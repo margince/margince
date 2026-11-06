@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -220,7 +221,7 @@ func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.
 	case !visible && by == decidedBySystem:
 		return row{}, ErrPolicyWithdrawn
 	case !visible:
-		return row{}, apperrors.ErrNotFound
+		return row{}, auth.HideRow(ctx, "approval")
 	}
 	return a, nil
 }

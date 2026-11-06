@@ -168,8 +168,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 			"und für die Nachricht, wie sie geschrieben wurde, ist es jetzt zu spät",
 		heldTimerExhausted:   "der Job, der den Versand auslöst, hat alle Versuche aufgebraucht",
 		heldSendRefused:      "eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt",
-		heldFollowupSettled:  "die Anfrage, an die es anschließt, wurde nach der Planung beantwortet oder erledigt",
-		heldMeetingCanceled:  "der Termin, an den es anschließt, wurde nach der Planung abgesagt",
+		heldFollowupSettled:  "die Anfrage, an die sie anschließt, wurde nach der Planung beantwortet oder erledigt",
+		heldMeetingCanceled:  "der Termin, an den sie anschließt, wurde nach der Planung abgesagt",
 		heldRecipientStopped: "jemand unter den Empfangenden hat nach der Planung Werbung gestoppt",
 		heldRecipientReplied: "nach der Planung kam neue Mail von jemandem unter den Empfangenden",
 

@@ -43,7 +43,7 @@ func setupConsent(t *testing.T) *consentEnv {
 	// The relay is wired because a controller delivery resolves its transport
 	// before any gate runs; the LINK is read from the vault, where minting
 	// sealed it (confirmlinkmail_integration_test.go).
-	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(discardingMailer{}))
+	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(apptest.DiscardingMailer{}))
 	apptest.BootstrapWorkspaceSession(t, e, "Consent E2E", "dpo@fable.test", "Admin")
 	return seedConsentSubject(t, e)
 }
@@ -108,7 +108,7 @@ func (c *consentEnv) stakeADeal(t *testing.T) {
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("relink the anchor onto the deal → %d", status)
 	}
-	askedAboutTheDeal(t, c.AppEnv, c.contactID, "subject@consent.test", c.dealID)
+	apptest.AskedAboutTheDeal(t, c.AppEnv, c.contactID, "subject@consent.test", c.dealID)
 }
 
 func (c *consentEnv) send(t *testing.T, purpose string) (int, string) {

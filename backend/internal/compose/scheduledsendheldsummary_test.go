@@ -29,7 +29,7 @@ func TestEveryHoldReasonHasWordsOnTheCardInEveryLanguage(t *testing.T) {
 		t.Fatal("the contract declares no held_reason enum this test can read")
 	}
 	var reasons []string
-	for _, reason := range strings.Split(string(found[1]), ",") {
+	for reason := range strings.SplitSeq(string(found[1]), ",") {
 		if reason = strings.TrimSpace(reason); reason != "null" {
 			reasons = append(reasons, reason)
 		}

@@ -38,7 +38,13 @@ func changedScheduledContext(ctx context.Context, tx pgx.Tx, in SendEmailInput, 
 	if reason := changedFollowup(source, created); reason != "" {
 		return reason, nil
 	}
-	settlement, err := settlementImage(ctx, tx, in.Evidence.ActivityID)
+	return settledAfterScheduling(ctx, tx, in.Evidence.ActivityID, created)
+}
+
+// settledAfterScheduling answers HeldFollowupSettled when the request's
+// settlement rests on an answer that arrived after the mail was scheduled.
+func settledAfterScheduling(ctx context.Context, tx pgx.Tx, request ids.UUID, created time.Time) (string, error) {
+	settlement, err := settlementImage(ctx, tx, request)
 	if err != nil || settlement == nil {
 		return "", err
 	}

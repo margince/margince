@@ -29,7 +29,7 @@ package gates
 // different question from picking one. What is refused is a statement that
 // takes ONE row out of app_user on an ordering that does not decide which.
 //
-// THE FIX IS `sessionUserID`, in compose/integration: it reads the signed-in
+// The fix is `SessionUserID`, in compose/integration/apptest: it reads the signed-in
 // seat from `GET /v1/me`, which is the same resolution the handlers take. A
 // fixture deriving production's answer for itself is free to derive a different
 // one, and here "different" means acting as a stranger.
@@ -120,7 +120,7 @@ func TestNoFixturePicksASeatAnOrderingDoesNotDecide(t *testing.T) {
 			t.Errorf("%s takes ONE row out of app_user on an ordering that does not decide which:\n\t%s\n\n"+
 				"Rows inserted in one transaction share now(), so a second contact makes this pick "+
 				"arbitrary — and a fixture acting as a stranger fails as a defect in whatever it was "+
-				"asserting about. Read the signed-in seat instead (sessionUserID, compose/integration), "+
+				"asserting about. Read the signed-in seat instead (SessionUserID, compose/integration/apptest), "+
 				"or pin the row by id or email.",
 				slash, gatekit.FirstLineOf(sql))
 		}

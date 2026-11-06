@@ -32,12 +32,12 @@ const dealVerdictBodyChars = 1500
 // dealVerdictChecksumSQL is what a verdict read about one deal. It moves when
 // the viability evidence, the deal's own fields, an offer or a stage move
 // does. It is stored after the verdict's own writes, so those never ask for a
-// second reading.
-func dealVerdictChecksumSQL(deal string) string {
-	return `md5(concat_ws('|', ` + viabilityFingerprintSQL(deal) + `, ` + deal + `.amount_minor, ` + deal + `.currency, ` +
-		deal + `.win_probability_override, ` + deal + `.win_probability_set_by, ` + deal + `.stage_id,
-		(SELECT concat_ws('|', count(*), max(vo.updated_at)) FROM offer vo WHERE vo.deal_id = ` + deal + `.id),
-		(SELECT concat_ws('|', count(*), max(vh.changed_at)) FROM deal_stage_history vh WHERE vh.deal_id = ` + deal + `.id)))`
+// second reading. Every reader aliases the deal as d.
+func dealVerdictChecksumSQL() string {
+	return `md5(concat_ws('|', ` + viabilityFingerprintSQL("d") + `, d.amount_minor, d.currency,
+		d.win_probability_override, d.win_probability_set_by, d.stage_id,
+		(SELECT concat_ws('|', count(*), max(vo.updated_at)) FROM offer vo WHERE vo.deal_id = d.id),
+		(SELECT concat_ws('|', count(*), max(vh.changed_at)) FROM deal_stage_history vh WHERE vh.deal_id = d.id)))`
 }
 
 // dealVerdictRead is one deal's input and the state the rules check.
@@ -90,7 +90,7 @@ func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVe
 		SELECT d.name, st.name, st.position, d.stage_id, d.amount_minor, d.currency::text, d.expected_close_date, d.close_date_provisional,
 		       d.win_probability_override, d.win_probability_set_by,
 		       `+deals.WinProbabilitySQL("d")+`, `+deals.WinProbabilitySourceSQL("d")+`,
-		       `+deals.StageWinProbabilitySQL("d")+`, `+dealVerdictChecksumSQL("d")+`
+		       `+deals.StageWinProbabilitySQL("d")+`, `+dealVerdictChecksumSQL()+`
 		  FROM deal d JOIN stage st ON st.id = d.stage_id
 		 WHERE d.id = $1`, deal).
 		Scan(&read.in.DealName, &read.in.Stage, &read.in.StagePosition, &seen.StageID, &seen.AmountMinor, &seen.Currency, &seen.CloseDate,

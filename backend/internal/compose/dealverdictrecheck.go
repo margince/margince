@@ -24,7 +24,7 @@ func verdictEvidenceHolds(
 	var checksum string
 	var accepted, eligible int
 	err := tx.QueryRow(ctx, `
-		SELECT `+dealVerdictChecksumSQL("d")+`,
+		SELECT `+dealVerdictChecksumSQL()+`,
 		       (SELECT count(*) FROM offer o WHERE o.deal_id = d.id AND o.archived_at IS NULL AND o.accepted_at IS NOT NULL),
 		       (SELECT count(DISTINCT a.id) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		         WHERE l.deal_id = d.id AND a.id::text = ANY($2) AND a.archived_at IS NULL AND `+visibleToAllSQL("a")+`)

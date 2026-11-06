@@ -11,6 +11,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { stillHeld, today } from "../../lib/employmentcurrency";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useAddEmployment } from "./addemploymentmodal";
 import { BoughtMark, boughtFields } from "./boughtmarks";
@@ -26,7 +27,6 @@ import {
   proposedEmployer,
   useEmployerProposal,
 } from "./employerproposal";
-import { stillHeld, today } from "./employmentcurrency";
 import { EmploymentEdit } from "./employmentedit";
 import { ImportedEmploymentHistory } from "./employmentimport";
 import { useEmploymentPages } from "./employmentpages";

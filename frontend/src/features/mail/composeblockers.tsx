@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { decidingRecipient } from "../../components/sendpermission";
+import { decidingRecipient, sendStatus } from "../../components/sendpermission";
 import type { MessageKey } from "../../i18n/en";
 import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
@@ -119,8 +119,10 @@ export function ComposeBlockers({
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
-  const unproven =
-    decidingRecipient(send.permission.preview).state === "unproven";
+  const asksWhyAgain =
+    whyMissing &&
+    (decidingRecipient(send.permission.preview).state === "unproven" ||
+      sendStatus(send.permission).kind === "missingContext");
   return (
     <div className="compose-blockers">
       <ComposeWhy
@@ -145,7 +147,7 @@ export function ComposeBlockers({
       {/* A channel reply asks no preview, so its status is only ever a
           refused Send. */}
       {(!isChannelReply || send.permission.refusal) &&
-        !(whyMissing && unproven) &&
+        !asksWhyAgain &&
         drawPermission(
           alternative ? (
             <ReasonSwitch reason={alternative} onSwitch={fields.setContext} />

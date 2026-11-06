@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -151,6 +152,10 @@ func (r *Registry) requireCapturingGrantor(ctx context.Context, ws, userID ids.U
 	seat, err := r.authority.SeatType(ctx, ws, userID)
 	if err != nil {
 		return fmt.Errorf("capture: the granting human's seat does not resolve: %w", err)
+	}
+	for _, object := range captureWriterGrants {
+		create := auth.Check{Object: object, Actions: []principal.Action{principal.ActionCreate}}
+		auth.RecordDecision(ctx, create, rbac.Permissions.Allows(object, principal.ActionCreate))
 	}
 	return CaptureRefusal(rbac.Permissions, seat)
 }

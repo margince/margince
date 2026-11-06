@@ -698,7 +698,7 @@ export const AccentAndBrand: Story = {
   name: "Accent and brand",
   render: () => (
     <Rows
-      intro="The accent means primary action and brand, and nothing else: at most one filled control in view wears it, and so does the current row of the side rail. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
+      intro="The accent means primary action and brand, and nothing else: at most one filled control in view wears it, and the current row of the side rail takes its tint and text. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
       entries={ACCENT}
     />
   ),

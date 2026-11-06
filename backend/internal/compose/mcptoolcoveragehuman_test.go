@@ -96,9 +96,9 @@ func plainWords(m modelCoverage, titles map[string]string) string {
 	if len(m.BelowBar) > 0 {
 		names := make([]string, 0, len(m.BelowBar))
 		for _, name := range m.BelowBar {
-			names = append(names, titles[name])
+			names = append(names, strings.TrimRight(titles[name], "."))
 		}
-		held += "; not yet: " + strings.Join(names, ", ")
+		held += "; not yet: " + strings.Join(names, "; ")
 	}
 	if m.Search == "lexical" {
 		held += ". Measured with search working on word matches only, which is harder than a real setup"

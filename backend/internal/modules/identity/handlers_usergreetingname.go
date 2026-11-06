@@ -47,6 +47,7 @@ func seatUser(seat Seat) crmcontracts.User {
 		Timezone:     optionalString(seat.Timezone),
 		// The flag rides only with the zone it describes.
 		TimezoneChosen: timezoneChosenFlag(seat.Timezone, seat.TimezoneChosen),
+		TimezoneSetBy:  seat.TimezoneSetBy,
 	}
 }
 

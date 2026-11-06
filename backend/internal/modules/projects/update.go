@@ -201,11 +201,11 @@ func refuseMovedTargetEnd(current crmcontracts.Project, in UpdateProjectInput) e
 }
 
 // patchedDate is the date a patch leaves in one column.
-func patchedDate(stored *openapi_types.Date, sent *time.Time, clear []string, column string) *time.Time {
+func patchedDate(stored *openapi_types.Date, sent *time.Time, cleared []string, column string) *time.Time {
 	switch {
 	case sent != nil:
 		return sent
-	case slices.Contains(clear, column) || stored == nil:
+	case slices.Contains(cleared, column) || stored == nil:
 		return nil
 	}
 	return &stored.Time

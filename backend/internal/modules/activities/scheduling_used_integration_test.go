@@ -42,7 +42,9 @@ func tryBookingPublicly(f *invitationFixture, key string, start time.Time) error
 	body := crmcontracts.BookPublicMeetingJSONRequestBody{}
 	body.Booker.Email = "guest@example.test"
 	req := httptest.NewRequest(http.MethodPost, "/public/booking/host", nil)
-	req.Header.Set("Idempotency-Key", key)
+	if key != "" {
+		req.Header.Set("Idempotency-Key", key)
+	}
 	intent, err := publicBookingRequestIntent(req, "host", body)
 	if err != nil {
 		return err
@@ -53,7 +55,7 @@ func tryBookingPublicly(f *invitationFixture, key string, start time.Time) error
 	}
 	request := f.request
 	request.Start, request.End = start, start.Add(30*time.Minute)
-	_, err = f.store.reserveAndQueueInvitation(f.ctx, host, request, invitationIntent{Public: intent})
+	_, err = f.store.reserveAndQueueInvitation(f.ctx, host, request, invitationIntent{Public: intent, DescriptionFromBooker: true})
 	return err
 }
 
@@ -106,7 +108,7 @@ func TestABookingDuringALinkReplacementStampsTheNewPage(t *testing.T) {
 			if err := storekit.LockWriteIdentity(f.ctx, tx, "booking_page", host.String()); err != nil {
 				return err
 			}
-			if _, err := f.store.replaceBookingPage(f.ctx, tx, host); err != nil {
+			if _, err := f.store.replaceBookingPage(f.ctx, tx, host, false); err != nil {
 				return err
 			}
 			<-release
@@ -194,6 +196,18 @@ func TestReplacingTheLinkKeepsItsFirstUse(t *testing.T) {
 	}
 	if used := pageFirstUsedAt(t, f); used == nil || !used.Equal(monday(6)) {
 		t.Fatalf("the replaced page's first use = %v, want %v carried over", used, monday(6))
+	}
+	if audits, _ := firstUseWrites(t, f); audits != 2 {
+		t.Fatalf("first-use audit rows = %d, want the copy's and the carry's", audits)
+	}
+}
+
+// A browser that sends no key still books through the public door.
+func TestAPublicBookingWithoutAKeyMarksThePageUsed(t *testing.T) {
+	f := newInvitationFixture(t)
+	bookPublicly(t, f, "", monday(10))
+	if used := pageFirstUsedAt(t, f); used == nil {
+		t.Fatal("a public booking sent without a key left the page unused")
 	}
 }
 

@@ -51,8 +51,8 @@ func TestAnOwnerWhoLeavesBeforeTheSweepWritesKeepsTheirDate(t *testing.T) {
 			e := setupCloseDate(t)
 			owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
 			policy := &changedBeforeTheWrite{
-				closeDatePolicy: closeDatePolicy{owner: owner},
-				change:          func() { change(e, t) },
+				owner:  owner,
+				change: func() { change(e, t) },
 			}
 			e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
 				quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
@@ -112,7 +112,7 @@ func (p *bindsBeforeRecords) ActForOwner(owner ids.UUID) deals.OwnerAuthorityTx 
 func TestTheSweepBindsTheOwnerBeforeItLocksADeal(t *testing.T) {
 	e := setupCloseDate(t)
 	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
-	policy := &bindsBeforeRecords{closeDatePolicy: closeDatePolicy{owner: owner}}
+	policy := &bindsBeforeRecords{owner: owner}
 	e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
 		quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
 		installseam.Deals()).SetClock(func() time.Time { return e.day }).
@@ -158,7 +158,7 @@ func TestASwitchTurnedOffWaitsForTheSweepsWriteInFlight(t *testing.T) {
 		t.Fatal(err)
 	}
 	owner := dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}
-	policy := &switchedOffAfterTheWriteReads{closeDatePolicy: closeDatePolicy{owner: owner}, e: e, t: t}
+	policy := &switchedOffAfterTheWriteReads{owner: owner, e: e, t: t}
 	e.corrector = deals.NewCloseDateCorrector(e.DB(), policy,
 		quietReviewReader{db: e.DB(), owner: owner}, slog.New(slog.NewTextHandler(os.Stderr, nil)),
 		installseam.Deals()).SetClock(func() time.Time { return e.day }).

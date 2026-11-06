@@ -424,7 +424,7 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	}
 
 	p := storekit.NewPatch()
-	p.Set("stage_id", current.StageId, in.ToStageID)
+	p.Set(stageIDColumn, current.StageId, in.ToStageID)
 	if status != string(current.Status) {
 		p.Set("status", current.Status, status)
 	}

@@ -174,20 +174,20 @@ func DealCommercialTotals(lines []DealLineInput) (DealCommercialFigures, error) 
 	if out.KnownCommittedNetMinor, err = minorFromBig(known, "known_committed_net_minor", "line_items"); err != nil {
 		return DealCommercialFigures{}, err
 	}
-	if out.CommittedNetMinor, err = completeSum(committed, committedComplete, "committed_net_minor"); err != nil {
+	if err = setCompleteSum(&out.CommittedNetMinor, committed, committedComplete, "committed_net_minor"); err != nil {
 		return DealCommercialFigures{}, err
 	}
-	if out.ArrMinor, err = completeSum(arr, arrComplete, "arr_minor"); err != nil {
+	if err = setCompleteSum(&out.ArrMinor, arr, arrComplete, "arr_minor"); err != nil {
 		return DealCommercialFigures{}, err
 	}
 	if !committedComplete || !taxComplete {
 		return out, nil
 	}
-	if out.TaxMinor, err = completeSum(tax, true, "tax_minor"); err != nil {
+	if err = setCompleteSum(&out.TaxMinor, tax, true, "tax_minor"); err != nil {
 		return DealCommercialFigures{}, err
 	}
 	gross := new(big.Int).Add(committed, tax)
-	out.GrossMinor, err = completeSum(gross, true, "gross_minor")
+	err = setCompleteSum(&out.GrossMinor, gross, true, "gross_minor")
 	return out, err
 }
 
@@ -201,13 +201,16 @@ func addKnown(sum *big.Int, figure *int64, complete bool) bool {
 	return complete
 }
 
-func completeSum(sum *big.Int, complete bool, figure string) (*int64, error) {
+// setCompleteSum stores a sum every line stated. A figure a line left unknown
+// stays nil, because a partial sum is a number nobody stated.
+func setCompleteSum(figure **int64, sum *big.Int, complete bool, name string) error {
 	if !complete {
-		return nil, nil
+		return nil
 	}
-	v, err := minorFromBig(sum, figure, "line_items")
+	v, err := minorFromBig(sum, name, lineItemsField)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &v, nil
+	*figure = &v
+	return nil
 }

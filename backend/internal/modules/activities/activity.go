@@ -44,9 +44,11 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 }
 
 type LogActivityInput struct {
-	Recommendation *crmcontracts.RecommendationReceipt
-	FollowUpTask   *LogActivityInput
-	recordedAt     *time.Time
+	DealFiling         *crmcontracts.ActivityDealFiling
+	dealFilingResolver DealFilingResolver
+	Recommendation     *crmcontracts.RecommendationReceipt
+	FollowUpTask       *LogActivityInput
+	recordedAt         *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
 	// invitedAssignee admits an invited colleague as the task's assignee. The
@@ -246,6 +248,7 @@ func (s *Store) logActivityAndReadTranscript(
 	}
 	at := s.now()
 	in.recordedAt = &at
+	in.dealFilingResolver = s.dealFilingResolver
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err
@@ -307,6 +310,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return bound, false, err
 	}
 	if err := refuseLoggedOutcomeBeforeStart(ctx, tx, in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	if err := applyLoggedDealFiling(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 

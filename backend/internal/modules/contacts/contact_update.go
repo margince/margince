@@ -254,11 +254,11 @@ func displayNameAfter(current crmcontracts.Contact, in UpdateContactInput) *stri
 }
 
 // namePartAfter is one name column as the update leaves it.
-func namePartAfter(stored string, set *string, clear []string, field string) string {
+func namePartAfter(stored string, set *string, cleared []string, field string) string {
 	switch {
 	case set != nil:
 		return *set
-	case slices.Contains(clear, field):
+	case slices.Contains(cleared, field):
 		return ""
 	}
 	return stored

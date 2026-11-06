@@ -91,7 +91,8 @@ function recordTypesInHistory(source: ts.SourceFile): string[] {
 
 // Body fields that tell the update what else to do and are never a column it
 // writes, so no history row can name them.
-const INSTRUCTIONS = new Set(["convert_lead_ids"]);
+// deal_filing uses the relink audit instead of changing an activity column.
+const INSTRUCTIONS = new Set(["convert_lead_ids", "deal_filing"]);
 
 function updateBodyName(recordType: string): string {
   return `Update${recordType[0].toUpperCase()}${recordType.slice(1)}Request`;

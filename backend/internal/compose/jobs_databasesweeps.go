@@ -36,6 +36,9 @@ import (
 // does not — a projection store, and the brief engine plus the identity service
 // — not because they are gated differently: the gating is the same nothing, and
 // that is why they belong here rather than behind a condition of their own.
+//
+// The verdict pass is the one exception: it reads through verdictBrain, a model
+// lane. Unset, the close-date sweep still runs and its verdict step does nothing.
 func addDatabaseOnlySweepJobs(
 	reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, verdictBrain completer,
 ) {
@@ -62,7 +65,8 @@ func addDatabaseOnlySweepJobs(
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
 	addDeclaredWorker[RiskVerdictSweepArgs](reg, newRiskVerdictSweepWorker(
-		pool, func() time.Time { return time.Now().UTC() }, log))
+		pool, func() time.Time { return time.Now().UTC() }, log,
+	))
 	addDeclaredWorker[TimeScanArgs](reg, &timeScanWorker{pool: pool, log: log})
 	addDeclaredWorker[IdempotencyRetentionArgs](reg, &idempotencyRetentionWorker{
 		pool: pool, sweeper: NewIdempotencyRetentionSweeper(pool, log),

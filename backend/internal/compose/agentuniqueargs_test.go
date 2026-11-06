@@ -50,7 +50,7 @@ func toolListUniqueness(t *testing.T, tool string, schema json.RawMessage) map[s
 	t.Helper()
 	var shape struct {
 		Properties map[string]struct {
-			UniqueItems bool `json:"uniqueItems"`
+			UniqueItems bool `json:"uniqueItems"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
 		} `json:"properties"`
 	}
 	if err := json.Unmarshal(schema, &shape); err != nil {
@@ -66,7 +66,7 @@ func toolListUniqueness(t *testing.T, tool string, schema json.RawMessage) map[s
 // contractSchema is the part of a contract schema this sweep reads.
 type contractSchema struct {
 	Ref         string                    `yaml:"$ref"`
-	UniqueItems bool                      `yaml:"uniqueItems"`
+	UniqueItems bool                      `yaml:"uniqueItems"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
 	Properties  map[string]contractSchema `yaml:"properties"`
 }
 

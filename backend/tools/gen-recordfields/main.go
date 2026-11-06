@@ -49,8 +49,6 @@ var recordBodies = []struct{ recordType, create, update string }{
 	{"offer_template", "CreateOfferTemplateRequest", "UpdateOfferTemplateRequest"},
 	{"offer", "CreateOfferRequest", "UpdateOfferRequest"},
 	{"deal_room", "CreateDealRoomRequest", ""},
-	{"deal_room_thread", "OpenDealRoomThreadRequest", ""},
-	{"deal_room_comment", "PostDealRoomCommentRequest", ""},
 }
 
 // createParents names the parent a record is created under, which its REST

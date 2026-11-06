@@ -280,7 +280,7 @@ func (s *Store) FinishRun(
 	// about what it found.
 	auditID, err := storekit.AuditEvent(ctx, tx, "create", "assurance_run", runID,
 		map[string]any{
-			"status":           status,
+			auditStatusKey:     status,
 			"readiness":        readiness,
 			"eligible_deals":   eligibleDeals,
 			"eligible_signals": eligibleSignals,

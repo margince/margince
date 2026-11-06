@@ -225,8 +225,8 @@ describe("ForecastView", () => {
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const answer = await screen.findByText(/Manager forecast:/i);
-    expect(answer.textContent).toContain("2,000 EUR");
-    expect(answer.textContent).toContain("1,600 EUR");
+    expect(answer.textContent).toContain("€2,000");
+    expect(answer.textContent).toContain("€1,600");
   });
 
   // A signed gap needs its own direction rather than an unconditional "over".
@@ -287,7 +287,7 @@ describe("ForecastView", () => {
       expect(screen.queryByText(/above won \+ Likely/)).toBeNull();
     });
 
-    // Its own arm rather than a zero: "±0 EUR over evidence" is a difference
+    // Its own arm rather than a zero: "±€0 over evidence" is a difference
     // nobody has.
     it("says a call that matches its evidence carries no gap at all", async () => {
       withCall(160_000);
@@ -305,7 +305,7 @@ describe("ForecastView", () => {
   });
 
   // Nobody having called is a real answer, and a different one from a call of
-  // zero. It must not render as "the current call is 0 EUR".
+  // zero. It must not render as "the current call is €0".
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);

@@ -126,14 +126,53 @@ func TestAnInviteMailIsARouteBackedSendOnSendOutbound(t *testing.T) {
 	}
 }
 
-func TestARouteBackedUploadFailsGeneration(t *testing.T) {
+func TestARouteBodyThatIsNeitherJSONNorOneFileFailsGeneration(t *testing.T) {
 	defects := nonJSONBodies(map[string]routeShape{
-		"POST /v1/company/logo":     {body: true},
+		"POST /v1/raw":              {body: true},
+		"POST /v1/company/logo":     {body: true, uploadField: "file"},
 		"POST /v1/record-grants":    {body: true, bodySchema: `{"type":"object"}`},
 		"POST /v1/offers/{id}/send": {},
 	})
-	if len(defects) != 1 || !strings.Contains(defects[0], "/v1/company/logo") {
-		t.Fatalf("defects = %v, want the upload alone", defects)
+	if len(defects) != 1 || !strings.Contains(defects[0], "/v1/raw") {
+		t.Fatalf("defects = %v, want the raw body alone", defects)
+	}
+}
+
+func TestAnUploadRouteNamesItsOneFileField(t *testing.T) {
+	cases := map[string]struct {
+		body, field string
+		refused     bool
+	}{
+		"one file": {body: `
+content:
+  multipart/form-data:
+    schema: { type: object, properties: { file: { type: string, format: binary } } }
+`, field: "file"},
+		"a JSON body": {body: `
+content:
+  application/json:
+    schema: { type: object, properties: { name: { type: string } } }
+`},
+		"a second field the door would drop": {body: `
+content:
+  multipart/form-data:
+    schema: { type: object, properties: { file: { type: string, format: binary }, object: { type: string } } }
+`, refused: true},
+		"no file": {body: `
+content:
+  multipart/form-data:
+    schema: { type: object, properties: { note: { type: string } } }
+`, refused: true},
+	}
+	for name, tc := range cases {
+		var doc yaml.Node
+		if err := yaml.Unmarshal([]byte(tc.body), &doc); err != nil {
+			t.Fatal(err)
+		}
+		field, err := uploadField(doc.Content[0])
+		if (err != nil) != tc.refused || field != tc.field {
+			t.Errorf("%s: field %q, err %v; want field %q, refused %t", name, field, err, tc.field, tc.refused)
+		}
 	}
 }
 
@@ -247,5 +286,82 @@ func TestAFieldNamedLikeProseKeepsItsPlaceInABodySchema(t *testing.T) {
 	want := `{"properties":{"description":{"type":"string"},"example":{"type":"string"}},"type":"object"}`
 	if string(encoded) != want {
 		t.Fatalf("schema = %s, want %s", encoded, want)
+	}
+}
+
+func TestAQueryParameterKeepsWhatTheRouteRequiresOfIt(t *testing.T) {
+	var param queryParameter
+	if err := yaml.Unmarshal([]byte(`
+name: entity_type
+in: query
+required: true
+schema: { $ref: '#/components/schemas/Kind' }
+`), &param); err != nil {
+		t.Fatal(err)
+	}
+	schemas := map[string]schemaNode{"Kind": {Type: "string", Enum: []string{"company", "deal"}}}
+	got, err := queryOf(param, schemas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{Name: "entity_type", Type: "string", Required: true, Enum: []string{"company", "deal"}}`; got.literal() != want {
+		t.Errorf("the query parameter renders as %s, want %s", got.literal(), want)
+	}
+	param.Required, param.Schema.Ref, param.Schema.Type, param.Schema.Format = false, "", "string", "uuid"
+	if got, _ := queryOf(param, schemas); got.literal() != `{Name: "entity_type", Type: "string", Format: "uuid"}` {
+		t.Errorf("an optional uuid renders as %s", got.literal())
+	}
+}
+
+// A member an answer may hold as null, or a route may leave out, must not fail the
+// check that withholds a client's structured answer. A field named required stays.
+func TestAnAnswerSchemaRequiresNoNestedMember(t *testing.T) {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+'200':
+  content:
+    application/schema+json:
+      schema:
+        type: object
+        required: [last_drill, items]
+        properties:
+          last_drill: { type: [string, 'null'] }
+          required: { type: boolean }
+          items:
+            type: array
+            items: { type: object, required: [id], properties: { id: { type: string } } }
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	got, err := answerSchema(*node.Content[0], map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(got, `"required":[`) {
+		t.Errorf("the answer schema still requires a member: %s", got)
+	}
+	if !strings.Contains(got, `"required":{"type":"boolean"}`) || !strings.Contains(got, `"last_drill":{"type":"string"}`) {
+		t.Errorf("the answer schema lost a field: %s", got)
+	}
+}
+
+func TestAClosedAnswerAdmitsTheReadableFigureBesideAnAmount(t *testing.T) {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+'200':
+  content:
+    application/json:
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          currency: { type: string }
+          total_minor: { type: integer }
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	got, err := answerSchema(*node.Content[0], nil)
+	if err != nil || !strings.Contains(got, `"total_display":{"type":"string"}`) {
+		t.Errorf("answer schema %s (%v) does not admit total_display", got, err)
 	}
 }

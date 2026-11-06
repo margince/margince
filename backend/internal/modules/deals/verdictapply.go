@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // The corrections a verdict records. The amount and probability names are
@@ -164,40 +165,51 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 			result.dropAsMoved()
 			return nil
 		}
-		var applied []VerdictChange
-		// Asked of the deal as locked, before a stage move resets its
-		// probability: that reset is ours, not a colleague's edit.
-		heldStill := make([]bool, len(in.Changes))
-		for i, change := range in.Changes {
-			_, heldStill[i] = verdictColumns(change.Correction, in.Seen, current)
-		}
-		for _, i := range stageMoveFirst(in.Changes) {
-			change := in.Changes[i]
-			var outcome string
-			switch {
-			case !heldStill[i]:
-				outcome = VerdictDroppedStale
-			case change.Correction == VerdictStageMoveCorrection:
-				outcome, current, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
-			default:
-				now := in
-				now.Seen = current
-				outcome, err = applyVerdictChange(ctx, tx, lock, now, current, change)
-			}
-			if err != nil {
-				return err
-			}
-			outcomes[i] = outcome
-			if outcome == VerdictApplied {
-				applied = append(applied, change)
-			}
-		}
-		if len(applied) == 0 {
-			return nil
+		applied, err := s.applyVerdictChanges(ctx, tx, lock, in, current, active, outcomes)
+		if err != nil || len(applied) == 0 {
+			return err
 		}
 		return in.Record(ctx, tx, applied)
 	})
 	return result, err
+}
+
+// applyVerdictChanges writes each change on the locked deal, the stage move
+// first, sets its outcome and answers the changes that applied.
+func (s *Store) applyVerdictChanges(
+	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, in VerdictInput, current VerdictValues,
+	active []fieldcatalog.Column, outcomes []string,
+) ([]VerdictChange, error) {
+	var applied []VerdictChange
+	// Asked of the deal as locked, before a stage move resets its
+	// probability: that reset is ours, not a colleague's edit.
+	heldStill := make([]bool, len(in.Changes))
+	for i, change := range in.Changes {
+		_, heldStill[i] = verdictColumns(change.Correction, in.Seen, current)
+	}
+	for _, i := range stageMoveFirst(in.Changes) {
+		change := in.Changes[i]
+		var outcome string
+		var err error
+		switch {
+		case !heldStill[i]:
+			outcome = VerdictDroppedStale
+		case change.Correction == VerdictStageMoveCorrection:
+			outcome, current, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
+		default:
+			now := in
+			now.Seen = current
+			outcome, err = applyVerdictChange(ctx, tx, lock, now, current, change)
+		}
+		if err != nil {
+			return nil, err
+		}
+		outcomes[i] = outcome
+		if outcome == VerdictApplied {
+			applied = append(applied, change)
+		}
+	}
+	return applied, nil
 }
 
 // dropAsMoved drops every change because what the verdict rested on moved
@@ -289,18 +301,17 @@ func applyVerdictChange(
 	} else if err != nil {
 		return "", err
 	}
-	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, "basis_owner": in.Owner.String()}
+	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, basisOwnerKey: in.Owner.String()}
 	maps.Copy(evidence, change.Evidence)
 	if change.Correction == VerdictProbabilityCorrection {
 		if err := addProbabilityValuation(ctx, tx, in.DealID, current, evidence); err != nil {
 			return "", err
 		}
 	}
-	_, err = commitCorrection(ctx, tx, lock, correctionWrite{
+	if err := commitCorrection(ctx, tx, lock, correctionWrite{
 		deal: in.DealID, correction: change.Correction, patch: patch, auditEvidence: evidence,
 		changedFields: map[string]any{CorrectionKindEvidenceKey: change.Correction},
-	})
-	if err != nil {
+	}); err != nil {
 		return "", err
 	}
 	return VerdictApplied, nil
@@ -314,13 +325,13 @@ func verdictColumns(correction string, seen, current VerdictValues) ([]string, b
 		return []string{closeDateField, provisionalField},
 			sameDate(seen.CloseDate, current.CloseDate) && seen.Provisional == current.Provisional
 	case VerdictAmountCorrection:
-		return []string{"amount_minor", "currency"},
+		return []string{amountField, currencyField},
 			sameInt64(seen.AmountMinor, current.AmountMinor) && sameString(seen.Currency, current.Currency)
 	case VerdictProbabilityCorrection:
 		return []string{winProbabilityOverrideColumn},
 			sameInt(seen.Probability, current.Probability) && sameString(seen.ProbabilitySource, current.ProbabilitySource)
 	case VerdictStageMoveCorrection:
-		return []string{"stage_id"}, seen.StageID == current.StageID
+		return []string{stageIDColumn}, seen.StageID == current.StageID
 	}
 	return nil, false
 }
@@ -342,10 +353,10 @@ func verdictPatch(patch *storekit.Patch, change VerdictChange, current VerdictVa
 			return false
 		}
 		if current.Currency == nil {
-			patch.Set("currency", nil, change.Currency)
+			patch.Set(currencyField, nil, change.Currency)
 		}
 		if current.AmountMinor == nil || *current.AmountMinor != change.AmountMinor {
-			patch.Set("amount_minor", current.AmountMinor, change.AmountMinor)
+			patch.Set(amountField, current.AmountMinor, change.AmountMinor)
 		}
 	case VerdictProbabilityCorrection:
 		if current.ProbabilitySource != nil && Source(*current.ProbabilitySource) == SourceHuman {

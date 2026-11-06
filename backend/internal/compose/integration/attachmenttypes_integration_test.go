@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -31,7 +32,7 @@ func TestAnUploadOfAnUnacceptedKindStoresNothing(t *testing.T) {
 	contact := e.SeedContact(t, "Typed Upload", &e.Rep1)
 
 	upload := func(filename string, data []byte) *httptest.ResponseRecorder {
-		body, ctype := multipartAttachment(t, "contact", contact.String(), filename, data)
+		body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), filename, data)
 		req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 		req.Header.Set("Content-Type", ctype)
 		rec := httptest.NewRecorder()

@@ -156,6 +156,10 @@ func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
 	// spills to disk.
 	//nolint:gosec // G120 wants a bound, and the bound is the chassis's own MaxBytesReader on this route: this argument is the spill threshold, deliberately far below the ceiling.
 	if err := r.ParseMultipartForm(vcardSpillBytes); err != nil {
+		if tooLarge, over := errors.AsType[*http.MaxBytesError](err); over {
+			httperr.WriteMultipartRefusal(w, r, err, tooLarge.Limit)
+			return
+		}
 		httperr.Write(w, r, httperr.Validation("file", "unreadable",
 			"Send the .vcf file as a multipart form field named `file`."))
 		return

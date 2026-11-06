@@ -36,7 +36,7 @@ Margince also reads common names such as `name`, `your-email` or `Firma`. Every 
 Also called: field names, map fields, custom fields, my own form, Contact Form 7.
 
 ### What happens when someone sends the form?
-Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Everything the prospect wrote goes into a note on the lead's timeline.
+Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Its **Added via** field names the form, such as Web form “Contact page”. Everything the prospect wrote goes into a note on the lead's timeline.
 
 Open the note to see each field under its own label. The page it came from is a link, and the consent is a badge with its policy version. Margince stores that page, and the page before it, only as a web address. It drops the text after `?` except the `utm_` names, the text after `#`, and any name and password in the address. Text that is not a web address is not stored.
 
@@ -49,6 +49,8 @@ Also called: where do my website leads go, new lead from website, duplicate lead
 
 ### Who gets the leads from a form?
 Pick a colleague in **Owner of new leads** when you create or edit the form. Each new lead from it then goes to that colleague. With **Unassigned**, anyone on the team can pick the lead up. If the owner leaves the workspace, new leads arrive unassigned until you pick someone else.
+
+The list holds every colleague who may own records, also those whose records you do not see. Type a name to find it.
 Also called: assign website leads, lead owner, route form leads.
 
 ### How do I connect WordPress?

@@ -41,6 +41,13 @@ import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
+import {
+  dayRows,
+  FOCUS_PARAM,
+  identity,
+  rowByKey,
+  useStaleFocusCleared,
+} from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
@@ -222,17 +229,22 @@ function PersonalMorning({
   const [params] = useUrlParams();
   const update = useTaskUpdate([worklistKey]);
   const day = briefDay(query.data?.pages);
-  const context = day?.focus?.items.find(
-    (item) => `${item.source}-${item.id}` === selected,
+  const rows = dayRows(day, query.data?.pages);
+  // A row named by the address opens as a click on it does; mail links there.
+  const linkedFocus = params.get(FOCUS_PARAM);
+  const context = rowByKey(rows, linkedFocus || selected);
+  useStaleFocusCleared(
+    linkedFocus,
+    context,
+    query.isSuccess && !query.isFetching,
   );
   // A task named by the address, as a reminder notification opens it. It
   // opens whether or not the day lists it, and writes only where a row the
   // reader holds offers `complete`.
   const linkedTask = context ? undefined : params.get(TASK_PARAM);
-  const linkedRow = [
-    ...(day?.focus?.items ?? []),
-    ...(query.data?.pages.flatMap((page) => page.queue) ?? []),
-  ].find((item) => item.source === "task" && item.id === linkedTask);
+  const linkedRow = linkedTask
+    ? rowByKey(rows, identity({ source: "task", id: linkedTask }))
+    : undefined;
   const state = query.isPending
     ? "loading"
     : query.isError && !day
@@ -264,7 +276,7 @@ function PersonalMorning({
           <>
             <BriefFeed
               day={day}
-              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+              onContext={(item) => setSelected(identity(item))}
               state={state}
               changed={changedSinceBrief(day)}
               refreshFailed={query.isRefetchError}
@@ -336,7 +348,10 @@ function PersonalMorning({
         <FocusDetails
           item={context}
           update={update}
-          onClose={() => setSelected("")}
+          onClose={() => {
+            setSelected("");
+            if (linkedFocus) replaceDial(FOCUS_PARAM, undefined);
+          }}
         />
       )}
     </>

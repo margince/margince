@@ -143,7 +143,8 @@ func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider st
 	return sender, auth, granted, nil
 }
 
-// Connections refuses delegated user ids so only humans read their mailbox connections.
+// Connections lists the caller's own mailbox connections, for a user or their
+// agent. It carries status and cursors, never the credential.
 func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 	return r.connectionViews(ctx, true)
 }

@@ -72,12 +72,9 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // newActivitiesHandlers builds the timeline transport over the sibling
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
-	// ONE gate serving both seams. The composer's preview and the send's
-	// default-deny door are two questions of the same authority, and two gates
-	// here would be two answers about one message — the drift this whole
-	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
+		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
@@ -185,6 +182,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
+	s.companyContactShareHandlers = companyContactShareHandlers{db: InstallationDB(pool), grants: identity.NewService(pool)}
 	s.wireHandoverSurface()
 }
 
@@ -234,12 +232,15 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
 	s.analyticsQueryHandlers = newAnalyticsQueryHandlers(
-		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)))
+		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)),
+	)
 	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
-		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
+	)
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
-		InstallationDB(pool), func() time.Time { return time.Now().UTC() }).withTargets(reportingService)
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
+	).withTargets(reportingService)
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
 		newForecastStoreFor(pool),

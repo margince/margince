@@ -139,7 +139,7 @@ func TestSharingCompanyContactsValidatesRecipientsWithoutEligibleContacts(t *tes
 	}
 }
 
-func TestSharingCompanyContactsRestatesAnExistingPersonGrantAtTheChosenLevel(t *testing.T) {
+func TestSharingCompanyContactsRestatesAnExistingMemberGrantAtTheChosenLevel(t *testing.T) {
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "Shared account", &e.Rep1))
 	contact := e.SeedContact(t, "Shared employee", &e.Rep1)

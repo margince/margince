@@ -180,7 +180,8 @@ const (
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
-	"created_at":          rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
+	"opened_at":           actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
+	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
 	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp,
 	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
 	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,

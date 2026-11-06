@@ -5,8 +5,7 @@
 **Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week,
 its review and its plan are in [Your week](your-week.md).
 
-The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page;
-**Hide Worklist** closes it. It has no sidebar row of its own.
+The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
 ## Daily tasks
 
@@ -190,7 +189,7 @@ When Margince changed three or more of your deals, they become one row: "Marginc
 A deal that changed again reads "This deal changed again. Open the deal to review its current state." Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
 
 ### What happens to a promise from a call or an email?
-A promise Margince reads in a meeting transcript or an email becomes something to watch or a task,
+A promise Margince reads in a call or meeting transcript or an email becomes something to watch or a task,
 by who made it.
 - A promise the customer made goes on their contact to watch, and never becomes a task. The deal's
   **Overview** lists open ones under **Customer commitments**, with **Open message**. **Dismiss**
@@ -387,10 +386,11 @@ You can also add a note to a teammate's Worklist with **Add note** ("A short not
 
 ### What is in the morning email?
 
-It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
+It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. Each item opens its record's page when it has one. A task, a meeting or its outcome, or an item without a record opens **Home** with that item open.
 
-Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
-Mail follows your working days and local clock, with a three-hour window that can end on the next day.
+When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
+
+Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest. Mail follows your working days and local clock, with a three-hour window that can end on the next day.
 A missed window leaves the work on Home. If choices cannot be read, the email waits.
 
 A weekly day you do not work moves to the next working day. Results keep the company's reporting week. Older chosen morning hours use the company clock until you choose a personal time or turn combining on.

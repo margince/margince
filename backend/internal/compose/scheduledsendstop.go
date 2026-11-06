@@ -59,15 +59,15 @@ func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope
 	if err != nil {
 		return err
 	}
-	wsCtx := principal.WithCorrelationID(principal.WithWorkspaceID(ctx, ws.UUID), env.EventID)
-	pending, err := s.store.PendingMarketingToContact(sendWorkerScope(wsCtx), ids.From[ids.ContactKind](env.Entity.ID), purpose)
+	wsCtx := principal.WithCausationEvent(principal.WithWorkspaceID(ctx, ws.UUID), env.EventID)
+	pending, err := s.store.PendingMarketingToContact(onStopTrace(sendWorkerScope(wsCtx), env), ids.From[ids.ContactKind](env.Entity.ID), purpose)
 	if err != nil {
 		return fmt.Errorf("scheduled send stop: %w", err)
 	}
 	for _, message := range pending {
 		// A stop is about the world now, so it holds the message whatever
 		// version a rep last moved it to.
-		if err := s.store.HoldScheduledSend(holdScopeFor(wsCtx, message.ScheduledBy), message.ID,
+		if err := s.store.HoldScheduledSend(onStopTrace(holdScopeFor(wsCtx, message.ScheduledBy), env), message.ID,
 			activities.HeldRecipientStopped, activities.UnobservedVersion); err != nil {
 			return fmt.Errorf("scheduled send stop: holding %s: %w", message.ID, err)
 		}
@@ -78,12 +78,18 @@ func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope
 	return nil
 }
 
+// onStopTrace puts a system scope back on the stop's trace. The send worker's
+// scope mints a fresh correlation id, and a hold must read as part of the stop.
+func onStopTrace(scope context.Context, env events.Envelope) context.Context {
+	return principal.WithCorrelationID(scope, env.Trace.CorrelationID)
+}
+
 // stopOf reads whether an envelope stops marketing to a contact, and for which
 // purpose. A suppression binds every marketing send, so it names none. A
 // withdrawal names the purpose it withdrew. A lead's consent.changed shares the
 // event type and is not this consumer's: a scheduled send addresses contacts.
 func stopOf(env events.Envelope) (purpose string, stop bool, err error) {
-	if env.Entity.Type != "contact" || env.Entity.ID == ids.Nil {
+	if env.Entity.Type != string(recordTypeContact) || env.Entity.ID == ids.Nil {
 		return "", false, nil
 	}
 	switch env.Type {

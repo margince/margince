@@ -147,7 +147,7 @@ func WorkingHoursOf(ctx context.Context, tx pgx.Tx, user ids.UserID) (WorkingHou
 
 // MyWorkingHours answers the CALLER's own.
 func (s *Service) MyWorkingHours(ctx context.Context) (WorkingHours, bool, error) {
-	human, err := selfScoped(ctx)
+	human, err := ownSettingsSeat(ctx)
 	if err != nil {
 		return WorkingHours{}, false, err
 	}
@@ -172,7 +172,7 @@ func (s *Service) MyWorkingHours(ctx context.Context) (WorkingHours, bool, error
 // on the request would be an admin's way to set a colleague's working hours,
 // which is the shape this setting exists to refuse.
 func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (WorkingHours, error) {
-	human, err := selfScoped(ctx)
+	human, err := ownSettingsSeat(ctx)
 	if err != nil {
 		return WorkingHours{}, err
 	}
@@ -217,7 +217,11 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 		if in.Timezone == "" {
 			return nil
 		}
-		seat, err := writeTimezoneTx(ctx, tx, ids.From[ids.UserKind](human), in.Timezone, TimezoneChosen)
+		source := TimezoneChosen
+		if _, isAgent := callingAgent(ctx); isAgent {
+			source = TimezoneFromAgent
+		}
+		seat, err := writeTimezoneTx(ctx, tx, ids.From[ids.UserKind](human), in.Timezone, source)
 		normalized.Timezone = seat.Timezone
 		return err
 	})
@@ -227,11 +231,19 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 	return normalized, nil
 }
 
+// ownSettingsSeat is whose own settings a call changes: the caller, or the user
+// an agent works for. Its audit row still names the agent.
+func ownSettingsSeat(ctx context.Context) (ids.UUID, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
+		return ids.UUID{}, apperrors.ErrPermissionDenied
+	}
+	return actor.UserID, nil
+}
+
 // selfScoped is the caller, refusing anybody who is not a human seat.
 //
-// Deliberately NOT actingHuman: that resolves the human an agent is acting
-// under, which is right for attributing work and wrong here. An agent carrying
-// its grantor's authority must not change when its grantor is bookable.
+// It guards a seat's sign-in and sessions, which an agent never touches.
 func selfScoped(ctx context.Context) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {

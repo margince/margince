@@ -206,7 +206,8 @@ func heldInvite() IssuedInvitation {
 // and a channel closed once the send and its record are over.
 func inviteHandler(relay interface {
 	Send(context.Context, string, string, string) error
-}, records *stubInviteRecords) (Handlers, chan struct{}) {
+}, records *stubInviteRecords,
+) (Handlers, chan struct{}) {
 	finished := make(chan struct{})
 	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test")
 	handler.inviteRecords = records

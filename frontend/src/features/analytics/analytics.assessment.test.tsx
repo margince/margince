@@ -94,6 +94,10 @@ function renderPanel(
 it("renders connected paragraphs without observation badges or a second summary", async () => {
   renderPanel(written);
   expect(await screen.findByText(sentence.text)).toBeVisible();
+  // The paragraphs after the first fold behind one door.
+  await userEvent
+    .setup({ delay: null })
+    .click(screen.getByText("Read the full outlook"));
   expect(screen.getByText(/^Review the relevant opportunities/)).toBeVisible();
   expect(screen.getByText("Written by Margince")).toBeVisible();
   expect(screen.queryByText("Observation")).toBeNull();
@@ -257,14 +261,12 @@ it("formats raw legacy quantities in both report prose and supporting records", 
     ],
   });
   expect(
-    await screen.findByText("Open business is ≈7,432,190 EUR."),
+    await screen.findByText("Open business is ≈€7,432,190."),
   ).toBeInTheDocument();
   await userEvent.click(
     screen.getByRole("button", { name: "View supporting records" }),
   );
-  expect(screen.getAllByText("Open business is ≈7,432,190 EUR.")).toHaveLength(
-    2,
-  );
+  expect(screen.getAllByText("Open business is ≈€7,432,190.")).toHaveLength(2);
   expect(screen.queryByText(/7432189\.65/)).not.toBeInTheDocument();
 });
 

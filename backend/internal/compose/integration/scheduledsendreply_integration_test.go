@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -85,7 +86,7 @@ func (p *preflightEnv) mailboxCtx(t *testing.T) context.Context {
 	})
 }
 
-// A mailing is not a person writing, so it pauses nothing.
+// A mailing is not a contact writing, so it pauses nothing.
 //
 // Mutation: drop the pursuitPausedByReply call, and the plain reply is sent.
 // Compare the Date header instead of the arrival, and the backdated and the
@@ -110,8 +111,10 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 			return inbound{dated: after.AddDate(0, 0, 7), arrived: after.Add(-time.Hour), authenticated: true}
 		}, false},
 		{"a mailing from their address", dealClaim, func(after time.Time) inbound {
-			return inbound{dated: after, arrived: after, authenticated: true,
-				extraHeaders: []string{"List-Unsubscribe: <mailto:unsubscribe@preflight.test>"}}
+			return inbound{
+				dated: after, arrived: after, authenticated: true,
+				extraHeaders: []string{"List-Unsubscribe: <mailto:unsubscribe@preflight.test>"},
+			}
 		}, false},
 		{"a forged reply", dealClaim, func(after time.Time) inbound {
 			return inbound{dated: after, arrived: after}
@@ -122,10 +125,10 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := setupPreflight(t)
-			p.connect(t, gmailReadonlyScope, gmailSendScope)
+			p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 			id := p.scheduleClaiming(t, tc.claim)
 
-			p.theyWrite(t, tc.mail(time.Now().UTC().Add(time.Second)))
+			p.theyWrite(t, tc.mail(clocktest.Now(t).UTC().Add(time.Second)))
 			p.makeDue(t, id)
 			p.fire(t, id)
 
@@ -148,7 +151,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 // reply is paused.
 func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET thread_key = 'the-quote-thread' WHERE id = $1`, uuidOf(t, p.activityID))
@@ -158,7 +161,7 @@ func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
 	}
 	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
 
-	after := time.Now().UTC().Add(time.Second)
+	after := clocktest.Now(t).UTC().Add(time.Second)
 	p.theyWrite(t, inbound{dated: after, arrived: after, authenticated: true})
 	p.makeDue(t, id)
 	p.fire(t, id)

@@ -13,6 +13,7 @@ import {
   rangeQueryParams,
   WIN_PROBABILITY_DIAL,
 } from "./dealranges";
+import { defaultPipelineOf } from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
@@ -38,8 +39,7 @@ export function usePipeline(pipelineId?: string | null) {
       const pipeline =
         (pipelineId &&
           data.data.find((candidate) => candidate.id === pipelineId)) ||
-        data.data.find((candidate) => candidate.is_default) ||
-        data.data[0];
+        defaultPipelineOf(data.data);
       if (!pipeline) {
         throw new Error("no pipeline");
       }
@@ -112,22 +112,28 @@ export function dealsQueryParams(f: DealFilters) {
 
 // The close-day dial as days. "This quarter" is the fiscal quarter holding
 // today in the installation's zone, the one the reports count.
-function useCloseDay(value: string | undefined): DayRange | undefined {
+export function useCloseDay(value: string | undefined): DayRange | undefined {
   const today = dayInZone(useNow(0), useCompanyZone());
   const fiscalStart =
     useInstallationSettings().data?.fiscal_year_start_month ?? 1;
   return closeDayRange(value, today, fiscalStart);
 }
 
-/**
- * The deals the board and the table share.
- *
- * A keyset walk rather than one fixed page. The board draws a column per stage
- * out of whatever this holds. A single capped read would show a busy stage only
- * a fraction of its cards. Its header comes from the deals-by-stage report over
- * every matching deal, so it names the true count. A column saying "40 deals"
- * above six cards is what a pipeline view must not do.
- */
+export type DealListQuery = ReturnType<typeof dealsQueryParams> & {
+  cursor?: string;
+};
+
+export type DealListPage = Awaited<ReturnType<typeof readDealPage>>;
+
+export async function readDealPage(query: DealListQuery, signal?: AbortSignal) {
+  return unwrap(await api.GET("/deals", { params: { query }, signal }));
+}
+
+export function nextCursorOf(page: DealListPage): string | undefined {
+  return page.page?.has_more ? (page.page.next_cursor ?? undefined) : undefined;
+}
+
+/** The deals as one keyset walk over every stage. */
 export function useDeals(f: DealFilters, enabled = true) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   return useInfiniteQuery({
@@ -139,20 +145,12 @@ export function useDeals(f: DealFilters, enabled = true) {
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => {
-      return unwrap(
-        await api.GET("/deals", {
-          params: {
-            query: {
-              ...dealsQueryParams({ ...f, closeDay }),
-              cursor: pageParam,
-            },
-          },
-        }),
-      );
-    },
-    getNextPageParam: (last) =>
-      last.page?.has_more ? (last.page.next_cursor ?? undefined) : undefined,
+    queryFn: ({ pageParam, signal }) =>
+      readDealPage(
+        { ...dealsQueryParams({ ...f, closeDay }), cursor: pageParam },
+        signal,
+      ),
+    getNextPageParam: nextCursorOf,
   });
 }
 
@@ -219,8 +217,8 @@ export function totalsRefusedBecause(
 }
 
 // useStageTotals reads the board's per-column totals from the deals-by-stage
-// report: a full aggregate over every matching deal, not the capped page
-// useDeals fetches. The server converts each deal before grouping by stage.
+// report: a full aggregate over every matching deal, not the pages the columns
+// have read. The server converts each deal before grouping by stage.
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
 export function useStageTotals(f: DealFilters, enabled = true) {

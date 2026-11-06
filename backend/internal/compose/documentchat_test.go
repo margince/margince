@@ -19,7 +19,8 @@ func chatReply() string {
 	return reply(
 		statedField(chatFieldText, chatScreenshotText, "Lena Hoffmann: Are we still on for Thursday?"),
 		statedField(chatFieldName, "Lena Hoffmann", "Lena Hoffmann"),
-		notStated(chatFieldPhone))
+		notStated(chatFieldPhone),
+	)
 }
 
 func pngAttachment() crmcontracts.Attachment {
@@ -33,8 +34,10 @@ func chatSource(t *testing.T) documentSource {
 }
 
 func TestAChatScreenshotIsReadForItsMessagesAndItsHeader(t *testing.T) {
-	store := &fakeReadStore{meta: pngAttachment(), body: string(cardPNG(t)),
-		question: activities.ExtractionQuestionChatCapture}
+	store := &fakeReadStore{
+		meta: pngAttachment(), body: string(cardPNG(t)),
+		question: activities.ExtractionQuestionChatCapture,
+	}
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(chatReply()), carriage: carriesImagesOnly}
 
 	if err := runReading(t, store, brain); err != nil {
@@ -62,8 +65,10 @@ func TestAChatScreenshotIsReadForItsMessagesAndItsHeader(t *testing.T) {
 }
 
 func TestAChatScreenshotShowingNoChatSaysWhyNothingIsOffered(t *testing.T) {
-	store := &fakeReadStore{meta: pngAttachment(), body: string(cardPNG(t)),
-		question: activities.ExtractionQuestionChatCapture}
+	store := &fakeReadStore{
+		meta: pngAttachment(), body: string(cardPNG(t)),
+		question: activities.ExtractionQuestionChatCapture,
+	}
 	empty := reply(notStated(chatFieldText), notStated(chatFieldName), notStated(chatFieldPhone))
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(empty), carriage: carriesImagesOnly}
 
@@ -114,5 +119,22 @@ func TestAChatQuoteBelowTheFloorIsOmittedNotOffered(t *testing.T) {
 	}
 	if !fields[0].Omitted || fields[0].OmittedReason != omitReasonNotConfident {
 		t.Fatalf("an unsure chat text was offered: %+v", fields[0])
+	}
+}
+
+// The chat instruction asks for characters, so a line of Vietnamese or Japanese
+// is held to the same bound as a line of English.
+func TestAQuoteAndLocationAreBoundedInCharactersNotBytes(t *testing.T) {
+	field := documentField{
+		Field: chatFieldName, Stated: documentStated, Value: "Lena",
+		Quote: strings.Repeat("語", maxDocumentQuote), Where: strings.Repeat("語", maxDocumentWhere), Confidence: 0.9,
+	}
+	question := chatCaptureQuestion()
+	if msg := validateDocumentField(question, field, documentSource{}); msg != "" {
+		t.Fatalf("a quote at the bound was refused: %s", msg)
+	}
+	field.Quote += "語"
+	if msg := validateDocumentField(question, field, documentSource{}); !strings.Contains(msg, "at most") {
+		t.Fatalf("a quote past the bound answered %q", msg)
 	}
 }

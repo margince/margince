@@ -23,11 +23,7 @@ import { useListed } from "../worklist/worklist.row.captions";
 import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
 
 import "./brief.feed.css";
-
-/** One row's identity across renders, the way the queue page spells it. */
-export function identity(item: WorklistItem): string {
-  return `${item.source}-${item.id}`;
-}
+import { identity } from "./brief.focuslink";
 
 export function Triage({
   rows,

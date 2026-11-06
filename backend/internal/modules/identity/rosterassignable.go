@@ -11,17 +11,21 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// markAssignable answers, per row, the owner-change check the write would run
-// for this caller, so a picker offers the owners the write accepts.
+// markAssignable answers both owner checks: a record's owner needs the seat
+// alone, and an automation's owner must also lie inside the caller's scope.
 func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		eligible, err := auth.EligibleAssignees(ctx, tx, rowIDs(rows))
+		seated, err := auth.EligibleAssignees(ctx, tx, rowIDs(rows))
+		if err != nil {
+			return err
+		}
+		inScope, err := auth.EligibleRunAsOwners(ctx, tx, rowIDs(rows))
 		if err != nil {
 			return err
 		}
 		for i := range rows {
-			assignable := eligible[rows[i].ID]
-			rows[i].Assignable = &assignable
+			runAs, canOwn := inScope[rows[i].ID], seated[rows[i].ID]
+			rows[i].Assignable, rows[i].CanOwnRecords = &runAs, &canOwn
 		}
 		return nil
 	})

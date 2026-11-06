@@ -358,7 +358,7 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 		}
 
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "offer", newID.UUID, nil, map[string]any{
-			"offer_number": current.OfferNumber, "from_revision": current.Revision, "revision": nextRevision,
+			offerNumberColumn: current.OfferNumber, "from_revision": current.Revision, "revision": nextRevision,
 		}, retax.evidence())
 		if err != nil {
 			return fmt.Errorf("audit offer regenerate: %w", err)

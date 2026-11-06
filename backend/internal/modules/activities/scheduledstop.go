@@ -111,7 +111,7 @@ func stopCovers(purposeKey, marketing, legacy string) bool {
 //
 // Only an authenticated inbound mail counts, so a forged sender cannot pause a
 // message. Mail a sending system sent (an auto-reply, a bulk mailing) is not a
-// person writing. Its time is when it reached us: the provider's arrival
+// contact writing. Its time is when it reached us: the provider's arrival
 // time, or the capture time, never the Date header the sender wrote. A
 // scheduled reply listens on its own thread; a new message has no thread yet,
 // so any new mail from a recipient counts.

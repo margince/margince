@@ -321,6 +321,10 @@ func ownScope(p principal.Principal) ResolvedScope {
 	return ResolvedScope{Kind: ScopeKindOwner, ID: &me}
 }
 
+// measuredPopulation names, to a recorder, the records a measurement covers
+// when the caller's lens refuses them.
+const measuredPopulation = "measured_population"
+
 // resolveTeamScope accepts any team for totals; labelScope refuses an archived
 // or unknown one as absent.
 func resolveTeamScope(id ids.UUID) ResolvedScope {
@@ -343,7 +347,7 @@ func ResolveAssertionScope(
 		return ResolvedScope{}, errors.New("compose: no actor bound to context")
 	}
 	if err := assertionLensRefusal(p, requested, resolved); err != nil {
-		return ResolvedScope{}, err
+		return ResolvedScope{}, auth.RefuseRow(ctx, measuredPopulation, err)
 	}
 	return resolved, nil
 }
@@ -385,12 +389,12 @@ func resolveOwnerScope(
 			return ResolvedScope{}, err
 		}
 		if !shares {
-			return ResolvedScope{}, fmt.Errorf(
-				"that contact is not in one of your teams: %w", apperrors.ErrNotFound)
+			return ResolvedScope{}, auth.RefuseRow(ctx, measuredPopulation, fmt.Errorf(
+				"that contact is not in one of your teams: %w", apperrors.ErrNotFound))
 		}
 	default:
-		return ResolvedScope{}, fmt.Errorf(
-			"only your own records are within what you may measure: %w", apperrors.ErrNotFound)
+		return ResolvedScope{}, auth.RefuseRow(ctx, measuredPopulation, fmt.Errorf(
+			"only your own records are within what you may measure: %w", apperrors.ErrNotFound))
 	}
 	if err := requireMeasurableSeat(ctx, tx, id); err != nil {
 		return ResolvedScope{}, err

@@ -18,6 +18,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -26,30 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// multipartAttachment builds a multipart/form-data upload body.
-func multipartAttachment(t *testing.T, entityType, entityID, filename string, data []byte) (*bytes.Buffer, string) {
-	t.Helper()
-	var buf bytes.Buffer
-	mw := multipart.NewWriter(&buf)
-	if err := mw.WriteField("entity_type", entityType); err != nil {
-		t.Fatal(err)
-	}
-	if err := mw.WriteField("entity_id", entityID); err != nil {
-		t.Fatal(err)
-	}
-	fw, err := mw.CreateFormFile("file", filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := fw.Write(data); err != nil {
-		t.Fatal(err)
-	}
-	if err := mw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return &buf, mw.FormDataContentType()
-}
 
 // TestAttachmentHandlersHTTPRoundTrip drives the /attachments handlers over
 // the real HTTP surface (multipart parse, streamed download, status codes),
@@ -61,7 +38,7 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 	contact := e.SeedContact(t, "HTTP Attach", &e.Rep1)
 
 	// Upload → 201 + Location + the stored metadata.
-	body, ctype := multipartAttachment(t, "contact", contact.String(), "report.pdf", []byte("PDF-BYTES"))
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "report.pdf", []byte("PDF-BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -78,7 +55,7 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 	}
 
 	// Upload with a bad entity_type → 422 (not a 500).
-	badBody, badType := multipartAttachment(t, "widget", contact.String(), "x.txt", []byte("y"))
+	badBody, badType := apptest.MultipartAttachment(t, "widget", contact.String(), "x.txt", []byte("y"))
 	badReq := httptest.NewRequest(http.MethodPost, "/v1/attachments", badBody).WithContext(ctx)
 	badReq.Header.Set("Content-Type", badType)
 	badRec := httptest.NewRecorder()
@@ -199,7 +176,7 @@ func TestAttachmentHandlersAnswer501WithoutAStore(t *testing.T) {
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "No Store", &e.Rep1)
 
-	body, ctype := multipartAttachment(t, "contact", contact.String(), "x.txt", []byte("y"))
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "x.txt", []byte("y"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -467,7 +444,7 @@ func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Empty Upload", &e.Rep1)
 
-	body, ctype := multipartAttachment(t, "contact", contact.String(), "scan.pdf", []byte{})
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "scan.pdf", []byte{})
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -484,12 +461,40 @@ func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
 
 	// One byte is enough to be a file, so the rule is about content and not
 	// about a threshold somebody has to guess.
-	okBody, okType := multipartAttachment(t, "contact", contact.String(), "scan.pdf", []byte{0x25})
+	okBody, okType := apptest.MultipartAttachment(t, "contact", contact.String(), "scan.pdf", []byte{0x25})
 	okReq := httptest.NewRequest(http.MethodPost, "/v1/attachments", okBody).WithContext(ctx)
 	okReq.Header.Set("Content-Type", okType)
 	okRec := httptest.NewRecorder()
 	h.UploadAttachment(okRec, okReq)
 	if okRec.Code != http.StatusCreated {
 		t.Errorf("a one-byte file was refused too: status %d, body %s", okRec.Code, okRec.Body.String())
+	}
+}
+
+// A seat that may read a record and not change it is told so when it tries to
+// archive or relabel a file on it. One that may not see the record learns
+// nothing, as before.
+func TestAReaderIsRefusedAChangeToAFileItCanSee(t *testing.T) {
+	e := Setup(t)
+	store, _ := attachmentStore(e)
+	contact := e.SeedContact(t, "Readable Contact", &e.Rep1)
+	uploaded, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
+		EntityType: "contact", EntityID: contact, Filename: "deck.pdf", Content: bytes.NewReader([]byte("deck")),
+	})
+	if err != nil {
+		t.Fatalf("seeding the attachment through the real writer: %v", err)
+	}
+	reader := e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{"contact": {Read: true}}, RowScope: principal.RowScopeAll,
+	})
+	if err := store.ArchiveAttachment(reader, ids.UUID(uploaded.Id)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader archiving a file it sees: err = %v, want ErrPermissionDenied", err)
+	}
+	if _, err := store.UpdateAttachmentMetadata(reader, ids.UUID(uploaded.Id), activities.DocumentMetadata{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader relabelling a file it sees: err = %v, want ErrPermissionDenied", err)
+	}
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
+	if err := store.ArchiveAttachment(reader, ids.UUID(uploaded.Id)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("a reader archiving a file it cannot see: err = %v, want ErrNotFound", err)
 	}
 }
