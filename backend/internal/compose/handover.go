@@ -153,7 +153,7 @@ func handoverTally(counts *crmcontracts.HandoverCounts) map[string]*int {
 	return map[string]*int{
 		tableLead: &counts.Lead, tableContact: &counts.Contact, tableCompany: &counts.Company,
 		tableDeal: &counts.Deal, tableProject: &counts.Project,
-		"list": &counts.List,
+		string(recordTypeList): &counts.List,
 	}
 }
 

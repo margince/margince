@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39428,
+    "tokens": 39523,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 821
+    "mean_tool_tokens": 823
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4319,
-      "listing_tokens": 2134,
-      "step_schema_tokens": 1592,
+      "tokens": 4340,
+      "listing_tokens": 2131,
+      "step_schema_tokens": 1617,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18891,
+      "headroom_tokens": 18870,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6422,
-      "listing_tokens": 3373,
-      "step_schema_tokens": 2457,
+      "tokens": 6444,
+      "listing_tokens": 3370,
+      "step_schema_tokens": 2482,
       "percent_of_ceiling": 19,
-      "headroom_tokens": 16788,
+      "headroom_tokens": 16766,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -96,12 +96,12 @@
       "tokens": 2167
     },
     {
-      "name": "change_activities",
-      "tokens": 1898
+      "name": "find_records",
+      "tokens": 1914
     },
     {
-      "name": "find_records",
-      "tokens": 1874
+      "name": "change_activities",
+      "tokens": 1898
     },
     {
       "name": "change_state",
@@ -132,12 +132,12 @@
       "tokens": 984
     },
     {
-      "name": "read_analytics",
-      "tokens": 927
+      "name": "read_forecast",
+      "tokens": 978
     },
     {
-      "name": "read_forecast",
-      "tokens": 924
+      "name": "read_analytics",
+      "tokens": 927
     },
     {
       "name": "change_attention",

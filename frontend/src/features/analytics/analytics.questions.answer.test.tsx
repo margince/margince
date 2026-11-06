@@ -419,6 +419,6 @@ it("keeps the answer’s conversion frame when the page currency differs", async
     },
   );
   expect(await screen.findByText(/USD.*12/)).toBeTruthy();
-  expect(screen.getByText("1,000 USD")).toBeTruthy();
+  expect(screen.getByText("US$1,000")).toBeTruthy();
   expect(screen.getByText(/7 records are left out/)).toBeTruthy();
 });

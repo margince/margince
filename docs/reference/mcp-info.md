@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 222.5 KB |
+| Tool catalog | 227.2 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 58283 |
+| Approx. wire tokens | 59479 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 46.3 KB | 20% | **No**: a result's shape, never listed to a model |
+| Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.0 KB | 23% | Yes, every step |
-| Input schemas | 111.4 KB | 50% | Yes, every step |
+| Input schemas | 111.7 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **164.4 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **164.8 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1874 |
+| [`find_records`](#find_records) | Find records | yes |  | 1914 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
 | [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2167 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 924 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
@@ -4683,6 +4683,10 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
       "minItems": 1,
       "type": "array"
     },
+    "compact": {
+      "description": "list, query only: Activity identifying facts and body_length without long prose. Default false returns full records.",
+      "type": "boolean"
+    },
     "cursor": {
       "description": "list, search only: Keyset cursor from a previous page's next_cursor",
       "type": "string"
@@ -5168,6 +5172,28 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
                 },
                 "type": "array"
               },
+              "conflicts": {
+                "items": {
+                  "properties": {
+                    "blocks_approval": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "blocks_approval",
+                    "kind",
+                    "summary"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "created_at": {
                 "format": "date-time",
                 "type": "string"
@@ -5269,6 +5295,227 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
               "expires_at": {
                 "format": "date-time",
                 "type": "string"
+              },
+              "files": {
+                "items": {
+                  "properties": {
+                    "byte_size": {
+                      "type": "integer"
+                    },
+                    "content_type": {
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "byte_size",
+                    "content_type",
+                    "filename",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "import_rows": {
+                "items": {
+                  "properties": {
+                    "changes": {
+                      "items": {
+                        "properties": {
+                          "after": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          },
+                          "before": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          },
+                          "field": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "after",
+                          "before",
+                          "field",
+                          "label"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "details": {
+                      "items": {
+                        "properties": {
+                          "field": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "label",
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "effects": {
+                      "items": {
+                        "properties": {
+                          "effect": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "effect",
+                          "label"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "line": {
+                      "type": "integer"
+                    },
+                    "object": {
+                      "type": "string"
+                    },
+                    "object_label": {
+                      "type": "string"
+                    },
+                    "outcome": {
+                      "type": "string"
+                    },
+                    "outcome_label": {
+                      "type": "string"
+                    },
+                    "source_key": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "changes",
+                    "details",
+                    "effects",
+                    "line",
+                    "object",
+                    "object_label",
+                    "outcome",
+                    "outcome_label",
+                    "source_key"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
               },
               "kind": {
                 "type": "string"
@@ -6546,6 +6793,28 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           },
           "type": "array"
         },
+        "conflicts": {
+          "items": {
+            "properties": {
+              "blocks_approval": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "blocks_approval",
+              "kind",
+              "summary"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "created_at": {
           "format": "date-time",
           "type": "string"
@@ -6647,6 +6916,227 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
         "expires_at": {
           "format": "date-time",
           "type": "string"
+        },
+        "files": {
+          "items": {
+            "properties": {
+              "byte_size": {
+                "type": "integer"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "byte_size",
+              "content_type",
+              "filename",
+              "id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "import_rows": {
+          "items": {
+            "properties": {
+              "changes": {
+                "items": {
+                  "properties": {
+                    "after": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "before": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "field": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "after",
+                    "before",
+                    "field",
+                    "label"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "details": {
+                "items": {
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "label",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "effects": {
+                "items": {
+                  "properties": {
+                    "effect": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "effect",
+                    "label"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "line": {
+                "type": "integer"
+              },
+              "object": {
+                "type": "string"
+              },
+              "object_label": {
+                "type": "string"
+              },
+              "outcome": {
+                "type": "string"
+              },
+              "outcome_label": {
+                "type": "string"
+              },
+              "source_key": {
+                "type": "string"
+              },
+              "target": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "changes",
+              "details",
+              "effects",
+              "line",
+              "object",
+              "object_label",
+              "outcome",
+              "outcome_label",
+              "source_key"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "kind": {
           "type": "string"
@@ -8734,9 +9224,17 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
       "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
       "type": "boolean"
     },
+    "country": {
+      "description": "input_exceptions only",
+      "type": "string"
+    },
     "from": {
       "description": "movement only: The opening snapshot.",
       "format": "uuid",
+      "type": "string"
+    },
+    "industry": {
+      "description": "input_exceptions only",
       "type": "string"
     },
     "period": {
@@ -8746,6 +9244,11 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         "month",
         "week"
       ],
+      "type": "string"
+    },
+    "product_id": {
+      "description": "input_exceptions only",
+      "format": "uuid",
       "type": "string"
     },
     "reading": {

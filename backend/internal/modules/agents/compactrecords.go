@@ -22,6 +22,7 @@ func compactActivityRecord(record *wireRecord) error {
 		return fmt.Errorf("read activity fields for compact output: %w", err)
 	}
 	compact := make(map[string]json.RawMessage)
+	//nolint:goconst // The wire projection repeats field names from the per-language label maps.
 	for _, name := range []string{kindArg, "subject", "direction", "participants", "occurred_at", "occurred_at_precision", "occurred_precision", "source_system", "source", "owner_id", "content_state", "withheld_reason"} {
 		if value, present := fields[name]; present {
 			compact[name] = value

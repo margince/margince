@@ -1,4 +1,3 @@
-import type { Dimensions } from "./reporting.overview";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -24,6 +23,7 @@ import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
 import { useInputChecks } from "./analytics.forecast.review";
 import { checkLabel } from "./inputcheck.facts";
+import type { Dimensions } from "./reporting.dimensions";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type CheckList = NonNullable<ReturnType<typeof useInputChecks>["data"]>;

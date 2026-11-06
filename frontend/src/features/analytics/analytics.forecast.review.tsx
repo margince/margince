@@ -16,7 +16,7 @@ import {
   outOfDate,
   verdictStands,
 } from "./analytics.forecast.freshness";
-import type { Dimensions } from "./reporting.overview";
+import type { Dimensions } from "./reporting.dimensions";
 
 type Assurance = components["schemas"]["ForecastAssurance"];
 
