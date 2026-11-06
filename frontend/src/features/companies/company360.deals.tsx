@@ -45,7 +45,6 @@ export function DealsCard({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const deals = view?.deals;
-  const _won = deals?.won_lifetime;
   const state = sectionState(
     view,
     "deals",
