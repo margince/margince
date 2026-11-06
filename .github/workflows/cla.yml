@@ -84,9 +84,9 @@ jobs:
         run: |
           set -euo pipefail
           unlinked=$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/commits" \
-            --jq '.[] | select(.author == null and .committer == null and .commit.author.name == env.AUTHOR_NAME) | .sha')
+            --jq '.[] | select(.author.login == null and .commit.author.name == env.AUTHOR_NAME) | .sha')
           unlisted=$(grep -vxF -f <(tr ' ' '\n' <<<"$STAFF_COMMITS") <<<"$unlinked" || true)
-          if [ -z "$unlisted" ]; then
+          if [ -n "$unlinked" ] && [ -z "$unlisted" ]; then
             echo "names=,$AUTHOR_NAME" >> "$GITHUB_OUTPUT"
           fi
       # The link a contributor reads is the commit that last changed CLA.md, never
