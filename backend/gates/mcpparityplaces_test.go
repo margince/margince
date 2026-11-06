@@ -145,6 +145,7 @@ var parityTagAreas = map[string]string{
 	"Import":        "imports",
 	"Knowledge":     "knowledge",
 	"Leads":         "leads",
+	"Links":         "search",
 	"Lists":         "lists",
 	"Notices":       "worklist",
 	"Offers":        "offers",
