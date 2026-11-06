@@ -22897,10 +22897,13 @@ export interface paths {
          * @description Always the CALLER's own picture, never anybody else's: there is no id to pass.
          *     Colleagues see it beside your name wherever the app draws you.
          *
-         *     Multipart upload with one `file` part. PNG, JPEG and WebP are accepted; anything
-         *     else, SVG and GIF included, is refused as 415. The image is cropped to a centred
-         *     square and re-encoded as this server's own PNG of at most 512px, so what
-         *     `avatar_url` serves is never the uploaded bytes.
+         *     Multipart upload with one `file` part of at most 5,000,000 bytes. The request may
+         *     be 16 KiB larger, for the form's own boundary lines and part headers; a larger
+         *     request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
+         *     GIF included, is refused as 415. The image is cropped to a centred square and
+         *     re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
+         *     is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
+         *     many pictures at once; the same file may be sent again.
          *
          *     Which picture a seat shows: an uploaded one, else the picture of the Google
          *     account the member signs in with, else no picture and the client draws initials.
@@ -44921,7 +44924,7 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            /** @description Where the client fetches this seat's profile picture (`getUserAvatar`), absent when the seat has none and the client draws initials. The URL changes whenever the picture does. */
+            /** @description Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does. */
             avatar_url?: string;
             /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
@@ -77272,6 +77275,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     deleteAnchorCompanyLogo: {
@@ -77354,6 +77366,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -77607,6 +77628,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -85940,6 +85970,10 @@ export interface operations {
             /** @description The picture's bytes. */
             200: {
                 headers: {
+                    /** @description The revision served, the same token `avatar_url` carries, quoted. */
+                    ETag?: string;
+                    /** @description `private, max-age=86400, immutable` when `v` names this revision, else `private, no-cache`. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -85949,6 +85983,10 @@ export interface operations {
             /** @description The client already holds this revision. */
             304: {
                 headers: {
+                    /** @description The revision the client holds, quoted. */
+                    ETag?: string;
+                    /** @description The freshness a 200 for the same request would carry. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -92931,6 +92969,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no picture can be stored or served. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -30,8 +30,8 @@ import (
 const calendarAPIBase = "https://www.googleapis.com/calendar/v3"
 
 // Default Google OAuth endpoints; overridable via OAuthConfig for tests. The
-// calendar connector authorizes against the same Google identity platform as
-// Gmail, but as its OWN authorization (calendar scope only).
+// calendar connector authorizes against the same Google identity platform as Gmail.
+// Its grant is its own: the calendar scopes and the profile scope, and no mail scope.
 const (
 	googleAuthURL  = "https://accounts.google.com/o/oauth2/v2/auth"
 	googleTokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101 false positive: Google's public OAuth token *endpoint URL*, not a credential

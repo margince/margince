@@ -62,9 +62,9 @@ func uploadCeilings(limits UploadLimits) map[string]int64 {
 		"/v1/company/logo/icon": companyLogoUploadBytes, // uploadCompanyLogoIcon
 		// A legal entity's mark, through the same decode as the company's.
 		"/v1/legal-entities/{id}/logo": companyLogoUploadBytes, // uploadLegalEntityLogo
-		// A seat's own picture goes through the same decode as a mark, under the same
-		// cap on what that decode may be handed.
-		"/v1/me/avatar": companyLogoUploadBytes, // uploadMyAvatar
+		// A seat's own picture goes through the same decode as a mark, under the same cap
+		// on the file. The form's framing is added, so a file at that cap fits.
+		"/v1/me/avatar": avatarUploadBytes, // uploadMyAvatar
 		// A website form post. Its contract takes multipart because a browser's
 		// FormData sends it. File parts are skipped, so the bound is the form's.
 		"/v1/public/forms/{form_key}": webforms.MaxBody, // submitWebForm

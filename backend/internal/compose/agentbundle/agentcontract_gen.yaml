@@ -12985,6 +12985,11 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
     delete:
       tags: [Companies]
       operationId: deleteAnchorCompanyLogo
@@ -13059,6 +13064,11 @@ paths:
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -13268,6 +13278,11 @@ paths:
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -43672,7 +43687,7 @@ components:
         avatar_url:
           type: string
           description: >-
-            Where the client fetches this seat's profile picture (`getUserAvatar`), absent when the seat has none and the client draws initials. The URL changes whenever the picture does.
+            Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does.
         greeting_name:
           type: [string, 'null']
           maxLength: 100

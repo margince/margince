@@ -8,9 +8,16 @@ import (
 	"fmt"
 )
 
-// maxJPEGScans bounds decode work, because image/jpeg walks every block once per scan.
-// Encoders write about 10 scans for a progressive file and 1 for a baseline one.
-const maxJPEGScans = 64
+// maxJPEGBlockScans bounds decode work, because image/jpeg walks every 8x8 block once per
+// scan. It admits 64 scans of the largest canvas Decode takes, so a small picture may carry
+// far more scans than the about 10 a progressive encoder writes.
+const maxJPEGBlockScans = maxSourcePixels
+
+// jpegScanCap is how many scans a width x height JPEG may carry within maxJPEGBlockScans.
+func jpegScanCap(width, height int) int {
+	blocks := ((width + 7) / 8) * ((height + 7) / 8)
+	return max(1, maxJPEGBlockScans/blocks)
+}
 
 // Marker codes from ITU-T T.81 Table B.1.
 const (
@@ -24,11 +31,11 @@ const (
 // jpegMagic is the prefix image.Decode routes to the JPEG decoder.
 var jpegMagic = []byte{0xff, jpegSOI}
 
-// checkJPEGScans refuses a JPEG with more than maxJPEGScans scans, or one whose
-// marker stream breaks off before its end-of-image marker. Between segments it
-// skips bytes the way image/jpeg resynchronizes, so it counts every scan the
-// decoder would run.
-func checkJPEGScans(src []byte) error {
+// checkJPEGScans refuses a JPEG with more scans than jpegScanCap allows its canvas, or one
+// whose marker stream breaks off before its end-of-image marker. Between segments it skips
+// bytes the way image/jpeg resynchronizes, so it counts every scan the decoder would run.
+func checkJPEGScans(src []byte, width, height int) error {
+	scanCap := jpegScanCap(width, height)
 	scans := 0
 	for pos := len(jpegMagic); ; {
 		marker, at, found := nextJPEGMarker(src, pos)
@@ -47,8 +54,8 @@ func checkJPEGScans(src []byte) error {
 		}
 		if marker == jpegSOS {
 			scans++
-			if scans > maxJPEGScans {
-				return fmt.Errorf("%w: the JPEG carries more than %d scans", ErrUnsupported, maxJPEGScans)
+			if scans > scanCap {
+				return fmt.Errorf("%w: the JPEG carries more than the %d scans its canvas allows", ErrUnsupported, scanCap)
 			}
 		}
 		pos = at + length

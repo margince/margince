@@ -17722,6 +17722,11 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Companies]
       operationId: deleteAnchorCompanyLogo
@@ -17808,6 +17813,11 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -18026,6 +18036,11 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -26892,10 +26907,25 @@ paths:
       responses:
         '200':
           description: The picture's bytes.
+          headers:
+            ETag:
+              description: The revision served, the same token `avatar_url` carries, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: '`private, max-age=86400, immutable` when `v` names this revision, else `private, no-cache`.'
+              schema: { type: string }
           content:
             image/png:
               schema: { type: string, format: binary }
-        '304': { description: The client already holds this revision. }
+        '304':
+          description: The client already holds this revision.
+          headers:
+            ETag:
+              description: The revision the client holds, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: The freshness a 200 for the same request would carry.
+              schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -33525,10 +33555,13 @@ paths:
         Always the CALLER's own picture, never anybody else's: there is no id to pass.
         Colleagues see it beside your name wherever the app draws you.
 
-        Multipart upload with one `file` part. PNG, JPEG and WebP are accepted; anything
-        else, SVG and GIF included, is refused as 415. The image is cropped to a centred
-        square and re-encoded as this server's own PNG of at most 512px, so what
-        `avatar_url` serves is never the uploaded bytes.
+        Multipart upload with one `file` part of at most 5,000,000 bytes. The request may
+        be 16 KiB larger, for the form's own boundary lines and part headers; a larger
+        request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
+        GIF included, is refused as 415. The image is cropped to a centred square and
+        re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
+        is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
+        many pictures at once; the same file may be sent again.
 
         Which picture a seat shows: an uploaded one, else the picture of the Google
         account the member signs in with, else no picture and the client draws initials.
@@ -33560,6 +33593,11 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no picture can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -61125,7 +61163,7 @@ components:
         avatar_url:
           type: string
           description: >
-            Where the client fetches this seat's profile picture (`getUserAvatar`), absent when
+            Where the client fetches this seat's profile picture, absent when
             the seat has none and the client draws initials. The URL changes whenever the
             picture does.
         greeting_name:

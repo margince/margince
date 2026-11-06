@@ -36,8 +36,12 @@ func newFakeUserinfo(t *testing.T, status int) *fakeUserinfo {
 	f.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.reads.Add(1)
 		f.bearer.Store(r.Header.Get("Authorization"))
-		if r.URL.Path != "/userinfo" || status != http.StatusOK {
+		if r.URL.Path != "/userinfo" {
 			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if status != http.StatusOK {
+			w.WriteHeader(status)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

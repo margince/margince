@@ -205,8 +205,13 @@ func TestTheSignInFillStoresTheGooglePictureUntilTheMemberDeletesIt(t *testing.T
 		t.Error("the same Google picture moved the seat to another key")
 	}
 
-	if _, _, err := pictures.users.RemoveMyAvatar(f.me); err != nil {
-		t.Fatalf("deleting: %v", err)
+	removal := httptest.NewRecorder()
+	f.h.DeleteMyAvatar(removal, httptest.NewRequest(http.MethodDelete, "/v1/me/avatar", nil).WithContext(f.me))
+	if removal.Code != http.StatusOK {
+		t.Fatalf("deleting = %d: %s", removal.Code, removal.Body)
+	}
+	if f.objectExists(t, *filled) {
+		t.Error("the deleted Google picture's bytes are still stored")
 	}
 	f.site.assets[googlePicture] = encodedPicture(t, pngOf, halvesImage(30, 30))
 	asked := len(f.site.asked)

@@ -158,7 +158,7 @@ func (h companyHandlers) writeCompany(w http.ResponseWriter, r *http.Request) {
 // the file part, decoded as an image and re-encoded as this server's own PNG.
 // It writes the refusal itself and reports whether the caller may continue.
 func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte, filename string, ok bool) {
-	source, filename, ok := readImageUpload(w, r)
+	source, filename, ok := readImageUpload(w, r, companyLogoUploadBytes)
 	if !ok {
 		return nil, "", false
 	}
@@ -178,13 +178,13 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 // readImageUpload reads the request's one `file` part, for every route that
 // takes a single image. It writes the refusal itself and reports whether the
 // caller may continue.
-func readImageUpload(w http.ResponseWriter, r *http.Request) (source []byte, filename string, ok bool) {
+func readImageUpload(w http.ResponseWriter, r *http.Request, limit int64) (source []byte, filename string, ok bool) {
 	// upload:route /v1/company/logo, /v1/company/logo/icon, /v1/legal-entities/{id}/logo, /v1/me/avatar
 	// The ceiling this parse runs under is granted to every path in compose.uploadCeilings,
 	// and TestEveryMultipartParseNamesItsRoute holds them together.
 	//nolint:gosec // G120 wants a bound here, and the bound is the route ceiling the chassis already applied: this argument is only the in-memory/spill threshold.
 	if err := r.ParseMultipartForm(companyLogoSpillBytes); err != nil {
-		httperr.WriteMultipartRefusal(w, r, err, companyLogoUploadBytes)
+		httperr.WriteMultipartRefusal(w, r, err, limit)
 		return nil, "", false
 	}
 	// An upload past the in-memory threshold is spilled to a temporary file that
@@ -214,6 +214,13 @@ func readImageUpload(w http.ResponseWriter, r *http.Request) (source []byte, fil
 	return source, header.Filename, true
 }
 
+// errPicturesBusy answers an upload whose decode found no free slot in time. The picture
+// itself was not judged, so the reader is told to send the same file again.
+var errPicturesBusy = &httperr.DetailedError{
+	Status: http.StatusServiceUnavailable, Code: "pictures_busy", RetryAfterSeconds: 10,
+	Detail: "the server is reading other pictures right now; send the same file again in a few seconds",
+}
+
 // writeMarkDecodeRefusal names what a mark the decoder refused would need.
 func writeMarkDecodeRefusal(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
@@ -227,6 +234,8 @@ func writeMarkDecodeRefusal(w http.ResponseWriter, r *http.Request, err error) {
 			Status: http.StatusUnprocessableEntity, Code: "svg_not_drawable",
 			Detail: "the SVG has parts this server cannot draw, such as embedded images; export it as a PNG",
 		})
+	case errors.Is(err, imagenorm.ErrDecodeBusy):
+		httperr.Write(w, r, errPicturesBusy)
 	case errors.Is(err, imagenorm.ErrUnsupported):
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnsupportedMediaType, Code: "unsupported_media_type",

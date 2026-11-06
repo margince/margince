@@ -37,15 +37,18 @@ const avatarKind = "avatar"
 // AvatarMediaTypes maps each type an upload may be to its decoder format. Not SVG: markup is
 // a document. Not GIF: one frame of an animation is not the picture somebody chose.
 // Mirrored by frontend/src/features/settings/picturelimits.ts (frontendpicturelimits_test.go).
-var AvatarMediaTypes = map[string]string{"image/png": "png", "image/jpeg": "jpeg", "image/webp": "webp"}
+var AvatarMediaTypes = map[string]string{imagenorm.ContentType: "png", "image/jpeg": "jpeg", "image/webp": "webp"}
+
+// AvatarFileMaxBytes is the largest picture file an upload may carry, the same as a mark's.
+// The client offers no larger file; the same gate holds its copy.
+const AvatarFileMaxBytes = imagenorm.MaxMarkBytes
 
 // avatarMultipartFraming is what a browser's form adds around the file: boundary lines and
 // part headers. Any filename a browser sends keeps it far under this.
 const avatarMultipartFraming = 16 << 10
 
-// AvatarFileMaxBytes is the largest picture file whose upload fits the route's body ceiling.
-// The client offers no larger file; the same gate holds its copy.
-const AvatarFileMaxBytes = companyLogoUploadBytes - avatarMultipartFraming
+// avatarUploadBytes is the route's body ceiling: a file at AvatarFileMaxBytes with its framing.
+const avatarUploadBytes = AvatarFileMaxBytes + avatarMultipartFraming
 
 // avatarFormats is AvatarMediaTypes keyed by what the decoder names.
 var avatarFormats = func() map[string]bool {
@@ -89,6 +92,9 @@ func normalizeAvatar(source []byte) ([]byte, error) {
 		return nil, errAvatarFormat
 	}
 	img, err := imagenorm.Decode(source)
+	if errors.Is(err, imagenorm.ErrDecodeBusy) {
+		return nil, errPicturesBusy
+	}
 	if err != nil {
 		return nil, errAvatarFormat
 	}
@@ -149,7 +155,7 @@ func (h avatarHandlers) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return
 	}
-	source, _, ok := readImageUpload(w, r)
+	source, _, ok := readImageUpload(w, r, AvatarFileMaxBytes)
 	if !ok {
 		return
 	}

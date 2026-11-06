@@ -64,10 +64,11 @@ func baselineJPEG(t *testing.T) []byte {
 
 func TestDecodeReadsJPEGsWithTheScanCountsEncodersWrite(t *testing.T) {
 	cases := map[string][]byte{
-		"baseline":                      baselineJPEG(t),
-		"progressive with ten scans":    progressiveJPEG(256, 10, nil),
-		"progressive at the scan cap":   progressiveJPEG(256, maxJPEGScans, nil),
-		"scan markers after fill bytes": progressiveJPEG(256, 10, []byte{0xff, 0xff}),
+		"baseline":                             baselineJPEG(t),
+		"progressive with ten scans":           progressiveJPEG(256, 10, nil),
+		"a small picture with a hundred scans": progressiveJPEG(256, 100, nil),
+		"the largest canvas at its scan cap":   progressiveJPEG(2896, jpegScanCap(2896, 2896), nil),
+		"scan markers after fill bytes":        progressiveJPEG(256, 10, []byte{0xff, 0xff}),
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -80,10 +81,11 @@ func TestDecodeReadsJPEGsWithTheScanCountsEncodersWrite(t *testing.T) {
 
 func TestDecodeRefusesAJPEGWithMoreScansThanAnyEncoderWrites(t *testing.T) {
 	cases := map[string][]byte{
-		"one scan over the cap":                progressiveJPEG(256, maxJPEGScans+1, nil),
-		"two thousand scans of a large canvas": progressiveJPEG(2048, 2000, nil),
-		"scans hidden behind fill bytes":       progressiveJPEG(2048, 2000, []byte{0xff, 0xff}),
-		"scans after stray bytes and FF00":     progressiveJPEG(2048, 2000, []byte{0x5a, 0xff, 0x00, 0x5a}),
+		"one scan over a small canvas's cap":     progressiveJPEG(256, jpegScanCap(256, 256)+1, nil),
+		"one scan over the largest canvas's cap": progressiveJPEG(2896, jpegScanCap(2896, 2896)+1, nil),
+		"two thousand scans of a large canvas":   progressiveJPEG(2048, 2000, nil),
+		"scans hidden behind fill bytes":         progressiveJPEG(2048, 2000, []byte{0xff, 0xff}),
+		"scans after stray bytes and FF00":       progressiveJPEG(2048, 2000, []byte{0x5a, 0xff, 0x00, 0x5a}),
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -138,12 +140,7 @@ func TestDecodeWaitsForASlotWhileEverySlotIsHeld(t *testing.T) {
 	}
 	src := baselineJPEG(t)
 	synctest.Test(t, func(t *testing.T) {
-		processSlots := decodeSlots
-		decodeSlots = make(chan struct{}, 2)
-		t.Cleanup(func() { decodeSlots = processSlots })
-		for range cap(decodeSlots) {
-			decodeSlots <- struct{}{}
-		}
+		holdEverySlot(t, 2, 3, 0)
 
 		const callers = 3
 		results := make(chan error, callers)
@@ -167,6 +164,51 @@ func TestDecodeWaitsForASlotWhileEverySlotIsHeld(t *testing.T) {
 		}
 		if held := len(decodeSlots); held != cap(decodeSlots)-1 {
 			t.Fatalf("%d slots held after the decodes finished, want only the test's %d", held, cap(decodeSlots)-1)
+		}
+	})
+}
+
+// holdEverySlot swaps in a small pool of held slots and a queue with queued places taken.
+func holdEverySlot(t *testing.T, slots, queue, queued int) {
+	t.Helper()
+	processSlots, processQueue := decodeSlots, decodeQueue
+	decodeSlots, decodeQueue = make(chan struct{}, slots), make(chan struct{}, queue)
+	t.Cleanup(func() { decodeSlots, decodeQueue = processSlots, processQueue })
+	for range slots {
+		decodeSlots <- struct{}{}
+	}
+	for range queued {
+		decodeQueue <- struct{}{}
+	}
+}
+
+func TestADecodeThatWaitsPastItsBoundIsRefusedBusy(t *testing.T) {
+	src := baselineJPEG(t)
+	synctest.Test(t, func(t *testing.T) {
+		holdEverySlot(t, 1, 1, 0)
+		start := time.Now()
+		if _, err := Decode(src); !errors.Is(err, ErrDecodeBusy) {
+			t.Fatalf("a decode that never got a slot = %v, want ErrDecodeBusy", err)
+		}
+		if waited := time.Since(start); waited != decodeSlotWait {
+			t.Fatalf("the decode waited %v, want exactly %v", waited, decodeSlotWait)
+		}
+		if queued := len(decodeQueue); queued != 0 {
+			t.Fatalf("a refused decode left %d places taken in the queue", queued)
+		}
+	})
+}
+
+func TestADecodeFindingTheQueueFullIsRefusedAtOnce(t *testing.T) {
+	src := baselineJPEG(t)
+	synctest.Test(t, func(t *testing.T) {
+		holdEverySlot(t, 1, 2, 2)
+		start := time.Now()
+		if _, err := Decode(src); !errors.Is(err, ErrDecodeBusy) || errors.Is(err, ErrUnsupported) {
+			t.Fatalf("a decode behind a full queue = %v, want ErrDecodeBusy and not a refusal of the bytes", err)
+		}
+		if waited := time.Since(start); waited != 0 {
+			t.Fatalf("a decode behind a full queue waited %v, want no wait", waited)
 		}
 	})
 }

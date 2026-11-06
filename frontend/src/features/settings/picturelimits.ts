@@ -12,5 +12,5 @@ export const PICTURE_TYPES: readonly string[] = [
   "image/webp",
 ];
 
-// The largest file whose upload, with the form's own framing, fits the route's body ceiling.
-export const PICTURE_MAX_BYTES = 4_983_616;
+// The largest picture file an upload may carry. The route adds the form's framing to it.
+export const PICTURE_MAX_BYTES = 5_000_000;

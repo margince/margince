@@ -33,6 +33,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"runtime"
+	"time"
 
 	xdraw "golang.org/x/image/draw"
 	// WebP is the one modern image format the stdlib carries no decoder for,
@@ -79,18 +80,50 @@ var ErrUnsupported = errors.New("imagenorm: unsupported or undecodable image")
 // take the cores that serve requests.
 var decodeSlots = make(chan struct{}, max(1, runtime.GOMAXPROCS(0)-1))
 
+// decodeQueue bounds the decodes waiting for a slot. Each holds its whole source, so an
+// unbounded queue is a burst of uploads held in memory.
+var decodeQueue = make(chan struct{}, 4*cap(decodeSlots))
+
+// decodeSlotWait bounds one wait for a slot, well inside a request's own deadline.
+const decodeSlotWait = 10 * time.Second
+
+// ErrDecodeBusy reports that no decode slot freed in time. It is a property of the load, not
+// of the input: the same bytes may decode on a retry.
+var ErrDecodeBusy = errors.New("imagenorm: every decode slot stayed busy")
+
 // Decode decodes an untrusted image. Beyond the stdlib's PNG/JPEG/GIF it
 // handles WebP, and it unwraps the ICO container by extracting the largest
 // PNG frame inside it. A legacy ICO carrying only bitmap frames is
 // ErrUnsupported: this package owns no decoder for their stride and
-// transparency-mask rules. A call waits for a free decode slot first.
+// transparency-mask rules. A call waits for a free decode slot first, and is
+// ErrDecodeBusy when the queue is full or no slot frees in decodeSlotWait.
 func Decode(src []byte) (image.Image, error) {
-	decodeSlots <- struct{}{}
-	defer func() { <-decodeSlots }()
-	return decode(src)
+	release, err := acquireDecodeSlot()
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+	return decodeWithinCaps(src)
 }
 
-func decode(src []byte) (image.Image, error) {
+func acquireDecodeSlot() (release func(), err error) {
+	select {
+	case decodeQueue <- struct{}{}:
+	default:
+		return nil, ErrDecodeBusy
+	}
+	defer func() { <-decodeQueue }()
+	wait := time.NewTimer(decodeSlotWait)
+	defer wait.Stop()
+	select {
+	case decodeSlots <- struct{}{}:
+		return func() { <-decodeSlots }, nil
+	case <-wait.C:
+		return nil, ErrDecodeBusy
+	}
+}
+
+func decodeWithinCaps(src []byte) (image.Image, error) {
 	if looksLikeSVG(src) {
 		// A vector mark has no pixels of its own, so it is drawn here rather
 		// than decoded — and never kept as the document it arrived as.
@@ -114,7 +147,7 @@ func decode(src []byte) (image.Image, error) {
 			ErrUnsupported, config.Width, config.Height, maxSourcePixels)
 	}
 	if bytes.HasPrefix(src, jpegMagic) {
-		if err := checkJPEGScans(src); err != nil {
+		if err := checkJPEGScans(src, config.Width, config.Height); err != nil {
 			return nil, err
 		}
 	}

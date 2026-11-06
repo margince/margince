@@ -18,6 +18,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -94,6 +95,12 @@ func TestAnUploadWinsOverTheGooglePicture(t *testing.T) {
 		t.Fatal("a seat nobody chose a picture for refused the Google picture")
 	}
 
+	if err := storedobjects.NewLedger(e.svc.db).Record(e.wsCtx(e.admin), storedobjects.KindAvatar, "ws/avatar/upload-1.png"); err != nil {
+		t.Fatalf("declaring the upload provisional, as the upload route does before its put: %v", err)
+	}
+	if !provisional(t, e, "ws/avatar/upload-1.png") {
+		t.Fatal("the seeded upload intent is not in the ledger, so the check below would prove nothing")
+	}
 	seat, dropped, err := e.svc.SetMyAvatar(e.wsCtx(e.admin), "ws/avatar/upload-1.png")
 	if err != nil {
 		t.Fatalf("uploading: %v", err)
@@ -263,10 +270,11 @@ func TestEveryReadThatNamesASeatCarriesItsPictureURL(t *testing.T) {
 	fillFromGoogle(t, e, rep.UserID, "ws/avatar/google-1.png")
 	want := "/v1/users/" + rep.UserID.String() + "/avatar?v=" + AvatarETag("ws/avatar/google-1.png")
 
-	_, session, err := e.svc.Login(principal.WithWorkspaceID(context.Background(), e.ws.UUID), "rep@acme.test", seatNamePassword, noDevice)
+	loggedIn, session, err := e.svc.Login(principal.WithWorkspaceID(context.Background(), e.ws.UUID), "rep@acme.test", seatNamePassword, noDevice)
 	if err != nil {
 		t.Fatalf("signing in: %v", err)
 	}
+	expectPicture(t, "/auth/login", NewHandlers(e.svc).meResponse(me, loggedIn).User.AvatarUrl, want)
 	signedIn, err := e.svc.Authenticate(principal.WithWorkspaceID(context.Background(), e.ws.UUID), session.Token)
 	if err != nil {
 		t.Fatalf("resolving the session: %v", err)
