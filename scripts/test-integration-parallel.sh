@@ -845,8 +845,9 @@ if [[ -n "$SHARD_OUT" ]]; then
   cp "$DISCOVERY" "$SHARD_OUT/discovery.txt"
   cp "$ASSIGNED" "$SHARD_OUT/assigned.txt"
   cp "$RAN" "$SHARD_OUT/ran.txt"
-  # "rel|seconds|tests" per package, so cost can be tracked across runs rather
-  # than re-derived by eye from a scrolled log.
+  # "rel|seconds|tests|slot" per process (a split package has one row per
+  # part), so cost can be tracked across runs rather than re-derived by eye
+  # from a scrolled log.
   cp "$TIMING" "$SHARD_OUT/timing.txt"
   cp "$TEST_TIMING" "$SHARD_OUT/test-timing.txt"
   printf 'shard=%s\ntotal=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" > "$SHARD_OUT/meta.txt"
