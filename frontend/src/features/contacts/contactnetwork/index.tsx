@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 
 import type { components } from "../../../api/schema";
 import { ErrorLine } from "../../../design-system/errorline";
+import { Panel, PanelBody } from "../../../design-system/panel";
 import { RelationshipMap } from "../../../design-system/relationshipmap";
 import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatNumber } from "../../../format/format";
@@ -166,6 +167,53 @@ export function ContactNetworkTab({
 
       <CaptureGapsNotice contactId={contactId} />
 
+      {/* Full width, under the readings: the picture behind the answer. The
+          drawing scrolls rather than shrinking, so it never sits in a column. */}
+      <Panel title={t("contact.intro.mapTitle", { name: read.targetName })}>
+        <PanelBody>
+          <RelationshipMap
+            model={model}
+            focusId={read.focused}
+            onFocus={setFocus}
+            onAction={(nodeId, actionId) => {
+              if (actionId === WRITE_EMAIL_ACTION) {
+                onWrite?.();
+                return;
+              }
+              const picked = read.routeAt(nodeId);
+              // The reader's own route, or one spoken for, opens no drawer.
+              // Neither the panel nor the rows offer it. The server refuses an
+              // ask whose introducer is the contact making it.
+              if (
+                picked &&
+                !own(picked) &&
+                picked.availability === "available"
+              ) {
+                setAsking(picked);
+              }
+            }}
+            completenessText={complete}
+            // The account page's word set, with the one label that names the
+            // subject swapped: this drawing is about a contact, not an account.
+            labels={mapLabels(t, locale, t("contact.intro.mapRegion"))}
+            // The selected contact's own detail, including the one write this
+            // picture offers: recording an observed acquaintance the graph
+            // spotted but nothing has written down yet.
+            panelSlot={
+              read.focused && read.anchor ? (
+                <EdgeDetail
+                  graph={data}
+                  nodeId={read.focused}
+                  anchorId={read.anchor.id}
+                  viewerId={viewerId}
+                  onOpenEmail={onOpenEmail}
+                />
+              ) : null
+            }
+          />
+        </PanelBody>
+      </Panel>
+
       {/* With nothing to draw on the left — one route, nothing withheld —
           the side cards take the row, because a column of two cards beside
           an empty one reads as a page that failed to load its left half. */}
@@ -205,56 +253,18 @@ export function ContactNetworkTab({
           className="pn-side-column"
           aria-label={t("contact.graph.sideColumn")}
         >
-          <RelayPanel ask={read.open} />
+          <RelayPanel
+            ask={read.open}
+            action={
+              <RecordIntroductionButton
+                contactId={contactId}
+                contactName={read.targetName}
+              />
+            }
+          />
           <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
         </aside>
       </div>
-
-      {/* Full width, below the grid. The drawing is 744px wide and scrolls
-          rather than shrinking, so inside a half-width column it showed its
-          left third and nothing else — one lane, and eleven nodes painted off
-          the visible canvas. */}
-      <RelationshipMap
-        model={model}
-        focusId={read.focused}
-        onFocus={setFocus}
-        onAction={(nodeId, actionId) => {
-          if (actionId === WRITE_EMAIL_ACTION) {
-            onWrite?.();
-            return;
-          }
-          const picked = read.routeAt(nodeId);
-          // A route the reader IS, or one already spoken for, opens no drawer:
-          // neither the panel nor the rows offer it, and the server refuses an
-          // ask whose introducer is the contact making it.
-          if (picked && !own(picked) && picked.availability === "available") {
-            setAsking(picked);
-          }
-        }}
-        completenessText={complete}
-        // The account page's word set, with the one label that names the
-        // subject swapped: this drawing is about a contact, not an account.
-        labels={mapLabels(t, locale, t("contact.intro.mapRegion"))}
-        // The selected contact's own detail, including the one write this
-        // picture offers: recording an observed acquaintance the graph
-        // spotted but nothing has written down yet.
-        panelSlot={
-          read.focused && read.anchor ? (
-            <EdgeDetail
-              graph={data}
-              nodeId={read.focused}
-              anchorId={read.anchor.id}
-              viewerId={viewerId}
-              onOpenEmail={onOpenEmail}
-            />
-          ) : null
-        }
-      />
-
-      <RecordIntroductionButton
-        contactId={contactId}
-        contactName={read.targetName}
-      />
 
       {/* What moved lately closes the tab, under the picture it changed. */}
       {view && <MomentsPanel view={view} />}

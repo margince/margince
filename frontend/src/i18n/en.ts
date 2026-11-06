@@ -16996,6 +16996,8 @@ export const en = {
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
   "contact.intro.relayTitle": "Introduction status",
+  "contact.intro.stripLabel": "Network figures",
+  "contact.intro.mapTitle": "Who knows {name}",
   "contact.intro.stepRoute": "Choose route",
   "contact.intro.stepRoutePick": "select who to ask",
   "contact.intro.stepRequest": "Request",

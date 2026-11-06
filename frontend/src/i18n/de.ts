@@ -17159,6 +17159,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
   "contact.intro.relayTitle": "Status der Vorstellung",
+  "contact.intro.stripLabel": "Netzwerk in Zahlen",
+  "contact.intro.mapTitle": "Wer {name} kennt",
   "contact.intro.stepRoute": "Weg wählen",
   "contact.intro.stepRoutePick": "auswählen, wen du fragst",
   "contact.intro.stepRequest": "Anfrage",

@@ -179,7 +179,7 @@
    side column narrower than its content is a column nobody reads. */
 .pn-work-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(285px, 0.75fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
   align-items: start;
 }
@@ -194,25 +194,62 @@
   align-items: start;
 }
 
-/* The route chain, read left to right: who asks, through whom, to whom. */
+/* The route as a path: two people, and the tie between them drawn as a line
+   whose weight is the route's band. The tie's words sit on the line. */
 .pn-hero {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  grid-template-columns: minmax(0, auto) minmax(6rem, 1fr) minmax(0, auto);
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   corner-shape: round;
-  border: 1px solid var(--groundEdge);
 }
 .pn-hero-who {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
   min-width: 0;
+  max-width: 10rem;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
-.pn-hero-who p {
-  margin: var(--space-1) 0 0;
+.pn-hero-link {
+  position: relative;
+  margin: 0;
+  /* Centred on the 46px avatars. */
+  margin-top: calc(23px - 0.75em);
+  display: flex;
+  justify-content: center;
+  text-align: center;
 }
-.pn-hero-arrow {
-  color: var(--accent);
+.pn-hero-link::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 2px;
+  border-radius: var(--r-xs);
+  background: var(--borderStrong);
+}
+.pn-hero[data-strength="strong"] .pn-hero-link::before {
+  height: 4px;
+  margin-top: -1px;
+  background: var(--accent);
+}
+.pn-hero[data-strength="moderate"] .pn-hero-link::before {
+  height: 3px;
+  background: var(--accentMed);
+}
+/* The tie's words as a pill on the line, so the line passes behind them. */
+.pn-hero-link > span {
+  position: relative;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ground);
 }
 .pn-facts {
   display: flex;
@@ -347,6 +384,29 @@
 .pn-moment-when {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Wide enough, the handoff runs across one row: rings on a line that fills
+   as steps complete, each step's words under its ring. */
+@container network (min-width: 46rem) {
+  .pn-relay {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .pn-relay-step {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    padding-bottom: 0;
+  }
+  .pn-relay-step::before {
+    left: 30px;
+    right: calc(-1 * var(--space-2));
+    top: 12px;
+    bottom: auto;
+    width: auto;
+    height: 2px;
+  }
 }
 
 /* Folds. 56rem is where the side column would drop under the 285px its

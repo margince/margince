@@ -16713,6 +16713,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.ownerColleague": "một đồng nghiệp",
   "contact.intro.ownerNobody": "không ai",
   "contact.intro.relayTitle": "Trạng thái giới thiệu",
+  "contact.intro.stripLabel": "Số liệu mạng lưới",
+  "contact.intro.mapTitle": "Ai quen {name}",
   "contact.intro.stepRoute": "Chọn hướng",
   "contact.intro.stepRoutePick": "chọn người để nhờ",
   "contact.intro.stepRequest": "Yêu cầu",
