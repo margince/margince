@@ -32,7 +32,7 @@ func inAreasCtx(areas principal.WorkAreas) context.Context {
 	return principal.WithActor(ctx, p)
 }
 
-func areaRegistry(listed bool) (*Registry, *argsTool, *argsTool) {
+func areaRegistry(listed bool) (*Registry, *argsTool) {
 	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
 	sales := &argsTool{spec: targetSpec(salesVerb, principal.ScopeWrite, mcp.TierAutoExecute)}
 	admin := &argsTool{spec: targetSpec(adminVerb, principal.ScopeWrite, mcp.TierAutoExecute)}
@@ -41,11 +41,11 @@ func areaRegistry(listed bool) (*Registry, *argsTool, *argsTool) {
 	r.Register(admin)
 	// No measured check narrows these, so only the areas decide.
 	r.required = nil
-	return r, sales, admin
+	return r, admin
 }
 
 func TestAPassportIsOfferedOnlyTheToolsOfTheAreasItHasOn(t *testing.T) {
-	r, _, _ := areaRegistry(true)
+	r, _ := areaRegistry(true)
 
 	offered := offeredByName(inAreasCtx(salesOnly), r)
 	if _, ok := offered[salesVerb]; !ok {
@@ -60,7 +60,7 @@ func TestAPassportIsOfferedOnlyTheToolsOfTheAreasItHasOn(t *testing.T) {
 }
 
 func TestARouterKeepsOnlyTheActionsOfTheAreasOn(t *testing.T) {
-	r, _, _ := areaRegistry(false)
+	r, _ := areaRegistry(false)
 	r.Register(fakeRouter{name: "mixed", targets: map[string]string{"offer": salesVerb, "automation": adminVerb}})
 
 	mixed, ok := offeredByName(inAreasCtx(salesOnly), r)["mixed"]
@@ -78,7 +78,7 @@ func TestARouterKeepsOnlyTheActionsOfTheAreasOn(t *testing.T) {
 // The areas ride the principal each call authenticates, so turning an area
 // back on admits the next call with no session to restart.
 func TestTurningAnAreaBackOnAdmitsTheNextCall(t *testing.T) {
-	r, _, admin := areaRegistry(false)
+	r, admin := areaRegistry(false)
 	r.Register(fakeRouter{name: "mixed", targets: map[string]string{"offer": salesVerb, "automation": adminVerb}})
 	call := json.RawMessage(`{"action":"automation","x":1}`)
 
@@ -119,7 +119,7 @@ func TestARecordTypeHoldsACallToItsOwnArea(t *testing.T) {
 }
 
 func TestTheAreasOfferedAreTheOnesTheGrantsReach(t *testing.T) {
-	r, _, _ := areaRegistry(true)
+	r, _ := areaRegistry(true)
 	r.required = map[string][]auth.Check{salesVerb: dealCheck(t, "deal.read"), adminVerb: dealCheck(t, "deal.update")}
 	p, _ := principal.Actor(grantedCtx(principal.SeatFull))
 

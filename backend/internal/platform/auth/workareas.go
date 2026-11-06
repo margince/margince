@@ -37,6 +37,9 @@ func AreaRefusal(p principal.Principal, spec mcp.ToolSpec) error {
 	return &AreaOffError{Tool: spec.Name, Area: area}
 }
 
+// areaOffCode is the sentinel's code, which a missing scope answers too.
+const areaOffCode = "scope_exceeds_grantor"
+
 // AreaOffError refuses an agent whose passport leaves the call's area off, and
 // names the area and where its user turns it on.
 type AreaOffError struct {
@@ -61,13 +64,13 @@ func (e *AreaOffError) Unwrap() error { return apperrors.ErrScopeExceeded }
 func (e *AreaOffError) MessageFault() (code, message string) {
 	const allAreas = "ask the user to set the passport to all areas in Settings, under Passports"
 	if e.Area == "" {
-		return "scope_exceeds_grantor", "this passport may work only in the areas its user chose, and this call is in none of them; " + allAreas
+		return areaOffCode, "this passport may work only in the areas its user chose, and this call is in none of them; " + allAreas
 	}
 	if !workarea.IsChoosable(e.Area) {
-		return "scope_exceeds_grantor", fmt.Sprintf(
+		return areaOffCode, fmt.Sprintf(
 			"this call is in the %q area, which only a passport set to all areas reaches; %s", workarea.NameOf(e.Area), allAreas)
 	}
-	return "scope_exceeds_grantor", fmt.Sprintf(
+	return areaOffCode, fmt.Sprintf(
 		"this passport may not work in the %q area; ask the user to turn that area on for this passport in Settings, under Passports",
 		workarea.NameOf(e.Area))
 }

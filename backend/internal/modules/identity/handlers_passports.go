@@ -37,7 +37,7 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 	in := IssuePassportInput{Label: req.Label}
 	if req.Areas != nil {
 		if !req.Areas.Mode.Valid() {
-			httperr.Write(w, r, httperr.Validation("areas", "unknown_mode", "say all or custom"))
+			httperr.Write(w, r, httperr.Validation(fieldAreas, "unknown_mode", "say all or custom"))
 			return
 		}
 		in.Areas = areasFromWire(*req.Areas)

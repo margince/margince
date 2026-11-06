@@ -28,7 +28,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const auditFieldAreas = "work_areas"
+const (
+	auditFieldAreas = "work_areas"
+	fieldAreas      = "areas"
+)
 
 // consentAllAreas is what the consent screen posts for a passport set to all areas.
 const consentAllAreas = "all"
@@ -62,14 +65,14 @@ func admitAreas(areas principal.WorkAreas) error {
 		return nil
 	}
 	if len(areas.Chosen) == 0 {
-		return &InvalidPassportFieldError{Field: "areas", Code: "no_area_chosen", Message: "choose at least one area, or all areas"}
+		return &InvalidPassportFieldError{Field: fieldAreas, Code: "no_area_chosen", Message: "choose at least one area, or all areas"}
 	}
 	for i, area := range areas.Chosen {
 		if !workarea.IsChoosable(area) {
-			return &InvalidPassportFieldError{Field: "areas", Code: "unknown_area", Message: fmt.Sprintf("%q is not an area a passport can be limited to", area)}
+			return &InvalidPassportFieldError{Field: fieldAreas, Code: "unknown_area", Message: fmt.Sprintf("%q is not an area a passport can be limited to", area)}
 		}
 		if slices.Contains(areas.Chosen[:i], area) {
-			return &InvalidPassportFieldError{Field: "areas", Code: "area_repeated", Message: fmt.Sprintf("%q is chosen twice", area)}
+			return &InvalidPassportFieldError{Field: fieldAreas, Code: "area_repeated", Message: fmt.Sprintf("%q is chosen twice", area)}
 		}
 	}
 	return nil

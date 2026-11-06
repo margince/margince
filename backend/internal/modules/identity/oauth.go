@@ -357,7 +357,7 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	// all, so intersecting with it would make every real connection read-only
 	// whatever the human chose.
 	code, err := h.svc.mintConsentedAuthorizationCode(
-		r.Context(), id, consentChoice{scopes: r.PostForm.Get("scopes"), areas: r.PostForm.Get("areas")}, req,
+		r.Context(), id, consentChoice{scopes: r.PostForm.Get("scopes"), areas: r.PostForm.Get(fieldAreas)}, req,
 	)
 	if errors.Is(err, apperrors.ErrInvalidArgument) {
 		// Not something the human's next click fixes: this server rendered
