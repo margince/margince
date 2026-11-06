@@ -105,10 +105,14 @@ var sendOutboundCopy = toolCopy{
 		"a first mail starting a new conversation, filed on `links` naming the records it is about. " +
 		"chat_reply: an answer on a captured chat conversation, by activity_id, on the channel it " +
 		"came from. The other actions act for the app: deal_room_invite and deal_room_resend mail " +
-		"a buyer their room link, meeting_proposal makes an expiring scheduling link and mails nothing, " +
+		"a buyer their room link, the room actions change what a buyer reads at once, meeting_proposal makes an expiring scheduling link and mails nothing, " +
 		"change_invitation changes an invitation already sent, invite_member adds a member and mails " +
-		"their sign-in link where the installation can send mail, and signature_template and " +
-		"my_signature set the sign-off every later mail carries.",
+		"their sign-in link where the installation can send mail, signature_template and " +
+		"my_signature set the sign-off every later mail carries, and double_opt_in, privacy_notice " +
+		"and details_confirmation mail a contact a link about their data: ask the user first. " +
+		"direct_send sends a message the engine refused and held: show the user the review's warning, " +
+		"call only once they have seen it and said yes, and give their reason. It names them as the one " +
+		"who took it on and you as the agent, and the refusal stays on record.",
 	Limits: "Every recipient must have granted the consent purpose the call names. A sent message " +
 		"cannot be recalled, and by default nothing holds it: where an installation has raised a " +
 		"send to confirm first, the answer is a staged approval instead. chat_reply cannot start a " +

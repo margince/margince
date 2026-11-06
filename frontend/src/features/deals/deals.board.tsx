@@ -9,20 +9,27 @@ import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useSuggestionGhosts } from "../../components/dealsuggestion";
 import { rosterOwnerNaming } from "../../components/entityref";
+import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
+import { CountLine } from "../../design-system/listsurface";
 import type {
   BoardColumn,
   BoardDeal,
   PipelineBoard,
 } from "../../design-system/pipelineboard";
-import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../../design-system/querystates";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
 import {
   type DealFilters,
   ownerDialParams,
-  type useDeals,
   type useStageTotals,
 } from "../../lib/deals.queries";
 import { useMemberNames } from "../../lib/membernames";
@@ -31,10 +38,12 @@ import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { AdvanceInput, PendingAdvance } from "./deal360/confirmadvance";
+import type { StageColumnRead, useStageColumns } from "./dealboard.queries";
 import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
+import { probabilitySetNote } from "./dealprobability";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
-import { buildColumns } from "./deals.columns";
+import { boardDealCount, buildColumns } from "./deals.columns";
 
 /**
  * What a terminal advance says about how the deal closed, on top of the stage
@@ -73,6 +82,7 @@ function closingFields(input: AdvanceInput) {
 export function useAdvanceDeal() {
   const toast = useToast();
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   return useMutation({
     // No single record: one instance serves every card on the board, and the
@@ -102,7 +112,8 @@ export function useAdvanceDeal() {
       // returns. Without this, a reader who clicks a second stage at once would
       // pin the version this write replaced and read a 409 they did not cause.
       if (deal) {
-        queryClient.setQueryData(["deal", input.dealId], deal);
+        const { probability_set: _, ...record } = deal;
+        queryClient.setQueryData(["deal", input.dealId], record);
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
       for (const queryKey of dealRecordKeys(input.dealId)) {
@@ -116,22 +127,104 @@ export function useAdvanceDeal() {
       for (const queryKey of dealWinKeys(deal)) {
         queryClient.invalidateQueries({ queryKey });
       }
-      toast.show(t("deals.advanced", { stage: input.toStage.name }));
+      // The probability note names the stage too, so it stands for the move.
+      toast.show(
+        probabilitySetNote(deal, t, locale) ??
+          t("deals.advanced", { stage: input.toStage.name }),
+      );
     },
   });
 }
 
+// Under a column's cards: its first read's wait or failure, then its "Load more".
+// A failed later read keeps the cards and is named, with Retry once no page is left.
+export function StageColumnFoot({ read }: Readonly<{ read: StageColumnRead }>) {
+  const t = useT();
+  return (
+    <QueryStates query={read} pendingLabel={t("nav.deals")} pendingLines={3}>
+      <ErrorLine
+        error={read.loadMoreError}
+        actions={
+          !read.hasNextPage && (
+            <Button variant="ghost" onClick={() => read.refetch()}>
+              {t("common.retry")}
+            </Button>
+          )
+        }
+      />
+      <LoadMoreButton query={read} />
+    </QueryStates>
+  );
+}
+
+// Stages whose first read has not answered with cards, so their count is unknown.
+function uncountedStages(columns: ReadonlyMap<string, StageColumnRead>) {
+  return new Set(
+    [...columns].flatMap(([stageId, read]) =>
+      read.isPending || read.isError ? [stageId] : [],
+    ),
+  );
+}
+
+// The board's count beside the page's name, once its pipeline and figures are in.
+// A sum of loaded cards that misses a column's deals says it counts the loaded.
+export function BoardHeadCount({
+  pipeline,
+  stageColumns,
+  stageTotalsQuery,
+}: Readonly<{
+  pipeline?: Pipeline;
+  stageColumns: ReturnType<typeof useStageColumns>;
+  stageTotalsQuery: ReturnType<typeof useStageTotals>;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const totals = stageTotalsQuery.data;
+  // isLoading, not isPending: a withheld report is a disabled query, pending for good.
+  // An answered report counts every stage, so no column read is waited for.
+  if (
+    !pipeline ||
+    stageTotalsQuery.isLoading ||
+    (!totals && stageColumns.isPending)
+  ) {
+    return null;
+  }
+  const count = boardDealCount(
+    pipeline.stages ?? [],
+    totals,
+    stageColumns.deals,
+  );
+  const loadedOnly =
+    !totals &&
+    [...stageColumns.columns.values()].some(
+      (read) => read.hasNextPage || read.isError || read.loadMoreError !== null,
+    );
+  return loadedOnly ? (
+    <CountLine
+      unit={t("deals.unit")}
+      first={1}
+      last={count}
+      total={count}
+      more
+      scope={pipeline.name}
+    />
+  ) : (
+    translatePlural(locale, "deals.countInPipeline", count, {
+      count: formatNumber(count, locale),
+      pipeline: pipeline.name,
+    })
+  );
+}
+
 // The board surface's body, drawn only while the board is showing.
 //
-// Its own component because the choice it makes is three deep. First a
-// pipeline to draw in, then a first load that has not landed, then the board.
-// Inside the screen, that choice would sit under every other dial it holds.
+// Its own component because the choice it makes is two deep: a pipeline to
+// draw in, then the board. Each column states its own wait and failure.
 export function DealBoardBody({
-  dealsQuery,
+  stageColumns,
   pipelinesQuery,
   effectivePipeline,
   dealFilters,
-  loadedDeals,
   stageTotalsQuery,
   companies,
   companiesSettled,
@@ -140,11 +233,10 @@ export function DealBoardBody({
   columnDropHandlers,
   totalsWithheld,
 }: Readonly<{
-  dealsQuery: ReturnType<typeof useDeals>;
+  stageColumns: ReturnType<typeof useStageColumns>;
   pipelinesQuery: ReturnType<typeof usePipelines>;
   effectivePipeline?: Pipeline;
   dealFilters: DealFilters;
-  loadedDeals: Deal[];
   stageTotalsQuery: ReturnType<typeof useStageTotals>;
   // Why no stage total is coming, or undefined when one is. Decided by
   // totalsWithheldBecause where the query's own `enabled` reads it, so the
@@ -160,6 +252,7 @@ export function DealBoardBody({
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
+  const loadedDeals = stageColumns.deals;
   // Named by id, batched into one request for every card's owner at once.
   // An unowned deal contributes no id, so a board of them asks nothing.
   const ownerNames = useMemberNames(
@@ -181,40 +274,36 @@ export function DealBoardBody({
     effectivePipeline?.id,
     ownerDialParams(dealFilters.filters),
   );
+  const columnExtras = (column: BoardColumn) => {
+    const read = stageColumns.columns.get(column.stage);
+    return (
+      <>
+        {read && <StageColumnFoot read={read} />}
+        {suggestionGhosts(column)}
+      </>
+    );
+  };
   return (
     <QueryGate query={pipelinesQuery} pendingLabel={t("nav.deals")}>
       {() =>
         effectivePipeline ? (
-          // Only the initial load goes through the gate. An infinite
-          // query reports isError when any page fails, later ones
-          // included. A gate around a loaded board would let one failed
-          // "load more" throw away every card already on screen. Past
-          // the first page the board stands and the button retries.
-          (dealsQuery.data?.pages ?? []).length === 0 ? (
-            <QueryGate query={dealsQuery} pendingLabel={t("nav.deals")}>
-              {() => null}
-            </QueryGate>
-          ) : (
-            <>
-              <DealPipelineBoard
-                cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
-                zone={readerZone}
-                columns={buildColumns(
-                  effectivePipeline.stages ?? [],
-                  loadedDeals,
-                  stageTotalsQuery.data ?? new Map(),
-                  companyMarks,
-                  totalsWithheld ? t(totalsWithheld) : undefined,
-                  rosterOwnerNaming(ownerNames),
-                )}
-                onOpen={openDeal}
-                cardDragHandlers={cardDragHandlers}
-                columnDropHandlers={columnDropHandlers}
-                columnExtras={suggestionGhosts}
-              />
-              <LoadMoreButton query={dealsQuery} />
-            </>
-          )
+          <DealPipelineBoard
+            cardHref={(deal) => routeHash({ screen: "deals", id: deal.id })}
+            zone={readerZone}
+            columns={buildColumns(
+              effectivePipeline.stages ?? [],
+              loadedDeals,
+              stageTotalsQuery.data ?? new Map(),
+              companyMarks,
+              totalsWithheld ? t(totalsWithheld) : undefined,
+              rosterOwnerNaming(ownerNames),
+              uncountedStages(stageColumns.columns),
+            )}
+            onOpen={openDeal}
+            cardDragHandlers={cardDragHandlers}
+            columnDropHandlers={columnDropHandlers}
+            columnExtras={columnExtras}
+          />
         ) : null
       }
     </QueryGate>

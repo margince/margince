@@ -337,11 +337,8 @@ func TestJobHealthCountsACancelledRowThatCarriesNoAttemptErrorAtAll(t *testing.T
 	}
 }
 
-// TestJobHealthRefusesAPassportOverHTTP proves the wire, not just the gate
-// function: the payload carries operational failure text and a fleet-wide
-// view of the dispatchers, and a read-scoped passport satisfies every
-// object grant an admin could mint.
-func TestJobHealthRefusesAPassportOverHTTP(t *testing.T) {
+// An admin's agent reads the page over the wire on the admin's own grant.
+func TestAnAdminsAgentReadsJobHealthOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -354,16 +351,10 @@ func TestJobHealthRefusesAPassportOverHTTP(t *testing.T) {
 		t.Fatalf("issue passport → %d", status)
 	}
 
-	var problem struct {
-		Code string `json:"code"`
-	}
 	status := e.Call(t, "GET", "/v1/admin/job-health", nil,
-		map[string]string{"Authorization": "Bearer " + minted.Token}, &problem)
-	if status != http.StatusForbidden {
-		t.Errorf("agent GET /admin/job-health → %d, want 403 (the contract declares it human-only)", status)
-	}
-	if problem.Code != "permission_denied" {
-		t.Errorf("code %q, want permission_denied", problem.Code)
+		map[string]string{"Authorization": "Bearer " + minted.Token}, nil)
+	if status != http.StatusOK {
+		t.Errorf("an admin's agent GET /admin/job-health → %d, want 200", status)
 	}
 }
 

@@ -2,7 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { X } from "lucide-react";
-import { type KeyboardEvent, useRef, useState } from "react";
+import {
+  type ClipboardEvent,
+  type KeyboardEvent,
+  useRef,
+  useState,
+} from "react";
 import { isImeCommit } from "../lib/imecommit";
 import { Avatar } from "./avatar";
 import { type PeekContent, usePeek } from "./peek";
@@ -21,6 +26,21 @@ export type TokenCard = Readonly<{
 }>;
 
 export type TokenSuggestion = Suggestion & Readonly<{ card?: TokenCard }>;
+
+/** What a commit's text reads as: the values it holds, and the parts that are none. */
+export type TokenReading = Readonly<{
+  values: readonly string[];
+  refused: readonly string[];
+}>;
+
+/** How a field reads text into values that have a shape. Refused parts stay in the
+ *  box; `onRefuse` hears them on each commit, and an empty list once none is left. */
+export type TokenParse = Readonly<{
+  /** Keys that commit what is typed, beside Enter. */
+  keys: readonly string[];
+  read: (raw: string) => TokenReading;
+  onRefuse: (refused: readonly string[]) => void;
+}>;
 
 /**
  * A set of short values a reader builds one at a time — the control the `in`
@@ -81,6 +101,9 @@ export type TokenInputProps = Readonly<{
    * reader never chose.
    */
   onEditing?: () => void;
+  /** Omit it and comma splits, nothing is refused, and a paste waits for a
+   *  commit. Given, a paste that holds a value commits at once. */
+  parse?: TokenParse;
   placeholder?: string;
   disabled?: boolean;
   id?: string;
@@ -96,6 +119,7 @@ export function TokenInput({
   onChange,
   suggestions,
   onEditing,
+  parse,
   placeholder,
   disabled,
   ...aria
@@ -118,9 +142,10 @@ export function TokenInput({
     // said twice. Hence one `seen` set covering both: admitting the second would
     // render two tokens under one React key, and give the reader a remove
     // control that takes away a token it does not name.
+    const reading = (parse ?? BY_COMMA).read(raw);
     const seen = new Set(values);
     const fresh: string[] = [];
-    for (const part of raw.split(",")) {
+    for (const part of reading.values) {
       const value = part.trim();
       if (value === "" || seen.has(value)) {
         continue;
@@ -131,7 +156,27 @@ export function TokenInput({
     if (fresh.length > 0) {
       onChange([...values, ...fresh]);
     }
-    setTyped("");
+    const refused = [...new Set(reading.refused)];
+    setTyped(refused.join(", "));
+    parse?.onRefuse(refused);
+  };
+
+  const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    if (!parse) {
+      return;
+    }
+    const box = event.currentTarget;
+    const text =
+      typed.slice(0, box.selectionStart ?? typed.length) +
+      event.clipboardData.getData("text") +
+      typed.slice(box.selectionEnd ?? typed.length);
+    // A paste of part of one value is still being typed.
+    if (parse.read(text).values.length === 0) {
+      return;
+    }
+    event.preventDefault();
+    onEditing?.();
+    commit(text);
   };
 
   // A committed value an offer named reads as that name; what it stands for
@@ -167,7 +212,7 @@ export function TokenInput({
     if (isImeCommit(event)) {
       return;
     }
-    if (event.key === "Enter" || event.key === ",") {
+    if (event.key === "Enter" || (parse ?? BY_COMMA).keys.includes(event.key)) {
       // Enter must not submit the surrounding form: the reader is adding a
       // value, not finishing the filter.
       event.preventDefault();
@@ -218,9 +263,13 @@ export function TokenInput({
           setTyped(event.target.value);
           onEditing?.();
           list.retype();
+          if (event.target.value.trim() === "") {
+            parse?.onRefuse([]);
+          }
         }}
         onFocus={list.show}
         onKeyDown={onKeyDown}
+        onPaste={onPaste}
         // A value left typed but not committed would be silently dropped when
         // the reader clicks away, so blur commits it. The list closes with it:
         // a popup left hanging under a control nobody is focused on is what a
@@ -313,6 +362,11 @@ function tokenCard(
 // hook filters on identity-stable input, and a new array each time would remake
 // the matches on every keystroke of a field that was given nothing to offer.
 const EMPTY: readonly TokenSuggestion[] = [];
+
+const BY_COMMA: Omit<TokenParse, "onRefuse"> = {
+  keys: [","],
+  read: (raw) => ({ values: raw.split(","), refused: [] }),
+};
 
 /**
  * The same tokens, WITHOUT a text box: a set somebody built somewhere else.

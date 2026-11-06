@@ -6,8 +6,11 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ListSurface } from "../../design-system/listsurface";
 import { type Locale, LocaleProvider, useLocale, useT } from "../../i18n";
+import { de } from "../../i18n/de";
 import { useCompanyZone } from "../../lib/companyzone";
 import { withheldDealDials } from "../../lib/dealranges";
+import { openFilterValues } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { dealRangeChips } from "./deals.rangefilters";
 
 // The deal list's commercial dials as a reader meets them in the filter bar.
@@ -66,8 +69,7 @@ function renderBar(props: Parameters<typeof Bar>[0], locale: Locale = "en") {
 
 async function openAttribute(name: string) {
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "Filter" }));
-  await user.click(screen.getByRole("button", { name }));
+  await openFilterValues(user, name);
   return user;
 }
 
@@ -139,17 +141,20 @@ describe("the deal list's commercial filters", () => {
   it("offers countries by name in the reader's language", async () => {
     let filters: Record<string, string> = {};
     renderBar({ seen: (next) => (filters = next) }, "de");
-    const user = await openAttribute("Land");
+    const user = userEvent.setup();
+    await openViewStep(user, de["table.filters"], document.body, "de");
+    await user.click(screen.getByRole("button", { name: "Land" }));
     await user.click(screen.getByRole("radio", { name: "Deutschland" }));
     expect(filters).toEqual({ country: "DE" });
   });
 
   it("offers no value dial before the base currency is known", async () => {
     renderBar({ baseCurrency: "" });
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Filter" }));
-    expect(screen.queryByRole("button", { name: "Value" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Currency" })).toBeTruthy();
+    const step = await openViewStep(userEvent.setup(), "Filters");
+    expect(within(step).queryByRole("button", { name: "Value" })).toBeNull();
+    expect(
+      within(step).getByRole("button", { name: "Currency" }),
+    ).toBeInTheDocument();
   });
 
   it.each([
@@ -163,13 +168,12 @@ describe("the deal list's commercial filters", () => {
     "offers no dial the server refuses this role: $refused",
     async ({ refused, gone, kept }) => {
       renderBar({ refused });
-      const user = userEvent.setup();
-      await user.click(screen.getByRole("button", { name: "Filter" }));
+      const step = await openViewStep(userEvent.setup(), "Filters");
       for (const name of gone) {
-        expect(screen.queryByRole("button", { name })).toBeNull();
+        expect(within(step).queryByRole("button", { name })).toBeNull();
       }
       for (const name of kept) {
-        expect(screen.getByRole("button", { name })).toBeTruthy();
+        expect(within(step).getByRole("button", { name })).toBeInTheDocument();
       }
     },
   );

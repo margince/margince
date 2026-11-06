@@ -66,7 +66,7 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
   return (
     <div className="card-actions">
       {review.can_undo &&
-        (review.kind === "close_date" ? (
+        (review.kind !== "stage" ? (
           <ReceiptUndo receipt={receipt} />
         ) : (
           <Button

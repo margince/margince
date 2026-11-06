@@ -10,17 +10,15 @@ import {
   useRef,
   useState,
 } from "react";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
-import { useFoldedViewport } from "../lib/viewport";
 import { useActiveOptionVisible } from "./anchoredpopup";
-import { Button, type ButtonVariant, SearchField } from "./atoms";
+import { type ButtonVariant, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
-import { Heading } from "./heading";
-import { Modal } from "./modal";
-import { Popover } from "./popover";
+import { PopoverSheet } from "./popover";
 import { type CandidateSearch, useCandidateSearch } from "./recordpicker";
 import {
   type ListKey,
@@ -29,7 +27,6 @@ import {
   walkedTo,
 } from "./suggestlist";
 import "./listpopover.css";
-import { holdsEveryWord, searchWords } from "../format/collate";
 
 export type ListPopoverOption = Readonly<{
   id: string;
@@ -107,9 +104,6 @@ export function ListPopover({
   onOpenChange,
   ...list
 }: ListPopoverProps) {
-  // Modal's own fold, so no width draws a panel the sheet would also draw.
-  const phone = useFoldedViewport();
-  const titleId = useId();
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const setOpen = useCallback(
@@ -119,55 +113,24 @@ export function ListPopover({
     },
     [onOpenChange],
   );
-  const search = (
-    <ListSearch
-      title={title}
-      searchLabel={searchLabel}
-      list={list}
-      done={() => setOpen(false)}
-    />
-  );
-
-  if (!phone) {
-    return (
-      <Popover
-        label={label}
-        variant={variant}
-        className={className}
-        reasonId={reasonId}
-        open={open}
-        onOpenChange={setOpen}
-        dialog
-        panelClassName="listpopover-panel"
-      >
-        {search}
-      </Popover>
-    );
-  }
   return (
-    <>
-      <Button
-        variant={variant}
-        className={className}
-        reasonId={reasonId}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-      >
-        {label}
-      </Button>
-      <Modal
-        intent="drawer"
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy={titleId}
-      >
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {title}
-        </Heading>
-        {search}
-      </Modal>
-    </>
+    <PopoverSheet
+      label={label}
+      title={title}
+      variant={variant}
+      className={className}
+      reasonId={reasonId}
+      panelClassName="listpopover-panel"
+      open={open}
+      onOpenChange={setOpen}
+    >
+      <ListSearch
+        title={title}
+        searchLabel={searchLabel}
+        list={list}
+        done={() => setOpen(false)}
+      />
+    </PopoverSheet>
   );
 }
 

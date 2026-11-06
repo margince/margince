@@ -61,11 +61,19 @@ export function SearchField({
  * that has to move focus here needs the node. A dialog whose fields are mostly
  * prose has no single-line input to land on instead.
  */
-export function Textarea(props: ComponentPropsWithRef<"textarea">) {
+export function Textarea({
+  grow,
+  ...props
+}: ComponentPropsWithRef<"textarea"> & Readonly<{ grow?: boolean }>) {
+  // `grow` sizes the box to its text in CSS alone: no measuring on each key.
+  // `rows` is the fallback height where the browser cannot size to content.
   return (
     <textarea
+      rows={grow ? 3 : undefined}
       {...props}
-      className={`textarea ${props.className ?? ""}`.trim()}
+      className={[grow ? "textarea textarea-grow" : "textarea", props.className]
+        .filter(Boolean)
+        .join(" ")}
     />
   );
 }

@@ -429,11 +429,18 @@ func writeActivitySatellites(
 // the same bounded delta a human's PATCH does. A held row refuses this write
 // like any other, which is the point of the hold — the capture reports the
 // refusal rather than claiming a success it did not have.
+//
+// Moving the status changes a row that already exists, so it asks for the
+// update grant a PATCH asks for. The create grant that admitted the log only
+// covers a replay that changes nothing.
 func replayMovedTheMeeting(
 	ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, in LogActivityInput,
 ) (crmcontracts.Activity, error) {
 	if in.MeetingStatus == nil || *in.MeetingStatus == meetingStatusString(replay.MeetingStatus) {
 		return replay, nil
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return crmcontracts.Activity{}, err
 	}
 	return updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), UpdateActivityInput{
 		recordedAt:    in.recordedAt,

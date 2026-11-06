@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -226,7 +227,7 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		return row{}, err
 	}
 	if !visible {
-		return row{}, apperrors.ErrNotFound
+		return row{}, auth.HideRow(ctx, "approval")
 	}
 	// After visibility, so a caller who cannot see this row is told it is absent
 	// rather than that their credential is short a cap — the existence-hiding

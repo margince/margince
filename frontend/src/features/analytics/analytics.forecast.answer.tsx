@@ -9,6 +9,7 @@ import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
   formatDateAbbrev,
+  formatPercent,
 } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useT } from "../../i18n";
@@ -25,7 +26,7 @@ import "./analytics.css";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
-// Compare the period forecast with won sales plus confirmed committed deals.
+// Compare the period forecast with won sales plus the Likely deals.
 function callDetail(
   call: NonNullable<Readings["current_call"]>,
   readings: Readings,
@@ -63,6 +64,8 @@ export function ForecastAnswer({
   period,
   landingUnrecorded = false,
   onOpenDeals,
+  landing = true,
+  density,
 }: Readonly<{
   readings: Readings;
   locale: Locale;
@@ -70,6 +73,9 @@ export function ForecastAnswer({
   // A snapshot frozen before its landing was kept: the basis is unknown.
   landingUnrecorded?: boolean;
   onOpenDeals?: () => void;
+  // False when the page places the landing readings elsewhere, beside these.
+  landing?: boolean;
+  density?: "plate";
 }>) {
   const t = useT();
   const currency = readings.base_currency;
@@ -84,13 +90,7 @@ export function ForecastAnswer({
       formatAnalyticsMoney,
     );
   const call = readings.current_call;
-  const range = rangeOf(readings.range_low_minor, readings.range_high_minor);
-  // What best case adds on top of the evidence it contains. Never below zero:
-  // a superset smaller than its subset is a server fault, shown as nothing added.
-  const bestCaseAdds = Math.max(
-    0,
-    readings.best_case_minor - readings.evidence_minor,
-  );
+  const threshold = formatPercent(readings.likely_threshold / 100, locale);
 
   return (
     <>
@@ -112,11 +112,9 @@ export function ForecastAnswer({
                   evidence: money(readings.won_minor + readings.evidence_minor),
                 })}
           </p>
-          {/* The same answer as one shape: what is banked, what is committed
-              with a date, what best case adds, and the call across them. The
-              three are DISJOINT on the server — evidence and best case count
-              open deals only, and best case contains evidence — so they are
-              laid end to end, and best case contributes only what it adds. */}
+          {/* The same answer as one shape: what is banked, what is Likely, and
+              the call across them. The two are DISJOINT on the server, since
+              Likely counts open deals only, so they are laid end to end. */}
           <SegmentBar
             label={t("forecast.makeup")}
             parts={[
@@ -128,15 +126,9 @@ export function ForecastAnswer({
               },
               {
                 key: "evidence",
-                label: t("forecast.evidence"),
+                label: t("forecast.likely"),
                 value: readings.evidence_minor,
                 amount: slot(readings.evidence_minor),
-              },
-              {
-                key: "bestCase",
-                label: t("forecast.bestCaseAdds"),
-                value: bestCaseAdds,
-                amount: slot(bestCaseAdds),
               },
             ]}
             marker={
@@ -161,6 +153,34 @@ export function ForecastAnswer({
         </PanelBody>
       </Panel>
 
+      {/* The two readings of the open deals. Weighted is not a segment above:
+          it counts the Likely deals too, at their probability. */}
+      <StatStrip density={density}>
+        <StatCard
+          narrow="row"
+          label={t("forecast.likely")}
+          value={slot(readings.evidence_minor)}
+          detail={t("forecast.likely.help", { threshold })}
+        />
+        <StatCard
+          narrow="row"
+          label={t("forecast.weighted")}
+          value={slot(readings.weighted_minor)}
+          detail={
+            <>
+              <span>{t("forecast.weighted.help")}</span>
+              <span>
+                {t("forecast.bySource", {
+                  stage: money(readings.by_source.stage.weighted_minor),
+                  human: money(readings.by_source.human.weighted_minor),
+                  margince: money(readings.by_source.margince.weighted_minor),
+                })}
+              </span>
+            </>
+          }
+        />
+      </StatStrip>
+
       {/* An unpriced deal is a real deal contributing zero money, so the gap
           between eligible and priced is stated beside the total rather than
           left in the receipt alone. */}
@@ -177,70 +197,114 @@ export function ForecastAnswer({
         </Callout>
       )}
 
-      {/* Every slot declares the narrow shape, the landing pair included: the
-          fold is the strip's, so a card that did not declare it would keep its
-          box while the rows beside it lost theirs.
-
-          Both are absent for a managed-teams reading, which covers several
-          populations at once: a landing summed across books that are called
-          separately, and a coverage rate blended over them, would each
-          describe none of them. With neither, no strip: an empty one still
-          takes its row and its gaps. A share has a range without a landing
-          when its snapshot predates the landing, so the range alone keeps
-          the strip. */}
-      {(readings.landing ||
-        readings.sufficiency ||
-        range ||
-        landingUnrecorded) && (
-        <StatStrip>
-          {readings.landing ? (
-            <LandingCard
-              landing={readings.landing}
-              currency={currency}
-              locale={locale}
-              callMinor={
-                readings.landing.measure === "manager_call"
-                  ? undefined
-                  : readings.current_call?.amount_minor
-              }
-            />
-          ) : (
-            landingUnrecorded && (
-              <StatCard
-                narrow="row"
-                label={t("forecast.landing")}
-                value={t("forecast.landingUnrecorded")}
-                detail={t("forecast.basis.unknown")}
-              />
-            )
-          )}
-          {(readings.landing || range) && (
-            <ModelRangeCard
-              label={t(`forecast.model.${period}`)}
-              range={range}
-              wonMinor={readings.won_minor}
-              unpriced={readings.eligible_count - readings.priced_count}
-              fxMissing={readings.fx_missing_count}
-              money={slot}
-              onOpen={onOpenDeals}
-            />
-          )}
-          {readings.landing?.system_minor != null && (
-            <RecordsLandingCard
-              systemMinor={readings.landing.system_minor}
-              currency={currency}
-              locale={locale}
-            />
-          )}
-          {readings.sufficiency && (
-            <SufficiencyCard
-              sufficiency={readings.sufficiency}
-              currency={currency}
-              locale={locale}
-            />
-          )}
-        </StatStrip>
+      {landing && (
+        <ForecastLanding
+          readings={readings}
+          locale={locale}
+          period={period}
+          landingUnrecorded={landingUnrecorded}
+          onOpenDeals={onOpenDeals}
+          density={density}
+        />
       )}
     </>
+  );
+}
+
+/**
+ * Where the period lands: the landing, the modelled range, what the records
+ * say and the deal value still needed.
+ */
+export function ForecastLanding({
+  readings,
+  locale,
+  period,
+  landingUnrecorded = false,
+  onOpenDeals,
+  density,
+  title,
+}: Readonly<{
+  readings: Readings;
+  locale: Locale;
+  period: ForecastPeriod;
+  landingUnrecorded?: boolean;
+  onOpenDeals?: () => void;
+  density?: "plate";
+  // Set where the readings stand as a section of their own, as in a rail.
+  title?: string;
+}>) {
+  const t = useT();
+  const currency = readings.base_currency;
+  const slot = (minor: number | null | undefined) =>
+    formatMoneyOrWord(
+      minor,
+      currency,
+      locale,
+      t("format.notForecast"),
+      formatAnalyticsMoney,
+    );
+  const range = rangeOf(readings.range_low_minor, readings.range_high_minor);
+  // Every card declares the narrow shape, since the fold is the strip's. A
+  // managed-teams reading has neither landing nor sufficiency: summed over
+  // separate books, neither would describe any of them. A share's snapshot may
+  // predate the landing, so a range alone keeps the strip.
+  if (!(readings.landing || readings.sufficiency || range || landingUnrecorded))
+    return null;
+  const strip = (
+    <StatStrip density={density}>
+      {readings.landing ? (
+        <LandingCard
+          landing={readings.landing}
+          currency={currency}
+          locale={locale}
+          callMinor={
+            readings.landing.measure === "manager_call"
+              ? undefined
+              : readings.current_call?.amount_minor
+          }
+        />
+      ) : (
+        landingUnrecorded && (
+          <StatCard
+            narrow="row"
+            label={t("forecast.landing")}
+            value={t("forecast.landingUnrecorded")}
+            detail={t("forecast.basis.unknown")}
+          />
+        )
+      )}
+      {(readings.landing || range) && (
+        <ModelRangeCard
+          label={t(`forecast.model.${period}`)}
+          range={range}
+          wonMinor={readings.won_minor}
+          unpriced={readings.eligible_count - readings.priced_count}
+          fxMissing={readings.fx_missing_count}
+          money={slot}
+          onOpen={onOpenDeals}
+        />
+      )}
+      {readings.landing?.system_minor != null && (
+        <RecordsLandingCard
+          systemMinor={readings.landing.system_minor}
+          currency={currency}
+          locale={locale}
+        />
+      )}
+      {readings.sufficiency && (
+        <SufficiencyCard
+          sufficiency={readings.sufficiency}
+          currency={currency}
+          locale={locale}
+        />
+      )}
+    </StatStrip>
+  );
+  return title ? (
+    <Panel title={title} flatHead>
+      {strip}
+    </Panel>
+  ) : (
+    strip
   );
 }

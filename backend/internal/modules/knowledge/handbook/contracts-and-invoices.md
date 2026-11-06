@@ -137,9 +137,8 @@ checks the records, and the audit trail shows who entered what.
 
 ### Contracts and agents
 
-**An agent cannot read or change a contract.** A wrong answer about contract
-values and dates, given as if it were true, costs the most. So agents have no
-access to contracts. Every contract action is done by a signed-in user.
+An agent acting for you can read, record, edit and renew contracts as you can. It
+asks you first before it cancels or archives one.
 
 ## Finance and invoices
 

@@ -27,6 +27,7 @@ import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
+import { ActivityKindsSelect } from "./customfields.kinds";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import "./customfields.css";
 
@@ -79,6 +80,7 @@ export function FieldTable({
   onRename,
   onArchive,
   onSetting,
+  onKinds,
   savingField,
 }: Readonly<{
   object: CfObject;
@@ -91,6 +93,8 @@ export function FieldTable({
   onRename: (field: CustomField) => void;
   onArchive: (field: CustomField) => void;
   onSetting: (field: CustomField, setting: FieldSetting, on: boolean) => void;
+  // The activity types an activity field shows on, written on each change.
+  onKinds: (field: CustomField, kinds: string[]) => void;
   // The id of the field whose settings are being written. Both its switches
   // wait, so a second flip cannot send a version the first one moved.
   savingField?: string;
@@ -133,6 +137,27 @@ export function FieldTable({
         />
       ),
     },
+    ...(object === "activity"
+      ? [
+          {
+            key: "kinds",
+            header: t("cf.activityKinds"),
+            render: (field: CustomField) => (
+              <ActivityKindsSelect
+                aria-label={t("cf.activityKindsFor", { label: field.label })}
+                values={field.activity_kinds ?? []}
+                disabled={
+                  !canEdit ||
+                  field.status !== "active" ||
+                  field.id === STAGED_ID ||
+                  savingField === field.id
+                }
+                onChange={(kinds) => onKinds(field, kinds)}
+              />
+            ),
+          },
+        ]
+      : []),
     ...(REPORTED_OBJECTS.has(object)
       ? [
           {

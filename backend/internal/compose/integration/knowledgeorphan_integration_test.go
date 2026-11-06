@@ -29,6 +29,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -132,7 +133,7 @@ func TestAWriteThatFailsAfterStoringItsBytesRemovesThem(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
 	made := httpCorpus(ctx, t, h)
 
-	body, ctype := multipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
+	body, ctype := apptest.MultipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)

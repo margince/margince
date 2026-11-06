@@ -205,7 +205,7 @@ Include completeness and applicability states. An unknown amount or unknown cove
 |---|---|
 | Deal details and Home | Show baseline stage probability, effective eligibility, reason, date credibility, and the persistent review. |
 | Forecast API and MCP | Keep baseline readings; expose qualified readings and per-deal eligibility separately. |
-| Default forecast landing | With enforcement active, the new UI explicitly requests `qualified_commit_evidence`, preserving the current evidence-first policy. |
+| Default forecast landing | With enforcement active, the new UI explicitly requests `qualified_likely`, preserving the current evidence-first policy. |
 | Optional weighted landing | Add `qualified_weighted`; keep the existing `weighted` measure available and labeled as baseline. |
 | Manager call | Preserve the human's authored call; show its gap to qualified support instead of rewriting it. |
 | Weekly review, saved copies, shares, exports, and Explain | Carry the selected measure and row-level eligibility; recipient-visible totals are re-summed from permitted rows. |

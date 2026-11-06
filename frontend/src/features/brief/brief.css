@@ -531,11 +531,23 @@
   white-space: nowrap;
 }
 
+/* An opened receipt reads under its sentence, as wide as the line: auto-placed,
+   it would take a free narrow track beside the sentence. */
+.magic-line > .disclosure {
+  grid-row: 2;
+  grid-column: 2 / -1;
+}
+
 /* On a phone the controls drop under the line, so the words keep the width
    and the time keeps its column. */
 @media (max-width: 600px) {
+  /* Not `auto`: an auto track grows to a long time's one-line width before
+     the sentence gets any. */
   .magic-lines {
-    grid-template-columns: var(--space-3) minmax(0, 1fr) auto;
+    grid-template-columns:
+      var(--space-3)
+      minmax(0, 1fr)
+      fit-content(var(--space-16));
   }
 
   .magic-line-controls {
@@ -544,8 +556,17 @@
     justify-content: flex-start;
   }
 
+  .magic-line > .disclosure {
+    grid-row: 3;
+  }
+
   .magic-line-when {
     grid-column: 3;
+  }
+
+  .magic-line-since {
+    white-space: normal;
+    text-align: end;
   }
 }
 

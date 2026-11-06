@@ -8,8 +8,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -76,7 +79,7 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 	if stored.ID == "" {
 		return principal.Principal{}, fmt.Errorf("a stored agent actor for %s names no agent", human)
 	}
-	live, ok, err := s.passportStillLive(ctx, stored.PassportID, human)
+	live, ok, err := s.passportStillLive(ctx, stored, human)
 	if err != nil {
 		return principal.Principal{}, err
 	}
@@ -85,7 +88,7 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 	}
 	actor.Type = principal.PrincipalAgent
 	actor.ID = stored.ID
-	actor.PassportID = stored.PassportID
+	actor.PassportID = live.passport
 	actor.ConnectionID = stored.ConnectionID
 	actor.Scopes = live.within(scopes)
 	return actor, nil
@@ -93,7 +96,10 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 
 // livePassport is what a re-authenticated passport still grants.
 type livePassport struct {
-	scopes principal.ScopeSet
+	// passport is the live credential: the stored one, or its successor on the
+	// same connection. Zero for an agent that presented none.
+	passport ids.UUID
+	scopes   principal.ScopeSet
 	// unbounded marks an agent that presented no passport: no credential
 	// exists to narrow the verbs, so the human's authority alone governs.
 	unbounded bool
@@ -113,16 +119,17 @@ func (l livePassport) within(scopes []principal.Scope) principal.ScopeSet {
 	return kept
 }
 
-// passportStillLive re-authenticates a stored passport, and answers false when
-// it is no longer live.
+// passportStillLive re-authenticates a stored passport, or the newest one on its
+// connection after a refresh, and answers false when neither is live.
 //
 // The human's authority cannot see a revoked passport. Without this check, work
-// an operator stopped by revoking the credential would go on under it.
-func (s storedActor) passportStillLive(ctx context.Context, passport, human ids.UUID) (livePassport, bool, error) {
-	if passport.IsZero() {
+// an operator stopped by revoking the credential would go on under it. The lookup
+// is held to the human, so a passport that now belongs to somebody else is not live.
+func (s storedActor) passportStillLive(ctx context.Context, stored migration.StoredActor, human ids.UUID) (livePassport, bool, error) {
+	if stored.PassportID.IsZero() {
 		return livePassport{unbounded: true}, true, nil
 	}
-	live, err := s.authority.AuthenticateAgentByID(ctx, ids.From[ids.PassportKind](passport))
+	live, err := s.authority.AgentForStoredWork(ctx, human, ids.From[ids.PassportKind](stored.PassportID), stored.ConnectionID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// Revoked, expired, or its human is gone.
 		return livePassport{}, false, nil
@@ -130,12 +137,7 @@ func (s storedActor) passportStillLive(ctx context.Context, passport, human ids.
 	if err != nil {
 		return livePassport{}, false, fmt.Errorf("re-authenticating the stored passport: %w", err)
 	}
-	// A passport that now belongs to somebody else is not the credential the
-	// work was queued under, whatever its id says.
-	if live.OnBehalfOf.UUID != human {
-		return livePassport{}, false, nil
-	}
-	return livePassport{scopes: live.Scopes}, true, nil
+	return livePassport{passport: live.PassportID.UUID, scopes: live.Scopes}, true, nil
 }
 
 // actAsRun binds the principal that queued an import attempt, and that
@@ -154,4 +156,27 @@ func (s storedActor) actAsRun(ctx context.Context, run migration.Run) (context.C
 		return nil, err
 	}
 	return principal.WithCorrelationID(principal.WithActor(ctx, actor), *run.AttemptCorrelationID), nil
+}
+
+// activationActor is who a reviewed data task's run writes as: the user or the
+// agent that activated it, with grants read live.
+func activationActor(ctx context.Context, pool *pgxpool.Pool, activation datatask.Activation) (principal.Principal, error) {
+	stored := migration.StoredActor{Type: principal.PrincipalAgent, ID: activation.Operator}
+	if agent := activation.Agent; agent != nil {
+		stored.UserID, stored.PassportID, stored.ConnectionID, stored.OnBehalfOf = agent.UserID, agent.PassportID, agent.ConnectionID, agent.OnBehalfOf
+		actor, err := (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, stored, principal.ScopeWrite)
+		if err != nil {
+			return principal.Principal{}, err
+		}
+		// A run writes, so a passport that no longer lends write ends it.
+		if stored.PassportID.IsZero() || !actor.Scopes.Has(principal.ScopeWrite) {
+			return principal.Principal{}, errActorPassportRevoked
+		}
+		return actor, nil
+	}
+	human, ok := principal.HumanUserID(activation.Operator)
+	if !ok {
+		return principal.Principal{}, apperrors.ErrPermissionDenied
+	}
+	return (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, migration.StoredActor{Type: principal.PrincipalHuman, UserID: human})
 }

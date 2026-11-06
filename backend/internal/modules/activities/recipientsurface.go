@@ -23,7 +23,7 @@ func surfaceForRecipients(ctx context.Context, in SendEmailInput, origin SendOri
 	if surface.disclosureCategory() == commsauthz.CategoryMarketing {
 		return surface, nil
 	}
-	previewer, ok := gate.(SendPreviewer)
+	previewer, ok := gate.(decisionPreviewer)
 	if !ok {
 		return surface, nil
 	}

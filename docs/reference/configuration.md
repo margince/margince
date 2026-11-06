@@ -360,6 +360,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `deals.legal_review_enabled` | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a deal be sent to legal for review, and let a `legal_reviewed` criterion hold a deal at its stage. |
 | `deals.maintenance_writes_enabled` | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | — | `bool`, stored | `true` | api, worker | Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes. |
+| `deals.silent_close_days` | `MARGINCE_DEALS_SILENT_CLOSE_DAYS` | — | `int`, 60 to 730, stored | `120` | api, worker | Days without word from the customer after which Margince closes an open deal as lost. |
 | `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `false` | api, worker | Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move. |
 
 ### `email`
@@ -379,6 +380,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored, kept by a reset | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
+| `identity.mcp_client_check` | `MARGINCE_IDENTITY_MCP_CLIENT_CHECK` | — | `bool`, stored, kept by a reset | `false` | api, worker | Admins may run the `check_client` tool from an AI tool to test whether it can answer a form. |
 | `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
 | `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
 | `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored, kept by a reset | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
@@ -404,7 +406,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `installation.dead_work_banner_hours` | `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | — | `int`, stored, kept by a reset | `24` | api, worker | Hours the job-health banner looks back before it calls dead work a problem. |
 | `installation.fiscal_year_start_month` | `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | — | `int`, stored, kept by a reset | `1` | api, worker | The month the business year begins, 1 to 12. |
 | `installation.follow_up_reconcile_interval_seconds` | `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the follow-up reconcile passes. |
-| `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored, kept by a reset | `commit_evidence` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
+| `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored, kept by a reset | `likely` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
+| `installation.forecast_likely_threshold` | `MARGINCE_INSTALLATION_FORECAST_LIKELY_THRESHOLD` | — | `int`, stored, kept by a reset | `90` | api, worker | The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date. |
 | `installation.forecast_self_correcting` | `MARGINCE_INSTALLATION_FORECAST_SELF_CORRECTING` | — | `bool`, stored, kept by a reset | `true` | api, worker | Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage. |
 | `installation.geocode_backfill_interval_seconds` | `MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `3600` | api, worker | Seconds between the sweeps that add missing map points, or 0 for off. |
 | `installation.gmail_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 144, stored | `48` | api, worker | Hours before a Gmail push subscription ends that it is renewed. |
@@ -521,7 +524,7 @@ reset from taking over.
 Some bounds are checked in code and not shown in the Type column.
 `installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
 and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
-`installation.forecast_forward_measure` takes `commit_evidence`, `weighted` or `manager_call`.
+`installation.forecast_forward_measure` takes `likely`, `qualified_likely`, `weighted`, `qualified_weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,

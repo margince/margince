@@ -142,7 +142,7 @@ export function metric(
 export const compared: Comparison = {
   status: "compared",
   target_metric: "bookings_won",
-  basis: "commit_evidence",
+  basis: "likely",
   target: 80_000_000,
   landing: 76_000_000,
   won: 42_000_000,
@@ -177,7 +177,7 @@ export function landingBasis(
   const { won, remaining, ...shape } = landing;
   return {
     landing: {
-      measure: "commit_evidence",
+      measure: "likely",
       amount_minor: won + remaining,
       won_minor: won,
       remaining_minor: remaining,

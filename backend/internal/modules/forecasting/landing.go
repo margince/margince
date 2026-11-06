@@ -5,10 +5,10 @@ package forecasting
 
 // Where the period lands if nothing changes.
 //
-// The readings beside this one answer what is IN the pipeline. None of them
-// answers the question a manager actually asks — "what will we finish on?" —
-// and a reader left to add two of them together will pick the wrong two: Won
-// plus Best case double-counts nothing but overstates, Weighted alone forgets
+// The readings beside this one answer what is in the pipeline. None of them
+// answers the question a manager asks: "what will we finish on?" A reader left
+// to add two of them together will pick the wrong two. Won
+// plus Open overstates, Weighted alone forgets
 // the money already in the bank.
 //
 // Pure arithmetic over Readings. No clock, no database, no scope: the inputs
@@ -32,10 +32,10 @@ import (
 type ForwardMeasure = values.ForwardMeasure
 
 const (
-	// MeasureCommitEvidence is the strictest reading and the default.
-	MeasureCommitEvidence = values.MeasureCommitEvidence
-	// MeasureQualifiedCommitEvidence is commit evidence over supported deals.
-	MeasureQualifiedCommitEvidence = values.MeasureQualifiedCommitEvidence
+	// MeasureLikely is the strictest reading and the default.
+	MeasureLikely = values.MeasureLikely
+	// MeasureQualifiedLikely is Likely over supported deals.
+	MeasureQualifiedLikely = values.MeasureQualifiedLikely
 	// MeasureWeighted adds every open deal at its stage probability.
 	MeasureWeighted = values.MeasureWeighted
 	// MeasureQualifiedWeighted is the weighted reading over supported deals.
@@ -60,7 +60,7 @@ type Landing struct {
 	// so RemainingMinor is zero there and the line says the call instead.
 	WonMinor       int64
 	RemainingMinor int64
-	// SystemMinor is what the deal records alone project, by the commit
+	// SystemMinor is what the deal records alone project, by the Likely
 	// measure, beside a manager's call. A call replaces that figure, and a
 	// reader comparing the two needs both. Nil for every other measure, whose
 	// amount already is the system's.
@@ -74,13 +74,13 @@ type LandingCaveat string
 
 const (
 	// CaveatCallAbsent means a manager-call installation has no current call,
-	// so the figure is the commit measure instead. Named rather than silently
-	// substituted: a manager who set this expects their own number, and a
-	// commit total wearing that label is the wrong number under a right word.
+	// so the figure is the Likely measure instead. Named rather than silently
+	// substituted, because a manager who set this expects their own number. A
+	// Likely total wearing that label is the wrong number under a right word.
 	CaveatCallAbsent LandingCaveat = "call_absent"
 	// CaveatCallBelowActual means the authored call is less than the money
-	// already won. It is reported rather than corrected: the call is somebody's
-	// stated belief and this code does not get to overrule it, but a landing
+	// already won. It is reported rather than corrected, because the call is
+	// somebody's stated belief and this code does not overrule it. A landing
 	// below what is already banked is a number nobody should read past.
 	CaveatCallBelowActual LandingCaveat = "call_below_actual"
 	// CaveatQualifiedUnavailable means a qualified measure was asked of a read
@@ -92,30 +92,30 @@ const (
 // ProjectLanding answers where the period finishes.
 //
 // call is the current manager call for this period and scope, or nil. It is
-// only consulted for MeasureManagerCall — a commit or weighted installation has
+// only consulted for MeasureManagerCall. A Likely or weighted installation has
 // made a different choice, and quietly preferring an authored number would make
 // the setting a lie.
 func ProjectLanding(readings Readings, measure ForwardMeasure, call *int64) (Landing, error) {
 	switch measure {
-	case MeasureCommitEvidence:
+	case MeasureLikely:
 		return remainingLanding(readings, measure, readings.EvidenceMinor)
 	case MeasureWeighted:
 		return remainingLanding(readings, measure, readings.WeightedMinor)
-	case MeasureQualifiedCommitEvidence, MeasureQualifiedWeighted:
+	case MeasureQualifiedLikely, MeasureQualifiedWeighted:
 		return qualifiedLanding(readings, measure)
 	case MeasureManagerCall:
 		if call == nil {
-			// The commit measure, and SAID so. Falling back silently would show
+			// The Likely measure, and SAID so. Falling back silently would show
 			// a manager the number they did not ask for under the label of the
 			// one they did.
-			out, err := remainingLanding(readings, MeasureCommitEvidence, readings.EvidenceMinor)
+			out, err := remainingLanding(readings, MeasureLikely, readings.EvidenceMinor)
 			if err != nil {
 				return Landing{}, err
 			}
 			out.Caveat = CaveatCallAbsent
 			return out, nil
 		}
-		system, err := remainingLanding(readings, MeasureCommitEvidence, readings.EvidenceMinor)
+		system, err := remainingLanding(readings, MeasureLikely, readings.EvidenceMinor)
 		if err != nil {
 			return Landing{}, err
 		}
@@ -129,7 +129,7 @@ func ProjectLanding(readings Readings, measure ForwardMeasure, call *int64) (Lan
 		return out, nil
 	default:
 		return Landing{}, fmt.Errorf(
-			"forecasting: %q is not a forward measure; a landing is built from commit evidence, "+
+			"forecasting: %q is not a forward measure; a landing is built from Likely, "+
 				"the weighted pipeline or a manager's own call", measure)
 	}
 }
@@ -163,7 +163,7 @@ func remainingLanding(
 // qualifiedLanding is Won plus the qualified remaining reading. With no
 // qualified block it is the baseline reading, named as such and caveated.
 func qualifiedLanding(readings Readings, measure ForwardMeasure) (Landing, error) {
-	baseline, baselineMinor := MeasureCommitEvidence, readings.EvidenceMinor
+	baseline, baselineMinor := MeasureLikely, readings.EvidenceMinor
 	if measure == MeasureQualifiedWeighted {
 		baseline, baselineMinor = MeasureWeighted, readings.WeightedMinor
 	}

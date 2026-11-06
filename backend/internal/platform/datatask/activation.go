@@ -40,14 +40,33 @@ type ReviewRequest struct {
 // Activation keeps reviewed authority with the run, across worker restarts.
 type Activation struct {
 	ReviewRequest
-	Operator    string    `json:"operator"`
-	ActivatedAt time.Time `json:"activated_at"`
+	Operator string `json:"operator"`
+	// Agent is set when an agent activated the run, so its writes name that agent.
+	Agent       *ActingAgent `json:"agent,omitempty"`
+	ActivatedAt time.Time    `json:"activated_at"`
+}
+
+// ActingAgent is what a worker needs to act as the agent that activated a run.
+// Its grants are read live, and a revoked passport ends the run.
+type ActingAgent struct {
+	UserID       ids.UUID `json:"user_id"`
+	PassportID   ids.UUID `json:"passport_id"`
+	ConnectionID ids.UUID `json:"connection_id"`
+	OnBehalfOf   ids.UUID `json:"on_behalf_of"`
+}
+
+// actingAgentOf is the record of an agent operator, and nil for a user.
+func actingAgentOf(actor principal.Principal) *ActingAgent {
+	if actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	return &ActingAgent{UserID: actor.UserID, PassportID: actor.PassportID, ConnectionID: actor.ConnectionID, OnBehalfOf: actor.OnBehalfOf}
 }
 
 // Activate rechecks a reviewed plan before replacing any previous manual run.
 func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version int64, review ReviewRequest) error {
 	review.Trusted = false
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "data_task", principal.ActionUpdate); err != nil {
@@ -63,13 +82,13 @@ func (e *Engine) Activate(ctx context.Context, taskID, stepName string, version 
 		return apperrors.ErrConflict
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return apperrors.ErrPermissionDenied
 	}
 	ctx, cancel := context.WithTimeout(ctx, transactionLimit)
 	defer cancel()
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		return e.activateTx(ctx, tx, task, step, version, actor.ID, review)
+		return e.activateTx(ctx, tx, task, step, version, actor, review)
 	})
 }
 
@@ -116,7 +135,7 @@ func (e *Engine) validateReview(ctx context.Context, tx pgx.Tx, task Task, opera
 	return review, nil
 }
 
-func (e *Engine) activateTx(ctx context.Context, tx pgx.Tx, task Task, step Step, version int64, operator string, review ReviewRequest) error {
+func (e *Engine) activateTx(ctx context.Context, tx pgx.Tx, task Task, step Step, version int64, operator principal.Principal, review ReviewRequest) error {
 	if err := database.BoundStatement(ctx, tx, statementLimit); err != nil {
 		return err
 	}
@@ -148,11 +167,11 @@ func (e *Engine) activateTx(ctx context.Context, tx pgx.Tx, task Task, step Step
 	if len(missing) > 0 {
 		return apperrors.ErrConflict
 	}
-	review, err = e.validateReview(ctx, tx, task, operator, review)
+	review, err = e.validateReview(ctx, tx, task, operator.ID, review)
 	if err != nil {
 		return err
 	}
 
-	activation := Activation{ReviewRequest: review, Operator: operator, ActivatedAt: e.now()}
+	activation := Activation{ReviewRequest: review, Operator: operator.ID, Agent: actingAgentOf(operator), ActivatedAt: e.now()}
 	return e.replaceManualRun(ctx, tx, task, step, p, activation)
 }

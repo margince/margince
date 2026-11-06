@@ -79,7 +79,7 @@ func dispatchWith(t *testing.T, tool mcp.Tool, log *strings.Builder) *Dispatcher
 func scopedAgentCtx(scopes ...principal.Scope) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(),
+		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull, Permissions: everyRecordedGrant(),
 		Scopes: principal.NewScopeSet(scopes...),
 	})
 }
@@ -246,6 +246,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb, revertStageVerb, downloadVerbForTest}, func(context.Context, RouteCall) (json.RawMessage, error) {
 		return json.RawMessage(`{}`), nil
 	})
+	RegisterClientCheckTool(r, discardLog())
 	RegisterDocumentTools(r, &fakeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})

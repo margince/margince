@@ -70,7 +70,7 @@ func (h aiRoutingHandlers) PreviewAiTaskOverrides(w http.ResponseWriter, r *http
 		httperr.NotImplemented(w, r, "PreviewAiTaskOverrides")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
