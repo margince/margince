@@ -68349,14 +68349,17 @@ type GetAccountCoverageParamsView string
 
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
-	DealId       *openapi_types.UUID                `form:"deal_id,omitempty" json:"deal_id,omitempty"`
-	Status       *ListSalesDecisionsParamsStatus    `form:"status,omitempty" json:"status,omitempty"`
-	ScopeKind    *ListSalesDecisionsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
-	ScopeId      *openapi_types.UUID                `form:"scope_id,omitempty" json:"scope_id,omitempty"`
-	ProductId    *ReportingProductId                `form:"product_id,omitempty" json:"product_id,omitempty"`
-	InitiativeId *ReportingInitiativeId             `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
-	Country      *ReportingCountry                  `form:"country,omitempty" json:"country,omitempty"`
-	Industry     *ReportingIndustry                 `form:"industry,omitempty" json:"industry,omitempty"`
+	DealId    *openapi_types.UUID                `form:"deal_id,omitempty" json:"deal_id,omitempty"`
+	Status    *ListSalesDecisionsParamsStatus    `form:"status,omitempty" json:"status,omitempty"`
+	ScopeKind *ListSalesDecisionsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId      *openapi_types.UUID    `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId   *openapi_types.UUID    `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	ProductId    *ReportingProductId    `form:"product_id,omitempty" json:"product_id,omitempty"`
+	InitiativeId *ReportingInitiativeId `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	Country      *ReportingCountry      `form:"country,omitempty" json:"country,omitempty"`
+	Industry     *ReportingIndustry     `form:"industry,omitempty" json:"industry,omitempty"`
 }
 
 // ListSalesDecisionsParamsStatus defines parameters for ListSalesDecisions.
@@ -102737,6 +102740,19 @@ func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
 		}
 		return
 	}

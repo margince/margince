@@ -22,8 +22,12 @@ type salesDecisionHandlers struct {
 
 // ListSalesDecisions implements GET /analytics/decisions.
 func (h salesDecisionHandlers) ListSalesDecisions(w http.ResponseWriter, r *http.Request, params crmcontracts.ListSalesDecisionsParams) {
-	filter := decisionFilter{selection: &crmcontracts.ReportingSelection{
-		ProductId: params.ProductId, InitiativeId: params.InitiativeId,
+	if params.ScopeId != nil && params.ScopeKind == nil {
+		httperr.Write(w, r, httperr.Validation("scope_kind", "required", "Name the kind of scope scope_id belongs to."))
+		return
+	}
+	filter := decisionFilter{selection: crmcontracts.ReportingSelection{
+		PipelineId: params.PipelineId, ProductId: params.ProductId, InitiativeId: params.InitiativeId,
 		Country: params.Country, Industry: params.Industry,
 	}}
 	if params.DealId != nil {

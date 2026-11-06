@@ -4732,7 +4732,7 @@ export interface paths {
         };
         /**
          * The decisions recorded from a sales review, newest first, as tasks the reader may see.
-         * @description The review's selection narrows the list to the decisions on its deals: the deals its scope owns, of its product, country and industry, and members of its initiative. The selection's period does not narrow it, because a deal belongs to a period only through the figure that reads it.
+         * @description The review's selection narrows the list to the decisions on its live deals: the deals its scope owns, on its pipeline, of its product, country and industry, and members of its initiative. It needs the deal read grant. The selection's period does not narrow it, because a deal belongs to a period only through the figure that reads it. A selection reading more deals than a report may read is refused.
          */
         get: operations["listSalesDecisions"];
         put?: never;
@@ -65370,7 +65370,9 @@ export interface operations {
                 deal_id?: string;
                 status?: "open" | "done";
                 scope_kind?: "owner" | "team" | "workspace" | "managed_teams";
+                /** @description The owner or team named by `scope_kind`. */
                 scope_id?: string;
+                pipeline_id?: string;
                 product_id?: components["schemas"]["ReportingProductId"];
                 initiative_id?: components["schemas"]["ReportingInitiativeId"];
                 country?: components["schemas"]["ReportingCountry"];
@@ -65391,7 +65393,17 @@ export interface operations {
                     "application/json": components["schemas"]["SalesDecisionListResponse"];
                 };
             };
+            /** @description A scope that does not fit its kind, or a selection reading too many deals. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

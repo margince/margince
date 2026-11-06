@@ -7,14 +7,19 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // A decision recorded twice with one text on one deal is one open task. Its
@@ -130,7 +135,7 @@ func TestTheDecisionListFollowsTheReviewSelection(t *testing.T) {
 	}
 	decided := func(selection crmcontracts.ReportingSelection) []openapi_types.UUID {
 		t.Helper()
-		listed, err := seam.List(ctx, decisionFilter{selection: &selection})
+		listed, err := seam.List(ctx, decisionFilter{selection: selection})
 		if err != nil {
 			t.Fatalf("listing under %+v: %v", selection, err)
 		}
@@ -154,5 +159,63 @@ func TestTheDecisionListFollowsTheReviewSelection(t *testing.T) {
 	}
 	if got := decided(crmcontracts.ReportingSelection{Industry: &retail}); len(got) != 0 {
 		t.Errorf("a review of an industry with no deal lists decisions on %v, want none", got)
+	}
+
+	// The review's pipeline narrows, as it does for every figure.
+	var pipeline openapi_types.UUID
+	if err := e.owner.QueryRow(context.Background(), `SELECT pipeline_id FROM deal WHERE id = $1`, open["Tern portal"]).Scan(&pipeline); err != nil {
+		t.Fatalf("reading the deal's pipeline: %v", err)
+	}
+	other := openapi_types.UUID(ids.NewV7())
+	if got := decided(crmcontracts.ReportingSelection{PipelineId: &pipeline}); len(got) != 2 {
+		t.Errorf("the deals' own pipeline lists decisions on %v, want both", got)
+	}
+	if got := decided(crmcontracts.ReportingSelection{PipelineId: &other}); len(got) != 0 {
+		t.Errorf("another pipeline lists decisions on %v, want none", got)
+	}
+
+	// A named deal stays only if the review holds it.
+	tern := open["Tern portal"]
+	named, err := seam.List(ctx, decisionFilter{deal: &tern, selection: crmcontracts.ReportingSelection{Industry: &manufacturing}})
+	if err != nil {
+		t.Fatalf("listing a named deal under a review: %v", err)
+	}
+	if len(named) != 0 {
+		t.Errorf("a deal outside the review lists %+v, want none", named)
+	}
+
+	// A workspace review narrows nothing, and reads as the whole list.
+	if got := decided(crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKindWorkspace}}); len(got) != 2 {
+		t.Errorf("the workspace review lists decisions on %v, want both", got)
+	}
+
+	// An archived deal is in no figure, so its decision leaves the review.
+	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at = now() WHERE id = $1`, open["Tern portal"]); err != nil {
+		t.Fatalf("archiving the deal: %v", err)
+	}
+	if got := decided(crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: &rep1}}); len(got) != 1 {
+		t.Errorf("Rep1's review lists decisions on %v, want the live deal only", got)
+	}
+}
+
+// A selection reads deals, so it needs the deal read grant, and a filter through
+// a company the role masks would name what the mask hid.
+func TestADecisionSelectionHonoursTheReadersGrants(t *testing.T) {
+	e := setupForecast(t)
+	seam := newSalesDecisions(InstallationDB(e.Pool))
+	manufacturing := "manufacturing"
+	narrowed := decisionFilter{selection: crmcontracts.ReportingSelection{Industry: &manufacturing}}
+
+	if _, err := seam.List(initiativeEditor(e, "deal"), narrowed); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a role with no deal read answered %v, want permission denied", err)
+	}
+
+	masked := initiativeManager(e)
+	actor, _ := principal.Actor(masked)
+	actor.Permissions.RowScope = principal.RowScopeTeam
+	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "company_id", Condition: principal.MaskAlways}}
+	_, err := seam.List(principal.WithActor(masked, actor), narrowed)
+	if parse, ok := errors.AsType[*values.ParseError](err); !ok || parse.Code != auth.CodeFieldMasked {
+		t.Errorf("a filter through a masked company answered %v, want it refused", err)
 	}
 }

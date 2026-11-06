@@ -35,11 +35,10 @@ type DecisionInput = components["schemas"]["SalesDecisionInput"];
 
 const DECISIONS_KEY = "sales-decisions";
 
-/** The decisions recorded from sales reviews, newest first, on one deal or all. */
 /** The part of a review's selection that narrows its decisions to its deals. */
 export type DecisionReview = Pick<
   ReportingSelection,
-  "scope" | "product_id" | "initiative_id" | "country" | "industry"
+  "scope" | "pipeline_id" | "product_id" | "initiative_id" | "country" | "industry"
 >;
 
 /** The list's query for a review, or the whole list without one. */
@@ -48,6 +47,7 @@ export function decisionQuery(dealId?: string, review?: DecisionReview) {
     deal_id: dealId,
     scope_kind: review?.scope.kind,
     scope_id: review?.scope.id ?? undefined,
+    pipeline_id: review?.pipeline_id ?? undefined,
     product_id: review?.product_id ?? undefined,
     initiative_id: review?.initiative_id ?? undefined,
     country: review?.country ?? undefined,
@@ -55,6 +55,7 @@ export function decisionQuery(dealId?: string, review?: DecisionReview) {
   };
 }
 
+/** The decisions recorded from sales reviews, newest first, on one deal or all. */
 export function useSalesDecisions(dealId?: string, review?: DecisionReview) {
   const query = decisionQuery(dealId, review);
   return useQuery({

@@ -61,7 +61,7 @@ func newSalesDecisions(db *database.DB) salesDecisions {
 type decisionFilter struct {
 	deal      *ids.UUID
 	status    *string
-	selection *crmcontracts.ReportingSelection
+	selection crmcontracts.ReportingSelection
 }
 
 // Record writes the decision as a task on the deal, or returns the open
@@ -162,13 +162,12 @@ func (s salesDecisions) List(ctx context.Context, filter decisionFilter) ([]crmc
 	if filter.deal != nil {
 		in.LinkedToDeals = []ids.UUID{*filter.deal}
 	}
-	if filter.selection != nil && reportingSelectionNarrows(*filter.selection) {
-		reviewed, err := s.reviewedDeals(ctx, *filter.selection, in.LinkedToDeals)
+	if reportingSelectionNarrows(filter.selection) {
+		reviewed, err := s.reviewedDeals(ctx, filter.selection, in.LinkedToDeals)
 		if err != nil {
 			return nil, err
 		}
-		// No deal in the review is no decision, answered without a query. A
-		// nil link list would read as no narrowing at all.
+		// No deal in the review is no decision, answered without a query.
 		if len(reviewed) == 0 {
 			return []crmcontracts.SalesDecision{}, nil
 		}

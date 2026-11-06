@@ -14,20 +14,48 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// reportingSelectionNarrows says whether a selection names a scope or a
-// dimension. One that names neither reads every deal the reader may see.
+// reportingSelectionNarrows says whether a selection names a narrower set of
+// deals. The workspace scope with no dimension is the whole list, so it reads no
+// deal ids.
 func reportingSelectionNarrows(selection crmcontracts.ReportingSelection) bool {
-	return selection.Scope.Kind != "" || selection.ProductId != nil || selection.InitiativeId != nil ||
+	scoped := selection.Scope.Kind != "" && selection.Scope.Kind != crmcontracts.ReportingScopeKindWorkspace
+	return scoped || selection.PipelineId != nil || selection.ProductId != nil || selection.InitiativeId != nil ||
 		selection.Country != nil || selection.Industry != nil
 }
 
-// reportingSelectionDeals answers the deals a review selection reads, by the
-// clauses the metric readers apply. Those are the deals its scope owns that the
-// reader may see, of its product, country and industry, and in its initiative.
-// A period selects no deals of its own, since each metric reads its own window.
+// reportingDealPopulationSQL is the one spelling of the deals a frame reads,
+// over the deal alias `t`: its scope, the reader's row scope and field masks,
+// its dimensions and its initiative. withheld reports deals a mask left out.
+func reportingDealPopulationSQL(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, owner string, fields []string, b *reportingBindings) (string, bool, error) {
+	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
+	if err != nil {
+		return "", false, err
+	}
+	rowScope, err := auth.ScopeClauseFor(ctx, string(recordTypeDeal), "t", b.arg)
+	if err != nil {
+		return "", false, err
+	}
+	fieldScope, withheld, err := reportingFieldScope(ctx, string(recordTypeDeal), "t", fields, b)
+	if err != nil {
+		return "", false, err
+	}
+	dimensions, err := dealDimensionSQL(ctx, frame, b, "t")
+	if err != nil {
+		return "", false, err
+	}
+	where := orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope
+	return where + dimensions + initiativeMemberSQL(ctx, b, "t", string(recordTypeDeal)), withheld, nil
+}
+
+// reportingSelectionDeals answers the live deals a review selection reads. A
+// period selects no deals of its own, since each metric reads its own window.
 func reportingSelectionDeals(ctx context.Context, tx pgx.Tx, store *initiatives.Store, selection crmcontracts.ReportingSelection) ([]ids.UUID, error) {
+	if err := auth.Require(ctx, string(recordTypeDeal), principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var frame crmcontracts.ReportingContext
 	scope, err := (reportingAuthority{}).Scope(ctx, tx, selection.Scope, false)
 	if err != nil {
@@ -37,36 +65,19 @@ func reportingSelectionDeals(ctx context.Context, tx pgx.Tx, store *initiatives.
 	if err := reportingDimensionContext(ctx, tx, selection, &frame); err != nil {
 		return nil, err
 	}
-	if err := requireInitiativeRead(ctx, frame); err != nil {
-		return nil, err
-	}
-	members, err := loadInitiativeMembership(ctx, tx, store, frame)
+	ctx, err = withInitiativeMembers(ctx, tx, store, frame)
 	if err != nil {
 		return nil, err
-	}
-	if members != nil {
-		ctx = withInitiativeMembership(ctx, members)
 	}
 	var b reportingBindings
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), "t.owner_id", b.arg, unownedIsExcluded)
+	population, _, err := reportingDealPopulationSQL(ctx, tx, frame, "t.owner_id", []string{fieldOwnerID, "pipeline_id"}, &b)
 	if err != nil {
 		return nil, err
 	}
-	if population == "" {
-		population = sqlUnnarrowed
+	where := "t.archived_at IS NULL AND " + population
+	if selection.PipelineId != nil {
+		where += " AND t.pipeline_id=" + b.add(*selection.PipelineId)
 	}
-	rowScope, err := auth.ScopeClauseFor(ctx, string(recordTypeDeal), "t", b.arg)
-	if err != nil {
-		return nil, err
-	}
-	if rowScope == "" {
-		rowScope = sqlUnnarrowed
-	}
-	dimensions, err := dealDimensionSQL(ctx, frame, &b, "t")
-	if err != nil {
-		return nil, err
-	}
-	where := population + " AND " + rowScope + dimensions + initiativeMemberSQL(ctx, &b, "t", string(recordTypeDeal))
 	rows, err := tx.Query(ctx, "SELECT t.id FROM deal t WHERE "+where+" LIMIT "+b.add(reportingFactLimit+1), b.values...)
 	if err != nil {
 		return nil, fmt.Errorf("read the deals of the review selection: %w", err)
