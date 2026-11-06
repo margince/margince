@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # Deploy Margince on your own servers
 
-Keep deployment domains, secrets and platform manifests in your own infrastructure repository.
+Keep deployment domains, secrets and platform manifests in the repository that holds your deployment.
 For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md).
 See [self-hosting](../explanation/self-hosting.md) for the role layout and
 [configuration](../reference/configuration.md) for settings.
@@ -306,7 +306,7 @@ writes still run while history is held. Older writers do not share every lock us
 
 Keep queued runs, cursors and pending jobs. Resume one history run at a time while measuring load.
 A rollback also stops and restarts all writers; keep additive schema and finish derived work
-with a release that can read it. The [capture settings](../reference/configuration.md) define the controls.
+with a release that can read it. The [capture settings](../reference/configuration.md) list the controls.
 
 ## After the first boot
 

@@ -33679,14 +33679,14 @@ type AssuranceFreshness struct {
 	// ChangedSince The oldest change the check has not read. Absent when there is none.
 	ChangedSince *time.Time `json:"changed_since,omitempty"`
 
-	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
 	State AssuranceFreshnessState `json:"state"`
 
 	// WorkspaceChanged A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check.
 	WorkspaceChanged bool `json:"workspace_changed"`
 }
 
-// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
 type AssuranceFreshnessState string
 
 // AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.

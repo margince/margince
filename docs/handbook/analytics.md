@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/accountcoverage.go -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/modules/assurance backend/internal/compose/accountcoverage.go -->
 # Analytics and forecasting
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
@@ -10,9 +10,9 @@
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
 3. Read the **Period forecast** and what it is made of: **Already won**, **Likely** and **Weighted**.
-   The forecast gap sets the manager’s total against won sales plus Likely deals.
-   Review **Checks before the call**; source details are under **Data and evidence checked**.
-A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
+   The forecast gap sets the manager’s total against won sales plus Likely deals. Review **Checks before the call**; source details are under **Data and evidence checked**.
+
+If Margince cannot confirm that a check still matches the records, it says so. Wait for an update or choose **Check again**. A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.

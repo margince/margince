@@ -8328,7 +8328,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateRefresh":
     "Chọn Kiểm tra lại để đọc các thay đổi ngay, hoặc chờ lần chạy hằng đêm tiếp theo.",
   "review.freshnessUnknown":
-    "Chưa biết dữ liệu có thay đổi kể từ lần kiểm tra này hay không: từ khi Margince bắt đầu theo dõi thay đổi, chưa có lần kiểm tra nào đọc được mọi nguồn. Chọn Kiểm tra lại để chạy một lần.",
+    "Margince chưa xác nhận liệu dữ liệu có thay đổi kể từ lần kiểm tra này hay không. Chờ cập nhật hoặc chọn Kiểm tra lại để đọc dữ liệu hiện tại.",
   "review.allSourcesRead": "Đã kiểm tra mọi nguồn.",
   "review.source.mail": "hộp thư",
   "review.source.calendar": "lịch",

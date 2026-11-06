@@ -328,8 +328,8 @@ type ForecastAssuranceResult struct {
 
 // ForecastAssuranceFreshnessResult is what changed after the run read it.
 type ForecastAssuranceFreshnessResult struct {
-	// State is current, out_of_date, or unknown when no run has recorded what
-	// it read since changes were first tracked.
+	// State is current, out_of_date, or unknown while committed inputs
+	// have not been read by a complete check or the freshness consumer.
 	State            string `json:"state"`
 	ChangedDeals     int    `json:"changed_deals"`
 	ChangedSignals   int    `json:"changed_signals"`
