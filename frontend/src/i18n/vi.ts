@@ -8553,7 +8553,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thu thập email và lịch cùng các kết nối mà dữ liệu đi qua",
   "workArea.hint.workspace_settings":
     "Cách công ty được thiết lập, ở những chỗ vai trò của bạn được phép đổi",
-  "workArea.hint.admin_settings": "Các cài đặt cần nhiều quyền hơn nhân viên bán hàng",
+  "workArea.hint.admin_settings":
+    "Các cài đặt cần nhiều quyền hơn nhân viên bán hàng",
   "workArea.hint.own_account": "Hồ sơ cá nhân và tùy chọn của bạn",
   "workArea.legend": "Được làm việc ở đâu",
   "workArea.mode.all": "Mọi khu vực",
@@ -16615,8 +16616,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
     "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
-  "consent.scopeNote.enrich":
-    "chạy việc AI và mua dữ liệu liên hệ",
+  "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
   "consent.preset.label": "Quyền của trợ lý",

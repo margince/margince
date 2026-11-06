@@ -8778,7 +8778,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mail- und Kalendererfassung und die Verbindungen, über die sie läuft",
   "workArea.hint.workspace_settings":
     "Wie das Unternehmen eingerichtet ist, wo deine Rolle es ändern darf",
-  "workArea.hint.admin_settings": "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
+  "workArea.hint.admin_settings":
+    "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
   "workArea.hint.own_account": "Dein Profil und deine Präferenzen",
   "workArea.legend": "Wo er arbeiten darf",
   "workArea.mode.all": "Alle Bereiche",
@@ -17050,8 +17051,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
     "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
-  "consent.scopeNote.enrich":
-    "führt KI-Arbeit aus und kauft Kontaktdaten",
+  "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Zugang trennen.",
   "consent.preset.label": "Assistentenrechte",
