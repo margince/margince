@@ -329,6 +329,7 @@ type openDealRow struct {
 	id, stageID    string
 	amountMinor    *int64
 	currency       *string
+	override       *int
 	winProbability int
 }
 
@@ -358,7 +359,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		return 0, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id::text, d.stage_id::text, %s, d.currency, s.win_probability
+		SELECT d.id::text, d.stage_id::text, %s, d.currency, d.win_probability_override, s.win_probability
 		FROM deal d
 		JOIN stage s ON s.id = d.stage_id
 		WHERE d.company_id = ANY($1) AND d.status = 'open' AND d.archived_at IS NULL`, amount),
@@ -368,7 +369,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	}
 	openRows, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openDealRow, error) {
 		var d openDealRow
-		err := row.Scan(&d.id, &d.stageID, &d.amountMinor, &d.currency, &d.winProbability)
+		err := row.Scan(&d.id, &d.stageID, &d.amountMinor, &d.currency, &d.override, &d.winProbability)
 		return d, err
 	})
 	if err != nil {
@@ -386,7 +387,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		if err != nil {
 			return 0, err
 		}
-		weighted, err := values.WeightedValue(baseMinor, chances.applied(d.id, d.stageID, d.winProbability))
+		weighted, err := values.WeightedValue(baseMinor, chances.applied(d.id, d.stageID, d.override, d.winProbability))
 		if err != nil {
 			return 0, err
 		}

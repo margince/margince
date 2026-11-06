@@ -10,8 +10,9 @@ import {
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
-import { ResetRoute, ROUTE_CHUNKS } from "./App.screens";
+import { ResetRoute } from "./App.screens";
 import { ScreenView } from "./App.views";
+import { useWarmRouteChunks } from "./App.warmchunks";
 import { AskFromAddress } from "./app/askfromaddress";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
@@ -433,56 +434,6 @@ function AuthedApp({
       </CompanyZoneProvider>
     </DateFormatsProvider>
   );
-}
-
-// Route warm-up runs only after login.
-// Fetches the route chunks in the background, once, for a reader who is past
-// the login screen. It runs at idle so it never competes with the screen the
-// reader is actually looking at, and with a deadline so a busy tab cannot defer
-// it indefinitely — a click that arrives before the warm-up finishes suspends
-// exactly as it would have without one, so the worst case is the behaviour
-// without this hook rather than a slower one.
-function useWarmRouteChunks() {
-  useEffect(() => {
-    let cancelled = false;
-    // ONE chunk in flight at a time. Asking for all of them at once empties the
-    // browser's per-host connection pool, and the read the reader is actually
-    // waiting on — the record they just opened — queues behind two dozen files
-    // nobody asked for. Warming that makes the next navigation slower is worse
-    // than not warming at all.
-    const warm = async () => {
-      for (const load of ROUTE_CHUNKS) {
-        if (cancelled) {
-          return;
-        }
-        try {
-          await load();
-        } catch (reason: unknown) {
-          // Nobody asked for this screen yet, so a failed fetch is not the
-          // reader's problem: the navigation that does ask will suspend and
-          // surface it through the error boundary. It is still worth saying out
-          // loud, because a chunk that cannot be fetched is a broken deploy.
-          console.warn("route chunk warm-up failed", reason);
-        }
-      }
-    };
-    // Typed as always present, and absent in jsdom and in older Safari, so the
-    // check is a runtime one whatever the DOM lib claims.
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(() => void warm(), {
-        timeout: 500,
-      });
-      return () => {
-        cancelled = true;
-        window.cancelIdleCallback(handle);
-      };
-    }
-    const handle = window.setTimeout(() => void warm(), 0);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(handle);
-    };
-  }, []);
 }
 
 function AuthedShell({

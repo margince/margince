@@ -1,0 +1,29 @@
+# CASE 89 — The user's own hours are theirs alone, so they go to change_my_settings. No workspace setting moves.
+name: case89_set_my_hours
+criteria: [1]
+writes: true
+
+prompt: |
+  Keep me out of bookings on Fridays from now on. I work Monday to Thursday, nine to five.
+
+must_call:
+  - change_my_settings
+
+must_call_with:
+  - change_my_settings.action=save_working_hours
+
+must_call_matching:
+  - 'change_my_settings~"days": \[1, 2, 3, 4\]'
+  - 'change_my_settings~"start_time": "09:00"'
+  - 'change_my_settings~"end_time": "17:00"'
+
+must_not_call_with:
+  - change_settings~.
+  - update_record~.
+
+may_call:
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

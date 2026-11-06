@@ -218,7 +218,7 @@ export function ProspectingReadings({
   const heldState = readingState(held);
   const week = evaluation.context.period_kind === "this_week";
   return (
-    <StatStrip label={t("analytics.overview.readings")}>
+    <StatStrip label={t("analytics.overview.readings")} density="plate">
       <StatCard
         narrow="row"
         label={metricName("meetings_held")}

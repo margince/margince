@@ -88,7 +88,7 @@ func (d SenderDecision) Overruled() bool { return d.Decision != "" }
 // classifier privately concluded about a colleague's correspondence with it —
 // `advisor` among them, which exists to hide that somebody has a lawyer.
 func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindows) ([]SenderDecision, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)

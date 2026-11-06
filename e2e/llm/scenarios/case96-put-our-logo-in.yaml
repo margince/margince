@@ -1,0 +1,29 @@
+# CASE 96 — A logo comes as a file. The action takes it as base64, as attach_document does, and attaches nothing to a record.
+name: case96_put_our_logo_in
+criteria: [1]
+writes: true
+
+prompt: |
+  This is our new logo, a PNG, already in base64: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+  Please set it as our company logo, the wide one.
+
+must_call:
+  - change_settings
+
+must_call_with:
+  - change_settings.action=upload_company_logo
+
+must_call_matching:
+  - 'change_settings~iVBORw0KGgo'
+
+must_not_call_with:
+  - attach_document~.
+  - update_record~.
+
+may_call:
+  - read_workspace
+  - whoami
+  - list_documents
+
+runs: 3
+pass_at: 2

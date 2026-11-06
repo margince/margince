@@ -65,7 +65,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err != nil {
 			return err
 		}
-		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL(identities), auth.AssigneeEligibleSQL(actor, "u", arg))
+		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL(identities), auth.AssigneeEligibleSQL("u"))
 		wake := messageSnoozeLiftedSQL(fmt.Sprintf("$%d", arg(asOf)), "TRUE")
 		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, automaticRequestHorizonDays,
 			outstandingRequestSQL+`

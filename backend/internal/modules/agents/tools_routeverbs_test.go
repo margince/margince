@@ -4,9 +4,13 @@
 package agents
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -76,6 +80,24 @@ func TestARouteVerbsSchemaIsItsRoutesParameters(t *testing.T) {
 	share := routeVerbTool{verb: shareRecordVerb}.Spec()
 	if share.UnkeyedArguments["$.request_body"] == "" {
 		t.Errorf("a body-taking verb declares no unkeyed body: %+v", share.UnkeyedArguments)
+	}
+}
+
+func TestARouteVerbRequiresTheQueryItsRouteRequires(t *testing.T) {
+	verb := revertStageVerb
+	verb.Query = []ViewQuery{
+		{Name: "entity_type", Type: "string", Required: true, Enum: []string{"company", "deal"}},
+		{Name: "since", Type: "string", Format: "date-time"},
+		{Name: "kinds", Type: schemaArray, Enum: []string{"a"}},
+	}
+	got := string(routeVerbTool{verb: verb}.Spec().InputSchema)
+	for _, want := range []string{
+		`"required":["id","entity_type"]`, `"entity_type":{"type":"string","enum":["company","deal"]}`,
+		`"since":{"type":"string","format":"date-time"}`, `"kinds":{"type":"array","items":{"type":"string","enum":["a"]}}`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the input schema %s lacks %s", got, want)
+		}
 	}
 }
 
@@ -163,8 +185,84 @@ func TestAWritesAnswerSchemaAdmitsTheCutAnswer(t *testing.T) {
 	if defect := ResultDefect(routeVerbTool{verb: write}.Spec().OutputSchema, json.RawMessage(`{"id":"d1"}`)); defect != "" {
 		t.Errorf("a whole write answer breaks its own schema: %s", defect)
 	}
+	write.AnswerSchema = json.RawMessage(`{"type":"object","properties":{"status":{"type":"string"}}}`)
+	for _, whole := range []string{`{"status":"draft"}`, string(cut)} {
+		if defect := ResultDefect(routeVerbTool{verb: write}.Spec().OutputSchema, json.RawMessage(whole)); defect != "" {
+			t.Errorf("a write whose record has a status answered %s against its own schema: %s", whole, defect)
+		}
+	}
 	read := RouteVerb{Verb: "r", Method: "GET", Pattern: "/v1/r", Scope: principal.ScopeRead, AnswerSchema: answer}
 	if defect := ResultDefect(routeVerbTool{verb: read}.Spec().OutputSchema, json.RawMessage(`{}`)); defect == "" {
 		t.Error("a read answer missing a required member passed its schema")
+	}
+}
+
+var uploadLogoVerb = RouteVerb{
+	Verb: "upload_company_logo", Router: "change_settings", Action: "upload_company_logo", Op: "uploadAnchorCompanyLogo",
+	Method: http.MethodPost, Pattern: "/v1/company/logo", Scope: principal.ScopeWrite, UploadField: "file",
+}
+
+// An upload takes its file as attach_document does, and one request may carry it.
+func TestAnUploadVerbPublishesTheFileItTakes(t *testing.T) {
+	spec := routeVerbTool{verb: uploadLogoVerb}.Spec()
+	if spec.MaxArgsBytes != MaxMCPRequestBytes {
+		t.Errorf("MaxArgsBytes = %d, want the whole request a file may fill", spec.MaxArgsBytes)
+	}
+	var shape struct {
+		Required   []string                   `json:"required"`
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
+		t.Fatal(err)
+	}
+	for _, arg := range []string{"filename", "content_type", "content_base64"} {
+		if !slices.Contains(shape.Required, arg) || shape.Properties[arg] == nil {
+			t.Errorf("%s is not a required published argument: %s", arg, spec.InputSchema)
+		}
+	}
+	if shape.Properties[routeBodyArg] != nil {
+		t.Errorf("an upload takes no JSON body: %s", spec.InputSchema)
+	}
+}
+
+func TestAnUploadVerbSendsTheDecodedFile(t *testing.T) {
+	var got RouteCall
+	tool := routeVerbTool{verb: uploadLogoVerb, run: func(_ context.Context, call RouteCall) (json.RawMessage, error) {
+		got = call
+		return json.RawMessage(`{}`), nil
+	}}
+	content := []byte{0x89, 'P', 'N', 'G', 0x00}
+	in := mustMarshal(map[string]string{
+		"filename": " logo.png ", "content_type": "image/png", "content_base64": base64.StdEncoding.EncodeToString(content),
+	})
+	if _, err := tool.Handle(t.Context(), in); err != nil {
+		t.Fatal(err)
+	}
+	if got.File.Name != "logo.png" || got.File.ContentType != "image/png" || !bytes.Equal(got.File.Content, content) {
+		t.Errorf("file = %+v", got.File)
+	}
+}
+
+func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
+	good := base64.StdEncoding.EncodeToString([]byte("x"))
+	huge := base64.StdEncoding.EncodeToString(make([]byte, MaxInlineFileBytes+1))
+	for name, tc := range map[string]struct {
+		args  map[string]string
+		field string
+	}{
+		"no name":      {map[string]string{"filename": " ", "content_type": "image/png", "content_base64": good}, "filename"},
+		"no type":      {map[string]string{"filename": "a.png", "content_type": "png", "content_base64": good}, "content_type"},
+		"not base64":   {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": "!!"}, "content_base64"},
+		"empty":        {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": ""}, "content_base64"},
+		"past a limit": {map[string]string{"filename": "a.png", "content_type": "image/png", "content_base64": huge}, "over the"},
+	} {
+		tool := routeVerbTool{verb: uploadLogoVerb, run: func(context.Context, RouteCall) (json.RawMessage, error) {
+			t.Errorf("%s reached the route", name)
+			return nil, nil
+		}}
+		_, err := tool.Handle(t.Context(), mustMarshal(tc.args))
+		if err == nil || !strings.Contains(err.Error(), tc.field) {
+			t.Errorf("%s: err = %v, want a refusal naming %s", name, err, tc.field)
+		}
 	}
 }

@@ -3,9 +3,10 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { decidingRecipient } from "../../components/sendpermission";
+import { decidingRecipient, sendStatus } from "../../components/sendpermission";
 import type { MessageKey } from "../../i18n/en";
 import { asksWhy } from "../../lib/compose-context";
+import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
 import type { ComposeFields } from "./composefields";
@@ -22,6 +23,12 @@ type Preview = components["schemas"]["SendAuthorizationPreview"];
  * that could only answer 404 is a dead button, which `SendPermission` refuses.
  * An answer still out, or one that failed, names no one either. A vouch
  * resting on the answer before it would be recorded for the wrong message.
+ *
+ * The vouch is for the category the refusal is explained in, so the offered
+ * action and the text agree. A claim the engine did not resolve to, such as an
+ * active-deal follow-up with no deal behind it, offers no vouch at all: its
+ * remedy is the missing fact, and a vouch in the resolved category would let
+ * the next check pass on a reason the rep never gave.
  */
 export function reasonTargetOf(
   permission: ComposeSend["permission"],
@@ -32,7 +39,15 @@ export function reasonTargetOf(
   }
   const preview: Preview | undefined = permission.preview;
   const { state, recipient } = decidingRecipient(preview);
-  if (state !== "unproven" || !recipient?.resolved_category) {
+  const category = recipient?.resolved_category;
+  if (state !== "unproven" || !recipient || !category) {
+    return undefined;
+  }
+  const remedy = remedyCategoryOf({
+    category,
+    requestedCategory: recipient.requested_category,
+  });
+  if (remedy !== category) {
     return undefined;
   }
   const contactId = contactOf(recipient.address);
@@ -42,8 +57,21 @@ export function reasonTargetOf(
   return {
     contactId,
     address: recipient.address,
-    category: recipient.resolved_category,
+    category,
   };
+}
+
+/**
+ * The addresses the send would add as new contacts, by the engine's settled
+ * answer. An answer still out, or one that failed, names none.
+ */
+export function newContactsOf(permission: ComposeSend["permission"]): string[] {
+  if (permission.asking || permission.unanswered) {
+    return [];
+  }
+  return (permission.preview?.recipients ?? [])
+    .filter((recipient) => recipient.new_contact === true)
+    .map((recipient) => recipient.address);
 }
 
 /**
@@ -78,8 +106,10 @@ export function ComposeBlockers({
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
-  const unproven =
-    decidingRecipient(send.permission.preview).state === "unproven";
+  const asksWhyAgain =
+    whyMissing &&
+    (decidingRecipient(send.permission.preview).state === "unproven" ||
+      sendStatus(send.permission).kind === "missingContext");
   return (
     <div className="compose-blockers">
       <ComposeWhy
@@ -93,12 +123,13 @@ export function ComposeBlockers({
           to={fields.to}
           cc={fields.cc}
           context={send.claimedContext}
+          newContacts={newContactsOf(send.permission)}
         />
       )}
       {/* A channel reply asks no preview, so its status is only ever a
           refused Send. */}
       {(!isChannelReply || send.permission.refusal) &&
-        !(whyMissing && unproven) &&
+        !asksWhyAgain &&
         drawPermission(
           target && (
             <ContactReasonPick

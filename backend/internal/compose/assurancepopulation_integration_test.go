@@ -23,8 +23,8 @@ import (
 // narrowed by the rule the forecast and reports use for it.
 func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
 	e := setupForecast(t)
-	team1Deal := e.seedOpenDeal(t, "North deal", 20, &e.Rep1, nil, nil)
-	team2Deal := e.seedOpenDeal(t, "South deal", 20, &e.Rep3, nil, nil)
+	team1Deal := e.seedOpenDeal(t, "North deal", 20, &e.Rep1, nil)
+	team2Deal := e.seedOpenDeal(t, "South deal", 20, &e.Rep3, nil)
 	for _, deal := range []ids.UUID{team1Deal, team2Deal} {
 		if _, err := e.owner.Exec(t.Context(),
 			`INSERT INTO assurance_exception (logical_key, type, subject_kind, subject_id, severity, captured_by)

@@ -210,11 +210,17 @@ func TestEveryAbsoluteReasonIsClassifiedDeliberately(t *testing.T) {
 		ReasonRestricted:       LevelSubject,
 		ReasonSubjectRequest:   LevelSubject,
 		ReasonConsentWithdrawn: LevelSubject,
+		// The objection behind it is the subject's act; a newer request of
+		// theirs is the only thing that carries the quote again.
+		ReasonOptedOutAfterRequest: LevelSubject,
 		// Absolute, but nobody's decision — each names a fact a human corrects.
 		ReasonHardBounce:          LevelMachine,
 		ReasonFrequencyCapReached: LevelMachine,
 		ReasonNoSubject:           LevelMachine,
 		ReasonUnconfirmedDOI:      LevelMachine,
+		// The absence of a consent the country requires: the subject's own
+		// act is missing, not given.
+		ReasonMarketingConsentRequired: LevelMachine,
 		// A request the engine cannot answer, corrected by asking again with a
 		// purpose that means what the caller claimed — nothing about the
 		// recipient refuses it.

@@ -211,16 +211,20 @@ type NextBarProps = ComponentProps<typeof NextBar>;
  * when nothing more urgent is next. So the page never says there is nothing to
  * do under a mail that asks for something. Otherwise it is one line above the
  * bar. `urgent` defaults to the bar saying it is late. A bar whose move cites
- * the item (`about`) already says it, so it draws alone.
+ * the item (`about`) already says it, so it draws alone. With nothing next,
+ * the last exchange is a history line above the bar, unless the page shows
+ * that exchange elsewhere on its Overview (`lastExchange={false}`).
  */
 export function RecordNextBar({
   urgent,
   about = [],
+  lastExchange = true,
   ...bar
 }: NextBarProps &
   Readonly<{
     urgent?: boolean;
     about?: readonly (string | null | undefined)[];
+    lastExchange?: boolean;
   }>) {
   const t = useT();
   const scope = useContext(JustInContext);
@@ -230,9 +234,13 @@ export function RecordNextBar({
     return <NextBar {...bar} />;
   }
   if (!latest || about.includes(latest.activity.id)) {
-    // With nothing next, the bar says where the conversation stands.
-    return bar.title === undefined ? (
-      <LastExchangeNextBar scope={scope} more={bar.more} />
+    // With nothing next, the last exchange shows as history above the bar.
+    // It is never the bar's own content: a past meeting is not a next step.
+    return bar.title === undefined && lastExchange ? (
+      <>
+        <LastExchangeLine scope={scope} />
+        <NextBar {...bar} />
+      </>
     ) : (
       <NextBar {...bar} />
     );
@@ -305,60 +313,74 @@ function JustInNextBar({
 
 type WhoseMove = components["schemas"]["LastExchange"]["whose_move"];
 
-const MOVE_TITLE: Record<WhoseMove, MessageKey> = {
+// Whose move the exchange leaves, where the server can tell. "neither" says
+// nothing: no reply direction is no evidence that nothing is left to do.
+const MOVE_WORDS: Partial<Record<WhoseMove, MessageKey>> = {
   them: "standing.exchange.them",
   us: "standing.exchange.us",
-  neither: "standing.next.none",
 };
 
-const EXCHANGE_KIND: Partial<Record<Activity["kind"], MessageKey>> = {
-  email: "timeline.kind.email",
-  message: "timeline.kind.message",
-  call: "timeline.kind.call",
-  meeting: "timeline.kind.meeting",
+type ExchangeKind = "email" | "message" | "call" | "meeting";
+
+const EXCHANGE_LAST: Record<ExchangeKind, MessageKey> = {
+  email: "standing.exchange.last.email",
+  message: "standing.exchange.last.message",
+  call: "standing.exchange.last.call",
+  meeting: "standing.exchange.last.meeting",
 };
+
+const EXCHANGE_VIEW: Record<ExchangeKind, MessageKey> = {
+  email: "standing.exchange.view.email",
+  message: "standing.exchange.view.message",
+  call: "standing.exchange.view.call",
+  meeting: "standing.exchange.view.meeting",
+};
+
+function exchangeKind(kind: Activity["kind"]): ExchangeKind | undefined {
+  return Object.hasOwn(EXCHANGE_LAST, kind)
+    ? (kind as ExchangeKind)
+    : undefined;
+}
 
 /**
- * The bar with nothing next: whose move the record's last call, meeting, mail
- * or message leaves, and when it was. The server judges whose move it is.
+ * The record's last call, meeting, mail or message, as one history line above
+ * a Next bar with nothing next: what it was, when, whose move it leaves where
+ * the server can tell, and a verb that names what opens. Nothing draws while
+ * the read is out or when there is no exchange.
  */
-function LastExchangeNextBar({
-  scope,
-  more,
-}: Readonly<{ scope: JustInScopeValue; more?: NextBarProps["more"] }>) {
+function LastExchangeLine({ scope }: Readonly<{ scope: JustInScopeValue }>) {
   const t = useT();
   const opener = useSourceOpener(scope.onOpenEmail);
   const exchange = useLatestInboundRead(scope.entityType, scope.entityId).data
     ?.last_exchange;
   if (!exchange) {
-    return <NextBar more={more} />;
+    return null;
   }
   const { activity, whose_move } = exchange;
-  const kind = EXCHANGE_KIND[activity.kind];
+  const kind = exchangeKind(activity.kind);
   const open = opener({
     id: activity.id,
     kind: activity.kind,
     contentState: activity.content_state,
   });
+  const move = MOVE_WORDS[whose_move];
+  const subject = itemWords(activity).subject;
   return (
-    <NextBar
-      title={t(MOVE_TITLE[whose_move])}
-      detail={itemWords(activity).subject}
-      sub={
-        <span className="latest-sub">
-          {kind && `${t(kind)} · `}
+    <div className="latest-line latest-history">
+      <span className="latest-line-text">
+        <span className="latest-line-kind">
+          {kind ? t(EXCHANGE_LAST[kind]) : t("standing.exchange.last.other")} ·{" "}
           <When activity={activity} />
+          {move && ` · ${t(move)}`}
         </span>
-      }
-      insight={
-        open && (
-          <Button variant="link" onClick={open}>
-            {t("standing.exchange.open")}
-          </Button>
-        )
-      }
-      more={more}
-    />
+        {subject && <span className="latest-line-subject">{subject}</span>}
+      </span>
+      {open && (
+        <Button variant="link" onClick={open}>
+          {kind ? t(EXCHANGE_VIEW[kind]) : t("standing.exchange.view.other")}
+        </Button>
+      )}
+    </div>
   );
 }
 

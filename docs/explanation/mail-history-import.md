@@ -115,7 +115,7 @@ The run is a row with a state machine, paged by the worker:
 ```text
    queued ──▶ running ──▶ done
                  │
-                 ├──▶ cancelled   (the human stopped it, or the connection changed under it)
+                 ├──▶ cancelled   (the user or their agent stopped it, or the connection changed under it)
                  └──▶ error       (a non-transient fault, or too many consecutive transient ones)
 ```
 

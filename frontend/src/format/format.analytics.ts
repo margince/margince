@@ -6,6 +6,11 @@ import { INTL_LOCALE } from "./intllocale";
 import { toMajorUnits } from "./minorunits";
 import { formatMoneyOrWord, MONEY_ABSENT } from "./moneyword";
 
+/**
+ * An analytics amount in whole major units, written with its currency's sign
+ * the way `formatMoney` writes it ("€420,000"). "≈" marks a figure rounded to
+ * the unit, and an amount under half a unit reads "<€1" rather than a zero.
+ */
 export function formatAnalyticsMoney(
   amountMinor: number,
   currency: string,
@@ -13,14 +18,17 @@ export function formatAnalyticsMoney(
 ): string {
   const major = toMajorUnits(amountMinor, currency);
   if (!Number.isFinite(major)) return MONEY_ABSENT;
+  const format = new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
   const magnitude = Math.abs(major);
   if (magnitude > 0 && magnitude < 0.5)
-    return `${major < 0 ? "−(<1)" : "<1"} ${currency}`;
+    return major < 0 ? `−(<${format.format(1)})` : `<${format.format(1)}`;
   const rounded = Math.sign(major) * Math.round(magnitude);
-  const number = new Intl.NumberFormat(INTL_LOCALE[locale], {
-    maximumFractionDigits: 0,
-  }).format(rounded === 0 ? 0 : rounded);
-  return `${major === rounded ? "" : "≈"}${number} ${currency}`;
+  return `${major === rounded ? "" : "≈"}${format.format(rounded === 0 ? 0 : rounded)}`;
 }
 
 export function formatAnalyticsNumber(value: number, locale: Locale): string {

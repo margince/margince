@@ -185,7 +185,7 @@ func TestAComparisonTheQuarterCannotSupportSaysWhyAndOffersOneItCan(t *testing.T
 	if got.Status != "incompatible" || *got.Incompatibility != "manager_call_pipeline" || got.SupportedSelection.PipelineId != nil {
 		t.Fatalf("pipeline comparison %+v, want the call refused for one pipeline and every pipeline offered", got)
 	}
-	if err := config.Save(q.human, StoredConfig(q.env.Pool), identity.ForecastForwardMeasure, string(forecasting.MeasureCommitEvidence)); err != nil {
+	if err := config.Save(q.human, StoredConfig(q.env.Pool), identity.ForecastForwardMeasure, string(forecasting.MeasureLikely)); err != nil {
 		t.Fatal(err)
 	}
 	_, got = q.comparison(t, pipeline)

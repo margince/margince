@@ -90,6 +90,9 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	// Each recipient's country, resolved once: the decision and its recorded
 	// stamp read this one answer.
 	countries, err := recipientCountries(ctx, tx, req.Recipients)
@@ -121,7 +124,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	// would consume an instruction on a send that never needed one.
 	if directed != nil && directed.wanted && refusesAnyRecipient(set) {
 		instruction, err := g.AuthorizeDirectedExecutionTx(
-			ctx, tx, directed.intentID, deliveryID, directed.authored)
+			ctx, tx, directed.intentID, deliveryID, directed.authored, set)
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -226,15 +229,17 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id,
-			   ruleset_version, ruleset_codes)
-			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+			   ruleset_version, ruleset_codes, legal_entity_id, purpose_key,
+			   existing_customer_notice_id, existing_customer_offer_id, existing_customer_sold_at)
+			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
 			deliveryID, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], string(d.Mode), by, evidence, authority, instructionID,
-			ruleset.Version, ruleset.Codes)
+			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			groundNotice(d), groundOffer(d), groundSoldAt(d))
 		if err != nil {
 			return fmt.Errorf("consent: record the staging decision: %w", err)
 		}

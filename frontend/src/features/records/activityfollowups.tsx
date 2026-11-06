@@ -2,8 +2,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { EntityRef } from "../../components/entityref";
 import { LogActivityForm } from "../../components/logactivity";
+import { TaskAssignee } from "../../components/taskassignee";
 import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Row, Stack } from "../../design-system/stack";
@@ -140,11 +140,7 @@ function FollowUpRow({
         </Badge>
       </Row>
       <p className="t-caption">
-        {task.assignee_id ? (
-          <EntityRef kind="user" id={task.assignee_id} />
-        ) : (
-          t("log.unassigned")
-        )}
+        <TaskAssignee id={task.assignee_id} />
         {task.due_at && (
           <>
             {" "}

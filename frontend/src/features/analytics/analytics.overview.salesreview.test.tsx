@@ -90,7 +90,7 @@ describe("the lead and its readings", () => {
     expect(cards).toHaveLength(4);
     for (const label of [
       "Sales won",
-      "Won + confirmed commit",
+      "Won + Likely deals",
       "Modelled quarter finish",
       "Pipeline due this quarter",
     ])
@@ -100,7 +100,7 @@ describe("the lead and its readings", () => {
   it("keeps a measured zero's explanation and actions with no blank chart", async () => {
     openScenario("trueZero");
     await readings();
-    expect(hero().getAllByText("0 EUR").length).toBeGreaterThan(0);
+    expect(hero().getAllByText("€0").length).toBeGreaterThan(0);
     expect(hero().queryByRole("figure")).toBeNull();
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
     expect(screen.queryByText("No supported decision.")).toBeNull();
@@ -240,10 +240,14 @@ describe("the composition of the expected finish", () => {
           }),
     );
     const summary = await readings();
-    expect(await summary.findByText("15 of 18 valued")).toBeVisible();
+    expect(await summary.findByText(/15 of 18 valued/)).toBeVisible();
+    const pipeline = summary
+      .getByText("Pipeline due this quarter")
+      .closest<HTMLElement>(".stat-card");
+    if (!pipeline) throw new Error("missing pipeline card");
     await userEvent
       .setup({ delay: null })
-      .click(summary.getByRole("button", { name: "Evidence" }));
+      .click(within(pipeline).getByRole("button", { name: "Evidence" }));
     expect(
       await screen.findByText(
         "Counts 15 of the 18 open deals the forecast considered.",
