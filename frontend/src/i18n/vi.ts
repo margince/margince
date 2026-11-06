@@ -16947,7 +16947,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.deals.ofAll_one": "trên tổng {count}",
   "contact.deals.ofAll_other": "trên tổng {count}",
   "contact.deals.openValue": "Giá trị đang mở",
-  "contact.deals.noValue": "Nhiều loại tiền tệ",
+  "contact.deals.noValue": "Nhiều loại tiền",
   "contact.deals.nextClose": "Ngày chốt gần nhất",
   "contact.deals.noClose": "Chưa có ngày chốt",
   "contact.deals.untitled": "Deal chưa có tên",

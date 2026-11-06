@@ -121,6 +121,8 @@ function StoredFileDoor({
       className="board-doc-title board-doc-open"
       href={anchor.href}
       download={anchor.download}
+      target={anchor.target}
+      rel={anchor.rel}
       onClick={onClick}
     >
       {title}

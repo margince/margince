@@ -29,8 +29,8 @@ export function MeetingFigures({
   next?: NextMeeting;
   // Null while meetings ahead may still sit on a page not read yet.
   booked: number | null;
-  // Meetings held, newest first; one called off is not among them.
-  held: readonly Activity[];
+  // Meetings held, newest first, without those called off. Null until read.
+  held: readonly Activity[] | null;
   heldMore: boolean;
   asOf: string;
 }>) {
@@ -42,14 +42,16 @@ export function MeetingFigures({
     activityDay(at, precision, locale, zone, (iso, l, z) =>
       formatDayMonthNearYear(iso, l, z, now),
     );
-  // Held meetings only, newest first; a page not read yet may hold the last.
-  const last = held[0];
+  // A page not read yet may hold the last meeting held.
+  const last = held?.[0];
   const none = t("contact.meetings.noneYet");
-  const lastValue = last
-    ? day(last.occurred_at, last.occurred_precision)
-    : heldMore
+  let lastValue = none;
+  if (last) lastValue = day(last.occurred_at, last.occurred_precision);
+  else if (held === null || heldMore) lastValue = "…";
+  const heldValue =
+    held === null
       ? "…"
-      : none;
+      : `${formatNumber(held.length, locale)}${heldMore ? "+" : ""}`;
   return (
     <StatStrip density="plate" label={t("contact.meetings.figures")}>
       <StatCard
@@ -60,10 +62,7 @@ export function MeetingFigures({
         label={t("contact.meetings.bookedLabel")}
         value={booked === null ? "…" : formatNumber(booked, locale)}
       />
-      <StatCard
-        label={t("contact.meetings.heldLabel")}
-        value={`${formatNumber(held.length, locale)}${heldMore ? "+" : ""}`}
-      />
+      <StatCard label={t("contact.meetings.heldLabel")} value={heldValue} />
       <StatCard label={t("contact.meetings.lastHeld")} value={lastValue} />
     </StatStrip>
   );

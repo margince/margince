@@ -275,7 +275,7 @@ export function ContactMeetingsTab({
           <MeetingFigures
             next={next}
             booked={booked}
-            held={happened}
+            held={listed.isSuccess ? happened : null}
             heldMore={listed.hasNextPage}
             asOf={view.as_of}
           />

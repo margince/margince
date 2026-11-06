@@ -7,7 +7,11 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
-import { formatDayMonth, formatNumber } from "../../format/format";
+import {
+  formatDayMonth,
+  formatNumber,
+  MONEY_ABSENT,
+} from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
@@ -216,12 +220,16 @@ function DealFigures({
   const reads = useQueries({
     queries: roles.map((role) => dealSummaryQuery(role.deal_id)),
   });
-  const settled = reads.every((read) => read.isSuccess);
+  // A failed read settles too, so a lost deal never leaves "…" up for good.
+  const settled = reads.every((read) => !read.isPending);
   const deals = reads
     .map((read) => read.data)
     .filter((deal): deal is Deal => deal != null);
   // A page cut leaves deals unread, so every figure is a floor.
-  const complete = settled && !cut && deals.length === roles.length;
+  const complete =
+    !cut &&
+    reads.every((read) => read.isSuccess) &&
+    deals.length === roles.length;
   const open = deals.filter((deal) => deal.status === "open");
   const next = open
     .filter((deal) => deal.expected_close_date)
@@ -256,9 +264,11 @@ function DealFigures({
         value={
           !settled
             ? pending
-            : next?.expected_close_date
-              ? formatDayMonth(next.expected_close_date, locale, readerZone)
-              : t("contact.deals.noClose")
+            : !complete
+              ? MONEY_ABSENT
+              : next?.expected_close_date
+                ? formatDayMonth(next.expected_close_date, locale, readerZone)
+                : t("contact.deals.noClose")
         }
         detail={next?.name}
       />
