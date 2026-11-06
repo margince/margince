@@ -1206,7 +1206,9 @@ paths:
         `custom` admits only the areas listed. The change holds from the passport's next call, in an
         MCP session that is already connected too. On a connection's passport it also holds for the
         credentials its renewals mint. Only the passport's own user changes it; another user's
-        passport answers 404. Audited. Human-only: an agent that could widen its own areas would be
+        passport answers 404. A refused choice answers 422 with `no_area_chosen`, `unknown_area`,
+        `area_repeated`, `area_not_reachable` (the caller's role reaches nothing there), `areas_with_all`
+        or `unknown_mode`. Audited. Human-only: an agent that could widen its own areas would be
         self-granted authority.
       requestBody:
         required: true
@@ -71406,11 +71408,9 @@ components:
       type: string
       enum: [business, compliance, capture, workspace_settings, admin_settings, own_account]
       description: |
-        One area of work a passport may be limited to: sales work, compliance and privacy, mail and
-        calendar capture, workspace settings a non-admin reaches, admin settings, and the user's own
-        account. Each operation an agent can call sits in one area, as `docs/reference/mcp-parity.md`
-        places it. Agent governance and running the installation are in no area a user can choose,
-        so only a passport set to all areas reaches them.
+        One area of work a passport may be limited to. Each operation an agent can call sits in one
+        group, as `docs/reference/mcp-parity.md` places it, and that page names the area each group
+        is held to. The values are the groups a user can choose, held to that placement by a gate.
 
     PassportAreas:
       type: object

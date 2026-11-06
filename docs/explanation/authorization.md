@@ -72,6 +72,11 @@ Two things make it safe:
   So revoking the passport (or giving the human a lower role) takes effect at once. That includes an MCP
   session that is already connected.
 
+A passport also holds its `work_areas`: every group of work, or the groups its human chose. Scopes say
+what kind of act an agent may do, and `work_areas` say where. `Gate.Admit` reads them with the seat and
+RBAC at every call, and refuses a call outside them with `scope_exceeds_grantor`. Which group each
+operation is in: [mcp-parity.md](../reference/mcp-parity.md#each-agent-operations-passport-area).
+
 Making and using one: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md) →
 [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md).
 

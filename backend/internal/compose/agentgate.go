@@ -67,7 +67,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 			}
 			// Before the passes below: a tool's in-process call lands here too,
 			// and an area is held to the route whichever door reached it.
-			if refusedOutsideAreas(w, r) {
+			if refusedOutsideAreas(w, r, reg) {
 				return
 			}
 			if servedByTheRegistry(r) || admittedByTheTool(r) {

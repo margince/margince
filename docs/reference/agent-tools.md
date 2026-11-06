@@ -206,7 +206,9 @@ The catalog comes from the `mcp.ToolSpec` each tool returns from `Spec()`. **The
   `backend/internal/modules/agents/toolchecks.go` then drops each tool, and each router action, whose
   measured checks the user lacks ([mcp-tool-roles.md](mcp-tool-roles.md#what-each-call-needs)). A
   verb with no measured row stays offered. So an agent made with `["read"]` sees the read tools and
-  nothing else, and a rep's agent is not offered the admin's settings actions.
+  nothing else, and a rep's agent is not offered the admin's settings actions. A passport limited to
+  some work areas is also not offered a tool, or a router action, in an area it leaves off
+  ([mcp-parity.md](mcp-parity.md#each-agent-operations-passport-area)).
 
   This filters the list only. A scheduled run may choose any tool its passport may call
   (`Registry.Runnable`). Each call still checks the user's grants, row scope and the call's

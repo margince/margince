@@ -127,3 +127,20 @@ describe("areasChange", () => {
     ).toBe(false);
   });
 });
+
+describe("a chosen area the role no longer reaches", () => {
+  it("counts as lost when another area is edited, since the server refuses to keep it", () => {
+    const before: PassportAreas = {
+      mode: "custom",
+      areas: ["business", "admin_settings"],
+    };
+    const after: PassportAreas = {
+      mode: "custom",
+      areas: ["business", "compliance"],
+    };
+    const change = areasChange(before, after, THREE);
+    expect(change.gains).toEqual(["compliance"]);
+    expect(change.loses).toEqual(["admin_settings"]);
+    expect(change.changed).toBe(true);
+  });
+});

@@ -13,12 +13,15 @@ import (
 )
 
 // placedCall narrows spec's areas to the one the call's record type picks. A
-// verb serving records in two areas is then admitted on the one this call names.
+// verb serving records in two areas is then admitted on the one this call
+// names. A record type the table does not place leaves the call in no area, so
+// it never borrows the union of the verb's areas.
 func placedCall(t mcp.Tool, spec mcp.ToolSpec, args json.RawMessage) mcp.ToolSpec {
 	typed, ok := t.(recordTypeNamer)
-	if !ok {
+	if !ok || len(spec.Areas) < 2 {
 		return spec
 	}
+	spec.Areas = nil
 	if area, placed := workarea.OfRecordCall(spec.Name, typed.RecordTypeOf(args)); placed {
 		spec.Areas = []string{area}
 	}

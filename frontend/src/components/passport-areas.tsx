@@ -38,9 +38,10 @@ type AreasChange = Readonly<{
   changed: boolean;
 }>;
 
-// What saving would add and take away, in the areas the role reaches. A switch
-// between all and custom over the same areas still changes the later areas the
-// passport gets. It counts as a change with nothing gained or lost.
+// What saving would add and take away. A chosen area the role no longer
+// reaches cannot be kept, since the server refuses it, so it counts as lost. A
+// switch between all and custom over the same areas still changes the later
+// areas the passport gets. It counts as a change with nothing gained or lost.
 export function areasChange(
   before: PassportAreas,
   after: PassportAreas,
@@ -51,9 +52,15 @@ export function areasChange(
   const sameCustom =
     before.areas.length === after.areas.length &&
     before.areas.every((area) => after.areas.includes(area));
+  const dormant =
+    before.mode === "custom"
+      ? before.areas.filter(
+          (area) => !reachable.includes(area) && !after.areas.includes(area),
+        )
+      : [];
   return {
     gains: will.filter((area) => !was.includes(area)),
-    loses: was.filter((area) => !will.includes(area)),
+    loses: [...was.filter((area) => !will.includes(area)), ...dormant],
     changed:
       before.mode !== after.mode || (after.mode === "custom" && !sameCustom),
   };
@@ -142,6 +149,9 @@ export function PassportAreasDrawer({
             kind="standing"
             title={t("passportAreas.loses", { areas: names(change.loses) })}
           />
+        )}
+        {subject.areas.mode === "all" && draft.mode === "custom" && (
+          <Callout kind="standing" title={t("passportAreas.closesLater")} />
         )}
         {change.gains.length > 0 && (
           <Callout

@@ -96,6 +96,10 @@ func TestAPassportIsHeldToTheAreasItsUserChose(t *testing.T) {
 	if status := e.Call(t, http.MethodGet, salesRoute, nil, bearer, nil); status != http.StatusOK {
 		t.Fatalf("REST %s with sales work on → %d, want 200", salesRoute, status)
 	}
+	// Who the caller is sits in no area, on REST as it does over MCP.
+	if status := e.Call(t, http.MethodGet, "/v1/whoami", nil, bearer, nil); status != http.StatusOK {
+		t.Fatalf("REST /v1/whoami with my account off → %d, want 200", status)
+	}
 
 	topics := topicsOffered(t, client)
 	if slices.Contains(topics, adminTopic) || !slices.Contains(topics, salesTopic) {

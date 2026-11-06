@@ -8778,7 +8778,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mail- und Kalendererfassung und die Verbindungen, über die sie läuft",
   "workArea.hint.workspace_settings":
     "Wie das Unternehmen eingerichtet ist, wo deine Rolle es ändern darf",
-  "workArea.hint.admin_settings": "Einstellungen, die nur Admins ändern dürfen",
+  "workArea.hint.admin_settings": "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
   "workArea.hint.own_account": "Dein Profil und deine Präferenzen",
   "workArea.legend": "Wo er arbeiten darf",
   "workArea.mode.all": "Alle Bereiche",
@@ -8797,6 +8797,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passportAreas.loses":
     "Er arbeitet dann nicht mehr in: {areas}. Sein nächster Aufruf dort wird abgelehnt.",
   "passportAreas.unchanged": "Ändere zuerst einen Bereich.",
+  "passportAreas.closesLater":
+    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben für ihn deaktiviert.",
   "passportAreas.refusalTitle":
     "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
   "passportAreas.refusal":
@@ -17049,7 +17051,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.send":
     "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
   "consent.scopeNote.enrich":
-    "führt KI-Arbeit und Anreicherung aus, fragt aber vor jedem Kauf weiterhin nach",
+    "führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Zugang trennen.",
   "consent.preset.label": "Assistentenrechte",

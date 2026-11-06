@@ -49,6 +49,21 @@ func TestThePassportPageSpeaksOfWorkAreasAsTheServerDoes(t *testing.T) {
 			t.Errorf("the page names %s %q and the server %q; make them one name", area.Key, got, area.Name)
 		}
 	}
+	for _, family := range []string{"workArea.name.", "workArea.hint."} {
+		keyed := regexp.MustCompile(`"` + regexp.QuoteMeta(family) + `([a-z_]+)":`)
+		var named []string
+		for _, found := range keyed.FindAllStringSubmatch(catalog, -1) {
+			named = append(named, found[1])
+		}
+		if len(named) != len(areas) {
+			t.Errorf("%s has %d keys under %s, and the server offers %d areas: %v", workAreaCatalog, len(named), family, len(areas), named)
+		}
+		for _, key := range named {
+			if !workarea.IsChoosable(key) {
+				t.Errorf("%s names %s%s, which no passport can choose", workAreaCatalog, family, key)
+			}
+		}
+	}
 	shown := strings.ReplaceAll(enMessage(t, catalog, "passportAreas.refusal"), "{area}", areas[0].Name)
 	_, told := (&auth.AreaOffError{Area: areas[0].Key}).MessageFault()
 	if want := strings.ToUpper(told[:1]) + told[1:] + "."; shown != want {

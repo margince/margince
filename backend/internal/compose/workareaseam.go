@@ -33,29 +33,32 @@ func reachableAreasOf(reg *agents.Registry) identity.ReachableAreas {
 // operationAreaRefusal holds an agent to the one operation's area. Gate.Admit
 // admits a verb in several areas while any of them is on, and this is the
 // precise half. An operation the table does not place is in no area, like an
-// unplaced tool. Only a passport set to all areas runs it.
-func operationAreaRefusal(ctx context.Context, tool, operationID string) error {
+// unplaced tool. Only a passport set to all areas runs it. verb is the tool's
+// registered spec, so a tool about the caller passes here as it does by name.
+func operationAreaRefusal(ctx context.Context, verb mcp.ToolSpec, operationID string) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return nil
 	}
-	spec := mcp.ToolSpec{Name: tool}
+	verb.Areas = nil
 	if area, placed := workarea.OfOperation(operationID); placed {
-		spec.Areas = []string{area}
+		verb.Areas = []string{area}
 	}
-	return auth.AreaRefusal(p, spec)
+	return auth.AreaRefusal(p, verb)
 }
 
 // refusedOutsideAreas answers an agent's REST call on a route its passport's
 // areas leave off, and reports whether it did. A route an agent may not call
 // at all is left to the checks after it, which refuse it with their own reason.
-func refusedOutsideAreas(w http.ResponseWriter, r *http.Request) bool {
+func refusedOutsideAreas(w http.ResponseWriter, r *http.Request, reg *agents.Registry) bool {
 	pattern := chi.RouteContext(r.Context()).RoutePattern()
 	pol, admitted := routeAdmitsAgents(r.Method, pattern)
 	if !admitted {
 		return false
 	}
-	if err := operationAreaRefusal(r.Context(), "", pol.Op); err != nil {
+	// An unregistered verb has a zero spec here; prepareAgentGate refuses it.
+	verb, _ := reg.Spec(pol.Tool)
+	if err := operationAreaRefusal(r.Context(), verb, pol.Op); err != nil {
 		httperr.Write(w, r, err)
 		return true
 	}

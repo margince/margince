@@ -8553,7 +8553,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thu thập email và lịch cùng các kết nối mà dữ liệu đi qua",
   "workArea.hint.workspace_settings":
     "Cách công ty được thiết lập, ở những chỗ vai trò của bạn được phép đổi",
-  "workArea.hint.admin_settings": "Các cài đặt chỉ quản trị viên được đổi",
+  "workArea.hint.admin_settings": "Các cài đặt cần nhiều quyền hơn nhân viên bán hàng",
   "workArea.hint.own_account": "Hồ sơ cá nhân và tùy chọn của bạn",
   "workArea.legend": "Được làm việc ở đâu",
   "workArea.mode.all": "Mọi khu vực",
@@ -8571,6 +8571,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "passportAreas.loses":
     "Sẽ không còn làm việc ở: {areas}. Lệnh gọi tiếp theo ở đó sẽ bị từ chối.",
   "passportAreas.unchanged": "Đổi một khu vực trước.",
+  "passportAreas.closesLater":
+    "Các khu vực thêm sau và công cụ do tiện ích mở rộng thêm vẫn tắt với nó.",
   "passportAreas.refusalTitle": "Agent được báo gì khi một khu vực bị tắt",
   "passportAreas.refusal":
     "Passport này không được làm việc ở khu vực “{area}”. Hãy đề nghị bật khu vực đó cho passport này trong Cài đặt → Quyền truy cập AI, mục Passport của bạn hoặc Kết nối của bạn.",
@@ -16614,7 +16616,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.send":
     "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
   "consent.scopeNote.enrich":
-    "chạy việc AI và bổ sung dữ liệu; mỗi lần mua vẫn hỏi bạn trước",
+    "chạy việc AI và mua dữ liệu liên hệ",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
   "consent.preset.label": "Quyền của trợ lý",

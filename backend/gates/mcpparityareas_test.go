@@ -107,6 +107,24 @@ func placeUnnamedRecordTypes(file workarea.File) {
 	}
 }
 
+// passportAreaOf says, from the placement alone, which switch on a passport
+// admits a group's calls.
+func passportAreaOf(info parityGroupInfo) string {
+	switch {
+	case info.Passport != "":
+		return info.Passport
+	case info.Free:
+		return "every passport, in no area"
+	case info.HeldAs != "":
+		for _, held := range parityGroupInfos {
+			if held.Key == info.HeldAs {
+				return held.Passport + ", held as that area"
+			}
+		}
+	}
+	return "none: no agent acts here"
+}
+
 // The contract's WorkArea enum is what a client may send, so it must be the
 // choosable areas, in the table's order, and nothing else.
 func TestTheContractOffersTheChoosableWorkAreas(t *testing.T) {

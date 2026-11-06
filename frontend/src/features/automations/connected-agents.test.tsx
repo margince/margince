@@ -485,6 +485,7 @@ describe("ConnectedAgentsCard: work areas", () => {
   const AREAS = ["business", "admin_settings", "own_account"];
 
   it("lists each connection's areas and offers to change them until it ends", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backend({
@@ -510,12 +511,12 @@ describe("ConnectedAgentsCard: work areas", () => {
     expect(within(renewingRow).getByText("Sales work")).toBeTruthy();
     expect(within(lapsedRow).getByText("All areas")).toBeTruthy();
 
-    await userEvent.click(lapsed);
+    await user.click(lapsed);
     expect(
       screen.queryByRole("button", { name: "Change areas for Claude Code" }),
     ).toBeNull();
-    await userEvent.click(renewing);
-    await userEvent.click(
+    await user.click(renewing);
+    await user.click(
       await screen.findByRole("button", {
         name: "Change areas for Claude Code",
       }),

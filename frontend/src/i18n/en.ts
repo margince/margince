@@ -8752,7 +8752,7 @@ export const en = {
     "Mail and calendar capture and the connections it comes through",
   "workArea.hint.workspace_settings":
     "How the company is set up, where your role may change it",
-  "workArea.hint.admin_settings": "Settings only an admin may change",
+  "workArea.hint.admin_settings": "Settings a sales rep may not change",
   "workArea.hint.own_account": "Your profile and preferences",
   "workArea.legend": "Where it may work",
   "workArea.mode.all": "All areas",
@@ -8769,6 +8769,8 @@ export const en = {
   "passportAreas.loses":
     "It will no longer work in: {areas}. Its next call there is refused.",
   "passportAreas.unchanged": "Change an area first.",
+  "passportAreas.closesLater":
+    "Areas added later, and tools an extension adds, stay off for it.",
   "passportAreas.refusalTitle": "What an agent is told when an area is off",
   "passportAreas.refusal":
     "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI access, under Your passports or Your connections.",
@@ -16886,7 +16888,7 @@ export const en = {
   "consent.scopeNote.write": "creates, edits and archives records as you",
   "consent.scopeNote.send": "sends messages as you, without asking first",
   "consent.scopeNote.enrich":
-    "runs AI work and enrichment; each purchase still asks you first",
+    "runs AI work and buys contact data",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
   "consent.preset.label": "Assistant permissions",

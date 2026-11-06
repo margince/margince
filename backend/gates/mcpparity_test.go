@@ -170,6 +170,8 @@ type parityGroupRow struct {
 	Key   string `json:"key"`
 	Title string `json:"title"`
 	What  string `json:"what"`
+	// PassportArea says which switch on a passport admits the group's calls.
+	PassportArea string `json:"passport_area"`
 	parityCounts
 	Areas []parityAreaRow `json:"areas"`
 }
@@ -476,7 +478,7 @@ func summarizeParity(scan webScan, ops []parityOperation) parityReport {
 		titles[area.Key] = area.Title
 	}
 	for _, info := range parityGroupInfos {
-		groups[info.Key] = &parityGroupRow{Key: info.Key, Title: info.Title, What: info.What}
+		groups[info.Key] = &parityGroupRow{Key: info.Key, Title: info.Title, What: info.What, PassportArea: passportAreaOf(info)}
 		areasByKey[info.Key] = map[string]*parityAreaRow{}
 	}
 	for _, op := range ops {

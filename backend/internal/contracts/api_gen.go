@@ -65701,11 +65701,9 @@ type WeeklyScorecardLeadBlock struct {
 	Promoted               int `json:"promoted" minimum:"0"`
 }
 
-// WorkArea One area of work a passport may be limited to: sales work, compliance and privacy, mail and
-// calendar capture, workspace settings a non-admin reaches, admin settings, and the user's own
-// account. Each operation an agent can call sits in one area, as `docs/reference/mcp-parity.md`
-// places it. Agent governance and running the installation are in no area a user can choose,
-// so only a passport set to all areas reaches them.
+// WorkArea One area of work a passport may be limited to. Each operation an agent can call sits in one
+// group, as `docs/reference/mcp-parity.md` places it, and that page names the area each group
+// is held to. The values are the groups a user can choose, held to that placement by a gate.
 type WorkArea string
 
 // WorkEvidenceBasis A recommendation's scoped source and classification. Known request kinds

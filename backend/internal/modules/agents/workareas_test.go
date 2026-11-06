@@ -132,6 +132,10 @@ func TestARecordTypeHoldsACallToItsOwnArea(t *testing.T) {
 	if !errors.As(err, &off) || off.Area != "workspace_settings" {
 		t.Fatalf("creating a product with only sales work on → %v, want refused in workspace settings", err)
 	}
+	areas = principal.WorkAreas{Limited: true, Chosen: []string{"business", "workspace_settings"}}
+	if _, err := r.Invoke(ctx, "create_record", json.RawMessage(`{"record_type":"no_such_type"}`)); !errors.As(err, &off) {
+		t.Fatalf("a record type the table does not place, with both areas on → %v, want refused rather than admitted on the union", err)
+	}
 }
 
 func TestTheAreasOfferedAreTheOnesTheGrantsReach(t *testing.T) {
