@@ -33,6 +33,12 @@ describe("the words for an Undo of Margince's changes", () => {
     );
   });
 
+  it("still answers when a partial Undo names no kept field", () => {
+    expect(() =>
+      undoResultText({ ...result([]), outcome: "partly_undone" }, t),
+    ).not.toThrow();
+  });
+
   it("names the field a later edit kept", () => {
     expect(
       undoResultText(result(["deal_close_date"], [{ kind: "deal_amount" }]), t),

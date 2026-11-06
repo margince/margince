@@ -320,7 +320,8 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		if err != nil {
 			return err
 		}
-		if row.PublicIntent != nil {
+		// The door's own flag: Public is nil for a booking sent without a key.
+		if intent.DescriptionFromBooker {
 			if _, err := stampBookingPageUseTx(ctx, tx, host, s.now()); err != nil {
 				return err
 			}

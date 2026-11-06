@@ -42,6 +42,10 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // sorting the column means the label beside it.
 const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lead.source)`
 
+// leadWebFormNameSQL is the current name of the website form a lead came
+// through. A deleted form leaves it NULL, and the lead still reads as a web form.
+var leadWebFormNameSQL = `(SELECT f.name FROM web_form f WHERE f.id::text = ` + provenance.WebFormIDSQL("lead") + `)`
+
 // leadNextTaskDueSQL is when the next open task a reader may open falls due —
 // the deadline the Next task column prints, taking the audience for the reason
 // the pair beside it does.
@@ -96,7 +100,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	` + sourceAuthorSeatNameSQL("lead") + `,
 	version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
-	` + leadSourceLabelSQL + `,
+	` + leadSourceLabelSQL + `, ` + leadWebFormNameSQL + `,
 	origin, origin_detail, ` + leadOriginLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
 	(SELECT r.label FROM lead_disqualify_reason r WHERE r.id = lead.disqualify_reason_id),
@@ -243,7 +247,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&promotedContact, &l.PromotedAt, &mergedInto, &fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
-		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
+		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
 		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,

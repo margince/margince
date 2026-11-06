@@ -105,6 +105,21 @@ func withoutDisagreeingFullName(fields map[string]string) map[string]string {
 	return out
 }
 
+// withNamePartsOverStoredEmail gives a record still named by its own address the
+// name the row's parts spell. The address is the last rung of contactFullName, a
+// name nobody chose. The store protects anything that is not a join of the stored
+// parts, so the row has to send this one.
+func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map[string]string) map[string]string {
+	joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"])
+	stored := textOf(current[fieldFullName])
+	if joined == "" || stored == "" || !strings.EqualFold(stored, textOf(storedPrimaryEmail(current))) {
+		return fields
+	}
+	out := maps.Clone(fields)
+	out[fieldFullName] = joined
+	return out
+}
+
 // joinedNameParts is "first last" when the row states both parts, else "".
 func joinedNameParts(fields map[string]string) string {
 	first, last := fields["first_name"], fields["last_name"]

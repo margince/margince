@@ -206,6 +206,43 @@ func TestOnlyASeatTypedObjectionIsCorrectable(t *testing.T) {
 	}
 }
 
+// A passport agent's objection acts for its user. So the app names that user, and
+// an admin may correct it. The agent itself may not.
+func TestAnObjectionAPassportAgentRecordedIsCorrectable(t *testing.T) {
+	e := setupChannelConsent(t)
+	passport := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
+		VALUES ($1, $2, $2, 'objection', ARRAY['read','write'], $3, now() + interval '1 day')`,
+		passport, e.user, "hash-"+passport.String()); err != nil {
+		t.Fatal(err)
+	}
+	var name string
+	if err := e.owner.QueryRow(context.Background(), `SELECT display_name FROM app_user WHERE id = $1`, e.user).Scan(&name); err != nil {
+		t.Fatal(err)
+	}
+	agent := adminAgent(e, "agent:"+passport.String(), passport)
+	if err := e.store.Suppress(agent, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "they said stop",
+	}); err != nil {
+		t.Fatalf("the agent recording the objection: %v", err)
+	}
+	stop := onlyStop(t, e, e.ctx, e.contact)
+	if !stop.MayLift || !stop.Correction || !stop.RecordedByColleague || stop.RecordedByName == nil || *stop.RecordedByName != name {
+		t.Errorf("the admin is offered %+v, want a correction of a stop %s recorded", stop, name)
+	}
+	row := ids.UUID(stop.Id)
+	if err := e.store.Lift(agent, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "mistake"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("the agent correcting it answered %v, want ErrPermissionDenied", err)
+	}
+	if err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "mistake"}); err != nil {
+		t.Errorf("the admin's correction answered %v", err)
+	}
+	if stillLive(t, e, row) {
+		t.Error("the admin's correction left the objection live")
+	}
+}
+
 // A merge marks the copy it writes, and the copy of a typed objection stays
 // correctable through its chain.
 func TestACarriedTypedObjectionIsMarkedAndCorrectable(t *testing.T) {

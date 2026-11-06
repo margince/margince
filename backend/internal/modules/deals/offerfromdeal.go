@@ -38,7 +38,7 @@ func (e *OfferLinesFromDealError) Error() string {
 
 // FieldFault points at the lines.
 func (e *OfferLinesFromDealError) FieldFault() (field, code, message string) {
-	return "line_items", "offer_lines_from_deal", e.Error()
+	return lineItemsField, "offer_lines_from_deal", e.Error()
 }
 
 // DealHasNoLinesError refuses a request to copy lines from a deal without any.
@@ -107,7 +107,7 @@ func admitOfferLines(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in Creat
 		return in, nil, nil, nil
 	}
 	if len(in.LineItems) > 0 {
-		return CreateOfferInput{}, nil, nil, &LineOwnedValueError{Field: "line_items"}
+		return CreateOfferInput{}, nil, nil, &LineOwnedValueError{Field: lineItemsField}
 	}
 	if in.FromDealRevision == nil {
 		return CreateOfferInput{}, nil, nil, &RequiredFieldError{Field: fromDealRevisionField}
@@ -220,14 +220,7 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM offer_line_item WHERE offer_id = $1`, offerID); err != nil {
-			return fmt.Errorf("clear the draft's lines: %w", err)
-		}
-		basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
-		if err := insertOfferLines(ctx, tx, offerID, current.Currency, languageOf(current.Language), basis, rows); err != nil {
-			return err
-		}
-		if err := bindOfferLinesToDeal(ctx, tx, offerID, sources); err != nil {
+		if err := s.replaceDraftLines(ctx, tx, current, rows, sources); err != nil {
 			return err
 		}
 		bound := storekit.NewPatch()
@@ -250,6 +243,20 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 		return err
 	})
 	return out, err
+}
+
+// replaceDraftLines swaps the draft's lines for rows and names the deal line
+// each came from.
+func (s *Store) replaceDraftLines(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer, rows []OfferLineInputRow, sources []ids.UUID) error {
+	offerID := ids.From[ids.OfferKind](ids.UUID(current.Id))
+	if _, err := tx.Exec(ctx, `DELETE FROM offer_line_item WHERE offer_id = $1`, offerID); err != nil {
+		return fmt.Errorf("clear the draft's lines: %w", err)
+	}
+	basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
+	if err := insertOfferLines(ctx, tx, offerID, current.Currency, languageOf(current.Language), basis, rows); err != nil {
+		return err
+	}
+	return bindOfferLinesToDeal(ctx, tx, offerID, sources)
 }
 
 // ensureLinesPricedToWin refuses to win a deal priced from lines that are not

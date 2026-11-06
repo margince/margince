@@ -107,7 +107,7 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 		moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
 			ToStageID: first, WonWithoutContractReason: nil,
 			auditEvidence: map[string]any{
-				"basis": in.Basis, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: DealReviveCorrection,
+				basisKey: in.Basis, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: DealReviveCorrection,
 			},
 		}, active)
 		if err != nil {
@@ -143,15 +143,8 @@ func (s *Store) revivableDeal(ctx context.Context, tx pgx.Tx, in ReviveLostDealI
 	// The evidence is held first. The time checks below then read rows that
 	// nobody can change before the write.
 	evidence := citedEvidence(current)
-	if held, err := in.EvidenceHolds(ctx, tx, evidence); err != nil || !held {
+	if stands, err := s.suggestionStands(ctx, tx, current, in, evidence); err != nil || !stands {
 		return Suggestion{}, ids.Nil, false, err
-	}
-	for _, superseded := range []func(context.Context, pgx.Tx, Suggestion) (bool, error){
-		supersedeIfEvidenceChanged, s.supersedeIfBuyerChanged, supersedeIfCompanyTaken,
-	} {
-		if gone, err := superseded(ctx, tx, current); err != nil || gone {
-			return Suggestion{}, ids.Nil, false, err
-		}
 	}
 	if _, err := storekit.LockRow(ctx, tx, dealTable, in.DealID.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -167,14 +160,35 @@ func (s *Store) revivableDeal(ctx context.Context, tx pgx.Tx, in ReviveLostDealI
 	if err != nil || !ok {
 		return Suggestion{}, ids.Nil, false, err
 	}
-	// Evidence from before the loss was about the deal that was lost, and
-	// evidence from before an Undo is what the owner already turned down.
-	// Either retires the suggestion, so newer evidence can raise its own.
-	if !arrived.Earliest.After(lost.closedAt) || (lost.undoneAt != nil && !arrived.Latest.After(*lost.undoneAt)) {
+	if arrivedTooEarly(arrived, lost) {
 		return Suggestion{}, ids.Nil, false, supersedeTx(ctx, tx, current.ID, map[string]any{"arrived_before": "the deal's loss or its reopen's Undo"})
 	}
 	on, err := in.SwitchOn(ctx, tx)
 	return current, lost.pipeline, on, err
+}
+
+// suggestionStands holds the cited evidence and asks whether the suggestion
+// still rests on it. A change retires the suggestion and answers false.
+func (s *Store) suggestionStands(ctx context.Context, tx pgx.Tx, current Suggestion, in ReviveLostDealInput, evidence []SuggestionEvidence) (bool, error) {
+	if held, err := in.EvidenceHolds(ctx, tx, evidence); err != nil || !held {
+		return false, err
+	}
+	for _, superseded := range []func(context.Context, pgx.Tx, Suggestion) (bool, error){
+		supersedeIfEvidenceChanged, s.supersedeIfBuyerChanged, supersedeIfCompanyTaken,
+	} {
+		if gone, err := superseded(ctx, tx, current); err != nil || gone {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// arrivedTooEarly asks whether evidence predates the decision to reopen.
+// Evidence from before the loss was about the deal that was lost, and evidence
+// from before an Undo is what the owner already turned down. Either retires
+// the suggestion, so newer evidence can raise its own.
+func arrivedTooEarly(arrived EvidenceArrival, lost lostDeal) bool {
+	return !arrived.Earliest.After(lost.closedAt) || (lost.undoneAt != nil && !arrived.Latest.After(*lost.undoneAt))
 }
 
 // lostDeal is what a reopen reads of the locked deal.
@@ -219,6 +233,9 @@ func readLostDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, company, owne
 	return out, nil
 }
 
+// suggestionKindKey is the kind in a suggestion's audit image.
+const suggestionKindKey = "kind"
+
 // recordRevived settles the suggestion as the reopen of the deal. Its kind
 // says so, so no reader takes it for the suggestion the deal was opened from.
 func recordRevived(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID) error {
@@ -237,8 +254,8 @@ func recordRevived(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID) er
 		return &SuggestionDecidedError{State: "decided"}
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", suggestionEntity, suggestion,
-		map[string]any{columnState: SuggestionOpen, "kind": SuggestionKindOpenDeal},
-		map[string]any{columnState: SuggestionAccepted, "kind": SuggestionKindRevive, "accepted_deal_id": deal})
+		map[string]any{columnState: SuggestionOpen, suggestionKindKey: SuggestionKindOpenDeal},
+		map[string]any{columnState: SuggestionAccepted, suggestionKindKey: SuggestionKindRevive, "accepted_deal_id": deal})
 	if err != nil {
 		return fmt.Errorf("deals: auditing the reopen on the suggestion: %w", err)
 	}

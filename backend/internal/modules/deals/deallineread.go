@@ -190,14 +190,13 @@ func (s *Store) dealCommercialForCaller(ctx context.Context, tx pgx.Tx, dealID i
 	if err != nil {
 		return crmcontracts.DealCommercial{}, err
 	}
-	basis, err := dealAmountBasis(ctx, tx, dealID, head, readable)
+	basis, stated, err := dealAmountBasis(ctx, tx, dealID, head, readable)
 	if err != nil {
 		return crmcontracts.DealCommercial{}, err
 	}
 	out := crmcontracts.DealCommercial{
 		DealId:             openapi_types.UUID(dealID.UUID),
 		Mode:               crmcontracts.DealCommercialMode(head.Mode),
-		AmountBasis:        basis,
 		CommercialRevision: head.Revision,
 		Currency:           commercialCurrency(head, lines),
 		Lines:              make([]crmcontracts.DealLine, 0, len(lines)),
@@ -205,6 +204,9 @@ func (s *Store) dealCommercialForCaller(ctx context.Context, tx pgx.Tx, dealID i
 		Missing:            make([]crmcontracts.DealCommercialMissing, 0, len(figures.Missing)),
 		MoneyWithheld:      !readable,
 		Writable:           writable[dealID.UUID] && head.Status == string(DealOpen) && readable,
+	}
+	if stated {
+		out.AmountBasis = &basis
 	}
 	for _, reason := range figures.Missing {
 		out.Missing = append(out.Missing, crmcontracts.DealCommercialMissing(reason))
@@ -237,30 +239,28 @@ func commercialCurrency(head dealCommercialHead, lines []dealLineRow) *string {
 // an accepted offer's gross came from that offer; any other legacy amount was
 // typed by somebody whose basis nobody recorded. A reader the amount is
 // masked from learns only what the mode says: comparing the amount to an
-// offer's gross would tell them the amount.
-func dealAmountBasis(ctx context.Context, tx pgx.Tx, dealID ids.DealID, head dealCommercialHead, readable bool) (*crmcontracts.DealCommercialAmountBasis, error) {
-	basis := func(b crmcontracts.DealCommercialAmountBasis) (*crmcontracts.DealCommercialAmountBasis, error) {
-		return &b, nil
-	}
+// offer's gross would tell them the amount. It reports false when the reader
+// is told no basis at all.
+func dealAmountBasis(ctx context.Context, tx pgx.Tx, dealID ids.DealID, head dealCommercialHead, readable bool) (crmcontracts.DealCommercialAmountBasis, bool, error) {
 	switch {
 	case head.Mode == modeLines:
-		return basis(crmcontracts.DealCommercialAmountBasisLinesNetCommitted)
+		return crmcontracts.DealCommercialAmountBasisLinesNetCommitted, true, nil
 	case !readable || head.AmountMinor == nil:
-		return nil, nil
+		return "", false, nil
 	case head.Mode == modeEstimate:
-		return basis(crmcontracts.DealCommercialAmountBasisEstimate)
+		return crmcontracts.DealCommercialAmountBasisEstimate, true, nil
 	}
 	var fromOffer bool
 	if err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM offer WHERE deal_id = $1 AND status = 'accepted' AND archived_at IS NULL
 		                 AND gross_minor = $2 AND currency = $3)`,
 		dealID, *head.AmountMinor, head.Currency).Scan(&fromOffer); err != nil {
-		return nil, fmt.Errorf("read the deal's amount basis: %w", err)
+		return "", false, fmt.Errorf("read the deal's amount basis: %w", err)
 	}
 	if fromOffer {
-		return basis(crmcontracts.DealCommercialAmountBasisOfferGross)
+		return crmcontracts.DealCommercialAmountBasisOfferGross, true, nil
 	}
-	return basis(crmcontracts.DealCommercialAmountBasisUnknown)
+	return crmcontracts.DealCommercialAmountBasisUnknown, true, nil
 }
 
 // dealLineWire renders one line, with the tax rate it is figured at. A reader

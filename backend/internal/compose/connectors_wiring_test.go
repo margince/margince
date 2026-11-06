@@ -38,15 +38,19 @@ func (fakeVault) GetOn(context.Context, keyvault.Querier, ids.WorkspaceID, keyva
 func (fakeVault) Delete(context.Context, ids.WorkspaceID, keyvault.Ref) error { return nil }
 func (fakeVault) Health(context.Context) error                                { return nil }
 
-// recordingOAuth notes whether the token exchange ran, so a CSRF test can tell
-// "blocked before the exchange" from "passed the gate and reached it".
-type recordingOAuth struct{ exchanged bool }
+// recordingOAuth counts the token exchanges, so a CSRF test can tell "blocked
+// before the exchange" from "passed the gate and reached it". granted is what
+// the user left ticked on the provider's screen.
+type recordingOAuth struct {
+	exchanges int
+	granted   []string
+}
 
 func (o *recordingOAuth) AuthCodeURL(state, _ string) string { return "https://auth?state=" + state }
 
 func (o *recordingOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
-	o.exchanged = true
-	return oauthflow.TokenGrant{RefreshToken: "refresh"}, nil
+	o.exchanges++
+	return oauthflow.TokenGrant{RefreshToken: "refresh", Scopes: o.granted}, nil
 }
 
 func (o *recordingOAuth) AccessToken(context.Context, string) (string, error) { return "access", nil }
@@ -118,7 +122,7 @@ func TestCallbackRequiresMatchingCSRFCookie(t *testing.T) {
 	// (a) No cookie → blocked before any token exchange.
 	rec := httptest.NewRecorder()
 	h.ConnectorOAuthCallback(rec, httptest.NewRequest(http.MethodGet, "/cb", nil), "gmail", params)
-	if oauth.exchanged {
+	if oauth.exchanges != 0 {
 		t.Fatal("token exchange ran without a matching nonce cookie (CSRF gate bypassed)")
 	}
 	if rec.Code != http.StatusFound {
@@ -129,11 +133,10 @@ func TestCallbackRequiresMatchingCSRFCookie(t *testing.T) {
 	}
 
 	// (b) Matching cookie → passes the gate and reaches the exchange.
-	oauth.exchanged = false
 	req := httptest.NewRequest(http.MethodGet, "/cb", nil)
 	req.AddCookie(&http.Cookie{Name: csrfCookieName("gmail"), Value: nonce, HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
 	h.ConnectorOAuthCallback(httptest.NewRecorder(), req, "gmail", params)
-	if !oauth.exchanged {
+	if oauth.exchanges != 1 {
 		t.Fatal("a matching nonce cookie should let the flow reach the token exchange")
 	}
 }

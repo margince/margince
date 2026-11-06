@@ -85,6 +85,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
   a new forecast model is tested against, before it is scored.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
+- [prove-a-tool-in-the-role-matrix.md](how-to/prove-a-tool-in-the-role-matrix.md): make a new MCP tool show
+  ✓ or ✗ for every role.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
 - [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
@@ -148,6 +150,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
+  extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
   of an extension runs as.
 - [land-companies-and-deals-from-an-extension.md](how-to/land-companies-and-deals-from-an-extension.md): hand the

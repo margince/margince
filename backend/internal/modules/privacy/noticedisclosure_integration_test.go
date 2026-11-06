@@ -39,8 +39,10 @@ func seedNoticeHistory(t *testing.T, e *sarIdentifierEnv) {
 		args []any
 	}{
 		{`UPDATE contact SET address_city = 'Berlin' WHERE id = $1`, []any{e.contact}},
-		{`INSERT INTO consent_purpose (key, label, class) VALUES ($1, 'News', 'marketing'), ($2, 'Old', 'marketing')`,
-			[]any{"pn_news_" + tag, "pn_old_" + tag}},
+		{
+			`INSERT INTO consent_purpose (key, label, class) VALUES ($1, 'News', 'marketing'), ($2, 'Old', 'marketing')`,
+			[]any{"pn_news_" + tag, "pn_old_" + tag},
+		},
 		{`INSERT INTO contact_consent (contact_id, purpose_id, state)
 		  SELECT $1, id, CASE WHEN key LIKE 'pn_news_%' THEN 'granted' ELSE 'withdrawn' END
 		    FROM consent_purpose WHERE key IN ($2, $3)`, []any{e.contact, "pn_news_" + tag, "pn_old_" + tag}},

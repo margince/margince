@@ -68,7 +68,7 @@ To edit a contact in Margince, open it and press the value to change in the **De
 2. Press the value (an empty one says **Not set**) or its mark, change it in the dialog, and press **Save**. Nothing is stored before that, even a choice from a list. **Cancel** or `Esc` closes the dialog without saving.
 3. **Email**, **Phone** and **Address** open a dialog with several fields. Each email or phone is one row with **Type**, **Primary** and buttons to move or remove it. Pressing the email address or phone number still starts a message or a call. The box around it and its mark open the dialog.
 
-**Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created.
+**Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created. **LinkedIn** shows as a chip with the LinkedIn logo and the record's name: the chip opens the profile, and the mark opens the dialog. A company's **LinkedIn URL** and a lead's LinkedIn show the same chip, but a lead's cannot be changed. An address on another host shows as plain text.
 Also called: update a contact, change a phone number, rename.
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
@@ -84,7 +84,7 @@ To link a contact to a company in Margince, open the contact's page and choose *
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
 3. Tick **This is their current employer** if it is.
 4. Choose **Create**.
-To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
+To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact to another company, choose **Employer** in **About** and pick it, or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
 A company name Margince read for a contact with no current job shows in the **Companies** panel and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates and links the company, with the domain of the contact's work email unless that is consumer mail, blocked or another company's. If you can open the company that holds the domain, Margince uses it and links the contact. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature.
 ### How do I match a purchased job history entry to a company?
@@ -115,7 +115,7 @@ The first merge settles the group for every owner, and it cannot be undone. A co
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
-To call a contact, click its number in **Details** or in the header's **Phone** field. It dials that number in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has nothing to dial. A call logged this way is not linked to the task and does not complete it.
+To call a contact, click its number in **Details** or in the header's **Phone** field. It dials that number in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the open card under **Your tasks** on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has nothing to dial. A call logged this way is not linked to the task and does not complete it.
 
 To write to a contact, press **Email** in its header; a contact reached only on chat shows **Message on** there. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial, call result, not reached.

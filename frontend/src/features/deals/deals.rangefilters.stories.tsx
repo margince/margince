@@ -7,6 +7,7 @@ import { expect, screen, userEvent, within } from "storybook/test";
 import { ListSurface } from "../../design-system/listsurface";
 import { LocaleProvider, useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { playOpenViewStep } from "../../testing/listview.play";
 import { dealRangeChips } from "./deals.rangefilters";
 
 const meta: Meta = {
@@ -61,14 +62,13 @@ export const CloseDateStep: Story = {
     </LocaleProvider>
   ),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+    const panel = within(await playOpenViewStep(canvasElement, "Filters"));
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Filter" }),
+      await panel.findByRole("button", { name: "Close date" }),
     );
-    await userEvent.click(canvas.getByRole("button", { name: "Close date" }));
     await expect(
-      canvas.getByRole("radio", { name: "This fiscal quarter" }),
-    ).toBeTruthy();
+      await panel.findByRole("radio", { name: "This fiscal quarter" }),
+    ).toBeVisible();
     await expect(screen.getByRole("button", { name: "Apply" })).toBeTruthy();
   },
 };
@@ -105,15 +105,12 @@ export const AmountAndCompanyWithheld: Story = {
     </LocaleProvider>
   ),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Filter" }),
-    );
+    const panel = within(await playOpenViewStep(canvasElement, "Filters"));
     await expect(
-      canvas.getByRole("button", { name: "Close date" }),
-    ).toBeTruthy();
+      await panel.findByRole("button", { name: "Close date" }),
+    ).toBeVisible();
     for (const name of ["Value", "Currency", "Country"]) {
-      await expect(canvas.queryByRole("button", { name })).toBeNull();
+      await expect(panel.queryByRole("button", { name })).toBeNull();
     }
   },
 };

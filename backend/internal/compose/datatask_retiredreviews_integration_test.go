@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -118,6 +119,39 @@ func TestTheRetiredReviewBatchRollsBackWithItsTransaction(t *testing.T) {
 	}
 	if got := e.WsScalar(t, `SELECT is_done::text FROM activity WHERE id = $1`, f.systemTask); got != "false" {
 		t.Errorf("the review's task done=%s after the rollback, want false", got)
+	}
+}
+
+// A completion waits for an edit already under way and takes the new version.
+// One colleague's edit therefore cannot abort the batch.
+func TestAnEditDuringTheBatchDoesNotAbortTheTaskCompletion(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	f := seedRetiredReviews(t, e)
+	editor, err := integration.OwnerConn(t).Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := editor.Exec(ctx, `UPDATE activity SET version = version + 1 WHERE id = $1`, f.systemTask); err != nil {
+		t.Fatal(err)
+	}
+
+	completed := make(chan error, 1)
+	go func() {
+		completed <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			_, err := activities.NewStore(InstallationDB(e.Pool)).CompleteSystemTasksTx(ctx, tx, []ids.UUID{f.systemTask})
+			return err
+		})
+	}()
+	waitForLockWaiter(t, nil, `'transactionid', 'tuple'`, "the completion finished without waiting on the edit")
+	if err := editor.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-completed; err != nil {
+		t.Fatalf("the completion lost to a concurrent edit: %v", err)
+	}
+	if got := e.WsScalar(t, `SELECT is_done::text FROM activity WHERE id = $1`, f.systemTask); got != "true" {
+		t.Errorf("the task done=%s after the edit landed, want true", got)
 	}
 }
 

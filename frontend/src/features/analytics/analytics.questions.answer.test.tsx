@@ -83,8 +83,8 @@ describe("the answer table", () => {
     stubServer();
     renderAnswer();
     expect(await screen.findByText("Qualified")).toBeTruthy();
-    expect(screen.getByText("862,000 EUR")).toBeTruthy();
-    expect(within(bodyRows()[2]).getByText("125,000 USD")).toBeTruthy();
+    expect(screen.getByText("€862,000")).toBeTruthy();
+    expect(within(bodyRows()[2]).getByText("US$125,000")).toBeTruthy();
     expect(within(bodyRows()[2]).getByText("Not set")).toBeTruthy();
   });
 
@@ -193,7 +193,7 @@ describe("a row's drill-down", () => {
       await screen.findByRole("button", { name: "Explain Not set, USD" }),
     );
     const dialog = await screen.findByRole("dialog");
-    await within(dialog).findByText("42,000 EUR");
+    await within(dialog).findByText("€42,000");
     expect(asked).toEqual([
       {
         url: expect.stringContaining("/analytics/explain"),

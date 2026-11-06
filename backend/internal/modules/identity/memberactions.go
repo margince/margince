@@ -146,12 +146,11 @@ func keepsAnAdmin(target memberTarget) bool {
 	return !target.soleAdmin || len(target.row.Roles) > 1
 }
 
-// callerMay is the gate in front of every member verb: the user_admin grant
-// the action takes, and a seat that may write at all, which the HTTP layer
-// checks above RBAC for every mutating method.
+// callerMay decides whether a member verb is offered: the user_admin grant the
+// action takes, and a seat that may write at all. The write handlers enforce it.
 func callerMay(ctx context.Context, actor Identity, action memberAction) bool {
 	return principal.SeatType(actor.SeatType).CanMutate() &&
-		auth.Require(ctx, objectUserAdmin, action.verb()) == nil
+		auth.Allows(ctx, objectUserAdmin, action.verb())
 }
 
 // alreadyDeactivated reports a member deactivating changes nothing for.

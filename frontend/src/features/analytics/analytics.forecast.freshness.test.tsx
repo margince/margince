@@ -21,6 +21,7 @@ type InputCheck = components["schemas"]["InputCheck"];
 
 const RUN: Assurance = {
   run_id: "r-1",
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
   as_of: "2026-09-07T03:00:00Z",
   status: "complete",
   readiness: "ready",

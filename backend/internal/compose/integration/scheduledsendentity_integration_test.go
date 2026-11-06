@@ -31,7 +31,7 @@ import (
 // and the preview signs as the default entity.
 func TestAHeldMessagePreviewsTheSignatureOfItsFrozenEntity(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	branch := ids.NewV7()
 	p.inWorkspace(t, `INSERT INTO legal_entity (id, display_name, legal_name, country, imprint, signature_template, captured_by)
 		VALUES ($1, 'Branch', 'Branch GmbH', 'at', 'Branch GmbH imprint', '<p>{name}</p><p>{imprint}</p>', 'human:x')`, branch)

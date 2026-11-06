@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 )
 
-func bookingCards(t *testing.T, h *aliasHosts, ctx context.Context) []string {
+func bookingCards(ctx context.Context, t *testing.T, h *aliasHosts) []string {
 	t.Helper()
 	feed := newAttentionService(h.e.Pool, approvals.NewService(h.e.DB()), func() time.Time { return h.now })
 	day, err := feed.Assemble(ctx)
@@ -42,10 +42,10 @@ func TestHomeNamesAPausedBookingPageOnlyOnceItWasUsed(t *testing.T) {
 	if err := h.store.MarkBookingPageShared(h.ben); err != nil {
 		t.Fatal(err)
 	}
-	if got := bookingCards(t, h, h.ben); len(got) != 1 || got[0] != "calendar_unavailable" {
+	if got := bookingCards(h.ben, t, h); len(got) != 1 || got[0] != "calendar_unavailable" {
 		t.Fatalf("Ben's Home carries %v, want one calendar_unavailable card", got)
 	}
-	if got := bookingCards(t, h, h.ada); len(got) != 0 {
+	if got := bookingCards(h.ada, t, h); len(got) != 0 {
 		t.Fatalf("Ada never used her page and her Home carries %v, want no card", got)
 	}
 }

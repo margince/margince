@@ -170,7 +170,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 		return "", err
 	}
 	if !masked {
-		amountShown = "TRUE"
+		amountShown = sqlTrue
 	}
 	before, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d", "(a.before->>'amount_minor')::bigint", arg)
 	if err != nil {

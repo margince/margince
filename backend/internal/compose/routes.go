@@ -43,7 +43,7 @@ import (
 // contractAPI builds the generated contract router with the ADR-0055
 // admission layer and idempotency wrapped around it (outermost last — see the
 // wrap-order note inline).
-func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) http.Handler {
+func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) *chi.Mux {
 	// The SAME meter the tool registry charges: this door refuses on the bound
 	// the other door pays into, so a Passport cannot spend its window on one
 	// and keep reading on the other.
@@ -220,6 +220,9 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the
 	// controller reaches through.
+	if srv.routesForTest != nil {
+		publicEdge = srv.routesForTest(publicEdge)
+	}
 	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
 		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(publicEdge))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment

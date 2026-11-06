@@ -63,8 +63,8 @@ const overrideWarningTextV1 = "The engine refused this message, and that refusal
 	"message are written to a record that cannot be edited afterwards. This covers this message " +
 	"alone — the next one to the same recipient is judged from scratch."
 
-// overrideWarnings resolves the words a recorded version showed. A
-// version is added and never edited or removed. A record naming any of them
+// overrideWarnings holds the versions this build has served, with their words.
+// A version is added and never edited or removed. A record naming any of them
 // can then be read back with what its director was shown. Only the current one is
 // accepted for a new instruction (servedWarningVersion).
 //

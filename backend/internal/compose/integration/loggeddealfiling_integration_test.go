@@ -6,12 +6,14 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -58,6 +60,27 @@ func newLoggedDealWorld(t *testing.T, count int) *loggedDealWorld {
 		w.deals = append(w.deals, ids.UUID(deal.Id))
 	}
 	return w
+}
+
+// requireFilingAsksForADeal logs in and wants the refusal an ambiguous filing
+// answers with.
+func (w *loggedDealWorld) requireFilingAsksForADeal(t *testing.T, in activities.LogActivityInput) {
+	t.Helper()
+	_, _, err := w.store.LogActivity(w.Admin(), in)
+	if err == nil {
+		t.Fatal("an ambiguous filing did not ask for a deal or none")
+	}
+	fault, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok {
+		t.Fatalf("wanted a filing validation error: %v", err)
+	}
+	if len(fault.Fields) != 1 {
+		t.Fatalf("field faults = %+v", fault.Fields)
+	}
+	field, code := fault.Fields[0].Field, fault.Fields[0].Code
+	if field != "deal_filing" || code != "choose_deal" {
+		t.Fatalf("fault = %s/%s", field, code)
+	}
 }
 
 func (w *loggedDealWorld) call(at time.Time) activities.LogActivityInput {
@@ -113,21 +136,7 @@ func TestLoggedDealFilingDistinguishesNoDealARequiredChoiceAndExplicitNone(t *te
 			in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
 			in.DealFiling = &ref
 			if count > 1 {
-				if _, _, err := w.store.LogActivity(w.Admin(), in); err == nil {
-					t.Fatal("an ambiguous filing did not ask for a deal or none")
-				} else {
-					fault, ok := errors.AsType[*httperr.DetailedError](err)
-					if !ok {
-						t.Fatalf("wanted a filing validation error: %v", err)
-					}
-					if len(fault.Fields) != 1 {
-						t.Fatalf("field faults = %+v", fault.Fields)
-					}
-					field, code := fault.Fields[0].Field, fault.Fields[0].Code
-					if field != "deal_filing" || code != "choose_deal" {
-						t.Fatalf("fault = %s/%s", field, code)
-					}
-				}
+				w.requireFilingAsksForADeal(t, in)
 				ref.Skip = new(true)
 			}
 			logged, _, err := w.store.LogActivity(w.Admin(), in)
@@ -278,6 +287,81 @@ func TestDealFilingRefusesAnUnrelatedCompanyContext(t *testing.T) {
 	field, code := fault.Fields[0].Field, fault.Fields[0].Code
 	if field != "deal_filing" || code != "unrelated_record" {
 		t.Fatalf("fault = %s/%s", field, code)
+	}
+}
+
+// requireFilingFault logs in and wants one deal_filing refusal with this code.
+func (w *loggedDealWorld) requireFilingFault(ctx context.Context, t *testing.T, in activities.LogActivityInput, code string) {
+	t.Helper()
+	_, _, err := w.store.LogActivity(ctx, in)
+	fault, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok {
+		t.Fatalf("wanted a %s refusal: %v", code, err)
+	}
+	if len(fault.Fields) != 1 || fault.Fields[0].Field != "deal_filing" || fault.Fields[0].Code != code {
+		t.Fatalf("field faults = %+v, want deal_filing/%s", fault.Fields, code)
+	}
+}
+
+// A chosen deal has to be an open deal of the record the form started on.
+func TestDealFilingRefusesAChosenDealOfAnotherCompany(t *testing.T) {
+	w := newLoggedDealWorld(t, 2)
+	w.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, w.deals[1], w.SeedCompany(t, "Unrelated account", &w.AdminUser))
+	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
+	in.DealFiling = &crmcontracts.ActivityDealFiling{
+		RecordType: "contact", RecordId: crmcontracts.Id(w.contact.UUID), DealId: new(crmcontracts.Id(w.deals[1])),
+	}
+	w.requireFilingFault(w.Admin(), t, in, "unrelated_deal")
+}
+
+// A filing named on a meeting that was not held is refused, never dropped.
+func TestDealFilingRefusesAMeetingNotHeld(t *testing.T) {
+	w := newLoggedDealWorld(t, 1)
+	at := time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC)
+	in := w.call(at)
+	in.Kind, in.CallOutcome, in.MeetingStatus = "meeting", nil, new("booked")
+	in.DealFiling = &crmcontracts.ActivityDealFiling{RecordType: "contact", RecordId: crmcontracts.Id(w.contact.UUID)}
+	w.requireFilingFault(w.Admin(), t, in, "meeting_not_held")
+}
+
+// An import stays unfiled by itself, and a filing somebody names on it lands.
+func TestAnImportedCallIsFiledOnlyWhenAFilingIsNamed(t *testing.T) {
+	w := newLoggedDealWorld(t, 1)
+	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
+	in.SourceSystem, in.SourceID = new("mirror:csv"), new("row-1")
+	imported, _, err := w.store.LogActivity(w.Admin(), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := w.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND entity_type = 'deal'`, imported.Id); got != 0 {
+		t.Fatal("an import filed itself on a deal")
+	}
+	named := w.call(time.Date(2026, 1, 11, 9, 0, 0, 0, time.UTC))
+	named.SourceSystem, named.SourceID = new("mirror:csv"), new("row-2")
+	named.DealFiling = &crmcontracts.ActivityDealFiling{RecordType: "contact", RecordId: crmcontracts.Id(w.contact.UUID)}
+	filed, _, err := w.store.LogActivity(w.Admin(), named)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := w.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND deal_id = $2`, filed.Id, w.deals[0]); got != 1 {
+		t.Fatal("a named filing on an import was dropped")
+	}
+}
+
+// The automatic link does not push a request at the ceiling over it.
+func TestACallAtTheLinkCeilingStaysUnfiled(t *testing.T) {
+	w := newLoggedDealWorld(t, 1)
+	in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
+	for len(in.Links) < activities.MaxLinks {
+		extra := w.SeedContact(t, fmt.Sprintf("Attendee %d", len(in.Links)), &w.AdminUser)
+		in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "contact", EntityID: extra})
+	}
+	logged, _, err := w.store.LogActivity(w.Admin(), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := w.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND entity_type = 'deal'`, logged.Id); got != 0 {
+		t.Fatalf("deal links = %d, want the call left unfiled", got)
 	}
 }
 

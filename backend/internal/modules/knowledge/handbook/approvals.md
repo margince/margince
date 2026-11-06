@@ -133,7 +133,7 @@ Also called: request ownership, take over an account, ask for a contact, ownersh
 To give a contact or company you own to a colleague, open the record and press the access chip under its name. Press **Hand over to…**, choose the colleague, add a note if you like, and press **Send offer**.
 The offer waits as an approval on the colleague's **Worklist** for 7 days. Only that colleague can answer it, and their agent can decline it but not accept it.
 
-You can offer it to any active colleague on a seat that can edit records, even one outside your own team. The colleague's agreement takes the place of the limit an owner change has. If they accept, the record moves to them, with the same open deals and tasks a request moves.
+You can offer it to any active colleague on a seat that can edit records, even one outside your own team. If they accept, the record moves to them, with the same open deals and tasks a request moves. To move it without asking, change the owner on the record instead, which needs edit rights on it.
 
 A notice tells you when the colleague accepts or declines and when the offer runs out. Until then the panel says who it is offered to; press **Withdraw offer** to take it back. A record has one handover open at a time. While a colleague's request or your offer is open, a second one is refused with a line naming the open one.
 

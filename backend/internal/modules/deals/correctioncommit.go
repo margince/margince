@@ -31,14 +31,14 @@ type correctionWrite struct {
 // commitCorrection writes a correction's patch, its audit row, its event and
 // its deal_correction row, in the caller's transaction under the deal's row
 // lock. The close-date sweep and the nightly verdict both write through it.
-func commitCorrection(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, w correctionWrite) (DealCorrection, error) {
+func commitCorrection(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, w correctionWrite) error {
 	if err := applyDealPatchLocked(ctx, tx, w.patch, lock); err != nil {
-		return DealCorrection{}, fmt.Errorf("apply %s patch: %w", w.correction, err)
+		return fmt.Errorf("apply %s patch: %w", w.correction, err)
 	}
 	auditID, err := storekit.AuditWithEvidence(
 		ctx, tx, "update", "deal", w.deal.UUID, w.patch.Before(), w.patch.After(), w.auditEvidence)
 	if err != nil {
-		return DealCorrection{}, fmt.Errorf("audit %s: %w", w.correction, err)
+		return fmt.Errorf("audit %s: %w", w.correction, err)
 	}
 	changed := maps.Clone(w.changedFields)
 	if changed == nil {
@@ -47,12 +47,13 @@ func commitCorrection(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, w c
 	maps.Copy(changed, w.patch.After())
 	if err := storekit.EmitEvent(ctx, tx, auditID, w.deal.UUID,
 		crmcontracts.PublicEventDealUpdated{ChangedFields: changed}); err != nil {
-		return DealCorrection{}, fmt.Errorf("emit %s: %w", w.correction, err)
+		return fmt.Errorf("emit %s: %w", w.correction, err)
 	}
 	// Moved, not After: a reversal that restored a field which never changed
 	// would put back a value that is already there.
-	return recordCorrection(ctx, tx, DealCorrection{
+	_, err = recordCorrection(ctx, tx, DealCorrection{
 		DealID: w.deal, AuditLogID: auditID, Correction: w.correction,
 		Fields: movedFields(w.patch), Evidence: w.evidence,
 	}, w.runID)
+	return err
 }

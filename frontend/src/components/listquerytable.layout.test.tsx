@@ -7,6 +7,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { openViewStep } from "../testing/listview.testkit";
 import { type ListPage, ListTable, useListQuery } from "./listquery";
 
 // Two record lists that count the same unit keep their own column layout.
@@ -76,7 +77,7 @@ describe("a list's column layout", () => {
     const user = userEvent.setup();
     const main = mount();
     await headers();
-    await user.click(screen.getByRole("button", { name: "Display" }));
+    await openViewStep(user, "Columns");
     screen.getByRole("button", { name: "Move Stage, 2 of 2" }).focus();
     await user.keyboard("{ArrowUp}");
     expect(await headers()).toEqual(["Name", "Stage", "City"]);

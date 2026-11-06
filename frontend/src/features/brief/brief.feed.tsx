@@ -18,7 +18,8 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { identity, Triage } from "./brief.focus";
+import { Triage } from "./brief.focus";
+import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
@@ -80,14 +81,12 @@ export function BriefFeed({
             </Badge>
           </AppLink>
         )}
-        {lead && (
-          <span className="t-caption t-num brief-first-position">
-            {t("brief.focus.position", {
-              at: formatNumber(at + 1, locale),
-              count: formatNumber(rows.length, locale),
-            })}
+        {rows.length > 0 && (
+          <span className="t-caption t-num brief-first-count">
+            {formatNumber(rows.length, locale)}
           </span>
         )}
+        {queueToggle && <div className="brief-first-queue">{queueToggle}</div>}
       </div>
       {refreshFailed && (
         <p role="alert">
@@ -131,7 +130,6 @@ export function BriefFeed({
           )}
         </SurfaceState>
       )}
-      {queueToggle && <div className="brief-first-foot">{queueToggle}</div>}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={readerZone}

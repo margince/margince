@@ -15,6 +15,7 @@ import {
   AttachedFiles,
   useCarriageBlocks,
 } from "./composeattachments";
+import { useKeptDraft } from "./composeautosave";
 import { ComposeBlockers } from "./composeblockers";
 import { useDealChoice } from "./composedeal";
 import { type ComposeDock, ComposeDockContext } from "./composedockcontext";
@@ -24,6 +25,8 @@ import { groundingOf } from "./composelinks";
 import type { ComposeProps } from "./composeprops";
 import { useRecipientOffer } from "./composerecipientoffer";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
+import { savedFieldsOf } from "./composesaveddraftfields";
+
 import { ScheduleDialog } from "./composeschedule";
 import { sendWording, useComposeSend } from "./composesend";
 import {
@@ -194,6 +197,7 @@ export function ComposeWindow({
     settle,
     restoreSaved,
     adoptSavedSubject,
+    setFiles: attached.setFiles,
     account: fields.account,
   });
   const savedDraft = useSavedDraft({
@@ -204,15 +208,7 @@ export function ComposeWindow({
       isChannelReply,
     },
     open,
-    fields: {
-      to: fields.to,
-      cc: fields.cc,
-      bcc: fields.bcc,
-      subject: fields.subject,
-      body: fields.body,
-      html: fields.html,
-      editorState: fields.editorState,
-    },
+    fields: savedFieldsOf(fields, attached.files),
     replyTo: thread.anchorActivity,
     offeredRecipient: offer.standing.offeredAddress,
     initialIntent: askedIntent,
@@ -279,6 +275,10 @@ export function ComposeWindow({
     control: voice.control,
   });
   const busy = sendPending || voice.rejectionInFlight;
+  const held = voice.rejectionInFlight || savedDraft.saving;
+  // Every hold on the Send button, so Cmd/Ctrl+Enter waits for the same ones.
+  const sendBlocked = [held, sendPending, fields.addressRefused].includes(true);
+  useKeptDraft(savedDraft.keeper, sendPending);
   const selectMessage = useConversationSwitch({
     answering,
     choose,
@@ -378,7 +378,8 @@ export function ComposeWindow({
                 voiceMaturity={voiceProfile.data?.maturity}
                 channelLabel={dial.channel?.label}
                 carriageBlocks={carriageBlocks}
-                flagged={send.flagged}
+                send={send}
+                sendBlocked={sendBlocked}
                 voice={voice}
                 marksIn={markRow}
                 attach={
@@ -433,11 +434,12 @@ export function ComposeWindow({
             isChannelReply={isChannelReply}
             // The button stays live with fields outstanding, so a press can
             // name them. A rejection or a draft save in flight holds it.
-            held={voice.rejectionInFlight || savedDraft.saving}
+            held={held}
             onPickMoment={() => setPickingMoment(true)}
             sendAt={fields.sendAt}
             savedDraft={savedDraft}
             busy={busy}
+            addressRefused={fields.addressRefused}
             marksRef={setMarkRow}
           />
         </ComposeFrame>

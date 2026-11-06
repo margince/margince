@@ -80,12 +80,10 @@ func (h Handlers) GetContactProfileFields(w http.ResponseWriter, r *http.Request
 // The upsert takes GREATEST(stored, now), so a slow tab's late-arriving ack
 // can never rewind a newer one.
 //
-// The human gate is load-bearing, not defense in depth: an agent principal
-// carries the granting human's id as its UserID, so resolving "the acting
-// user" would happily mark a record as SEEN by a human who never opened it,
-// consuming their unread marker on their behalf.
+// An agent carries its user's id, so this spends that user's unread marker. Only
+// an agent on a passport may, and its tool tells it to ask first.
 func (s *Service) Acknowledge(ctx context.Context, contactID ids.ContactID) (crmcontracts.RecordViewAck, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.RecordViewAck{}, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {

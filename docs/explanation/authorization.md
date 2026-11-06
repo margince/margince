@@ -150,8 +150,8 @@ checks and no other:
   grant check.
 - `AdmitChangers`, the batch check for several principals, lets it pass for the acting principal
   only. A colleague in the same batch still needs their own write authority.
-- `EnsureAssignee` accepts one of the named owners as the new owner, if that owner is a live
-  human with a full seat. Anyone else is still refused.
+- `EnsureRunAsOwner` accepts one of the named owners without the caller's write scope, if that
+  owner is a live human with a full seat. `EnsureAssignee` asks no write scope of anyone.
 
 It opens up no other table, no other contact and no read. Object RBAC, the visibility check and the
 seat limit still run, so a `read` seat still cannot write.
@@ -204,7 +204,7 @@ below the transport, so REST and MCP act the same:
   - An installation can also set a verb back to confirm first, per record type, by declaring
     `tier: confirmation_required` on the operation. Every verb still has the staging code that sends
     such a call to a human's inbox, so it does not just end as a refusal.
-- **`human-only`** routes (consent purposes, passport issue, pipeline config, retention policy) refuse
+- **`human-only`** routes (consent purposes, passport issue, retention policy, trusting a stage move to run by itself) refuse
   an agent principal at once. Each one would let a credential add to what a credential may do.
 - An operation that changes data and has no tier is **denied by default** for agents. The generator for
   agent policy refuses to ship a change with no tier in the first place; see

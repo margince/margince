@@ -139,7 +139,7 @@ func (w *weeklyGenerateWorker) combinedMorningMessage(ctx context.Context, setti
 	if err != nil || !allowed {
 		return emailview.Message{}, err
 	}
-	worker := briefGenerateWorker{engine: routineBriefEngine(w.pool), pool: w.pool, users: w.users, log: w.log, mail: BriefMailConfig(w.mail)}
+	worker := routineBriefWorker(w.pool, w.users, w.log, BriefMailConfig(w.mail))
 	morning, useful, err := worker.morningMessage(ctx, now, words, true)
 	if err != nil || !useful {
 		return emailview.Message{}, err

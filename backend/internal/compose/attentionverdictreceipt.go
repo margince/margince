@@ -110,9 +110,12 @@ func receiptStage(name *string) string {
 	return *name
 }
 
+// receiptNoAmount is the receipt's word for a change with no amount on a side.
+const receiptNoAmount = "none"
+
 func receiptAmount(amount *int64, currency *string) string {
 	if amount == nil || currency == nil {
-		return "none"
+		return receiptNoAmount
 	}
 	return values.MajorUnits(*amount, *currency) + " " + *currency
 }

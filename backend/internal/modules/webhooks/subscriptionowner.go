@@ -43,8 +43,8 @@ func (s *Store) ownerAdmission() OwnerAdmission {
 
 // setOwner adds a change of owner to an update's patch. Only a CHANGE is an
 // assignment, so re-stating the current owner passes even after they left.
-// admit is asked about the new owner; nil means the caller was admitted for
-// the member already, as a handover is. The signing secret stays.
+// admit is asked about the new owner; nil means the caller asked it already,
+// as a handover's transfer does. The signing secret stays.
 func setOwner(
 	ctx context.Context, tx pgx.Tx, p *storekit.Patch, current Subscription, next *ids.UserID, admit OwnerAdmission,
 ) error {
@@ -78,9 +78,9 @@ func OwnedLiveSubscriptionsTx(ctx context.Context, tx pgx.Tx, owner ids.UserID) 
 // TransferSubscriptionOwnershipTx moves every live subscription from `from` to
 // `to` and answers how many moved. Each goes through the patch and audit an
 // edit of its owner writes. Archived subscriptions stay where they are. The
-// caller runs it inside a handover, which already admitted them for both
-// members.
-func TransferSubscriptionOwnershipTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID) (int, error) {
+// caller runs it inside a handover, which admitted them for from. admit asks
+// the same of to, because the delivery then reads what to may see.
+func TransferSubscriptionOwnershipTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID, admit OwnerAdmission) (int, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return 0, err
 	}
@@ -90,7 +90,10 @@ func TransferSubscriptionOwnershipTx(ctx context.Context, tx pgx.Tx, from, to id
 		return 0, err
 	}
 	owned, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
+	if err != nil || len(owned) == 0 {
+		return 0, err
+	}
+	if err := admit(ctx, tx, to); err != nil {
 		return 0, err
 	}
 	moved := 0

@@ -35,20 +35,25 @@ import (
 var forwardMeasureSites = []struct {
 	what string
 	path []string
-	// frozen marks a site that also offers the retired measures, because a
-	// stored row read back keeps the word it was frozen under.
-	frozen bool
+	// retired marks a site that also offers the retired measures. A stored row
+	// read back keeps the word it was frozen under.
+	retired bool
+	// saves marks a site whose retired measures are written rather than read
+	// back, so each must save as a measure Go can build.
+	saves bool
 }{
 	// A shared snapshot frozen under the retired qualified forecast lands on the
 	// measure it was frozen under.
-	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}, true},
-	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}, false},
-	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}, false},
+	{"the landing a read returns", []string{"components", "schemas", "ForecastLanding"}, true, false},
+	{"the stored installation setting", []string{"components", "schemas", "InstallationSettings"}, false, false},
+	// The patch still accepts the retired measures, and saves each as the measure
+	// it was built on, so no read ever meets one.
+	{"the settings patch", []string{"components", "schemas", "UpdateInstallationSettingsRequest"}, true, true},
 	// The weekly review's FROZEN measure. It records which measure a past week
 	// was read under, so it must offer the same set — a review frozen under a
 	// measure the server no longer builds is a record nobody can re-read.
-	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}, true},
-	{"the basis of a target comparison", []string{"components", "schemas", "ReportingTargetComparison"}, false},
+	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}, true, false},
+	{"the basis of a target comparison", []string{"components", "schemas", "ReportingTargetComparison"}, false, false},
 }
 
 // TestEveryForwardMeasureIsOfferedOnTheWire is the gate forecasting.ForwardMeasures names.
@@ -73,7 +78,10 @@ func TestEveryForwardMeasureIsOfferedOnTheWire(t *testing.T) {
 			}
 		}
 		for _, measure := range onWire {
-			if site.frozen && slices.Contains(values.RetiredForwardMeasures(), measure) {
+			if site.retired && slices.Contains(values.RetiredForwardMeasures(), measure) {
+				if saved := values.SavedForwardMeasure(measure); site.saves && !slices.Contains(inGo, saved) {
+					t.Errorf("%s saves retired %q as %q and forecasting.ProjectLanding refuses it", site.what, measure, saved)
+				}
 				continue
 			}
 			if !slices.Contains(inGo, measure) {

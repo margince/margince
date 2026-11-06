@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/dealverdict"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -40,6 +41,11 @@ type dealVerdictDealFixture struct {
 	Currency    string `json:"currency"`
 	CloseDate   string `json:"close_date"`
 	Probability int    `json:"probability"`
+	// ProbabilitySource says who set Probability, the stage unless named.
+	ProbabilitySource string `json:"probability_source"`
+	// StageProbability is the stage's own, which a raise may reach. Unset, the
+	// deal's Probability is already the limit.
+	StageProbability int `json:"stage_probability"`
 	// Later are the open stages after the deal's, in order. ExitCriteria
 	// belong to the deal's own stage unless they name a later one.
 	Later        []dealVerdictStageFixture     `json:"later"`
@@ -112,10 +118,11 @@ func dealVerdictFixtureInput(f dealVerdictFixture) (dealverdict.Input, error) {
 	amount, currency := f.Deal.Amount*100, f.Deal.Currency
 	in := dealverdict.Input{
 		Today: today, DealName: f.Deal.Name, Stage: f.Deal.Stage, AmountMinor: &amount, Currency: &currency,
-		Probability: f.Deal.Probability, ProbabilitySource: "stage",
+		Probability: f.Deal.Probability, StageProbability: f.Deal.StageProbability,
+		ProbabilitySource: cmp.Or(f.Deal.ProbabilitySource, string(deals.SourceStage)),
 	}
-	if close, err := time.Parse(time.DateOnly, f.Deal.CloseDate); err == nil {
-		in.CloseDate = &close
+	if closeDate, err := time.Parse(time.DateOnly, f.Deal.CloseDate); err == nil {
+		in.CloseDate = &closeDate
 	}
 	stageFixtureInput(f.Deal, &in)
 	for _, a := range f.Activities {

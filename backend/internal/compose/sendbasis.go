@@ -123,8 +123,10 @@ func readSendBasis(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUID
 		if err != nil {
 			return basis, err
 		}
-		basis.rows = append(basis.rows, basisRow{table: marginceChangesBasis, id: seat,
-			key: refs.changesSince.Format(time.RFC3339Nano), version: fingerprint})
+		basis.rows = append(basis.rows, basisRow{
+			table: marginceChangesBasis, id: seat,
+			key: refs.changesSince.Format(time.RFC3339Nano), version: fingerprint,
+		})
 	}
 	read, err := readShownItems(ctx, tx, seat, team, refs, now)
 	if err != nil {

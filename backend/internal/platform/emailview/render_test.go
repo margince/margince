@@ -4,6 +4,7 @@
 package emailview
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -143,5 +144,47 @@ func TestAMailWhoseLogoIsGoneIsHeadedByTheName(t *testing.T) {
 	}
 	if got := WithoutLetterheadLogo(markup, "signature-logo@margince"); got != markup {
 		t.Fatal("markup changed for a content id it does not show")
+	}
+}
+
+func TestAMailSpeakingAsMarginceDrawsTheAttachedMark(t *testing.T) {
+	head := Letterhead{MarkContentID: BrandMarkContentID}
+	if !head.UsesBrandMark() {
+		t.Fatal("an unnamed letterhead speaks as Margince")
+	}
+	rendered := Render(Message{Title: "Your day", Text: "Two tasks are due."}, head)
+	if !strings.Contains(rendered, `src="cid:`+BrandMarkContentID+`"`) || !strings.Contains(rendered, ">Margince</td>") {
+		t.Fatal("the letterhead lacks the Margince mark beside the wordmark")
+	}
+	if strings.Contains(rendered, ">M</td>") {
+		t.Fatal("the initials tile stands in for the mark the mail carries")
+	}
+}
+
+func TestACompanyLetterheadNeverBorrowsTheMarginceMark(t *testing.T) {
+	head := Letterhead{Name: "Northstar GmbH", MarkContentID: BrandMarkContentID}
+	if head.UsesBrandMark() || strings.Contains(Render(Message{Title: "T", Text: "B"}, head), "cid:") {
+		t.Fatal("a company without a logo was headed by the Margince mark")
+	}
+}
+
+// Gmail drops a whole style attribute that holds a colour it cannot parse,
+// and with it the background, border and width beside that colour.
+func TestEveryColourIsWrittenInTheFormGmailReads(t *testing.T) {
+	var body Content
+	body.Lead("Your week.")
+	body.Stats(Stat{Label: "Won", Value: "€1"})
+	body.Note("Expires Friday.", Info)
+	body.Append(weekWithItems())
+	rendered := Render(body.Message("Week", "en", ""), Letterhead{MarkContentID: BrandMarkContentID})
+	colours := regexp.MustCompile(`(?:rgba?|hsla?)\([^)]*\)`).FindAllString(rendered, -1)
+	if len(colours) == 0 {
+		t.Fatal("the mail writes no colour function; this check can no longer see its subject")
+	}
+	commaForm := regexp.MustCompile(`^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+%?\s*)?\)$`)
+	for _, colour := range colours {
+		if !commaForm.MatchString(colour) {
+			t.Errorf("%s is not in comma form, so Gmail drops the style that holds it", colour)
+		}
 	}
 }

@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
 )
 
@@ -496,7 +497,7 @@ func TestADecisionPastItsWindowSaysSoRatherThanLoopingTheCaller(t *testing.T) {
 		   acknowledged_at, facts_as_of, valid_until)
 		VALUES ($1, $2, 'contractual_necessity', 'decided a while ago', 'override-v1',
 		        now() - interval '2 days', now() - interval '2 days', now() - interval '1 day')`,
-		review, sessionUserID(t, c.AppEnv)); err != nil {
+		review, apptest.SessionUserID(t, c.AppEnv)); err != nil {
 		t.Fatalf("recording the stale decision: %v", err)
 	}
 

@@ -1,32 +1,23 @@
-import {
-  CheckSquare,
-  FileText,
-  Search,
-  Send,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { RecordNextBar } from "../../components/latestinbound";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
-import { Button } from "../../design-system/atoms";
+import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatDue } from "../../format/format";
 import { daysPast } from "../../format/lateness";
-import { useLocale, usePlural, useT, type Words } from "../../i18n";
-import {
-  type LatePromise,
-  latePromise,
-  type PromiseKind,
-} from "../../lib/latepromise";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { latePromise } from "../../lib/latepromise";
 import { useSourceOpener } from "../../lib/opensource";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
+import { momentTask, owedLateness, recordsTheMoveNames } from "./contactowed";
 import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -240,7 +231,12 @@ function MomentSource({
   return (
     <>
       <span>{t("co.suggest.basedOn")}</span>{" "}
-      <Button variant="link" className="btn-valuelabel" onClick={open}>
+      <Button
+        variant="link"
+        align="start"
+        className="btn-valuelabel"
+        onClick={open}
+      >
         {item.label}
       </Button>
     </>
@@ -254,6 +250,7 @@ function TaskBar({
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
   const plural = usePlural();
+  const holder = useTaskHolder(task.assignee_id);
   const { locale } = useLocale();
   const zone = useViewerZone();
   const late =
@@ -264,13 +261,14 @@ function TaskBar({
       title={task.subject ?? t("task.untitled")}
       late={late ? { label: late.badge, tone: "danger" } : undefined}
       detail={taskDetail(task)}
-      sub={
+      sub={taskLine([
+        holder,
         task.due_at
           ? t("co.next.due", {
               when: formatDue(task.due_at, task.due_has_time, locale, zone),
             })
-          : t("co.next.undated")
-      }
+          : t("co.next.undated"),
+      ])}
       action={
         <>
           <TaskCallAction task={task} pageContact={view.contact} />
@@ -347,80 +345,10 @@ function AnswerBar({
   );
 }
 
-// What the move says is owed, in the order both readers below take it: the
-// promise it may already have settled, then its evidence.
-function owedRecords(moment: ContactMoment): { id: string; task: boolean }[] {
-  const promise = moment.may_be_done;
-  return [
-    ...(promise
-      ? [{ id: promise.promise_id, task: promise.promise_type === "task" }]
-      : []),
-    ...moment.evidence.flatMap((item) =>
-      item.id ? [{ id: item.id, task: item.type === "task" }] : [],
-    ),
-  ];
-}
-
-// The first listed task the move is about.
-function momentTask(
-  moment: ContactMoment,
-  view: Contact360,
-): Activity | undefined {
-  const tasks = view.next_steps?.data ?? [];
-  for (const record of owedRecords(moment)) {
-    const task = record.task
-      ? tasks.find((row) => row.id === record.id)
-      : undefined;
-    if (task) {
-      return task;
-    }
-  }
-  return undefined;
-}
-
-// What the move says is owed, as its due date and kind: a claim's or a listed
-// task's. A privacy notice is dated like a task.
-function owedDue(
-  moment: ContactMoment,
-  view: Contact360,
-): { due: string; kind: PromiseKind } | undefined {
-  if (moment.rule === "privacy_notice_due") {
-    const due = view.privacy_notice_duties?.find(
-      (duty) => duty.id === moment.recommended_action.destination?.entity_id,
-    )?.due_at;
-    return due ? { due, kind: "task" } : undefined;
-  }
-  for (const { id } of owedRecords(moment)) {
-    const claim = view.claims?.find((row) => row.id === id)?.due_at;
-    if (claim) {
-      return { due: claim, kind: "claim" };
-    }
-    const task = view.next_steps?.data.find((row) => row.id === id)?.due_at;
-    if (task) {
-      return { due: task, kind: "task" };
-    }
-  }
-  return undefined;
-}
-
-// How late the owed thing is, against the read's own `as_of`. So the tag agrees
-// with the dates beside it and does not drift while a tab is left open.
-function owedLateness(
-  moment: ContactMoment,
-  view: Contact360,
-  zone: string,
-  words: Words,
-): LatePromise | undefined {
-  const owed = owedDue(moment, view);
-  return owed && latePromise(owed.due, view.as_of, zone, owed.kind, words);
-}
-
-// The records the move is itself about. A task the move names is the subject
-// of the bar, and counted again under "+N tasks" it would be owed twice.
-function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
-  return new Set(
-    (move?.evidence ?? []).flatMap((item) => (item.id ? [item.id] : [])),
-  );
+// The bar has one filled verb, its lead; indigo when the model writes it.
+function verbVariant(drafts: boolean, lead: boolean): ButtonVariant {
+  if (lead) return drafts ? "ai" : "primary";
+  return drafts ? "aiQuiet" : "ghost";
 }
 
 function ActionVerb({
@@ -445,9 +373,10 @@ function ActionVerb({
     action.destination?.surface === "booking" ||
     action.destination?.surface === "activity_log";
   const blocked = action.state === "blocked";
-  // Only a verb that writes with a model uses the AI accent.
+  // A rule ladder picks the verb, not a model. Only the bar's lead verb is
+  // filled; a press that has the model write the mail carries the ✦.
   const drafts = momentDrafts(action);
-  const variant = drafts ? "ai" : primary ? "primary" : "ghost";
+  const variant = verbVariant(drafts, primary === true);
   return (
     <span className="today-verb">
       <Button
@@ -462,7 +391,7 @@ function ActionVerb({
               : undefined
         }
       >
-        {drafts ? <Sparkles aria-hidden="true" /> : actionIcon(action.kind)}
+        {!drafts && actionIcon(action.kind)}
         {action.label}
       </Button>
     </span>

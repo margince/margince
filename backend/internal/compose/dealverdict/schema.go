@@ -137,6 +137,25 @@ func validatePayload(payload Payload, in Input) string {
 }
 
 func validateAction(action Action, known map[string]Activity, in Input) string {
+	if msg := validateActionValue(action, in); msg != "" {
+		return msg
+	}
+	if len(action.Cited) == 0 {
+		return "every action cites at least one activity id"
+	}
+	for _, id := range action.Cited {
+		if _, ok := known[id]; !ok {
+			return fmt.Sprintf("cited id %q is not one of the supplied activities", id)
+		}
+	}
+	if action.Confidence < 0 || action.Confidence > 1 {
+		return fmt.Sprintf("confidence %v is outside 0 to 1", action.Confidence)
+	}
+	return ""
+}
+
+// validateActionValue checks the value an action's kind proposes.
+func validateActionValue(action Action, in Input) string {
 	switch action.Kind {
 	case KindSetCloseDate:
 		if _, err := time.Parse(time.DateOnly, action.Date); err != nil {
@@ -151,22 +170,9 @@ func validateAction(action Action, known map[string]Activity, in Input) string {
 			return fmt.Sprintf("probability %d is outside 0 to 100", action.Probability)
 		}
 	case KindMoveStage:
-		if msg := validateMove(action, in); msg != "" {
-			return msg
-		}
+		return validateMove(action, in)
 	default:
 		return fmt.Sprintf("kind %q is not set_close_date, set_amount, set_probability or move_stage", action.Kind)
-	}
-	if len(action.Cited) == 0 {
-		return "every action cites at least one activity id"
-	}
-	for _, id := range action.Cited {
-		if _, ok := known[id]; !ok {
-			return fmt.Sprintf("cited id %q is not one of the supplied activities", id)
-		}
-	}
-	if action.Confidence < 0 || action.Confidence > 1 {
-		return fmt.Sprintf("confidence %v is outside 0 to 1", action.Confidence)
 	}
 	return ""
 }

@@ -1378,6 +1378,8 @@ export const en = {
   "reporting.industry": "Industry",
   "reporting.allIndustries": "All industries",
   "reporting.valueBasis": "Value basis",
+  "reporting.filtersMore": "Filters",
+  "reporting.filtersActive": "Filters · {active}",
   "reporting.basis.all": "All value",
   "reporting.basis.software": "Software only",
   "reporting.basis.implementation": "Implementation only",
@@ -2057,7 +2059,6 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
-  "brief.focus.position": "{at} of {count}",
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
@@ -2300,6 +2301,7 @@ export const en = {
   "systemJob.domain_triage": "Website triage",
   "systemJob.employment_import_worker": "Employment history import",
   "systemJob.enabled_oidc_providers_read": "Sign-in provider read",
+  "systemJob.client_check_read": "AI tool check switch read",
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.extension_inventory": "Extension inventory",
@@ -2732,6 +2734,7 @@ export const en = {
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
+  "shell.accountSettingsAria": "{who}: account settings",
   "shell.theme": "Theme",
   "shell.helpMenu": "Help and feedback",
   "shell.help.report": "Report a problem",
@@ -2929,6 +2932,7 @@ export const en = {
   "record.registration": "Registration",
   "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
   "record.openProfile": "Open profile",
+  "record.linkedinProfile": "{name} on LinkedIn",
   "record.fieldsFailed": "Custom fields could not be loaded.",
   "record.fieldsLoading": "Loading custom fields…",
   "record.fieldsRetry": "Retry",
@@ -3360,6 +3364,14 @@ export const en = {
   "list.headActions": "More actions",
   "list.search": "Search",
   "list.showArchived": "Show archived",
+  "list.viewToggleOn": "On",
+  "list.viewToggleOff": "Off",
+  "list.viewMenu": "View",
+  "list.viewMenuBack": "back to view options",
+  "list.viewMenuChanged": "changed",
+  "list.viewMenuFilters_one": "{count} filter",
+  "list.viewMenuFilters_other": "{count} filters",
+  "list.viewMenuNone": "None",
   "list.loadMore": "Load more",
   "scrollSentinel.loading": "Loading more…",
   "scrollSentinel.failed": "Could not load more.",
@@ -3381,15 +3393,14 @@ export const en = {
   "table.rowsPerPage": "Rows per page",
   "table.perPage": "{count} per page",
   "table.sortedBy": "sorted by {column}",
-  "table.shownColumns": "Shown columns",
-  "table.display": "Display",
-  "table.density": "Density",
   "table.compact": "Compact",
+  "table.filters": "Filters",
+  "table.columns": "Columns",
+  "table.columnsShown": "{shown} of {total}",
+  "table.sortValue": "{column}, {direction}",
   "table.columnHandle": "Move {name}, {position} of {total}",
   "table.columnMoved": "{name} moved to {position} of {total}",
   "table.sort": "Sort",
-  "table.sortNamed": "Sort: {column}",
-  "table.sortMenu": "Sort by",
   "table.sortDefault": "Default order",
   "table.sortAscending": "ascending",
   "table.sortDescending": "descending",
@@ -3399,6 +3410,7 @@ export const en = {
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
+  "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "contacts",
   "unit.companies": "companies",
   "unit.deals": "deals",
@@ -3407,9 +3419,7 @@ export const en = {
   "unit.partners": "partners",
   "unit.products": "products",
   "unit.offerTemplates": "offer templates",
-  "table.filter": "Filter",
   "table.filterSearch": "Search attributes",
-  "table.addFilter": "Add filter",
   "table.filterIs": "is",
   "table.filterCondition": "Condition",
   "table.filterMore": "More actions for the {filter} filter",
@@ -3419,7 +3429,7 @@ export const en = {
   "table.filterSearching": "Searching…",
   "table.filterSearchFailed": "Search failed. Retry.",
   "table.filterNoMatches": "No matches.",
-  "table.filterBack": "Back to all filters",
+  "table.filterBack": "back to all filters",
 
   "contacts.name": "Name",
   "contacts.email": "Email",
@@ -3444,6 +3454,7 @@ export const en = {
   // lands beside the list's own tools, and "this section did not load" under a
   // toolbar says nothing about WHICH section.
   "views.rail": "Saved views",
+  "views.loadFailed": "Saved views did not load.",
   "views.manage": "Manage views",
   "views.none": "No saved views",
   "views.rename": "Rename",
@@ -3678,7 +3689,7 @@ export const en = {
   "co.strip.nextMeeting": "Next meeting",
   "co.strip.next.none": "None scheduled",
   "co.360.fullHistory": "Full history",
-  "co.overview.alsoOnList": "Also on your list",
+  "co.overview.otherOpen": "Other open tasks",
   "record.allTasks": "All tasks",
   "co.overview.latest": "Latest",
   "co.overview.nothingOpen": "Nothing else open",
@@ -3859,6 +3870,8 @@ export const en = {
   "co.routeIn.bandBadge.unknown": "Contact on file, no pattern yet",
   "record.context": "Context",
   "standing.title": "How it stands · {date}",
+  "standing.noteMore": "Show more",
+  "standing.noteLess": "Show less",
   "standing.sources.records": "From CRM records",
   "standing.sources.model_one": "Margince · {count} source",
   "standing.sources.model_other": "Margince · {count} sources",
@@ -3871,6 +3884,15 @@ export const en = {
   "stageLadder.earlier": "Show earlier stages",
   "stageLadder.later": "Show later stages",
   "standing.timeline.empty": "Nothing dated here yet.",
+  "standing.timeline.zoom": "Time shown",
+  "standing.timeline.zoom.month": "Month",
+  "standing.timeline.zoom.quarter": "Quarter",
+  "standing.timeline.zoom.year": "Year",
+  "standing.timeline.zoom.all": "All time",
+  "standing.timeline.loadingOlder": "Loading earlier items…",
+  "standing.timeline.olderOnHistory": "Earlier items are in History.",
+  "standing.timeline.olderFailed":
+    "Earlier items could not load. They are in History.",
   "latest.kind.email": "New email",
   "latest.kind.message": "New message",
   "latest.kind.webForm": "New website form",
@@ -4487,6 +4509,7 @@ export const en = {
   "approval.field.lost_reason": "Why it was lost",
   "approval.field.note": "Note",
   "approval.kind.transcript_proposal": "Add next step from transcript",
+  "approval.kind.stage_progression": "Advance deal stage",
   "approval.kind.commitment_task": "Task commitment",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
   "approval.kind.disqualify_lead": "Disqualify lead",
@@ -5426,6 +5449,7 @@ export const en = {
   "lead.source.manual": "Created manually",
   "lead.source.inbound": "Inbound",
   "lead.source.webform": "Web form",
+  "lead.source.webformNamed": "Web form “{name}”",
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
@@ -5543,8 +5567,24 @@ export const en = {
     "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.",
   "lead.boardCountsUnavailable":
     "Qualified and Disqualified counts did not load.",
+  "lead.boardCountsNoSearch":
+    "The counts cannot apply a search, so none is shown.",
+  "lead.boardCountsNoTagFilter": "No count while a tag filter is on.",
+  "lead.boardCountsNoTeamFilter":
+    "The counts cannot narrow by team or to unassigned leads, so none is shown.",
+  "lead.boardCountsNoScoreFilter": "No count while a score filter is on.",
+  "lead.boardCountsNoResponseFilter": "No count while a response filter is on.",
+  "lead.boardCountsNoCompanyFilter":
+    "The counts cannot narrow by industry, country or company size, so none is shown.",
+  "lead.boardCountsNoOtherFilter":
+    "The counts cannot apply every filter on this list, so none is shown.",
+  "lead.boardCountsNoConnectorSource":
+    "The counts cannot narrow to every lead from one connector, so none is shown.",
+  "lead.boardCountsOwnerNotMeasurable":
+    "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
     "These leads did not load. The count above is still correct.",
+  "lead.boardTerminalRowsUnavailableNoCount": "These leads did not load.",
   "lead.boardTerminalOnly":
     "No open leads here. They are counted under Qualified and Disqualified.",
 
@@ -5756,8 +5796,9 @@ export const en = {
     "What happens to the {count} open task on this deal?",
   "deals.closeTasks.legend_other":
     "What happens to the {count} open tasks on this deal?",
-  "deals.closeTasks.listLabel": "Open tasks on this deal",
   "deals.closeTasks.untitled": "Untitled task",
+  "deals.closeTasks.more_one": "and {count} more",
+  "deals.closeTasks.more_other": "and {count} more",
   "deals.closeTasks.complete": "Complete all",
   "deals.closeTasks.completeHint":
     "Mark them done once the deal closes. You can undo it.",
@@ -6199,13 +6240,15 @@ export const en = {
   "deal.correctCloseDayConfirm": "Save close day",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "{count} deal in {pipeline}",
+  "deals.countInPipeline_other": "{count} deals in {pipeline}",
   "deals.filterStalled": "Stalled only",
   // Both reasons say "loaded only" rather than naming the sum alone: with no
   // server aggregate the column's figure is the cards LOADED, and the board
   // pages on demand, so that number grows as the reader presses Load more.
   // Naming only the total would leave the count reading as final.
   "deals.totalsOwnerNotMeasurable":
-    "Loaded deals only. This owner’s totals are outside what you may measure.",
+    "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":
@@ -6262,6 +6305,13 @@ export const en = {
   "bulk.selected_one": "{count} selected",
   "bulk.selected_other": "{count} selected",
   "bulk.selectRow": "Select {name}",
+  "bulk.selectPage": "Select every row on this page",
+  "bulk.selectAll": "Select all",
+  "bulk.clearSelection": "Clear selection",
+  "bulk.selectionLimit_one":
+    "One change takes at most {count} record, so the selection stops there.",
+  "bulk.selectionLimit_other":
+    "One change takes at most {count} records, so the selection stops there.",
   "bulk.owner": "New owner",
   "bulk.ownerPick": "Pick an owner",
   "bulk.assign": "Assign owner",
@@ -6560,8 +6610,9 @@ export const en = {
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.briefedAt": "Briefed by Margince at {time}",
-  "brief.first.title": "First",
-  "brief.first.then": "Then",
+  "brief.task.done": "Mark done: {title}",
+  "brief.task.reply": "Reply to {name}: {subject}",
+  "brief.first.title": "Your tasks",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
   "brief.intro.urgent": "Urgent",
@@ -6683,13 +6734,26 @@ export const en = {
   "brief.report.vsPrior": "{delta} since last week",
   "brief.report.priorWeek": "Last week = week {week} ({range})",
   "brief.report.chapter.forecast": "Forecast",
-  "brief.report.chapter.glance": "At a glance",
   "brief.report.chapter.closed": "Closed deals",
   "brief.report.chapter.movement": "Pipeline movement",
   "brief.report.chapter.commitments": "The week ahead",
   "brief.report.chapter.figures": "Figures",
-  "brief.report.chapter.observations": "Observations",
+  "brief.report.chapter.observations": "What the week taught",
   "brief.report.closedTotal": "Won {won} · Lost {lost}",
+  "brief.report.weeks": "Weeks",
+  "brief.weekly.rail": "The week in figures",
+  "brief.report.movedCount_one": "{count} deal moved",
+  "brief.report.movedCount_other": "{count} deals moved",
+  "brief.report.wonCount_one": "{count} deal won",
+  "brief.report.wonCount_other": "{count} deals won",
+  "brief.report.wonPerWeek": "Won per week",
+  "brief.weekly.activity.title": "Activity this week",
+  "brief.weekly.activity.total_one": "{count} thing you did",
+  "brief.weekly.activity.total_other": "{count} things you did",
+  "brief.weekly.activity.emails": "Emails sent",
+  "brief.weekly.activity.calls": "Calls",
+  "brief.weekly.activity.meetings": "Meetings held",
+  "brief.weekly.activity.busiest": "Your busiest day was {day}.",
   "brief.report.next": "Next report on {date}",
   "brief.report.earlier": "Earlier week",
   "brief.report.later": "Later week",
@@ -7064,6 +7128,7 @@ export const en = {
     "This section did not load. The rest of the page is unaffected.",
   "today.quiet": "Nothing needs attention right now.",
   "task.untitled": "Untitled task",
+  "task.assigneeYou": "You",
   "task.next.openContact": "Open contact",
   "task.next.draftEmail": "Draft email",
   "task.next.draftIntent": "write about this task",
@@ -7489,7 +7554,21 @@ export const en = {
   "compose.savedDraftGoneBody":
     "It was sent or deleted there. Saving keeps the text on screen as a new draft.",
   "compose.savedDraftFailed":
-    "The draft was not saved. Save again, or close again to discard the text.",
+    "The draft was not saved. Retry, or close again to discard the text.",
+  "compose.savedDraftAutosaveFailed":
+    "Saving the draft did not finish. It tries again when you keep writing or come back online.",
+  "compose.savedDraftAutosaveRefused":
+    "The draft was not saved. Retry, or keep writing to try again.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} file could not be restored.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} files could not be restored.",
+  "compose.sendWaitsForAddress":
+    "Correct or remove the text that is not an email address.",
+  "compose.notAnAddress_one":
+    "Not an email address: {parts}. Correct it or remove it.",
+  "compose.notAnAddress_other":
+    "Not email addresses: {parts}. Correct them or remove them.",
   "compose.savedDraftLoad": "Load saved version",
   "compose.aiDisclosureTitle": "AI-assisted draft",
   "compose.aiDisclosureFallback":
@@ -8123,6 +8202,7 @@ export const en = {
   "analytics.wholeScopeForecast":
     "Forecast figures and non-deal checks cover the whole selected population, regardless of product, country or industry filters.",
   "analytics.attention": "Needs your attention",
+  "analytics.board.rail": "Outlook and next steps",
   "analytics.attentionNoOwner": "No owner",
   "analytics.attentionOutOfDate": "out of date, changed since the check",
   "analytics.attentionAtStake": "{amount} at stake",
@@ -8732,7 +8812,7 @@ export const en = {
   "passport.noneOption": "No passport",
   "settings.passportUseAi": "In a script or another AI tool",
   "settings.passportUseAiDetail":
-    "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex and Antigravity sign in without one, under Coding agents.",
+    "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex, Cursor and the editors sign in without one, under Connect your AI tool.",
   "settings.skillDownload": "Download skill",
   "settings.skillDownloadFailed": "Skill not downloaded",
   "settings.passportUseCode": "In your own code",
@@ -9085,8 +9165,6 @@ export const en = {
   "agents.colConnected": "Connected",
   "agents.disconnectConfirm":
     "This ends the whole connection, not one credential. The agent loses access on its next call and cannot renew. Reconnecting requires approving access again.",
-  "agents.connectAntigravityPath":
-    "Antigravity has no add command. Put the block below in ~/.gemini/config/mcp_config.json, then open its agent settings, “Customizations”, and choose “Authenticate” next to margince.",
   "agents.connectorOff": "AI tools cannot connect to Margince yet.",
   "agents.connectorOffDetail":
     "Whoever runs this installation turns this on in its configuration. Until then, passports still work for scripts.",
@@ -9110,6 +9188,33 @@ export const en = {
     "Registered by hand under MCP clients. The tool must send the client secret.",
   "agentClients.methods.alwaysOn": "Always on",
   "agentClients.methods.readOnly": "Only an admin can change these.",
+  "agentClients.experiments.title": "Experiments",
+  "agentClients.experiments.sub":
+    "Test features that may change or go away. Off for everyone until an admin turns them on here.",
+  "agentClients.experiments.clientCheck": "Tool support check",
+  "agentClients.experiments.clientCheckHint":
+    "Lets an admin’s AI tool show a small form, to test whether it can answer one.",
+  "agentClients.experiments.about": "About this experiment",
+  "agentClients.experiments.whyTitle": "Why",
+  "agentClients.experiments.why":
+    "Margince can ask you in the chat before a bulk change, or which record you meant, when your AI tool can show a small form. This check finds out which of your AI tools can. Changes that need approval still wait in Approvals.",
+  "agentClients.experiments.howTitle": "How to test",
+  "agentClients.experiments.step1": "Turn this on.",
+  "agentClients.experiments.step2":
+    "In your AI tool, reconnect Margince so it loads the new tool.",
+  "agentClients.experiments.step3": "Ask it:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Use the Margince check_client tool to check whether this AI tool can show a Margince form.",
+  "agentClients.experiments.clientCheckQuestionLabel": "Question",
+  "agentClients.experiments.copy": "Copy the question",
+  "agentClients.experiments.copied": "Copied",
+  "agentClients.experiments.copyRemedy":
+    "The browser refused the copy. Select the question and copy it by hand.",
+  "agentClients.experiments.step4":
+    "If your AI tool shows a form that asks you to pick a color, it supports forms. If not, the answer names the tool, its version and the reason.",
+  "agentClients.experiments.safeTitle": "Safe to try",
+  "agentClients.experiments.safe":
+    "While it is on, admins see the tool in every AI tool they connect. It reads and changes no data. Turn it off when you are done.",
   "agentClients.title": "MCP clients",
   "agentClients.sub":
     "Each client an AI tool signs in through, and how it came to exist.",
@@ -9203,7 +9308,7 @@ export const en = {
   "aiAccess.connect.help": "Help from {vendor}",
   "aiAccess.connect.helpAdmin": "Help from {vendor} for your admin",
   "aiAccess.connect.devHint":
-    "Using a command-line tool or your own code? See For developers below.",
+    "Writing your own code? Create an API key under For developers below.",
   "aiAccess.step.allow": "Margince opens. Sign in and choose Authorize. Done.",
   "aiAccess.claude.openConnectors":
     "In Claude, open “Customize”, then “Connectors”.",
@@ -9282,14 +9387,84 @@ export const en = {
   "aiAccess.guide.checked": "These steps were checked on {date}.",
   "aiAccess.dev.title": "For developers",
   "aiAccess.dev.sub":
-    "API keys for your own code, coding agents, and what agents may do without you.",
+    "API keys for your own code, and what agents may do without you.",
   "aiAccess.dev.tab.passports": "API keys",
-  "aiAccess.dev.tab.agents": "Coding agents",
   "aiAccess.dev.tab.rules": "Agent rules",
-  "aiAccess.cli.title": "Coding agents",
-  "aiAccess.cli.sub":
-    "Connect once, then sign in in the browser. No passport needed.",
-  "aiAccess.cli.then": "Then run {command}.",
+  "aiAccess.connect.placeQuestion": "Where do you use it?",
+  "aiAccess.connect.copy": "Copy",
+  "aiAccess.connect.command": "Text to copy",
+  "aiAccess.choice.other": "Another AI tool",
+  "aiAccess.place.claudeApp": "Claude app: web, desktop or phone",
+  "aiAccess.place.claudeAppNote":
+    "One connection covers Claude on the web, the desktop app and your phone. Claude Code is set up on its own.",
+  "aiAccess.place.claudeCodeTerminal": "Claude Code in a terminal",
+  "aiAccess.place.claudeCodeVsCode": "Claude Code in VS Code",
+  "aiAccess.place.claudeCodeJetBrains": "Claude Code in JetBrains",
+  "aiAccess.place.claudeCodeVisualStudio": "Claude Code in Visual Studio",
+  "aiAccess.place.claudeInCopilot":
+    "Using Claude as the model inside GitHub Copilot? Choose Copilot above.",
+  "aiAccess.place.chatgptApp": "ChatGPT app: web, desktop or phone",
+  "aiAccess.place.codex": "Codex in a terminal or editor",
+  "aiAccess.place.m365": "Microsoft 365 Copilot or Teams",
+  "aiAccess.place.githubVsCode": "GitHub Copilot in VS Code",
+  "aiAccess.place.githubVisualStudio": "GitHub Copilot in Visual Studio",
+  "aiAccess.place.geminiApp": "Gemini app, at work or at home",
+  "aiAccess.place.antigravity": "Antigravity, Google’s agent editor",
+  "aiAccess.runIn.vscode":
+    "Run the command in VS Code’s terminal: “Terminal”, then “New Terminal”.",
+  "aiAccess.runIn.jetbrains": "Run the command in the IDE’s “Terminal” window.",
+  "aiAccess.runIn.visualStudio":
+    "Run the command in Visual Studio’s terminal: “View”, then “Terminal”.",
+  "aiAccess.local.sub": "Set up on your own computer. No admin needed.",
+  "aiAccess.local.claudeCode.add":
+    "Run this once. Margince is then there in every project and editor.",
+  "aiAccess.local.claudeCode.signIn":
+    "In Claude Code, type /mcp, choose margince and sign in.",
+  "aiAccess.local.codex.add": "Run this once in a terminal.",
+  "aiAccess.local.codex.signIn": "Then run “codex mcp login margince”.",
+  "aiAccess.local.vscode.add":
+    "In the Command Palette, run “MCP: Add Server” and choose “HTTP”.",
+  "aiAccess.local.vscode.paste":
+    "Paste the address, enter margince as the server ID and choose “Global”.",
+  "aiAccess.local.vscode.signIn":
+    "Accept VS Code’s sign-in prompt. Margince opens: sign in and choose Authorize.",
+  "aiAccess.local.visualStudio.file":
+    "In Visual Studio, create or open the file %USERPROFILE%\\.mcp.json, add this text and save it. If the file already lists servers, add only the margince entry beside them.",
+  "aiAccess.local.visualStudio.signIn":
+    "Above margince in the file, choose “Authentication Required”, then “Authenticate”. Sign in and choose Authorize.",
+  "aiAccess.local.visualStudio.tools":
+    "In Copilot Chat, switch to Agent mode and turn on the margince tools.",
+  "aiAccess.local.cursor.file":
+    "Open ~/.cursor/mcp.json, or create it, add this text and save. Then restart Cursor. If the file already lists servers, add only the margince entry beside them.",
+  "aiAccess.local.cursor.signIn":
+    "Follow Cursor’s sign-in prompt for margince. Margince opens: sign in and choose Authorize.",
+  "aiAccess.local.antigravity.file":
+    "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
+  "aiAccess.local.antigravity.signIn":
+    "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
+  "aiAccess.other.sub":
+    "Margince works with any AI tool that can add a remote MCP server. Look for “MCP”, “connectors” or “tools” in its settings.",
+  "aiAccess.other.typeLabel": "Type",
+  "aiAccess.other.type":
+    "Remote server over HTTP, sometimes called “Streamable HTTP”",
+  "aiAccess.other.signInLabel": "Sign-in",
+  "aiAccess.other.signIn":
+    "OAuth in your browser. Most tools start it the first time they connect.",
+  "aiAccess.other.apiKey":
+    "No sign-in in the tool? Create an API key in Settings under AI access, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
+  "aiAccess.other.notAllowed":
+    "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under MCP.",
+  "setup.step.ai": "Connect your AI tool",
+  "setup.caption.ai":
+    "Use Margince from Claude, ChatGPT, Copilot or your editor.",
+  "setup.action.ai": "Connect",
+  "setup.step.aiDone": "{name} is connected.",
+  "setup.step.aiDoneUnnamed": "An AI tool is connected.",
+  "ob.conv.connect.aiRow": "Your AI tool",
+  "ob.conv.connect.aiBody":
+    "Ask Claude, ChatGPT, Copilot or your editor about your deals, and let it update Margince for you.",
+  "ob.conv.connect.aiConnect": "Connect",
+  "ob.conv.connect.aiConnected": "Connected",
   "aiAccess.cli.docs": "{tool} docs",
   "settings.token": "Credential",
   "settings.autonomy": "Autonomy tiers",
@@ -10384,6 +10559,13 @@ export const en = {
   "notifications.centre": "Notifications",
   "notifications.markAllRead": "Mark all read",
   "notifications.markRead": "Mark read",
+  "notifications.action.openContact": "Open contact",
+  "notifications.action.openCompany": "Open company",
+  "notifications.action.openDeal": "Open deal",
+  "notifications.action.openLead": "Open lead",
+  "notifications.action.openProject": "Open project",
+  "notifications.action.review": "Review request",
+  "notifications.action.systemHealth": "Open System health",
   "notifications.markAllFailed": "Nothing was marked read",
   "notifications.markReadFailed": "That notice was not marked read",
   "notifications.unread": "Unread",
@@ -12745,6 +12927,10 @@ export const en = {
     "Paused because the list it watches or adds to was archived. Restoring the list does not resume it.",
   "auto.pausedReason.listInvalid":
     "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
+  "auto.pausedReason.passportRevoked":
+    "The agent that set this rule up no longer has live access because its passport expired or was revoked, or its connection ended. Resume it to keep running without an agent.",
+  "auto.setByYourAgent": "By your agent",
+  "auto.setByAnAgent": "By an agent",
   "auto.pausedReason.listUnavailable":
     "Paused because its owner can no longer find the list it watches.",
   "auto.pausedReason.burst":
@@ -12791,6 +12977,7 @@ export const en = {
   "auto.action.addToShortlist": "add to a Shortlist",
   "auto.pausedShort.listArchived": "Paused · list archived",
   "auto.pausedShort.listInvalid": "Paused · list filter broken",
+  "auto.pausedShort.passportRevoked": "Paused · agent’s access ended",
   "auto.pausedShort.listUnavailable": "Paused · list not found",
   "auto.pausedShort.burst": "Paused · too many records",
   "auto.withheld": "Configured automations are hidden for your role.",
@@ -14700,6 +14887,7 @@ export const en = {
   "installationSettings.likelyThreshold.help":
     "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
+  "forecast.landingSection": "Where the period lands",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.likely": "Won + Likely deals",
@@ -14714,6 +14902,7 @@ export const en = {
   "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
+  "forecast.model.short": "Central 80% of outcomes",
   "forecast.model.month": "Modelled month finish",
   "forecast.model.week": "Modelled week finish",
   "forecast.model.value": "{low} to {high}",
@@ -15206,7 +15395,8 @@ export const en = {
   "ob.conv.connect.continueNoImport": "Continue without importing",
   "ob.conv.connect.importAndContinue": "Import {period} and continue",
   "ob.conv.connect.alsoTitle": "Also worth doing now",
-  "ob.conv.connect.alsoSub": "Optional. Both can be changed later in Settings.",
+  "ob.conv.connect.alsoSub":
+    "Optional. All of these can be changed later in Settings.",
   "ob.conv.connect.linkedinRow": "Your LinkedIn profile",
   "ob.conv.connect.linkedinAdd": "Add profile",
   "setup.reminder.trigger": "Finish setup",
@@ -15224,8 +15414,6 @@ export const en = {
   "setup.action.voice": "Add samples",
   "setup.action.booking": "Turn on",
   "settings.home.setup.title": "Your setup",
-  "settings.home.setup.complete": "Setup is complete",
-  "settings.home.setup.show": "Show steps",
   "connectors.tile.notSetUp": "Not set up",
   "connectors.tile.askAdmin": "An administrator turns {vendor} on in {page}.",
   "connectors.tile.registerApp":
@@ -15266,6 +15454,7 @@ export const en = {
   "account.timezoneLabel": "Time zone",
   "account.timezoneHelp":
     "Times in Margince, your bookable hours and mail sent to you use this time zone. Saved to your account, so it follows you to every device you sign in on.",
+  "account.timezoneSetByAgent": "By your agent",
   "workingHours.zoneIs": "Your hours are read in {zone}.",
   "workingHours.changeZone": "Change time zone",
   "account.languageCard": "Language and time zone",
@@ -17118,6 +17307,17 @@ export const en = {
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
     "The link to {company} and its history are deleted permanently. {company} itself stays. If they left, mark the role ended instead.",
+  // The About column's employer dialog: move the contact to another company or
+  // none, and say what became of the old job.
+  "contact.employer.changeTitle": "Change employer",
+  "contact.employer.none": "No current employer",
+  "contact.employer.fateQuestion": "What about {company}?",
+  "contact.employer.fateLeft": "They left {company}",
+  "contact.employer.fateLeftHint":
+    "It stays on their record as a former employer, and the job ends today.",
+  "contact.employer.fateWrong": "{company} was never their employer",
+  "contact.employer.fateWrongHint":
+    "The link and its history are deleted. {company} itself stays.",
   "contact.proposal.title": "From {source}: {company}",
   "contact.proposal.ask": "Link or create this company?",
   "contact.proposal.link": "Link",
@@ -17306,7 +17506,14 @@ export const en = {
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link URL (leave empty to remove the link)",
+  "richtext.linkAdd": "Add link",
+  "richtext.linkEdit": "Edit link",
+  "richtext.linkAddress": "Web or email address",
+  "richtext.linkPlaceholder": "example.com or name@example.com",
+  "richtext.linkApply": "Apply",
+  "richtext.linkRemove": "Remove link",
+  "richtext.linkRefused":
+    "This is not a web or email address. Enter one such as example.com or name@example.com.",
   "contact.composer.intentAgenda": "propose an agenda for the upcoming meeting",
   "contact.composer.intentReply": "reply to their last message",
   "contact.composer.intentCommitment": "deliver on a commitment",
@@ -17838,18 +18045,6 @@ export const en = {
     "Nothing chosen yet. Add records from a record page or a selection.",
   "lists.members.projects":
     "Project lists show their members in the Projects list.",
-  "lists.members.selectAll_one": "Select all {count} member",
-  "lists.members.selectAll_other": "Select all {count} members",
-  "lists.members.selectionFullTitle": "The selection is full",
-  "lists.members.selectionFull_one":
-    "One change can include at most {count} member. Untick one to select another.",
-  "lists.members.selectionFull_other":
-    "One change can include at most {count} members. Untick one to select another.",
-  "lists.members.selectAllCappedTitle": "Not every member is selected",
-  "lists.members.selectAllCapped_one":
-    "Only the first {count} member can be selected at once. Act on it, then select the rest.",
-  "lists.members.selectAllCapped_other":
-    "Only the first {count} members can be selected at once. Act on these, then select the rest.",
   "lists.history.title": "What changed",
   "lists.history.empty": "Nothing has changed yet.",
   "lists.history.loading": "Loading history",
@@ -18479,7 +18674,8 @@ export const en = {
     "Nothing was sent after this meeting. Send the attendees a follow-up.",
   "worklist.ask.batch":
     "Several routine decisions that read alike are grouped here. Review them together.",
-  "worklist.consequence.buyer_waits": "The buyer keeps waiting.",
+  "worklist.consequence.buyer_waits": "They keep waiting.",
+  "worklist.consequence.buyer_waits.named": "{name} keeps waiting.",
   "worklist.consequence.promise_breaks": "A commitment is broken.",
   "worklist.consequence.deal_drifts": "The deal keeps drifting.",
   "worklist.consequence.deal_slips_past_close":
@@ -18870,7 +19066,8 @@ export const en = {
   "worklist.because.pinned": "pinned by you",
   "worklist.because.reminder_due": "your reminder is due",
   "worklist.because.non_buyer_request": "not established as customer work",
-  "worklist.because.buyer_wrote_last": "buyer wrote last",
+  "worklist.because.buyer_wrote_last": "they wrote last",
+  "worklist.because.buyer_wrote_last.named": "{name} wrote last",
   "worklist.because.waiting_days": "waiting",
   "worklist.because.waiting_days.value_one": "waiting {value} day",
   "worklist.because.waiting_days.value_other": "waiting {value} days",
@@ -19065,6 +19262,8 @@ export const en = {
     "Nothing to rerun. This run was stopped on purpose, not by an error.",
   "worklist.verb.retryRefusedRepeats":
     "This rule is not allowed to run twice, so a rerun could repeat its actions.",
+  "worklist.verb.retryRefusedPassportRevoked":
+    "The agent that set this rule up no longer has live access, so the rule is paused. Resume it to keep it running with no agent behind it.",
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
@@ -20402,6 +20601,7 @@ export const en = {
   "project.standing.peek.documents": "Files on this project, newest first",
   "connectors.syncTimeUnknown": "Successful sync time unavailable",
   "brief.coverage.source.deal_advice": "Suggested deal steps",
+  "brief.coverage.source.contact_employers": "Where your contacts work",
   "tasks.origin.accepted_recommendation": "Accepted from a suggested step.",
   "deal.verdict.yourMove": "Your move",
   "deal.verdict.yourMoveToday":
@@ -20559,6 +20759,15 @@ export const en = {
   "analytics.hero.shortfall": "Projected shortfall {amount}",
   "analytics.hero.surplus": "Projected surplus {amount}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
+  "analytics.hero.ofTarget": "of {target} target",
+  "analytics.hero.short": "{amount} short of target",
+  "analytics.hero.over": "{amount} over target",
+  "analytics.trajectory.label": "Sales won through the period",
+  "analytics.trajectory.today": "Today · {date}",
+  "analytics.trajectory.through": "Through {date}",
+  "analytics.trajectory.target": "Target {amount}",
+  "analytics.trajectory.projection": "{amount} projected",
+  "analytics.trajectory.range": "Modelled finish",
   "analytics.overview.more": "More",
   "analytics.outlook.valuedCount": "{included} of {eligible} valued",
   "analytics.outlook.periodPipeline": "Pipeline due this quarter",
@@ -20567,6 +20776,7 @@ export const en = {
   "analytics.outlook.team": "Team prospecting outlook",
   "analytics.outlook.prospecting": "Prospecting outlook",
   "analytics.outlook.records": "View supporting records",
+  "analytics.outlook.more": "Read the full outlook",
   "analytics.assessment.refresh": "Refresh assessment",
   "analytics.assessment.retry": "Retry",
   "analytics.assessment.evidenceTitle": "What the assessment rests on",

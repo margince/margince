@@ -53,7 +53,10 @@ export function BriefChanges() {
     return null;
   }
   return (
-    <section className="brief-section" aria-labelledby={titleId}>
+    <section
+      className="brief-section brief-agent-section"
+      aria-labelledby={titleId}
+    >
       <Eyebrow as="h2" id={titleId} className="brief-section-label">
         {t("brief.changes.title")}
       </Eyebrow>
@@ -84,7 +87,6 @@ export function BriefChanges() {
                       </span>
                     )}
                   </p>
-                  <ReceiptDetail receipt={receipt} />
                   <div className="magic-line-controls">
                     <ReceiptReview receipt={receipt} />
                   </div>
@@ -99,6 +101,7 @@ export function BriefChanges() {
                   >
                     {changeWhen(receipt.occurred_at, asOf, locale, readerZone)}
                   </time>
+                  <ReceiptDetail receipt={receipt} />
                 </li>
               ))}
             </ul>

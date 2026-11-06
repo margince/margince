@@ -21,6 +21,7 @@ run:
     - e2e_llm
     - voicelive
     - vendorlive
+    - rolesweep
 
 issues:
   # Only findings introduced after the merge-base with origin/main fail.
