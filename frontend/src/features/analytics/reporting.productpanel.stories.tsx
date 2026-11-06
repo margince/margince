@@ -13,7 +13,7 @@ import { ProductReports } from "./reporting.productpanel";
 // with no product to list.
 
 const meta: Meta = {
-  title: "Analytics/Reporting/Product reports",
+  title: "Records/Reports/Product reports",
   parameters: { layout: "padded" },
 };
 export default meta;

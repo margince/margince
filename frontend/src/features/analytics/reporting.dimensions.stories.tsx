@@ -16,7 +16,7 @@ import type { ReportingSelection } from "./reporting.model";
 // chips say which are set: none, every one, and a product the catalog cannot name.
 
 const meta: Meta = {
-  title: "Analytics/Reporting/Dimensions",
+  title: "Records/Reports/Dimensions",
   parameters: { layout: "padded" },
 };
 export default meta;
