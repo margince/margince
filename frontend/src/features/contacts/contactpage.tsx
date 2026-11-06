@@ -308,6 +308,11 @@ export function ContactPageV2({
                     onAction={runAction}
                     onOpenEmail={setOpenEmail}
                     onOpenTab={openTab}
+                    onAddTask={
+                      !activity.pending && activity.refusedId === undefined
+                        ? () => setDrawer("activity_task")
+                        : undefined
+                    }
                   />
                 </ContactLatestInbound>
               </>

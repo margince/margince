@@ -10,8 +10,15 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
+// correctionMovedForecast reports whether a correction lowered the deal's
+// probability. A correction recorded before deals had their own probability
+// names the forecast category it lowered instead.
+func correctionMovedForecast(c deals.CorrectionReceipt) bool {
+	return slices.Contains(c.Fields, "win_probability_override") || slices.Contains(c.Fields, "forecast_category")
+}
+
 func correctionValues(c deals.CorrectionReceipt) *crmcontracts.CloseDateChange {
-	change := &crmcontracts.CloseDateChange{DateChanged: slices.Contains(c.Fields, "expected_close_date"), ForecastChanged: slices.Contains(c.Fields, "forecast_category")}
+	change := &crmcontracts.CloseDateChange{DateChanged: slices.Contains(c.Fields, "expected_close_date"), ForecastChanged: correctionMovedForecast(c)}
 	if c.BeforeClose != nil {
 		change.Before = c.BeforeClose
 	}

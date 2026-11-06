@@ -21,12 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// meetingRuleClocks are the recency functions a task or a called-off meeting
-// must not move.
-var meetingRuleClocks = []string{
-	"last_activity_of_deal", "last_activity_of_contact", "last_activity_of_company", "last_activity_of_project",
-}
-
 // gatekit:fixture the Go reads of a record's last touch that do not read
 // last_activity_at, each with what it computes.
 var meetingRuleReaders = map[string]string{
@@ -43,12 +37,10 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 	t.Parallel()
 	bodies := currentRecencyBodies(t)
 	rule := relstrength.LastActivityCountsSQL("a", "now()")
-	for _, name := range meetingRuleClocks {
-		body, ok := bodies[name]
-		if !ok {
-			t.Errorf("no migration defines %s, so this gate checks nothing for it", name)
-			continue
-		}
+	// Every function a migration names last_activity_of_*, so a new clock is
+	// held to the rule without joining a list (currentRecencyBodies).
+	for _, name := range sortedKeys(bodies) {
+		body := bodies[name]
 		arms := activityArms(body)
 		if len(arms) == 0 {
 			t.Errorf("%s: no activity join found, so the gate cannot see this function's shape", name)

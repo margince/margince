@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { settingsReach } from "../../lib/settingscatalog";
 import { STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -11,9 +10,9 @@ import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { newClient, renderWith } from "../../testing/shellharness";
 import { SettingsHome } from "./settingshome";
 
-// The "Your setup" card at the top of the settings home. It holds the same
-// steps the top bar reminds a reader of, still here after the reminder is
-// hidden.
+// The "Your setup" card at the top of the settings home. It holds the steps the
+// top bar reminds a reader of. It stays when that reminder is hidden, and goes
+// once every step is done.
 
 const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
 
@@ -66,8 +65,10 @@ function serve({ finished }: Readonly<{ finished: boolean }>) {
   };
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (request: Request) => {
-      const path = new URL(request.url).pathname;
+    // The connector discovery read asks by URL string, the API client by Request.
+    vi.fn(async (request: Request | string) => {
+      const url = typeof request === "string" ? request : request.url;
+      const path = new URL(url, "https://crm.test").pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
     }),
@@ -79,6 +80,7 @@ function mountHome() {
   const client = newClient();
   client.setQueryData(["me"], snapshot);
   renderWith(client, <SettingsHome reach={settingsReach(snapshot)} />);
+  return client;
 }
 
 async function card(): Promise<HTMLElement> {
@@ -120,20 +122,19 @@ describe("Your setup card", () => {
     expect(within(await card()).getAllByRole("listitem")).toHaveLength(4);
   });
 
-  it("folds to a success note once everything is done, with the steps a press away", async () => {
+  it("is gone once every step is done, and the steps' pages stay listed", async () => {
     serve({ finished: true });
-    mountHome();
+    const client = mountHome();
 
-    const setup = await card();
-    expect(within(setup).getByText("Setup is complete")).not.toBeNull();
-    expect(within(setup).queryByRole("listitem")).toBeNull();
-
-    await userEvent
-      .setup()
-      .click(within(setup).getByRole("button", { name: "Show steps" }));
-    expect(within(setup).getAllByRole("listitem")).toHaveLength(4);
-    expect(
-      within(setup).queryByRole("button", { name: "Show steps" }),
-    ).toBeNull();
+    // Every setup read answered, so an absent card is the decision, not a wait.
+    await waitFor(() => {
+      // Mail, voice, booking, and whether AI tools can connect (here: off).
+      expect(fetch).toHaveBeenCalledTimes(4);
+      expect(client.isFetching()).toBe(0);
+    });
+    const directory = screen.getByRole("link", { name: /Connections/ });
+    expect(directory.getAttribute("href")).toBe("/#/settings/connections");
+    expect(screen.queryByRole("heading", { name: "Your setup" })).toBeNull();
+    expect(screen.queryByText("Setup is complete")).toBeNull();
   });
 });

@@ -6,10 +6,9 @@ package signals
 // Signals a producer derived rather than a human filed.
 //
 // The table has carried a `derived` source_channel since 0047 and nothing ever
-// wrote one: the only entry point was POST /signals, which is human-only. This
-// is the writer, and it stays in THIS module because the module owns the table
-// — a producer computes WHICH accounts to raise, and hands the finding here to
-// be written.
+// wrote one: the only entry point was POST /signals, which a user files. This
+// is the writer. It stays in this module because the module owns the table. A
+// producer computes which accounts to raise and hands the finding here.
 //
 // A derived signal is an OBSERVATION. It is written directly, attributed to the
 // producer that drew it, and carries the evidence a reader can open. What

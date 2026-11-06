@@ -389,6 +389,17 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 			defer done()
 		}
 		defer recoverDetached("invite send")
+		current, live, err := h.svc.InviteMailRecipient(workCtx, inviter, rawToken)
+		if err != nil {
+			slog.Error("reading an invitation before mailing it failed", "err", err)
+			h.recordInviteOutcome(workCtx, inviter, rawToken, err)
+			return
+		}
+		if !live {
+			slog.Info("invitation not mailed: its link or its member changed before the send")
+			return
+		}
+		email = current
 		link := passwordLink(h.passwordLinkBaseURL, rawToken)
 		words := h.mailCopy(workCtx, email)
 		body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
@@ -396,15 +407,20 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 		if sendErr != nil {
 			slog.Error("invite email failed", "err", sendErr)
 		}
-		// Its own budget: a send that ran out of time has spent workCtx, and the
-		// refusal must still land on the link.
-		outcomeCtx, releaseOutcome := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
-		defer releaseOutcome()
-		if err := h.svc.RecordInviteMailOutcome(outcomeCtx, inviter, rawToken, sendErr); err != nil {
-			slog.Error("recording an invite email outcome failed", "err", err)
-		}
+		h.recordInviteOutcome(workCtx, inviter, rawToken, sendErr)
 	}()
 	return true
+}
+
+// recordInviteOutcome takes its own budget: a send that ran out of time has spent
+// workCtx, and the refusal must still land on the link. An invitation that never
+// reached the relay counts as refused, because the admin can only resend from there.
+func (h Handlers) recordInviteOutcome(workCtx context.Context, inviter Identity, rawToken string, sendErr error) {
+	outcomeCtx, release := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
+	defer release()
+	if err := h.svc.RecordInviteMailOutcome(outcomeCtx, inviter, rawToken, sendErr); err != nil {
+		slog.Error("recording an invite email outcome failed", "err", err)
+	}
 }
 
 // CreateFormerMember (POST /users/former): record a colleague who already left,
@@ -422,7 +438,7 @@ const formerSourceMax = 200
 // no "this member could never sign in" conflict applies. Being unable to sign
 // in is the point here rather than the failure.
 func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}

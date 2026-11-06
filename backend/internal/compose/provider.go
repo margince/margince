@@ -212,7 +212,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return p.contacts.Create(ctx, in)
 	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Create(ctx, in)
-	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment:
+	case datasource.EntityDealRoom:
 		return p.dealRooms.Create(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Create(ctx, in)

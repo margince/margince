@@ -117,7 +117,7 @@ func (s *CounterpartyHoldStore) Add(ctx context.Context, kind, value string) (Co
 		row := tx.QueryRow(ctx, `
 			INSERT INTO capture_counterparty_hold (user_id, kind, value, created_by)
 			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (user_id, kind, value) DO UPDATE SET value = EXCLUDED.value
+			ON CONFLICT (user_id, kind, value) DO UPDATE SET value = EXCLUDED.value, created_by = `+fmt.Sprintf(agentDecisionTakeoverSQL, "capture_counterparty_hold")+`
 			RETURNING id, user_id, kind, value, created_at`,
 			seat, kind, normalized, actor.ID)
 		if err := row.Scan(&h.ID, &h.UserID, &h.Kind, &h.Value, &h.CreatedAt); err != nil {
@@ -152,6 +152,14 @@ func (s *CounterpartyHoldStore) Remove(ctx context.Context, id ids.UUID) error {
 	seat := actor.UserID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var h CounterpartyHold
+		var createdBy string
+		if err := tx.QueryRow(ctx, `SELECT created_by FROM capture_counterparty_hold
+			 WHERE id = $1 AND user_id = $2 FOR UPDATE`, id, seat).Scan(&createdBy); err != nil {
+			return err
+		}
+		if err := refuseAgentOverAUsersDecision(actor, &createdBy, "this hold"); err != nil {
+			return err
+		}
 		// The delete carries the user id, so a caller naming a colleague's hold
 		// matches no row and answers as absent — the existence of another
 		// seat's hold stays hidden.

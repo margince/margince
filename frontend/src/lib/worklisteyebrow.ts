@@ -39,8 +39,27 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
     }
   }
   if (item.source === "brief_item") return "search.kind.deal";
-  return `worklist.category.${item.category}` as MessageKey;
+  return CATEGORY_LABEL[item.category];
 }
+
+/**
+ * The word each row category reads as. A map rather than a built key: a
+ * category the contract adds without a word here fails the type check, where
+ * a built key showed the raw key on every row of the new kind.
+ */
+export const CATEGORY_LABEL: Readonly<
+  Record<WorklistItem["category"], MessageKey>
+> = {
+  customer_waiting: "worklist.category.customer_waiting",
+  leads: "worklist.category.leads",
+  deals_at_risk: "worklist.category.deals_at_risk",
+  meetings: "worklist.category.meetings",
+  tasks: "worklist.category.tasks",
+  decisions: "worklist.category.decisions",
+  relationships: "worklist.category.relationships",
+  system: "worklist.category.system",
+  upcoming: "worklist.category.upcoming",
+};
 
 // A system row's named condition, or null so the caller keeps the category
 // word: an empty eyebrow would be worse than a vague one.

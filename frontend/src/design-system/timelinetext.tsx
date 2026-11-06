@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { splitEmailBody } from "../format/emailtext";
 import { useT } from "../i18n";
 import { writtenAsMarkdown } from "./activitytimeline";
-import { Markdown } from "./markdown";
+import { useLineClamped } from "./lineclamp";
+import { NoteMarkdown } from "./markdown";
 import { URL_PATTERN } from "./markdown-autolink";
 import { ReaderRendering } from "./readerrendering";
 import "./composed.css";
@@ -57,10 +58,6 @@ export function TimelineText({
   const email = entry.kind === "email";
   const [open, setOpen] = useState(false);
   const [tailOpen, setTailOpen] = useState(false);
-  // Measured, not guessed: the clamp is three visual lines at the column's
-  // width. A short guess leaves clipped text with no control to reach it.
-  const [clipped, setClipped] = useState(false);
-  const [el, setEl] = useState<HTMLElement | null>(null);
   // Markdown is block content, which a <span> may not hold.
   const Block = writtenAsMarkdown(entry) ? "div" : "span";
   // The tail is what the reader is spared. `trimmed` is what the row shows and
@@ -81,24 +78,8 @@ export function TimelineText({
     setTailOpen(false);
   }
 
-  useLayoutEffect(() => {
-    // Nothing to measure while expanded: scrollHeight equals clientHeight, and
-    // re-measuring there would drop the control that collapses it again. Empty
-    // text renders nothing, so there is nothing that could be clipped.
-    if (!el || open || !trimmed) {
-      return;
-    }
-    const measure = () => setClipped(el.scrollHeight > el.clientHeight + 1);
-    measure();
-    // The column is resizable, so a width change can start or stop the
-    // clipping. Guarded because jsdom has no ResizeObserver.
-    if (typeof ResizeObserver === "undefined") {
-      return;
-    }
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [el, open, trimmed]);
+  // The clamp is three visual lines at the column's width.
+  const [setEl, clipped] = useLineClamped(open, trimmed);
 
   if (!trimmed) {
     return null;
@@ -106,11 +87,7 @@ export function TimelineText({
   return (
     <Block className="tl-text">
       <Block ref={setEl} className={open ? "tl-text-full" : "tl-text-clamp"}>
-        {Block === "div" ? (
-          <Markdown source={trimmed} autolink />
-        ) : (
-          linkify(trimmed)
-        )}
+        {Block === "div" ? <NoteMarkdown source={trimmed} /> : linkify(trimmed)}
       </Block>
       {(clipped || open) && (
         <button
@@ -166,7 +143,11 @@ export function TimelineBody({
     return text;
   }
   return (
-    <ReaderRendering activityId={entry.id} language={entry.language}>
+    <ReaderRendering
+      activityId={entry.id}
+      language={entry.language}
+      note={writtenAsMarkdown(entry)}
+    >
       {text}
     </ReaderRendering>
   );

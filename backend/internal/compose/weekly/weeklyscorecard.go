@@ -280,24 +280,11 @@ func hasLeads(ctx context.Context, tx pgx.Tx, userID ids.UUID, by time.Time) (bo
 	return present, nil
 }
 
-// forecastRankSQL orders the forecast categories so a move between two of them
-// has a direction.
-//
-// The vocabulary is deal_forecast_category_check's, and the order is the
-// confidence ladder the product already speaks: omitted is not in the number at
-// all, pipeline is in it, best_case is likely and commit is promised. A
-// category the CHECK does not allow, and a NULL, rank as -1 and so read as
-// BELOW omitted — a deal that gained a category moved up, and one that lost it
-// moved down, which is what happened.
-//
-// Spelled as SQL rather than compared in Go because the comparison happens
-// inside the aggregate that reduces a deal's many edits to one move; pulling
-// the rows out to rank them here would be a second pass over the same data to
-// answer the same question.
-func forecastRank(column string) string {
-	return `CASE ` + column + `
-		WHEN 'commit' THEN 3 WHEN 'best_case' THEN 2
-		WHEN 'pipeline' THEN 1 WHEN 'omitted' THEN 0 ELSE -1 END`
+// probabilityRank orders the override images so a move between two has a
+// direction. No override ranks -1, below every percent: a deal that took its
+// own probability moved up, and one set back to its stage moved down.
+func probabilityRank(column string) string {
+	return `COALESCE((` + column + `)::int, -1)`
 }
 
 // scoreDeals reads the pipeline block, or reports it absent.
@@ -357,7 +344,7 @@ func scoreDeals(
 	var median *int
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
 		startPos, endPos, userPos, occurredday.WithinSQL("act", fmt.Sprintf("$%d", sincePos), fmt.Sprintf("$%d", endPos)), stakeholdersPos,
-		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
+		probabilityRank("last_cat"), probabilityRank("first_cat"), scope, zonePos,
 		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
 		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),
 		args...).

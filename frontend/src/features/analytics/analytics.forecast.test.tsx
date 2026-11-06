@@ -52,7 +52,12 @@ function readings(over: Record<string, unknown> = {}) {
     scope_kind: "workspace",
     won_minor: 40_000,
     evidence_minor: 120_000,
-    best_case_minor: 180_000,
+    likely_threshold: 90,
+    by_source: {
+      stage: { open_minor: 250_000, weighted_minor: 130_000 },
+      human: { open_minor: 0, weighted_minor: 0 },
+      margince: { open_minor: 0, weighted_minor: 0 },
+    },
     open_minor: 250_000,
     weighted_minor: 130_000,
     eligible_count: 12,
@@ -151,7 +156,7 @@ describe("ForecastView", () => {
         readings: readings({
           landing: {
             amount_minor: 160_000,
-            measure: "commit_evidence",
+            measure: "likely",
             won_minor: 40_000,
             remaining_minor: 120_000,
           },
@@ -161,7 +166,7 @@ describe("ForecastView", () => {
       }),
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    expect(await screen.findByText("Won + confirmed commit")).toBeTruthy();
+    expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
     const model = screen
       .getByText("Modelled quarter finish")
       .closest("section");
@@ -220,8 +225,8 @@ describe("ForecastView", () => {
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const answer = await screen.findByText(/Manager forecast:/i);
-    expect(answer.textContent).toContain("2,000 EUR");
-    expect(answer.textContent).toContain("1,600 EUR");
+    expect(answer.textContent).toContain("€2,000");
+    expect(answer.textContent).toContain("€1,600");
   });
 
   // A signed gap needs its own direction rather than an unconditional "over".
@@ -252,16 +257,16 @@ describe("ForecastView", () => {
     // letting the gap read as what moved since.
     it("says a call with no baseline cannot say what moved since", async () => {
       withCall(200_000, "unavailable");
-      const detail = await screen.findByText(/above won \+ confirmed commits/);
+      const detail = await screen.findByText(/above won \+ Likely/);
       expect(detail.textContent).toContain(
         en["forecast.callHistoryUnavailable"],
       );
     });
 
-    it("says a forecast above won plus confirmed commits is over it", async () => {
+    it("says a forecast above won plus Likely is over it", async () => {
       withCall(200_000);
 
-      const detail = await screen.findByText(/above won \+ confirmed commits$/);
+      const detail = await screen.findByText(/above won \+ Likely$/);
       expect(detail.textContent).toContain(
         formatAnalyticsMoney(40_000, "EUR", "en"),
       );
@@ -271,18 +276,18 @@ describe("ForecastView", () => {
       );
     });
 
-    it("says a forecast below won plus confirmed commits is under it, not over it by a minus", async () => {
+    it("says a forecast below won plus Likely is under it, not over it by a minus", async () => {
       withCall(100_000);
 
-      const detail = await screen.findByText(/below won \+ confirmed commits$/);
+      const detail = await screen.findByText(/below won \+ Likely$/);
       expect(detail.textContent).toContain(
         formatAnalyticsMoney(60_000, "EUR", "en"),
       );
       expect(detail.textContent).not.toContain("-");
-      expect(screen.queryByText(/above won \+ confirmed commits/)).toBeNull();
+      expect(screen.queryByText(/above won \+ Likely/)).toBeNull();
     });
 
-    // Its own arm rather than a zero: "±0 EUR over evidence" is a difference
+    // Its own arm rather than a zero: "±€0 over evidence" is a difference
     // nobody has.
     it("says a call that matches its evidence carries no gap at all", async () => {
       withCall(160_000);
@@ -295,14 +300,12 @@ describe("ForecastView", () => {
           ),
         ),
       ).toBeTruthy();
-      expect(
-        screen.queryByText(/(above|below) won \+ confirmed commits/),
-      ).toBeNull();
+      expect(screen.queryByText(/(above|below) won \+ Likely/)).toBeNull();
     });
   });
 
   // Nobody having called is a real answer, and a different one from a call of
-  // zero. It must not render as "the current call is 0 EUR".
+  // zero. It must not render as "the current call is €0".
   it("says nobody has called rather than calling it zero", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
@@ -473,7 +476,6 @@ it("states the qualified figure and keeps unknown deals apart from left-out ones
       readings: readings({
         qualified: {
           evidence_minor: 20_000,
-          best_case_minor: 30_000,
           weighted_minor: 25_000,
           excluded_minor: 100_000,
           unknown_minor: 7_000,
@@ -487,7 +489,7 @@ it("states the qualified figure and keeps unknown deals apart from left-out ones
   );
   render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
   const answer = await screen.findByText(/the customer still supports/i);
-  expect(answer.textContent).toContain("600 EUR");
+  expect(answer.textContent).toContain("€600");
   expect(
     (await screen.findByText(/while their reviews are open/i)).textContent,
   ).toContain("3 deals (");
@@ -505,7 +507,6 @@ it("says apart deals left out for a weak date or no next step", async () => {
       readings: readings({
         qualified: {
           evidence_minor: 20_000,
-          best_case_minor: 30_000,
           weighted_minor: 25_000,
           excluded_minor: 100_000,
           unknown_minor: 0,
@@ -520,11 +521,43 @@ it("says apart deals left out for a weak date or no next step", async () => {
   render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
   expect(
     (await screen.findByText(/while their reviews are open/i)).textContent,
-  ).toContain("2 deals (600 EUR)");
+  ).toContain("2 deals (€600)");
   expect(
     (await screen.findByText(/no confirmed close date or no next step/i))
       .textContent,
-  ).toContain("1 deal (400 EUR)");
+  ).toContain("1 deal (€400)");
+});
+
+// Likely is counted in full above the installation's threshold; Weighted
+// takes every open deal at its probability, split by where it comes from.
+it("states Likely at its threshold and Weighted by source, with no best case", async () => {
+  vi.stubGlobal(
+    "fetch",
+    forecastStub({
+      readings: readings({
+        likely_threshold: 80,
+        by_source: {
+          stage: { open_minor: 200_000, weighted_minor: 100_000 },
+          human: { open_minor: 40_000, weighted_minor: 24_000 },
+          margince: { open_minor: 10_000, weighted_minor: 6_000 },
+        },
+      }),
+    }),
+  );
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  expect(
+    await screen.findByText(
+      en["forecast.likely.help"].replace("{threshold}", "80%"),
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText(en["forecast.weighted.help"])).toBeTruthy();
+  const money = (minor: number) => formatAnalyticsMoney(minor, "EUR", "en");
+  expect(
+    screen.getByText(
+      `From stages ${money(100_000)} · set by hand ${money(24_000)} · Margince ${money(6_000)}`,
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/best case/i)).toBeNull();
 });
 
 // While enforcement is off the server sends no qualified block, and the screen
@@ -532,7 +565,7 @@ it("says apart deals left out for a weak date or no next step", async () => {
 it("says nothing about qualification when the server sends none", async () => {
   vi.stubGlobal("fetch", forecastStub());
   render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-  await screen.findByText(/Won plus committed deals/i);
+  await screen.findByText(/Won plus Likely deals/i);
   expect(screen.queryByText(/the customer still supports/i)).toBeNull();
 });
 
@@ -562,12 +595,12 @@ describe("SharedForecastView", () => {
     share("live", {
       landing: {
         amount_minor: 160_000,
-        measure: "commit_evidence",
+        measure: "likely",
         won_minor: 40_000,
         remaining_minor: 120_000,
       },
     });
-    expect(await screen.findByText("Won + confirmed commit")).toBeTruthy();
+    expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
     expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
   });
 

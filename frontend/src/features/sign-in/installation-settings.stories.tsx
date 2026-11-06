@@ -30,7 +30,7 @@ const SETTINGS = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
+  forecast_forward_measure: "likely",
   timezone: "Europe/Berlin",
   base_currency: "EUR",
   date_format: "dmy",
@@ -41,6 +41,7 @@ const SETTINGS = {
   call_zalo: true,
   individual_performance: true,
   forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
 };
 
 const RATE_SHEET_LOCK = {

@@ -44,11 +44,10 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice {
 		// A LEAD REACHES ONE ARM AND NO OTHER.
 		//
-		// The correspondence arm asks who wrote to us, and both of its readers
-		// answer about a lead on their own: wroteToUsWithin shares the
-		// authorIsTheSubject spelling, which matches a lead through its bare
-		// address, and askedToBeContacted returns false for a non-contact rather
-		// than querying a contact-keyed table.
+		// The correspondence arm asks who wrote to us through subjectAskedUs.
+		// wroteToUsWithin matches a lead through its bare address, and
+		// requestOnRecord answers false for a lead without reading a
+		// contact-keyed table.
 		//
 		// The privacy notice is the one link a lead can hold. A website lead
 		// is told by it before anything else is sent.
@@ -117,27 +116,13 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	}
 }
 
-// validateRequestedFollowup answers an unprompted follow-up: is there something
-// on file, inside the window, that says this contact asked to hear from us.
-//
-// TWO SOURCES, and the second is why a first mail to somebody who phoned is not
-// refused. An inbound message is the obvious one. The other is the acquisition
-// evidence a contact was created with (contact_acquisition_evidence, written by
-// every creation door): a rep who logged "they asked me for a quote at the
-// trade fair" has recorded the request, and asking them to record it a second
-// time in a different table would be asking them to restate what the CRM
-// already knows.
+// validateRequestedFollowup answers an unprompted follow-up through
+// subjectAskedUs. A request a rep logged once is not asked for again on every
+// later message.
 func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
-	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
+	found, err := subjectAskedUs(ctx, tx, subject, w)
 	if err != nil {
 		return resolution{}, err
-	}
-	if !found {
-		asked, err := askedToBeContacted(ctx, tx, subject, time.Now().Add(-w.reply))
-		if err != nil {
-			return resolution{}, err
-		}
-		found = asked
 	}
 	if !found {
 		return resolution{
@@ -152,6 +137,17 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 	}, nil
 }
 
+// subjectAskedUs answers whether the record shows the subject asking to hear
+// from us. Either they wrote or met with us inside the window, or a request of
+// theirs is on record at any age.
+func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules) (bool, error) {
+	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
+	if err != nil || found {
+		return found, err
+	}
+	return requestOnRecord(ctx, tx, subject, followupRequests)
+}
+
 // repliedOrWasRecorded asks whether the subject wrote to us, or somebody
 // recorded that they asked to hear from us, inside the window.
 //
@@ -164,7 +160,7 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 	if subject.Kind != entityContact {
 		return wroteToUsWithin(ctx, tx, subject, since)
 	}
-	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since)
+	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, &subject.Address)
 	if err != nil {
 		return false, err
 	}
@@ -172,8 +168,10 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 }
 
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
-// the picked deal through liveDealInLinks. So "an open deal the recipient is a
-// stakeholder on" is asked one way for the links and for the picked deal.
+// the picked deal through liveDealInLinks and requestedNegotiation, so the
+// links and the picked deal are asked one way. A live deal the contact never
+// asked about gets its own reason: the deal is there, their request about it
+// is not.
 func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.Evidence.DealID == (ids.UUID{}) {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
@@ -184,6 +182,13 @@ func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request
 	}
 	if !live {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	asked, err := requestedNegotiation(ctx, tx, []ids.UUID{req.Evidence.DealID}, subject)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !asked {
+		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonDealNotRequested}, nil
 	}
 	return resolution{
 		Category:  commsauthz.CategoryActiveDealFollowup,
@@ -238,11 +243,37 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 		)`, req.Evidence.ContractID)
 }
 
-// validateQuote answers a requested quote or offer. The offer hangs off a deal,
-// and the contact is reached as a stakeholder on that deal — the same edge the
-// follow-up arm reads, because being on the opportunity is what makes somebody
-// the contact a quote goes to.
+// validateQuote answers a requested quote or offer. Either a sent offer on the
+// named deal reaches this contact, or a request for a quote is on record. The
+// second is the quote written from the enquiry before anyone made a deal or an
+// offer, and it needs no newsletter consent. Correspondence alone is not a
+// request for a quote; a reply in the enquiry's own thread is a reply.
+//
+// The request arm is the weaker ground, so a marketing objection recorded
+// after the request binds it (MarketingStopsBind). Only a request about this
+// quote's deal, or naming no deal, is read for it.
 func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	res, err := quoteOnDeal(ctx, tx, req, subject)
+	if err != nil || res.Supported {
+		return res, err
+	}
+	askedAt, asked, err := latestRequest(ctx, tx, subject, quoteRequests, req.Evidence.DealID)
+	if err != nil || !asked {
+		return res, err
+	}
+	return resolution{
+		Category:           commsauthz.CategoryPrecontractQuote,
+		Basis:              commsauthz.BasisPrecontractRequest,
+		Supported:          true,
+		MarketingStopsBind: true,
+		RequestedAt:        askedAt,
+	}, nil
+}
+
+// quoteOnDeal answers a quote on a named deal: a sent offer on a live deal
+// whose stakeholder is this contact. Being on the opportunity is what makes
+// somebody the contact a quote goes to.
+func quoteOnDeal(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
 		commsauthz.BasisPrecontractRequest, `
 		SELECT EXISTS (
