@@ -32,7 +32,8 @@ package gates
 // The declaration the manifest is generated FROM carries all of them.
 //
 // A staged fixture counts as a declarer. CI copies it into the tier and runs the
-// composed build, the unit lane and its self-tests over it. The workflow's own
+// composed build over it. Then it runs the tests of cmd/, the only importer of
+// the composition, and the fixture's own tests. The workflow's own
 // staging step names it; a fixture nothing stages is walked by nobody.
 
 import (
