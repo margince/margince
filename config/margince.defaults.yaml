@@ -75,9 +75,6 @@ ai:
 analytics:
   performance_enabled: false
 
-assurance:
-  qualified_forecast_enforced: false
-
 auth:
   password:
     enabled: true
@@ -122,7 +119,7 @@ deals:
   legal_review_enabled: true
   maintenance_writes_enabled: true
   silent_close_days: 120
-  stage_autopilot_enabled: false
+  stage_autopilot_enabled: true
 
 email:
   enabled: false

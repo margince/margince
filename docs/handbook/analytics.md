@@ -37,7 +37,7 @@ A check is **Out of date** when a record it read changed after it ran. It reads 
 
 A change to one deal also starts a check of that deal alone. When it lands, it clears that deal's mark, and the screen does not wait for it. A manager forecast is checked against the pipeline it was recorded over. **Forecast call needs review** names the call and the deals that moved.
 
-A deal moved if its amount changed, it entered or left the period, or it left or came back to the qualified forecast. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
+A deal moved if its amount changed or it entered or left the period. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
 
 The **Reports** section lists saved reports, and **New custom report** opens the report builder. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
 
@@ -313,17 +313,14 @@ means is the **Projection basis** installation setting, and the card names it:
 
 - **Likely**: deals at the Likely threshold or above, with confirmed close dates. The strictest.
 - **Weighted**: every open deal at its probability ([how it is set](forecast-learning.md)).
-- **Supported Likely**, **Supported weighted**: the same, for deals the customer supports.
 - **Manager’s call**: the recorded number *replaces* the projection rather than adding to what is already won. **From the deal records** shows won plus Likely beside it, never added.
 
-With no basis chosen, the card uses supported Likely while **Count only deals the customer supports** is on. A chosen basis stays chosen.
-No deal is counted in both parts.
+With no basis chosen, the card uses Likely. No deal is counted in both parts.
 
-The card tells you about three caveats under **Landing has a caveat**:
+The card tells you about two caveats under **Landing has a caveat**:
 
 - "No call recorded for this period, so this shows the Likely deals."
 - "The call is below the amount already won. It is shown as recorded, not corrected."
-- "The count of supported deals is off, so this shows all deals."
 
 ### Deal value needed
 
@@ -349,7 +346,7 @@ pipeline with all it needs:
 Neither the landing nor this figure is shown under **My teams**. A total of
 teams that made their own calls would describe none of them.
 
-A deal whose customer stopped answering gets a review here, whatever its close
+Margince closes a deal whose customer stopped answering, whatever its close
 date: see [Deals the customer still supports](deals-the-customer-supports.md).
 
 ### The receipt

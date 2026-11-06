@@ -7,9 +7,9 @@ package compose
 
 // A deal whose customer went silent half a year ago, with a close date three
 // months ahead, is what the close-date check missed. Its date is in the future,
-// so nothing about it looked wrong. These tests drive the real
-// worker over deals written through the deals and activities stores. Then they
-// read the forecast for the period the close date falls in.
+// so nothing about it looked wrong. These tests drive the real worker over
+// deals written through the deals and activities stores, and read the receipt
+// the check stores for each deal.
 
 import (
 	"context"
@@ -19,17 +19,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -136,15 +132,8 @@ func (v *viabilityEnv) customerWrites(t *testing.T, deal ids.UUID, at time.Time)
 	}
 }
 
-// check runs the input check and works the review deliveries it queued.
+// check runs the input check.
 func (v *viabilityEnv) check(t *testing.T) {
-	t.Helper()
-	v.runCheck(t)
-	v.deliverReviews(t)
-}
-
-// runCheck runs the input check alone, leaving its deliveries queued.
-func (v *viabilityEnv) runCheck(t *testing.T) {
 	t.Helper()
 	worker := &assuranceRunWorker{sweep: v.worker}
 	if err := worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{
@@ -154,137 +143,25 @@ func (v *viabilityEnv) runCheck(t *testing.T) {
 	}
 }
 
-// forecast reads the qualified forecast for the quarter the close date is in,
-// as an admin, through the read every forecast surface shares.
-func (v *viabilityEnv) forecast(t *testing.T) forecasting.Readings {
+// receiptStale answers whether the deal's evidence moved since the check
+// stored its receipt, by the fingerprint the freshness check compares.
+func (v *viabilityEnv) receiptStale(t *testing.T, deal ids.UUID) bool {
 	t.Helper()
-	var out forecasting.Readings
-	ctx := v.Admin()
-	if err := database.WithWorkspaceTx(ctx, v.Pool, func(tx pgx.Tx) error {
-		period, base, err := ForecastPeriodAt(ctx, tx, forecasting.PeriodQuarter, v.closeDate)
-		if err != nil {
-			return err
-		}
-		dealsIn, _, _, err := ForecastDeals(ctx, tx, period, forecasting.Scope{Kind: ScopeKindWorkspace}, v.now, base)
-		if err != nil {
-			return err
-		}
-		out, err = forecasting.Compute(period, dealsIn, forecasting.Rules{LikelyThreshold: 90})
-		return err
-	}); err != nil {
-		t.Fatalf("reading the forecast: %v", err)
-	}
-	return out
+	return v.WsScalar(t, `SELECT (r.input_fingerprint IS DISTINCT FROM `+viabilityFingerprintSQL("d")+`)::text
+		  FROM deal d JOIN assurance_deal_receipt r ON r.deal_id = d.id WHERE d.id = $1`, deal) == "true"
 }
 
-func (v *viabilityEnv) reviewTasks(t *testing.T, deal ids.UUID) (all, open int) {
-	t.Helper()
-	all = v.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.deal_id = $1 AND a.kind = 'task' AND a.origin = 'system_remediation'`, deal)
-	open = v.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.deal_id = $1 AND a.kind = 'task' AND a.origin = 'system_remediation' AND NOT a.is_done`, deal)
-	return all, open
-}
-
-func TestASilentDealWithAFarCloseDateLeavesTheQualifiedForecastAndGetsOneReview(t *testing.T) {
-	v := setupViability(t)
-
-	before := v.forecast(t)
-	if before.Qualified != nil {
-		t.Fatalf("qualified readings %+v before anybody enforced them", before.Qualified)
-	}
-	if before.EvidenceMinor != 600_000 {
-		t.Fatalf("baseline evidence %d, want both commits (600000) — the fixture no longer puts "+
-			"them in the quarter of their close date, so the assertions below would prove nothing",
-			before.EvidenceMinor)
-	}
-
-	// A call dated three days ahead has not happened, so it is no progress.
-	v.customerWrites(t, v.silent, v.now.AddDate(0, 0, 3))
-	v.check(t)
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND status = 'open' AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 1 {
-		t.Fatalf("%d open viability reviews on the silent deal, want 1", got)
-	}
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.supported); got != 0 {
-		t.Fatalf("the deal whose customer answered last week got %d viability reviews", got)
-	}
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_deal_receipt WHERE deal_id IN ($1, $2)`,
-		v.silent, v.supported); got != 2 {
-		t.Fatalf("%d receipts for the two deals, want one each — an eligible deal needs its own", got)
-	}
-	if all, _ := v.reviewTasks(t, v.silent); all != 1 {
-		t.Fatalf("%d review tasks on the silent deal, want 1", all)
-	}
-
-	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
-		t.Fatalf("enforcing: %v", err)
-	}
-	after := v.forecast(t)
-	if after.EvidenceMinor != before.EvidenceMinor || after.WeightedMinor != before.WeightedMinor {
-		t.Errorf("the baseline moved from %d/%d to %d/%d — enforcement must not rewrite it",
-			before.EvidenceMinor, before.WeightedMinor, after.EvidenceMinor, after.WeightedMinor)
-	}
-	q := after.Qualified
-	if q == nil || q.EvidenceMinor != 100_000 || q.ExcludedMinor != 500_000 || q.ExcludedCount != 1 || q.UnknownCount != 0 {
-		t.Fatalf("qualified readings %+v, want 100000 evidence with the silent 500000 excluded", q)
-	}
-}
-
-func TestACompletedReviewTaskIsNotMintedAgainAndAReplyAloneKeepsTheReview(t *testing.T) {
+func TestEvidenceThatMovedSinceTheCheckMakesTheReceiptStale(t *testing.T) {
 	v := setupViability(t)
 	v.check(t)
-
-	var task ids.UUID
-	if err := v.Pool.QueryRow(context.Background(), `SELECT task_activity_id FROM assurance_exception
-		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent).Scan(&task); err != nil {
-		t.Fatalf("the review carries no task link: %v", err)
-	}
-	if done, err := v.Activities.CompleteTask(v.Admin(), ids.From[ids.ActivityKind](task), settledAfterDelivery(t)); err != nil || !done {
-		t.Fatalf("completing the review task: done=%v err=%v", done, err)
-	}
-	v.check(t)
-	if all, open := v.reviewTasks(t, v.silent); all != 1 || open != 0 {
-		t.Fatalf("after completing the task and a second check: %d tasks, %d open; want the one "+
-			"completed task and no replacement", all, open)
-	}
-
-	// The customer answers today. Silence is over, but nobody validated the
-	// next step or the date, so the review stays and the deal stays out.
-	v.customerWrites(t, v.silent, v.now.Add(-time.Hour))
-	v.check(t)
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND status = 'open' AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 1 {
-		t.Fatalf("a reply closed the review (%d open) — only somebody's answer may", got)
-	}
-	if got := v.WsScalar(t, `SELECT array_to_string(reasons, ',') FROM assurance_deal_receipt
-		WHERE deal_id = $1`, v.silent); got == "" || hasReason(got, "customer_silent") || !hasReason(got, "requalification_pending") {
-		t.Fatalf("receipt reasons %q, want requalification pending and no customer silence", got)
-	}
-	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
-		t.Fatal(err)
-	}
-	if q := v.forecast(t).Qualified; q == nil || q.ExcludedCount != 1 {
-		t.Fatalf("qualified readings %+v, want the replied deal still excluded until it is revived", q)
-	}
-}
-
-func TestEvidenceThatMovedSinceTheCheckMakesTheDealUnknown(t *testing.T) {
-	v := setupViability(t)
-	v.check(t)
-	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
-		t.Fatal(err)
+	if v.receiptStale(t, v.supported) {
+		t.Fatal("the receipt is stale right after the check")
 	}
 	// The supported deal's customer writes again after the check. The receipt
-	// describes evidence the deal no longer carries, so it may not be trusted.
+	// describes evidence the deal no longer carries.
 	v.customerWrites(t, v.supported, v.now.Add(-time.Minute))
-	q := v.forecast(t).Qualified
-	if q == nil || q.UnknownCount != 1 || q.UnknownMinor != 100_000 || q.EvidenceMinor != 0 {
-		t.Fatalf("qualified readings %+v, want the changed deal unknown until the next check", q)
+	if !v.receiptStale(t, v.supported) {
+		t.Fatal("a new customer call left the receipt current")
 	}
 }
 
@@ -292,77 +169,6 @@ func hasReason(list, item string) bool {
 	return slices.Contains(strings.Split(list, ","), item)
 }
 
-// While the qualified forecast is enforced the viability review decides what
-// counts, so the sweep keeps its date work and lowers no category. A notch a
-// night would otherwise walk a quiet deal down to omitted with nobody deciding.
-func TestCloseDateSweepLowersNoCategoryWhileTheQualifiedForecastIsEnforced(t *testing.T) {
-	e := setupCloseDate(t)
-	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at=now() WHERE pipeline_id=$1 AND status='won'`, e.pipeline); err != nil {
-		t.Fatal(err)
-	}
-	if err := config.Save(e.Admin(), StoredConfig(e.Pool), assurance.QualifiedForecastEnforced, true); err != nil {
-		t.Fatal(err)
-	}
-	id := e.seedSweepDeal(t, "Gone quiet under enforcement", e.late, new(95), new(30), 90)
-
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-
-	swept := e.readSwept(t, id)
-	if swept.probability == nil || *swept.probability != 95 {
-		t.Errorf("probability = %v, want 95 kept while the review decides what counts", swept.probability)
-	}
-	if want := today().AddDate(0, 0, 30); swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
-		t.Errorf("date = %v, want retained %s", swept.expectedClose, want)
-	}
-}
-
-// A review is answered with an override or a reminder. "Fixed" with nothing
-// checked would put the deal back in the qualified forecast unseen. An override
-// counts it again until it ends, and an ended override reads unknown at once.
-func TestAReviewAnswerIsAnOverrideThatEndsOrNothing(t *testing.T) {
-	v := setupViability(t)
-	v.check(t)
-	store := assurance.NewStore(InstallationDB(v.Pool))
-	if err := store.SetQualifiedForecastEnforced(v.Admin(), StoredConfig(v.Pool), true); err != nil {
-		t.Fatal(err)
-	}
-	var review ids.UUID
-	if err := v.Pool.QueryRow(context.Background(), `SELECT id FROM assurance_exception
-		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent).Scan(&review); err != nil {
-		t.Fatal(err)
-	}
-	now := clocktest.Now(t)
-	if err := store.Resolve(v.Admin(), review, assurance.Resolution{Outcome: assurance.OutcomeFixedRecord}, now); err == nil {
-		t.Fatal("a review was closed as fixed with nothing checked")
-	}
-	until := now.AddDate(0, 0, 30)
-	if err := store.Resolve(v.Admin(), review, assurance.Resolution{
-		Outcome: assurance.OutcomeValueCorrect, Reason: "Signed order in the post", ExpiresAt: &until,
-	}, now); err != nil {
-		t.Fatalf("overriding the review: %v", err)
-	}
-	if q := v.forecast(t).Qualified; q == nil || q.ExcludedCount != 0 || q.EvidenceMinor != 600_000 {
-		t.Fatalf("qualified readings %+v, want the overridden deal counted again", q)
-	}
-	// An override cannot end before it was given, so the lapse is reached by
-	// moving the answer back in time rather than its end alone.
-	v.WsExec(t, `UPDATE assurance_resolution
-		SET created_at = now() - interval '2 days', expires_at = now() - interval '1 minute'
-		WHERE exception_id = $1`, review)
-	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 1 || q.UnknownMinor != 500_000 {
-		t.Fatalf("qualified readings %+v, want the deal unknown once its override ended", q)
-	}
-}
-
-// ONE BROKEN MAILBOX DOES NOT BLIND THE CHECK FOR EVERY DEAL. A colleague's
-// mailbox needs re-authorising. The run is incomplete, and the colleague's own
-// deal reads unknown. The owner whose mailbox was read on time gets the review
-// on their silent deal.
-//
-// Mutation: make dealMailCovered return runCovered alone and the silent deal
-// gets no review. Restore Needs: mail on the viability rule and the same holds.
 func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
 	v := setupViability(t)
 	// The fixture's pipeline and stage, read off a deal it already made.
@@ -385,13 +191,8 @@ func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
 
 	v.check(t)
 
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND status = 'open' AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 1 {
-		t.Fatalf("%d open viability reviews on the silent deal whose owner's mailbox was read, want 1", got)
-	}
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, theirs); got != 0 {
-		t.Fatalf("the deal whose owner's mailbox is broken got %d viability reviews, want none", got)
+	if outcome, _ := v.receiptOf(t, v.silent); outcome != "review_required" {
+		t.Fatalf("the silent deal whose owner's mailbox was read reads %s, want review_required", outcome)
 	}
 	if got := v.WsScalar(t, `SELECT outcome || ':' || array_to_string(reasons, ',')
 		FROM assurance_deal_receipt WHERE deal_id = $1`, theirs); got != "unknown:coverage_unknown" {
@@ -405,10 +206,10 @@ func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
 // A DEAL WHOSE MAIL REACHED A BROKEN MAILBOX STAYS UNKNOWN. The owner's mailbox
 // was read on time, but a colleague's mailbox captured mail on the deal and
 // needs re-authorising. A customer answer may sit unread in that mailbox, so
-// the deal's silence is not observed and no review is raised.
+// the deal's silence is not observed.
 //
 // Mutation: drop the capture_import users from dealMailCovered (judge the owner
-// alone) and the silent deal gets a review.
+// alone) and the silent deal reads review_required.
 func TestADealWhoseMailReachedABrokenMailboxStaysUnknown(t *testing.T) {
 	v := setupViability(t)
 	owner := integration.OwnerConn(t)
@@ -432,10 +233,6 @@ func TestADealWhoseMailReachedABrokenMailboxStaysUnknown(t *testing.T) {
 
 	v.check(t)
 
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 0 {
-		t.Fatalf("the silent deal got %d viability reviews though a mailbox its mail reached is broken, want none", got)
-	}
 	if got := v.WsScalar(t, `SELECT outcome || ':' || array_to_string(reasons, ',')
 		FROM assurance_deal_receipt WHERE deal_id = $1`, v.silent); got != "unknown:coverage_unknown" {
 		t.Fatalf("the silent deal reads %q, want unknown:coverage_unknown", got)
@@ -477,17 +274,13 @@ func (v *viabilityEnv) ourMailOnDeal(t *testing.T, deal, importer ids.UUID, deli
 // shows the owner's mail was read at all.
 //
 // Mutation: let a checked run grade cover every deal again in dealMailCovered
-// and the deal gets a review.
+// and the deal reads review_required.
 func TestAHealthyRunDoesNotCoverADealWhoseOwnerHasNoMailbox(t *testing.T) {
 	v := setupViability(t)
 	v.reassign(t, v.silent, v.Rep2)
 
 	v.check(t)
 
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 0 {
-		t.Fatalf("a deal whose owner has no mailbox got %d viability reviews, want none", got)
-	}
 	if outcome, reasons := v.receiptOf(t, v.silent); outcome != "unknown" || reasons != "coverage_unknown" {
 		t.Fatalf("the deal reads %s:%s, want unknown:coverage_unknown", outcome, reasons)
 	}
@@ -498,7 +291,7 @@ func TestAHealthyRunDoesNotCoverADealWhoseOwnerHasNoMailbox(t *testing.T) {
 // does not cover the deal.
 //
 // Mutation: judge an import on its user's connections and ignore delivered_by,
-// and the deal gets a review.
+// and the deal reads review_required.
 func TestAGoneDeliveringConnectionIsNotCoveredByTheUsersNewOne(t *testing.T) {
 	v := setupViability(t)
 	owner := integration.OwnerConn(t)
@@ -514,10 +307,6 @@ func TestAGoneDeliveringConnectionIsNotCoveredByTheUsersNewOne(t *testing.T) {
 
 	v.check(t)
 
-	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
-		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 0 {
-		t.Fatalf("a deal whose mail came through a gone connection got %d viability reviews, want none", got)
-	}
 	if outcome, reasons := v.receiptOf(t, v.silent); outcome != "unknown" || reasons != "coverage_unknown" {
 		t.Fatalf("the deal reads %s:%s, want unknown:coverage_unknown", outcome, reasons)
 	}
@@ -527,18 +316,14 @@ func TestAGoneDeliveringConnectionIsNotCoveredByTheUsersNewOne(t *testing.T) {
 // deal's coverage rests on, so the receipt no longer counts. Nothing else about
 // the deal changed: the message was already on it.
 //
-// Mutation: drop the mailboxes from viabilityFingerprintSQL and the supported
-// deal still counts.
+// Mutation: drop the mailboxes from viabilityFingerprintSQL and the receipt
+// stays current.
 func TestANewDeliveringMailboxMakesTheReceiptStale(t *testing.T) {
 	v := setupViability(t)
 	v.ourMailOnDeal(t, v.supported, v.Rep1, "gmail:0")
 	v.check(t)
-	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
-		t.Fatal(err)
-	}
-	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 0 || q.EvidenceMinor != 100_000 {
-		t.Fatalf("qualified readings %+v after the check, want the supported deal counted", q)
+	if v.receiptStale(t, v.supported) {
+		t.Fatal("the receipt is stale right after the check")
 	}
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
 		INSERT INTO capture_import (activity_id, user_id, delivered_by)
@@ -548,7 +333,7 @@ func TestANewDeliveringMailboxMakesTheReceiptStale(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 1 || q.UnknownMinor != 100_000 {
-		t.Fatalf("qualified readings %+v, want the deal unknown until the next check", q)
+	if !v.receiptStale(t, v.supported) {
+		t.Fatal("a second mailbox delivering the deal's mail left the receipt current")
 	}
 }

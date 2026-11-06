@@ -5,8 +5,7 @@
 **Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week,
 its review and its plan are in [Your week](your-week.md).
 
-The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page;
-**Hide Worklist** closes it. It has no sidebar row of its own.
+The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
 ## Daily tasks
 
@@ -85,13 +84,13 @@ Captured mail needs a reply only when Margince finds a request or you keep it as
 ### How do I undo a snooze or removal on my worklist?
 To undo a Worklist snooze or removal in Margince, press **Undo** in the note that appears right after you picked it.
 
-The undo reaches as far as the choice did. Undoing your own snooze never brings back a thread a colleague marked **Not a customer** for the whole company. If the undo fails, the item stays off your list ("Undo failed. The message is still off your list."). Snoozed items also come back on their own when the snooze ends. Also called: restore, bring back, unsnooze.
+The undo reaches as far as the choice did. Undoing your own snooze never brings back a thread a colleague marked **Not a customer** for the whole company. If the undo fails, the item stays off your list ("Undo failed. The message is still off your list."). Snoozed items also come back on their own when the snooze ends.
+
+Undoing **Done** clears only your own choice, and the row then follows the usual rules. A deal a colleague closed, or a task they completed, stays off your list. Home and the Worklist show the same rows. Also called: restore, bring back, unsnooze.
 
 ### How do I see all my tasks?
-To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the
-**Tasks** button under **Work type**.
-Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**,
-**Due this week** and **Later**. There is no separate "Due today" heading.
+To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** button under **Work type**.
+Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
 
 A task more than 30 days late leaves the Worklist and its counts. A pin keeps it there while the pin is one of your 50 newest, and so does a reminder of yours that is due. The task stays open, keeps its due date, and still shows on its record. A company also has a **Tasks** tab with its own tasks; a contact has no Tasks tab. Also called: my to-dos, tasks due today, open tasks, task list.
 
@@ -102,7 +101,7 @@ To complete a task in Margince, press **Done** on its Worklist row, or on the ta
 3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick
    a day under **Move to**.
 
-**Snooze 1 day** adds a day to the task's own due date, so a task with no date does not show it. If
+**Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### How do I mark a meeting ready?
@@ -115,7 +114,7 @@ When the start time, the guests or the invite's agenda change, the row asks agai
 ### What can I do from a task?
 A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason. The task's row on a timeline offers **Write email** to the same contact, lead or company.
 
-It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Your tasks** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
+It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Your tasks** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
@@ -185,11 +184,12 @@ The work counts come from the current Worklist read. The greeting's email count 
 
 **Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
-A deal that changed again reads "This deal changed again. Open the deal to review its current state."
-Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
+When Margince changed three or more of your deals, they become one row: "Margince updated 3 of your deals: 1 closed, 2 re-dated". It counts deals and names the five worth the most, each with **Undo**. **View all** and **Undo all** end the row. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed).
+
+A deal that changed again reads "This deal changed again. Open the deal to review its current state." Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
 
 ### What happens to a promise from a call or an email?
-A promise Margince reads in a meeting transcript or an email becomes something to watch or a task,
+A promise Margince reads in a call or meeting transcript or an email becomes something to watch or a task,
 by who made it.
 - A promise the customer made goes on their contact to watch, and never becomes a task. The deal's
   **Overview** lists open ones under **Customer commitments**, with **Open message**. **Dismiss**
@@ -335,11 +335,11 @@ As you move down, the list loads every task, every waiting customer and every de
 
 Each count is exact, or Margince says it is not:
 
-- **Today**, **Decisions** and **System** each show a count only when it is exact. The heading above the list shows it, such as **12 outstanding actions**, or **25+ outstanding actions** when some work was not counted.
-- A **Work type** button shows a number only when that number is exact. Tasks and approvals are counted in full. On **Team**, approvals are not.
+- **Today**, **Decisions** and **System** each show a count. When some work was not counted, the count ends in `+`, such as **Decisions 25+**: there are at least 25. The heading above the list shows it too, such as **12 outstanding actions**, or **25+ outstanding actions**.
+- A **Work type** button shows its count the same way. Tasks and approvals are counted in full. On **Team**, approvals are not.
 - **"{shown} of {considered} items loaded"**: how far you are, plus "{cards} cards on screen" for a group.
 - "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": nobody knows the total. Each load checks a fixed number of these, and the list stops there.
-- **"{count} sources did not load"**: the list may not be complete, even after the last row. **All** leaves weekly plans out, so it shows no count for Today.
+- **"{count} sources did not load"**: the list may not be complete, even after the last row. **All** leaves weekly plans out, so the count for Today ends in `+`.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
@@ -354,8 +354,7 @@ A task that is late, or whose reminder is due, stays in Today. Also called: late
 
 When there is nothing: "No actions taken on your behalf today."
 
-**Undo** puts the record back the way it was before a deal change. A change already undone
-stays in history with its status and has no action to take.
+**Undo** puts the record back the way it was before a deal change. A change already undone stays in history with its status and has no action to take. **Undo all** takes back every change Margince made to your deals that you have not kept or undone. A change to a field somebody edited since stays, and the deal's other changes go back. If somebody moved the deal after Margince moved it, none of that deal's changes go back, and other deals still do.
 
 ## For a team lead
 
@@ -370,7 +369,7 @@ Your brief and digest stay personal. **Team**, **All**, and teammate views show 
 not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
 
 **Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due,
-promises due. Unassigned work gets its own row.
+promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone.
 
 **Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
 
@@ -389,8 +388,9 @@ You can also add a note to a teammate's Worklist with **Add note** ("A short not
 
 It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. Each item opens its record's page when it has one. A task, a meeting or its outcome, or an item without a record opens **Home** with that item open.
 
-Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
-Mail follows your working days and local clock, with a three-hour window that can end on the next day.
+When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
+
+Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest. Mail follows your working days and local clock, with a three-hour window that can end on the next day.
 A missed window leaves the work on Home. If choices cannot be read, the email waits.
 
 A weekly day you do not work moves to the next working day. Results keep the company's reporting week. Older chosen morning hours use the company clock until you choose a personal time or turn combining on.

@@ -189,6 +189,7 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 // over the tool surface, which is the whole point of the seam.
 func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int64) UpdateActivityInput {
 	return UpdateActivityInput{
+		DealFiling: req.DealFiling,
 		Subject:    req.Subject,
 		Body:       req.Body,
 		OccurredAt: req.OccurredAt,
@@ -329,6 +330,7 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		return LogActivityInput{}, err
 	}
 	in := LogActivityInput{
+		DealFiling:     req.DealFiling,
 		Recommendation: req.Recommendation,
 		Kind:           string(req.Kind),
 		Subject:        req.Subject,
@@ -343,6 +345,10 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		Author:         author,
 		AssigneeID:     idArg[ids.UserKind](req.AssigneeId),
 	}
+	if err := validateDealFiling(in.Kind, in.DealFiling); err != nil {
+		return LogActivityInput{}, err
+	}
+
 	if err := optionalFieldsFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}

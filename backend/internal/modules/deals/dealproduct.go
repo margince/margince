@@ -21,16 +21,21 @@ import (
 
 // syncDealProductsFromOffer rewrites the deal's `offer` allocations from the
 // accepted offer's lines that name a product, one row per product with the
-// lines' net value. A `manual` set stays, because it is the human's answer.
+// lines' net value. A `manual` set stays, because it is the human's answer,
+// and so does every row of a deal priced from its lines.
 // It runs under the deal row lock the amount sync took, so a manual set
 // cannot land between the check and the writes. It answers the rows it
 // wrote, and nil when the manual set stood.
 func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offer crmcontracts.Offer) ([]crmcontracts.DealProduct, error) {
+	head, err := readDealCommercialHead(ctx, tx, dealID)
+	if err != nil {
+		return nil, err
+	}
 	var manual bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal_product WHERE deal_id = $1 AND source = 'manual')`, dealID).Scan(&manual); err != nil {
 		return nil, fmt.Errorf("read manual deal products: %w", err)
 	}
-	if manual {
+	if manual || head.Mode == modeLines {
 		return nil, nil
 	}
 	lines, err := readOfferLines(ctx, tx, ids.From[ids.OfferKind](ids.UUID(offer.Id)))
@@ -76,16 +81,16 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 		return nil, err
 	}
 	if len(in) > 50 {
-		return nil, httperr.Validation("products", "out_of_range", "name at most fifty products on one deal")
+		return nil, httperr.Validation(productsField, "out_of_range", "name at most fifty products on one deal")
 	}
 	seen := map[openapi_types.UUID]bool{}
 	for _, row := range in {
 		if seen[row.ProductId] {
-			return nil, httperr.Validation("products", "duplicate", "name each product once")
+			return nil, httperr.Validation(productsField, "duplicate", "name each product once")
 		}
 		seen[row.ProductId] = true
 		if row.AmountMinor != nil && *row.AmountMinor < 0 {
-			return nil, httperr.Validation("products", "invalid", "an allocated amount is zero or more")
+			return nil, httperr.Validation(productsField, "invalid", "an allocated amount is zero or more")
 		}
 	}
 	var out []crmcontracts.DealProduct
@@ -97,6 +102,13 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 		// the two never leave a mixed manual and offer set behind.
 		if _, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("lock deal for product set: %w", err)
+		}
+		head, err := readDealCommercialHead(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+		if head.Mode == modeLines {
+			return &LineOwnedValueError{Field: productsField}
 		}
 		before, err := readDealProducts(ctx, tx, dealID)
 		if err != nil {
@@ -129,7 +141,7 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 				return fmt.Errorf("write manual deal product: %w", err)
 			}
 			if tag.RowsAffected() == 0 {
-				return httperr.Validation("products", "unknown", "choose a live product")
+				return httperr.Validation(productsField, "unknown", "choose a live product")
 			}
 		}
 		out, err = readDealProducts(ctx, tx, dealID)
@@ -137,11 +149,11 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "deal", dealID.UUID,
-			map[string]any{"products": allocationImage(before)}, map[string]any{"products": allocationImage(out)})
+			map[string]any{productsField: allocationImage(before)}, map[string]any{productsField: allocationImage(out)})
 		if err != nil {
 			return fmt.Errorf("audit deal products: %w", err)
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: map[string]any{"products": allocationImage(out)}})
+		return storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: map[string]any{productsField: allocationImage(out)}})
 	})
 	return out, err
 }
@@ -183,7 +195,7 @@ func refuseOverAllocation(in []crmcontracts.DealProductInput, dealAmount *int64)
 		}
 	}
 	if total > *dealAmount {
-		return httperr.Validation("products", "exceeds_deal", "the allocated amounts add up to more than the deal's amount")
+		return httperr.Validation(productsField, "exceeds_deal", "the allocated amounts add up to more than the deal's amount")
 	}
 	return nil
 }
@@ -220,14 +232,24 @@ func (s *Store) ListDealProducts(ctx context.Context, dealID ids.DealID) ([]crmc
 			return err
 		}
 		var err error
-		out, err = readDealProducts(ctx, tx, dealID)
-		return err
+		if out, err = readDealProducts(ctx, tx, dealID); err != nil {
+			return err
+		}
+		readable, err := dealAmountReadable(ctx, tx, dealID)
+		if err != nil || readable {
+			return err
+		}
+		// The allocations add up to the deal's amount, so its mask withholds them.
+		for i := range out {
+			out[i].AmountMinor, out[i].KnownAmountMinor, out[i].Currency = nil, nil, nil
+		}
+		return nil
 	})
 	return out, err
 }
 
 func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmcontracts.DealProduct, error) {
-	rows, err := tx.Query(ctx, `SELECT dp.product_id, p.name, dp.source, dp.amount_minor, dp.currency, dp.component_kind, dp.updated_at
+	rows, err := tx.Query(ctx, `SELECT dp.product_id, p.name, dp.source, dp.amount_minor, dp.known_amount_minor, dp.currency, dp.component_kind, dp.updated_at
 		 FROM deal_product dp JOIN product p ON p.id = dp.product_id WHERE dp.deal_id = $1 ORDER BY p.name, dp.product_id`, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("read deal products: %w", err)
@@ -235,7 +257,7 @@ func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmc
 	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.DealProduct, error) {
 		var product crmcontracts.DealProduct
 		var source, kind *string
-		err := row.Scan(&product.ProductId, &product.ProductName, &source, &product.AmountMinor, &product.Currency, &kind, &product.UpdatedAt)
+		err := row.Scan(&product.ProductId, &product.ProductName, &source, &product.AmountMinor, &product.KnownAmountMinor, &product.Currency, &kind, &product.UpdatedAt)
 		if source != nil {
 			product.Source = crmcontracts.DealProductSource(*source)
 		}
@@ -260,7 +282,7 @@ func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmc
 func allocationImage(products []crmcontracts.DealProduct) []map[string]any {
 	out := make([]map[string]any, 0, len(products))
 	for _, product := range products {
-		out = append(out, map[string]any{"product_id": product.ProductId.String(), "source": product.Source, "amount_minor": product.AmountMinor, "currency": product.Currency, "component_kind": product.ComponentKind})
+		out = append(out, map[string]any{productIDColumn: product.ProductId.String(), sourceColumn: product.Source, amountField: product.AmountMinor, currencyField: product.Currency, componentKindColumn: product.ComponentKind})
 	}
 	return out
 }
@@ -274,6 +296,6 @@ func noteAllocations(dealChanged map[string]any, allocated []crmcontracts.DealPr
 	if dealChanged == nil {
 		dealChanged = map[string]any{}
 	}
-	dealChanged["products"] = allocationImage(allocated)
+	dealChanged[productsField] = allocationImage(allocated)
 	return dealChanged
 }

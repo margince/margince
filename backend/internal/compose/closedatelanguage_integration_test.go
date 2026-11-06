@@ -16,7 +16,7 @@ import (
 )
 
 func TestCloseDateReceiptRetainsItsWrittenLanguageAndCorrection(t *testing.T) {
-	for _, tc := range []struct{ language, phrase string }{{"en", "could not read its correspondence"}, {"de", "Korrespondenz konnte nicht gelesen"}, {"vi", "không đọc được trao đổi"}} {
+	for _, tc := range []struct{ language, phrase string }{{"en", "Nobody has been in touch on this deal"}, {"de", "Zu diesem Deal hat noch kein Austausch"}, {"vi", "Chưa có bên nào liên hệ về deal này"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			env := setupCloseDate(t)
 			integration.SetBaseLanguage(env.Admin(), t, env.Pool, tc.language)

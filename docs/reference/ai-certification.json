@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 53,
+    "sites": 55,
     "sites_best_current": 31,
     "sites_best_partial": 1,
     "sites_best_stale": 16,
-    "sites_absent": 5,
-    "scenarios": 289,
+    "sites_absent": 7,
+    "scenarios": 295,
     "records": 355,
     "bindings": 18,
     "self_judged_records": 0
@@ -283,6 +283,34 @@
           "passed": 27,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 1
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "document_extract",
@@ -918,7 +946,7 @@
         "supported_degraded": 4,
         "not_supported": 8
       },
-      "untested": 5,
+      "untested": 6,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1201,6 +1229,34 @@
           "abandoned": 0,
           "runs": 21,
           "passed": 21,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini",
+              "model": "gemini-3.1-flash-lite",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1858,7 +1914,7 @@
         "supported_degraded": 6,
         "not_supported": 1
       },
-      "untested": 7,
+      "untested": 8,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2235,6 +2291,34 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           }
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.1-flash-lite",
+              "env": "eu_hosted"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "document_extract",
@@ -3063,7 +3147,7 @@
         "supported_degraded": 6,
         "not_supported": 1
       },
-      "untested": 7,
+      "untested": 8,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -3339,6 +3423,34 @@
           "passed": 15,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 1
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "document_extract",
@@ -3974,7 +4086,7 @@
         "supported_degraded": 5,
         "not_supported": 15
       },
-      "untested": 6,
+      "untested": 7,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4250,6 +4362,34 @@
           "passed": 21,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 1
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-oss-120b",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "document_extract",
@@ -4885,7 +5025,7 @@
         "supported_degraded": 7,
         "not_supported": 7
       },
-      "untested": 6,
+      "untested": 7,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5161,6 +5301,34 @@
           "passed": 24,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 2
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-8b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "mistralai/ministral-14b-2512",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "document_extract",
@@ -5796,7 +5964,7 @@
         "supported_degraded": 2,
         "not_supported": 14
       },
-      "untested": 6,
+      "untested": 7,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6070,6 +6238,34 @@
           "abandoned": 0,
           "runs": 15,
           "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -6707,7 +6903,7 @@
         "supported_degraded": 3,
         "not_supported": 4
       },
-      "untested": 6,
+      "untested": 7,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6983,6 +7179,34 @@
           "passed": 9,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 1
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "vllm",
+              "model": "mlx-community/Qwen3-14B-4bit",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "document_extract",
@@ -7618,7 +7842,7 @@
         "supported_degraded": 1,
         "not_supported": 19
       },
-      "untested": 6,
+      "untested": 7,
       "unbound": 0,
       "unrecognised": 0
     }
@@ -7627,7 +7851,7 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 53,
+      "sites_shipped": 55,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 15,
@@ -8331,7 +8555,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 53,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 31,
       "usable_with_care": 10,
@@ -9021,7 +9245,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 53,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 29,
       "usable_with_care": 14,
@@ -9704,7 +9928,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 53,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -10414,7 +10638,7 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 53,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
@@ -16852,6 +17076,42 @@
       ]
     },
     {
+      "task": "deal_verdict",
+      "site": "deal_verdict",
+      "key": "deal_verdict/deal_verdict",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_friendly_check_in_changes_nothing",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_verdict/small_talk_changes_nothing_01.yaml"
+        },
+        {
+          "name": "a_verbal_yes_names_the_price_and_moves_the_chances",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_verdict/a_verbal_yes_and_a_price_01.yaml"
+        },
+        {
+          "name": "the_buyer_asks_for_the_contract_and_the_deal_moves_on",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_verdict/the_buyer_asks_for_the_contract_01.yaml"
+        },
+        {
+          "name": "the_customer_names_a_new_signing_date",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_verdict/the_customer_moved_the_start_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
       "task": "document_extract",
       "site": "cards",
       "key": "document_extract/cards",
@@ -16907,6 +17167,30 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "document_extract",
+      "site": "chat",
+      "key": "document_extract/chat",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "chat_screenshot_with_header",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/chat_screenshot_07.yaml"
+        },
+        {
+          "name": "picture_with_no_chat",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/chat_no_chat_08.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "document_extract",

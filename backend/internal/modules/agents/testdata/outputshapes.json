@@ -3258,7 +3258,8 @@
                 }
               },
               "more_fields": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "sentence": {
                 "type": "string"
@@ -3626,7 +3627,8 @@
                       }
                     },
                     "more_fields": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 0
                     },
                     "sentence": {
                       "type": "string"
@@ -4125,7 +4127,8 @@
                 }
               },
               "size_limit_mb": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "version": {
                 "type": "string"
@@ -5367,7 +5370,8 @@
             "type": "integer"
           },
           "edition_count": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           },
           "id": {
             "type": "string",
@@ -5392,7 +5396,8 @@
             "format": "uuid"
           },
           "paused_schedule_count": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           },
           "revision": {
             "type": "integer"
@@ -5471,7 +5476,9 @@
                                 }
                               },
                               "limit": {
-                                "type": "integer"
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1000
                               },
                               "measures": {
                                 "type": "array",
@@ -6258,52 +6265,6 @@
           "priced_count": {
             "type": "integer"
           },
-          "qualification_mode": {
-            "type": "string"
-          },
-          "qualified": {
-            "type": "object",
-            "properties": {
-              "amounts_partial": {
-                "type": "boolean"
-              },
-              "evidence_minor": {
-                "type": "integer"
-              },
-              "excluded_count": {
-                "type": "integer"
-              },
-              "excluded_minor": {
-                "type": "integer"
-              },
-              "unknown_count": {
-                "type": "integer"
-              },
-              "unknown_minor": {
-                "type": "integer"
-              },
-              "unsupported_count": {
-                "type": "integer"
-              },
-              "unsupported_minor": {
-                "type": "integer"
-              },
-              "weighted_minor": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "amounts_partial",
-              "evidence_minor",
-              "excluded_count",
-              "excluded_minor",
-              "unknown_count",
-              "unknown_minor",
-              "unsupported_count",
-              "unsupported_minor",
-              "weighted_minor"
-            ]
-          },
           "range_high_minor": {
             "type": "integer"
           },
@@ -6366,7 +6327,6 @@
           "period_end",
           "period_start",
           "priced_count",
-          "qualification_mode",
           "scope_kind",
           "snapshots",
           "timezone",
@@ -7244,7 +7204,8 @@
                       }
                     },
                     "more_fields": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 0
                     },
                     "sentence": {
                       "type": "string"
@@ -10196,19 +10157,24 @@
                 "type": "object",
                 "properties": {
                   "created": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "duplicates": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "skipped": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "unchanged": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "updated": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   }
                 },
                 "required": [
@@ -10236,7 +10202,8 @@
                       "type": "string"
                     },
                     "line": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 1
                     },
                     "params": {
                       "type": "object",
@@ -10263,10 +10230,12 @@
                 "type": "object",
                 "properties": {
                   "applied": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "offered": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "unresolved": {
                     "type": "array",
@@ -10317,28 +10286,35 @@
                   "type": "object",
                   "properties": {
                     "closed_lost": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 1
                     },
                     "closed_won": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 1
                     },
                     "disposition": {
                       "type": "object",
                       "properties": {
                         "created": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "duplicates": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "skipped": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "unchanged": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "updated": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -10355,7 +10331,8 @@
                       "type": "string"
                     },
                     "rows_read": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 0
                     }
                   },
                   "required": [
@@ -10367,7 +10344,8 @@
                 }
               },
               "rows_read": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "run_id": {
                 "type": "string",
@@ -10440,7 +10418,8 @@
                     }
                   },
                   "reversed_count": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "run_id": {
                     "type": "string",
@@ -10450,7 +10429,8 @@
                     "type": "string"
                   },
                   "updates_not_reversed": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   }
                 },
                 "required": [
@@ -10611,22 +10591,32 @@
             "type": "object",
             "properties": {
               "company": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "contact": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "deal": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "lead": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "project": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "task": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
+              },
+              "webhook": {
+                "type": "integer",
+                "minimum": 0
               }
             },
             "required": [
@@ -10635,11 +10625,13 @@
               "deal",
               "lead",
               "project",
-              "task"
+              "task",
+              "webhook"
             ]
           },
           "signal_count": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           },
           "source_email": {
             "type": "string"
@@ -11600,7 +11592,8 @@
                 }
               },
               "more_fields": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "sentence": {
                 "type": "string"
@@ -13663,52 +13656,6 @@
           "priced_count": {
             "type": "integer"
           },
-          "qualification_mode": {
-            "type": "string"
-          },
-          "qualified": {
-            "properties": {
-              "amounts_partial": {
-                "type": "boolean"
-              },
-              "evidence_minor": {
-                "type": "integer"
-              },
-              "excluded_count": {
-                "type": "integer"
-              },
-              "excluded_minor": {
-                "type": "integer"
-              },
-              "unknown_count": {
-                "type": "integer"
-              },
-              "unknown_minor": {
-                "type": "integer"
-              },
-              "unsupported_count": {
-                "type": "integer"
-              },
-              "unsupported_minor": {
-                "type": "integer"
-              },
-              "weighted_minor": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "amounts_partial",
-              "evidence_minor",
-              "excluded_count",
-              "excluded_minor",
-              "unknown_count",
-              "unknown_minor",
-              "unsupported_count",
-              "unsupported_minor",
-              "weighted_minor"
-            ],
-            "type": "object"
-          },
           "range_high_minor": {
             "type": "integer"
           },
@@ -13926,7 +13873,8 @@
                   "type": "string"
                 },
                 "row_count": {
-                  "type": "integer"
+                  "type": "integer",
+                  "minimum": 0
                 }
               },
               "required": [
@@ -13943,19 +13891,24 @@
                 "type": "object",
                 "properties": {
                   "created": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "duplicates": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "skipped": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "unchanged": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "updated": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   }
                 },
                 "required": [
@@ -13983,7 +13936,8 @@
                       "type": "string"
                     },
                     "line": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 1
                     },
                     "params": {
                       "type": "object",
@@ -14010,10 +13964,12 @@
                 "type": "object",
                 "properties": {
                   "applied": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "offered": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "unresolved": {
                     "type": "array",
@@ -14064,28 +14020,35 @@
                   "type": "object",
                   "properties": {
                     "closed_lost": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 1
                     },
                     "closed_won": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 1
                     },
                     "disposition": {
                       "type": "object",
                       "properties": {
                         "created": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "duplicates": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "skipped": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "unchanged": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         },
                         "updated": {
-                          "type": "integer"
+                          "type": "integer",
+                          "minimum": 0
                         }
                       },
                       "required": [
@@ -14102,7 +14065,8 @@
                       "type": "string"
                     },
                     "rows_read": {
-                      "type": "integer"
+                      "type": "integer",
+                      "minimum": 0
                     }
                   },
                   "required": [
@@ -14114,7 +14078,8 @@
                 }
               },
               "rows_read": {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 0
               },
               "run_id": {
                 "type": "string",
@@ -14187,7 +14152,8 @@
                     }
                   },
                   "reversed_count": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   },
                   "run_id": {
                     "type": "string",
@@ -14197,7 +14163,8 @@
                     "type": "string"
                   },
                   "updates_not_reversed": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 0
                   }
                 },
                 "required": [
@@ -17497,10 +17464,14 @@
             "type": "string"
           },
           "partner_fit_score": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
           },
           "partner_fit_score_computed": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
           },
           "partner_kinds": {
             "type": "array",
@@ -17537,7 +17508,8 @@
             "format": "date-time"
           },
           "version": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 1
           }
         },
         "required": [
