@@ -18,9 +18,9 @@ export type ImageSlotVerbs = Readonly<{
 }>;
 
 /**
- * One stored picture as the hero of its row, in its own shape, with an Edit
- * pill on its edge whose menu uploads or removes it. Nothing takes a file while
- * a write is out: a drop racing a removal lands in whichever order they answer.
+ * One stored picture as the hero of its row, with an Edit pill whose menu
+ * uploads or removes it. Nothing takes a file while a write is out. A drop
+ * racing a removal lands in whichever order the two answer.
  */
 export function ImageSlot({
   shape,
@@ -62,8 +62,8 @@ export function ImageSlot({
   const inputId = useId();
   const tile = useRef<HTMLDivElement>(null);
   const busy = uploading || removing;
-  // Out of the tab order: the menu's Upload is the keyboard's way to it, and
-  // the zone stays only so a file dropped on the picture lands.
+  // Out of the tab order, since the menu's Upload is the keyboard's way in.
+  // The zone stays so a file dropped on the picture lands.
   const control = {
     id: inputId,
     "aria-labelledby": name === undefined ? labelledBy : nameId,

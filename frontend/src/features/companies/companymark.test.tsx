@@ -73,8 +73,8 @@ async function openEdit(
   await user.click(screen.getByRole("button", { name: label }));
 }
 
-// A company with no mark in a slot is not a broken image and not an empty slot:
-// it is its own initials, and the slot's menu offers the way out.
+// An empty slot shows the company's initials, never a broken image.
+// Its menu offers the way out.
 it.each(["Wide logo", "Square icon"] as const)(
   "stands the monogram in for an empty %s and offers only its upload",
   async (slotName) => {
@@ -180,8 +180,8 @@ it.each([
   },
 );
 
-// The menu answers the keyboard: Down opens it on its first item, Down walks
-// to the next, and Escape closes it on the pill it came from.
+// Down opens the menu on its first item and walks to the next.
+// Escape closes it and puts focus back on the pill.
 it("opens the Edit menu from the keyboard and closes back onto its pill", async () => {
   const user = userEvent.setup();
   mark(WITH_MARK);

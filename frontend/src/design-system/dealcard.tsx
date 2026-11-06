@@ -126,6 +126,13 @@ function DealCardCompany({
   );
 }
 
+/** The colleague who owns a deal, with their picture when they have one. */
+export type DealOwnerSeat = Readonly<{
+  id: string;
+  name: string;
+  photo?: string | null;
+}>;
+
 /**
  * Who carries the deal, as a mark at the edge of the company line.
  *
@@ -135,13 +142,6 @@ function DealCardCompany({
  * stop of its own: the card is a link and already has one, and a second stop
  * inside it would be a control that does nothing.
  */
-/** The colleague who owns a deal, with their picture when they have one. */
-export type DealOwnerSeat = Readonly<{
-  id: string;
-  name: string;
-  photo?: string | null;
-}>;
-
 function DealOwner({
   owner: { id, name, photo },
   dealLink,

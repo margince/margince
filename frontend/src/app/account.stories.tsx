@@ -13,20 +13,9 @@ import { PORTRAIT, WHITE_PORTRAIT } from "../testing/seatphotos";
 import { AccountMenu } from "./account";
 
 /**
- * Who is signed in, and the two things the product now offers nowhere else: the
- * door into settings, and the appearance choice.
- *
- * One chrome: the seat's chip at the end of the strip's trail. The menu drops
- * out of it, and the theme flyout opens left because the right has no room.
- *
- * The menu's head carries the chip, the design system's `Avatar`. Its mesh is
- * keyed on the seat's user id, so a rename or a new address keeps its colour.
- *
- * fullscreen: the block measures itself against the container it sits in — the
- * strip's trail is flush to the content column's right edge, and the menu's drop
- * offset is computed from the strip's own height — so every story renders the
- * real chrome. Storybook's default canvas padding would frame a geometry the
- * product does not use.
+ * The seat's chip at the end of the top bar, and the menu it opens.
+ * `fullscreen`, because the menu places itself against the real bar; canvas
+ * padding would draw a geometry the product does not have.
  */
 const meta: Meta<typeof AccountMenu> = {
   title: "Shell/Account block",
