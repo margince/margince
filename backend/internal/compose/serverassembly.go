@@ -191,7 +191,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // queue rather than two readings of it; a second engine here is how the two
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
-	staged := approvalsServiceWithEffects(pool)
+	staged := NewApprovalsServiceWithEffects(pool)
 	s.homeCache = homecache.New(pool)
 	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)

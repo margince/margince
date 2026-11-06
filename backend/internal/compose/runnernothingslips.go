@@ -28,7 +28,7 @@ func (s *RunnerService) closeWhenNothingSlips(runCtx context.Context, spec runne
 	if !spec.JudgesSlippingDeals {
 		return runner.Result{}, false
 	}
-	slipping, err := slippingLister(s.pool)(runCtx, runner.SweepQuietDays)
+	slipping, err := slippingLister(s.pool)(runCtx, runner.SweepQuietDays, nil)
 	if err != nil {
 		s.log.Warn("runner: reading the member's slipping deals before the run", "run", runID, "cause", err)
 		return runner.Result{}, false

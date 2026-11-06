@@ -1879,7 +1879,7 @@ func (stubs) CreateDeal(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "CreateDeal")
 }
 
-func (stubs) ListAtRiskRelationships(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListAtRiskRelationships(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAtRiskRelationshipsParams) {
 	httperr.NotImplemented(w, r, "ListAtRiskRelationships")
 }
 

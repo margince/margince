@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 232659,
+    "tool_catalog_bytes": 232816,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 59479,
+    "approx_wire_tokens_total": 59518,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 54293,
-      "input_schema_bytes": 114420,
+      "input_schema_bytes": 114577,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 168713
+      "description_plus_input_schema_bytes": 168870
     }
   },
   "tools": {
@@ -6612,6 +6612,11 @@
               "maximum": 50,
               "minimum": 1,
               "type": "integer"
+            },
+            "owner_id": {
+              "description": "at_risk, slipping only: Narrow to deals owned by this member; existing read scope still applies",
+              "format": "uuid",
+              "type": "string"
             },
             "project_id": {
               "description": "commitments only: Keep only promises filed under this project or under none",

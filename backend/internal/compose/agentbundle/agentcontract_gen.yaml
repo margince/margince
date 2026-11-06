@@ -4232,6 +4232,10 @@ paths:
         Each deal carries the evidence that puts it on the list. A deal whose risk cannot be
         evidenced from its own fields is left out rather than guessed.
       parameters:
+        - name: owner_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Narrow to deals owned by this member within the caller's read scope.
         - name: quiet_days
           in: query
           schema: {type: integer, minimum: 1, maximum: 365, default: 60}
@@ -4263,6 +4267,11 @@ paths:
         may see and stops at its cap; `truncated` says when it did.
         `coverage_withheld` says a deal could not be judged because the caller may not read
         its relationships, so it is missing from the list rather than clean.
+      parameters:
+        - name: owner_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Narrow to deals owned by this member within the caller's read scope.
       responses:
         '200':
           description: The at-risk deals.
@@ -4271,6 +4280,7 @@ paths:
               schema: {$ref: '#/components/schemas/AtRiskRelationships'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /deals/follow-up-drafts:
     post:
       tags: [Deals]

@@ -62,14 +62,14 @@ func requestHandover(ctx context.Context, t *testing.T, e *integration.Env, reco
 
 func decideHandover(ctx context.Context, t *testing.T, e *integration.Env, id ids.ApprovalID, approve bool) error {
 	t.Helper()
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(ctx, id, approve, nil)
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(ctx, id, approve, nil)
 	return err
 }
 
 func transfersInInbox(reader context.Context, t *testing.T, e *integration.Env) int {
 	t.Helper()
 	kind, pending := ownershipTransferKind, approvals.StatusPending
-	rows, _, err := approvalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind, Status: &pending})
+	rows, _, err := NewApprovalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind, Status: &pending})
 	if err != nil {
 		t.Fatalf("reading the inbox: %v", err)
 	}

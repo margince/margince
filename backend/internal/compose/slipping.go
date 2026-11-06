@@ -40,8 +40,8 @@ const slippingScanLimit = 50
 // slippingLister serves the candidate set at the window the tool asks for. It
 // holds the open deals quiet that long and those past their expected close.
 func slippingLister(pool *pgxpool.Pool) agents.SlippingLister {
-	return func(ctx context.Context, quietDays int) ([]agents.SlippingDeal, error) {
-		candidates, _, err := quietDealScanWithClock(pool, quietDays, clockNow)(ctx, scheduledRunOwners(ctx))
+	return func(ctx context.Context, quietDays int, owner *ids.UUID) ([]agents.SlippingDeal, error) {
+		candidates, _, err := quietDealScanWithClock(pool, quietDays, clockNow)(ctx, riskViewOwners(ctx, owner))
 		return candidates, err
 	}
 }

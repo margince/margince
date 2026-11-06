@@ -193,7 +193,7 @@ type AtRiskReport struct {
 
 // AtRiskLister answers "which of my relationships are in trouble" over the
 // caller's own open deals, under their row scope.
-type AtRiskLister func(ctx context.Context) (AtRiskReport, error)
+type AtRiskLister func(ctx context.Context, owner *ids.UUID) (AtRiskReport, error)
 
 // RegisterNetworkTools wires the relationship-graph intents. A seam that is
 // absent registers no tool: a surface that cannot ground its answer does not
@@ -348,12 +348,9 @@ func (t atRiskTool) Spec() mcp.ToolSpec {
 		Description:   atRiskRelationshipsCopy.render(),
 		Instead:       atRiskRelationshipsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		Unlisted:  true,
-		OpenAPIOp: "listAtRiskRelationships",
-		// No arguments. The question is about the caller's own book, and the
-		// row scope already decides what that is — an owner or team filter here
-		// would be a second, weaker spelling of the same rule.
-		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
+		Unlisted:     true,
+		OpenAPIOp:    "listAtRiskRelationships",
+		InputSchema:  schema(`{"type":"object","properties":{"owner_id":{"type":"string","format":"uuid","description":"Narrow to deals owned by this member; existing read scope still applies"}},"additionalProperties":false}`),
 		OutputSchema: schemaFor[AtRiskReport](),
 	}
 }
@@ -378,11 +375,13 @@ const atRiskWithheldMessage = "At least one deal could not be assessed: reading 
 	"not clean — report the pipeline as partly unexamined."
 
 func (t atRiskTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct{}
+	var args struct {
+		Owner *ids.UUID `json:"owner_id"`
+	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	report, err := t.list(ctx)
+	report, err := t.list(ctx, args.Owner)
 	if err != nil {
 		return nil, err
 	}

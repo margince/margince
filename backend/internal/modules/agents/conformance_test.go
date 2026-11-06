@@ -195,7 +195,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil, inertLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
-		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
+		func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) { return nil, nil },
 		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", nil }, testStalledDays, testStalledDays)
 	RegisterCommitmentTool(r, func(context.Context, CommitmentQuery) (CommitmentSweep, error) {
 		return CommitmentSweep{}, nil
@@ -210,7 +210,7 @@ func fullRegistry(t *testing.T) *Registry {
 		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, nil },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) { return DealCoverageAnswer{}, nil },
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, nil },
-		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
+		func(context.Context, *ids.UUID) (AtRiskReport, error) { return AtRiskReport{}, nil })
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
 	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -229,7 +231,8 @@ func refusedSendReview(s sweepSeed, purpose string) string {
 	}, nil, nil); status != http.StatusConflict {
 		s.t.Fatalf("a %s send with no grant → %d, want the refusal that opens a review", purpose, status)
 	}
-	review := s.ownerScalar(`SELECT id::text FROM communication_review WHERE resolved_at IS NULL ORDER BY id DESC LIMIT 1`)
+	review := s.ownerScalar(`SELECT id::text FROM communication_review
+ WHERE resolved_at IS NULL AND initiated_by = @initiator ORDER BY id DESC LIMIT 1`, pgx.NamedArgs{"initiator": apptest.SessionUserID(s.t, s.e)})
 	s.pool.note(review, "contact", contact)
 	return review
 }
