@@ -134,6 +134,15 @@ describe("a worklist row at list density", () => {
     expect(inline[0].textContent).toContain(" · ");
   });
 
+  // The pin rides the name at this density too.
+  it("shows the reader's pin beside the name", () => {
+    render(row({ because: MANY_REASONS }));
+
+    expect(
+      screen.getByRole("img", { name: en["worklist.pinnedMark"] }),
+    ).toBeTruthy();
+  });
+
   // NOTHING IS DISCARDED. The count names everything the line could not hold,
   // not just the reasons — a count that promised less than the press delivers
   // is a count a reader learns not to spend a press on.

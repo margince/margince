@@ -39,7 +39,6 @@ reach features/booking/booking-review.tsx features/mail/compose.tsx
 reach features/brief/brief.changed.test.ts features/worklist/worklist.queries.ts
 reach features/brief/brief.changed.ts features/worklist/worklist.header.tsx
 reach features/brief/brief.changed.ts features/worklist/worklist.queries.ts
-reach features/brief/brief.changes.tsx features/worklist/worklist.receiptcopy.ts
 reach features/brief/brief.decisions.tsx features/automations/approvaldisplay.ts
 reach features/brief/brief.decisions.tsx features/automations/approvalevidence.tsx
 reach features/brief/brief.decisions.tsx features/automations/approvalkind.ts

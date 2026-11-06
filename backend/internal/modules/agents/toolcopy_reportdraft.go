@@ -27,7 +27,7 @@ var changeReportsCopy = toolCopy{
 		"check and share a forecast by link. record_decision records a decision from a sales review on its " +
 		"deal, with an owner and a review date; record_decision_outcome closes it.",
 	Limits: "A draft is refused on a report that already has one. publish_draft, discard_draft, " +
-		"restore_revision, archive_report, publish_framework, launch_initiative and close_lost_input_check " +
+		"restore_revision, archive_report, publish_framework and launch_initiative " +
 		"change what colleagues see: ask the user first.",
 	Instead: "Use read_reports to read reports and their metric catalog, run_research for the sales " +
 		"review's assessment or a report set up from a description, and change_state move_deal to move a deal.",

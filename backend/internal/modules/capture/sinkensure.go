@@ -55,6 +55,7 @@ type EnsureOutcome struct {
 
 // EnsureRequest names one captured message's counterparty for the resolver.
 type EnsureRequest struct {
+	HoldAuthority   func(context.Context, pgx.Tx) error
 	Admission       func(context.Context, pgx.Tx, bool) error
 	Email           string
 	DisplayName     string // untrusted header text
@@ -103,6 +104,10 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 	// The party the ladder judged — see counterpartyDecision.subject.
 	cp := decision.subject
 	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{
+		HoldAuthority: func(ctx context.Context, tx pgx.Tx) error {
+			_, owner := capturePrincipal(ctx)
+			return s.holdPartyAuthorityTx(ctx, tx, owner)
+		},
 		Admission:       s.counterpartyAdmission(rec, ref, cp),
 		Email:           cp.Email,
 		DisplayName:     cp.DisplayName,

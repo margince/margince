@@ -14,6 +14,7 @@ import {
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
 import { useT } from "../../i18n";
+import { stillHeld } from "../../lib/employmentcurrency";
 import { unwrap } from "../../lib/problem";
 import { useAddEmployment } from "./addemploymentmodal";
 import {
@@ -24,7 +25,6 @@ import {
   useEmploymentActions,
 } from "./contactemployers";
 import type { Contact360 } from "./contactrail";
-import { stillHeld } from "./employmentcurrency";
 import "../../design-system/querystates.css";
 
 /**

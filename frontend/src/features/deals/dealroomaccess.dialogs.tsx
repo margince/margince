@@ -17,7 +17,7 @@ import type {
   Participant,
 } from "./dealroomaccess";
 import { IssuedNotice } from "./dealroomaccess.notices";
-import { refreshSeats } from "./dealroomaccess.queries";
+import { refreshSeats, watchInviteMail } from "./dealroomaccess.queries";
 import {
   CAPABILITIES,
   CAPABILITY_HINTS,
@@ -90,6 +90,9 @@ export function InviteDialog({
       );
     },
     onSuccess: (data) => {
+      if (data?.queued) {
+        watchInviteMail(queryClient, room.id);
+      }
       void refreshSeats(queryClient, room.id);
       if (data) {
         setIssued(data);
@@ -192,6 +195,9 @@ export function ReissueDialog({
       );
     },
     onSuccess: (data) => {
+      if (data?.queued) {
+        watchInviteMail(queryClient, room.id);
+      }
       void refreshSeats(queryClient, room.id);
       if (data) {
         setIssued(data);
