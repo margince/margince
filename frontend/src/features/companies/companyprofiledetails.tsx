@@ -4,8 +4,8 @@
 import type { components } from "../../api/schema";
 import { RELATIONSHIP_TYPE_LABELS } from "../../components/companylookups";
 import { EntityRef } from "../../components/entityref";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { type Edit, useRowBuilders } from "./companyrail";
@@ -57,9 +57,7 @@ export function CompanyProfileDetails({
     ),
     text("linkedin_url", "create.linkedinUrl", {
       link: company.linkedin_url && (
-        <OffsiteLink href={company.linkedin_url}>
-          {company.linkedin_url}
-        </OffsiteLink>
+        <LinkedInChip href={company.linkedin_url} name={company.display_name} />
       ),
     }),
     text("phone", "create.phone"),

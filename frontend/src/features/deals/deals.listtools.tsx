@@ -23,6 +23,7 @@ import {
   withoutScreenDials,
 } from "../../components/listquery";
 import { Radio, SegmentedControl } from "../../design-system/atoms";
+import type { RowSelection } from "../../design-system/listselection";
 import type { ListChip, ViewRow } from "../../design-system/listsurface";
 import type { ListSelection } from "../../design-system/listtable";
 import { type Translator, useLocale, useT } from "../../i18n";
@@ -309,53 +310,39 @@ export function useDealScreenDials({
 // name rows the reader can neither see nor deselect.
 export function dealRowSelection({
   view,
-  liveSelection,
-  selectedRows,
+  chosen,
   stages,
-  setSelected,
   t,
 }: Readonly<{
   view: "board" | "table";
-  liveSelection: ReadonlySet<string>;
-  selectedRows: Deal[];
+  chosen: RowSelection<Deal>;
   stages: Stage[];
-  setSelected: Dispatch<SetStateAction<ReadonlySet<string>>>;
   t: ReturnType<typeof useT>;
 }>): ListSelection<Deal> | undefined {
   return view === "board"
     ? undefined
     : {
-        selected: liveSelection,
+        selected: chosen.selected,
+        limit: chosen.limit,
         // A closed or archived deal takes no bulk write. Archiving it is done
         // or meaningless. Moving it between open stages would be the unannounced
         // reopen the stepper already refuses.
         selectable: (deal) =>
           deal.archived_at == null && deal.status === "open",
-        onToggle: (deal) =>
-          setSelected((prev) => {
-            const next = new Set(prev);
-            if (next.has(deal.id)) {
-              next.delete(deal.id);
-            } else {
-              next.add(deal.id);
-            }
-            return next;
-          }),
+        onChange: chosen.onChange,
         label: (deal) => t("bulk.selectRow", { name: deal.name }),
         bar: (
           <DealBulkBar
-            deals={selectedRows}
+            deals={chosen.selectedRows}
             stages={stages}
             // The rows that went through leave the selection. The ones that
             // refused stay in it, named, so the reader can retry them once
             // the list has refetched their versions.
             onDone={(outcomes) =>
-              setSelected(
-                new Set(
-                  outcomes
-                    .filter((outcome) => outcome.error)
-                    .map((outcome) => outcome.id),
-                ),
+              chosen.replace(
+                outcomes
+                  .filter((outcome) => outcome.error)
+                  .map((outcome) => outcome.id),
               )
             }
           />

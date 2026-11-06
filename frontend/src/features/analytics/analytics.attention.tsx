@@ -79,7 +79,7 @@ export function AttentionPanel({
     return null;
   }
   return (
-    <Panel title={t("analytics.attention")}>
+    <Panel title={t("analytics.attention")} flatHead>
       {state !== undefined && items.length === 0 && (
         <PanelBody>
           <SurfaceState
@@ -109,10 +109,7 @@ export function AttentionPanel({
             )}
             <p className="t-caption">{item.detail}</p>
           </div>
-          <AppLink
-            className="btn btn-ghost"
-            href={analyticsSectionHref(item.section, dials ?? params)}
-          >
+          <AppLink href={analyticsSectionHref(item.section, dials ?? params)}>
             {item.action}
           </AppLink>
         </PanelRow>

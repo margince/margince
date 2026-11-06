@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  summaryFieldsLine,
-  summarySentence,
-} from "../../design-system/approvalsummary";
+import { summaryFieldsLine } from "../../design-system/approvalsummary";
 import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import { summaryWords } from "../../lib/approvalpreviewfields";
@@ -14,48 +11,12 @@ import {
   isAuditActorType,
 } from "../../lib/auditactor";
 import { runReasonWords } from "../../lib/automationrun";
+import type { Viewer } from "../../lib/worklistcopy";
 import {
   domainQuestionHeading,
   domainQuestionReason,
 } from "./worklist.domaincopy";
 import type { WorklistItem } from "./worklist.queries";
-
-type Viewer = Readonly<{ id: string; display_name: string }>;
-
-/** Responsibility comes from the assigned user ID; the stored promise stays verbatim. */
-export function readerTask(
-  item: WorklistItem,
-  viewer: Viewer | undefined,
-  t: Translator,
-): WorklistItem {
-  if (
-    item.source !== "task" ||
-    !viewer ||
-    item.owner?.kind !== "user" ||
-    item.owner.id !== viewer.id ||
-    !item.title
-  )
-    return item;
-  const prefix = `${viewer.display_name.trim()} will `;
-  if (!viewer.display_name.trim() || !item.title.startsWith(prefix))
-    return item;
-  return {
-    ...item,
-    title: t("home.task.yours", { action: item.title.slice(prefix.length) }),
-  };
-}
-
-/**
- * The row's own reading of an approval: the sentence as the title, because
- * noticeDetail draws the values under it. Other surfaces keep the whole title.
- */
-export function sentenceTitled(item: WorklistItem): WorklistItem {
-  const sentence = summarySentence({
-    summary: item.title,
-    summary_parts: item.summary_parts,
-  });
-  return item.summary_parts && sentence ? { ...item, title: sentence } : item;
-}
 
 /**
  * A row's supporting line where the server sent a code for it: a failed

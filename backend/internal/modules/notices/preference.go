@@ -464,6 +464,10 @@ func preferenceImage(class string, delivery *string) map[string]any {
 // TargetApproval is the target type of a notice that opens a pending decision.
 const TargetApproval = "approval"
 
+// TargetDataTask is the target type of a notice about one background
+// correction run; a client opens System health on it.
+const TargetDataTask = "data_task"
+
 // ApprovalNoticeKey names one announcement of a pending decision across every
 // seat told about it. The writer, the retraction and the centre's routing all
 // read this one spelling.

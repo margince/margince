@@ -30430,12 +30430,19 @@ export interface components {
              */
             read_at?: string;
             /**
-             * @description The record the notice is about, when it is about one. Both halves or neither — a type
-             *     with no id names a KIND of thing and cannot be opened. Absent is the common case: a
-             *     capture backlog and a colleague's word are about no single record.
+             * @description What the notice is about, when it is about one thing a reader can open. Both halves or
+             *     neither — a type with no id names a KIND of thing and cannot be opened. Absent where
+             *     the notice names nothing: a capture backlog and a colleague's word are about no single
+             *     record.
              */
             target?: {
-                /** @description The record's class, as its own endpoint spells it. */
+                /**
+                 * @description A record's class, as its own endpoint spells it, or one of two non-record targets:
+                 *     `approval` (a pending decision, `id` is the approval) and `data_task` (a
+                 *     background correction run, `id` is the `run_id` that failed). A client opens the
+                 *     corrections list rather than that run: a manual re-run replaces the `run_id`, so the
+                 *     one a notice names may no longer be listed.
+                 */
                 type: string;
                 /** Format: uuid */
                 id: string;
@@ -53242,6 +53249,28 @@ export interface components {
         WeeklyReviewIndex: {
             /** @description The Monday of each week with a review, newest first. */
             weeks: string[];
+            /**
+             * @description The same weeks in the same order, each with what it won, so the index can draw the
+             *     weeks beside each other. Frozen with each review, like every figure in it. Absent
+             *     from an older server.
+             */
+            entries?: components["schemas"]["WeeklyReviewIndexEntry"][];
+        };
+        WeeklyReviewIndexEntry: {
+            /**
+             * Format: date
+             * @description The Monday of the week.
+             */
+            week: string;
+            /** @description Deals the week won. */
+            deals_won: number;
+            /**
+             * Format: int64
+             * @description What they were worth, in minor units of `currency`. Zero when the week won nothing. Absent when the value is unknown: a deal could not be converted, or the installation names no base currency.
+             */
+            won_minor?: number;
+            /** @description The currency `won_minor` is in. Present exactly when `won_minor` is. */
+            currency?: string;
         };
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
@@ -53682,6 +53711,17 @@ export interface components {
             won_minor?: number;
             figure_coverage?: components["schemas"]["WeeklyFigureCoverageSet"];
         };
+        /** @description One local day of a rep's own activity, in the installation reporting timezone. */
+        WeeklyDayActivity: {
+            /** Format: date */
+            day: string;
+            /** @description Outbound emails the rep wrote or their mailbox sent. */
+            emails_sent: number;
+            /** @description Calls the rep logged, by their own hand or an agent acting for them. */
+            calls_logged: number;
+            /** @description Meetings credited to the rep that took place that day. */
+            meetings_held: number;
+        };
         /**
          * @description Whether each figure family on the review was measured over the week, by the source
          *     that feeds it. Absent on a review frozen before figures carried their coverage; such a
@@ -53767,6 +53807,13 @@ export interface components {
             narrated_at?: string | null;
             numeric_summary?: components["schemas"]["WeeklyNumericSummary"];
             counts: components["schemas"]["WeeklyReviewCounts"];
+            /**
+             * @description What the rep did on each day of the week, Monday first, frozen with the review.
+             *     Only their own work counts: emails they sent, calls they logged, meetings they were
+             *     credited with. A received email is not work they did. Absent on a review frozen
+             *     before this was measured, and for a reader who may not read activities.
+             */
+            daily_activity?: components["schemas"]["WeeklyDayActivity"][];
             /**
              * @description The deals the week is about, won and lost first. Capped for reading — the counts stay
              *     complete, so a busy week reads "12 moved" beside the most recent of them rather than
@@ -57309,9 +57356,8 @@ export interface components {
             label?: string;
             touch?: components["schemas"]["WorklistContactTouch"];
             /**
-             * @description Where the contact works today, so a meeting row says which account the
-             *     meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
-             *     other row's title already names its record.
+             * @description Where the contact works today, so every row that names a contact can also
+             *     name the account, and a meeting row says which account the meeting was with.
              *
              *     Absent where the contact has no current employer, or where this caller may
              *     not read the employment or the company. Absent never means "works nowhere".
@@ -57427,7 +57473,7 @@ export interface components {
             reason: "withheld" | "failed";
             /**
              * @description False for a side read that puts no row on the queue — `calendar`,
-             *     `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
+             *     `next_meeting`, `deal_advice` and `contact_employers` — so its failure cannot hide a row, and a figure counted over
              *     the queue stays exact. True for a lane whose rows may be missing. Absent from
              *     an older server and from a surface that names only lanes, and a client reads
              *     absent as true.
@@ -90714,6 +90760,15 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 /** @description The owner or team named by `scope_kind`. */
                 scope_id?: string;
+                /**
+                 * @description The instant to count at, so the summary describes the same moment as an evaluation
+                 *     read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
+                 *     refused, since nothing has happened by then to count. It bounds each handoff's state,
+                 *     submitter and reason, and which meetings existed. The recipient, whether that
+                 *     recipient can still act, team membership and a meeting's status keep no history, so
+                 *     they read as they stand now. An `as_of` far in the past is not a historical report.
+                 */
+                as_of?: string;
             };
             header?: never;
             path?: never;
@@ -90748,6 +90803,12 @@ export interface operations {
                 /** @description Opaque position from a previous page's `next_cursor`. */
                 cursor?: string;
                 limit?: number;
+                /**
+                 * @description The instant to list at, so the rows describe the same moment as a summary read beside
+                 *     them (its `as_of`). Omitted means now; a future instant is refused. It bounds the same
+                 *     facts as the summary's `as_of`: the recipient and team membership read as they stand now.
+                 */
+                as_of?: string;
             };
             header?: never;
             path?: never;

@@ -89,6 +89,7 @@
   .voicekind,
   .compose-reasons-card,
   .page-pane,
+  .brief-main .brief-agent-section .magic-line,
   .analytics-sheet
 ) {
   --ground: var(--ladder1Solid);
@@ -186,6 +187,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -268,6 +270,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   ) {
   --ground: var(--ladder2);
@@ -365,6 +368,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -447,6 +451,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -529,6 +534,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   ) {
   --ground: var(--ladder3);
@@ -626,6 +632,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -708,6 +715,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -790,6 +798,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -872,6 +881,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   ) {
   --ground: var(--ladder4);
@@ -1024,6 +1034,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   ) {
   --ground: var(--ladder2);
@@ -1141,6 +1152,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -1223,6 +1235,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   ) {
   --ground: var(--ladder3);
@@ -1340,6 +1353,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -1422,6 +1436,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   )
   :where(
@@ -1504,6 +1519,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   ) {
   --ground: var(--ladder4);
@@ -1640,6 +1656,7 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
+    .brief-main .brief-agent-section .magic-line,
     .analytics-sheet
   ) {
   background-color: var(--ground);
