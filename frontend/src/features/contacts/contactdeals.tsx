@@ -205,7 +205,10 @@ function DealRow({
 // The deals in figures: how many are open, what they are worth together, and
 // which closes next. Until every deal is read in full, a figure says it is a
 // floor or says nothing. It never prints part of the answer.
-function DealFigures({ roles }: Readonly<{ roles: DealRole[] }>) {
+function DealFigures({
+  roles,
+  cut,
+}: Readonly<{ roles: DealRole[]; cut: boolean }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -217,7 +220,8 @@ function DealFigures({ roles }: Readonly<{ roles: DealRole[] }>) {
   const deals = reads
     .map((read) => read.data)
     .filter((deal): deal is Deal => deal != null);
-  const complete = settled && deals.length === roles.length;
+  // A page cut leaves deals unread, so every figure is a floor.
+  const complete = settled && !cut && deals.length === roles.length;
   const open = deals.filter((deal) => deal.status === "open");
   const next = open
     .filter((deal) => deal.expected_close_date)
@@ -236,7 +240,7 @@ function DealFigures({ roles }: Readonly<{ roles: DealRole[] }>) {
             : pending
         }
         detail={plural("contact.deals.ofAll", roles.length, {
-          count: formatNumber(roles.length, locale),
+          count: `${formatNumber(roles.length, locale)}${cut ? "+" : ""}`,
         })}
       />
       <StatCard
@@ -365,7 +369,10 @@ export function ContactDealsTab({
       >
         {state === "ready" ? (
           <PanelBody>
-            <DealFigures roles={cards} />
+            <DealFigures
+              roles={cards}
+              cut={view?.deal_roles?.page.has_more ?? false}
+            />
             <ul className="ct-deal-grid">
               {cards.map((role) => (
                 <DealTile key={role.relationship_id} role={role} />

@@ -47,4 +47,16 @@ describe("the value of a set of open deals", () => {
     );
     expect(openValue([], true).kind).toBe("unknown");
   });
+
+  it("states no sum once the total is too large to add exactly", () => {
+    expect(
+      openValue(
+        [
+          { amount_minor: Number.MAX_SAFE_INTEGER, currency: "EUR" },
+          { amount_minor: 2, currency: "EUR" },
+        ],
+        true,
+      ).kind,
+    ).toBe("unknown");
+  });
 });

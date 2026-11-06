@@ -27,6 +27,8 @@ export function openValue(
   for (const deal of deals) {
     if (deal.amount_minor == null || !deal.currency) return { kind: "unknown" };
     minor += deal.amount_minor;
+    // Past 2^53 a sum rounds, and a rounded total is not one the server holds.
+    if (!Number.isSafeInteger(minor)) return { kind: "unknown" };
     currencies.add(deal.currency);
   }
   const [currency] = currencies;

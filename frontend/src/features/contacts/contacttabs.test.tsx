@@ -614,6 +614,31 @@ describe("the deals tab", () => {
     expect(searched).not.toContain("companies");
   });
 
+  it("counts a floor, never a total, when the deal list is cut", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            amount_minor: 42_000_000,
+            currency: "EUR",
+          } satisfies Deal),
+      },
+      {},
+    );
+    const cut: Contact360 = {
+      ...view,
+      deal_roles: {
+        data: view.deal_roles?.data ?? [],
+        page: { has_more: true },
+      },
+    };
+    withProviders(<ContactDealsTab view={cut} />);
+    const open = await screen.findByText("1+");
+    expect(open.closest(".stat-card")?.textContent).toContain("of 1+ on record");
+    expect(screen.queryByText(/€420k/i, { selector: ".stat-card *" })).toBeNull();
+  });
+
   // Withheld rather than disabled: a grant the role does not hold is not a fact
   // about this contact, so there is nothing for a disabled button to explain.
   it("withholds the verb from a reader who may not write an edge", async () => {
