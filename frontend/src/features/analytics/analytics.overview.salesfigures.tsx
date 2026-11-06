@@ -6,10 +6,14 @@ import type { ReactNode } from "react";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
-import { StockCharts } from "./analytics.overview.board";
+import { drawnChart, StockCharts } from "./analytics.overview.board";
 import { HeroAside, heroReceipt } from "./analytics.overview.hero";
 import { SalesOverviewMetrics } from "./analytics.overview.metrics";
-import { OpenPipelineLine } from "./analytics.overview.salesreadings";
+import {
+  OpenPipelineLine,
+  OpenPipelineMeta,
+  OpenPipelineNote,
+} from "./analytics.overview.salesreadings";
 import { QuarterTrajectory } from "./analytics.overview.trajectory";
 import type {
   ReportingEvaluation,
@@ -79,8 +83,9 @@ export function SalesFigures({
   );
 }
 
-// All open pipeline over today's stock by stage and the permitted sales by
-// owner, each a section of the review's sheet.
+// Today's stock by stage and the permitted sales by owner, each a section of
+// the review's sheet. All open pipeline heads the stage chart, which draws the
+// same stock; with no stage chart to head, it keeps a line of its own.
 function SalesStock({
   answered,
   charts,
@@ -93,10 +98,26 @@ function SalesStock({
     from?: ReportingEvaluation,
   ) => void;
 }>) {
+  const headed = charts?.data
+    ? drawnChart(charts.data, "stage_distribution") != null
+    : charts?.isPending === true;
   return (
     <>
-      <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
-      {charts && <StockCharts charts={charts} onEvidence={onEvidence} />}
+      {!headed && (
+        <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
+      )}
+      {charts && (
+        <StockCharts
+          charts={charts}
+          stageMeta={
+            headed ? <OpenPipelineMeta evaluation={answered} /> : undefined
+          }
+          stageNote={
+            headed ? <OpenPipelineNote evaluation={answered} /> : undefined
+          }
+          onEvidence={onEvidence}
+        />
+      )}
     </>
   );
 }

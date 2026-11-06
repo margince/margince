@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatBytes,
   formatDate,
+  formatDateAbbrevRange,
   formatDateTime,
   formatDayMonth,
   formatDayMonthNearYear,
@@ -13,6 +14,7 @@ import {
   formatHours,
   formatMoney,
   formatMoneyCompact,
+  formatMoneyCompactRange,
   formatMoneyOrAbsent,
   formatMoneyWhole,
   formatNumber,
@@ -110,6 +112,50 @@ describe("money formatting (B-EP09.17)", () => {
 // call, not this module's. So the compact figure is folded to lower case before
 // comparison — the digit, the decimal and the symbol stay exact, which is what
 // tells the three figures apart; only the case floats.
+describe("a money range abbreviated for a KPI slot", () => {
+  it("adds digits until the two ends read apart", () => {
+    expect(
+      formatMoneyCompactRange(
+        2_453_456_600,
+        2_454_776_600,
+        "EUR",
+        "en",
+      ).toLowerCase(),
+    ).toBe("€24.53m–24.54m");
+  });
+
+  it("keeps three digits where they already differ", () => {
+    expect(
+      formatMoneyCompactRange(
+        61_000_000,
+        98_000_000,
+        "EUR",
+        "en",
+      ).toLowerCase(),
+    ).toBe("€610k–980k");
+  });
+
+  it("puts a trailing currency sign once, after the high end", () => {
+    expect(
+      formatMoneyCompactRange(61_000_000, 98_000_000, "EUR", "de").replace(
+        /\s/g,
+        " ",
+      ),
+    ).toMatch(/^[^€]+–[^€]+ €$/);
+  });
+
+  it("says one amount once", () => {
+    expect(
+      formatMoneyCompactRange(
+        42_000_000,
+        42_000_000,
+        "EUR",
+        "en",
+      ).toLowerCase(),
+    ).toBe("€420k");
+  });
+});
+
 describe("a money figure abbreviated for a KPI slot", () => {
   it("drops a decimal a round figure does not need", () => {
     expect(formatMoneyCompact(42_000_000, "EUR", "en").toLowerCase()).toBe(
@@ -518,6 +564,27 @@ describe("formatDayRange", () => {
     expect(
       formatDayRange("2026-06-29", "2026-07-05", "en", "Europe/Berlin"),
     ).toMatch(/29 June\s*[–-]\s*5 July/);
+  });
+});
+
+describe("formatDateAbbrevRange", () => {
+  it("names the month and year the two ends share once", () => {
+    expect(
+      formatDateAbbrevRange(
+        "2026-11-01T00:00:00Z",
+        "2026-11-06T12:00:00Z",
+        "en",
+        "Europe/Berlin",
+      ),
+    ).toMatch(/^1\s*[–-]\s*6 Nov 2026$/);
+    expect(
+      formatDateAbbrevRange(
+        "2026-10-01T00:00:00Z",
+        "2026-12-31T12:00:00Z",
+        "en",
+        "Europe/Berlin",
+      ),
+    ).toMatch(/^1 Oct\s*[–-]\s*31 Dec 2026$/);
   });
 });
 

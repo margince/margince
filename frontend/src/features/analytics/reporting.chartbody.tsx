@@ -40,16 +40,18 @@ export function ChartBody({
   evaluation,
   onEvidence,
   trendSize,
+  headline = true,
 }: Readonly<{
   chart: ReportingChart;
   evaluation: ReportingEvaluation;
   onEvidence: EvidenceAction;
   /** `compact` is a shorter trend, for one beside a lead figure. */
   trendSize?: "default" | "compact";
+  /** False where the chart's head already states its total. */
+  headline?: boolean;
 }>) {
   const t = useT();
   const metricName = useMetricNames();
-  const plural = usePlural();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
@@ -72,17 +74,7 @@ export function ChartBody({
     targetAmount: point.target == null ? undefined : compact(point.target),
     upperAmount: format(point.upper),
   }));
-  const onSelect = (key: string) => {
-    if (
-      chart.kind === "pipeline_movement" &&
-      (key === "opening" || key === "closing")
-    ) {
-      onEvidence({ metric: chart.metric, context_id: `movement_${key}` });
-      return;
-    }
-    const reference = chart.points.find((point) => point.key === key)?.evidence;
-    if (reference) onEvidence(reference);
-  };
+  const onSelect = (key: string) => selectReading(chart, key, onEvidence);
   const shared = {
     readings,
     label: chartTitle(chart, evaluation, t, metricName),
@@ -145,37 +137,14 @@ export function ChartBody({
       );
     case "stage_distribution":
       return (
-        <>
-          <p className="reporting-headline t-num">
-            {reportingCompactAmount(
-              evaluation.metrics.find((metric) => metric.id === chart.metric)
-                ?.value,
-              chart.unit,
-              evaluation.context.currency,
-              locale,
-            )}
-          </p>
-          <GroupedBars
-            chart={chart}
-            label={shared.label}
-            amount={(point) =>
-              withDealCount(
-                reportingCompactAmount(
-                  point.value,
-                  chart.unit,
-                  evaluation.context.currency,
-                  locale,
-                ),
-                point.observations,
-                plural,
-                locale,
-              )
-            }
-            format={format}
-            countHeader={t("reporting.stageDeals")}
-            onSelect={onSelect}
-          />
-        </>
+        <StageChart
+          chart={chart}
+          evaluation={evaluation}
+          label={shared.label}
+          format={format}
+          headline={headline}
+          onSelect={onSelect}
+        />
       );
     case "breakdown":
       return (
@@ -468,4 +437,74 @@ export function chartTitle(
   )
     return metricName(chart.metric);
   return blockLabel(chart.kind, t);
+}
+
+// Today's stock by stage, under the total it splits unless the head says it.
+function StageChart({
+  chart,
+  evaluation,
+  label,
+  format,
+  headline,
+  onSelect,
+}: Readonly<{
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
+  label: string;
+  format: (value: number | null | undefined) => string;
+  headline: boolean;
+  onSelect: (key: string) => void;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const { currency } = evaluation.context;
+  return (
+    <>
+      {headline && (
+        <p className="reporting-headline t-num">
+          {reportingCompactAmount(
+            evaluation.metrics.find((metric) => metric.id === chart.metric)
+              ?.value,
+            chart.unit,
+            currency,
+            locale,
+          )}
+        </p>
+      )}
+      <GroupedBars
+        chart={chart}
+        label={label}
+        amount={(point) =>
+          withDealCount(
+            reportingCompactAmount(point.value, chart.unit, currency, locale),
+            point.observations,
+            plural,
+            locale,
+          )
+        }
+        format={format}
+        countHeader={t("reporting.stageDeals")}
+        onSelect={onSelect}
+      />
+    </>
+  );
+}
+
+// The records behind one reading. A waterfall's two ends open the stock it
+// starts and ends with, which no point carries.
+function selectReading(
+  chart: ReportingChart,
+  key: string,
+  onEvidence: EvidenceAction,
+) {
+  if (
+    chart.kind === "pipeline_movement" &&
+    (key === "opening" || key === "closing")
+  ) {
+    onEvidence({ metric: chart.metric, context_id: `movement_${key}` });
+    return;
+  }
+  const reference = chart.points.find((point) => point.key === key)?.evidence;
+  if (reference) onEvidence(reference);
 }

@@ -15,12 +15,25 @@ export function assessmentText(
   assessment: SalesAssessment,
   locale: Locale,
 ): string {
-  return withCells(
-    sentence,
-    assessment,
-    (value, unit, cell) =>
-      cell.display ?? assessmentQuantity(value, unit, locale),
+  return withCells(sentence, assessment, (value, unit, cell) =>
+    shownQuantity(value, unit, cell, locale),
   );
+}
+
+// Money takes the page's own format, currency sign first, wherever the
+// server's display spelled it with the ISO code.
+function shownQuantity(
+  value: number,
+  unit: string,
+  cell: Cell,
+  locale: Locale,
+) {
+  if (isCurrency(unit)) return assessmentQuantity(value, unit, locale);
+  return cell.display ?? assessmentQuantity(value, unit, locale);
+}
+
+function isCurrency(unit: string) {
+  return /^[A-Z]{3}$/.test(unit);
 }
 
 /**
@@ -34,9 +47,7 @@ export function assessmentResidue(
   locale: Locale,
 ): string {
   return withCells(sentence, assessment, (value, unit, cell) =>
-    (cell.display ?? assessmentQuantity(value, unit, locale)) === undefined
-      ? undefined
-      : "",
+    shownQuantity(value, unit, cell, locale) === undefined ? undefined : "",
   );
 }
 
@@ -58,7 +69,11 @@ function withCells(
     const value = Number(raw);
     const shown = display(value, unit, cell);
     if (shown === undefined) continue;
-    for (const literal of [`${raw} ${unit}`, `${value} ${unit}`]) {
+    // The server writes its own display into the text, so that spelling is
+    // matched beside the raw value.
+    const literals = [`${raw} ${unit}`, `${value} ${unit}`, cell.display];
+    for (const literal of literals) {
+      if (!literal) continue;
       const escaped = literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       text = text.replace(
         new RegExp(`(^|[^\\d.,])${escaped}(?![\\w])`, "g"),
@@ -70,7 +85,7 @@ function withCells(
 }
 
 function assessmentQuantity(value: number, unit: string, locale: Locale) {
-  if (/^[A-Z]{3}$/.test(unit))
+  if (isCurrency(unit))
     return formatAnalyticsMoney(
       value * 10 ** minorUnitDigits(unit),
       unit,

@@ -76,7 +76,9 @@ its size:
 | `--fontDisplayXLarge` | The greeting that fills the window once a day. |
 | `--fontDisplayLarge` | The title at the head of Home: the reader's name, or the days the weekly report covers. Also the figure an MCP app view leads with. |
 | `--fontDisplayMedium` | A figure under the full-window greeting, and the verdict word of `HowItStands`. |
-| `--fontDisplayFigure` | The one figure a report view leads with, such as Sales won on Sales review. It is smaller than the figure under the greeting, so the readings and the first action still fit the first screen. |
+| `--fontDisplayFigure` | The one figure a report view leads with in its hero. It is smaller than the figure under the greeting, so the readings and the first action still fit the first screen. |
+| `--fontPlateFigure` | The figures in the row of readings that heads a report view, at the medium weight, so the row reads as one band. |
+| `--fontPlateLeadFigure` | The first figure in that row. It scales with its cell, so it fits whole and never falls under the figures beside it. |
 | `--fontLead` | The line under the full-window greeting. Its line is tall enough to hold a large `RecordChip`. |
 
 **A heading's level comes from the structure.** A user of a screen reader moves through a page by

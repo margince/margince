@@ -14,6 +14,7 @@ export {
   displayDay,
   formatDate,
   formatDateAbbrev,
+  formatDateAbbrevRange,
   formatDateTime,
   formatDayLong,
   formatDayMonth,
@@ -133,6 +134,7 @@ export function formatMoneyCompact(
   amountMinor: number,
   currency: string,
   locale: Locale,
+  significantDigits = 3,
 ): string {
   // Our scale, Intl's formatting: see formatMoney for why.
   const major = toMajorUnits(amountMinor, currency);
@@ -158,7 +160,7 @@ export function formatMoneyCompact(
     maximumFractionDigits: abbreviated ? 1 : 0,
     // One decimal alone cuts €1,062,548 and €1,094,000 both to "€1m". Three
     // significant digits keep them apart, and the more precise rule wins.
-    maximumSignificantDigits: 3,
+    maximumSignificantDigits: significantDigits,
     roundingPriority: "morePrecision",
     // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
     // not reach; truncating drops digits but never adds any.
@@ -174,6 +176,46 @@ export function formatMoneyCompact(
   return parts
     .map((part, index) => part.value + (index === lastDigit ? unit : ""))
     .join("");
+}
+
+/**
+ * A range as two short amounts that stay apart. Each end gains a digit until
+ * the two read differently, so €24,534,566 to €24,547,766 never reads as
+ * "€24.5M–24.5M". Ends that are one amount are said once.
+ */
+export function formatMoneyCompactRange(
+  lowMinor: number,
+  highMinor: number,
+  currency: string,
+  locale: Locale,
+): string {
+  for (let digits = 3; digits <= 21; digits++) {
+    const low = formatMoneyCompact(lowMinor, currency, locale, digits);
+    const high = formatMoneyCompact(highMinor, currency, locale, digits);
+    if (low !== high) return joinedRange(low, high, currency, locale);
+  }
+  return formatMoneyCompact(lowMinor, currency, locale);
+}
+
+// Two amounts in one currency carry its sign once, as "€610k–980k" or
+// "610–980 €", so a range fits the slot a single amount does.
+function joinedRange(
+  low: string,
+  high: string,
+  currency: string,
+  locale: Locale,
+): string {
+  const sign = new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "currency",
+    currency,
+  })
+    .formatToParts(0)
+    .find((part) => part.type === "currency")?.value;
+  if (sign && low.startsWith(sign) && high.startsWith(sign))
+    return `${low}–${high.slice(sign.length).trimStart()}`;
+  if (sign && low.endsWith(sign) && high.endsWith(sign))
+    return `${low.slice(0, -sign.length).trimEnd()}–${high}`;
+  return `${low} – ${high}`;
 }
 
 /**

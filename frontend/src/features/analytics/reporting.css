@@ -162,6 +162,19 @@
 .reporting-details-trigger {
   color: var(--textSecondary);
 }
+/* Quiet at rest, so a head reads as its title; the pane returns under the
+   pointer, on focus and while open. */
+.reporting-details-trigger:not(:hover, :focus-visible, [aria-expanded="true"]) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+/* What a chart sums, stated beside its title. */
+.reporting-meta {
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  text-align: end;
+}
 .reporting-context {
   display: flex;
   flex: 1 1 auto;
@@ -221,4 +234,21 @@
   margin: 0;
   color: var(--warningText);
   font: var(--fontBodySmall);
+}
+
+/* A prepared report's verbs read as one quiet line beside its title. */
+.reporting-prepared-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-3);
+}
+/* The filter, the table and its paging are one column with air between. */
+.reporting-library-body {
+  display: grid;
+  gap: var(--space-3);
+}
+.reporting-library-body > .segmented,
+.reporting-library-body > .btn {
+  justify-self: start;
 }

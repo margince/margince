@@ -43,6 +43,8 @@ describe("the type scale and the control geometry", () => {
       "--fontDisplayLarge",
       "--fontDisplayMedium",
       "--fontDisplayFigure",
+      "--fontPlateFigure",
+      "--fontPlateLeadFigure",
       "--fontLead",
       "--fontFamilyBody",
       "--controlHeight",

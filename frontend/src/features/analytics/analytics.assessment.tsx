@@ -181,7 +181,12 @@ export function AssessmentPanel({
       onEvidence={onEvidence}
     />
   );
-  if (empty || workPending || (view !== "sales" && !supported)) return actions;
+  // Without the written outlook its record doors still stand on a card.
+  const framedActions = (
+    <OverviewActions evaluation={evaluation} onEvidence={onEvidence} framed />
+  );
+  if (empty || workPending || (view !== "sales" && !supported))
+    return framedActions;
   const upcoming = assessment?.cells?.find(
     (cell) => cell.id === "work:upcoming",
   );
@@ -193,7 +198,7 @@ export function AssessmentPanel({
   )
     return (
       <>
-        {actions}
+        {framedActions}
         <ErrorLine>{t("reporting.evidenceStale")}</ErrorLine>
         <Button onClick={() => void reloadReportingFigures(client)}>
           {t("common.retry")}
@@ -212,25 +217,23 @@ export function AssessmentPanel({
         actions={actions}
       />
     );
-  if (!query.isFetching && !query.isError) return actions;
+  if (!query.isFetching && !query.isError) return framedActions;
   return (
-    <>
-      <Panel title={t(outlookTitle(view, evaluation))} flatHead>
-        <PanelBody>
-          {query.isFetching ? (
-            <AiPending label={t(outlookTitle(view, evaluation))} lines={3} />
-          ) : (
-            <>
-              <ErrorLine error={query.error} />
-              <Button variant="ghost" onClick={refresh}>
-                {t("analytics.assessment.retry")}
-              </Button>
-            </>
-          )}
-        </PanelBody>
-      </Panel>
-      {actions}
-    </>
+    <Panel title={t(outlookTitle(view, evaluation))} flatHead>
+      <PanelBody>
+        {query.isFetching ? (
+          <AiPending label={t(outlookTitle(view, evaluation))} lines={3} />
+        ) : (
+          <>
+            <ErrorLine error={query.error} />
+            <Button variant="ghost" onClick={refresh}>
+              {t("analytics.assessment.retry")}
+            </Button>
+          </>
+        )}
+        {actions}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -372,10 +375,13 @@ function OverviewActions({
   evaluation,
   order,
   onEvidence,
+  framed = false,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   order?: readonly string[];
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  // On a card of its own, when no outlook panel holds the doors.
+  framed?: boolean;
 }>) {
   const { locale } = useLocale();
   const candidates = evaluation.overview_actions ?? [];
@@ -389,7 +395,7 @@ function OverviewActions({
       })
     : candidates;
   if (!actions.length) return null;
-  return (
+  const doors = (
     <div className="actions">
       {actions.map((action) => (
         <Button
@@ -401,6 +407,13 @@ function OverviewActions({
         </Button>
       ))}
     </div>
+  );
+  return framed ? (
+    <Panel>
+      <PanelBody>{doors}</PanelBody>
+    </Panel>
+  ) : (
+    doors
   );
 }
 
