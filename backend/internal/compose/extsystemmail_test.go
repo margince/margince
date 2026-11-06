@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -44,7 +45,7 @@ func TestTheMailReadNeedsItsDeclarationAndAnUnattendedCall(t *testing.T) {
 }
 
 func TestAMailCursorOnlyReadsBackWhatTheReadGave(t *testing.T) {
-	at := mailPosition{at: time.Now().UTC().Truncate(time.Microsecond), id: ids.NewV7()}
+	at := mailPosition{at: clocktest.Now(t).UTC().Truncate(time.Microsecond), id: ids.NewV7()}
 	back, err := parseMailCursor(at.cursor())
 	if err != nil || back == nil || !back.at.Equal(at.at) || back.id != at.id {
 		t.Fatalf("a cursor read back as %+v, %v; want %+v", back, err, at)

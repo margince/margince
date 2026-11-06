@@ -4,7 +4,7 @@
 package compose
 
 // The system read of the emails linked to one deal. A job tick or a bus
-// delivery has no caller, so no grant narrows it. What a person limited to
+// delivery has no caller, so no grant narrows it. What a user limited to
 // themselves may not see is left out here instead: the read answers only mail
 // the whole workspace may see, and only the facts a unit needs to tell whether
 // a mail went out and whether anyone answered. No subject, body, address or
