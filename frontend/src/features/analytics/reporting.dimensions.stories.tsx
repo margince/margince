@@ -12,9 +12,8 @@ import {
 import { DimensionChips, DimensionFilters } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
 
-// The dials that narrow a report to a product, an initiative or a market, and
-// the chips that say which are set: none, every one, and a product the catalog
-// cannot name.
+// The dials that narrow a report to a product, an initiative or a market. The
+// chips say which are set: none, every one, and a product the catalog cannot name.
 
 const meta: Meta = {
   title: "Analytics/Reporting/Dimensions",
