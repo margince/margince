@@ -192,9 +192,10 @@ jobs:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
 
-  # The `-tags=integration -cover -coverpkg=./...` compile the eight shards
-  # read. ONE shard is enough: every shard compiles substantially the same set,
-  # which is why the lane it mirrors also elects a single writer.
+  # What the integration lane reads: the `-tags=integration -cover
+  # -coverpkg=./...` compile of its build job, and the `go run` tools its shards
+  # use. It does what the lane does, the build and then one shard from its
+  # binaries, so the entry holds both.
   integration:
     name: warm integration
     timeout-minutes: 45
@@ -234,9 +235,14 @@ jobs:
           restore: "false"
       - name: Start the dev infra stack (compose + app role)
         run: make db-up
-      - name: Compile and run one shard
+      - name: Compile every integration test binary
+        env:
+          INTEGRATION_BUILD_OUT: ${{ runner.temp }}/integration-bin
+        run: make test-integration
+      - name: Run one shard from the binaries
         env:
           INTEGRATION_SHARD: 1/8
+          INTEGRATION_BIN_DIR: ${{ runner.temp }}/integration-bin
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
           # The value of the shard it mirrors, in _lane-integration.yml, for its
           # reason: sixteen ran the 16GB runner out of memory and got it signalled.
