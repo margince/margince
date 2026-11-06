@@ -490,6 +490,24 @@ func TestAnAuthorityHoldLetsAWriteNameTheMember(t *testing.T) {
 	}
 }
 
+// An archived member has no row left to hold, so the hold answers not found.
+func TestAnAuthorityHoldOnAnArchivedMemberIsNotFound(t *testing.T) {
+	e := setupRevocationEnv(t, "authority-archived")
+	ctx := e.wsCtx(e.admin)
+	_, member := e.dealCloser(t)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE app_user SET archived_at = now() WHERE id = $1`, member.UserID.UUID); err != nil {
+		t.Fatal(err)
+	}
+	err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := e.dealUpdateInTx(ctx, tx, member)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("the hold on an archived member: %v, want not found", err)
+	}
+}
+
 // wantMemberLock takes mode on the member's row without waiting, in a
 // transaction of its own. It fails unless the hold refuses it when refused says so.
 func (e *revocationEnv) wantMemberLock(t *testing.T, member Identity, mode string, refused bool) {
