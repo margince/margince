@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 374 | 373✓ 1✗ | 347✓ 27✗ | 348✓ 26✗ | 347✓ 27✗ | 175✓ 199✗ | 317✓ 57✗ |
+| [Business operations](#business-operations) | 374 | 373✓ 1✗ | 347✓ 27✗ | 348✓ 26✗ | 347✓ 27✗ | 175✓ 199✗ | 318✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 41 | 41✓ 0✗ | 23✓ 18✗ | 23✓ 18✗ | 27✓ 14✗ | 8✓ 33✗ | 22✓ 19✗ |
 | [Capture and connectors](#capture-and-connectors) | 38 | 38✓ 0✗ | 32✓ 6✗ | 32✓ 6✗ | 38✓ 0✗ | 26✓ 12✗ | 31✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 38 | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 34✓ 4✗ | 38✓ 0✗ |
@@ -278,7 +278,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_state.correct_project_health` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.move_project` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.record_project_health` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
-| `change_state.transfer_projects` | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+| `change_state.transfer_projects` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `read_project.handoff` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_project.overview` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
@@ -1224,7 +1224,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Projects | `change_state.correct_project_health` | `correct_project_health_assessment` | `project.update` |
 | Projects | `change_state.move_project` | `advance_project_phase` | `company.read` `project.update` `relationship.read` |
 | Projects | `change_state.record_project_health` | `create_project_health_assessment` | `project.update` |
-| Projects | `change_state.transfer_projects` | `transfer_project_ownership` | `project.read` `project.update` `scope:team` |
+| Projects | `change_state.transfer_projects` | `transfer_project_ownership` | `project.read` `project.update` |
 | Projects | `read_project.handoff` | `prepare_handoff` | `activity.read` `company.read` `contact.read` `deal.read` `project.read` `relationship.read` |
 | Projects | `read_project.overview` | `read_project_360` | `activity.read` `company.read` `contact.read` `contract.read` `deal.read` `project.read` `relationship.read` |
 | Reports and analytics | `change_reports.archive_report` | `archive_reporting_report` | `report_definition.delete` `report_definition.read` |
@@ -1633,7 +1633,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Members, teams and roles | `change_access.create_record_role` | `create_record_role` | `custom_field.create` |
 | Members, teams and roles | `change_access.create_team` | `create_team` | `team_admin.create` |
 | Members, teams and roles | `change_access.deactivate_member` | `deactivate_user` | `user_admin.delete` `user_admin.read|create|update|delete` |
-| Members, teams and roles | `change_access.hand_over_work` | `hand_over_user_work` | `activity.read` `activity.update` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `project.update` `scope:team` `user_admin.update` `webhook_subscription.update` |
+| Members, teams and roles | `change_access.hand_over_work` | `hand_over_user_work` | `activity.read` `activity.update` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `project.update` `user_admin.update` `webhook_subscription.update` |
 | Members, teams and roles | `change_access.reactivate_member` | `reactivate_user` | `user_admin.delete` `user_admin.read|create|update|delete` |
 | Members, teams and roles | `change_access.remove_member` | `remove_workspace_member` | `activity.read` `admin` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `signal.delete` `user_admin.delete` `user_admin.read` `user_admin.update` |
 | Members, teams and roles | `change_access.remove_team_member` | `remove_team_member` | `team_admin.update` |
