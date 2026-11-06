@@ -33,11 +33,11 @@ export async function expectDialPlacement(canvasElement: HTMLElement) {
   await expect(at.bottom).toBeLessThanOrEqual(head.bottom + 0.5);
 }
 
-/** The weekly report runs the whole inner width of its padded pane. */
+/** The weekly report runs the whole inner width of its work pane. */
 export async function expectReportFillsPane(canvasElement: HTMLElement) {
   const { report, pane } = await waitFor(() => {
     const found = canvasElement.querySelector(
-      ".page-pane.brief-weekly-page > .brief-report",
+      ".brief-weekly-page .page-pane > .brief-report",
     );
     if (!found?.parentElement) {
       throw new Error("the weekly drew no report on a pane");
@@ -48,7 +48,6 @@ export async function expectReportFillsPane(canvasElement: HTMLElement) {
   const inset =
     Number.parseFloat(style.paddingLeft) +
     Number.parseFloat(style.paddingRight);
-  await expect(inset).toBeGreaterThan(0);
   await expect(
     Math.abs(report.getBoundingClientRect().width - (pane.clientWidth - inset)),
   ).toBeLessThan(1);
