@@ -173,6 +173,7 @@ describe("the contact's files tab", () => {
   });
 
   it("draws the files as a list once the reader asks, and keeps that choice", async () => {
+    const user = userEvent.setup();
     stub({
       data: [
         attachment({ id: "f-1", entity_id: "p-1", filename: "quote.pdf" }),
@@ -185,7 +186,7 @@ describe("the contact's files tab", () => {
     const file = await screen.findByRole("article", { name: "quote.pdf" });
     expect(file.classList.contains("board-doc-row")).toBe(false);
 
-    await userEvent.click(screen.getByRole("button", { name: "List" }));
+    await user.click(screen.getByRole("button", { name: "List" }));
     expect(
       screen
         .getByRole("article", { name: "quote.pdf" })

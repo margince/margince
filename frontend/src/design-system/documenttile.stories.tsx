@@ -82,7 +82,7 @@ export const Row: Story = {
     filename: "Retrofit-proposal-v2.pdf",
     title: "Retrofit proposal",
     anchor: {
-      href: "/v1/attachments/a-1/download",
+      href: "/v1/attachments/a-1",
       download: "Retrofit-proposal-v2.pdf",
     },
     layout: "row",
