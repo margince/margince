@@ -2133,7 +2133,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "home.change.stageUnknown": "Unbekannte Phase",
   "home.change.unidentified": "Unbekannt",
   "home.change.by": "Geändert von: {actor}",
-  "brief.focus.position": "{at} von {count}",
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
@@ -3003,6 +3002,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.leadProfileReadOnly":
     "LinkedIn kann bei einem Lead nicht geändert werden.",
   "record.openProfile": "Profil öffnen",
+  "record.linkedinProfile": "{name} auf LinkedIn",
   "record.fieldsFailed": "Die eigenen Felder konnten nicht geladen werden.",
   "record.fieldsLoading": "Eigene Felder werden geladen…",
   "record.fieldsRetry": "Erneut versuchen",
@@ -6319,6 +6319,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.selected_one": "{count} ausgewählt",
   "bulk.selected_other": "{count} ausgewählt",
   "bulk.selectRow": "{name} auswählen",
+  "bulk.selectPage": "Alle Zeilen dieser Seite auswählen",
+  "bulk.selectAll": "Alle auswählen",
+  "bulk.clearSelection": "Auswahl aufheben",
+  "bulk.selectionLimit_one":
+    "Eine Änderung umfasst höchstens {count} Datensatz, daher endet die Auswahl dort.",
+  "bulk.selectionLimit_other":
+    "Eine Änderung umfasst höchstens {count} Datensätze, daher endet die Auswahl dort.",
   "bulk.owner": "Neue Verantwortung",
   "bulk.ownerPick": "Verantwortung wählen",
   "bulk.assign": "Verantwortung zuweisen",
@@ -6604,8 +6611,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
-  "brief.first.title": "Zuerst",
-  "brief.first.then": "Danach",
+  "brief.task.done": "Als erledigt markieren: {title}",
+  "brief.task.reply": "{name} antworten: {subject}",
+  "brief.first.title": "Deine Aufgaben",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
   "brief.intro.urgent": "Dringend",
@@ -6722,13 +6730,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.report.vsPrior": "{delta} gegenüber Vorwoche",
   "brief.report.priorWeek": "Vorwoche = KW {week} ({range})",
   "brief.report.chapter.forecast": "Prognose",
-  "brief.report.chapter.glance": "Auf einen Blick",
   "brief.report.chapter.closed": "Abschlüsse",
   "brief.report.chapter.movement": "Pipeline-Bewegung",
   "brief.report.chapter.commitments": "Die kommende Woche",
   "brief.report.chapter.figures": "Kennzahlen",
-  "brief.report.chapter.observations": "Beobachtungen",
+  "brief.report.chapter.observations": "Was die Woche gezeigt hat",
   "brief.report.closedTotal": "Gewonnen {won} · Verloren {lost}",
+  "brief.report.weeks": "Wochen",
+  "brief.weekly.rail": "Die Woche in Zahlen",
+  "brief.report.movedCount_one": "{count} Deal vorangebracht",
+  "brief.report.movedCount_other": "{count} Deals vorangebracht",
+  "brief.report.wonCount_one": "{count} Deal gewonnen",
+  "brief.report.wonCount_other": "{count} Deals gewonnen",
+  "brief.report.wonPerWeek": "Gewonnen pro Woche",
+  "brief.weekly.activity.title": "Aktivität dieser Woche",
+  "brief.weekly.activity.total_one": "{count} Aktivität von dir",
+  "brief.weekly.activity.total_other": "{count} Aktivitäten von dir",
+  "brief.weekly.activity.emails": "Gesendete E-Mails",
+  "brief.weekly.activity.calls": "Anrufe",
+  "brief.weekly.activity.meetings": "Gehaltene Termine",
+  "brief.weekly.activity.busiest": "Dein aktivster Tag war {day}.",
   "brief.report.next": "Nächster Bericht am {date}",
   "brief.report.earlier": "Frühere Woche öffnen",
   "brief.report.later": "Spätere Woche öffnen",
@@ -10532,6 +10553,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.centre": "Benachrichtigungen",
   "notifications.markAllRead": "Alle als gelesen markieren",
   "notifications.markRead": "Als gelesen markieren",
+  "notifications.action.openContact": "Kontakt öffnen",
+  "notifications.action.openCompany": "Unternehmen öffnen",
+  "notifications.action.openDeal": "Deal öffnen",
+  "notifications.action.openLead": "Lead öffnen",
+  "notifications.action.openProject": "Projekt öffnen",
+  "notifications.action.review": "Anfrage prüfen",
+  "notifications.action.systemHealth": "Systemzustand öffnen",
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
   "notifications.markReadFailed":
     "Diese Benachrichtigung wurde nicht als gelesen markiert",
@@ -18147,18 +18175,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch nichts ausgew\u00e4hlt. F\u00fcge Datens\u00e4tze \u00fcber eine Datensatzseite oder eine Auswahl hinzu.",
   "lists.members.projects":
     "Projektlisten zeigen ihre Mitglieder in der Projektliste.",
-  "lists.members.selectAll_one": "{count} Mitglied auswählen",
-  "lists.members.selectAll_other": "Alle {count} Mitglieder auswählen",
-  "lists.members.selectionFullTitle": "Die Auswahl ist voll",
-  "lists.members.selectionFull_one":
-    "Eine Änderung kann höchstens {count} Mitglied umfassen. Hebe die Auswahl eines Mitglieds auf, um ein anderes auszuwählen.",
-  "lists.members.selectionFull_other":
-    "Eine Änderung kann höchstens {count} Mitglieder umfassen. Hebe die Auswahl eines Mitglieds auf, um ein anderes auszuwählen.",
-  "lists.members.selectAllCappedTitle": "Nicht alle Mitglieder ausgewählt",
-  "lists.members.selectAllCapped_one":
-    "Nur {count} Mitglied lässt sich auf einmal auswählen. Bearbeite dieses Mitglied und wähle dann den Rest aus.",
-  "lists.members.selectAllCapped_other":
-    "Nur die ersten {count} Mitglieder lassen sich auf einmal auswählen. Bearbeite diese Mitglieder und wähle dann den Rest aus.",
   "lists.history.title": "Was sich ge\u00e4ndert hat",
   "lists.history.empty": "Bisher hat sich nichts ge\u00e4ndert.",
   "lists.history.loading": "Verlauf wird geladen",
@@ -18825,7 +18841,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nach diesem Termin wurde nichts gesendet. Sende den Teilnehmenden ein Follow-up.",
   "worklist.ask.batch":
     "Hier sind mehrere ähnliche Routineentscheidungen gebündelt. Prüfe sie gemeinsam.",
-  "worklist.consequence.buyer_waits": "Die Käuferseite wartet weiter.",
+  "worklist.consequence.buyer_waits": "Der Kontakt wartet weiter.",
+  "worklist.consequence.buyer_waits.named": "{name} wartet weiter.",
   "worklist.consequence.promise_breaks": "Eine Zusage wird nicht eingehalten.",
   "worklist.consequence.deal_drifts": "Der Deal gerät weiter ins Stocken.",
   "worklist.consequence.deal_slips_past_close":
@@ -19232,8 +19249,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.pinned": "von dir angeheftet",
   "worklist.because.reminder_due": "deine Erinnerung ist fällig",
   "worklist.because.non_buyer_request": "nicht als Kundenanliegen bestätigt",
-  "worklist.because.buyer_wrote_last":
-    "die Käuferseite hat zuletzt geschrieben",
+  "worklist.because.buyer_wrote_last": "sie haben zuletzt geschrieben",
+  "worklist.because.buyer_wrote_last.named": "{name} hat zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
   "worklist.because.waiting_days.value_one": "wartet seit {value} Tag",
   "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",
@@ -20795,6 +20812,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.syncTimeUnknown":
     "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
   "brief.coverage.source.deal_advice": "Vorgeschlagene nächste Schritte",
+  "brief.coverage.source.contact_employers": "Arbeitgeber deiner Kontakte",
   "tasks.origin.accepted_recommendation":
     "Aus einem vorgeschlagenen Schritt übernommen.",
   "deal.verdict.yourMove": "Du bist dran",

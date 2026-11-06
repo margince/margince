@@ -19,6 +19,7 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { readerTask } from "../../lib/worklistcopy";
 import { pillFigure } from "../../lib/worklistcounts";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
@@ -35,7 +36,6 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { readerTask } from "../worklist/worklist.reader";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
@@ -52,6 +52,7 @@ import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
+import { PlanConstraints } from "./brief.plan.contract";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
@@ -59,6 +60,7 @@ import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
@@ -189,16 +191,28 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
-  if (address.view === "weekly")
-    return (
-      <PageZones
-        shape="single"
-        panes
-        mainClassName="brief-weekly-page"
-        main={<WeeklySection plan={<PlanSection />} />}
-      />
-    );
+  if (address.view === "weekly") return <WeeklyPage />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
+}
+
+function WeeklyPage() {
+  const t = useT();
+  // An aside handed over empty still draws its column and landmark.
+  const railShown = useWeeklyRailShown();
+  return (
+    <PageZones
+      shape="aside"
+      panes
+      className="brief-weekly-page"
+      mainClassName="brief-main"
+      asideClassName="brief-rail"
+      asideLabel={t("brief.weekly.rail")}
+      main={<WeeklySection plan={<PlanSection withContract={false} />} />}
+      aside={
+        railShown ? <WeeklyRail constraints={<PlanConstraints />} /> : undefined
+      }
+    />
+  );
 }
 
 function PersonalMorning({
@@ -249,8 +263,8 @@ function PersonalMorning({
   }, [state, day, settled, magic.data]);
   return (
     <>
-      {/* The brief and the work it names in one column; beside it, the
-          figures and the meetings the work is read against. */}
+      {/* The work in one column; beside it, the meetings and the figures
+          the work is read against. */}
       <PageZones
         shape="aside"
         panes
@@ -269,6 +283,9 @@ function PersonalMorning({
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
             />
+            {/* The agent's own changes stand with the work, where a reader
+                keeps or undoes them, not in the rail beside it. */}
+            <BriefChanges />
             <BriefSuggestions />
             <MagicPanel
               visibleApprovalIds={day?.focus?.items
@@ -290,6 +307,8 @@ function PersonalMorning({
         }
         aside={
           <>
+            {/* The day's meetings first: the work is read against them. */}
+            <SchedulePanel day={day} state={state} />
             {day && (
               <div className="brief-overview">
                 <Eyebrow as="h2" className="brief-section-label">
@@ -303,9 +322,7 @@ function PersonalMorning({
                 />
               </div>
             )}
-            {/* The figures stand above the meetings, so their wait holds
-                their place rather than letting the meetings rise and fall. */}
-            {/* Hidden from a screen reader: the meetings below already
+            {/* Hidden from a screen reader: the meetings above already
                 announce the wait. */}
             {state === "loading" && (
               <div className="brief-overview" aria-hidden="true">
@@ -315,8 +332,6 @@ function PersonalMorning({
                 <BriefReadingsPending />
               </div>
             )}
-            <SchedulePanel day={day} state={state} />
-            <BriefChanges />
           </>
         }
       />

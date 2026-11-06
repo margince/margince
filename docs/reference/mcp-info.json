@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 227781,
+    "tool_catalog_bytes": 227875,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 58260,
+    "approx_wire_tokens_total": 58283,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 54293,
-      "input_schema_bytes": 113946,
+      "input_schema_bytes": 114040,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 168239
+      "description_plus_input_schema_bytes": 168333
     }
   },
   "tools": {
@@ -9194,6 +9194,11 @@
                 "type": "object"
               },
               "type": "array"
+            },
+            "as_of": {
+              "description": "sdr_handoffs, sdr_summary only",
+              "format": "date-time",
+              "type": "string"
             },
             "card_id": {
               "description": "question_card_answer, question_card_records only",

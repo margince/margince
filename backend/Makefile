@@ -183,7 +183,7 @@ check-static: composition ## The static half of check (STATIC_LEGS), which CI ru
 # build/composition/ before it writes it again, so a run in one `make check`
 # lane would take the tree away from the other lanes that read it.
 # `make check` composes once, before the lanes start.
-composition: ## Materialize build/composition/ from the enabled set under extensions/ (every build lane depends on this)
+composition: ## Materialize build/composition/ from the extensions instance/go.mod requires (every build lane depends on this)
 ifdef CHECK_WRITERS_RAN
 	@echo "composition: written by make check's writers phase, so this lane only reads it"
 else
@@ -200,9 +200,14 @@ check-composition: composition ## Reproducibility gate: a clean regeneration mus
 test-extensions: composition ## Every enabled extension's own test lane (each unit is its own module — ./... never reaches them), on the composed workspace [EXT_COVER_OUT=<file> merges a coverage profile]
 	@set -e; found=0; out="$(if $(EXT_COVER_OUT),$(abspath $(EXT_COVER_OUT)))"; \
 	[ -z "$$out" ] || { rm -f "$$out"; tmp=$$(mktemp); trap 'rm -f "$$tmp"' EXIT; }; \
-	for mod in ../extensions/*/go.mod; do \
-		[ -e "$$mod" ] || continue; found=1; \
-		dir=$$(dirname "$$mod"); \
+	members=../build/test-extensions.members; \
+	work=$$($(GO) work edit -json ../build/composition/go.work); \
+	printf '%s\n' "$$work" \
+	  | sed -n 's/^[[:space:]]*"DiskPath": "\(.*\)",\{0,1\}$$/\1/p' \
+	  | awk '$$0 !~ /^(\.\/backend|\.\.\/\.\.|\.\.\/\.\.\/backend(\/tools)?)$$/' > "$$members"; \
+	while IFS= read -r member; do \
+		dir="../build/composition/$$member"; \
+		[ -e "$$dir/go.mod" ] || { echo "test-extensions: $$dir has no go.mod"; exit 1; }; found=1; \
 		echo "== $$dir"; \
 		if [ -n "$$out" ]; then \
 			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test -coverprofile="$$tmp" -coverpkg=./... ./...); \
@@ -210,7 +215,7 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 		else \
 			(cd "$$dir" && $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./...); \
 		fi; \
-	done; \
+	done < "$$members"; \
 	[ "$$found" = "1" ] || echo "test-extensions: no enabled Go extensions"
 
 build: composition ## Compile every package (composed workspace)

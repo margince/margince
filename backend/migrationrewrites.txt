@@ -48,7 +48,7 @@
 1793445933_a_mail_without_its_original_says_so_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793514621_notice_source_assessment.down.sql | * | the procedural block only checks whether source evidence exists and refuses before DDL; it rewrites no rows
 1793531111_notice_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1793883863_notice_source_reference_note_check_validated.down.sql | * | the procedural block refuses rollback when a selected source has no typed note; it changes no rows
+1793936298_notice_source_reference_note_check_validated.down.sql | * | the procedural block refuses rollback when a selected source has no typed note; it changes no rows
 1793536357_a_website_forms_privacy_notice_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793594630_home_reads_are_cached_behind_an_access_fence.up.sql | * | the trigger functions advance one counter row in the new home_read_fence table and rewrite no existing row; the one INSERT seeds that singleton row in the table this migration creates
 1793612292_the_home_fence_moves_only_when_reach_narrows.up.sql | * | the trigger functions advance the one home_read_fence row and rewrite no existing row; the dropped columns are on the table of cached answers and the one counter row
@@ -84,14 +84,14 @@
 1793883855_a_deal_prices_itself_from_product_lines.down.sql | deal_product | runs only on a rollback and deletes only the line rows the deal-lines writer made, at most one per product of a deal priced from its lines
 1793861795_a_rule_names_the_passport_that_set_it_up.down.sql | automation | runs only on a rollback; an installation holds a catalog-bounded handful of rules, so the update is small
 1793861797_the_rule_setter_constraints_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1793888556_a_kept_stop_holds_a_hash_and_its_own_addresses.up.sql | *, communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the walk reads only its own carry chains; the procedural body is a trigger that binds the rows of the two contacts one merge touches
-1793888556_a_kept_stop_holds_a_hash_and_its_own_addresses.down.sql | communication_suppression | runs only on a rollback and rewrites only the stops recorded on an anonymized contact, which hold a hash and no address, a handful per such contact
-1793903351_signature_work_keeps_its_requested_generation.down.sql | * | the procedural block only checks for unread or pending signature work and refuses rollback; it rewrites no rows
-1793903929_a_link_insert_advances_the_activity_clock.down.sql | * | the procedural block restores trigger functions with DDL and checks the migration ledger; it rewrites no domain rows
-1793912983_derived_work_constraints_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1793927373_internal_mail_retains_its_source_authorization.down.sql | * | the procedural body checks for one retained row and refuses rollback; it rewrites no data
-1793927374_internal_mail_restriction_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1793927375_internal_history_needs_its_own_authorization.down.sql | * | the procedural body checks for one authorized run and refuses rollback; it rewrites no data
-1793927376_internal_history_authorization_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1793928609_a_kept_stop_holds_only_its_hash.up.sql | communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the UPDATE clears one column on the stops that name no record, a handful per anonymized contact or pressed link
-1793928609_a_kept_stop_holds_only_its_hash.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793936299_a_kept_stop_holds_a_hash_and_its_own_addresses.up.sql | *, communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the walk reads only its own carry chains; the procedural body is a trigger that binds the rows of the two contacts one merge touches
+1793936299_a_kept_stop_holds_a_hash_and_its_own_addresses.down.sql | communication_suppression | runs only on a rollback and rewrites only the stops recorded on an anonymized contact, which hold a hash and no address, a handful per such contact
+1793936304_signature_work_keeps_its_requested_generation.down.sql | * | the procedural block only checks for unread or pending signature work and refuses rollback; it rewrites no rows
+1793936305_a_link_insert_advances_the_activity_clock.down.sql | * | the procedural block restores trigger functions with DDL and checks the migration ledger; it rewrites no domain rows
+1793936308_derived_work_constraints_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793936310_internal_mail_retains_its_source_authorization.down.sql | * | the procedural body checks for one retained row and refuses rollback; it rewrites no data
+1793936311_internal_mail_restriction_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793936312_internal_history_needs_its_own_authorization.down.sql | * | the procedural body checks for one authorized run and refuses rollback; it rewrites no data
+1793936313_internal_history_authorization_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793936314_a_kept_stop_holds_only_its_hash.up.sql | communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the UPDATE clears one column on the stops that name no record, a handful per anonymized contact or pressed link
+1793936314_a_kept_stop_holds_only_its_hash.down.sql | * | the down migration is a single SELECT 1 that changes nothing

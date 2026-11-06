@@ -31299,6 +31299,16 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: The owner or team named by `scope_kind`.
+        - name: as_of
+          in: query
+          schema: { type: string, format: date-time }
+          description: |
+            The instant to count at, so the summary describes the same moment as an evaluation
+            read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
+            refused, since nothing has happened by then to count. It bounds each handoff's state,
+            submitter and reason, and which meetings existed. The recipient, whether that
+            recipient can still act, team membership and a meeting's status keep no history, so
+            they read as they stand now. An `as_of` far in the past is not a historical report.
       responses:
         '200':
           description: The summary.
@@ -31343,6 +31353,13 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+        - name: as_of
+          in: query
+          schema: { type: string, format: date-time }
+          description: |
+            The instant to list at, so the rows describe the same moment as a summary read beside
+            them (its `as_of`). Omitted means now; a future instant is refused. It bounds the same
+            facts as the summary's `as_of`: the recipient and team membership read as they stand now.
       responses:
         '200':
           description: One page of waiting handoffs.
@@ -43440,12 +43457,20 @@ components:
         target:
           type: object
           description: |
-            The record the notice is about, when it is about one. Both halves or neither — a type
-            with no id names a KIND of thing and cannot be opened. Absent is the common case: a
-            capture backlog and a colleague's word are about no single record.
+            What the notice is about, when it is about one thing a reader can open. Both halves or
+            neither — a type with no id names a KIND of thing and cannot be opened. Absent where
+            the notice names nothing: a capture backlog and a colleague's word are about no single
+            record.
           required: [type, id]
           properties:
-            type: { type: string, description: "The record's class, as its own endpoint spells it." }
+            type:
+              type: string
+              description: |
+                A record's class, as its own endpoint spells it, or one of two non-record targets:
+                `approval` (a pending decision, `id` is the approval) and `data_task` (a
+                background correction run, `id` is the `run_id` that failed). A client opens the
+                corrections list rather than that run: a manual re-run replaces the `run_id`, so the
+                one a notice names may no longer be listed.
             id: { type: string, format: uuid }
         origin: { $ref: '#/components/schemas/NoticeOrigin' }
         summary_parts:
@@ -71891,6 +71916,32 @@ components:
           type: array
           items: { type: string, format: date }
           description: The Monday of each week with a review, newest first.
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewIndexEntry' }
+          description: |
+            The same weeks in the same order, each with what it won, so the index can draw the
+            weeks beside each other. Frozen with each review, like every figure in it. Absent
+            from an older server.
+
+    WeeklyReviewIndexEntry:
+      type: object
+      additionalProperties: false
+      required: [week, deals_won]
+      properties:
+        week: { type: string, format: date, description: The Monday of the week. }
+        deals_won: { type: integer, minimum: 0, description: Deals the week won. }
+        won_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: >-
+            What they were worth, in minor units of `currency`. Zero when the week won
+            nothing. Absent when the value is unknown: a deal could not be converted, or the
+            installation names no base currency.
+        currency:
+          type: string
+          description: The currency `won_minor` is in. Present exactly when `won_minor` is.
 
     TeamWeeklyReview:
       type: object
@@ -72421,6 +72472,17 @@ components:
         figure_coverage:
           $ref: '#/components/schemas/WeeklyFigureCoverageSet'
 
+    WeeklyDayActivity:
+      type: object
+      additionalProperties: false
+      description: One local day of a rep's own activity, in the installation reporting timezone.
+      required: [day, emails_sent, calls_logged, meetings_held]
+      properties:
+        day: { type: string, format: date }
+        emails_sent: { type: integer, minimum: 0, description: 'Outbound emails the rep wrote or their mailbox sent.' }
+        calls_logged: { type: integer, minimum: 0, description: 'Calls the rep logged, by their own hand or an agent acting for them.' }
+        meetings_held: { type: integer, minimum: 0, description: 'Meetings credited to the rep that took place that day.' }
+
     WeeklyFigureCoverageSet:
       type: object
       additionalProperties: false
@@ -72511,6 +72573,16 @@ components:
             nobody narrated and a week with nothing to say look identical.
         numeric_summary: { $ref: '#/components/schemas/WeeklyNumericSummary' }
         counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
+        daily_activity:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: { $ref: '#/components/schemas/WeeklyDayActivity' }
+          description: |
+            What the rep did on each day of the week, Monday first, frozen with the review.
+            Only their own work counts: emails they sent, calls they logged, meetings they were
+            credited with. A received email is not work they did. Absent on a review frozen
+            before this was measured, and for a reader who may not read activities.
         deals:
           type: array
           items: { $ref: '#/components/schemas/WeeklyReviewDeal' }
@@ -76545,9 +76617,8 @@ components:
           allOf:
             - $ref: '#/components/schemas/ContactEmployer'
           description: |
-            Where the contact works today, so a meeting row says which account the
-            meeting was with. Sent on `meeting` and `meeting_outcome` rows only: every
-            other row's title already names its record.
+            Where the contact works today, so every row that names a contact can also
+            name the account, and a meeting row says which account the meeting was with.
 
             Absent where the contact has no current employer, or where this caller may
             not read the employment or the company. Absent never means "works nowhere".
@@ -76655,7 +76726,7 @@ components:
           type: boolean
           description: |
             False for a side read that puts no row on the queue — `calendar`,
-            `next_meeting` and `deal_advice` — so its failure cannot hide a row, and a figure counted over
+            `next_meeting`, `deal_advice` and `contact_employers` — so its failure cannot hide a row, and a figure counted over
             the queue stays exact. True for a lane whose rows may be missing. Absent from
             an older server and from a surface that names only lanes, and a client reads
             absent as true.

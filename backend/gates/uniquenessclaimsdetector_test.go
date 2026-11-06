@@ -301,7 +301,7 @@ func unauthoredDir(name string) bool {
 // Only backend/ carries it, and the rest are named with the reason they cannot.
 // Measured when this landed: backend 636, extensions 5, cli 0, fixtures 0. A
 // tree with none today may hold one tomorrow, which is why it is swept.
-// Requiring extensions/ to hold one would fail the vanilla lane for shipping no
+// Requiring extensions/ to hold one would fail an installation that ships no
 // units. A root that does not exist at all is still caught, by the walk error.
 type claimedTree struct {
 	root           string
