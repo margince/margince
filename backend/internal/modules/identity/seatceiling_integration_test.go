@@ -67,6 +67,39 @@ func inviteOneMore(t *testing.T, e *revocationEnv, who string) error {
 	return err
 }
 
+// refusedLicence is what licensecheck.Posture.Seats answers for every state
+// but valid: no number, and no claim that one applies.
+func refusedLicence() SeatCeiling { return func() (int, bool) { return 0, false } }
+
+// A refused licence lifts the ceiling rather than holding it. This pins what
+// the code does today, which is not what every surface says it does.
+//
+// The licence screen agrees with it: "Everything keeps working, uncapped,
+// until it is replaced." The comment in compose/license.go does not, and says
+// a licence that lapses lowers the ceiling.
+//
+// Which of the two is right is open on #8598. It sets out three readings:
+// keep the last valid ceiling, stay uncapped, or admit no new seat.
+//
+// This test is here so choosing one is an edit to a test that states the old
+// policy, rather than a change nothing notices.
+func TestARefusedLicenceLiftsTheSeatCeiling(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-ceiling-refused")
+	used := seatsInUse(t, e)
+	// Full under any ceiling the licence could have granted, so an admission
+	// here is the absent ceiling and not a spare seat.
+	licenseFor(t, e, licensedSeats(used))
+	if err := inviteOneMore(t, e, "atceiling"); !errors.Is(err, apperrors.ErrSeatLimitReached) {
+		t.Fatalf("invite at the ceiling: err = %v, want %v", err, apperrors.ErrSeatLimitReached)
+	}
+
+	licenseFor(t, e, refusedLicence())
+	if err := inviteOneMore(t, e, "afterrefusal"); err != nil {
+		t.Errorf("a refused licence refused the invite: %v. If that is the policy now, #8598 chose it "+
+			"and this test states the reading it replaced", err)
+	}
+}
+
 func TestSeatCeilingRefusesAnInviteWhenEveryLicensedSeatIsInUse(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-ceiling-full")
 	used := seatsInUse(t, e)
