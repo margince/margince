@@ -18,7 +18,7 @@ import { useMe } from "../../lib/session";
 import { briefContextTitle } from "../../lib/worklistcopy";
 import { useWriteTo } from "../../lib/writeto";
 import type { WorklistItem } from "../worklist/worklist.queries";
-import { WorklistRow } from "../worklist/worklist.row";
+import { useRowDone, WorklistRow } from "../worklist/worklist.row";
 import { useListed } from "../worklist/worklist.row.captions";
 import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
 
@@ -43,6 +43,7 @@ export function Triage({
   const t = useT();
   const { locale } = useLocale();
   const viewer = useMe(false).data?.user;
+  const leadDone = useRowDone(lead);
   const listed = useListed();
   const writeTo = useWriteTo();
   // A press removes the pressed button from the list. Focus follows it onto
@@ -105,7 +106,7 @@ export function Triage({
                     : "brief-triage-lead brief-triage-lead-asks"
                 }
               >
-                <TaskTick item={lead} />
+                <TaskTick item={lead} rowDone={leadDone} />
                 <div className="brief-triage-body">
                   <div className="brief-triage-lead-head">
                     {lead.email_summary && (
@@ -145,7 +146,7 @@ export function Triage({
           </li>
         ) : (
           <li key={identity(item)}>
-            <TaskCard
+            <QueuedCard
               item={item}
               onOpen={() => {
                 pressed.current = true;
@@ -157,4 +158,12 @@ export function Triage({
       )}
     </ol>
   );
+}
+
+/** A card waiting behind the one in hand, with Done on its tick where offered. */
+function QueuedCard({
+  item,
+  onOpen,
+}: Readonly<{ item: WorklistItem; onOpen: () => void }>) {
+  return <TaskCard item={item} onOpen={onOpen} rowDone={useRowDone(item)} />;
 }
