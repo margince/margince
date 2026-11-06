@@ -215,6 +215,13 @@ func snapshotOf(ctx context.Context) (pgx.Tx, bool) {
 	return tx, ok
 }
 
+// InWorkspaceTransaction reports whether a caller must leave rollback and retry
+// to the owner of an ambient transaction.
+func InWorkspaceTransaction(ctx context.Context) bool {
+	_, joined := snapshotOf(ctx)
+	return joined
+}
+
 // WithWorkspaceSnapshot runs fn against ONE read-only snapshot, which every
 // WithWorkspaceTx reached beneath it joins instead of opening its own.
 //

@@ -16,6 +16,13 @@ The test checks the range in
 [`capture_backfill_cost_integration_test.go`](../../backend/internal/compose/integration/capture/capture_backfill_cost_integration_test.go).
 Use the same count and configuration when comparing revisions.
 
+Set `MARGINCE_IMPORT_BENCH_SQL=1` to print costs by statement. With that option,
+`MARGINCE_IMPORT_BENCH_PREPARED=1` uses a separate pool with cached statements.
+The pool settings are in
+[`capture_sqlprofile_integration_test.go`](../../backend/internal/compose/integration/capture/capture_sqlprofile_integration_test.go).
+The test pool uses no statement cache so tests may change the schema.
+Use the prepared pool to measure cached queries. Record the selected mode with the result.
+
 The test ends when capture ends. It does not run background model or relationship jobs.
 Measure those jobs on their own before reporting total time.
 

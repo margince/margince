@@ -102,6 +102,7 @@ internal/compose/integration/bouncestop_integration_test.go 1
 internal/compose/integration/brief_e2e_integration_test.go 2
 internal/compose/integration/canceledmeetingleadtouch_integration_test.go 1
 internal/compose/integration/capture/capture_providerrecovery_integration_test.go 2
+internal/compose/integration/capture/capture_sqlprofile_integration_test.go 1
 internal/compose/integration/capture/capture_syncstate_integration_test.go 1
 internal/compose/integration/capture/fieldprovenance_integration_test.go 1
 internal/compose/integration/capture/gmail_connector_integration_test.go 1

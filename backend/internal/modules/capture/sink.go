@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -225,86 +226,74 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		return datasource.EntityRef{}, err
 	}
 
-	var ref datasource.EntityRef
-	var dedupeHit *ids.LeadID
-	var dedupeFields json.RawMessage
-	var internalOperational bool
-	var activityCreated bool
-	var decision counterpartyDecision
-	// internalOnly is set INSIDE the transaction and read after it commits.
-	// The skip has to commit — its breadcrumb is the proof that a message
-	// produced no rows, and returning ErrSkip from inside the callback would
-	// roll that proof back along with everything else (ADR-0082 §1).
-	var internalOnly bool
-	// dropped says why, when a gate above the raw store kept the message out;
-	// it is the skip's sentence to the connector, so it names the rule, never
-	// an address.
-	var dropped string
+	s = s.withRetryFileStage()
+	var attempt captureAttempt
 	txStart := time.Now()
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		ctx, err := s.admitWriteTx(ctx, tx, rec)
-		if err != nil {
-			return err
-		}
-
-		// The pre-store gates run BEFORE the raw store, which is the whole
-		// point: raw capture is append-once evidence, so a message that gets
-		// that far has been kept whatever happens next.
-		ctx, drop, err := s.dropBeforeStoreTx(ctx, tx, rec)
-		if err != nil {
-			return err
-		}
-		if drop != "" {
-			internalOnly = true
-			dropped = drop
-			return nil
-		}
-
-		switch fields := rec.Fields.(type) {
-		case ActivityFields:
-			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
+	original := rec
+	err = storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			rec = original
+			attempt = captureAttempt{}
+			ctx, err := s.admitWriteTx(ctx, tx, rec)
+			if err != nil {
 				return err
 			}
-			landed, err := s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
-			ref, activityCreated = landed.ref, landed.created
-			decision, internalOperational = landed.decision, landed.internal
-			return err
-		case LeadFields:
-			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+
+			// A skip commits its breadcrumb before the connector advances its cursor.
+			ctx, drop, err := s.dropBeforeStoreTx(ctx, tx, rec)
+			if err != nil {
 				return err
 			}
-			ref, dedupeHit, dedupeFields, err = s.captureLead(ctx, tx, rec, fields)
-			return err
-		default:
-			return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
-		}
+			if drop != "" {
+				attempt.dropped = drop
+				return nil
+			}
+
+			switch fields := rec.Fields.(type) {
+			case ActivityFields:
+				if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
+					return err
+				}
+				attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
+				return err
+			case LeadFields:
+				if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+					return err
+				}
+				attempt.ref, attempt.duplicate, attempt.duplicateFields, err = s.captureLead(ctx, tx, rec, fields)
+				return err
+			default:
+				return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
+			}
+		})
 	})
 	capturemetrics.ObserveStage(ctx, capturemetrics.StageSink, time.Since(txStart))
 	if err != nil {
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}
-	if internalOnly {
+	ref := attempt.ref
+	if attempt.dropped != "" {
 		// The breadcrumb is committed; only now does the connector learn the
 		// message was dropped. ErrSkip is counted by every sync loop and fails
 		// none of them, so the watermark advances past the message exactly as it
 		// does for any other skip — which is what makes the classification
 		// irreversible, and why the own-domain set is admin-visible (ADR-0082 §4).
-		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, dropped)
+		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, attempt.dropped)
 	}
-	if internalOperational {
+	if attempt.internal {
 		return ref, nil
 	}
 	// Everything after the commit, merge staging included, is the ensure stage.
 	ensureStart := time.Now()
 	defer func() { capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart)) }()
-	if activityCreated {
+	if attempt.created {
 		// The tier ladder already decided, and recorded its decision, inside
 		// the transaction above. Creation runs AFTER that commit, in its own
 		// transaction: the timeline row is never lost to a resolver fault, and
 		// a fault here is logged for the link_reconcile sweep rather than
 		// surfaced as a capture failure (the 60s p95 already delivered).
-		s.ensureCounterparty(ctx, rec, ref, decision)
+		s.ensureCounterparty(ctx, rec, ref, attempt.decision)
 	}
 	s.admitCapturedParties(ctx, rec, ref)
 	// The project ladder runs on the same terms as the counterparty step —
@@ -330,7 +319,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			s.contactArrivals.TellContactOwner(ctx, ids.From[ids.ContactKind](ref.ID), rec, fields)
 		}
 	}
-	if err := s.stageDuplicateLead(ctx, rec, dedupeHit, dedupeFields); err != nil {
+	if err := s.stageDuplicateLead(ctx, rec, attempt.duplicate, attempt.duplicateFields); err != nil {
 		return datasource.EntityRef{}, err
 	}
 	return ref, nil

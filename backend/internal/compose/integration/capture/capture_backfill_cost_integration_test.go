@@ -31,7 +31,11 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 	}
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	pool := e.Pool
+	if os.Getenv("MARGINCE_IMPORT_BENCH_SQL") != "" {
+		pool = profileHistoryPool(e.Admin(), t, pool)
+	}
+	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{})
 	page := &mailPageConnector{nextToken: "next", sent: make(map[string]bool, count)}
 	for i := range count {
 		messageID := fmt.Sprintf("cost-%d@myco.example", i)

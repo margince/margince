@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -66,7 +67,8 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 	// written, so the hold cannot ride inside it. Set only by the branch that
 	// rolls back; empty means nothing was deferred.
 	var deferred string
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		out, observed, deferred = FireOutcome{}, 0, ""
 		claimed, found, err := s.claimForFire(ctx, tx, id)
 		if err != nil {
 			return err

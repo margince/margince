@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,6 +20,13 @@ type activityLanding struct {
 	created  bool
 	decision counterpartyDecision
 	internal bool
+}
+
+type captureAttempt struct {
+	activityLanding
+	duplicate       *ids.LeadID
+	duplicateFields json.RawMessage
+	dropped         string
 }
 
 func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields, owner ids.UUID) (activityLanding, error) {

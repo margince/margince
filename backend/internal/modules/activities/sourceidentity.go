@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -129,6 +130,14 @@ func RekeyMeetingIdentity(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID
 func claimAndRetireIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind, key, attestedBy string) (held, changed bool, err error) {
 	if key == "" {
 		return false, false, nil
+	}
+	if kind == IdentityKindMail {
+		if _, err := storekit.LockActivityThreadTx(ctx, tx, activityID.UUID); err != nil {
+			return false, false, err
+		}
+		if err := storekit.LockThreadKeysTx(ctx, tx, key); err != nil {
+			return false, false, err
+		}
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)

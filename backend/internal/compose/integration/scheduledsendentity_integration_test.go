@@ -44,6 +44,7 @@ func TestAHeldMessagePreviewsTheSignatureOfItsFrozenEntity(t *testing.T) {
 		EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 		Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, p.contactID)},
 		Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
+		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	}); err != nil {
 		t.Fatalf("handling the stop: %v", err)
 	}

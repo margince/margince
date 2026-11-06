@@ -97,20 +97,9 @@ func WithheldSendersOnThreadTx(ctx context.Context, tx pgx.Tx, threadKey string,
 	return emails, nil
 }
 
-// Hold locks.
-//
-// A release reads every message, thread verdict and ledger row of an address,
-// then publishes. A writer that creates or lifts a hold in between would make
-// it publish on evidence that is no longer true. So the release and those
-// writers share locks. A writer that inserts a held message takes its
-// address's lock (lockAddressHoldTx). A writer that opens or answers a thread
-// question takes the thread's lock (LockThreadHoldTx). The release takes every
-// address lock, then every thread lock, each in sorted order, then share-locks
-// the existing rows. Updates of those rows by any writer wait on the row lock.
-const (
-	addressHoldLock = "capture_address_hold"
-	threadHoldLock  = "capture_thread_hold"
-)
+// Address mutexes keep releases from missing newly captured mail. Component
+// mutexes fence verdicts and moves; releases abort rather than wait on them.
+const addressHoldLock = "capture_address_hold"
 
 func lockAddressHoldTx(ctx context.Context, tx pgx.Tx, email string) error {
 	if folded := correspondence.Fold(email); folded != "" {
@@ -144,7 +133,7 @@ func LockThreadHoldTx(ctx context.Context, tx pgx.Tx, threadKey string) error {
 	if threadKey == "" {
 		return nil
 	}
-	return storekit.LockWriteIdentity(ctx, tx, threadHoldLock, threadKey)
+	return storekit.LockThreadKeysTx(ctx, tx, threadKey)
 }
 
 // LockHoldEvidenceTx locks what a release reads about the addresses, in the
@@ -156,21 +145,19 @@ func LockHoldEvidenceTx(ctx context.Context, tx pgx.Tx, emails []string) error {
 			return err
 		}
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT thread_key FROM activity
-		 WHERE counterparty_email = ANY($1) AND thread_key IS NOT NULL AND thread_key <> ''
-		 ORDER BY thread_key`, folded)
+	threads, err := heldContactThreads(ctx, tx, folded)
 	if err != nil {
-		return fmt.Errorf("capture: reading the threads of a held contact: %w", err)
+		return err
 	}
-	threads, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err := storekit.LockThreadKeysTx(ctx, tx, threads...); err != nil {
+		return err
+	}
+	current, err := heldContactThreads(ctx, tx, folded)
 	if err != nil {
-		return fmt.Errorf("capture: reading the threads of a held contact: %w", err)
+		return err
 	}
-	for _, thread := range threads {
-		if err := LockThreadHoldTx(ctx, tx, thread); err != nil {
-			return err
-		}
+	if !slices.Equal(threads, current) {
+		return storekit.RetryThreadTransaction(ctx, tx)
 	}
 	for _, lock := range []struct {
 		stmt string
@@ -185,6 +172,15 @@ func LockHoldEvidenceTx(ctx context.Context, tx pgx.Tx, emails []string) error {
 		}
 	}
 	return nil
+}
+
+func heldContactThreads(ctx context.Context, tx pgx.Tx, emails []string) ([]string, error) {
+	rows, err := tx.Query(ctx, `SELECT DISTINCT thread_key FROM activity
+ WHERE counterparty_email=ANY(@emails) AND thread_key IS NOT NULL AND thread_key<>'' ORDER BY thread_key`, pgx.NamedArgs{"emails": emails})
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the threads of a held contact: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
 // foldAll folds, drops empty and sorts addresses, so every locker takes them
