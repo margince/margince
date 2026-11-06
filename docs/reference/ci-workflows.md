@@ -45,10 +45,8 @@ for why it does not run on each push.
 GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
 three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
 caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-only).
-
-Its `ci-image` job builds the [CI image](../explanation/ci-image.md) for `main` when no pull request
-pushed it. Its `plain` job warms the caches of the runner, and those of the image when the image can
-be pulled. `lint-cache.yml` lints in the image for the same reason.
+Its `ci-image` job builds the [CI image](../explanation/ci-image.md) for `main`, and `plain` warms the
+caches of the runner and of the image. `lint-cache.yml` lints in the image too.
 
 ## `merge-attest.yml`
 
