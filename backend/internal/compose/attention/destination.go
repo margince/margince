@@ -31,9 +31,9 @@ const (
 	// destinationReview is a judgement a human makes before work can continue —
 	// an approval, a duplicate pair, an introduction to accept.
 	destinationReview = crmcontracts.WorklistItemDestinationWorklistDestinationReview
-	// destinationSystemHealth is a source or an automation an administrator
-	// restores. A seller can rarely act on one, and a queue that asked them to
-	// spent their attention on somebody else's job.
+	// destinationSystemHealth is a source or an automation that stopped. An
+	// administrator restores most of them, so a seller can rarely act on one.
+	// A queue that asked them to spent their attention on somebody else's job.
 	destinationSystemHealth = crmcontracts.WorklistItemDestinationWorklistDestinationSystemHealth
 )
 
@@ -101,7 +101,9 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	// else can answer it for them.
 	crmcontracts.WorklistItemSourceDomainQuestion: destinationReview,
 
-	// The product reporting on itself. An administrator restores these.
+	// The product reporting on itself. The screen follows what broke, not who
+	// repairs it. An administrator restores the workspace's machinery, while a
+	// mailbox or a booking page goes to the colleague who owns it.
 	crmcontracts.WorklistItemSourceCaptureHealth: destinationSystemHealth,
 	crmcontracts.WorklistItemSourceBookingHealth: destinationSystemHealth,
 	crmcontracts.WorklistItemSourceAiWorkHealth:  destinationSystemHealth,

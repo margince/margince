@@ -11,8 +11,11 @@ func NormalizedPurposeKey(key string) string {
 	return strings.TrimSpace(strings.ToLower(key))
 }
 
-// CanonicalPurpose rejects conflicting keys and fills the legacy key when
-// only a marketing purpose was supplied.
+// CanonicalPurpose is the one purpose key a message is judged, unsubscribed
+// and stored under. A legacy key and a marketing purpose that name two
+// different purposes are one message claiming two things, and it answers
+// false. A reader of a message's purpose asks this, so a queued message and the
+// engine name one purpose.
 func (r Request) CanonicalPurpose() (Request, bool) {
 	switch {
 	case r.MarketingPurpose == "":

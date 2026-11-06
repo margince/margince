@@ -398,10 +398,31 @@ describe("renewingBroken", () => {
   });
 });
 
+// The caller's git setup must not reach the fixture: a global commit.gpgsign
+// fails its commits, and an exported GIT_DIR points them at the real repository.
+// scripts/lib-git-fixture.sh holds the same list for the shell tests.
+const fixtureGitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([name]) =>
+      !/^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|COMMON_DIR|CEILING_DIRECTORIES|CONFIG|CONFIG_COUNT|CONFIG_PARAMETERS|CONFIG_KEY_\d+|CONFIG_VALUE_\d+|TEMPLATE_DIR)$/.test(
+        name,
+      ),
+  ),
+);
+Object.assign(fixtureGitEnv, {
+  GIT_CONFIG_GLOBAL: "/dev/null",
+  GIT_CONFIG_SYSTEM: "/dev/null",
+  GIT_TERMINAL_PROMPT: "0",
+});
+
 it("includes committed, staged, unstaged and new stories before commit", () => {
   const dir = mkdtempSync(join(tmpdir(), "approval-uat-scope-"));
   const git = (args) =>
-    execFileSync("git", args.split(" "), { cwd: dir, encoding: "utf8" }).trim();
+    execFileSync("git", args.split(" "), {
+      cwd: dir,
+      encoding: "utf8",
+      env: fixtureGitEnv,
+    }).trim();
   const write = (name, text) => writeFileSync(join(dir, name), text);
   try {
     git("init --quiet");

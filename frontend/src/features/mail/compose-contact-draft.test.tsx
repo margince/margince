@@ -250,9 +250,9 @@ describe("drafting to a contact", () => {
     expect(first?.body).toEqual({ intent: "Follow up on our discussion" });
   });
 
-  // Words the rep typed before any draft are the rep's work. They go out with
-  // no rewrite_of, and the draft is dropped with a notice.
-  it("keeps the body the reader wrote and says the draft was dropped", async () => {
+  // Words the rep typed before any draft are what the model revises.
+  it("revises the body the reader wrote", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
@@ -269,19 +269,64 @@ describe("drafting to a contact", () => {
     );
     writeMessage("Body", "hi, two products missing. pls send");
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
+
+    await waitFor(() =>
+      expect(messageText("Body")).toContain("Guten Tag Frau Malherbe"),
+    );
+    const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
+    expect(ask?.body).toEqual({
+      intent: "Make this nicer",
+      rewrite_of: "hi, two products missing. pls send",
+    });
+    expect(
+      screen.queryByText("Your edits were kept. Draft again when ready."),
+    ).toBeNull();
+  });
+
+  // A revision answers the words that were sent. Words typed while it was out
+  // are newer than both, and a silent overwrite would lose them.
+  it("keeps words typed while the revision was out, and says so", async () => {
+    const user = userEvent.setup();
+    let answer: ((response: Response) => void) | undefined;
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    render(
+      <ComposeModal
+        intent="Make this nicer"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    writeMessage("Body", "hi, two products missing.");
+
+    await user.click(draftButton());
+    await waitFor(() => expect(answer).toBeTypeOf("function"));
+    writeMessage("Body", "hi, two products missing. And a third.");
+    answer?.(jsonResponse(CONTACT_DRAFT));
 
     expect(
       await screen.findByText("Your edits were kept. Draft again when ready."),
     ).toBeTruthy();
-    expect(messageText("Body")).toBe("hi, two products missing. pls send");
+    expect(messageText("Body")).toBe("hi, two products missing. And a third.");
     const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
-    expect(ask?.body).toEqual({ intent: "Make this nicer" });
+    expect(ask?.body).toMatchObject({
+      rewrite_of: "hi, two products missing.",
+    });
   });
 
   // The deterministic floor writes from the record and never reads the body.
   // Its answer must not take the place of the words the rep wrote.
   it("keeps the body the reader wrote when no model answered", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       "POST /contacts/c-1/draft-email": () =>
         jsonResponse({
@@ -304,10 +349,44 @@ describe("drafting to a contact", () => {
     );
     writeMessage("Body", "hi, two products missing. pls send");
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
     expect(messageText("Body")).toContain("pls send");
+    expect(
+      screen.getByText("Your edits were kept. Draft again when ready."),
+    ).toBeTruthy();
+  });
+
+  // A body past the contract's cap cannot be sent to revise. The route still
+  // writes a first draft, and the words on screen stay.
+  it("keeps a body too long to revise and asks for a first draft", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
+    });
+    render(
+      <ComposeModal
+        intent="Make this nicer"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const long = "a".repeat(20_001);
+    writeMessage("Body", long);
+
+    await user.click(draftButton());
+
+    expect(
+      await screen.findByText("Your edits were kept. Draft again when ready."),
+    ).toBeTruthy();
+    expect(messageText("Body")).toBe(long);
+    const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
+    expect(ask?.body).toEqual({ intent: "Make this nicer" });
   });
 
   it("discloses a model-written draft", async () => {

@@ -141,6 +141,7 @@ export function LeadHowItStands({
           record={zone}
           events={timeline.events}
           gap={timeline.gap}
+          history={thread}
           marks={activityMarks(thread.activities, {
             ...ctx,
             onOpen: () =>

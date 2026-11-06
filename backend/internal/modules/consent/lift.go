@@ -208,7 +208,8 @@ func (s *Store) liftAdmittedTx(
 		kind: kind, decided: commsauthz.AuthorityLevel(decided), through: commsauthz.RecordedThrough(through),
 	})
 	if !verdict.may {
-		return fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied)
+		return auth.RefuseRow(ctx, "communication_suppression",
+			fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied))
 	}
 
 	if _, err = tx.Exec(ctx, `

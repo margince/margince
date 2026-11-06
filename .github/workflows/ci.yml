@@ -416,49 +416,24 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      # Cache the compiled gate binaries. `make tools` compiles golangci-lint,
-      # go-arch-lint, govulncheck, and oasdiff from source into ~/go/bin — ~75s
-      # that setup-go's module/build cache does not cover (it caches ~/go/pkg/mod
-      # and ~/.cache/go-build, not installed binaries). The pinned versions live
-      # in backend/Makefile and the Go toolchain version — which `go install`
-      # embeds in every binary, so a bump makes it reject and recompile the
-      # cached tools — lives in backend/go.mod, so the key hashes both: a change
-      # to either reseeds, otherwise a hit skips the compile. arch is in the key
-      # so a binary built for one runner CPU is never restored onto another.
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
+      # `make tools` compiles golangci-lint, go-arch-lint, govulncheck and
+      # oasdiff into ~/go/bin, which setup-go's caches do not cover. Restored,
+      # never saved: an entry a PR saves serves that PR alone, so cache-warm.yml
+      # writes the one on main that every PR reads.
+      - name: Gate binaries on PATH
+        uses: ./.github/actions/gate-binaries
       # golangci-lint's analysis cache (~/.cache/golangci-lint) is separate
       # from Go's build cache, so without it the two lint passes recompute the
-      # whole repo. cache-warm.yml writes the entry a PR's first push restores.
+      # whole repo. Restored, never saved, for the same reason as above.
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      # Install the pinned gate binaries (golangci-lint, go-arch-lint, oasdiff) so
-      # `make check` runs golangci and the oasdiff contract gate itself — one run
-      # of every gate, instead of the golangci-lint-action + per-gate steps that
-      # `make check` then re-ran as its prerequisites. Skipped entirely on a
-      # cache hit: the key hashes the pinned versions (backend/Makefile) and
-      # the toolchain (backend/go.mod), so a hit proves the binaries current —
-      # and `go install ...@version` would NOT short-circuit on an existing
-      # binary; it recomputes the whole build against a cold build cache
-      # (~75s), since setup-go's caches are keyed to the product module, not
-      # the tools' dependency graphs. The PATH export runs regardless.
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
       # test-lanes, file-length,
@@ -563,38 +538,29 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
+      - name: Gate binaries on PATH
+        uses: ./.github/actions/gate-binaries
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore only: lint-cache.yml and cache-warm.yml write the entry on main.
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Backend static gate (make check-static)
         working-directory: .
         run: make check-static STATIC_LEGS="${{ matrix.legs }}"
       # A test read outside its module that skips the tree digest merges green
       # and breaks cache-warm's save hours later. Here it fails the PR that
-      # adds it. On this job because it finishes minutes before
-      # deterministic-gates, so the census's uncached pass adds no wall clock.
+      # adds it. On the strict leg, the shorter golangci pass, so the census's
+      # uncached pass evens the two legs out instead of lengthening the longer.
       # Skipped into develop: it guards main's cache-warm, and the develop into
       # main pull request runs it.
       - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() && matrix.pass == 'baseline' && needs.changes.outputs.full_lane == 'true' }}
+        if: ${{ !cancelled() && matrix.pass == 'strict' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census
 

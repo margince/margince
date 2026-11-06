@@ -146,7 +146,7 @@ func installationToday(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time
 // team list for an owner.
 func dueVerdictCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]verdictCandidate, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT d.id, d.owner_id, `+dealVerdictChecksumSQL("d")+`, r.verdict_input_checksum,
+		SELECT d.id, d.owner_id, `+dealVerdictChecksumSQL()+`, r.verdict_input_checksum,
 		       r.verdict_basis_digest,
 		       r.verdict_next_due_at <= $1
 		         OR (`+verdictActionsSQL("r.verdict_actions")+` @> $2::jsonb

@@ -9,9 +9,10 @@ import "maps"
 // any of them, so each needs a headline in every language but English.
 
 // withRouteVerbs is one language's verb words, the route-backed ones included.
-func withRouteVerbs(routes, own map[string]string) map[string]string {
+func withRouteVerbs(routes, setup, own map[string]string) map[string]string {
 	merged := maps.Clone(own)
 	maps.Copy(merged, routes)
+	maps.Copy(merged, setup)
 	return merged
 }
 
@@ -101,7 +102,6 @@ var routeVerbsGerman = map[string]string{
 	"mark_notice_read":                   "Hinweis als gelesen markieren",
 	"mark_worklist_rows_done":            "Zeilen als erledigt markieren",
 	"message_anchor_company_site_read":   "Frage zur gelesenen Website stellen",
-	"message_onboarding_company":         "Einrichtung der eigenen Firma fortsetzen",
 	"offer_ownership_transfer":           "Datensatz einem Kollegen anbieten",
 	"pause_deal_room":                    "Deal-Raum pausieren",
 	"pin_worklist_row":                   "Zeile in der Arbeitsliste anheften",
@@ -141,6 +141,8 @@ var routeVerbsGerman = map[string]string{
 	"request_ownership_transfer":         "Übergabe eines Datensatzes anfragen",
 	"reschedule_scheduled_send":          "Geplanten Versand verschieben",
 	"resend_deal_room_invitation":        "Einladung in den Deal-Raum erneut senden",
+	"open_deal_room_thread":              "Thread im Deal Room eröffnen",
+	"reply_deal_room_thread":             "Im Thread des Deal Rooms antworten",
 	"resolve_deal_room_thread":           "Gesprächsfaden im Deal-Raum abschließen",
 	"restore_company_suggestion":         "Zurückgestellten Vorschlag zurückholen",
 	"restore_contact_moment":             "Ausgeblendeten Hinweis zurückholen",

@@ -8,14 +8,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // newWebhookHandlers builds the outbound-webhook transport (E10/S-E10.6,
@@ -42,10 +40,7 @@ func newWebhookHandlers(pool *pgxpool.Pool, cipher *webhooks.Cipher, log *slog.L
 // webhook runs as is acting for that member, so it asks the handover's
 // member-administration check about the new owner.
 func webhookStoreOver(db *database.DB, cipher *webhooks.Cipher) *webhooks.Store {
-	return webhooks.NewStore(db, cipher).WithOwnerAdmission(
-		func(ctx context.Context, tx pgx.Tx, next ids.UserID) error {
-			return identity.AdmitMemberHandover(ctx, tx, next)
-		})
+	return webhooks.NewStore(db, cipher).WithOwnerAdmission(identity.AdmitMemberHandover)
 }
 
 // NewWebhookDeliverer builds the bus-consumer / retry-sweep deliverer for

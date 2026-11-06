@@ -19,6 +19,14 @@ func TestTheRetiredBarsFoldIntoOther(t *testing.T) {
 	if len(folded[1].Drivers) != 2 || folded[1].Drivers[0].DealLabel != "A" {
 		t.Fatalf("drivers = %+v, want both, largest first", folded[1].Drivers)
 	}
+	crowded := foldRetiredBars([]Movement{
+		{PeriodKind: "quarter", Bar: BarOther, Drivers: []Driver{{DealLabel: "A", DeltaMinor: 1}, {DealLabel: "B", DeltaMinor: 2}}},
+		{PeriodKind: "quarter", Bar: "excluded", Drivers: []Driver{{DealLabel: "C", DeltaMinor: -3}, {DealLabel: "D", DeltaMinor: -9}}},
+		{PeriodKind: "quarter", Bar: "reinstated", Drivers: []Driver{{DealLabel: "E", DeltaMinor: 8}}},
+	})
+	if drivers := crowded[0].Drivers; len(drivers) != driversPerBar || drivers[0].DealLabel != "D" || drivers[2].DealLabel != "C" {
+		t.Fatalf("drivers = %+v, want the %d largest of the merged bars", drivers, driversPerBar)
+	}
 	merged := foldRetiredBars([]Movement{
 		{PeriodKind: "quarter", Bar: BarOther, DeltaMinor: 7},
 		{PeriodKind: "quarter", Bar: "not_checked", DeltaMinor: 3},

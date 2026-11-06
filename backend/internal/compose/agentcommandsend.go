@@ -48,8 +48,10 @@ import (
 //
 // Unreadable JSON is different: no resolver can be handed operands that were
 // never legible. It is refused with the code httperr.Decode answers on the
-// session half of the same route — the rule advanceDealCommand
-// (agentcommandlifecycle.go) already follows for the same reason.
+// session half of the same route. advanceDealCommand (agentcommandlifecycle.go)
+// follows the same rule. An out-of-range date-time or a repeated item is refused
+// here as well. httperr.Decode refuses both on the session half, and no resolver
+// asks about them.
 func commandBody[T any](body []byte) (T, error) {
 	var into T
 	if len(bytes.TrimSpace(body)) == 0 {

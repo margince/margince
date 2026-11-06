@@ -57,7 +57,7 @@ type closeDateSweepWorker struct {
 	// closes the deals the customer stopped answering.
 	closer silentDealCloser
 	// verdict runs last: it reads each open deal's evidence and may set its
-	// close date, amount or probability.
+	// close date, amount or probability, or move its stage.
 	verdict dealVerdictPass
 }
 

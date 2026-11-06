@@ -29,7 +29,7 @@ func TestAKeptStopLosesItsPlaintextAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793883475")); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793883863")); err != nil {
 		t.Fatalf("up to the release before stops held a hash: %v", err)
 	}
 	contact := scalar(t, conn, `INSERT INTO contact (full_name, source, captured_by)

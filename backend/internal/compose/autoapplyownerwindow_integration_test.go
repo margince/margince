@@ -306,8 +306,10 @@ func switchesOff(e *closeDateEnv) func(ctx context.Context) error {
 // lock can make it wait.
 func (e *closeDateEnv) setSwitch(ctx context.Context, on bool) error {
 	rep := principal.WithWorkspaceID(ctx, e.WS)
-	rep = principal.WithActor(rep, principal.Principal{Type: principal.PrincipalHuman,
-		ID: principal.HumanIDPrefix + e.Rep1.String(), UserID: e.Rep1})
+	rep = principal.WithActor(rep, principal.Principal{
+		Type: principal.PrincipalHuman,
+		ID:   principal.HumanIDPrefix + e.Rep1.String(), UserID: e.Rep1,
+	})
 	_, err := approvals.NewService(e.DB()).SetAutoApply(rep, deals.CloseDateCorrectionKind, on)
 	return err
 }

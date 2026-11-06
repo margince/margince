@@ -240,3 +240,29 @@
 .analytics-pair > .panel {
   align-self: start;
 }
+
+/* A projected shortfall is the one hero line that warns. */
+.analytics-hero-short {
+  color: var(--warningText);
+}
+.analytics-sales-hero .trajectory-chart {
+  padding: 0 var(--padPanel) var(--space-3);
+}
+/* The outlook's first sentence is its verdict, set a step above the prose. */
+.analytics-outlook-lead {
+  font: var(--fontHeadingSmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+.analytics-outlook .panel-body > .actions {
+  margin-block-start: var(--space-3);
+}
+.analytics-outlook .panel-foot {
+  justify-content: space-between;
+}
+/* As a chip the scope fits its name rather than holding a column's width. */
+.filter-bar[data-labels="inside"] .analytics-scope-control {
+  flex: none;
+  min-width: 0;
+}

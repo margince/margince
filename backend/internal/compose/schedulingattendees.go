@@ -231,7 +231,12 @@ func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provid
 	if err != nil || blocker != crmcontracts.SchedulingProfileBlockerNone {
 		return blocker, err
 	}
-	err = c.Check(ctx, host, provider)
+	return blockerOfCheck(c.Check(ctx, host, provider))
+}
+
+// blockerOfCheck reads a refused check as a page that cannot take bookings.
+// Any other failure says nothing about the page.
+func blockerOfCheck(err error) (crmcontracts.SchedulingProfileBlocker, error) {
 	if errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
 	}

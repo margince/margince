@@ -81,8 +81,6 @@ export type DraftAsk = Readonly<{
   subject?: string;
   body: string;
   html: string;
-  // The words as the model last served them, empty before any draft.
-  servedBody: string;
   instruction?: string;
 }>;
 
@@ -218,13 +216,15 @@ function steering(intent: string, rewriteOf: string, subject?: string) {
   };
 }
 
-// The words a draft call is asked to revise. That is the model's own served
-// draft while it is untouched, the only time the rewrite verbs are offered.
-// Any other body is the rep's work. It goes out as a first draft, and the
-// fill keeps the rep's words.
+// The contract's cap on `rewrite_of`, in characters. A longer body goes out as
+// a first draft, so the route still answers and the fill keeps the body.
+const REWRITE_OF_MAX = 20_000;
+
+// The words a draft call is asked to revise: the body on screen, whoever wrote
+// it. Not a body the rep formatted: a plain-text revision would drop the links.
 function rewriteOfAsk(ask: DraftAsk): string {
-  const untouched = ask.body !== "" && ask.body === ask.servedBody;
-  return untouched && !hasRepFormatting(ask.html) ? ask.body : "";
+  const overCap = [...ask.body.trim()].length > REWRITE_OF_MAX;
+  return hasRepFormatting(ask.html) || overCap ? "" : ask.body;
 }
 
 // The model's draft is paragraphs and line breaks only. Any other tag is

@@ -386,7 +386,8 @@ func readDrivers(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (map[string]
 var retiredBars = []string{"excluded", "reinstated", "not_checked"}
 
 // foldRetiredBars moves the retired bars into "other", the bar that already
-// holds a definition change, summing their deltas and keeping their drivers.
+// holds a definition change. It sums their deltas and keeps the largest of
+// their drivers, up to the number any bar remembers.
 func foldRetiredBars(bars []Movement) []Movement {
 	out := make([]Movement, 0, len(bars))
 	var retired []Movement
@@ -415,6 +416,7 @@ func foldRetiredBars(bars []Movement) []Movement {
 	slices.SortStableFunc(out[other].Drivers, func(a, b Driver) int {
 		return cmp.Compare(abs(b.DeltaMinor), abs(a.DeltaMinor))
 	})
+	out[other].Drivers = out[other].Drivers[:min(driversPerBar, len(out[other].Drivers))]
 	return out
 }
 

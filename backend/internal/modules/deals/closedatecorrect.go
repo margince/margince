@@ -47,6 +47,9 @@ const (
 // entitled to see.
 const basisOwnerKey = "basis_owner"
 
+// basisKey is the sentence a correction rests on, in its audit evidence.
+const basisKey = "basis"
+
 // ownerString renders a deal's owner for the evidence map. An unowned deal
 // records the empty string, which no user id equals, so a receipt on a deal
 // that has since gained an owner withholds the basis rather than matching by
@@ -170,7 +173,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 			}
 		}, map[string]any{
 			correctionFlagsKey:          hygiene.Flags,
-			"basis":                     proposal.Basis,
+			basisKey:                    proposal.Basis,
 			CloseDateSampleCountKey:     pace.wonDeals,
 			CloseDateMedianDaysKey:      pace.days,
 			CloseDateRemainingStagesKey: StagesToGo(cand.remainingOpen),
@@ -239,7 +242,7 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		// The same key the paced tiers record. The receipt reads one basis
 		// whichever tier corrected the deal, so a tier that omits it renders a
 		// change with no stated reason.
-		"basis": review.Basis,
+		basisKey: review.Basis,
 		// WHOSE grants composed that sentence.
 		//
 		// The basis can name a contact and a correspondence date, resolved

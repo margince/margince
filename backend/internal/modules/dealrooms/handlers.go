@@ -35,8 +35,8 @@ type Handlers struct {
 	// sendBudget is a test seam: a shorter budget for the invitation send.
 	// Zero means inviteRelayWait.
 	sendBudget time.Duration
-	// inviteRecords is a test seam standing in for the store's invitation
-	// reads and writes on the invitation send. Nil means the store.
+	// inviteRecords is what the invitation send reads and writes, the store
+	// unless a test stands in for it.
 	inviteRecords inviteMailRecords
 	// sendDone is a test seam, called when an invitation send has
 	// finished, outcome recorded. Nil in production.
@@ -51,7 +51,8 @@ func (h Handlers) WithDocumentStore(store blobstore.Store) Handlers {
 
 // NewHandlers builds the Deal Room handler set.
 func NewHandlers(db *database.DB) Handlers {
-	return Handlers{store: NewStore(db)}
+	store := NewStore(db)
+	return Handlers{store: store, inviteRecords: store}
 }
 
 func pathID(id crmcontracts.Id) ids.DealRoomID {

@@ -22,6 +22,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -234,7 +235,7 @@ func TestRequestAttachmentAccessHidesAnInvisibleParent(t *testing.T) {
 // non-deal/deal-scoped extraction tests need their own parent kind.
 func uploadAttachmentAs(ctx context.Context, t *testing.T, h activities.Handlers, entityType string, entityID ids.UUID, filename string, data []byte) crmcontracts.Attachment {
 	t.Helper()
-	body, ctype := multipartAttachment(t, entityType, entityID.String(), filename, data)
+	body, ctype := apptest.MultipartAttachment(t, entityType, entityID.String(), filename, data)
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()

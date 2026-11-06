@@ -20,6 +20,9 @@ import {
   newClient,
   render,
   renderWith,
+  repSeeing,
+  stubPhoneViewport,
+  TWO_MARKS,
 } from "../testing/shellharness";
 import type { NavSection } from "./nav";
 import { TopBar } from "./topbar";
@@ -165,6 +168,59 @@ describe("Top bar search (AC-shell-7)", () => {
     expect(caps).toHaveLength(2);
     expect(caps[1]).toBe("K");
     expect(caps[0]).toMatch(/^(⌘|Ctrl)$/);
+  });
+});
+
+// The page heading under the bar names the page, so a phone's bar spends the
+// trail's room on the company's mark instead.
+describe("Top bar at phone width", () => {
+  it("leads home from the company's mark in place of the trail", () => {
+    stubPhoneViewport();
+    const client = newClient();
+    client.setQueryData(["me"], repSeeing(TWO_MARKS));
+    renderWith(
+      client,
+      <TopBar
+        route={{ screen: "deals" }}
+        collapsed={false}
+        onOpenSearch={ignoreSearch}
+      />,
+    );
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
+    const home = screen.getByRole("link", {
+      name: "Demo GmbH home, powered by Margince",
+    });
+    expect(home.getAttribute("href")).toBe("/#/home");
+    expect(
+      home.querySelector(".ws-chip-company img")?.getAttribute("src"),
+    ).toBe(TWO_MARKS.logo_icon_url);
+  });
+
+  it("reads no record name for the trail it does not draw", async () => {
+    const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
+      fetch.mock.calls.filter(([request]) =>
+        String(request instanceof Request ? request.url : request).includes(
+          "/deals/d-1",
+        ),
+      );
+    const wideFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", wideFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(recordReads(wideFetch)).not.toEqual([]));
+    cleanup();
+
+    stubPhoneViewport();
+    const phoneFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", phoneFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(phoneFetch).toHaveBeenCalled());
+    expect(recordReads(phoneFetch)).toEqual([]);
+  });
+
+  it("keeps the trail and no mark on a wide screen", () => {
+    renderTopBar({ screen: "deals" });
+    expect(trail()).toBeTruthy();
+    expect(document.querySelector(".topbar .ws-chip")).toBeNull();
   });
 });
 

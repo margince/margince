@@ -315,7 +315,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err := refuseLoggedOutcomeBeforeStart(ctx, tx, in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	if err := in.applyDealFiling(ctx, tx); err != nil {
+	if err := applyLoggedDealFiling(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 

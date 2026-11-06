@@ -73,7 +73,7 @@ func (g *Gate) OverrulableBy(ctx context.Context, review Review) ([]OverrulableR
 }
 
 func mayUpdateContacts(ctx context.Context) bool {
-	return auth.Require(ctx, entityContact, principal.ActionUpdate) == nil
+	return auth.Allows(ctx, entityContact, principal.ActionUpdate)
 }
 
 // contactWritable separates a refusal (the caller may not write this contact,

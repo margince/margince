@@ -24,16 +24,17 @@ import (
 )
 
 // GetAttachmentExtraction answers the poll with the newest reading of this
-// attachment: its status, the fields it grounded, and what it honestly omitted
-// (RD-WIRE-N-2). A pure read — zero writes, no model call, no extractor here at
-// all. The reading itself is compose orchestration behind a 202, because a
-// model call takes seconds and can fail and so cannot happen inside the request
-// that asks for it.
+// attachment for one question, deal facts when none is named. It carries the
+// status, the fields the reading grounded, and what it omitted (RD-WIRE-N-2).
+// A pure read: zero writes, no model call, no extractor here at all. The reading
+// itself is compose orchestration behind a 202. A model call takes seconds and
+// can fail, so it cannot happen inside the request that asks for it.
 //
-// 404 when this attachment has never been read, which is the honest difference
-// between nobody asking and a reading that got nothing. Valid for ANY
-// entity_type: a non-deal attachment reads fine, since accepting fields onto a
-// deal (not this op) is what is deal-only.
+// 404 when this attachment was never read for that question, which separates
+// nobody asking from a reading that got nothing. An attachment read only as a
+// chat capture therefore answers 404 to a deal-facts poll. Valid for any
+// entity_type: a non-deal attachment reads fine, since only accepting fields
+// onto a deal (not this op) is deal-only.
 func (h Handlers) GetAttachmentExtraction(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetAttachmentExtractionParams,
 ) {

@@ -25,20 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-func (p *preflightEnv) serverTime(t *testing.T) time.Time {
-	t.Helper()
-	var at time.Time
-	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
-		return tx.QueryRow(t.Context(), "SELECT now()").Scan(&at)
-	}); err != nil {
-		t.Fatalf("reading the server clock: %v", err)
-	}
-	return at
-}
 
 func (p *preflightEnv) scheduledCreation(t *testing.T, id ids.UUID) time.Time {
 	t.Helper()
@@ -58,7 +48,7 @@ func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {
 	body := AnyMap{
 		"subject": "Next steps", "body": "Written the night before.",
 		"to":           []string{"buyer@preflight.test"},
-		"scheduled_at": p.serverTime(t).Add(2 * time.Hour).UTC().Format(time.RFC3339),
+		"scheduled_at": clocktest.Now(t).Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
 	}
 	maps.Copy(body, claim)
@@ -81,15 +71,16 @@ func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {
 // assembly, and no card is raised.
 func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	marketing := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing"})
 	other := p.scheduleClaiming(t, AnyMap{"consent_purpose": "transactional"})
 
 	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	env := kevents.Envelope{
-		EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: p.serverTime(t).UTC(),
+		EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 		Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, p.contactID)},
 		Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
+		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	}
 	for range 2 {
 		if err := stop.HandleEvent(context.Background(), env); err != nil {
@@ -109,6 +100,25 @@ func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
 	if n := p.cardsFor(t, marketing); n != 1 {
 		t.Fatalf("a stop delivered twice raised %d cards, want 1", n)
 	}
+	if n := p.eventsOnTraceOf(t, env); n == 0 {
+		t.Fatal("the hold wrote no event on the stop's trace, so it cannot be followed back to the stop")
+	}
+}
+
+// eventsOnTraceOf counts the events caused by env that kept its correlation id.
+func (p *preflightEnv) eventsOnTraceOf(t *testing.T, env kevents.Envelope) int {
+	t.Helper()
+	var n int
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT count(*) FROM event_outbox
+			 WHERE envelope->'trace'->>'correlation_id' = $1
+			   AND envelope->'trace'->>'causation_id' = $2`,
+			env.Trace.CorrelationID.String(), env.EventID.String()).Scan(&n)
+	}); err != nil {
+		t.Fatalf("reading the stop's trace: %v", err)
+	}
+	return n
 }
 
 // cardsFor counts the approval rows raised for one held message.
@@ -128,7 +138,7 @@ func (p *preflightEnv) cardsFor(t *testing.T, id ids.UUID) int {
 // consent.changed is not about any contact's queue.
 func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	newsletter := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "marketing_purpose": "newsletter"})
 	events := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "marketing_purpose": "events"})
 	// The legacy purpose key names the purpose the engine judges, so a
@@ -140,9 +150,10 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	changed := func(entityType string) kevents.Envelope {
 		return kevents.Envelope{
-			EventID: ids.NewV7(), Type: "consent.changed", Version: 1, OccurredAt: p.serverTime(t).UTC(),
+			EventID: ids.NewV7(), Type: "consent.changed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 			Entity:  kevents.EntityRef{Type: entityType, ID: uuidOf(t, p.contactID)},
 			Payload: []byte(`{"purpose_id":"` + ids.NewV7().String() + `","purpose":"newsletter","new_state":"withdrawn"}`),
+			Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 		}
 	}
 	if err := stop.HandleEvent(context.Background(), changed("lead")); err != nil {
@@ -178,7 +189,7 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 // the first stop holds the message.
 func TestAStopDoesNotReachAnAddressTheContactNoLongerHolds(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, uuidOf(t, p.contactID))
@@ -200,9 +211,10 @@ func TestAStopDoesNotReachAnAddressTheContactNoLongerHolds(t *testing.T) {
 	stop := compose.NewScheduledSendStop(p.Pool, identity.NewService(p.Pool), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	suppressed := func(contact string) kevents.Envelope {
 		return kevents.Envelope{
-			EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: p.serverTime(t).UTC(),
+			EventID: ids.NewV7(), Type: "consent.suppressed", Version: 1, OccurredAt: clocktest.Now(t).UTC(),
 			Entity:  kevents.EntityRef{Type: "contact", ID: uuidOf(t, contact)},
 			Payload: []byte(`{"kind":"objection","decided_by_level":"subject"}`),
+			Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 		}
 	}
 	if err := stop.HandleEvent(context.Background(), suppressed(p.contactID)); err != nil {

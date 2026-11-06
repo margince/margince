@@ -189,17 +189,10 @@ type inviteMailRecords interface {
 	RecordInvitationSend(ctx context.Context, participantID ids.DealRoomParticipantID, credential string, sendErr error) error
 }
 
-func (h Handlers) inviteMail() inviteMailRecords {
-	if h.inviteRecords != nil {
-		return h.inviteRecords
-	}
-	return h.store
-}
-
 // sendIfStillInvited mails the invitation only while its credential still
 // admits its bearer and the participant's address is the one it was issued to.
 func (h Handlers) sendIfStillInvited(ctx context.Context, issued IssuedInvitation) (bool, error) {
-	live, err := h.inviteMail().InvitationMailable(ctx, issued.Credential, string(issued.Participant.Email))
+	live, err := h.inviteRecords.InvitationMailable(ctx, issued.Credential, string(issued.Participant.Email))
 	if err != nil {
 		slog.ErrorContext(ctx, "reading a deal room invitation before mailing it failed",
 			"participant_id", issued.Participant.Id, "err", err)

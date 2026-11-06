@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // createCompanyReturningID makes one company and answers its id.
@@ -73,8 +74,8 @@ func TestCSVImportByIDUpdatesTheNamedCompany(t *testing.T) {
 	id := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
 
 	file := "Id,Company,City\n" + id + ",Kestrel Data,Bremen\n"
-	profile, _ := uploadCSV(t, e, "company", file)
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -114,8 +115,8 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 		other := createCompanyReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})
 
 		file := "Id,Company,City\n" + wanted + ",Kestrel Data,Bremen\n"
-		profile, _ := uploadCSV(t, e, "company", file)
-		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+		profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+		run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 		if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
@@ -138,8 +139,8 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 		ag := createCompanyReturningID(t, e, map[string]any{"display_name": "Falkenberg Maschinenbau AG"})
 
 		file := "Id,Company,City\n" + ag + ",Falkenberg Maschinenbau AG,Stuttgart\n"
-		profile, _ := uploadCSV(t, e, "company", file)
-		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+		profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+		run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 		if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
@@ -161,8 +162,8 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 		})
 
 		file := "Id,Company,City\n" + trading + ",Kestrel Data,Bremen\n"
-		profile, _ := uploadCSV(t, e, "company", file)
-		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+		profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+		run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 		if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
@@ -211,8 +212,8 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 			before := len(companyList(t, e).Data)
 
 			file := "Id,Company,City\n" + tc.id + ",Kestrel Data,Bremen\n"
-			profile, _ := uploadCSV(t, e, "company", file)
-			run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
+			profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+			run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 				map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 			if status != http.StatusAccepted {
 				t.Fatalf("create run → %d, want 202", status)
@@ -259,7 +260,7 @@ func TestCSVImportByIDTreatsAnEmptyIDAsANewCompany(t *testing.T) {
 	file := "Id,Company,City\n" +
 		existing + ",Kestrel Data,Bremen\n" +
 		",Nordwind Logistik,Kiel\n"
-	profile, _ := uploadCSV(t, e, "company", file)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
 	// Identified by the company column, which every row carries — so the id
 	// column is free to be empty on the rows that name no record.
 	run, status := createRunWithSourceKey(t, e, "company", profile.SourceRef,
@@ -290,8 +291,8 @@ func TestCSVImportByIDOfIdenticalValuesIsUnchanged(t *testing.T) {
 	})
 
 	file := "Id,Company,City\n" + id + ",Kestrel Data,Bremen\n"
-	profile, _ := uploadCSV(t, e, "company", file)
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
 
 	var report importReportDTO
@@ -321,8 +322,8 @@ func TestCSVImportOfAnUneditedExportIsUnchanged(t *testing.T) {
 		t.Fatalf("export %q does not guard the name, so this file proves nothing", file.String())
 	}
 
-	profile, _ := uploadCSV(t, e, "company", file.String())
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file.String())
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"id": "id", "display_name": "display_name", "description": "description"})
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
@@ -348,8 +349,8 @@ func TestCSVImportByIDOfOneAddressColumnKeepsTheRest(t *testing.T) {
 	})
 
 	file := "Id,City\n" + id + ",Bremen\n"
-	profile, _ := uploadCSV(t, e, "company", file)
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "City": "address.city"})
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
@@ -379,10 +380,10 @@ func TestCSVImportByIDOfOneAddressColumnKeepsTheRest(t *testing.T) {
 // default (a company's display name) is not what the file uses.
 func createRunWithSourceKey(t *testing.T, e *apptest.AppEnv, object, sourceRef string,
 	mapping map[string]string, sourceKey string,
-) (importRunDTO, int) {
+) (importjobtest.Run, int) {
 	t.Helper()
-	var run importRunDTO
-	status := testCall(t, e, "/v1/imports", map[string]any{
+	var run importjobtest.Run
+	status := importjobtest.CallTestRun(t, e, "/v1/imports", map[string]any{
 		"connector": "csv", "object": object, "source_ref": sourceRef,
 		"mapping": mapping, "source_key": sourceKey,
 	}, &run)
@@ -409,7 +410,7 @@ func TestCSVImportSkippedRowsAreCountedIndividually(t *testing.T) {
 	const file = "Company,Id,City\n" +
 		"Aurora Metallbau,01a02ed1-0000-7000-8000-000000000001,Bremen\n" +
 		"Boreas Logistik,01a02ed1-0000-7000-8000-000000000002,Kiel\n"
-	profile, _ := uploadCSV(t, e, "company", file)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
 	run, status := createRunWithSourceKey(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Id": "id", "City": "address.city"}, "Company")
 	if status != http.StatusAccepted {
@@ -457,7 +458,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 			}
 
 			const file = "Company,City\nKestrel Data,Bremen\nNordwind Logistik,Kiel\n"
-			profile, _ := uploadCSV(t, e, "company", file)
+			profile, _ := importjobtest.UploadCSV(t, e, "company", file)
 			run, status := createRunOnDuplicate(t, e, "company", profile.SourceRef,
 				map[string]string{"Company": "display_name", "City": "address.city"}, policy)
 			if status != http.StatusAccepted {

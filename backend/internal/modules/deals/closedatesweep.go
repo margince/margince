@@ -383,7 +383,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		maps.Copy(auditEvidence, extra)
 		changedFields := map[string]any{CloseDateCorrectionKind: correction}
 		maps.Copy(changedFields, extra)
-		if _, err := commitCorrection(actor, tx, lock, correctionWrite{
+		if err := commitCorrection(actor, tx, lock, correctionWrite{
 			deal: cand.id, correction: correction, patch: patch, auditEvidence: auditEvidence,
 			changedFields: changedFields, evidence: evidence, runID: &runID,
 		}); err != nil {

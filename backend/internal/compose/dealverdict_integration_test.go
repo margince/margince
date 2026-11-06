@@ -278,7 +278,7 @@ func (v *dealVerdictEnv) untouched(t *testing.T) {
 	if !strings.Contains(v.outcomes(t), "set_amount="+deals.VerdictDroppedMoved) {
 		t.Fatalf("outcomes = %s, want every change dropped because the evidence moved", v.outcomes(t))
 	}
-	if v.WsScalar(t, `SELECT (r.verdict_input_checksum IS DISTINCT FROM `+dealVerdictChecksumSQL("d")+`)::text
+	if v.WsScalar(t, `SELECT (r.verdict_input_checksum IS DISTINCT FROM `+dealVerdictChecksumSQL()+`)::text
 		  FROM deal d JOIN assurance_deal_receipt r ON r.deal_id = d.id WHERE d.id = $1`, v.deal) != "true" {
 		t.Fatal("the stored checksum matches the deal, so the next night would not read it again")
 	}
@@ -359,8 +359,10 @@ func verdictAfterTheOwnerLeft(t *testing.T, revoke, wantOutcome string) {
 		t.Fatal(err)
 	}
 	v.WsExec(t, revoke, v.Rep1)
-	amount := deals.VerdictChange{Correction: deals.VerdictAmountCorrection, AmountMinor: 4_500_000,
-		Evidence: map[string]any{"cited_activity_ids": []string{v.note}}}
+	amount := deals.VerdictChange{
+		Correction: deals.VerdictAmountCorrection, AmountMinor: 4_500_000,
+		Evidence: map[string]any{"cited_activity_ids": []string{v.note}},
+	}
 	outcomes, _, err := v.pass.applyAsOwner(ctx, c, read, []deals.VerdictChange{amount})
 	if err != nil {
 		t.Fatal(err)

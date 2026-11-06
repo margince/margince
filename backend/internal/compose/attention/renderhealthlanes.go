@@ -56,12 +56,13 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 }
 
 // bookingItem carries no subject and no verbs: the host fixes the page on the
-// booking settings screen. The cause names the blocker, so a page that moves
-// from one blocker to another is a new card and one host never gets two.
+// booking settings screen. The row id and the cause both name the blocker. A
+// page that moves to another blocker is a new card, and a Done on the old one
+// does not hide it. One host never gets two.
 func bookingItem(concern BookingConcern) crmcontracts.AttentionItem {
 	kind := concern.Blocker
 	item := crmcontracts.AttentionItem{
-		Id:      concern.PageID.String(),
+		Id:      concern.PageID.String() + ":" + kind,
 		Source:  crmcontracts.AttentionItemSource("booking_health"),
 		Kind:    &kind,
 		Actions: []crmcontracts.AttentionItemActions{},

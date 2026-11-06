@@ -4,9 +4,8 @@
 package ai
 
 // The voice-profile transport slice (B-E07.4/.5a): compose embeds
-// Handlers so the generated stubs are shadowed. Mutations are
-// contract-annotated human-only; the store re-gates on the
-// `voice_profile` RBAC object and the row-scope clause.
+// Handlers so the generated stubs are shadowed. The store gates each
+// mutation on the `voice_profile` RBAC object and the row-scope clause.
 
 import (
 	"context"

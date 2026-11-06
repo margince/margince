@@ -75,7 +75,7 @@ func (s *Store) applyVerdictStageMove(
 	if err != nil || !installationOn {
 		return VerdictDroppedSwitch, current, err
 	}
-	edited, err := humanEditedAfter(ctx, tx, in.DealID, []string{"stage_id"}, change.NewestCitedAt)
+	edited, err := humanEditedAfter(ctx, tx, in.DealID, []string{stageIDColumn}, change.NewestCitedAt)
 	if err != nil || edited {
 		return VerdictDroppedHuman, current, err
 	}
@@ -83,7 +83,7 @@ func (s *Store) applyVerdictStageMove(
 	if err != nil || admitted != VerdictApplied {
 		return admitted, current, err
 	}
-	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, "basis_owner": in.Owner.String()}
+	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, basisOwnerKey: in.Owner.String()}
 	maps.Copy(evidence, change.Evidence)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: change.ToStageID, auditEvidence: evidence,
@@ -163,6 +163,24 @@ func lockStagesMovedPast(ctx context.Context, tx pgx.Tx, deal ids.DealID, from i
 	if err != nil {
 		return nil, false, fmt.Errorf("deals: holding the deal's pipeline: %w", err)
 	}
+	stages, err := lockStageSpan(ctx, tx, pipeline, from, to)
+	if err != nil {
+		return nil, false, err
+	}
+	left, ok := stagesLeft(stages, from, to)
+	return left, ok, nil
+}
+
+// heldStage is one stage a move holds FOR SHARE.
+type heldStage struct {
+	id       ids.UUID
+	position int
+	semantic string
+	live     bool
+}
+
+// lockStageSpan holds the stages from the deal's own to the target, in id order.
+func lockStageSpan(ctx context.Context, tx pgx.Tx, pipeline, from ids.UUID, to ids.StageID) ([]heldStage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, position, semantic, archived_at IS NULL FROM stage
 		 WHERE pipeline_id = $1 AND id = ANY($2)
@@ -170,22 +188,22 @@ func lockStagesMovedPast(ctx context.Context, tx pgx.Tx, deal ids.DealID, from i
 		        AND position < (SELECT position FROM stage WHERE id = $4))
 		 ORDER BY id FOR SHARE`, pipeline, []ids.UUID{from, to.UUID}, from, to.UUID)
 	if err != nil {
-		return nil, false, fmt.Errorf("deals: holding the stages a move passes: %w", err)
+		return nil, fmt.Errorf("deals: holding the stages a move passes: %w", err)
 	}
-	type held struct {
-		id       ids.UUID
-		position int
-		semantic string
-		live     bool
-	}
-	stages, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (held, error) {
-		var h held
+	stages, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (heldStage, error) {
+		var h heldStage
 		return h, row.Scan(&h.id, &h.position, &h.semantic, &h.live)
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("deals: holding the stages a move passes: %w", err)
+		return nil, fmt.Errorf("deals: holding the stages a move passes: %w", err)
 	}
-	var fromAt, toAt *held
+	return stages, nil
+}
+
+// stagesLeft answers the live stages the deal leaves, and false when the target
+// is not a later open stage.
+func stagesLeft(stages []heldStage, from ids.UUID, to ids.StageID) ([]ids.UUID, bool) {
+	var fromAt, toAt *heldStage
 	for i := range stages {
 		switch stages[i].id {
 		case from:
@@ -196,7 +214,7 @@ func lockStagesMovedPast(ctx context.Context, tx pgx.Tx, deal ids.DealID, from i
 	}
 	if fromAt == nil || toAt == nil || !toAt.live || StageSemantic(toAt.semantic) != SemanticOpen ||
 		toAt.position <= fromAt.position {
-		return nil, false, nil
+		return nil, false
 	}
 	var left []ids.UUID
 	for _, stage := range stages {
@@ -204,7 +222,7 @@ func lockStagesMovedPast(ctx context.Context, tx pgx.Tx, deal ids.DealID, from i
 			left = append(left, stage.id)
 		}
 	}
-	return left, true, nil
+	return left, true
 }
 
 func citedFor(met []CriterionCitation, criterion ids.UUID) (ids.UUID, bool) {

@@ -27,6 +27,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CRA | The EU Cyber Resilience Act, which sets duties for software makers. |
 | CRM | Customer relationship management: software for contacts, companies and deals. |
 | CSV | Comma-separated values, a plain text format for tables. |
+| Cursor | An AI code editor, which can connect to Margince. |
 | de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
@@ -72,8 +73,8 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
 | Origins | The list of places a lead can come from, kept in Settings. |
 | origins | The list of places a lead can come from, kept in Settings. |
-| PNG | A common image file format, saved as .png. |
 | PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
+| PNG | A common image file format, saved as .png. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
 | RBAC | Role-based access control: what each role may see and change. |
@@ -89,10 +90,12 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | systemd | The service manager of most Linux systems, which starts the api and the worker. |
 | Tally | An online form tool that can send each answer to a webhook address. |
 | Telegram | A chat app Margince can send messages through. |
+| terminal | The window where you type commands, such as `claude` or `codex`. |
 | Typeform | An online form tool that can send each answer to a webhook address. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |
+| Visual | Part of the name Visual Studio, Microsoft's code editor, which can connect to Margince. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
 | Webflow | A website builder whose forms can send each entry to a webhook address. |

@@ -5,13 +5,11 @@ package approvals
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -31,38 +29,15 @@ func EstimateRetiredStageCards(ctx context.Context, q datatask.Querier, maximum 
 	}
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id `+retiredStageCardScope+` LIMIT @cap) candidates`,
-		pgx.NamedArgs{"kind": retiredStageCardKind, "cap": maximum + 1}).Scan(&count)
+		pgx.NamedArgs{approvalKeyKind: retiredStageCardKind, capArg: maximum + 1}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }
 
 // ExpireRetiredStageCardsTx expires each pending stage-move card through the
 // approvals writer, which audits the expiry.
 func ExpireRetiredStageCardsTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	if err := auth.RequireSystem(ctx); err != nil {
-		return datatask.BatchOut{}, err
-	}
-	after, err := datatask.UUIDCursor(in.Cursor)
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	rows, err := tx.Query(ctx, `SELECT id `+retiredStageCardScope+` AND id > @after ORDER BY id LIMIT @batch_limit`,
-		pgx.NamedArgs{"kind": retiredStageCardKind, "after": after, "batch_limit": in.Limit})
-	if err != nil {
-		return datatask.BatchOut{}, fmt.Errorf("approvals: reading pending stage-move cards: %w", err)
-	}
-	candidates, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	changed := 0
-	for _, id := range candidates {
-		expired, err := withdrawInTx(ctx, tx, ids.From[ids.ApprovalKind](id), retiredStageCardReason)
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		if expired {
-			changed++
-		}
-	}
-	return datatask.AdvanceUUID(in, candidates, changed)
+	return withdrawPendingBatch(ctx, tx, in, pendingWithdrawal{
+		scope: retiredStageCardScope, args: pgx.NamedArgs{approvalKeyKind: retiredStageCardKind},
+		noun: "stage-move cards", reason: retiredStageCardReason,
+	})
 }

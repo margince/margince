@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -62,6 +63,39 @@ func TestInviteAnswersWhileTheRelayIsStillSending(t *testing.T) {
 	<-sent
 	if row := rosterRow(t, e, h, "slow@acme.test"); !mailState(row, inviteMailSent) {
 		t.Errorf("after the relay took the mail the roster reads %v, want sent", row.InviteEmailState)
+	}
+}
+
+// An agent sends a colleague's invitation again, and never an administrator's: the
+// link is a credential to a seat an agent does not act on.
+func TestAnAgentSendsNoNewLinkToAnInvitedAdministrator(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-agent-admin")
+	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
+	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
+	invite := func(email, role string) ids.UserID {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		body := `{"email":"` + email + `","display_name":"Invited","role":"` + role + `"}`
+		h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx))
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("inviting %s → %d: %s", email, rec.Code, rec.Body)
+		}
+		var member crmcontracts.User
+		if err := json.Unmarshal(rec.Body.Bytes(), &member); err != nil {
+			t.Fatal(err)
+		}
+		return ids.UserID{UUID: ids.UUID(member.Id)}
+	}
+	admin := invite("boss@acme.test", "admin")
+	_, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, admin)
+	if detailed, ok := errors.AsType[*httperr.DetailedError](err); !ok || detailed.Code != "agent_member_limit" {
+		t.Errorf("an agent's resend to an invited administrator answered %v", err)
+	}
+	if _, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, invite("rep@acme.test", "rep")); err != nil {
+		t.Errorf("an agent's resend to an invited colleague answered %v", err)
+	}
+	if _, err := e.svc.ResendInvite(ctx, e.admin, admin); err != nil {
+		t.Errorf("the administrator's own resend answered %v", err)
 	}
 }
 
@@ -283,6 +317,25 @@ func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 				t.Fatalf("after the resend %d link(s) are live, newest=%v; want only the mailed one", live, newest)
 			}
 		})
+	}
+}
+
+// A read that fails before the send leaves the mail unsent, and the admin was
+// already told it went out. The link says so, which is what offers the resend.
+func TestAnInvitationThatNeverReachedTheRelayIsRecordedAsFailed(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-unread")
+	mail := &capturedMail{}
+	h, done := mailingHandlers(e, mail)
+	h.sendBudget = time.Nanosecond
+
+	inviteThrough(t, e, h, "unread@acme.test")
+	<-done
+	if mail.sent != 0 {
+		t.Fatalf("the relay took %d message(s), want the read to stop the send", mail.sent)
+	}
+	if row := rosterRow(t, e, h, "unread@acme.test"); !mailState(row, inviteMailFailed) || !offersResend(row) {
+		t.Fatalf("after the read before the send failed the roster shows %v %v, want failed and a resend",
+			row.InviteEmailState, row.AllowedActions)
 	}
 }
 

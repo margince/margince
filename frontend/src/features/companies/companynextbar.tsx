@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { formatDueCompact } from "../../format/format.dates";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { type LatePromise, latePromise } from "../../lib/latepromise";
@@ -114,6 +116,9 @@ export function CompanyNextBar({
   const task = nextBarTask(view);
   const said = nextBarLateness(view, zone, { t, plural, locale });
   const lateTag = said && { label: said.badge, tone: "danger" as const };
+  // The bar's task is the account's, not the reader's: its line names who holds it.
+  const holder = useTaskHolder(task?.assignee_id, task?.assignee_name);
+  const heldBy = (rest: ReactNode) => (task ? taskLine([holder, rest]) : rest);
   const count = otherTasks(view, task);
   const others = (view.next_steps?.data ?? []).filter(
     (step) => step.activity_id !== task?.activity_id,
@@ -148,7 +153,7 @@ export function CompanyNextBar({
         title={task?.subject ?? moment.headline}
         late={lateTag}
         detail={task && taskDetail(task)}
-        sub={said?.sentence ?? moment.why_now}
+        sub={heldBy(said?.sentence ?? moment.why_now)}
         insight={momentBasis(moment)}
         action={
           moment.may_be_done ? (
@@ -169,7 +174,7 @@ export function CompanyNextBar({
       title={task?.subject}
       late={lateTag}
       detail={task && taskDetail(task)}
-      sub={
+      sub={heldBy(
         task?.due_at
           ? t("co.next.due", {
               when: formatDueCompact(
@@ -179,8 +184,8 @@ export function CompanyNextBar({
                 zone,
               ),
             })
-          : undefined
-      }
+          : undefined,
+      )}
       action={task ? fallback : undefined}
       more={more}
     />

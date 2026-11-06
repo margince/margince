@@ -253,7 +253,7 @@ function LineWhen({
   const began = line.summary.values?.failing_since;
   if (line.lane === "watching" && began) {
     return (
-      <span className="t-caption magic-line-when">
+      <span className="t-caption magic-line-when magic-line-since">
         {t("magic.failingSince", { when: formatDateTime(began, locale, zone) })}
       </span>
     );

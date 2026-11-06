@@ -66,6 +66,7 @@ function LinkCompanyOffer({
     <>
       <Button
         variant="link"
+        align="start"
         className="btn-valuelabel lead-company-offer"
         aria-describedby={reasonId}
         onClick={() => setOpen(true)}

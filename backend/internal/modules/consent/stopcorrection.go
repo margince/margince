@@ -8,7 +8,7 @@ package consent
 //
 // The ladder in commsauthz answers most of it. A marketing objection is stamped
 // at the subject's level whoever typed it (levelFor). An admin may correct one
-// a colleague typed by mistake. One the contact pressed on a mailed link stays
+// a colleague or their agent recorded by mistake. One the contact pressed on a mailed link stays
 // theirs: the product, not a seat, wrote its first row.
 
 import (
@@ -18,6 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
+
+const passportAgentPrefix = "agent:"
 
 // kindProcessingRestriction is the Art. 18 stop. Lifting one owes the contact
 // notice before it happens, and Margince has no such notice, so no seat lifts
@@ -83,13 +85,19 @@ func judgeLift(caller lifter, stop stopFacts) liftVerdict {
 	return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByLevel}
 }
 
-// typedObjection reports a subject-level objection a colleague typed through
-// Suppress. It is an allow-list: an agent, a connector, an import, the product
-// and a row of unknown origin all count as the contact's own act.
+// typedObjection reports a subject-level objection a seat recorded through
+// Suppress, by hand or through its passport agent. It is an allow-list. Automated
+// work with no passport, a connector, an import, the product and a stop of
+// unknown origin all count as the contact's own act.
 func typedObjection(stop stopFacts) bool {
 	return stop.kind == commsauthz.ReasonObjection &&
 		stop.decided == commsauthz.LevelSubject &&
-		stop.through == commsauthz.RecordedByColleague
+		recordedForASeat(stop.through)
+}
+
+// recordedForASeat reports a stop typed by a seat or by an agent on its passport.
+func recordedForASeat(through commsauthz.RecordedThrough) bool {
+	return through == commsauthz.RecordedByColleague || through == commsauthz.RecordedByAgent
 }
 
 // carriedSourceMark opens the source of every stop a merge copied.

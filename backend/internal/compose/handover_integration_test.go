@@ -270,6 +270,33 @@ func TestAHandoverKeepsTheCeilingOverAnAdmin(t *testing.T) {
 	}
 }
 
+// A delivery reads what its owner may see, so a delegated administrator hands a
+// rep's records to an admin but not the rep's webhook.
+func TestAWebhookStaysWithTheMemberWhenTheCallerDoesNotOutrankTheReceiver(t *testing.T) {
+	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep3, "admin")
+	hook := seedWebhook(t, e, e.Rep1, false)
+	delegated := e.As(e.Rep2, nil, principal.Permissions{
+		RoleKeys: []string{"manager"},
+		Objects: map[string]principal.ObjectGrant{
+			"user_admin":           {Read: true, Update: true},
+			"webhook_subscription": {Read: true, Update: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+
+	out, err := handoverSeamFor(e).HandOver(delegated, e.Rep1, e.Rep3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ownerOf(t, e, "webhook_subscription", hook); got != e.Rep1 {
+		t.Errorf("the webhook moved to %s, a receiver the caller does not outrank", got)
+	}
+	if out.Moved.Webhook != 0 || out.Left.Webhook != 1 {
+		t.Errorf("moved %d webhooks and left %d, want 0 and 1", out.Moved.Webhook, out.Left.Webhook)
+	}
+}
+
 // The private handover asks the receiver question itself. A caller that reaches
 // it without the seam still cannot hand records to a seat that may not own them.
 func TestThePrivateHandoverRefusesAReceiverWhoCannotOwn(t *testing.T) {

@@ -80,7 +80,14 @@ func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProje
 	if in.FromOwnerID == in.ToOwnerID {
 		return 0, &SameOwnerError{}
 	}
-	if err := ensureActiveOwner(ctx, tx, in.ToOwnerID); err != nil {
+	err := ensureActiveOwner(ctx, tx, in.ToOwnerID)
+	// An own-scope seat's write scope holds no other seat to hand work to. Its
+	// refused handover is the scope's refusal; a wider seat's is the receiver's.
+	if p, ok := principal.Actor(ctx); ok && (err == nil || errors.As(err, new(*OwnerNotActiveError))) {
+		teamScope := auth.Check{RowScope: principal.RowScopeTeam}
+		auth.RecordDecision(ctx, teamScope, err == nil || teamScope.HeldBy(p))
+	}
+	if err != nil {
 		return 0, err
 	}
 	candidates, err := transferableProjectIDs(ctx, tx, in.FromOwnerID)
@@ -103,12 +110,8 @@ func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProje
 // ensureActiveOwner refuses a receiver who could not be handed a project by a
 // single update either.
 //
-// auth.EnsureAssignee is that question, asked once for every record kind: an
-// active, unarchived, non-agent seat that can write, inside the caller's own
-// write scope. This function keeps its name and its own error so the handover
-// contract's 422 is unchanged, and delegates the rule rather than keeping a
-// second, weaker copy of it — the copy here checked status and archival only,
-// so it admitted an agent seat and a read seat.
+// auth.EnsureAssignee is that question, asked once for every record kind. This
+// function keeps its own error so the handover contract's 422 is unchanged.
 func ensureActiveOwner(ctx context.Context, tx pgx.Tx, owner ids.UserID) error {
 	if err := auth.EnsureAssignee(ctx, tx, owner.UUID); err != nil {
 		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {

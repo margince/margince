@@ -20,13 +20,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-type activityDealFiling struct{ deals *deals.Store }
+// ActivityDealFiling resolves a logged activity's records to their deals.
+type ActivityDealFiling struct{ deals *deals.Store }
 
-func NewActivityDealFiling(db *database.DB) activities.DealFilingResolver {
-	return activityDealFiling{deals: deals.NewStore(db, DealsInstallation())}
+// NewActivityDealFiling builds the resolver over the deals store.
+func NewActivityDealFiling(db *database.DB) ActivityDealFiling {
+	return ActivityDealFiling{deals: deals.NewStore(db, DealsInstallation())}
 }
 
-func (f activityDealFiling) Resolve(ctx context.Context, tx pgx.Tx, records []activities.ActivityLinkInput) (crmcontracts.ActivityDealFilingOptions, error) {
+// Resolve answers the one company the records stand on and its open deals.
+func (f ActivityDealFiling) Resolve(ctx context.Context, tx pgx.Tx, records []activities.ActivityLinkInput) (crmcontracts.ActivityDealFilingOptions, error) {
 	out := crmcontracts.ActivityDealFilingOptions{}
 	companies, err := f.CompaniesOfRecords(ctx, tx, records)
 	if err != nil || len(companies) != 1 {
@@ -54,15 +57,27 @@ func (f activityDealFiling) Resolve(ctx context.Context, tx pgx.Tx, records []ac
 	return out, nil
 }
 
-func (f activityDealFiling) CompaniesOfRecords(ctx context.Context, tx pgx.Tx, records []activities.ActivityLinkInput) ([]ids.UUID, error) {
+// IsOpenDealOfRecords answers whether deal is an open deal of a company the
+// records stand on.
+func (f ActivityDealFiling) IsOpenDealOfRecords(ctx context.Context, tx pgx.Tx, records []activities.ActivityLinkInput, deal ids.UUID) (bool, error) {
+	companies, err := f.CompaniesOfRecords(ctx, tx, records)
+	if err != nil || len(companies) == 0 {
+		return false, err
+	}
+	return f.deals.IsOpenDealOfCompanies(ctx, tx, deal, companies)
+}
+
+// CompaniesOfRecords answers the companies the contacts and companies stand on,
+// after the caller's read gate on each record.
+func (f ActivityDealFiling) CompaniesOfRecords(ctx context.Context, tx pgx.Tx, records []activities.ActivityLinkInput) ([]ids.UUID, error) {
 	companies := map[ids.UUID]bool{}
 	var contactIDs []ids.UUID
 	for _, record := range records {
-		if record.EntityType != "contact" && record.EntityType != "company" {
+		if record.EntityType != string(recordTypeContact) && record.EntityType != string(recordTypeCompany) {
 			continue
 		}
 		var admission error
-		if record.EntityType == "company" {
+		if record.EntityType == string(recordTypeCompany) {
 			admission = auth.Require(ctx, "company", principal.ActionRead)
 		} else {
 			admission = auth.Require(ctx, "contact", principal.ActionRead)
@@ -73,7 +88,7 @@ func (f activityDealFiling) CompaniesOfRecords(ctx context.Context, tx pgx.Tx, r
 		if err := auth.EnsureVisibleLive(ctx, tx, record.EntityType, record.EntityID); err != nil {
 			return nil, err
 		}
-		if record.EntityType == "company" {
+		if record.EntityType == string(recordTypeCompany) {
 			companies[record.EntityID] = true
 		} else {
 			contactIDs = append(contactIDs, record.EntityID)

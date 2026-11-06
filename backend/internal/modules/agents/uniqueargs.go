@@ -9,6 +9,7 @@ package agents
 // the schema is the one place the claim can be read from.
 
 import (
+	"bytes"
 	"encoding/json"
 	"sort"
 
@@ -21,7 +22,7 @@ import (
 func declaredUniqueArgs(inputSchema json.RawMessage) []string {
 	var schema struct {
 		Properties map[string]struct {
-			UniqueItems bool `json:"uniqueItems"`
+			UniqueItems bool `json:"uniqueItems"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
 		} `json:"properties"`
 	}
 	if err := json.Unmarshal(inputSchema, &schema); err != nil {
@@ -62,7 +63,7 @@ func (r *Registry) requireDeclaredUniqueness(name string, args json.RawMessage) 
 			key := wireItemKey(item)
 			if first, found := seen[key]; found {
 				refusal := datasource.RepeatedItemRefusal(list, first, at)
-				return &BadArgsError{Cause: refusal, Field: list}
+				return &BadArgsError{Cause: refusal, Field: list, Code: "duplicate"}
 			}
 			seen[key] = at
 		}
@@ -71,18 +72,20 @@ func (r *Registry) requireDeclaredUniqueness(name string, args json.RawMessage) 
 }
 
 // wireItemKey is an item's JSON value without spelling that changes nothing:
-// whitespace, key order, and the letter case of a UUID.
+// whitespace, key order, and the letter case of a UUID. The key stays JSON, so
+// a string never meets a number or null. Numbers keep their literal, because a
+// float64 would merge integers above 2^53.
 func wireItemKey(item json.RawMessage) string {
-	var text string
-	if json.Unmarshal(item, &text) == nil {
-		if id, err := ids.Parse(text); err == nil {
-			return id.String()
-		}
-		return text
-	}
+	decoder := json.NewDecoder(bytes.NewReader(item))
+	decoder.UseNumber()
 	var value any
-	if json.Unmarshal(item, &value) != nil {
+	if decoder.Decode(&value) != nil {
 		return string(item)
+	}
+	if text, isText := value.(string); isText {
+		if id, err := ids.Parse(text); err == nil {
+			value = id.String()
+		}
 	}
 	canonical, err := json.Marshal(value)
 	if err != nil {
