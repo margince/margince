@@ -1718,7 +1718,6 @@
         "lead.read",
         "project.read",
         "project.update",
-        "scope:team",
         "user_admin.update",
         "webhook_subscription.update"
       ]
@@ -3522,8 +3521,7 @@
     "transfer_project_ownership": {
       "checks": [
         "project.read",
-        "project.update",
-        "scope:team"
+        "project.update"
       ]
     },
     "undo_import_run": {
