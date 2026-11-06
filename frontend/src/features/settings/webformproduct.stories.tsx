@@ -13,7 +13,7 @@ import { ProductField } from "./webformproduct";
 // The product every lead a web form captures asks about.
 
 const meta: Meta = {
-  title: "Settings/Web forms/Product field",
+  title: "Settings/Data/Website forms/Product field",
   parameters: { layout: "padded" },
 };
 export default meta;

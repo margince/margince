@@ -2752,6 +2752,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_attribution": "Partnerzuordnung",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
+  "history.field.product_id": "Produkt",
   "history.field.about_deal": "Betreffender Deal",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
   "history.field.qualifying_event_retracted":
