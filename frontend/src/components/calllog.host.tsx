@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  type ComponentProps,
   lazy,
   type ReactNode,
   Suspense,
@@ -28,7 +29,11 @@ import { useCanWrite } from "../lib/capability";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { EntityRef } from "./entityref";
 
-import { LogActivityForm } from "./logactivity";
+const LogActivityForm = lazy(() =>
+  import("./logactivity").then((module) => ({
+    default: module.LogActivityForm,
+  })),
+);
 
 const LogActivityAction = lazy(() =>
   import("./logactivity.action").then((module) => ({
@@ -95,7 +100,15 @@ export function CallLogHost({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /** The call log inside a dialog, which must not open a second dialog over itself. */
-export function CallLogInline({
+export function CallLogInline(props: ComponentProps<typeof CallLogInlineBody>) {
+  return (
+    <Suspense fallback={null}>
+      <CallLogInlineBody {...props} />
+    </Suspense>
+  );
+}
+
+function CallLogInlineBody({
   call,
   onClose,
 }: Readonly<{ call: StartedCall; onClose: () => void }>) {

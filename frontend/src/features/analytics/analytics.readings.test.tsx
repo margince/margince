@@ -130,9 +130,11 @@ describe("the seat's own readings when the report answers with nothing", () => {
     );
     await openOutcomes();
 
-    expect(
-      await screen.findAllByText(en["analytics.readingLoading"]),
-    ).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.getAllByText(en["analytics.readingLoading"])).toHaveLength(
+        2,
+      ),
+    );
     expect(screen.queryByText(en["analytics.readingNone"])).toBeNull();
   });
 

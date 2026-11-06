@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatAnalyticsMoney, formatDateAbbrev } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { AnalyticsScreen } from "./analytics";
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
 
 // The population these tests read under. Workspace because that is what a
@@ -501,6 +502,22 @@ it("states Likely at its threshold and Weighted by source, with no best case", a
 // A share states its landing and modelled finish. A snapshot frozen before the
 // landing was kept says its basis is not recorded, and keeps its range.
 describe("SharedForecastView", () => {
+  it("keeps the shared route's loading state inside the page gutter", () => {
+    const before = globalThis.location.href;
+    try {
+      globalThis.history.replaceState(null, "", "#/analytics/shared/fixture");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => new Promise<Response>(() => {})),
+      );
+      const { container } = render(<AnalyticsScreen />);
+      expect(container.querySelector(".wrap")).not.toBeNull();
+    } finally {
+      cleanup();
+      globalThis.history.replaceState(null, "", before);
+    }
+  });
+
   const ranged = {
     range_low_minor: 90_000,
     range_high_minor: 210_000,
