@@ -8691,6 +8691,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # screens read it; an agent meets a kind through the record that carries it
       x-agent-access: human-only
       x-human-only-reason: covered
+      x-settings-audience: member
       summary: Which kinds of record installed extensions add beside core's own.
       description: |
         The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
@@ -8716,6 +8717,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # the record page's History reads it; an agent reads the signal and the record kinds themselves
       x-agent-access: human-only
       x-human-only-reason: covered
+      x-settings-audience: member
       summary: What installed extensions add to one core record's History.
       description: |
         Two kinds of entry, newest first, for one contact, company or deal. A `record` entry is a
@@ -8752,6 +8754,7 @@ paths:
       security: [ { cookieAuth: [] } ]   # Reports and Home draw it; an agent asks the report tools
       x-agent-access: human-only
       x-human-only-reason: covered
+      x-settings-audience: member
       summary: The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
       description: |
         Each count and breakdown an installed extension declares, run through the report engine for
@@ -17285,7 +17288,6 @@ paths:
             items: { type: string, format: uuid }
             maxItems: 100
           style: form
-          explode: false
           description: >
             Record ids, of any type, to leave out of the answer. They are dropped before ranking,
             so a page is full and `types_with_more` counts only the records that remain. Use it to

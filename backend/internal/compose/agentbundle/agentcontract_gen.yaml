@@ -12473,7 +12473,6 @@ paths:
             items: {type: string, format: uuid}
             maxItems: 100
           style: form
-          explode: false
           description: >-
             Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record.
         - name: per_type
