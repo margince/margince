@@ -64,6 +64,31 @@ jobs:
             exit 1
           fi
           echo "logins=${members},renovate[bot],coderabbitai[bot],github-actions[bot],dependabot[bot]" >> "$GITHUB_OUTPUT"
+      # These staff commits carry a git identity GitHub cannot link, so the action
+      # reads them under a bare author name instead of a login. Anybody can type a
+      # name, so it joins the allowlist only while every unlinked commit under it
+      # is a hash listed here. A pull request lists only what its base lacks, so
+      # this step stops mattering once these commits have reached main.
+      - name: Staff commits without a linked identity
+        id: unlinked
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          AUTHOR_NAME: lars
+          STAFF_COMMITS: >-
+            ca5aa62cc8106c909ffd6273a779b1d950ddc2c0
+            18a756cac1f654e6849af2db277482d6f877200f
+            8505fb8c32c9f752013d61ebb10a7de047e4d556
+            62da4143f3facd9d9c1f7050544b77a443744937
+        run: |
+          set -euo pipefail
+          unlinked=$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/commits" \
+            --jq '.[] | select(.author == null and .committer == null and .commit.author.name == env.AUTHOR_NAME) | .sha')
+          unlisted=$(grep -vxF -f <(tr ' ' '\n' <<<"$STAFF_COMMITS") <<<"$unlinked" || true)
+          if [ -z "$unlisted" ]; then
+            echo "names=,$AUTHOR_NAME" >> "$GITHUB_OUTPUT"
+          fi
       # The link a contributor reads is the commit that last changed CLA.md, never
       # `main`: an acceptance covers the text it was shown, and main moves.
       - name: The CLA text in force
@@ -90,7 +115,7 @@ jobs:
           remote-organization-name: margince
           remote-repository-name: cla-signatures
           branch: main
-          allowlist: ${{ steps.allowlist.outputs.logins }}
+          allowlist: ${{ steps.allowlist.outputs.logins }}${{ steps.unlinked.outputs.names }}
           custom-pr-sign-comment: I have read the Margince Contributor License Agreement version 1.0 and I accept its terms.
           custom-notsigned-prcomment: >-
             Thank you for your contribution. Before we can merge it, every author
