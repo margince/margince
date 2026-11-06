@@ -103,6 +103,19 @@ func (h Handlers) GetSignal(w http.ResponseWriter, r *http.Request, id crmcontra
 	httperr.WriteJSON(w, http.StatusOK, sig)
 }
 
+// updateInput carries every field of the request to the store. An edit of
+// the kind or the evidence travels the way a status change does.
+func updateInput(req crmcontracts.UpdateSignalRequest, ifVersion *int64) UpdateSignalInput {
+	return UpdateSignalInput{
+		Status:    (*string)(req.Status),
+		Note:      req.Note,
+		Severity:  (*string)(req.Severity),
+		Kind:      (*string)(req.Kind),
+		Evidence:  req.Evidence,
+		IfVersion: ifVersion,
+	}
+}
+
 func (h Handlers) UpdateSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateSignalParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {
@@ -112,13 +125,7 @@ func (h Handlers) UpdateSignal(w http.ResponseWriter, r *http.Request, id crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in := UpdateSignalInput{
-		Status:    (*string)(req.Status),
-		Note:      req.Note,
-		Severity:  (*string)(req.Severity),
-		IfVersion: ifVersion,
-	}
-	sig, err := h.store.UpdateSignal(r.Context(), pathID[ids.SignalKind](id), in)
+	sig, err := h.store.UpdateSignal(r.Context(), pathID[ids.SignalKind](id), updateInput(req, ifVersion))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
