@@ -635,8 +635,12 @@ describe("the deals tab", () => {
     };
     withProviders(<ContactDealsTab view={cut} />);
     const open = await screen.findByText("1+");
-    expect(open.closest(".stat-card")?.textContent).toContain("of 1+ on record");
-    expect(screen.queryByText(/€420k/i, { selector: ".stat-card *" })).toBeNull();
+    expect(open.closest(".stat-card")?.textContent).toContain(
+      "of 1+ on record",
+    );
+    expect(
+      screen.queryByText(/€420k/i, { selector: ".stat-card *" }),
+    ).toBeNull();
   });
 
   // Withheld rather than disabled: a grant the role does not hold is not a fact
