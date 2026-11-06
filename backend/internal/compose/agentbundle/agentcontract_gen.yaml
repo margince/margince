@@ -25731,6 +25731,7 @@ components:
           description: The websites a `browser` form takes posts from, as origins (`https://example.com`).
         lead_origin: {type: [string, 'null'], description: 'The `/lead-origins` key every lead from this form carries.'}
         owner_id: {type: [string, 'null'], format: uuid, description: 'Who owns the leads this form creates; null leaves them in the unassigned queue.'}
+        product_id: {type: [string, 'null'], format: uuid, description: 'The product every lead this form creates is interested in; null captures leads with no product.'}
         field_map:
           type: object
           additionalProperties: {type: string}
@@ -25772,6 +25773,7 @@ components:
           items: {type: string, maxLength: 300}
         lead_origin: {type: [string, 'null']}
         owner_id: {type: [string, 'null'], format: uuid}
+        product_id: {type: [string, 'null'], format: uuid, description: 'The product every lead this form creates is interested in. Send null to stop naming one.'}
         field_map:
           type: object
           maxProperties: 40
