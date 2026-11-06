@@ -107,7 +107,12 @@ type ToolSpec struct {
 	// OpenAPIOp names the crm.yaml operations this tool runs as, operationIds
 	// joined by "/"; each declares this tool as its x-mcp-tool verb.
 	OpenAPIOp string
-	Egress    bool // true if the tool reaches outside the workspace (send_email, webhooks)
+	// Areas are the work areas a call lands in (platform/workarea). The registry
+	// fills them from the generated placement. It narrows them to one where a
+	// call's record type picks the operation. A passport limited to some areas
+	// is admitted when one of them is on.
+	Areas  []string
+	Egress bool // true if the tool reaches outside the workspace (send_email, webhooks)
 	// WaitsEvenForItsUser keeps a confirm-first tool waiting for a human when an
 	// agent acts as its user. Set where the model, not the colleague, picks the
 	// address the call reaches, and where a call cannot name the rows it changes.

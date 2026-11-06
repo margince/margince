@@ -74,6 +74,7 @@ type lockedGrant struct {
 	userID         ids.UserID
 	clientID       string
 	scopes         []string
+	areas          []string
 	resource       *string
 	grantRevokedAt *time.Time
 	refreshAllowed bool
@@ -232,7 +233,7 @@ func lockPresentedRefreshToken(ctx context.Context, tx pgx.Tx, tokenHash string,
 	l := lockedGrant{workspaceID: wsID}
 	err := tx.QueryRow(ctx, `
 		SELECT r.id, r.consumed_at, r.expires_at, r.replaced_by,
-		       g.id, g.user_id, g.client_id, g.scopes, g.resource, g.revoked_at, g.refresh_allowed,
+		       g.id, g.user_id, g.client_id, g.scopes, g.work_areas, g.resource, g.revoked_at, g.refresh_allowed,
 		       c.disabled_at, c.deleted_at, u.status, u.archived_at
 		  FROM oauth_refresh_token r
 		  JOIN oauth_grant  g ON g.id        = r.grant_id
@@ -241,7 +242,7 @@ func lockPresentedRefreshToken(ctx context.Context, tx pgx.Tx, tokenHash string,
 		 WHERE r.token_hash = $1
 		   FOR UPDATE OF r, g`,
 		tokenHash).Scan(&l.tokenID, &l.consumedAt, &l.expiresAt, &l.replacedBy,
-		&l.grantID, &l.userID, &l.clientID, &l.scopes, &l.resource, &l.grantRevokedAt, &l.refreshAllowed,
+		&l.grantID, &l.userID, &l.clientID, &l.scopes, &l.areas, &l.resource, &l.grantRevokedAt, &l.refreshAllowed,
 		&l.clientDisabledAt, &l.clientDeletedAt, &l.userStatus, &l.userArchivedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedGrant{}, errRefreshRejected
@@ -384,7 +385,7 @@ func (s *Service) spendAndReissue(ctx context.Context, tx pgx.Tx, l lockedGrant,
 		return IssuedPassport{}, "", err
 	}
 	issued, err := mintPassport(ctx, tx, l.identity(),
-		IssuePassportInput{Label: &label, Scopes: scopes, TTL: &ttl}, &l.grantID)
+		IssuePassportInput{Label: &label, Scopes: scopes, TTL: &ttl, Areas: areasFromColumn(l.areas)}, &l.grantID)
 	if err != nil {
 		return IssuedPassport{}, "", err
 	}

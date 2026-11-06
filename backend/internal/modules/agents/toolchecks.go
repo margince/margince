@@ -64,9 +64,10 @@ func mustReadToolChecks(raw []byte) map[string][]auth.Check {
 	return out
 }
 
-// grantedTo is spec as far as an agent's grants reach. A tool whose recorded
-// checks the caller lacks is not offered, and a router offers only the actions
-// whose verbs the caller holds. A verb with no recorded row stays offered: the
+// grantedTo is spec as far as an agent's grants and its passport's work areas
+// reach. A tool whose recorded checks the caller lacks, or whose areas are off,
+// is not offered. A router offers only the actions whose verbs pass both. A
+// verb with no recorded row stays offered: the
 // gate still decides each call. Humans and the system are not narrowed, since
 // their authority is enforced at the store and never listed. A self-describing
 // tool is never narrowed, for the reason invocableByCaller keeps it.
@@ -76,9 +77,11 @@ func (r *Registry) grantedTo(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSp
 		return spec, true
 	}
 	if len(spec.Actions) == 0 {
-		return spec, r.holdsChecks(p, spec.Name)
+		return spec, r.holdsChecks(p, spec.Name) && auth.AreasAdmit(p, spec)
 	}
-	kept := slices.DeleteFunc(slices.Clone(spec.Actions), func(a mcp.ToolAction) bool { return !r.holdsChecks(p, a.Verb) })
+	kept := slices.DeleteFunc(slices.Clone(spec.Actions), func(a mcp.ToolAction) bool {
+		return !r.holdsChecks(p, a.Verb) || !r.inAreas(p, a.Verb)
+	})
 	if len(kept) == len(spec.Actions) {
 		return spec, true
 	}

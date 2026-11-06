@@ -8764,7 +8764,52 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
   "passport.scope.send": "Nachrichten senden",
-  "passport.scope.enrich": "Kontaktdaten kaufen",
+  "passport.scope.enrich": "KI nutzen und Daten kaufen",
+  "workArea.name.business": "Vertriebsarbeit",
+  "workArea.name.compliance": "Compliance und Datenschutz",
+  "workArea.name.capture": "E-Mail- und Kalendererfassung",
+  "workArea.name.workspace_settings": "Unternehmenseinstellungen",
+  "workArea.name.admin_settings": "Admin-Einstellungen",
+  "workArea.name.own_account": "Mein Nutzerkonto",
+  "workArea.hint.business":
+    "Datensätze, Deals, Aktivitäten, Angebote, Berichte und Listen",
+  "workArea.hint.compliance":
+    "Einwilligungen, Datenschutzanfragen, Aufbewahrung und das Audit-Log",
+  "workArea.hint.capture":
+    "E-Mail- und Kalendererfassung und die Verbindungen, über die sie läuft",
+  "workArea.hint.workspace_settings":
+    "Wie das Unternehmen eingerichtet ist, wo deine Rolle es ändern darf",
+  "workArea.hint.admin_settings":
+    "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
+  "workArea.hint.own_account": "Dein Profil und deine Präferenzen",
+  "workArea.legend": "Wo er arbeiten darf",
+  "workArea.mode.all": "Alle Bereiche",
+  "workArea.mode.allNote":
+    "Alles, was deine Rolle erreicht, auch später hinzugefügte Bereiche",
+  "workArea.mode.custom": "Bereiche auswählen",
+  "workArea.mode.customNote":
+    "Nur die ausgewählten Bereiche. Ein neuer Bereich ist zunächst deaktiviert",
+  "workArea.pickLegend": "Bereiche, in denen er arbeiten darf",
+  "workArea.pickOne": "Wähle mindestens einen Bereich aus.",
+  "passportAreas.open": "Bereiche ändern",
+  "passportAreas.openNamed": "Bereiche für {name} ändern",
+  "passportAreas.for":
+    "Für {name}. Seine Berechtigungen bleiben, wie sie sind.",
+  "passportAreas.gains": "Er arbeitet dann auch in: {areas}.",
+  "passportAreas.loses":
+    "Er arbeitet dann nicht mehr in: {areas}. Sein nächster Aufruf dort wird abgelehnt.",
+  "passportAreas.unchanged": "Ändere zuerst einen Bereich.",
+  "passportAreas.closesLater":
+    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben für ihn deaktiviert.",
+  "passportAreas.refusalTitle":
+    "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
+  "passportAreas.refusal":
+    "Dieser Passport darf im Bereich „{area}“ nicht arbeiten. Lass diesen Bereich für diesen Passport in Einstellungen → KI-Zugang aktivieren.",
+  "passportAreas.cancel": "Abbrechen",
+  "passportAreas.save": "Bereiche speichern",
+  "passportAreas.saving": "Bereiche werden gespeichert…",
+  "passportAreas.failed": "Bereiche nicht geändert",
+  "settings.passportColAreas": "Bereiche",
   "passport.select": "Passport",
   "passport.noneOption": "Kein Passport",
   "settings.passportUseAi": "In einem Skript oder einem anderen KI-Tool",
@@ -17024,8 +17069,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
     "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
-  "consent.scopeNote.enrich":
-    "verbraucht Anreicherungs-Credits, fragt aber vor jedem Kauf weiterhin nach",
+  "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Zugang trennen.",
   "consent.preset.label": "Assistentenrechte",

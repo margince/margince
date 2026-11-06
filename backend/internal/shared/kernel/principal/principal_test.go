@@ -80,3 +80,13 @@ func TestHumanOrItsAgentAdmitsOnlyAHumanAndAnAgentActingForOne(t *testing.T) {
 		})
 	}
 }
+
+func TestTheZeroWorkAreasAdmitEveryAreaAndALimitedSetOnlyItsOwn(t *testing.T) {
+	if !(WorkAreas{}).Includes("an_area_added_later") {
+		t.Fatal("a passport set to all areas must admit an area added later")
+	}
+	limited := WorkAreas{Limited: true, Chosen: []string{"business"}}
+	if !limited.Includes("business") || limited.Includes("an_area_added_later") {
+		t.Fatal("a limited passport must admit only the areas it chose")
+	}
+}

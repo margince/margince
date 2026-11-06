@@ -149,7 +149,7 @@ paths:
         Other pages accept up to 1000 records, but activation also limits the encoded selection to 256 KiB.
         The application reviews 25 records per page.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
       requestBody:
@@ -704,7 +704,7 @@ paths:
         written to a contact: every card that is not an exact match goes to the approval queue
         as a `vcard_create` approval that only the importing member can see and decide.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
       requestBody:
@@ -1029,7 +1029,7 @@ paths:
         The explicit refresh behind the brief card's "outdated — refresh". It reads and writes
         only the cached brief: no record field changes, and nothing is sent.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -1170,7 +1170,7 @@ paths:
         its own lawful basis, and the company-site crawl machinery deliberately does not
         extend here.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
       responses:
@@ -1290,7 +1290,7 @@ paths:
         `POST /companies/{id}/intro-request-draft` — which writes the internal ask
         TO the colleague, and says so in its own prompt.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -1671,7 +1671,7 @@ paths:
         submission. This operation does not re-tier the agent `enrich` verb. An agent
         reaches it through `run_research`, on the enrich scope, and asks its user first.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
       parameters:
@@ -2244,7 +2244,7 @@ paths:
         Philipp. What it could not do is help them ask her, and the asking is where
         the route stops being a fact and becomes a move.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -2485,7 +2485,7 @@ paths:
         for the reader who wants a rebuild anyway — after correcting a claim, or after a
         fresh site read.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -2565,7 +2565,7 @@ paths:
         sees it now — a fingerprint over the composite read, the recent message words, the
         prompt and the routing — against the stored scan, and answers in one of three ways:
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
       requestBody:
@@ -2618,7 +2618,7 @@ paths:
         a refresh the AI budget refuses returns the cached assembly with its age rather
         than an error.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -2669,7 +2669,7 @@ paths:
         The explicit refresh behind the brief card's "outdated — refresh". It reads and
         writes only the cached brief: no record field changes, and nothing is sent.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -2767,7 +2767,7 @@ paths:
         that quietly answers from a subset would read exactly like one that searched
         everything.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -2923,7 +2923,7 @@ paths:
         accepts via /approvals — on accept it fills only the company's EMPTY fields, never overwriting a
         human-set value. A blocked or thin page degrades to 422, zero fabricated fields.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Waits for a human to approve.
 
@@ -2976,7 +2976,7 @@ paths:
         while a read is in flight answers the SAME read (idempotent per company+url). Budget-guarded: the
         crawl stops early and reports `partial` when the model lane demotes to queue-or-local.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Waits for a human to approve.
       requestBody:
@@ -3016,7 +3016,7 @@ paths:
         and one polite fingerprint fetch of the company's own homepage through the same
         robots-respecting reader the site read uses — no second crawler.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Waits for a human to approve.
       responses:
@@ -4968,7 +4968,7 @@ paths:
       description: |-
         The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -4995,7 +4995,7 @@ paths:
       description: |-
         A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without a model it answers 409 `ai_not_configured`.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -10104,7 +10104,7 @@ paths:
         editable clauses. Nothing is saved: the reader looks at the proposal, sees the match
         count the preview answers for it, and saves it themselves.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -12745,7 +12745,7 @@ paths:
         for entities already done. One live reindex fleet-wide at a time (`409 reindex_running`);
         admin/ops only (the `embedding_reindex` RBAC object's `update` grant).
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
       requestBody:
@@ -13504,7 +13504,7 @@ paths:
         present in the dossier. The response carries the cumulative, price-on-read AI runtime for
         this read so model identity and estimated provider spend stay visible in context.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -14395,7 +14395,7 @@ paths:
         no-op); a smaller window is refused (`409 window_narrowing`). One live run per connection
         (`409 backfill_running`). This op commands the job; it never ingests.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
       requestBody:
@@ -19307,7 +19307,7 @@ paths:
       description: |-
         Queue a durable build over the current included corpus.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
   /voice-profiles/{id}/builds/{buildId}:
@@ -20895,7 +20895,7 @@ paths:
         regenerate (no AI context available) still works and returns `ai_generated=false`. The
         produced draft's terms are not frozen until the send gate.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -21256,7 +21256,7 @@ paths:
         called. It exists for the morning the night could not cover — a rep activated today, a
         worker that was down — and for a reader who asks for it now rather than waiting.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -23189,7 +23189,7 @@ paths:
         has none — and a committee with no champion recorded looks exactly like a
         committee with no champion.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 
@@ -25092,7 +25092,7 @@ paths:
         is the bound: "everything" here is one finite corpus, so the retrieval can prove
         what it did not find.
 
-        Needs the passport permission Buy contact data.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
 

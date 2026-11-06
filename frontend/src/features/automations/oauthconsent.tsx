@@ -6,6 +6,13 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
+  ALL_AREAS,
+  areasComplete,
+  areasFormValue,
+  type PassportAreas,
+  WorkAreasChoice,
+} from "../../components/workareas";
+import {
   Button,
   Card,
   Checkbox,
@@ -190,6 +197,9 @@ function ConsentSelector({
     () => new Set(data.scopes),
   );
   const scopeList = data.scopes.filter((scope) => granted.has(scope)).join(" ");
+  // Every grant starts at all areas; the section hides itself when the role
+  // reaches one area, and the form then posts `all`.
+  const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
 
   return (
     <Card>
@@ -226,13 +236,23 @@ function ConsentSelector({
           />
         ))}
       </div>
+      <WorkAreasChoice
+        reachable={data.areas}
+        value={areas}
+        onChange={setAreas}
+      />
       <p className="t-caption">{t("consent.ceiling")}</p>
       {data.offline && <p>{t("consent.offline")}</p>}
       <div className="oauthconsent-verbs">
         <form method="post" action="/oauth/authorize">
           <HiddenAuthorizeFields params={params} consent={consent} />
           <input type="hidden" name="scopes" value={scopeList} />
-          <Button type="submit" variant="primary" disabled={granted.size === 0}>
+          <input type="hidden" name="areas" value={areasFormValue(areas)} />
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={granted.size === 0 || !areasComplete(areas)}
+          >
             {t("consent.approve")}
           </Button>
         </form>
@@ -242,6 +262,7 @@ function ConsentSelector({
           <Button type="submit">{t("consent.deny")}</Button>
         </form>
         {granted.size === 0 && <p>{t("consent.pickOne")}</p>}
+        {!areasComplete(areas) && <p>{t("workArea.pickOne")}</p>}
       </div>
     </Card>
   );
