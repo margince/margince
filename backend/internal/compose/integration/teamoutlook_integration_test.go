@@ -61,10 +61,9 @@ func oneTeamHorizon() []weekly.Outlook {
 		PeriodEnd:      time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC),
 		BaseCurrency:   "EUR",
 		WonMinor:       180_000_00,
-		CommitMinor:    120_000_00,
-		BestCaseMinor:  390_000_00,
+		LikelyMinor:    120_000_00,
 		WeightedMinor:  260_000_00,
-		ForwardMeasure: "commit_evidence",
+		ForwardMeasure: "likely",
 		Closing: weekly.OutlookSide{
 			Known: true, SnapshotID: ids.NewV7(), LandingMinor: 300_000_00,
 		},

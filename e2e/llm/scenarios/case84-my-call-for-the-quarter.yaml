@@ -1,0 +1,29 @@
+# CASE 84 — A forecast call is written through change_reports. Reading the forecast is its neighbour, and a read alone records nothing.
+name: case84_my_call_for_the_quarter
+criteria: [1]
+writes: true
+
+prompt: |
+  Record my forecast call for this quarter: 450,000 EUR.
+
+must_call:
+  - change_reports
+
+must_call_with:
+  - change_reports.action=record_forecast_call
+
+must_call_matching:
+  - record_forecast_call~"amount_minor": 45000000\b
+  - record_forecast_call~"currency": "EUR"
+
+must_not_call_with:
+  - update_record~.
+  - log_activity~.
+
+may_call:
+  - read_forecast
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

@@ -7,7 +7,12 @@ import {
   type AcquisitionSource,
   acquisitionFilterOptions,
 } from "../../../lib/acquisitionsources.queries";
+import { WIN_PROBABILITY_DIAL } from "../../../lib/dealranges";
 import type { LinkType } from "../../../lib/recordlinks.queries";
+import {
+  bandDialValue,
+  WIN_PROBABILITY_BANDS,
+} from "../../../lib/winprobabilitybands";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 
 // The surface's own narrowing chips, beside the stage and company ones
@@ -61,23 +66,16 @@ export function dealSurfaceChips({
       allLabel: "deals.filterPartnerAll",
       options: [{ value: "true", label: "deals.filterPartnerSourced" }],
     },
-    // The forecast's own buckets, in the order the tiles read them. Four, not
-    // five: `slipped` is derived by the report from a claimed category and a
-    // close date, so there is no column to filter on and a chip offering it
-    // would narrow to nothing.
-    //
-    // Unconditional: the vocabulary is the schema's, so
-    // there is no moment when the options are not yet known.
+    // The probability bands the forecast tiles read, each one a range. A range
+    // typed into the address by hand still narrows; it has no option here.
     {
-      key: "forecast_category",
-      label: "deals.filterForecast",
-      allLabel: "deals.filterForecastAll",
-      options: [
-        { value: "commit", label: "deal.fcCommit" },
-        { value: "best_case", label: "deal.fcBestCase" },
-        { value: "pipeline", label: "deal.fcPipeline" },
-        { value: "omitted", label: "deal.fcOmitted" },
-      ],
+      key: WIN_PROBABILITY_DIAL,
+      label: "deals.filterProbability",
+      allLabel: "deals.filterProbabilityAll",
+      options: WIN_PROBABILITY_BANDS.map((band) => ({
+        value: bandDialValue(band),
+        label: band.label,
+      })),
     },
     {
       key: "commercial_motion",

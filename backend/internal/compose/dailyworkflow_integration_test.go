@@ -167,7 +167,7 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 		messageID: ids.NewV7().String() + "@customer.example",
 	}
 	message := o.capture(t, mail)
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), message, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
@@ -376,7 +376,7 @@ func TestArchivingTheSourceTakesItsDerivedWorkAway(t *testing.T) {
 		body: "Please send the proposal for our integration project.", at: o.now.Add(-time.Hour),
 		messageID: ids.NewV7().String() + "@customer.example",
 	})
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), message, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
@@ -416,7 +416,7 @@ func TestCorrectedSourceContentLeavesOneRowOfWork(t *testing.T) {
 		from: "buyer@customer.example", to: o.seat, subject: "Proposal for the integration project",
 		body: "Please send the proposal.", at: sent, messageID: id,
 	})
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), first, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), first, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})

@@ -399,7 +399,7 @@ func TestReopeningADealReconsidersActivitiesAClosedDealCouldNotTake(t *testing.T
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
-	store := e.Deals.WithClock(func() time.Time { return f.o.now })
+	store := e.Deals.SetClock(func() time.Time { return f.o.now })
 	deal := ids.From[ids.DealKind](f.deal)
 	if _, err := store.AdvanceDeal(e.Admin(), deal, deals.AdvanceDealInput{ToStageID: f.closed, WonWithoutContractReason: new("verbal")}); err != nil {
 		t.Fatal(err)

@@ -306,3 +306,12 @@
     transform: none;
   }
 }
+
+/* The detail under the question spans the whole question in every layout. */
+.choicelist-row > .choicelist-detail,
+.choicelist-tiles > .choicelist-detail {
+  flex-basis: 100%;
+}
+.choicelist-cards > .choicelist-detail {
+  grid-column: 1 / -1;
+}

@@ -5,7 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import {
   bookingConnection,
@@ -76,7 +76,7 @@ function mount(hostSlug?: string) {
 }
 // The guest page lists the chosen day's times by their time alone; the day is
 // the calendar's, and the first day with a free time is chosen for the guest.
-const slotName = (index: number, zone = viewerZone()) =>
+const slotName = (index: number, zone = browserZone()) =>
   formatTimeOfDay(bookingSlots[index].start, "en", zone);
 const CONFIRM = /^Confirm \d/;
 // The month on show is the one the guest opens the page in, so the clock is

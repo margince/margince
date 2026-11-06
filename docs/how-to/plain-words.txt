@@ -667,7 +667,6 @@ made
 mail
 mailbox
 main
-maintainer
 make
 manifest
 many
@@ -1126,7 +1125,6 @@ sort
 source
 sovereign
 space
-specification
 spend
 spine
 split

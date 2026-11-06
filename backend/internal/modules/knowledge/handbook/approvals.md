@@ -129,7 +129,7 @@ Also called: request ownership, take over an account, ask for a contact, ownersh
 To give a contact or company you own to a colleague, open the record and press the access chip under its name. Press **Hand over to…**, choose the colleague, add a note if you like, and press **Send offer**.
 The offer waits as an approval on the colleague's **Worklist** for 7 days. Only that colleague can answer it, and their agent can decline it but not accept it.
 
-You can offer it to any active colleague on a seat that can edit records, even one outside your own team. The colleague's agreement takes the place of the limit an owner change has. If they accept, the record moves to them, with the same open deals and tasks a request moves.
+You can offer it to any active colleague on a seat that can edit records, even one outside your own team. If they accept, the record moves to them, with the same open deals and tasks a request moves. To move it without asking, change the owner on the record instead, which needs edit rights on it.
 
 A notice tells you when the colleague accepts or declines and when the offer runs out. Until then the panel says who it is offered to; press **Withdraw offer** to take it back. A record has one handover open at a time. While a colleague's request or your offer is open, a second one is refused with a line naming the open one.
 
@@ -217,8 +217,9 @@ raises it.
 Automatic changes are the exception to everything below: some proposals do not
 wait.
 
-Three kinds of change can apply on their own, without an approval being
-decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
+Four kinds of change can apply on their own, with no approval. They are
+**Close dates**, **Close silent deals as lost**, **Company names** and
+**Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
@@ -357,8 +358,11 @@ yourself.
 5. Open **History** and find the meeting. Margince queues a reading when you
    log a transcript. If no reading is running or done, click **Read
    transcript** to ask for one.
-6. Wait for **Done**. It reports what it found: "{count} next steps awaiting
-   review", or "Transcript read in full. No next steps found."
+6. Wait for **Done**. It reports what it found, in your language:
+   - A task it wrote names who has it, you or a colleague.
+   - You decide the "{count} next steps awaiting review" yourself.
+   - "Sent to {name} to confirm" waits in that colleague's Worklist, not yours.
+   - A reading that found nothing says "Transcript read in full. No next steps found."
 7. Go to **Home → Worklist** and set **Work type** to **Approvals**.
    A full queue can hide a new proposal, so look for the subject you chose in step 3.
 8. Choose **Decide** and open the evidence. It shows the transcript lines the

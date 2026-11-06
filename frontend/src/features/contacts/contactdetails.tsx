@@ -34,12 +34,13 @@ import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
+import { EmployerValue } from "./employerchange";
 import { type ProfileField, proposedEmployer } from "./employerproposal";
 import { ProposedEmployerRow } from "./employerproposalrow";
 import { currentEmployer } from "./employmentcurrency";
@@ -51,7 +52,7 @@ type Employment = components["schemas"]["Contact360Employment"];
 /**
  * The left column's About and Ownership groups. Every field the design
  * lists has a row; an empty one folds behind "Show N empty fields" with the
- * word for its empty state. The rows read; the Research tab's details change them.
+ * word for its empty state.
  */
 export function useContactAboutSections(view: Contact360): DetailSection[] {
   const t = useT();
@@ -78,7 +79,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   const record = { entityType: "contact", entityId: contact.id } as const;
-  // Every row but the employer changes in place; an empty one still folds.
+  // Every row opens its edit from its value; an empty one still folds.
   // A handle (an address or number with its marks and glyphs) lays them out.
   const field = (
     key: string,
@@ -214,9 +215,15 @@ function employerValue(
   proposed: ProfileField | undefined,
   notSet: string,
 ): ReactNode {
-  if (employer) return <EmployerCard employment={employer} />;
   if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
-  return notSet;
+  return (
+    <EmployerValue
+      view={view}
+      employer={employer}
+      reading={employer && <EmployerCard employment={employer} />}
+      notSet={notSet}
+    />
+  );
 }
 
 /**
@@ -254,9 +261,9 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
 }
 
 /**
- * Every field of the contact, each editing in place, with its tags, when it
- * was created and who wrote it. The Research tab draws it: the left column
- * reads the same fields, and this is where they change.
+ * Every field of the contact, each editing from its value, with its tags, when it
+ * was created and who wrote it. The Research tab draws it; the left column edits
+ * its own rows the same way.
  */
 export function ContactDetails({
   contact,
@@ -267,7 +274,7 @@ export function ContactDetails({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const edit = useContactEdit(contact);
   const bought = boughtFields(contact);
   const linkedin =

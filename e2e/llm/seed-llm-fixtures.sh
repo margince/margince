@@ -893,15 +893,13 @@ if [[ -z "$henning" ]]; then
 fi
 
 # Mid-morning on two of next week's days, so an honest answer has to work around
-# something. 201 or 409 — 409 is a re-run finding its own block already held —
-# and anything else is a seed reporting a full calendar it never wrote.
+# something. A booked meeting holds the slot with no calendar connected, which is
+# how this stack runs: POST /bookings now needs a real calendar to invite on.
 book_block() {
-  local subject="$1" days="$2" hour="$3" body code
-  body="$(printf '{"start":"%sT%02d:00:00Z","end":"%sT%02d:00:00Z","subject":"%s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
-    "$(days_ahead "$days")" "$hour" "$(days_ahead "$days")" "$((hour + 2))" "$subject" "$henning")"
-  code="$(status_of POST /bookings "$body")"
-  [[ "$code" = "201" || "$code" = "409" ]] || {
-    echo "booking \"$subject\" answered HTTP $code" >&2; exit 1; }
+  local subject="$1" days="$2" hour="$3" body
+  body="$(printf '{"kind":"meeting","meeting_status":"booked","host_user_id":"%s","occurred_at":"%sT%02d:00:00Z","duration_seconds":7200,"subject":"%s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+    "$me" "$(days_ahead "$days")" "$hour" "$subject" "$henning")"
+  create_or_die "/activities" "$body" "the booked block \"$subject\"" >/dev/null
 }
 # The first two days of the COMING week, whichever day the lane runs on. `date
 # +%u` numbers Monday 1 through Sunday 7, so 8 minus today lands on the next
@@ -1049,7 +1047,7 @@ ines="$(lead_id_by_email "Ines Waldner" "ines.waldner@stahlbau-waldner.test")"
 if [[ -z "$ines" ]]; then
   body="$(printf '{"full_name":"Ines Waldner","email":"ines.waldner@stahlbau-waldner.test","title":"Einkaufsleiterin","company_name":"Stahlbau Waldner","status":"engaged","source":"webform","owner_id":"%s"}' "$me")"
   ines="$(create_or_die "/leads" "$body" "the engaged lead")"
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Angebot Fassadenanker","body":"Ja, gerne — passt Donnerstag für ein Gespräch?","links":[{"entity_type":"lead","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Angebot Fassadenanker","body":"Ja, gerne — passt Donnerstag für ein Gespräch?","participants":{"from":"ines.waldner@stahlbau-waldner.test"},"links":[{"entity_type":"lead","entity_id":"%s"}]}' \
     "$(days_ago 6)" "$ines")"
   create_or_die "/activities" "$body" "the reply that justifies promotion" >/dev/null
 fi

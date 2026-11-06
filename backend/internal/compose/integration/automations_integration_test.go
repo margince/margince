@@ -182,9 +182,9 @@ func createPausedAutomation(t *testing.T, e *apptest.AppEnv) string {
 	return created.ID
 }
 
-// An agent passport cannot touch automation config: standing automation
-// authority stays human (the ADR-0055 human-only class).
-func TestAutomationConfigRejectsAgents(t *testing.T) {
+// An automation an agent sets up starts paused, so nothing runs until it is
+// enabled, and its tool says to ask before that. A read-only passport sets up none.
+func TestAnAgentsAutomationStartsPaused(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -198,10 +198,27 @@ func TestAutomationConfigRejectsAgents(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
+	var created struct {
+		Status string `json:"status"`
+	}
 	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
 		"key": "assign_lead_owner", "name": "Agent-made", "params": AnyMap{},
-	}, bearer, nil); status != http.StatusForbidden {
-		t.Fatalf("agent create automation → %d, want 403", status)
+	}, bearer, &created); status != http.StatusCreated || created.Status != "paused" {
+		t.Fatalf("agent create automation → %d %+v, want a paused automation", status, created)
+	}
+
+	var readOnly struct {
+		Token string `json:"token"`
+	}
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
+		"label": "automation reader", "scopes": []string{"read"},
+	}, nil, &readOnly); status != http.StatusCreated {
+		t.Fatalf("mint → %d", status)
+	}
+	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
+		"key": "assign_lead_owner", "name": "Reader-made", "params": AnyMap{},
+	}, map[string]string{"Authorization": "Bearer " + readOnly.Token}, nil); status != http.StatusForbidden {
+		t.Fatalf("read-only create automation → %d, want 403", status)
 	}
 }
 

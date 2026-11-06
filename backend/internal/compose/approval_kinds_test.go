@@ -14,7 +14,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -95,10 +94,6 @@ func (stubComms) CanSendOnProvider(p string) bool { return activities.CanSendOnP
 
 func (stubComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, int) (agents.AvailabilityResult, error) {
 	return agents.AvailabilityResult{}, nil
-}
-
-func (stubComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, nil
 }
 
 // stubSoR satisfies the record reader the 🟡 comms verbs stage against. This

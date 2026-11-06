@@ -8,8 +8,7 @@ package compose
 // delete retained data, and queue or read a contact's enrichment run.
 //
 // Thin transport. The integrations store owns every RBAC gate and every write;
-// what happens here is decoding, mapping and the human-only check the contract
-// declares.
+// what happens here is decoding, mapping and who may act on a provider.
 
 import (
 	"context"
@@ -126,7 +125,7 @@ func (h integrationsHandlers) DisconnectProvider(w http.ResponseWriter, r *http.
 		httperr.NotImplemented(w, r, "DisconnectProvider")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -158,7 +157,7 @@ func (h integrationsHandlers) CreateContactEnrichmentRun(w http.ResponseWriter, 
 		httperr.NotImplemented(w, r, "CreateContactEnrichmentRun")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -191,8 +190,8 @@ func (h integrationsHandlers) CreateContactEnrichmentRun(w http.ResponseWriter, 
 		// named, it is how a reader purchases a single priced detail without
 		// changing what every future run spends.
 		Categories: requestedCategories(body.Categories),
-		// A contact asking explicitly. Never fenced by the duplicate or
-		// freshness checks — they know something the timestamps do not.
+		// A user asking explicitly is not fenced by the duplicate or freshness
+		// checks: they know something the timestamps do not. An agent's run is.
 		Trigger: provider.TriggerManual,
 	})
 	if err != nil {
@@ -234,6 +233,18 @@ func requestedCategories(in *[]string) []provider.Category {
 func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, provider.ErrNotConnected) {
 		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if errors.Is(err, integrations.ErrAgentNeedsDailyLimit) || errors.Is(err, integrations.ErrConnectionNotHealthyForAgent) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "provider_not_open_to_agent",
+			Detail: strings.TrimPrefix(err.Error(), "integrations: "),
+		})
+		return
+	}
+	if errors.Is(err, integrations.ErrNothingFreeToBuy) {
+		httperr.Write(w, r, httperr.Validation("categories", "name_what_to_buy",
+			"nothing this connection buys is free; ask the user, then name the category to buy"))
 		return
 	}
 	if errors.Is(err, integrations.ErrCategoryNotPermitted) {

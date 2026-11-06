@@ -92,14 +92,15 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 func wireUser(u userRow) crmcontracts.User {
 	created := u.CreatedAt
 	return crmcontracts.User{
-		Id:          openapi_types.UUID(u.ID),
-		Email:       openapi_types.Email(u.Email),
-		DisplayName: u.DisplayName,
-		Status:      crmcontracts.UserStatus(u.Status),
-		IsAgent:     u.IsAgent,
-		Assignable:  u.Assignable,
-		CreatedAt:   &created,
-		UpdatedAt:   &u.UpdatedAt,
+		Id:            openapi_types.UUID(u.ID),
+		Email:         openapi_types.Email(u.Email),
+		DisplayName:   u.DisplayName,
+		Status:        crmcontracts.UserStatus(u.Status),
+		IsAgent:       u.IsAgent,
+		Assignable:    u.Assignable,
+		CanOwnRecords: u.CanOwnRecords,
+		CreatedAt:     &created,
+		UpdatedAt:     &u.UpdatedAt,
 	}
 }
 
@@ -140,6 +141,11 @@ func wireUserWithRoles(u userRow) crmcontracts.User {
 	}
 	wire.LastActiveAt = u.LastActiveAt
 	wire.ServiceExtension = u.ServiceExtension
+	wire.ConnectedMailboxes = u.ConnectedMailboxes
+	if u.InviteMailState != nil {
+		state := crmcontracts.UserInviteEmailState(*u.InviteMailState)
+		wire.InviteEmailState = &state
+	}
 	if u.MergedFrom != nil {
 		wire.MergedFrom = &u.MergedFrom
 	}
@@ -166,6 +172,9 @@ func (h Handlers) wireMemberActions(actions []memberAction) []crmcontracts.UserA
 	out := make([]crmcontracts.UserAllowedActions, 0, len(actions))
 	for _, action := range actions {
 		if action == actionIssuePasswordLink && h.passwordLinkRefusal() != nil {
+			continue
+		}
+		if action == actionResendInvite && !h.canSendPasswordLink() {
 			continue
 		}
 		out = append(out, crmcontracts.UserAllowedActions(action))

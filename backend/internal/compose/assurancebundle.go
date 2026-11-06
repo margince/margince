@@ -34,9 +34,12 @@ package compose
 // accumulated are archived as the sweep meets them.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -71,6 +74,10 @@ type bundleDeps struct {
 // so failing the job here would leave River retrying a pass whose real output
 // already landed, and the retry would re-scan and re-mint. What a failure costs
 // instead is one deal's task, which the next night's cycle mints again.
+//
+// A review is delivered by its own job (jobs_assurancereview.go). This pass
+// only files under a delivered review's task, and completes the review tasks
+// that have nothing left open.
 func bundleRunFindings(
 	ctx context.Context, deps bundleDeps, runID ids.UUID,
 ) (minted int, err error) {
@@ -111,10 +118,9 @@ func bundleRunFindings(
 	// whole list has been walked. Minting on first sight would title every task
 	// "1 finding" and then bundle three more onto it.
 	//
-	// ONE SUBJECT'S FAILURE IS NOT THE NIGHT'S. The list is ordered by severity
-	// and then by money at stake, so aborting on the first error would suppress
-	// every task below it — a single deal whose owner has left the company would
-	// silently cost the whole workspace its remaining tasks. Each failure is
+	// One subject's failure is not the night's. Aborting on the first error
+	// would suppress every task after it. A single deal whose owner has left
+	// would cost the whole workspace its remaining tasks, so each failure is
 	// carried and the walk continues.
 	var failed []error
 	for _, subject := range groupBySubject(open) {
@@ -126,6 +132,9 @@ func bundleRunFindings(
 		if wasMinted {
 			minted++
 		}
+	}
+	if err := settleReviewTasks(ctx, deps); err != nil {
+		failed = append(failed, err)
 	}
 	if len(failed) > 0 {
 		return minted, errors.Join(failed...)
@@ -166,9 +175,10 @@ func bundleableFindings(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
 ) ([]assurance.Exception, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT `+exceptionSelect(rawFindingMoney)+`
+		SELECT `+exceptionSelect(rawFindingMoney)+`, d.name, d.owner_id
 		  FROM assurance_exception e
 		  JOIN assurance_run_finding f ON f.exception_id = e.id AND f.run_id = $1
+		  JOIN deal d ON d.id = e.subject_id
 		  `+findingPricedJoin(rawFindingMoney.affected)+`
 		 WHERE e.status = 'open'
 		   AND e.subject_kind = 'deal'
@@ -182,10 +192,11 @@ func bundleableFindings(
 	}
 	defer rows.Close()
 
-	// scanException, shared with AssuranceExceptions: one select list, one
-	// scanner. Two copies of a positional scan drift into reading a currency
-	// into a status, and nothing fails loudly when they do.
-	return pgx.CollectRows(rows, scanException)
+	// The labelled scanner AssuranceExceptions uses, so the owner is the deal's
+	// live owner there and here. The finding's own owner_id is the scan's
+	// snapshot, and a deal handed over since would send its task to the former
+	// owner.
+	return pgx.CollectRows(rows, scanLabelledException)
 }
 
 // cycleScopeForRun names the cycle a run's findings bundle into.
@@ -206,14 +217,14 @@ type subjectFindings struct {
 	findings []assurance.Exception
 }
 
-// groupBySubject collects the findings per subject, KEEPING the read's order.
+// groupBySubject collects the findings per subject. Within a subject it keeps
+// the read's order, severity and then amount, so the most material finding
+// leads its bundle. The subjects themselves come in id order.
 //
-// A map alone would not: ranging one is randomised, so the task minted for a
-// subject would take a different finding's owner from night to night, and the
-// order findings bundle in would vary for no reason a reader could see. The
-// order matters because the first finding is the one whose owner becomes the
-// assignee, and the read already sorted by severity and amount — so the owner
-// carried is the one on the most material finding.
+// The subjects are not left in the read's order because tasks are minted in
+// the order this returns, and activity ids sort by creation. Minting the bigger
+// deal's task first would tell a reader masked from amounts which deal is
+// bigger.
 func groupBySubject(open []assurance.Exception) []subjectFindings {
 	var out []subjectFindings
 	at := map[string]int{}
@@ -227,6 +238,9 @@ func groupBySubject(open []assurance.Exception) []subjectFindings {
 		}
 		out[index].findings = append(out[index].findings, exception)
 	}
+	slices.SortFunc(out, func(a, b subjectFindings) int {
+		return cmp.Or(strings.Compare(a.kind, b.kind), strings.Compare(a.id.String(), b.id.String()))
+	})
 	return out
 }
 
@@ -236,7 +250,11 @@ func bundleSubject(
 	ctx context.Context, deps bundleDeps, runID, cycle ids.UUID, subject subjectFindings,
 ) (bool, error) {
 	if review, ok := reviewFinding(subject); ok {
-		return bundleReview(ctx, deps, cycle, subject, review)
+		episode, err := readEpisodeTask(ctx, deps, review.ID)
+		if err != nil {
+			return false, err
+		}
+		return false, fileUnderDeliveredReview(ctx, deps, cycle, subject, review, episode)
 	}
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {

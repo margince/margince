@@ -178,11 +178,9 @@ func (s *Service) ArchiveServiceMember(ctx context.Context, actor Identity, memb
 	})
 }
 
-// requireInstallationAdmin holds the literal-admin line. The user_admin grant
-// is delegable, and a delegated holder must not mint an identity that acts
-// without anyone present. Human-only for the same reason: the contract's
-// `x-agent-access: human-only` declares it and the generated wrapper enforces
-// nothing.
+// requireInstallationAdmin holds the literal-admin line for a service member. The
+// user_admin grant is delegable, and a delegated holder must not mint or retire an
+// identity that acts without anyone present. No agent may either, for the same reason.
 func requireInstallationAdmin(ctx context.Context, actor Identity) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err

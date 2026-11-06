@@ -255,7 +255,7 @@ func TestTheThreeThingsV1AdmitsValidate(t *testing.T) {
 		"target":"deal",
 		"where":[{"field":"status","op":"eq","value":"open"},
 		         {"field":"amount_minor","op":"gte","value":100000},
-		         {"field":"forecast_category","op":"in","values":["commit","best_case"]}],
+		         {"field":"status","op":"in","values":["open","won"]}],
 		"similar_to":"manufacturers who churned after a pilot",
 		"traverse":{"relation":"company","where":[{"field":"address.city","op":"eq","value":"Stuttgart"}]},
 		"limit":25}`)

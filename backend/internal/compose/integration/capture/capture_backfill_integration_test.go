@@ -108,7 +108,7 @@ func TestBackfillLifecycle(t *testing.T) {
 	prov := &pagedConnector{messages: 25, pageSize: 10}
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	now := time.Date(2026, time.March, 31, 12, 0, 0, 0, time.UTC)
-	registry.WithClock(func() time.Time { return now })
+	registry.SetClock(func() time.Time { return now })
 	registry.Register(prov)
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -136,9 +136,9 @@ func TestBackfillLifecycle(t *testing.T) {
 		if msgs.Floor {
 			t.Error("an exactly counted preview was reported as a floor")
 		}
-		registry.WithClock(func() time.Time { return time.Date(2026, time.August, 31, 12, 0, 0, 0, time.UTC) })
+		registry.SetClock(func() time.Time { return time.Date(2026, time.August, 31, 12, 0, 0, 0, time.UTC) })
 		august, err := registry.EstimateBackfill(grantCtx, "gmail", rep, 6)
-		registry.WithClock(func() time.Time { return now })
+		registry.SetClock(func() time.Time { return now })
 		wantAugust := time.Date(2026, time.March, 3, 12, 0, 0, 0, time.UTC)
 		if err != nil || !august.AfterDate.Equal(wantAugust) {
 			t.Fatalf("August month-end preview = %s, want %s; error = %v", august.AfterDate, wantAugust, err)

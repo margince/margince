@@ -23,8 +23,8 @@ const signatureLogoEdge = 300
 // photo-like logo can pass it at 300px, so it is refitted smaller until it fits.
 const signatureLogoMaxBytes = 48 << 10
 
-// signatureLogoEdges are the edges tried in turn. The last one is sent even
-// over the cap, because a smaller logo is no longer legible.
+// signatureLogoEdges are the edges tried in turn. A logo still over the cap
+// at the last one is left out, because a smaller logo is no longer legible.
 var signatureLogoEdges = []int{signatureLogoEdge, 200, 150}
 
 // signatureLogoReadLimit bounds the stored logo read before resizing.
@@ -82,6 +82,12 @@ func (l signatureLogo) SignatureLogo(ctx context.Context, key string) (connector
 		if len(png) <= signatureLogoMaxBytes {
 			break
 		}
+	}
+	// Still over the cap at the smallest legible edge: the logo is left out
+	// and the mail carries the name alone, rather than adding a heavy image to
+	// every message.
+	if len(png) > signatureLogoMaxBytes {
+		return connector.InlineImage{}, false, nil
 	}
 	image := connector.InlineImage{ContentID: connector.SignatureLogoContentID, ContentType: "image/png", Body: png}
 	l.mu.Lock()

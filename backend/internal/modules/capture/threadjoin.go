@@ -224,17 +224,24 @@ func heldNeighbourKeysTx(
 ) ([]string, error) {
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	// A neighbour on another topic is the conversation this reply left, not one to rejoin.
+	// Word overlap is not transitive; one reply must not bridge two different topics.
 	query := fmt.Sprintf(`
+		WITH held_neighbours AS (
+		    SELECT a.thread_key, a.subject
+		      FROM activity a
+		     WHERE a.thread_key IS NOT NULL AND a.thread_key <> ''
+		       AND a.archived_at IS NULL AND a.id = ANY($%d::uuid[])
+		       AND (a.id = ANY($%d::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
+		                    WHERE ci.activity_id = a.id AND ci.user_id = $%d))
+		)
 		SELECT DISTINCT a.thread_key
-		  FROM activity a
+		  FROM held_neighbours a
 		  JOIN activity self ON self.id = $%d
-		 WHERE a.thread_key IS NOT NULL AND a.thread_key <> ''
-		   AND a.archived_at IS NULL
-		   AND a.id = ANY($%d::uuid[])
-		   AND (a.id = ANY($%d::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
-		                WHERE ci.activity_id = a.id AND ci.user_id = $%d))
-		   AND %s`, arg(id), arg(neighbours), arg(sent), arg(seat), sameTopicSQL("a", "self"))
+		 WHERE %s
+		   AND NOT EXISTS (SELECT 1 FROM held_neighbours other
+		       WHERE other.thread_key <> a.thread_key
+		         AND mail_topics_differ(a.subject, other.subject))`,
+		arg(neighbours), arg(sent), arg(seat), arg(id), sameTopicSQL("a", "self"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the threads a reply links: %w", err)

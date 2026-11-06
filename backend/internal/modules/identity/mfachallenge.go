@@ -216,14 +216,21 @@ func spendMFAChallenge(ctx context.Context, tx pgx.Tx, jti string) error {
 // second factor is refused as neutrally as a wrong code: the challenge outlives
 // the standing it was minted under, and must not out-vote it.
 func signedInIdentity(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID) (Identity, error) {
+	id, err := liveMemberIdentity(ctx, tx, wsID, userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Identity{}, errBadMFACode
+	}
+	return id, err
+}
+
+// liveMemberIdentity reads a live member's Identity inside the caller's
+// transaction, answering pgx.ErrNoRows when the member is not live.
+func liveMemberIdentity(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID) (Identity, error) {
 	id := Identity{UserID: userID, WorkspaceID: wsID}
 	err := tx.QueryRow(ctx,
 		`SELECT email, display_name, seat_type FROM app_user
 		  WHERE id = $1 AND `+LiveMemberSQL("")+``,
 		userID).Scan(&id.Email, &id.DisplayName, &id.SeatType)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Identity{}, errBadMFACode
-	}
 	if err != nil {
 		return Identity{}, err
 	}

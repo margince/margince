@@ -4,10 +4,10 @@
 import type { ReactNode } from "react";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
+import { QuietVerbs } from "../../design-system/verbvolume";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import {
   briefContextTitle,
@@ -51,6 +51,7 @@ import {
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PreparationNote } from "./worklist.ready";
 import { rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
@@ -141,10 +142,10 @@ export function WorklistRow({
   RowDensity) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  // A task's deadline is the record's day; everything else on this row is a
-  // moment the reader is racing on their own clock.
-  const recordZone = useRecordZone();
+  const zone = useViewerZone();
+  // The due day is the server's bucket, counted on the company's clock (B1),
+  // so the day comparison and the due-day text read that clock.
+  const companyZone = useCompanyZone();
   // Inside the drawer a row's record links carry the way back to it.
   const listed = useListed();
   const target = rowHref(item);
@@ -164,7 +165,7 @@ export function WorklistRow({
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
-  const when = whenText(item, t, locale, zone, recordZone, new Date());
+  const when = whenText(item, t, locale, zone, companyZone, new Date());
   // The supporting line, which every source sends as a sentence already.
   const sourceDetail = noticeDetail(item, viewer, t);
   const detail = sourceDetail === item.verdict?.line ? undefined : sourceDetail;
@@ -306,26 +307,29 @@ export function WorklistRow({
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work
-            where it has, so the answer keeps one x down the whole queue. */}
-        <RowActs
-          allowPin={allowPin}
-          onOpenEmail={onOpenEmail}
-          item={item}
-          title={title}
-          href={href}
-          owner={owner}
-          primary={answer.primary}
-          equals={answer.equals}
-          onReview={onReview}
-          context={context}
-          framed={framed}
-          titled={titleLinks(emailOpener, href, source.open)}
-        />
-        {/* An answer that is not a VERB: a duplicate pair, whose two buttons
+            where it has, so the answer keeps one x down the whole queue.
+            Outlined in a list; only the card in hand has a filled verb. */}
+        <QuietVerbs quiet={!framed}>
+          <RowActs
+            allowPin={allowPin}
+            onOpenEmail={onOpenEmail}
+            item={item}
+            title={title}
+            href={href}
+            owner={owner}
+            primary={answer.primary}
+            equals={answer.equals}
+            onReview={onReview}
+            context={context}
+            framed={framed}
+            titled={titleLinks(emailOpener, href, source.open)}
+          />
+          {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
             it. It stays a block under the row, where it has the width to show
             both sides. */}
-        {answer.below}
+          {answer.below}
+        </QuietVerbs>
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>

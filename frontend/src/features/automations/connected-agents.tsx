@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { components } from "../../api/schema";
 import {
   Badge,
   Button,
@@ -14,44 +13,26 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
 import "./connected-agents.css";
 import "../settings/settings-agents.css";
 import { usePassportRevoke } from "../../components/passport-revoke";
-import { usePassports } from "../../lib/passports.queries";
+import {
+  type ConnectionState,
+  connectionStateOf,
+  type PassportSummary,
+  usePassports,
+} from "../../lib/passports.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
 
 // GET /passports lists a connected client's credential beside the minted
 // passports; `connection` tells them apart, never the `oauth:` label prefix.
 
-type PassportSummary = components["schemas"]["PassportSummary"];
 type Connection = PassportSummary & {
   connection: NonNullable<PassportSummary["connection"]>;
 };
-
-// A connection ends when revoked, or when its credential runs out and its grant
-// cannot renew. A renewable one past its expiry is only between credentials.
-type ConnectionState = Readonly<{
-  revoked: boolean;
-  renewing: boolean;
-  lapsed: boolean;
-  ended: boolean;
-}>;
-
-function connectionStateOf(passport: Connection, now: number): ConnectionState {
-  const revoked = passport.revoked_at != null;
-  const expired =
-    !revoked &&
-    passport.expires_at != null &&
-    Date.parse(passport.expires_at) <= now;
-  // Renewing, not ended: the client repairs this itself on its next call.
-  const renewing = expired && passport.connection.renewable;
-  const lapsed = expired && !passport.connection.renewable;
-  return { revoked, renewing, lapsed, ended: revoked || lapsed };
-}
 
 type Translate = ReturnType<typeof useT>;
 
@@ -143,18 +124,18 @@ const EXPIRES: MessageKey = "settings.passportExpiresOn";
 // connected_at is a record date; the expiry is the holder's own deadline. A
 // renewing or revoked row shows no expiry: its badge carries the state.
 function useConnectionDates() {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const connected = (connection: Connection) =>
-    formatDate(connection.connection.connected_at, locale, recordZone);
+    formatDate(connection.connection.connected_at, locale, readerZone);
   // A renewable connection outlives its credential, so its date is when the
   // client must next renew, never when it stops working.
   const deadline = (connection: Connection, state: ConnectionState) => {
     if (connection.expires_at == null || state.revoked || state.renewing) {
       return null;
     }
-    const date = formatDate(connection.expires_at, locale, viewerZone());
+    const date = formatDate(connection.expires_at, locale, readerZone);
     if (state.lapsed) {
       return { date, phrase: EXPIRED };
     }
