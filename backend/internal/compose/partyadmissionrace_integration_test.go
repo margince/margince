@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -63,6 +65,58 @@ func TestConcurrentPartyAdmissionsKeepTheSharedFilingLimit(t *testing.T) {
 	}
 	if e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1`, ref.ID) > 25 {
 		t.Fatal("concurrent admission exceeded the filing limit")
+	}
+}
+
+func TestAnAdmissionTakesTheSeatBeforeItSharesTheActivity(t *testing.T) {
+	e := integration.Setup(t)
+	sink := newCaptureSink(e.Pool, CaptureConfig{})
+	ref := capturePartiesMailUsing(t, e, sink.WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Buyer <buyer@buyer.test>", "", "Could we discuss the product requirements?")
+	ctx := threadConnectorCtx(e, e.AdminUser)
+
+	ensure, err := e.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := ensure.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	}()
+	var ensurePID int
+	if err := ensure.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&ensurePID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ensure.Exec(ctx, `SELECT 1 FROM app_user WHERE id=$1 FOR UPDATE`, e.AdminUser); err != nil {
+		t.Fatal(err)
+	}
+
+	admitted, returned := make(chan error, 1), make(chan struct{})
+	go func() {
+		defer close(returned)
+		admitted <- sink.AdmitActivityParties(ctx, ids.From[ids.ActivityKind](ref.ID))
+	}()
+	observer := integration.OwnerConn(t)
+	testdb.WaitForContention(t, returned, "the admission finished without reaching the seat", "the admission never waited on the seat",
+		func(ctx context.Context) (bool, error) {
+			if _, err := observer.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+				return false, err
+			}
+			var waiting bool
+			err := observer.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, ensurePID).Scan(&waiting)
+			return waiting, err
+		})
+
+	// The next lock an ensure asks for. Waiting for it would let a retry hide the
+	// cycle. NOWAIT asks whether the admission holds this row while it waits.
+	if _, err := ensure.Exec(ctx, `SELECT 1 FROM activity WHERE id=$1 FOR UPDATE NOWAIT`, ref.ID); err != nil {
+		t.Fatalf("the admission holds the activity while it waits for the seat: %v", err)
+	}
+	if err := ensure.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-admitted; err != nil {
+		t.Fatal(err)
 	}
 }
 
