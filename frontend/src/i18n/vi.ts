@@ -10124,7 +10124,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.action.openDeal": "Mở deal",
   "notifications.action.openLead": "Mở lead",
   "notifications.action.openProject": "Mở dự án",
-  "notifications.action.review": "Xem yêu cầu",
+  "notifications.action.review": "Xem lại yêu cầu",
   "notifications.action.systemHealth": "Mở Tình trạng hệ thống",
   "notifications.markAllFailed": "Không thể đánh dấu các thông báo là đã đọc",
   "notifications.markReadFailed": "Không thể đánh dấu thông báo đó là đã đọc",

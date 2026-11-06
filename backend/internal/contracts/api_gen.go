@@ -52592,7 +52592,9 @@ type NotificationItem struct {
 
 		// Type A record's class, as its own endpoint spells it, or one of two non-record targets:
 		// `approval` (a pending decision, `id` is the approval) and `data_task` (a
-		// background correction run, `id` is its `run_id` in `GET /admin/data-tasks`).
+		// background correction run, `id` is the `run_id` that failed). A client opens the
+		// corrections list rather than that run: a manual re-run replaces the `run_id`, so the
+		// one a notice names may no longer be listed.
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
 }

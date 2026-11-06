@@ -27,11 +27,11 @@ func TestCorrectionFailureNoticeNamesTheTaskAndItsCause(t *testing.T) {
 }
 
 func TestCorrectionFailureNoticeSaysWhenTheCauseIsUnknown(t *testing.T) {
-	subject, body := dataTaskFailureWords(datatask.Progress{TaskID: "core/100_example", Step: "first"})
+	subject, body := dataTaskFailureWords(datatask.Progress{TaskID: "core/100_example", Step: "first", ConsecutiveFailures: 5})
 	if subject != "Background correction stopped: core/100_example" {
 		t.Fatalf("an untitled task is named by its id, got %q", subject)
 	}
-	if !strings.Contains(body, "could not be classified") || !strings.Contains(body, "repeated failures") {
+	if !strings.Contains(body, "could not be classified") || !strings.Contains(body, "5 failed attempts") {
 		t.Fatalf("body=%q", body)
 	}
 }

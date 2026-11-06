@@ -63,12 +63,8 @@ func dataTaskFailureWords(p datatask.Progress) (subject, body string) {
 	if detail, ok := dataTaskFailure(p); ok {
 		reason = "Last failure: " + strings.TrimSuffix(detail.Sentence, ".") + ". " + detail.Remedy
 	}
-	attempts := "repeated failures"
-	if p.ConsecutiveFailures > 1 {
-		attempts = fmt.Sprintf("%d failed attempts in a row", p.ConsecutiveFailures)
-	}
-	body = fmt.Sprintf("It stopped at step %s after %s and will not run again on its own. %s "+
-		"Open System health to retry it once the cause is fixed.", p.Step, attempts, reason)
+	body = fmt.Sprintf("It stopped at step %s after %d failed attempts in a row and will not run again on its own. %s "+
+		"Open System health to retry it once the cause is fixed.", p.Step, p.ConsecutiveFailures, reason)
 	return subject, body
 }
 
