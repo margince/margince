@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"testing"
@@ -135,6 +136,38 @@ func TestASweepStartingBeforeRiverRecordsTheLastLeavesItCompleted(t *testing.T) 
 
 	if got := jobRowState(ctx, t, e.Pool, first); got != "completed" {
 		t.Errorf("the first sweep's row is %s, want completed", got)
+	}
+}
+
+// The row must be finished while the lock is held, or a sweep in the gap reads
+// it as a dead worker's. The write is refused once the lock is free, so a sweep
+// that let go first fails here.
+func TestASweepRecordsItsRowBeforeItLetsGoOfTheLock(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+	w := &embedDriftSweepWorker{
+		pool:     e.Pool,
+		store:    search.NewStore(InstallationDB(e.Pool)),
+		corpora:  knowledge.NewStore(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory()),
+		embedder: &gatedEmbedder{},
+		log:      slog.Default(),
+	}
+	identity, _ := w.embedder.EmbedIdentity()
+	if err := w.store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("seeding the binding marker: %v", err)
+	}
+	// The try succeeds only where no session holds the lock.
+	refuseUpdates(t, "river_job", fmt.Sprintf(
+		`NEW.state = 'completed' AND NEW.kind = '%s' AND pg_try_advisory_xact_lock(hashtextextended('%s', 0))`,
+		EmbedDriftSweepArgs{}.Kind(), embedDriftSweepLock))
+
+	own := seedSweepRow(ctx, t, e.Pool, "running")
+	job := &river.Job[EmbedDriftSweepArgs]{JobRow: &rivertype.JobRow{ID: own, Kind: EmbedDriftSweepArgs{}.Kind()}}
+	if err := w.Work(ctx, job); err != nil {
+		t.Fatalf("the sweep: %v", err)
+	}
+	if got := jobRowState(ctx, t, e.Pool, own); got != "completed" {
+		t.Errorf("the sweep's row is %s, want completed", got)
 	}
 }
 
