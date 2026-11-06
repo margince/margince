@@ -46,6 +46,9 @@ import (
 // installation that delegates the first has not thereby delegated the second.
 const entityCommunicationException = "communication_exception"
 
+// entityCommunicationReview names the review a refused direction is recorded on.
+const entityCommunicationReview = "communication_review"
+
 // EntityCommunicationException is the same object, exported because compose
 // decides which action to OFFER a refused caller and that decision turns on
 // this grant. Two spellings would let the offer and the door disagree about
@@ -122,10 +125,9 @@ type Instruction struct {
 //
 // GATED ON THREE THINGS, and each answers a different question.
 //
-// RequireHuman, because the claim is that a HUMAN BEING took responsibility. An
-// agent acting under somebody's passport inherits their grants, so without this
-// an agent could mint the very record that says a human decided — which is the
-// one assertion this table exists to make truthfully.
+// A user or their agent, because the row says a named user took this on. A
+// connector has that user's grants and was not asked, so it is refused. An agent
+// acts for the user who asked it, and the row names both.
 //
 // auth.Require on communication_exception:create, because directing a send is
 // its own authority. A seat that may edit a contact has not thereby been given
@@ -135,7 +137,7 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Instruction{}, err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
@@ -160,8 +162,11 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			return err
 		}
 		if !directableBy(ctx, review.Refusals) {
-			return apperrors.ErrPermissionDenied
+			return refuseDirection(ctx, review.Refusals)
 		}
+		// Recorded so the re-check at staging and dispatch knows which
+		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
+		givenByAdmin := auth.AdminGranted(ctx)
 		// THE FACTS ARE THE REVIEW'S, not the clock's. An instruction says "on
 		// what this review recorded, send anyway", and dating it from now would
 		// claim it was taken on facts nobody has looked at.
@@ -202,11 +207,11 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
-			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording)
-			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8)
+			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording, given_by_admin, directed_by_agent)
+			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8, $9, $10)
 			RETURNING id`,
 			reviewID, director, in.ReasonCode, in.Explanation,
-			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged).Scan(&out.ID); err != nil {
+			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged, givenByAdmin, actingAgent(ctx)).Scan(&out.ID); err != nil {
 			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
 			// unique key on review_id says. Named rather than reported as a
 			// storage fault: the caller retrying a send whose decision already
@@ -236,7 +241,8 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 				// read `communication_instruction.create` — a permission
 				// nothing checks. The entity stays the table, which is how a
 				// reader finds the row; the authority is recorded here.
-				"authorized_by": entityCommunicationException,
+				"authorized_by":  entityCommunicationException,
+				"given_by_admin": givenByAdmin,
 			}); err != nil {
 			return err
 		}
@@ -399,7 +405,7 @@ func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (dir
 // integration would mint a row saying that contact decided to send a refused
 // message — attributing an override to somebody who was not there.
 //
-// Every other human-only surface can live with that, because a connector
+// Every other surface kept from agents can live with that, because a connector
 // acting under somebody's authority is doing what they configured it to do.
 // This one cannot: the row's entire content is the claim that a named contact
 // took responsibility, and a claim like that must be true of the moment it
@@ -416,6 +422,29 @@ func requireAHumanAtTheKeyboard(ctx context.Context) error {
 	return nil
 }
 
+// requireAUserOrTheirAgent is the same refusal for acts an agent may do for its
+// user. A connector still fails it, because no user asked for what it does.
+func requireAUserOrTheirAgent(ctx context.Context) error {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || !actor.HumanOrItsAgent() {
+		return fmt.Errorf("this is a user's own statement: %w", apperrors.ErrPermissionDenied)
+	}
+	return nil
+}
+
+// actingAgent names the agent carrying out a user's decision, and nil when the
+// user acted in their own session.
+func actingAgent(ctx context.Context) *string {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	return &actor.ID
+}
+
 // ErrDecisionAlreadyRecorded reports that this review already carries a
 // decision. It is not a failure of the act — somebody decided, and the record
 // of it stands — so a caller whose send failed after the decision committed
@@ -429,8 +458,9 @@ func isDuplicateInstruction(err error) bool {
 	return ok && strings.Contains(constraint, "review_id")
 }
 
-// servedWarningVersion reports whether this build published the wording a
-// caller says they were shown.
+// servedWarningVersion reports whether a new instruction may name this
+// version: only the one this build serves now. A retired version still reads
+// back through OverrideWarningFor, for the records that name it.
 func servedWarningVersion(version string) bool {
 	return strings.TrimSpace(version) == OverrideWarningVersion
 }

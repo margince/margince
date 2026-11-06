@@ -35,6 +35,7 @@ const FILTER_VIEW: Readonly<Record<WorklistFilter, WorklistView | null>> = {
   decisions: "decisions",
   except_decisions: "today",
   leads: "today",
+  prospecting: "today",
   meetings: "today",
   relationships: "today",
   system: "system",

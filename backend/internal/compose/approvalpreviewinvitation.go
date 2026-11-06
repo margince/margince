@@ -28,7 +28,7 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 	if previewUnavailable(err) {
 		return out, nil
 	}
-	call := agents.NewMeetingInvitationCall(r.records, nil, in)
+	call := agents.NewMeetingInvitationCall(r.records, nil, nil, in)
 	if err := call.Guards(ctx); err != nil {
 		var invalid *agents.BadArgsError
 		if previewUnavailable(err) || errors.As(err, &invalid) {
@@ -88,7 +88,8 @@ func (r approvalPreviewReader) invitationParticipants(ctx context.Context, host 
 }
 
 // invitationRecipients names every address the approval sends the invite to.
-// A host-named address gets its own field, because no consent check clears it.
+// An address no record the host can read stands behind gets its own field.
+// It is the same whether or not a record hidden from the host holds it.
 func invitationRecipients(in crmcontracts.MeetingInvitationRequest, appointment connector.CalendarAppointment) []crmcontracts.ApprovalPreviewDetail {
 	if len(appointment.Roster) == 0 {
 		return []crmcontracts.ApprovalPreviewDetail{previewDetail("to", string(in.AttendeeEmail))}
@@ -96,7 +97,7 @@ func invitationRecipients(in crmcontracts.MeetingInvitationRequest, appointment 
 	out := make([]crmcontracts.ApprovalPreviewDetail, 0, len(appointment.Roster))
 	for _, attendee := range appointment.Roster {
 		field := "to"
-		if attendee.Basis == connector.AttendeeHostNamed && !attendee.AskConsent {
+		if attendee.Basis == connector.AttendeeHostNamed {
 			field = previewHostNamedAttendee
 		}
 		out = append(out, previewDetail(field, attendee.Address))

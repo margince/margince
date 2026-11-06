@@ -7,6 +7,7 @@ import { ToastProvider, ToastRegion } from "../design-system/toast";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../testing/story-utils";
 import { TagsPanel } from "./tagspanel";
@@ -52,6 +53,7 @@ function Served({
   const removable = { ...KEY_ACCOUNT, archived: retired };
   let carried = [removable, CHURN_RISK];
   installFetchStub({
+    "GET /me": meRoute({ tag: ["read"] }),
     [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: carried, withheld: false }),
     [REMOVE]: () => {

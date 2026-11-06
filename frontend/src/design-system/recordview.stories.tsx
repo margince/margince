@@ -169,6 +169,30 @@ export const Narrow: Story = {
   args: { ...Default.args },
 };
 
+// At 390px both cards take the phone inset, and the first tab still stands
+// over the feed's first card.
+export const Phone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: { ...Default.args },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("The open tab's feed.");
+    const phoneInset = getComputedStyle(document.documentElement)
+      .getPropertyValue("--space-3")
+      .trim();
+    for (const part of [
+      ".record-split-details",
+      ".record-split-tabs",
+      ".record-split-feed",
+    ]) {
+      const box = canvasElement.querySelector(part);
+      if (!(box instanceof HTMLElement)) throw new Error(`no ${part}`);
+      await expect(getComputedStyle(box).paddingLeft, part).toBe(phoneInset);
+      await expect(getComputedStyle(box).paddingRight, part).toBe(phoneInset);
+    }
+  },
+};
+
 // The name is an edit pill like any details value: a press opens the rename
 // dialog, titled by the field.
 export const Renamable: Story = {

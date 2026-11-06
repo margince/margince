@@ -1,0 +1,53 @@
+name: a_verbal_yes_names_the_price_and_moves_the_chances
+task: deal_verdict
+site: deal_verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The customer says yes on a call and names the yearly price they agreed. The
+# deal still carries an older, lower amount and a probability Margince set
+# below its stage's, so both should change. The close date already fits.
+fixture:
+  today: "2026-11-04"
+  deal:
+    name: "Fleet tracking for the depots"
+    stage: "Negotiation"
+    amount: 30000
+    currency: EUR
+    close_date: "2026-11-28"
+    probability: 50
+    probability_source: margince
+    stage_probability: 70
+  activities:
+    - kind: email
+      direction: outbound
+      at: "2026-10-28"
+      subject: "Updated offer"
+      body: |
+        Hi Jonas, as discussed the price for all twelve depots is 36,000 EUR
+        a year. Let me know if the board agrees.
+    - kind: call
+      direction: outbound
+      at: "2026-11-03"
+      subject: "Call with Jonas"
+      body: |
+        Jonas confirmed the board said yes to 36,000 EUR a year for all
+        depots. Legal sends the signed contract before the end of the month.
+expect:
+  outcome: accepted
+  answer:
+    - kind: set_amount
+      amount: 36000
+    - kind: set_probability
+  rubric: >
+    The customer agreed to 36,000 EUR a year, so the amount moves from 30,000
+    to 36,000 EUR, quoting those words. A board yes with the contract on its
+    way clearly raises the chance of winning above the deal's 50%, up to the
+    raise limit of 70%. The close date at the end of the month already fits.
+    Score high for set_amount to 36000 EUR and a set_probability above 50 and
+    no higher than 70.
+    Score in the middle when only one of the two is proposed. Score at the
+    floor for a changed close date or an amount the words do not state.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -56,7 +56,7 @@ func inviteeContact(t *testing.T, e *Env, name string, owner ids.UUID) ids.UUID 
 
 func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	e := Setup(t)
-	slotStart := apptest.NextBookableMorning()
+	slotStart := apptest.NextBookableMorning(t)
 	store := bookableStore(t, e, e.Rep1, e.Rep2)
 
 	// Every booking names an invitee, because a meeting with nobody is refused
@@ -102,7 +102,7 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 
 func TestAvailabilityBusyReadHonorsRowScope(t *testing.T) {
 	e := Setup(t)
-	slotStart := apptest.NextBookableMorning()
+	slotStart := apptest.NextBookableMorning(t)
 	store := bookableStore(t, e, e.Rep1)
 
 	// rep1's meeting is linked to a contact rep1 captured PRIVATELY — visible

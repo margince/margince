@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { UseQueryResult } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { ChartPanel } from "./reporting.charts";
@@ -64,11 +65,19 @@ export function useSalesCharts(
   return asked ? query : undefined;
 }
 
-function chartOf(
+/** The evaluation's chart of this kind, unless it has nothing to draw. */
+export function drawnChart(
   evaluation: ReportingEvaluation,
   kind: ReportingChart["kind"],
 ): ReportingChart | undefined {
-  return evaluation.charts.find((chart) => chart.kind === kind);
+  const chart = evaluation.charts.find((candidate) => candidate.kind === kind);
+  if (
+    !chart ||
+    (chart.coverage.status === "no_data" &&
+      chart.points.every((point) => point.value == null || point.value === 0))
+  )
+    return undefined;
+  return chart;
 }
 
 /** One preset chart in its panel, or nothing when the evaluation lacks it. */
@@ -76,17 +85,27 @@ export function BoardChart({
   evaluation,
   kind,
   onEvidence,
+  section = false,
+  meta,
+  note,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   kind: ReportingChart["kind"];
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  // A section of a sheet, with a flat head, rather than a panel of its own.
+  section?: boolean;
+  meta?: ReactNode;
+  note?: ReactNode;
 }>) {
-  const chart = chartOf(evaluation, kind);
+  const chart = drawnChart(evaluation, kind);
   if (!chart) return null;
   return (
     <ChartPanel
       chart={chart}
       wide={false}
+      section={section}
+      meta={meta}
+      note={note}
       evaluation={evaluation}
       onEvidence={onEvidence}
     />
@@ -94,15 +113,20 @@ export function BoardChart({
 }
 
 /**
- * Today's stock by stage beside the permitted sales by owner, from the chart
- * read. While it is read, or when it failed, it says so in its own place and
- * the figures above it stand.
+ * Today's stock by stage over the permitted sales by owner, from the chart
+ * read, each a section of the review's sheet. While it is read, or when it
+ * failed, it says so in its own place and the figures above it stand.
  */
 export function StockCharts({
   charts,
+  stageMeta,
+  stageNote,
   onEvidence,
 }: Readonly<{
   charts: UseQueryResult<ReportingEvaluation>;
+  // Said in the stage chart's head, and above its bars.
+  stageMeta?: ReactNode;
+  stageNote?: ReactNode;
   onEvidence: (
     reference: ReportingEvidenceRef,
     from?: ReportingEvaluation,
@@ -112,23 +136,28 @@ export function StockCharts({
   return (
     <QueryGate query={charts} pendingLabel={t("analytics.overview.charts")}>
       {(read) => (
-        <div className="analytics-pair">
+        <>
           <BoardChart
             evaluation={read}
             kind="stage_distribution"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
+            meta={stageMeta}
+            note={stageNote}
           />
           <BoardChart
             evaluation={read}
             kind="owner_attainment"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
           <BoardChart
             evaluation={read}
             kind="breakdown"
             onEvidence={(reference) => onEvidence(reference, read)}
+            section
           />
-        </div>
+        </>
       )}
     </QueryGate>
   );

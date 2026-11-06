@@ -11,8 +11,9 @@ meeting.
 ## Hours belong to the host
 
 The hours a host can be booked are a fact about one host, so each host sets their own. No setting for the whole
-installation replaces them. Hours a host never set fall back to 09:00 to 17:00, Monday to Friday,
-in the installation timezone. An agent acting for someone else may not set them, because when a
+installation replaces them. Hours a host never set fall back to 09:00 to 17:00, Monday to Friday.
+Hours are read in the host's own time zone, which is one setting per user under Settings → Account
+and is not part of the hours. A host with no stored zone is read in the installation timezone. An agent acting for someone else may not set them, because when a
 host can be booked is that host's call.
 
 ## A page with no calendar is paused, and says so
@@ -128,10 +129,15 @@ A booking with no guest is refused with `invitee_required`. To record a meeting 
 log it. Agents book with `invite_meeting` only.
 
 Each further address is matched under the host's row scope. A contact comes first, then a live
-colleague, then a lead. An address that matches none of them counts as typed by the host. The
-provider save matches it again. It asks the consent gate only about addresses a contact or lead
-holds. A colleague and an address no record holds get the invite without that check, and the
-approval preview marks the second kind.
+colleague, then a lead. An address that matches none of them counts as typed by the host.
+
+The provider save matches it again. It asks the consent gate only about addresses a contact or lead
+holds. A colleague and an address no record holds get the invite without that check.
+
+The approval preview and the staged summary mark an address as typed when no record the host can
+read stands behind it. They mark it the same way when a hidden record holds it, so the marker tells
+the host nothing about records they cannot see. Only a contact's or colleague's row keeps a name: a
+lead's row is an address row that no lead scope guards.
 
 `/availability` without `reliable=true` stays a read of CRM data only, and the agent answer
 says so. No email or ICS file stands in when a provider write fails. So a failed write never turns

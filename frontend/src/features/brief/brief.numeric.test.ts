@@ -3,7 +3,7 @@
 
 import { expect, it } from "vitest";
 import { formatDateAbbrev } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en, type MessageKey } from "../../i18n/en";
 import {
   beforeHistoryWeeklyNumbers,
@@ -27,8 +27,8 @@ function t(key: MessageKey, values?: Record<string, string>): string {
     template,
   );
 }
-const place = { t, locale: "en" as const, zone: viewerZone() };
-const day = (iso: string) => formatDateAbbrev(iso, "en", viewerZone());
+const place = { t, locale: "en" as const, zone: browserZone() };
+const day = (iso: string) => formatDateAbbrev(iso, "en", browserZone());
 
 it("keeps a complete zero-activity week readable", () => {
   const result = weeklyNumericStatus({

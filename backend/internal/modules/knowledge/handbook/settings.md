@@ -16,7 +16,7 @@ Margince Settings puts its pages in these groups:
 - **You**: Account, Meetings, Writing voice, AI access, Notifications, Connections, Capture activity.
 - **Company**: Company profile, Sign-in and apps.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
-- **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
+- **Sales**: Pipelines, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Website forms, Knowledge, Data import.
 - **AI**: AI usage, AI models, MCP, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
@@ -114,7 +114,9 @@ The rest of Margince settings is six groups after **You**. Which pages you see, 
 
 The Company profile page in Settings (group **Company**) holds your own company's name, currency and business facts. It is an administrator's page: Admin and Ops reach it, and a sales seat does not. Sign-in and the Google and Microsoft apps have their own **Sign-in and apps** page in the same group.
 
-The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
+The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the company time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
+
+The company's logo heads the mail Margince sends as your installation: daily and weekly emails, notifications, invitations and password resets. Under it is a small "Powered by Margince" line. Without a logo, and on privacy notices, the company name stands in its place. Mail you send from your own mailbox carries your signature instead.
 
 The **Show individual performance** switch there decides whether anyone sees a colleague's figures. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance). The **Forecast** card there holds one switch, **Let the forecast correct itself**. Off, each open deal counts at the probability typed on its stage. On, the forecast learns from deals that closed. See [How the forecast learns](forecast-learning.md).
 
@@ -201,7 +203,6 @@ The same card holds **Held threads reviewed per run**. A mailbox set to *Held un
 The Sales group in Settings has one page per subject. There are the fields a record carries, the stages it moves through, and the lists of choices it picks from. And there are the priced things that go on an offer.
 
 - **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
-- **Stage automation**: the record of how each stage move has gone, before Margince moves deals by itself. See [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
 - **Lead handling**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
 - **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
 - **Partners**: the partner stages and what each one means. See [Partners and commission](partners.md#how-do-i-change-the-partner-stages).

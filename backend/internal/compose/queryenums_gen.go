@@ -12,8 +12,12 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "lane", Values: []string{"chat", "embeddings", "decisions"}, Array: false, Explode: true},
 	},
 	"GET /v1/activities": {
+		{Name: "call_outcome", Values: []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: false, Explode: true},
+	},
+	"GET /v1/activities/deal-filing": {
+		{Name: "record_type", Values: []string{"contact", "company"}, Array: false, Explode: true},
 	},
 	"GET /v1/activities/latest-inbound": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
@@ -39,12 +43,12 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "status", Values: []string{"open", "done"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/editions/{id}/evidence": {
-		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
+		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evaluate": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
@@ -53,7 +57,7 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/analytics/evaluate.csv": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
@@ -61,8 +65,8 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/analytics/evidence": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
-		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
+		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
@@ -93,6 +97,9 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/attachments": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "activity", "lead", "project"}, Array: false, Explode: true},
+	},
+	"GET /v1/attachments/{id}/extraction": {
+		{Name: "question", Values: []string{"deal_facts", "chat_capture"}, Array: false, Explode: true},
 	},
 	"GET /v1/automations/{id}/runs": {
 		{Name: "outcome", Values: []string{"fired", "failed", "blocked", "skipped", "queued_for_approval"}, Array: false, Explode: true},
@@ -154,7 +161,6 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/deals": {
 		{Name: "commercial_motion", Values: []string{"new_business", "renewal", "upsell", "cross_sell", "expansion", "existing_business", "unset"}, Array: false, Explode: true},
-		{Name: "forecast_category", Values: []string{"commit", "best_case", "pipeline", "omitted"}, Array: false, Explode: true},
 		{Name: "partner_attribution", Values: []string{"sourced", "influenced"}, Array: false, Explode: true},
 		{Name: "priority", Values: []string{"low", "medium", "high", "unset"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"open", "won", "lost"}, Array: false, Explode: true},
@@ -192,7 +198,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/forecast/movement": {
-		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case", "qualified_evidence", "qualified_best_case", "qualified_weighted"}, Array: false, Explode: true},
+		{Name: "reading", Values: []string{"open", "weighted", "evidence", "qualified_evidence", "qualified_weighted"}, Array: false, Explode: true},
 	},
 	"GET /v1/imports": {
 		{Name: "view", Values: []string{"history", "drafts"}, Array: false, Explode: true},
@@ -223,7 +229,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "anchor_type", Values: []string{"activity", "contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
 	"GET /v1/me/ai-activity": {
-		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret"}, Array: true, Explode: true},
+		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering", "deal_verdict"}, Array: true, Explode: true},
 	},
 	"GET /v1/meeting-prep": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
@@ -281,7 +287,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "resource", Values: []string{"contacts", "companies", "deals", "activities", "leads", "partners", "projects"}, Array: false, Explode: true},
 	},
 	"GET /v1/worklist": {
-		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming"}, Array: false, Explode: true},
+		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "prospecting", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming"}, Array: false, Explode: true},
 		{Name: "relationships", Values: []string{"include", "omit"}, Array: false, Explode: true},
 		{Name: "scope", Values: []string{"mine", "unassigned", "team", "all"}, Array: false, Explode: true},
 		{Name: "view", Values: []string{"today", "decisions", "system"}, Array: false, Explode: true},
@@ -291,6 +297,9 @@ var queryEnumTable = map[string][]queryEnum{
 // queryMinimumTable maps "METHOD /v1/path" to the integer query parameters
 // the contract gives a minimum, with that minimum.
 var queryMinimumTable = map[string][]queryMinimum{
+	"DELETE /v1/deals/{id}/lines/{lineId}": {
+		{Name: "expected_revision", Minimum: 0},
+	},
 	"GET /v1/activities": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -419,6 +428,8 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 		{Name: "value_max", Minimum: 0},
 		{Name: "value_min", Minimum: 0},
+		{Name: "win_probability_max", Minimum: 0},
+		{Name: "win_probability_min", Minimum: 0},
 	},
 	"GET /v1/deals/slipping": {
 		{Name: "limit", Minimum: 1},
@@ -526,9 +537,6 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/signals": {
 		{Name: "limit", Minimum: 1},
-	},
-	"GET /v1/stage-automation/report": {
-		{Name: "window_days", Minimum: 1},
 	},
 	"GET /v1/teams": {
 		{Name: "limit", Minimum: 1},

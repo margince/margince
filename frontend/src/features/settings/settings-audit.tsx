@@ -35,8 +35,8 @@ import { actorAttribution } from "../../lib/auditactor";
 import { useCan } from "../../lib/capability";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   ACTOR_ICON,
   AUDIT_ACTION_VALUES,
@@ -275,12 +275,12 @@ function AuditLogTable({
 // two readers in two zones quote one entry on one day.
 function AuditWhen({ at, now }: Readonly<{ at: string; now: number }>) {
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <time
       className="auditlog-time"
       dateTime={at}
-      title={formatDateTime(at, locale, recordZone)}
+      title={formatDateTime(at, locale, readerZone)}
     >
       {formatRelativeTime(at, locale, new Date(now))}
     </time>

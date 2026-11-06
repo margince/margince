@@ -10,12 +10,13 @@ import { INTRO_STATUS_LABELS } from "../../../format/introstatus";
 // coloured circles. The state is textual, never colour alone.
 
 import { Check } from "lucide-react";
+import type { ReactNode } from "react";
 import { Avatar } from "../../../design-system/atoms";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
 import { useMe } from "../../../lib/session";
+import { useViewerZone } from "../../../lib/viewerzone";
 import type { IntroRequest } from "../introrequests";
 
 type StepState = "done" | "current" | "waiting";
@@ -29,16 +30,21 @@ type StepState = "done" | "current" | "waiting";
  */
 export function RelayPanel({
   ask,
-}: Readonly<{ ask: IntroRequest | undefined }>) {
+  action,
+}: Readonly<{
+  ask: IntroRequest | undefined;
+  // The panel's own verb, such as recording an introduction made elsewhere.
+  action?: ReactNode;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const reader = useMe().data?.user;
   const steps = stepsFor(ask, t);
   const owner =
     ask && !SETTLED.has(ask.status) ? ownerOf(ask, t, reader) : undefined;
   return (
-    <Panel title={t("contact.intro.relayTitle")}>
+    <Panel title={t("contact.intro.relayTitle")} titleAction={action}>
       <PanelBody>
         <ol className="pn-relay">
           {steps.map((step, index) => (
@@ -75,7 +81,7 @@ export function RelayPanel({
             {ask.status === "requested" && ask.due_at ? (
               <span className="pn-relay-due t-caption">
                 {t("contact.intro.relayDue", {
-                  date: formatDate(ask.due_at, locale, recordZone),
+                  date: formatDate(ask.due_at, locale, readerZone),
                 })}
               </span>
             ) : null}

@@ -27,10 +27,10 @@ import {
 import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./recordaccesspanel.css";
 
 type RecordAccessAnswer = components["schemas"]["RecordAccess"];
@@ -265,7 +265,7 @@ export function WhoCanSeePanel({
 }: Readonly<{ kind: AccessKind; recordId: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const query = useInfiniteQuery({
     queryKey: recordAccessKey(kind, recordId),

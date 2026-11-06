@@ -64,21 +64,27 @@ export function AddToShortlistAction({
   );
 }
 
-function AddToShortlistDialog({
+/**
+ * The dialog itself. `newName` opens it on "A new Shortlist…" with that name
+ * filled in, for a caller that already knows what the reader wants to call it.
+ */
+export function AddToShortlistDialog({
   entityType,
   entityId,
   onClose,
+  newName: named = "",
 }: Readonly<{
   entityType: ListRecordType;
   entityId: string;
   onClose: () => void;
+  newName?: string;
 }>) {
   const t = useT();
   const shortlists = useLists({ entityType, listType: "static" });
   const create = useCreateList();
   const change = useChangeMember();
-  const [choice, setChoice] = useState("");
-  const [newName, setNewName] = useState("");
+  const [choice, setChoice] = useState(named === "" ? "" : NEW_LIST);
+  const [newName, setNewName] = useState(named);
   const [note, setNote] = useState("");
   const editable = (shortlists.data?.data ?? []).filter(
     (list) => list.can_edit && !list.archived_at,

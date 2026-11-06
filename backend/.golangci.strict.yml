@@ -21,9 +21,11 @@ run:
     - e2e_llm
     - voicelive
     - vendorlive
+    - rolesweep
 
 issues:
   # Only findings introduced after the merge-base with origin/main fail.
+  # `make lint` overrides the ref with CHECK_BASE_REF.
   # CI checks out with fetch-depth 0 so the ref exists; `make lint` skips
   # this pass with a loud message when it doesn't.
   new-from-merge-base: origin/main

@@ -121,13 +121,16 @@ const (
 const waitingHorizonStaleAfter = storekit.WaitingHorizonStaleAfter
 
 // waitingHorizonFor is the horizon the worker pass stored, or the compiled one
-// when none is stored or it is older than waitingHorizonStaleAfter. It never
-// measures: a read that did was as slow as the mailbox is long.
+// when none is stored or it is older than waitingHorizonStaleAfter at asOf. It
+// never measures: a read that did was as slow as the mailbox is long.
+//
+// asOf is the reading's own instant, the one its badges are judged at
+// (moveInputs), so a row the filter admits and its badge read one horizon.
 //
 // Ungated: the horizon decides which rows the queue holds, so two colleagues
 // reading one thread must be judged by one number. It names no record.
-func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
-	return waitingHorizonAt(ctx, tx, s.now())
+func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	return waitingHorizonAt(ctx, tx, asOf)
 }
 
 func waitingHorizonAt(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {

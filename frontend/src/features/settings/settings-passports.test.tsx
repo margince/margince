@@ -11,9 +11,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { busyUsage } from "../../testing/agentallowances.fixtures";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { SettingsScreen, settingsAddress } from "./settings";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 // Minting a passport, in its own file rather than as more of `settings.test.tsx`
 // — that one is already well past the 1000-line ceiling the frontend guide sets,

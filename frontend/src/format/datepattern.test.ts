@@ -16,7 +16,7 @@ import {
   FIXED_DATE_PATTERNS,
   setDateTimePreferences,
 } from "./preferences";
-import { viewerZone } from "./timezone";
+import { browserZone } from "./timezone";
 
 const LETTERS = { day: "dd", month: "mm", year: "yyyy" };
 
@@ -98,7 +98,7 @@ describe("the field and the page", () => {
       setDateTimePreferences({ dateFormat: format, timeFormat: "locale" });
       for (const locale of LOCALES) {
         expect(formatISODate("2026-05-06", datePattern(locale, format))).toBe(
-          formatDate("2026-05-06", locale, viewerZone()),
+          formatDate("2026-05-06", locale, browserZone()),
         );
       }
     },

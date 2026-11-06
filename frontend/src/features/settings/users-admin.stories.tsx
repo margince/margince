@@ -213,6 +213,21 @@ export const RosterPhone: Story = {
   render: story(roster(ROSTER), ADMIN, true),
 };
 
+// A roster of 450: the first 100 rows are drawn, the next batches as the
+// reader scrolls, and the caption counts all 450.
+const LARGE_ROSTER = Array.from({ length: 450 }, (_, at) => {
+  const n = String(at).padStart(3, "0");
+  return {
+    ...DANA,
+    id: `u-roster-${n}`,
+    display_name: `Roster Member ${n}`,
+    email: `roster-${n}@example.test`,
+  };
+});
+export const LargeRoster: Story = {
+  render: story(roster(LARGE_ROSTER), ADMIN, true),
+};
+
 export const LongContent: Story = {
   render: story(roster([LARS, LONG, DANA]), ADMIN, true),
 };

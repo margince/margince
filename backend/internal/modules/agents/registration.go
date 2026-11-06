@@ -38,8 +38,12 @@ const maxDescriptionRunes = 3000
 // This is the ONE door every tool comes through, core and extension alike, so
 // none of it is a list of tools someone has to keep current.
 func (r *Registry) Register(t mcp.Tool) {
-	spec := t.Spec()
 	rt, isRouter := t.(router)
+	if isRouter {
+		rt = r.withRouteActions(rt)
+		t = rt
+	}
+	spec := t.Spec()
 	if isRouter {
 		spec = r.routedSpec(rt)
 	}
@@ -101,6 +105,8 @@ func (r *Registry) Register(t mcp.Tool) {
 		panic(fmt.Sprintf("crmagents: %s declares no Version — every result carries it as schema_version, "+
 			"and an empty one tells a client the shape can never be compared", spec.Name))
 	}
+	assertGatedShape(spec)
+	assertProtocolOnlyShape(spec)
 	if err := assertNoRequiredReservedArgument(spec); err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: " + err.Error())
@@ -134,7 +140,9 @@ func (r *Registry) Register(t mcp.Tool) {
 	// that could come to differ. See unitOwned for what the answer buys.
 	owned := unitOwned(t)
 	r.unitOwned[spec.Name] = owned
-	r.specs[spec.Name] = copySchemas(withRetryKey(envelopedSpec(spec), owned))
+	_, served := t.(routeVerbTool)
+	r.routeServed[spec.Name] = served
+	r.specs[spec.Name] = copySchemas(withRetryKey(envelopedSpec(spec), owned || served))
 	// Derived from the tool's OWN schema, never the spliced one: the reserved
 	// members are popped before any of these checks runs, so a check that knew
 	// about them would be describing arguments no handler can be reached with.
@@ -143,6 +151,7 @@ func (r *Registry) Register(t mcp.Tool) {
 	r.enumArgs[spec.Name] = declaredEnumArgs(spec.InputSchema)
 	r.requiredArgs[spec.Name] = declaredRequired(spec.InputSchema)
 	r.typedArgs[spec.Name] = declaredTypes(spec.InputSchema)
+	r.uniqueArgs[spec.Name] = declaredUniqueArgs(spec.InputSchema)
 }
 
 // envelopedSpec is the spec every surface is served: the tool's own, with its

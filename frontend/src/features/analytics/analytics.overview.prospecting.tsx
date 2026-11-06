@@ -5,6 +5,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -13,14 +14,15 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { AssessmentPanel } from "./analytics.assessment";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { scopeKey } from "./analytics.context";
 import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
-import { outboundDials } from "./analytics.overview.context";
 import { DoNext } from "./analytics.overview.donext";
 import { MonthlyTargets } from "./analytics.overview.monthly";
+import { useOverviewNavigation } from "./analytics.overview.navigation";
 import {
   ProspectingReadings,
   ProspectingResults,
@@ -34,10 +36,7 @@ import {
   HandoffCohort,
   UpcomingMeetings,
 } from "./analytics.overview.prospectingwork";
-import {
-  OverviewLinks,
-  OverviewSaveActions,
-} from "./analytics.overview.readings";
+import { OverviewSaveActions } from "./analytics.overview.readings";
 import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -94,7 +93,7 @@ export function MyProspecting({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const self = context.allowed_scopes.find((scope) => scope.kind === "owner");
   const filters = useOverviewFilters([], "this_week");
   const readsLeads = useCan("lead", "read");
@@ -120,6 +119,10 @@ export function MyProspecting({
   };
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   const workflow = workflowOf(framework, summary);
+  useOverviewNavigation("prospecting", selection, {
+    start: filters.start,
+    end: filters.end,
+  });
   const query = useReportingEvaluation(
     selection,
     !!self?.id && validDates && metrics.length > 0 && workflow !== "pending",
@@ -163,6 +166,7 @@ export function MyProspecting({
       <FilterBar
         label={t("analytics.filters")}
         quiet
+        labels="inside"
         actions={
           <OverviewSaveActions
             selection={
@@ -202,59 +206,62 @@ export function MyProspecting({
       {problemCodeOf(query.error) === "reporting_interval_invalid" && (
         <ErrorLine error={query.error} />
       )}
-      {/* The results and the first moves share the first screen; on a narrow
-          one the moves come straight after the results, before any history. */}
-      <div className="analytics-lead">
-        <div className="analytics-column">
-          <QueryGate
-            query={query}
-            pendingLabel={t("analytics.overview.prospecting")}
-          >
-            {(evaluation) => (
-              <>
-                <ProspectingResults
-                  evaluation={evaluation}
-                  outcome={outcome}
-                  workflowState={known ? "known" : workflow}
-                  weeks={weeks}
-                  onEvidence={openFrom}
-                  onRetryWorkflow={retryWorkflow}
-                  aside={
-                    <MonthlyTargets
-                      evaluation={evaluation}
-                      ownScope={scopeKey(self)}
-                    />
-                  }
-                />
-                <ProspectingReadings
-                  evaluation={evaluation}
-                  summary={summary}
-                  onEvidence={openFrom}
-                />
-              </>
-            )}
-          </QueryGate>
-        </div>
-        <DoNext />
-      </div>
-      <ProspectingWork
-        self={self.id}
-        workflow={workflow}
-        summary={summary}
-        week={query.data}
-        weeks={weeks}
-        onEvidence={openFrom}
-        outlook={
-          query.data &&
-          known &&
-          !query.isError && (
-            <AssessmentPanel
-              view="prospecting"
-              selection={query.data.selection}
-              evaluation={query.data}
+      <AnalyticsBoard
+        railLabel={t("analytics.board.rail")}
+        main={
+          <AnalyticsSheet>
+            <QueryGate
+              query={query}
+              pendingLabel={t("analytics.overview.prospecting")}
+            >
+              {(evaluation) => (
+                <>
+                  <ProspectingResults
+                    evaluation={evaluation}
+                    outcome={outcome}
+                    workflowState={known ? "known" : workflow}
+                    weeks={weeks}
+                    onEvidence={openFrom}
+                    onRetryWorkflow={retryWorkflow}
+                    aside={
+                      <MonthlyTargets
+                        evaluation={evaluation}
+                        ownScope={scopeKey(self)}
+                      />
+                    }
+                  />
+                  <ProspectingReadings
+                    evaluation={evaluation}
+                    summary={summary}
+                    onEvidence={openFrom}
+                  />
+                </>
+              )}
+            </QueryGate>
+            <ProspectingWork
+              self={self.id}
+              workflow={workflow}
+              summary={summary}
+              week={query.data}
+              weeks={weeks}
               onEvidence={openFrom}
             />
-          )
+          </AnalyticsSheet>
+        }
+        rail={
+          <>
+            {query.data && known && !query.isError && (
+              <AssessmentPanel
+                view="prospecting"
+                work={summary.data}
+                workPending={summary.isLoading}
+                selection={query.data.selection}
+                evaluation={query.data}
+                onEvidence={openFrom}
+              />
+            )}
+            <DoNext />
+          </>
         }
       />
       {evidence && query.data && (
@@ -265,24 +272,12 @@ export function MyProspecting({
           onClose={closeEvidence}
         />
       )}
-      <OverviewLinks
-        dials={outboundDials("prospecting", {
-          // The reader's own work, never a colleague's or a team's.
-          scope: scopeKey(self),
-          period: filters.period,
-          from: filters.period === "custom" ? filters.start : undefined,
-          through: filters.period === "custom" ? filters.end : undefined,
-        })}
-        sections={[
-          { section: "sdr", label: t("reporting.sdr") },
-          { section: "leads", label: t("reporting.leads") },
-        ]}
-      />
     </>
   );
 }
 
-// Meetings and waiting work precede interpretation; outcome history follows it.
+// The work around the outcome, each a section of the sheet: what waits on
+// others, the meetings ahead, then how the outcome developed.
 function ProspectingWork({
   self,
   workflow,
@@ -290,9 +285,7 @@ function ProspectingWork({
   week,
   weeks,
   onEvidence,
-  outlook,
 }: Readonly<{
-  outlook: ReactNode;
   self: string;
   workflow: WorkflowState;
   summary: ReturnType<typeof useSdrSummary>;
@@ -303,27 +296,24 @@ function ProspectingWork({
   const t = useT();
   return (
     <>
-      <div className="analytics-pair">
-        {workflow === "handoff" && <Waiting self={self} summary={summary} />}
-        <UpcomingMeetings
-          self={self}
-          summary={summary}
-          title={t(
-            workflow === "qualification"
-              ? "analytics.prospect.prepTitle"
-              : "analytics.prospect.upcomingTitle",
-          )}
-        />
-      </div>
-      {outlook}
+      {workflow === "handoff" && <Waiting self={self} summary={summary} />}
+      <UpcomingMeetings
+        self={self}
+        summary={summary}
+        title={t(
+          workflow === "qualification"
+            ? "analytics.prospect.prepTitle"
+            : "analytics.prospect.upcomingTitle",
+        )}
+      />
+      {workflow === "handoff" && week && (
+        <HandoffCohort self={self} evaluation={week} />
+      )}
       {workflow === "qualification" && <QualificationNote />}
       {week && (
-        <div className="analytics-pair">
+        <Disclosure summary={t("analytics.prospect.historyTitle")}>
           <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
-          {workflow === "handoff" && (
-            <HandoffCohort self={self} evaluation={week} />
-          )}
-        </div>
+        </Disclosure>
       )}
     </>
   );
@@ -368,29 +358,25 @@ function Waiting({
   );
 }
 
-{
-  /* Without SDR handoffs the page says why it counts qualified leads, and shows */
-}
-{
-  /* the one who can change that where the setting is. */
-}
 export function QualificationNote() {
   const t = useT();
   const canEdit = useCanWrite("reporting_framework", "update");
   return (
-    <p className="t-caption">
-      {t("analytics.overview.noHandoffs")}{" "}
-      {canEdit ? (
-        <AppLink
-          className="btn btn-link"
-          href={analyticsSectionHref("definitions", new Map())}
-        >
-          {t("analytics.overview.changeWorkflow")}
-        </AppLink>
-      ) : (
-        t("analytics.overview.workflowWho")
-      )}
-    </p>
+    <Disclosure summary={t("reporting.definitions")}>
+      <p className="t-caption">
+        {t("analytics.overview.noHandoffs")}{" "}
+        {canEdit ? (
+          <AppLink
+            className="btn btn-link"
+            href={analyticsSectionHref("definitions", new Map())}
+          >
+            {t("analytics.overview.changeWorkflow")}
+          </AppLink>
+        ) : (
+          t("analytics.overview.workflowWho")
+        )}
+      </p>
+    </Disclosure>
   );
 }
 

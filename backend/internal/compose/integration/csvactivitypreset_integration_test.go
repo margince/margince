@@ -12,14 +12,15 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // stagePresetActivities uploads one activities CSV and stages it with the
 // given preset links, answering the status and the run.
-func stagePresetActivities(t *testing.T, e *apptest.AppEnv, body string, presets []AnyMap) (status int, _ importRunDTO) {
+func stagePresetActivities(t *testing.T, e *apptest.AppEnv, body string, presets []AnyMap) (status int, _ importjobtest.Run) {
 	t.Helper()
-	profile, uploaded := uploadCSV(t, e, "activity", body)
+	profile, uploaded := importjobtest.UploadCSV(t, e, "activity", body)
 	if uploaded != http.StatusOK {
 		t.Fatalf("upload → %d", uploaded)
 	}
@@ -31,8 +32,8 @@ func stagePresetActivities(t *testing.T, e *apptest.AppEnv, body string, presets
 		request["preset_links"] = presets
 	}
 	var answer json.RawMessage
-	status = testCall(t, e, "/v1/imports", request, &answer)
-	var run importRunDTO
+	status = importjobtest.CallTestRun(t, e, "/v1/imports", request, &answer)
+	var run importjobtest.Run
 	if status == http.StatusAccepted {
 		if err := json.Unmarshal(answer, &run); err != nil {
 			t.Fatalf("decoding the staged run %s: %v", answer, err)
@@ -103,11 +104,11 @@ func TestAPresetIsRefusedOnARunThatLandsAnythingButActivities(t *testing.T) {
 		"source": "manual", "full_name": "Preset Pat",
 		"emails": []AnyMap{{"email": "pat@act-preset-only.test", "email_type": "work", "is_primary": true}},
 	})
-	profile, status := uploadCSV(t, e, "contact", "ref,email,name\nP-1,x@act-preset-only.test,X\n")
+	profile, status := importjobtest.UploadCSV(t, e, "contact", "ref,email,name\nP-1,x@act-preset-only.test,X\n")
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d", status)
 	}
-	got := testCall(t, e, "/v1/imports", AnyMap{
+	got := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": profile.SourceRef, "object": "contact",
 		"mapping":      AnyMap{"ref": "ref", "email": "email", "name": "full_name"},
 		"preset_links": []AnyMap{{"type": "contact", "id": contact}},
@@ -123,18 +124,18 @@ func TestAPresetSavedOnADraftIsTheOneTheCommitFilesUnder(t *testing.T) {
 		"source": "manual", "full_name": "Draft Dana",
 		"emails": []AnyMap{{"email": "dana@act-preset-draft.test", "email_type": "work", "is_primary": true}},
 	})
-	profile, status := uploadCSV(t, e, "activity", "ref,type,subject,occurred_at\nA-1,note,Saved on a draft,2025-03-02\n")
+	profile, status := importjobtest.UploadCSV(t, e, "activity", "ref,type,subject,occurred_at\nA-1,note,Saved on a draft,2025-03-02\n")
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d", status)
 	}
-	var saved importRunDTO
+	var saved importjobtest.Run
 	if got := e.Call(t, http.MethodPatch, "/v1/imports/"+profile.RunID, AnyMap{
 		"version": 1, "object": "activity", "mapping": AnyMap{"ref": "ref", "type": "type", "subject": "subject", "occurred_at": "occurred_at"},
 		"preset_links": []AnyMap{{"type": "contact", "id": contact}},
 	}, nil, &saved); got != http.StatusOK {
 		t.Fatalf("PATCH → %d, want 200", got)
 	}
-	if got := testCall(t, e, "/v1/imports/"+saved.ID+"/validate", AnyMap{"version": saved.Version}, nil); got != http.StatusAccepted {
+	if got := importjobtest.CallTestRun(t, e, "/v1/imports/"+saved.ID+"/validate", AnyMap{"version": saved.Version}, nil); got != http.StatusAccepted {
 		t.Fatalf("validate → %d, want 202", got)
 	}
 	approveAndRead(t, e, saved.ID)

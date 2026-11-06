@@ -37,10 +37,9 @@ import (
 )
 
 // The identity vocabulary, the Go spelling of the table's CHECKs. The kinds
-// are the exclusion kinds by design: both lists answer "which addresses does
-// this rule cover", and one spelling of address-or-domain is what lets them
-// share ValidExclusionValue rather than growing a second parser that folds
-// case differently on some path nobody tests.
+// are exclusion kinds by design: both answer "which addresses does this rule
+// cover". One spelling lets them share validRuleValue, so no second parser
+// folds case differently on some path nobody tests.
 const (
 	IdentityKindAddress = ExclusionKindAddress
 	IdentityKindDomain  = ExclusionKindDomain
@@ -89,24 +88,21 @@ func NewOwnerIdentityStore(db *database.DB) *OwnerIdentityStore {
 // seatItself is the caller when they are a HUMAN seat acting for themselves,
 // and a refusal otherwise.
 //
-// auth.RequireHuman is not enough here, and deliberately so: it refuses an
-// agent and a buyer, and admits the connector and system principals — which is
-// right for the reads it guards, and wrong for this list. A connector
-// principal carries the granting seat's UserID, so under RequireHuman alone a
-// connector could list, add and withdraw that seat's private identities. The
-// list says which of a contact's mail is theirs alone; nothing but that contact
-// touches it.
+// auth.RequireHumanOrItsAgent is not enough here: it admits the connector and
+// system principals. A connector carries the granting seat's UserID, so it could
+// list, add and withdraw that seat's private identities. The list says which of
+// a user's mail is theirs alone, so only they or their own agent touch it.
 func seatItself(ctx context.Context) (principal.Principal, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return principal.Principal{}, err
 	}
 	actor, err := storekit.Actor(ctx)
 	if err != nil {
 		return principal.Principal{}, err
 	}
-	if actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		return principal.Principal{}, fmt.Errorf(
-			"capture: an owner identity is a seat's own claim about themselves: %w", apperrors.ErrPermissionDenied)
+			"capture: an owner identity is a user's own claim about themselves: %w", apperrors.ErrPermissionDenied)
 	}
 	return actor, nil
 }
@@ -161,7 +157,7 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	if err != nil {
 		return OwnerIdentity{}, err
 	}
-	value, err := ValidExclusionValue(kind, raw)
+	value, err := validRuleValue(identityKinds, kind, raw)
 	if err != nil {
 		return OwnerIdentity{}, err
 	}

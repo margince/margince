@@ -26,6 +26,7 @@ import (
 //nolint:goconst,dupl // one row per wire field per language is the table's shape; the census holds the languages in step
 var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	textlang.English: {
+		"deal_filing":              "Deal filing",
 		"acquisition_source":       "Acquisition source",
 		"active":                   "Active",
 		"address":                  "Address",
@@ -61,7 +62,6 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"expected_arr_minor":       "Expected ARR",
 		"expected_close_date":      "Expected close",
 		"first_name":               "First name",
-		"forecast_category":        "Forecast category",
 		"full_name":                "Name",
 		"fx_rate_date":             "FX rate date",
 		"fx_rate_to_base":          "FX rate",
@@ -91,6 +91,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"priority":                 "Priority",
 		"project_id":               "Project",
 		"relationship_types":       "Relationship types",
+		"due_has_time":             "Due at a set time",
+		"call_outcome":             "Call outcome",
 		"remind_at":                "Reminder",
 		"role":                     "Role",
 		"score":                    "Score",
@@ -114,8 +116,10 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Valid until",
 		"visibility":               "Visibility",
 		"wait_until":               "Waiting until",
+		"win_probability":          "Probability",
 	},
 	textlang.German: {
+		"deal_filing":              "Deal-Zuordnung",
 		"acquisition_source":       "Akquisitionsquelle",
 		"active":                   "Aktiv",
 		"address":                  "Adresse",
@@ -151,7 +155,6 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"expected_arr_minor":       "Erwarteter ARR",
 		"expected_close_date":      "Voraussichtlicher Abschluss",
 		"first_name":               "Vorname",
-		"forecast_category":        "Prognosekategorie",
 		"full_name":                "Name",
 		"fx_rate_date":             "Datum des Wechselkurses",
 		"fx_rate_to_base":          "Wechselkurs",
@@ -181,6 +184,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"priority":                 "Priorität",
 		"project_id":               "Projekt",
 		"relationship_types":       "Beziehungstypen",
+		"due_has_time":             "Fällig zu einer Uhrzeit",
+		"call_outcome":             "Ergebnis des Anrufs",
 		"remind_at":                "Erinnerung",
 		"role":                     "Rolle",
 		"score":                    "Score",
@@ -204,8 +209,10 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Gültig bis",
 		"visibility":               "Sichtbarkeit",
 		"wait_until":               "Wartet bis",
+		"win_probability":          "Abschlusschance",
 	},
 	textlang.Vietnamese: {
+		"deal_filing":              "Gắn vào giao dịch",
 		"acquisition_source":       "Nguồn tiếp cận",
 		"active":                   "Đang hoạt động",
 		"address":                  "Địa chỉ",
@@ -241,7 +248,6 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"expected_arr_minor":       "ARR dự kiến",
 		"expected_close_date":      "Ngày chốt dự kiến",
 		"first_name":               "Tên",
-		"forecast_category":        "Danh mục dự báo",
 		"full_name":                "Tên",
 		"fx_rate_date":             "Ngày tỷ giá",
 		"fx_rate_to_base":          "Tỷ giá",
@@ -271,6 +277,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"priority":                 "Độ ưu tiên",
 		"project_id":               "Dự án",
 		"relationship_types":       "Loại quan hệ",
+		"due_has_time":             "Đến hạn vào giờ cụ thể",
+		"call_outcome":             "Kết quả cuộc gọi",
 		"remind_at":                "Lời nhắc",
 		"role":                     "Vai trò",
 		"score":                    "Điểm",
@@ -294,6 +302,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Có hiệu lực đến",
 		"visibility":               "Phạm vi hiển thị",
 		"wait_until":               "Chờ đến",
+		"win_probability":          "Xác suất",
 	},
 }
 

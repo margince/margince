@@ -19,7 +19,7 @@
 #              so a running dev stack and this lane never collide either. More
 #              than one package touches Redis, and at least two FLUSHDB between
 #              tests, so this is an isolation boundary rather than a convenience
-#              — see the NPKGS guard below for what happens when it is short.
+#              — batches wait before reusing the reserved test block.
 # Within a package nothing changes — still -p 1, the same sequential model that is
 # green today — so no test file needs editing.
 #
@@ -194,9 +194,8 @@ GO_DIRS=(backend)
 # which `make dev` owns, and the block above this one, which the per-worktree
 # dev stacks take. So --databases in docker-compose.dev.yml is higher than this
 # number, not equal to it, and the gate asserts the offset rather than equality.
-# It is one PER PACKAGE, not per concurrent job — a package's keys must survive
-# the whole package, and a slot freed by a finished package cannot be handed on
-# while its successor is still reading.
+# Packages in each batch own distinct databases until the whole batch exits.
+# Later batches reuse that block without entering the worktree dev allocation.
 REDIS_DBS=64
 
 # Candidate packages: every directory in the module that holds test files. Which
@@ -350,6 +349,9 @@ while IFS='|' read -r d rel; do
         # slice — does not apply, because `bench` is not built-in and nothing
         # in this lane defines it.
         'integration && bench') skip_file=1 ;;
+        # The weekly role sweep (make test-roles), kept out of the merge gate
+        # the same way and for the same reason as the benchmarks.
+        'integration && rolesweep') skip_file=1 ;;
         *)
           echo "FAIL: $f carries build constraint '$expr' — not one the static shard discovery knows" >&2
           echo "  teach the allowlist in scripts/test-integration-parallel.sh or simplify the constraint" >&2
@@ -459,17 +461,6 @@ done < "$GROUPED"
 rm -f "$GROUPED"
 
 NPKGS=$(wc -l < "$WORK" | tr -d ' ')
-# One Redis logical db per package, and there must be enough of them. Wrapping
-# the mapping instead is what this guard exists to prevent: two packages on one
-# db do not run slowly, they corrupt each other — platform/events and every
-# suite on platform/redistest FLUSHDB between tests, so a collision wipes the
-# other package's keys mid-test and the failure surfaces in whichever suite was
-# reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
-# databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.
-if (( NPKGS > REDIS_DBS )); then
-  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
-  exit 1
-fi
 # Say what was left to the unit lane. An unreported exclusion and a broken
 # selector produce the same silence, and this lane's whole contract is that a
 # thinner run must never read as a passing one.
@@ -494,9 +485,8 @@ run_one() {
   local db="margince_it_p${idx}_$$"
   local log="$outdir/$idx.log"
   local bucket; bucket="$(bucket_for "$idx")"
-  # Redis logical db per slot — db 0 stays reserved for `make dev`. The modulo
-  # never wraps in practice: the NPKGS guard above refuses the run rather than
-  # let two packages land on one db.
+  # The batch barrier lets this wrap only after the previous holder exits.
+  # Database 0 and the higher worktree dev block stay outside this mapping.
   local redis_db=$(( 1 + (idx - 1) % REDIS_DBS ))
   # Coverage args (empty unless COVERDIR is set — shard mode with a manifest
   # dir). -coverpkg=./... attributes cross-package exercise; binary output goes
@@ -508,6 +498,8 @@ run_one() {
     cover_post=(-args -test.gocoverdir="$COVERDIR/$idx")
   fi
   [[ -n "$runre" ]] && run_args=(-run "$runre")
+  # -vet=off: `make lint` vets tagged code with a superset of these analyzers, and
+  # gates/lintbuildtagreach_test.go holds that. A slot would only repeat it.
   {
     echo "=== integration $d $rel (db=$db bucket=$bucket redis-db=$redis_db${runre:+ sliced}) ==="
     make_clone "$db"
@@ -519,7 +511,7 @@ run_one() {
            MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
            MARGINCE_TEST_BLOBSTORE_BUCKET="$bucket" \
            MARGINCE_TEST_REDIS_DB="$redis_db" \
-        go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" \
+        go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" \
           "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}" \
           "$rel" "${cover_post[@]+"${cover_post[@]}"}" ) || st=$?
     if ! drop_clone "$db"; then
@@ -547,6 +539,21 @@ export -f run_one owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin b
 # to empty, and `% ` is a division by zero rather than a wrong db.
 export REDIS_DBS
 
+# Compile this run's tests in one build before fanning out. `go build` above stops
+# short of test code. Each slot would otherwise compile its own while the first
+# packages run their tests on the same cores.
+#
+# Same flags as the `go test` in run_one, or that run recompiles. A package that
+# does not compile fails again in its own slot, which reports it per package.
+test_build_started=$SECONDS
+test_packages=()
+while IFS='|' read -r _ rel; do test_packages+=("$rel"); done < "$WORK"
+if ( cd "$ROOT/backend" && go test -vet=off -exec=true "${prebuild_flags[@]}" "${test_packages[@]+"${test_packages[@]}"}" ) > /dev/null 2>&1; then
+  echo "test-integration-parallel: compiled the tests once ($(( SECONDS - test_build_started ))s)"
+else
+  echo "test-integration-parallel: a test package does not compile; its slot prints the error"
+fi
+
 # When the first package could START, which separates two very different costs
 # that both look like "before the tests ran": everything this script does before
 # fanning out (the template, the constraint scan over every Go file in the module,
@@ -554,11 +561,7 @@ export REDIS_DBS
 # is this script's to reduce.
 FANOUT_T0=$(( $(date +%s) - LANE_T0 ))
 
-# Fan out with a bounded worker pool. nl numbers the lines → stable per-job db
-# names + logs. The work line rides as a positional arg, not spliced into the
-# script, so the shard-mode regex characters never meet the shell.
-nl -ba -w1 -s'|' "$WORK" \
-  | xargs -P "$JOBS" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$OUTDIR"
+run_integration_packages "$WORK" "$JOBS" "$REDIS_DBS" "$OUTDIR"
 
 # Aggregate: print every log in package (idx) order, then enforce the teeth.
 fail=0

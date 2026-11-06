@@ -132,7 +132,7 @@ export const Answered: Story = {
   render: viewStory({}),
   play: async (context) => {
     await askFixture(context);
-    await screen.findByText("€862,000.00");
+    await screen.findByText("862,000 EUR");
   },
 };
 
@@ -219,7 +219,7 @@ export const Stale: Story = {
   render: viewStory({}),
   play: async (context) => {
     await askFixture(context);
-    await screen.findByText("€862,000.00");
+    await screen.findByText("862,000 EUR");
     await userEvent.click(
       within(context.canvasElement).getByRole("button", { name: "Add filter" }),
     );

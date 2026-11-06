@@ -33,10 +33,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/internal/shared/testsmtp"
@@ -95,6 +97,16 @@ func setupConfirmLane(t *testing.T) *confirmLaneEnv {
 		vault:   vault,
 		store: consent.NewStore(InstallationDB(e.Pool)).
 			WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter, laneFromAddress), vault, "https://crm.example.test"),
+	}
+}
+
+// livesIn puts the lane's contact in code's country, written upper case as the
+// contacts writer stores it.
+func (l *confirmLaneEnv) livesIn(t *testing.T, code jurisdiction.Code) {
+	t.Helper()
+	if _, err := l.e.Pool.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, l.contact, string(code)); err != nil {
+		t.Fatalf("placing the contact in %s: %v", code, err)
 	}
 }
 
@@ -181,7 +193,7 @@ func TestTheStagedMessageCarriesNoLiveLink(t *testing.T) {
 	// The token itself, as it appears in the sealed link. Searching for it
 	// rather than for a URL shape is what makes this catch a leak into a
 	// column that stores the token alone.
-	_, token, found := lastCut(l.vault.sealed, "#/confirm/")
+	token, found := sealedConfirmToken(l.vault.sealed)
 	if !found {
 		t.Fatalf("the sealed value is not a confirm link: %q", l.vault.sealed)
 	}
@@ -222,6 +234,14 @@ func lastCut(s, sep string) (before, after string, found bool) {
 	return s[:at], s[at+len(sep):], true
 }
 
+// sealedConfirmToken is the token inside a sealed confirm link, without the
+// language the link carries after it.
+func sealedConfirmToken(sealed string) (string, bool) {
+	_, fragment, found := lastCut(sealed, "#/confirm/")
+	token, _, _ := strings.Cut(fragment, "?")
+	return token, found
+}
+
 func lastIndex(s, sub string) int {
 	for i := len(s) - len(sub); i >= 0; i-- {
 		if s[i:i+len(sub)] == sub {
@@ -244,8 +264,9 @@ func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) 
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: 24 * time.Hour,
 	})
-	store := l.store.WithInstallationCountry(consent.InstallationCountryFunc(
-		func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return ackJurisdiction, nil }))
+	// The receipt is owed under the subject's own country.
+	l.livesIn(t, ackJurisdiction)
+	store := l.store
 	if _, err := l.e.Pool.Exec(context.Background(), `
 		INSERT INTO consent_purpose (key, label, class)
 		VALUES ('newsletter', 'Newsletter', 'marketing')
@@ -380,7 +401,8 @@ func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) 
 	lane := setupConfirmLane(t)
 	const country jurisdiction.Code = "qh"
 	messagingrules.Register(messagingrules.Rules{Jurisdiction: country, Version: 1, OptOutAcknowledgement: true})
-	store := lane.store.WithInstallationCountry(consent.InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return country, nil })).
+	lane.livesIn(t, country)
+	store := lane.store.
 		WithMailLanguage(consent.MailLanguageFunc(func(ctx context.Context, tx pgx.Tx) (string, error) {
 			_, err := tx.Exec(ctx, `SELECT 1/0`)
 			return "", err
@@ -394,5 +416,56 @@ func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) 
 	}
 	if count := lane.e.WsCount(t, `SELECT count(*) FROM comms_outbound`); count != 0 {
 		t.Fatalf("failed preparation staged %d receipts", count)
+	}
+}
+
+// A privacy notice is headed by the same company logo as other system mail.
+// The logo is staged with the notice and attached at send. A logo removed
+// between staging and sending leaves the company's name.
+func TestAPrivacyNoticeShowsTheCompanyLogoUntilItIsRemoved(t *testing.T) {
+	for _, removed := range []bool{false, true} {
+		lane := setupConfirmLane(t)
+		blob := blobstore.NewMemory()
+		putPNG(t, blob, "logos/anchor.png")
+		lane.e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+			VALUES ($1, 'Northstar GmbH', true, 'logos/anchor.png', 'upload', 'manual', 'human:x')`, ids.NewV7())
+		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
+			t.Fatal(err)
+		}
+		var deliveryID ids.UUID
+		var messageID, logoKey string
+		if err := lane.e.Pool.QueryRow(lane.ctx, `SELECT id, message_id, coalesce(inline_logo_key, '') FROM comms_outbound WHERE sender_kind='controller'`).
+			Scan(&deliveryID, &messageID, &logoKey); err != nil {
+			t.Fatal(err)
+		}
+		if logoKey != "logos/anchor.png" {
+			t.Fatalf("the notice was staged with logo %q, want the company's", logoKey)
+		}
+		if removed {
+			if err := blob.Delete(context.Background(), logoKey); err != nil {
+				t.Fatal(err)
+			}
+		}
+		relay := testsmtp.Start(t, false)
+		host, port := relay.Address(t)
+		dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, blob, nil, nil).
+			WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}), lane.vault)
+		if outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), deliveryID); err != nil || outcome != comms.OutcomeSent {
+			t.Fatalf("controller dispatch: %s %v", outcome, err)
+		}
+		// The markup is quoted-printable; joining its soft line breaks lets the
+		// content id be read whole.
+		received := strings.ReplaceAll(relay.Received(), "=\r\n", "")
+		if !strings.Contains(received, "Message-ID: <"+messageID+">") {
+			t.Fatal("the notice lost its staged Message-ID")
+		}
+		attached := strings.Contains(received, "Content-ID: <"+connector.LetterheadLogoContentID+">")
+		shown := strings.Contains(received, "cid:"+connector.LetterheadLogoContentID)
+		if attached == removed || shown == removed {
+			t.Fatalf("logo removed=%v: attached=%v shown=%v", removed, attached, shown)
+		}
+		if removed && !strings.Contains(received, "Northstar GmbH") {
+			t.Fatal("a notice whose logo was removed lost the company's name")
+		}
 	}
 }

@@ -1,7 +1,10 @@
 import type { components } from "../../api/schema";
 import { EmptyState, StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { formatMoneyCompact, formatNumber } from "../../format/format";
+import {
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
+} from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import {
   type Locale,
@@ -106,7 +109,7 @@ export function LandingCard({
       currency,
       locale,
       t("format.notForecast"),
-      formatMoneyCompact,
+      formatAnalyticsMoney,
     );
   const lines = landingBasisLines(landing, callMinor, money, t);
   return (
@@ -177,11 +180,11 @@ export function ModelRangeCard({
   const left = [
     unpriced > 0 &&
       plural("forecast.model.unpriced", unpriced, {
-        count: formatNumber(unpriced, locale),
+        count: formatAnalyticsNumber(unpriced, locale),
       }),
     fxMissing > 0 &&
       plural("forecast.model.fxMissing", fxMissing, {
-        count: formatNumber(fxMissing, locale),
+        count: formatAnalyticsNumber(fxMissing, locale),
       }),
   ].filter((line): line is string => typeof line === "string");
   return (
@@ -242,7 +245,7 @@ export function RecordsLandingCard({
         currency,
         locale,
         t("format.notForecast"),
-        formatMoneyCompact,
+        formatAnalyticsMoney,
       )}
       detail={t("forecast.landingRecordsDetail")}
     />
@@ -296,7 +299,7 @@ export function SufficiencyCard({
       currency,
       locale,
       t("format.notForecast"),
-      formatMoneyCompact,
+      formatAnalyticsMoney,
     );
   const percent = Math.round(coverage / BASIS_POINTS_PER_PERCENT);
 
@@ -316,7 +319,9 @@ export function SufficiencyCard({
       detail={
         <>
           <span>
-            {t("forecast.coverage", { percent: formatNumber(percent, locale) })}
+            {t("forecast.coverage", {
+              percent: formatAnalyticsNumber(percent, locale),
+            })}
           </span>
           <span>
             {t("forecast.pipelineNeededDetail", {
