@@ -61,6 +61,11 @@ func TestIdentityHolderPlansReadOnlyTheRequestedMailboxes(t *testing.T) {
 						if _, err := tx.Exec(ctx, `SELECT set_config('plan_cache_mode', @mode, true)`, pgx.NamedArgs{"mode": mode}); err != nil {
 							return err
 						}
+						// A few hundred rows read faster in a sequential scan once autovacuum has
+						// counted them. The check asks for the plan a full mailbox gets.
+						if _, err := tx.Exec(ctx, `SELECT set_config('enable_seqscan', 'off', true)`); err != nil {
+							return err
+						}
 						holders, err := storekit.IdentityHoldersOf(ctx, tx, keys)
 						if err != nil {
 							return err
