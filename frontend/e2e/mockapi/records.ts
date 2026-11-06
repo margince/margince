@@ -10,6 +10,7 @@ import {
 import {
   anna,
   brandt,
+  busyStageDeals,
   deals,
   MEETING_ACTIVITY,
   seats,
@@ -349,9 +350,25 @@ export const pipelines = page([
   },
 ]);
 
-// The board reads the list, so the list shows the writes the detail shows.
-export const listDeals: Handler = ({ json }, { dealPatches }) =>
-  json(page(deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] }))));
+// The board reads the list, so the list shows the writes the detail shows. A
+// board column asks for one stage, and the server answers only that stage. The
+// cursor is the offset of the next page, as a keyset server's is opaque.
+export const listDeals: Handler = ({ json, url }, { dealPatches, options }) => {
+  const stageId = url.searchParams.get("stage_id");
+  const current = [...deals, ...(options.busyStage ? busyStageDeals : [])].map(
+    (deal) => ({ ...deal, ...dealPatches[deal.id] }),
+  );
+  const rows = stageId
+    ? current.filter((deal) => deal.stage_id === stageId)
+    : current;
+  const from = Number(url.searchParams.get("cursor") ?? 0);
+  const limit = Number(url.searchParams.get("limit") ?? rows.length);
+  const more = from + limit < rows.length;
+  return json({
+    data: rows.slice(from, from + limit),
+    page: { next_cursor: more ? String(from + limit) : null, has_more: more },
+  });
+};
 
 const winEvidenceRequired = {
   title: "Unprocessable",

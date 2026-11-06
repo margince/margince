@@ -14,12 +14,12 @@ import {
 } from "../../design-system/recordpicker";
 import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
+import { stillHeld } from "../../lib/employmentcurrency";
 import {
   type Employment,
   type EmploymentActions,
   searchCompanyCandidates,
 } from "./contactemployers";
-import { stillHeld } from "./employmentcurrency";
 import { datePatch, validDateEntry } from "./employmentpatch";
 import "../../design-system/querystates.css";
 

@@ -10,12 +10,11 @@ package gates
 // Several activity audiences are recomputed in one agreed order, or two
 // transactions deadlock.
 //
-// RecomputeAudienceTx takes `FOR UPDATE` on the activity it derives, so a caller
-// holding several of them is choosing a lock order — and a caller that loops
-// over whatever its own query returned is choosing one by accident. Two such
-// callers that disagree can each hold the row the other needs next, which
-// Postgres resolves by aborting one of them: a failed verdict pass or a failed
-// release batch, retried on the next tick.
+// RecomputeAudienceTx row-locks the activity it derives, so a caller holding
+// several of them chooses a lock order. A loop over whatever its own query
+// returned chooses one by accident. Two such callers that disagree can each
+// hold the row the other needs next, and Postgres aborts one of them. That is
+// a failed verdict pass or release batch, retried on the next tick.
 //
 // The plural, RecomputeAudiencesTx, sorts before it locks. This refuses the loop
 // that goes around the singular instead, because that is the shape the defect

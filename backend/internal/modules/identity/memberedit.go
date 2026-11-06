@@ -41,7 +41,7 @@ func validateDisplayName(name string) error {
 
 // UpdateMember keeps profile and access edits in one transaction.
 func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.UserID, in MemberEdit) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionUpdate)
@@ -65,6 +65,9 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 			return err
 		}
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, member, reachTakeover); err != nil {
+			return err
+		}
+		if err := refuseAgentEmailChange(ctx, tx, member, in.Email); err != nil {
 			return err
 		}
 		if err := s.editMemberIdentityTx(ctx, tx, actor, member, in); err != nil {

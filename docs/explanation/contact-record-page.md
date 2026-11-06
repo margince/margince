@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx frontend/src/design-system/verbvolume.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
@@ -9,6 +9,10 @@ The Overview tab puts recorded context and real work first. A new contact must n
 The newest thing the contact sent in the last 7 days that nobody has answered is "Just in". The server reads it (`GET /activities/latest-inbound`, `backend/internal/modules/activities/latestinbound.go`). Mail and messages come from the `waiting_reply` read. A website form counts until a later sent mail or message, a call or a held meeting answers it. An item a task stands for is left out.
 
 `RecordNextBar` (`frontend/src/components/latestinbound.tsx`) puts the item in the Next bar on every record type. It takes the bar when nothing urgent is next: a late item, a moment or a move the page marks urgent. Otherwise it is one line above the bar. A bar whose move already cites the item draws alone.
+
+With nothing next and no item, `RecordNextBar` draws the record's last exchange (`last_exchange` on the same read) as a history line above the bar. The contact and company pages turn the line off (`lastExchange={false}`): "What was said" and the "Last contact" tile already show that exchange there. Deals, leads and projects keep it. The bar never takes that exchange as its content, because a past meeting is history and not a next step. A `whose_move` of `neither` adds nothing to the line, because a missing reply direction does not show that no work is left.
+
+On a contact, the empty bar says "No follow-up task recorded." only after the quiet rung. It needs the contact's tasks read, with none hidden from the reader (`AnswerBar` in `contacttoday.tsx`). A reader who may log activity also gets **Add follow-up**, which opens the task form.
 
 **Create task** accepts a mail's request when the server says it can (`accepts_request`), so finishing the task settles it. Anything else becomes a task made from the item. "Noticed" hides it in this browser, and no older item takes its place. On the other tabs it is one line under the badges.
 
@@ -44,7 +48,7 @@ Focus chooses and orders entries the normal way, with no pin controls and no sto
 
 The Next bar stays about this contact. With no move, no task and nothing just in, it says whose turn it is. It reads that from `last_exchange` in `GET /activities/latest-inbound`, the contact's newest call, meeting or message. `activities.WhoseMove` decides it, the same function the company page's strip uses, so the two cannot disagree.
 
-A move whose action opens the composer drafts the message on the press and is drawn in the AI indigo. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. A move that only opens a form or a record keeps the accent.
+A move whose action opens the composer drafts the message on the press and carries the AI ✦. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. Only the bar's first move is filled: indigo when it drafts, green when it only opens a form or a record. Every other move has no fill.
 
 The Next bar shows open privacy notice work before relationship suggestions. It reads the same
 contact-scoped queue as Home, with the same grants and row scope. **Review privacy duty** opens the
@@ -73,6 +77,15 @@ before transport direction.
 The Reach figure counts colleagues with recorded messages in both directions during the last
 90 days. Receiving the same message in several mailboxes does not show a reply.
 
-An unknown source appears as **Review source**, with no duty or legal deadline claimed. Only
-readers with privacy access see it. The review opens the case in Settings → Privacy, where the
-source and any known date can be confirmed.
+An unknown source appears in the left column under **Source**, with no duty or legal deadline
+claimed. Only readers with privacy access see it. A reader who may change privacy cases presses
+**Review source**, and a drawer opens over the contact. Other readers see who confirms the source,
+and no button.
+
+The drawer says why the source is asked and what is on record. Then it asks "How did you receive
+their contact details?". Each answer maps to one existing source kind. The answer for a meeting keeps
+the privacy notice duty open, even if they agreed to be contacted. **Another source** opens the
+seven other kinds, including the one that says the notice was given at the meeting.
+
+**Not sure** saves nothing, and the review stays open. Saving sends no mail and does not change
+whether the contact may be emailed.

@@ -50,6 +50,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	"Contact":                              {table: "contact", idPath: "id"},
 	"Company":                              {table: "company", idPath: "id"},
 	"Deal":                                 {table: "deal", idPath: "id"},
+	"DealAdvanced":                         {table: "deal", idPath: "id"},
 	"Lead":                                 {table: "lead", idPath: "id"},
 	"Project":                              {table: "project", idPath: "id"},
 	// A contract has no owner column; it is row-scoped through the deal it came

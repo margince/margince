@@ -121,7 +121,7 @@ func captureReadings(
 		return out, err
 	}
 	out.Scope, out.Readings, out.Assembly = assembly.Scope, assembly.Readings, assembly
-	if out.ForwardMeasure, out.QualifiedPolicy, err = forecastBasis(ctx, tx); err != nil {
+	if out.ForwardMeasure, err = ForecastForwardMeasure(ctx, tx); err != nil {
 		return out, err
 	}
 	members, err := reportingMembers(ctx, tx, scope)
@@ -155,22 +155,11 @@ func reportingCaptureAttempts(ctx context.Context, store *forecasting.Store, con
 	return attempts, nil
 }
 
-// stampForecastBasis records on a snapshot the two settings that shaped what
-// its reader saw. Both snapshot writers call it, so a vintage cannot be
+// stampForecastBasis records on a snapshot the forward measure that shaped
+// what its reader saw. Both snapshot writers call it, so a vintage cannot be
 // stamped one way by the daily pass and another way by the week's close.
 func stampForecastBasis(ctx context.Context, tx pgx.Tx, snapshot *forecasting.NewSnapshot) error {
-	measure, policy, err := forecastBasis(ctx, tx)
-	snapshot.ForwardMeasure, snapshot.QualifiedPolicyVersion = measure, policy
-	return err
-}
-
-// forecastBasis reads the forward measure and the qualified policy in force.
-// A call's baseline carries the same two through forecasting.Baseline.
-func forecastBasis(ctx context.Context, tx pgx.Tx) (forecasting.ForwardMeasure, string, error) {
 	measure, err := ForecastForwardMeasure(ctx, tx)
-	if err != nil {
-		return "", "", err
-	}
-	policy, err := forecastQualifiedPolicy(ctx, tx)
-	return measure, policy, err
+	snapshot.ForwardMeasure = measure
+	return err
 }

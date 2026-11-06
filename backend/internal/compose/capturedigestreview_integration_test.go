@@ -51,6 +51,8 @@ func (decidesDeals) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RB
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
+			"contact":  {Create: true, Read: true},
+			"lead":     {Create: true, Read: true},
 			"deal":     {Read: true, Update: true},
 		},
 		RowScope: principal.RowScopeAll,

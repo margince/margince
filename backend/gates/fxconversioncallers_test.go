@@ -43,6 +43,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -56,7 +57,7 @@ const fxRateField = "Rate"
 
 // convertEntryPoints are the two names a caller may reach for. PriceAll is a
 // wrapper over ConvertToBase, so a caller of either is inside the one rule.
-var convertEntryPoints = map[string]bool{"ConvertToBase": true, "PriceAll": true}
+var convertEntryPoints = map[string]bool{"ConvertToBase": true, "ConvertBetween": true, "PriceAll": true}
 
 // fxConversionOwner is where the arithmetic itself lives, and the one file
 // exempt from the rule below.
@@ -119,6 +120,10 @@ func rateArithmeticIn(file *ast.File, path string) []string {
 			// handing rate.Rate to ConvertToBase is the correct site.
 			return false
 		}
+		if isCall && bigArithmetic(call) && callNamesRateField(call) {
+			found = append(found, path)
+			return true
+		}
 		binary, isBinary := node.(*ast.BinaryExpr)
 		if !isBinary || binary.Op != token.MUL {
 			return true
@@ -162,4 +167,46 @@ func namesRateField(expr ast.Expr) bool {
 		return !found
 	})
 	return found
+}
+
+// bigArithmetic reports a math/big method call that multiplies or divides,
+// the spelling a rate takes once it is a *big.Int rather than a Go number.
+func bigArithmetic(call *ast.CallExpr) bool {
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	switch selector.Sel.Name {
+	case "Mul", "Quo", "QuoRem", "Div", "DivMod":
+		return true
+	}
+	return false
+}
+
+// callNamesRateField reports whether a call's receiver or arguments read an
+// FXRate's stored numeric.
+func callNamesRateField(call *ast.CallExpr) bool {
+	if selector, ok := call.Fun.(*ast.SelectorExpr); ok && namesRateField(selector.X) {
+		return true
+	}
+	return slices.ContainsFunc(call.Args, namesRateField)
+}
+
+// TestTheRateGateSeesAMethodCallMultiply holds the census to the big.Int
+// spelling: a rate multiplied through Mul is a second engine as surely as one
+// multiplied with *.
+func TestTheRateGateSeesAMethodCallMultiply(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"package p; func f() { new(big.Int).Mul(amount, rate.Rate.Int) }",
+		"package p; func f() { numerator.Quo(numerator, toRate.Rate.Int) }",
+	} {
+		file, err := parser.ParseFile(token.NewFileSet(), "planted.go", source, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(rateArithmeticIn(file, "planted.go")) == 0 {
+			t.Errorf("the gate reported no arithmetic in %q", source)
+		}
+	}
 }

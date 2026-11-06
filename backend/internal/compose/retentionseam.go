@@ -23,10 +23,12 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -63,8 +65,19 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 // The join those rows are found by belongs to capture, which writes them. A
 // copy of it in privacy would be a second answer to the same question, and the
 // half that drifted would leave originals behind while reporting success.
+//
+// The voice samples read from sent mail are copies of the same text, owned by
+// ai. They ride this seam so every path that destroys the original empties them.
 func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
-	return capture.NewPendingStore(db)
+	return capturedTextPurger{PendingStore: capture.NewPendingStore(db)}
+}
+
+// capturedTextPurger is capture's purge plus the copies ai holds.
+type capturedTextPurger struct{ *capture.PendingStore }
+
+// PurgeTextCopiesTx empties the voice samples read from the activities.
+func (capturedTextPurger) PurgeTextCopiesTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	return ai.EraseSamplesCopiedFromTx(ctx, tx, activityIDs, time.Now().UTC())
 }
 
 //nolint:ireturn // privacy owns the purge seam; compose supplies the vault adapter.

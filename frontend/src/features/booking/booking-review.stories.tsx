@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { bookingContact, bookingSlots } from "../../testing/book.testkit";
 import { StoryProviders } from "../../testing/story-utils";
 import { type BookingDraft, BookingReview } from "./booking-review";
@@ -34,7 +34,7 @@ const panel = (props: Partial<Parameters<typeof BookingReview>[0]>) => () => (
         picks={bookingSlots}
         onRemovePick={() => undefined}
         configured
-        zone={viewerZone()}
+        zone={browserZone()}
         searchContacts={async () => []}
         {...props}
       />

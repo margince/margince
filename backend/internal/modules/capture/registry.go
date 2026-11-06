@@ -228,7 +228,9 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
+	// Before the credential and the provider: a member who may no longer
+	// capture costs the provider nothing and parks under its own class.
+	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
 		if recErr := r.recordSyncFailure(runCtx, snapshot, credentialRef, err); recErr != nil {
 			return errors.Join(err, recErr)

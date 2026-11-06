@@ -38,3 +38,29 @@ func TestABookingCalendarsBlockerComesFromItsConnection(t *testing.T) {
 		t.Errorf("a read-only grant reads %q, want calendar_read_only", got)
 	}
 }
+
+// Home's lane and the booking reads agree on a host who lost the grant to book.
+// Their calendar is fine, so only the authority half of the check can pause it.
+func TestHomePausesABookingPageWhoseHostMayNotBook(t *testing.T) {
+	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "read_only")
+	e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status, provider_scopes)
+		VALUES ('gcal', $1, 'connected', ARRAY['https://www.googleapis.com/auth/calendar'])`, e.Rep1)
+	lane := bookingGrantCalendar{newSchedulingCalendar(e.Pool, captureHealthRegistry(e.DB()))}
+	host := ids.From[ids.UserKind](e.Rep1)
+	blocker := func() crmcontracts.SchedulingProfileBlocker {
+		t.Helper()
+		got, err := lane.Blocker(e.Admin(), host, "gcal")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	if got := blocker(); got != crmcontracts.SchedulingProfileBlockerCalendarUnavailable {
+		t.Errorf("a host who may not book reads %q, want calendar_unavailable", got)
+	}
+	e.GrantRole(t, e.Rep1, "rep")
+	if got := blocker(); got != crmcontracts.SchedulingProfileBlockerNone {
+		t.Errorf("a host who may book reads %q, want none", got)
+	}
+}

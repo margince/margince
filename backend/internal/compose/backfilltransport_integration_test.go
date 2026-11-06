@@ -159,7 +159,8 @@ func (backfillAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (aut
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
-			"contact":  {Read: true},
+			"contact":  {Create: true, Read: true},
+			"lead":     {Create: true, Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	}}, nil
@@ -199,7 +200,11 @@ func setupBackfillWire(t *testing.T) *backfillWireEnv {
 		TeamIDs: []ids.UUID{e.Team1}, SeatType: principal.SeatFull,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}},
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Create: true, Read: true},
+				"contact":  {Create: true, Read: true},
+				"lead":     {Create: true, Read: true},
+			},
 			RowScope: principal.RowScopeTeam,
 		},
 	})
@@ -884,4 +889,38 @@ func pagersFor(t *testing.T, pool *pgxpool.Pool, runID ids.UUID) int {
 		t.Fatalf("counting pagers: %v", err)
 	}
 	return n
+}
+
+// An agent starts and cancels its own user's backfill. A colleague's agent finds
+// no run of theirs to cancel.
+func TestAnAgentStartsAndCancelsItsOwnUsersBackfill(t *testing.T) {
+	b := setupBackfillWire(t)
+	perms := principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}},
+		RowScope: principal.RowScopeTeam,
+	}
+	passport := b.env.SeedPassport(t, integration.OwnerConn(t), "backfill agent")
+	agent := b.env.AgentOnPassport(t, b.env.Rep1, []ids.UUID{b.env.Team1}, perms, ids.From[ids.PassportKind](passport))
+	colleaguePassport := b.env.SeedPassportFor(t, integration.OwnerConn(t), "colleague's agent", b.env.Rep2)
+	colleague := b.env.AgentOnPassport(t, b.env.Rep2, []ids.UUID{b.env.Team1}, perms, ids.From[ids.PassportKind](colleaguePassport))
+	start := func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+	}
+	cancel := func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+	}
+
+	if code, problem := b.do(colleague, t, start, `{"window":"6m"}`, nil); code == http.StatusAccepted || code == http.StatusOK {
+		t.Errorf("a colleague's agent started a backfill on a mailbox its user does not hold: %d %s", code, problem)
+	}
+	var started crmcontracts.BackfillStatus
+	if code, problem := b.do(agent, t, start, `{"window":"6m"}`, &started); code != http.StatusAccepted && code != http.StatusOK {
+		t.Fatalf("the agent's start answered %d %s", code, problem)
+	}
+	if code, problem := b.do(colleague, t, cancel, ``, nil); code == http.StatusAccepted {
+		t.Errorf("a colleague's agent cancelled another user's backfill: %d %s", code, problem)
+	}
+	if code, problem := b.do(agent, t, cancel, ``, nil); code != http.StatusAccepted {
+		t.Errorf("the agent's cancel answered %d %s", code, problem)
+	}
 }

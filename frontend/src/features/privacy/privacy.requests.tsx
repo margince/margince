@@ -23,7 +23,6 @@ import { Select, type SelectOption } from "../../design-system/select";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
@@ -36,6 +35,7 @@ import {
   DSR_STATUS_LABEL,
   type DsrClosing,
   type DsrStatus,
+  ERASURE_ANSWER_LABEL,
   isIllegalTransition,
   isOverdue,
   isTerminal,
@@ -44,6 +44,7 @@ import {
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import "./privacy.css";
 import { isUuid } from "../../lib/uuid";
+import { useViewerZone } from "../../lib/viewerzone";
 import { DsrDispute, DsrProofFields } from "./privacy.requestproof";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
@@ -90,7 +91,7 @@ export function DsrTable({
   const t = useT();
   const { locale } = useLocale();
   // A statutory deadline, read on the viewer's own calendar day.
-  const tz = viewerZone();
+  const tz = useViewerZone();
   const columns: DataTableColumn<DataSubjectRequest>[] = [
     {
       key: "subject",
@@ -255,7 +256,7 @@ export function DsrDetail({
       onFulfilErasure(dsr, closing);
       return;
     }
-    patch.mutate({ id: dsr.id, body: closingBody(next, closing) });
+    patch.mutate({ id: dsr.id, body: closingBody(next, closing, dsr.kind) });
   }
 
   function draft(change: Partial<DsrClosing>) {
@@ -317,7 +318,11 @@ export function DsrDetail({
           {open && (
             <Field
               label={t("privacy.resolution")}
-              hint={t("privacy.resolutionRequired")}
+              hint={t(
+                dsr.kind === "erasure"
+                  ? "privacy.resolutionErasureHint"
+                  : "privacy.resolutionRequired",
+              )}
             >
               {(control) => (
                 <Textarea
@@ -334,7 +339,9 @@ export function DsrDetail({
           {open && (
             <DsrTransitions
               status={dsr.status}
-              ready={(next) => closingReady(next, closing, dsr.resolution)}
+              ready={(next) =>
+                closingReady(next, closing, dsr.resolution, dsr.kind)
+              }
               pending={patch.isPending}
               onTransition={transition}
             />
@@ -352,7 +359,7 @@ function DsrFacts({
 }: Readonly<{ dsr: DataSubjectRequest; nowMs: number; canWork: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const tz = viewerZone();
+  const tz = useViewerZone();
   const facts: Fact[] = [
     {
       key: "subject",
@@ -405,10 +412,14 @@ function DsrFacts({
     });
   }
   if (dsr.resolution && isTerminal(dsr.status)) {
+    // An erasure's answer is a fixed word, shown in the reader's language. By
+    // the value, not the case's kind: an erasure retires the subject's other
+    // cases with the same word.
+    const fixed = ERASURE_ANSWER_LABEL[dsr.resolution];
     facts.push({
       key: "resolution",
       term: t("privacy.resolution"),
-      value: dsr.resolution,
+      value: fixed ? t(fixed) : dsr.resolution,
     });
   }
 

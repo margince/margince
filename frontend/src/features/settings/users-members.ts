@@ -7,10 +7,10 @@ import { holdsEveryWord, searchWords } from "../../format/collate";
 import { readMemberPage } from "../../lib/memberpages";
 
 export type User = components["schemas"]["User"];
-export function matchingMembers(
-  members: readonly User[],
+export function matchingMembers<M extends Pick<User, "display_name" | "email">>(
+  members: readonly M[],
   search: string,
-): User[] {
+): M[] {
   const words = searchWords(search);
   return members.filter((member) =>
     holdsEveryWord(words, [member.display_name, member.email]),
@@ -26,7 +26,7 @@ const MEMBERS_KEY = ["users-admin", "all"] as const;
 export const MAIL_POLL_MS = 2_000;
 
 export function rosterPollInterval(
-  members: readonly User[] | undefined,
+  members: readonly Pick<User, "invite_email_state">[] | undefined,
 ): number | false {
   const onItsWay = members?.some(
     (member) => member.invite_email_state === "sending",

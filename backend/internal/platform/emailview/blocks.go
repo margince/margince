@@ -93,8 +93,9 @@ func renderFacts(facts []Fact) string {
 }
 
 // renderStats is the StatStrip at its plate density. Each cell holds its
-// figure over its label, so a narrow screen that stacks the cells keeps
-// every label with its figure.
+// figure over its label, and a figure never breaks inside a number. The
+// inline size fits three figures on a phone whose client drops the style
+// sheet; the wide sheet sets the larger desktop figure.
 func renderStats(stats []Stat) string {
 	var cells strings.Builder
 	for i, stat := range stats {
@@ -102,8 +103,8 @@ func renderStats(stats []Stat) string {
 		if i > 0 {
 			side = "border-left:1px solid;"
 		}
-		cells.WriteString(`<td valign="top"` + look{edge: borderSubtle}.attrs(side+"padding:14px 16px") + `>` +
-			`<div` + look{ink: textPrimary}.attrs("font:"+headingXLarge.font()) + `>` + html.EscapeString(stat.Value) + `</div>` +
+		cells.WriteString(`<td valign="top"` + look{edge: borderSubtle}.attrs(side+"padding:12px") + `>` +
+			`<div` + look{ink: textPrimary}.attrs("font:"+headingMedium.font()+";white-space:nowrap", "figure") + `>` + html.EscapeString(stat.Value) + `</div>` +
 			`<div` + look{ink: textSecondary}.attrs("margin-top:2px;font:"+bodySmall.font()) + `>` + html.EscapeString(stat.Label) + `</div></td>`)
 	}
 	return panel(`<tr>`+cells.String()+`</tr>`, "stats", false)

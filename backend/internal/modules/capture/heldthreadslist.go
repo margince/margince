@@ -92,7 +92,7 @@ func (t HeldThread) Pending() bool { return t.Status == "pending" }
 // `unsure`: a thread the model could not judge is held exactly like one it
 // judged legal, and an owner who is not shown it cannot release it.
 func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery) (HeldThreadPage, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return HeldThreadPage{}, err
 	}
 	actor, ok := principal.Actor(ctx)

@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { EmptyState, Field } from "../../design-system/atoms";
+import { Button, EmptyState, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ChoiceList } from "../../design-system/choicelist";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -13,12 +13,12 @@ import { QueryGate } from "../../design-system/querystates";
 import { useSaveDraft } from "../../design-system/savepage";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
-import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useToast } from "../../design-system/toast";
-import { timezoneOption, viewerZone } from "../../format/timezone";
+import { timezoneOption } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { unwrap } from "../../lib/problem";
+import { problemFieldSentencesOf, unwrap } from "../../lib/problem";
+import { navigate } from "../../lib/router";
 import { putSchedulingChanges } from "../../lib/scheduling-profile-query";
 import {
   BookingRules,
@@ -94,6 +94,9 @@ function sortedHours(hours: WorkingHours): WorkingHours {
 
 type Draft = Readonly<{ hours: WorkingHours | null; rules: Partial<Rules> }>;
 
+// The hours fields a refused save is shown beside, by the names the server uses.
+const HOURS_FIELDS = ["start_time", "end_time"] as const;
+
 // The card's drafts against what was last saved, and the one write for both.
 function useAvailabilityDraft(
   chosen: boolean,
@@ -136,6 +139,7 @@ function useAvailabilityDraft(
     offered: !chosen,
     offer: JSON.stringify(savedHours),
     invalid,
+    placed: HOURS_FIELDS,
     save: () => {
       const nextHours = hoursDirty || !chosen ? sortedHours(draftHours) : null;
       setNarrowed(nextHours !== null && narrowing(savedHours, nextHours));
@@ -197,6 +201,7 @@ function AvailabilityForm({
           chosen={chosen}
           value={draft.draftHours}
           onChange={draft.setDraftHours}
+          refused={save.error}
         />
       </PanelBody>
       {next && (
@@ -223,15 +228,17 @@ function HoursFields({
   chosen,
   value,
   onChange,
+  refused,
 }: Readonly<{
   chosen: boolean;
   value: WorkingHours;
   onChange: (next: WorkingHours) => void;
+  refused: unknown;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const [now] = useState(() => new Date());
-  const browserZone = viewerZone();
+  const refusedAt = problemFieldSentencesOf(refused, locale);
   return (
     <>
       {!chosen && <Callout kind="standing" title={t("workingHours.unset")} />}
@@ -247,7 +254,10 @@ function HoursFields({
         onChange={(days) => onChange({ ...value, days: days.map(Number) })}
       />
       <div className="form-row meeting-hours">
-        <Field label={t("workingHours.from")}>
+        <Field
+          label={t("workingHours.from")}
+          error={refusedAt.get("start_time")}
+        >
           {(control) => (
             <TimeInput
               {...control}
@@ -258,7 +268,10 @@ function HoursFields({
             />
           )}
         </Field>
-        <Field label={t("workingHours.until")}>
+        <Field
+          label={t("workingHours.until")}
+          error={refusedAt.get("end_time")}
+        >
           {(control) => (
             <TimeInput
               {...control}
@@ -270,26 +283,23 @@ function HoursFields({
             />
           )}
         </Field>
-        <Field
-          label={t("workingHours.timezone")}
-          hint={t("workingHours.zoneHelp")}
-        >
-          {(control) => (
-            <TimezoneSelect
-              {...control}
-              value={value.timezone}
-              onChange={(timezone) => onChange({ ...value, timezone })}
-            />
-          )}
-        </Field>
       </div>
-      {!chosen && browserZone !== value.timezone && (
+      {/* The hours are read on the user's own time zone, which is set once
+          under Settings → Account and not here. */}
+      <div className="form-row">
         <p className="t-caption">
-          {t("workingHours.browserZone", {
-            zone: timezoneOption(locale, browserZone, now).label,
-          })}
+          {t("workingHours.zoneIs", {
+            zone: timezoneOption(locale, value.timezone, now).label,
+          })}{" "}
+          {t("workingHours.zoneHelp")}
         </p>
-      )}
+        <Button
+          variant="ghost"
+          onClick={() => navigate({ screen: "settings", id: "account" })}
+        >
+          {t("workingHours.changeZone")}
+        </Button>
+      </div>
     </>
   );
 }
@@ -308,8 +318,11 @@ function useSaveAvailability(
     scope: { id: "working-hours" },
     mutationFn: async ({ hours, rules }: Draft) => {
       if (hours) {
+        const { start_time, end_time, days } = hours;
         const saved = unwrap(
-          await api.PUT("/me/working-hours", { body: hours }),
+          await api.PUT("/me/working-hours", {
+            body: { start_time, end_time, days },
+          }),
         );
         client.setQueryData(["working-hours"], saved);
         onHoursSaved(hours);

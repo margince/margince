@@ -116,6 +116,9 @@ func RunAnalyticsQuery(
 	if err := requireNoLoneColleagueIn(ctx, tx, frame, plan.ContributorsSQL, plan.ContributorsArgs); err != nil {
 		return AnalyticsAnswer{}, err
 	}
+	if err := requireSpecPopulationFloor(ctx, tx, spec, requestedFromQuery(q)); err != nil {
+		return AnalyticsAnswer{}, err
+	}
 
 	pgRows, err := tx.Query(ctx, sql, args...)
 	if err != nil {

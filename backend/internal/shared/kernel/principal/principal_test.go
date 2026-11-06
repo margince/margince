@@ -59,3 +59,24 @@ func TestWithinKeepsOnlyWhatBothPoliciesGrant(t *testing.T) {
 		t.Error("Within widened a scope")
 	}
 }
+
+func TestHumanOrItsAgentAdmitsOnlyAHumanAndAnAgentActingForOne(t *testing.T) {
+	passport, human := ids.NewV7(), ids.NewV7()
+	for _, tc := range []struct {
+		name string
+		p    Principal
+		want bool
+	}{
+		{"a signed-in user", Principal{Type: PrincipalHuman}, true},
+		{"an agent on its user's passport", Principal{Type: PrincipalAgent, PassportID: passport, OnBehalfOf: human}, true},
+		{"an agent with no passport", Principal{Type: PrincipalAgent, OnBehalfOf: human}, false},
+		{"an agent acting for nobody", Principal{Type: PrincipalAgent, PassportID: passport}, false},
+		{"automatic work", Principal{Type: PrincipalSystem}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.p.HumanOrItsAgent(); got != tc.want {
+				t.Fatalf("HumanOrItsAgent() = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}

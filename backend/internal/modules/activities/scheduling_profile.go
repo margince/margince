@@ -38,6 +38,9 @@ type SchedulingCalendar interface {
 	// Blocker says why the host's connected calendar cannot take bookings,
 	// without a provider call.
 	Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error)
+	// ReconnectedSince says whether the host granted the calendar again after
+	// since: the evidence a parked queue waits for.
+	ReconnectedSince(context.Context, ids.UserID, string, time.Time) (bool, error)
 	Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error)
 	Inspect(context.Context, ids.UserID, string, string, string) (connector.CalendarState, error)
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)
@@ -170,8 +173,13 @@ func (s *Store) calendarBlocker(ctx context.Context, host ids.UserID, profile cr
 	return s.calendar.Blocker(ctx, host, string(profile.Provider))
 }
 
+// calendarNotConnected is the refusal a host can act on when their calendar
+// refused us; calendarAuthFailure recognises it by value.
+var calendarNotConnected = SchedulingArgumentError{Field: "provider", Code: codeRequired, Message: "Connect a calendar first"}
+
 func errCalendarNotConnected() error {
-	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar first"}
+	refusal := calendarNotConnected
+	return &refusal
 }
 
 // unconnectedAsRefusal turns the provider seam's "no usable connection" into
@@ -394,7 +402,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 			return err
 		}
 		if errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink) {
-			id, err = s.replaceBookingPage(ctx, tx, host)
+			id, err = s.replaceBookingPage(ctx, tx, host, profile.Enabled)
 			if err != nil {
 				return err
 			}
@@ -418,7 +426,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 	})
 }
 
-func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID) (ids.UUID, error) {
+func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID, enabled bool) (ids.UUID, error) {
 	args := schedulingArgs{}
 	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL`, args...); err != nil {
 		return ids.Nil, err
@@ -434,6 +442,8 @@ func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.User
 	}
 	args = schedulingArgs{}
 	var id ids.UUID
-	err = tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id)
-	return id, err
+	if err := tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id); err != nil {
+		return ids.Nil, err
+	}
+	return id, carryBookingPageUseTx(ctx, tx, host, id, enabled)
 }

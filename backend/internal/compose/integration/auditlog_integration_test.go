@@ -55,9 +55,8 @@ func TestAuditLogReadRequiresAdminHuman(t *testing.T) {
 		}
 	}
 
-	// An agent principal is refused even with unbounded grants: the
-	// agent gate only fronts mutating routes, so the human-only rule
-	// binds at the store.
+	// An agent on no passport is refused even with unbounded grants: automatic
+	// work has no user behind it, and the store is what says so.
 	agentCtx := principal.WithWorkspaceID(t.Context(), e.WS)
 	agentCtx = principal.WithCorrelationID(agentCtx, ids.NewV7())
 	agentCtx = principal.WithActor(agentCtx, principal.Principal{

@@ -157,7 +157,7 @@ func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
 	}
 	var entityType, field string
 	switch subject.Kind {
-	case "advance_deal", "progress_deal", previewStageProgression:
+	case "advance_deal", "progress_deal":
 		entityType, field = "stage", "to_stage_id"
 	case "merge_tags":
 		entityType, field = "tag", "into_tag_id"
@@ -198,8 +198,7 @@ func proposalDestination(proposal crmcontracts.Approval, field string) ids.UUID 
 const PreviewNeedsWiderSight = approvalplan.NeedsWiderSight
 
 const (
-	previewIncomplete       = "incomplete"
-	previewStageProgression = "stage_progression"
+	previewIncomplete = "incomplete"
 )
 
 const previewMergeRecords = "merge_records"

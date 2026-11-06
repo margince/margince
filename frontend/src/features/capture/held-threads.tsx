@@ -19,12 +19,12 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useThreadAudience } from "../../lib/audienceservice";
 import { useOpenEmail } from "../../lib/openemail";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
   HELD_STATUSES,
@@ -169,10 +169,10 @@ function HeldThreadNotices({ list }: Readonly<{ list: HeldThreadList }>) {
 }
 
 function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
   const toast = useToast();
   // Which thread another owner still holds, so a release that changed nothing
   // says so instead of looking broken. Keyed by thread, because two rows can be
@@ -264,7 +264,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
                     row.occurred_at,
                     row.occurred_precision ?? "instant",
                     locale,
-                    zone,
+                    readerZone,
                   )
                 : "—",
           },
@@ -326,7 +326,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           mounts one dialog. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
       />
     </>

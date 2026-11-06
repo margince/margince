@@ -1,0 +1,28 @@
+# CASE 97 — A vCard file goes through the import, so a matching contact is not doubled. The user hands it over and says go.
+name: case97_import_this_card
+criteria: [1]
+writes: true
+
+prompt: |
+  Lena gave me her card as a .vcf, here it is. Import it into Margince, yes go ahead.
+  
+  BEGIN:VCARD
+  VERSION:3.0
+  FN:Lena Vogt
+  EMAIL:lena.vogt@vogt-beratung.test
+  END:VCARD
+
+must_call:
+  - change_capture
+
+must_call_with:
+  - change_capture.action=import_vcards
+
+may_call:
+  - read_workspace
+  - whoami
+  - find_records
+  - search_records
+
+runs: 3
+pass_at: 2

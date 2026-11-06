@@ -541,6 +541,48 @@ describe("the link variant is the .link-button affordance, not a copy of it", ()
   });
 });
 
+describe("align sets where the label's lines sit", () => {
+  it("centres by default and marks no alignment", () => {
+    render(<Button variant="link">Acme Holdings</Button>);
+    const label = screen.getByRole("button", { name: "Acme Holdings" });
+    expect(label).not.toHaveAttribute("data-align");
+  });
+
+  it("marks align start on the button", () => {
+    render(
+      <Button variant="link" align="start">
+        Acme Holdings
+      </Button>,
+    );
+    const label = screen.getByRole("button", { name: "Acme Holdings" });
+    expect(label).toHaveAttribute("data-align", "start");
+  });
+
+  it("compiles only for a button with a label", () => {
+    render(
+      <>
+        {/* @ts-expect-error a glyph has no lines to align */}
+        <Button iconOnly align="start" aria-label="Add">
+          <svg aria-hidden />
+        </Button>
+        {/* @ts-expect-error a glyph has no lines to align */}
+        <Button variant="bare" iconOnly align="start" aria-label="Bell">
+          <svg aria-hidden />
+        </Button>
+      </>,
+    );
+    expect(classesOf("Add")).toContain("btn-icon");
+  });
+
+  it("outranks the button box on specificity, not on sheet order", () => {
+    const css = stripComments(readFileSync(join(here, "base.css"), "utf8"));
+    const rule = /(?:^|\n)\.btn\[data-align="start"\]\s*\{([^}]*)\}/.exec(css);
+    expect(rule).not.toBeNull();
+    expect(rule?.[1]).toMatch(/justify-content:\s*flex-start/);
+    expect(rule?.[1]).toMatch(/text-align:\s*start/);
+  });
+});
+
 describe("the bare variant is the .iconbtn control, not a copy of it", () => {
   it("emits the class the stylesheet keys on", () => {
     render(
@@ -585,7 +627,7 @@ describe("the bare variant is the .iconbtn control, not a copy of it", () => {
       ...misspelled.map(where),
     ]).toEqual([]);
     // Pinned, so a pair deleted on both sides fails rather than shrinking.
-    expect(paired).toHaveLength(16);
+    expect(paired).toHaveLength(28);
   });
 
   it.each([

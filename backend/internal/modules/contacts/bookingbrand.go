@@ -53,14 +53,52 @@ func (s *Store) readAnchorBrand(ctx context.Context) (anchorBrand, error) {
 	var brand anchorBrand
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		brand.id, err = anchorCompany(ctx, tx, false)
-		if err != nil {
-			return err
-		}
-		args := []any{brand.id}
-		return tx.QueryRow(ctx, fmt.Sprintf(`SELECT display_name, logo_object_key FROM company WHERE id=$%d`, len(args)), args...).Scan(&brand.name, &brand.logoKey)
+		brand, err = readAnchorBrandTx(ctx, tx)
+		return err
 	})
 	return brand, err
+}
+
+func readAnchorBrandTx(ctx context.Context, tx pgx.Tx) (anchorBrand, error) {
+	var brand anchorBrand
+	var err error
+	brand.id, err = anchorCompany(ctx, tx, false)
+	if err != nil {
+		return brand, err
+	}
+	args := []any{brand.id}
+	err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT display_name, logo_object_key FROM company WHERE id=$%d`, len(args)), args...).Scan(&brand.name, &brand.logoKey)
+	return brand, err
+}
+
+// MailLetterhead is the name and stored logo key the system relay heads its
+// mail with: the installation's own company. An installation that has not
+// described its company yet answers "", "" and no error, and the caller falls
+// back to the installation name. The key never leaves the server; only the
+// sized image does, inside mail the installation sends as itself.
+func (s *Store) MailLetterhead(ctx context.Context) (string, string, error) {
+	return mailLetterheadOf(s.readAnchorBrand(ctx))
+}
+
+// MailLetterheadTx is MailLetterhead inside the caller's transaction: privacy
+// notices are staged in one, and a second transaction would read another
+// snapshot of the same company.
+func (s *Store) MailLetterheadTx(ctx context.Context, tx pgx.Tx) (string, string, error) {
+	return mailLetterheadOf(readAnchorBrandTx(ctx, tx))
+}
+
+func mailLetterheadOf(brand anchorBrand, err error) (string, string, error) {
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return "", "", nil
+	}
+	if err != nil {
+		return "", "", err
+	}
+	key := ""
+	if brand.logoKey != nil {
+		key = *brand.logoKey
+	}
+	return brand.name, key, nil
 }
 
 // GetPublicBookingCompanyLogo publishes the logo a booking page links to: a

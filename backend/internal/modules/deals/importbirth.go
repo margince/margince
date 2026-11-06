@@ -71,12 +71,13 @@ func (s *Store) ImportDealTx(
 	if err != nil || terminal == nil {
 		return created, err
 	}
-	return s.advanceOnTx(ctx, tx, ids.From[ids.DealKind](ids.UUID(created.Id)), AdvanceDealInput{
+	advanced, err := s.advanceOnTx(ctx, tx, ids.From[ids.DealKind](ids.UUID(created.Id)), AdvanceDealInput{
 		ToStageID:                terminal.StageID,
 		LostReason:               terminal.LostReason,
 		WonWithoutContractReason: &importedWinReason,
 		closedAt:                 terminal.ClosedAt,
 	}, cols.cols)
+	return advanced.Deal, err
 }
 
 // RefuseImportBirth asks, without writing, the refusals an import birth meets
@@ -152,5 +153,6 @@ func (s *Store) ImportAdvanceDealTx(
 	if in.WonWithoutContractReason == nil {
 		in.WonWithoutContractReason = &importedWinReason
 	}
-	return s.advanceOnTx(ctx, tx, id, in, cols.cols)
+	advanced, err := s.advanceOnTx(ctx, tx, id, in, cols.cols)
+	return advanced.Deal, err
 }

@@ -193,23 +193,6 @@ export const BUSINESS_PAGES = [
     changes: acts(writes("pipeline"), destroys("pipeline")),
   },
   {
-    id: "stageautomation",
-    group: "sales",
-    scope: "workspace",
-    // The report reads stage_progression_outcome through a pipeline-gated
-    // endpoint, so `pipeline` read opens it. That grant also shows the stages
-    // the transitions are between.
-    requires: reads("pipeline"),
-    // The page carries the per-transition switches beneath its report, so it
-    // writes. The table above them is read-only as a layout choice, not a
-    // permission one.
-    //
-    // Update only. A rule is created by the same PUT that edits one, and this
-    // page never creates a pipeline. A custom role with pipeline:create but no
-    // update would see every switch refused.
-    changes: acts(writes("pipeline", ["update"])),
-  },
-  {
     id: "leads",
     group: "sales",
     scope: "workspace",

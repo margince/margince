@@ -22,7 +22,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const REFUSED: User = {
+const REFUSED: Omit<User, "timezone"> = {
   id: "u-refused",
   email: "refused@acme.test",
   display_name: "Rhea Refused",
@@ -32,7 +32,6 @@ const REFUSED: User = {
   allowed_actions: ["issue_password_link", "resend_invite", "deactivate"],
   invite_email_state: "failed",
   team_ids: [],
-  timezone: "UTC",
   created_at: "2026-11-03T08:59:00Z",
 };
 
@@ -45,12 +44,10 @@ function invitingBackend(calls: { method: string; url: string }[]) {
       input instanceof Request ? input : new Request(String(input), init);
     const path = new URL(req.url).pathname;
     if (path.endsWith("/v1/users") && req.method === "GET") {
+      // An invited member is offered a resend whatever became of the mail,
+      // so the sent row keeps it.
       const refused = resent
-        ? {
-            ...REFUSED,
-            invite_email_state: "sent",
-            allowed_actions: ["issue_password_link", "deactivate"],
-          }
+        ? { ...REFUSED, invite_email_state: "sent" }
         : REFUSED;
       return jsonResponse({ ...ROSTER, data: [...ROSTER.data, refused] });
     }
@@ -101,6 +98,8 @@ describe("UsersAdminCard invitation mail", () => {
     expect(
       within(rowFor("Rhea Refused")).getByText(en["users.status.invited"]),
     ).toBeTruthy();
+    const after = await rowMenu(user, "Rhea Refused");
+    expect(after.getByText(en["users.resendInvite"])).toBeTruthy();
   });
 
   it("reads the roster again until a mail on its way is answered", async () => {
@@ -153,7 +152,7 @@ describe("UsersAdminCard invitation mail", () => {
   });
 
   it("polls only while a mail is on its way", () => {
-    const member = (state: User["invite_email_state"]): User => ({
+    const member = (state: User["invite_email_state"]) => ({
       ...REFUSED,
       invite_email_state: state,
     });
