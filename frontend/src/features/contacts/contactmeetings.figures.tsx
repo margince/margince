@@ -36,7 +36,7 @@ export function MeetingFigures({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const now = new Date(asOf || Date.now());
+  const now = new Date(asOf);
   const day = (at: string, precision: Activity["occurred_precision"]) =>
     activityDay(at, precision, locale, zone, (iso, l, z) =>
       formatDayMonthNearYear(iso, l, z, now),
