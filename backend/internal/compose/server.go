@@ -108,9 +108,13 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	srv.authHandlers = srv.WithReachableAreas(reachableAreasOf(srv.toolRegistry))
 	// Bound here for the same reason, and on the same Server: deactivation has
 	// to be able to destroy the provider secrets it withdrew.
 	installCaptureCredentialReaper(&srv, log)
+	// After the options too, because WithBlobstore decides whether a picture
+	// has anywhere to live.
+	installAvatarPictures(&srv, pool, log)
 	// Wired unconditionally, not inside WithKeyvault: a role composed with no
 	// vault still serves /installation/setup (every step reads "not
 	// configured"), and the anonymous capabilities probe must report the same

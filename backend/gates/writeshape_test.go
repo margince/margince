@@ -19,7 +19,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -239,6 +238,7 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/modules/identity:createRecordGrantInTx":          "the closed catalog (events.md \u00a75) defines no grant.* type; the closed-verb law forbids inventing one build-side",
 	"internal/modules/identity:RevokeRecordGrant":              "the closed catalog (events.md \u00a75) defines no grant.* type; the closed-verb law forbids inventing one build-side",
 	"internal/modules/identity:mintPassport":                   "minting an Agent Seat Passport is ratified audit-only \u2014 the closed catalog (events.md \u00a75.6a) defines passport.revoked and NO issuance counterpart, so the only bus-visible passport fact is its death. That asymmetry is deliberate on the consumer side (a long-lived holder must drop a credential that died; nobody has to react to one being born) and the closed-verb law forbids inventing passport.issued build-side. The mint is attributable via its audit row; the missing type is raised upstream (P3)",
+	"internal/modules/identity:SetPassportAreas":               "choosing where a passport may act is ratified audit-only for the reason mintPassport is: the closed catalog (events.md \u00a75.6a) defines passport.revoked and nothing for a passport that changes, and no consumer holds a passport's areas, since every call reads them again at authentication and at admission. The change is attributable via its audit row, with the areas before and after",
 	"internal/modules/identity:mintConsentedAuthorizationCode": "the record of WHICH scopes a human ticked and granted to a client is ratified audit-only — the closed catalog (events.md §5) defines no consent fact at all, and the one type that would fit structurally, audit.appended, is declared in the contract as having no emit site and an EMPTY payload, so it could name neither the scopes nor the client. It sits beside issueGrant and mintPassport, the two credential writes this same consent produces when the code is redeemed, and carries the same waiver for the same reason; the addition (an OAuth-consent verb covering the grant, the issuance and the revoke cascade) is raised upstream (P3)",
 	"internal/modules/signals:settleSignalTx":                  "human triage remains audit-only; the ownership-only signal.updated event does not publish private triage decisions",
 	"internal/modules/signals:UpdateSignal":                    "human triage remains audit-only; the ownership-only signal.updated event does not publish private triage decisions",
@@ -344,7 +344,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 	emissionPathsByDir := map[string]map[string]bool{}
 	fset := gatekit.SourceFileSet()
 	for _, root := range []string{"internal/modules", "internal/compose", settingsStoreDir} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err
@@ -411,7 +411,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 func emissionBearingFunctions(fset *token.FileSet, dir string) (map[string]bool, error) {
 	emits := map[string]bool{}
 	calls := map[string][]string{}
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}

@@ -13,13 +13,14 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -54,7 +55,7 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	t.Parallel()
 	all, static := backendCheckLegs(t)
 
-	raw, err := os.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
+	raw, err := gatekit.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
 	if err != nil {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
@@ -90,7 +91,7 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 // expanded through the Makefile's literal variables.
 func backendCheckLegs(t *testing.T) (all, static []string) {
 	t.Helper()
-	body, err := os.ReadFile(backendMakefile)
+	body, err := gatekit.ReadFile(backendMakefile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", backendMakefile, err)
 	}

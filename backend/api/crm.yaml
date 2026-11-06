@@ -1114,11 +1114,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data, api_base_url]
+                required: [data, api_base_url, reachable_areas]
                 properties:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/PassportSummary' }
+                  reachable_areas:
+                    type: array
+                    items: { $ref: '#/components/schemas/WorkArea' }
+                    description: >-
+                      The work areas the caller's role reaches, which a passport's areas are chosen
+                      from. Settings shows no choice of areas when this holds one area or none.
                   api_base_url:
                     type: string
                     format: uri
@@ -1181,6 +1187,40 @@ paths:
       responses:
         '204':
           description: Passport revoked (or already revoked).
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /passports/{id}/areas:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Identity]
+      operationId: setPassportAreas
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Choose the work areas one of the caller's own passports may act in.
+      description: |
+        Sets where the passport may act: `all` admits every area, those added later included, and
+        `custom` admits only the areas listed. The change holds from the passport's next call, in an
+        MCP session that is already connected too. On a connection's passport it also holds for the
+        credentials its renewals mint. Only the passport's own user changes it; another user's
+        passport answers 404. A refused choice answers 422 with `no_area_chosen`, `unknown_area`,
+        `area_repeated`, `area_not_reachable` (the caller's role reaches nothing there), `areas_with_all`
+        or `unknown_mode`. Audited. Human-only: an agent that could widen its own areas would be
+        self-granted authority.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PassportAreas' }
+      responses:
+        '200':
+          description: The passport's areas as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PassportAreas' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -17722,6 +17762,11 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Companies]
       operationId: deleteAnchorCompanyLogo
@@ -17808,6 +17853,11 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -18026,6 +18076,11 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -18702,8 +18757,28 @@ paths:
         Your own mailbox and nobody else's. What a contact is holding is the most private thing this
         module knows — the list names threads judged legal, personnel or personal — so there is no
         id here that reaches a colleague's list and no admin view of one.
+
+        A page at a time, pending first and then newest. `q` matches the opening message's subject
+        and a party's address or name, within what the reader may read. A thread whose message
+        was erased is found by the addresses its hold kept, less any contact erased since. `counts`
+        counts the whole list whatever a page narrows to. The order is fixed, so this list takes
+        no `sort`.
       x-mcp-tool: { verb: list_held_threads, router: read_workspace, action: held_threads, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 200 }
+          description: Matches the subject, and a party's address or name.
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, unsure, held, held_by_owner] }
+        - name: contact_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Only the threads with this contact. A contact you may not read, or one that is archived, answers 404.
       responses:
         '200':
           description: The caller's held threads, pending first.
@@ -18711,6 +18786,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/HeldThreadListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
   /capture/senders:
@@ -26861,6 +26938,65 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /users/{id}/avatar:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: getUserAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Stream a colleague's profile picture.
+      description: |
+        The bytes behind `User.avatar_url` and `SeatName.avatar_url`: always `image/png`,
+        this server's own re-encode, whatever the source was. Any member may read any
+        colleague's picture, as any member may read the roster.
+
+        404 when the seat has no picture, is archived, or does not exist; a client draws
+        initials for all three alike. 501 when the deployment has no object store configured.
+
+        When `v` names the revision served, the answer may be cached for a day without
+        asking again. Any other `v`, or none, is answered with the current picture under
+        `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
+        `ETag` answers 304.
+      parameters:
+        - name: v
+          in: query
+          required: false
+          description: The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: The picture's bytes.
+          headers:
+            ETag:
+              description: The revision served, the same token `avatar_url` carries, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: '`private, max-age=86400, immutable` when `v` names this revision, else `private, no-cache`.'
+              schema: { type: string }
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '304':
+          description: The client already holds this revision.
+          headers:
+            ETag:
+              description: The revision the client holds, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: The freshness a 200 for the same request would carry.
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no picture can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /users/{id}/role:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -33469,6 +33605,88 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /me/avatar:
+    post:
+      tags: [Identity]
+      operationId: uploadMyAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Upload your own profile picture.
+      description: |
+        Always the CALLER's own picture, never anybody else's: there is no id to pass.
+        Colleagues see it beside your name wherever the app draws you.
+
+        Multipart upload with one `file` part of at most 5,000,000 bytes. The request may
+        be 16 KiB larger, for the form's own boundary lines and part headers; a larger
+        request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
+        GIF included, is refused as 415. The image is cropped to a centred square and
+        re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
+        is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
+        many pictures at once; the same file may be sent again.
+
+        Which picture a seat shows: an uploaded one, else the picture of the Google
+        account the member signs in with, else no picture and the client draws initials.
+        An upload replaces either, and is the only way back to a picture after a delete.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: The caller's seat, carrying the `avatar_url` the upload now answers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: The upload is not a PNG, JPEG or WebP image this server can read.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no picture can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Identity]
+      operationId: deleteMyAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Take your own profile picture off for good.
+      description: |
+        The seat shows initials from now on, whether the picture was uploaded or came from
+        the Google account. A later Google sign-in does not bring the Google picture back;
+        only a new upload does.
+
+        Removing a picture the seat does not have is not an error: the seat still shows
+        initials from then on.
+      responses:
+        '200':
+          description: The caller's seat, with no `avatar_url`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /me/ai-activity:
     get:
       tags: [AI]
@@ -39869,17 +40087,33 @@ components:
         created_at: { type: string, format: date-time }
     HeldThreadListResponse:
       type: object
-      required: [data]
+      required: [data, page, counts]
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/HeldThread' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+        counts: { $ref: '#/components/schemas/HeldThreadCounts' }
         thread_verdict:
           $ref: '#/components/schemas/CaptureVerdictClock'
           description: >-
             When the thread verdict next runs — what a `pending` row above is waiting for. A held
             thread with no time beside it leaves its owner two readings, broken and slow, and both
             are wrong. Absent where the deployment composed no queue to ask.
+
+    HeldThreadCounts:
+      type: object
+      description: >-
+        The caller's whole held list by status, whatever a page narrows to. `stalled` is the
+        pending threads asked about as often as the verdict ever will be: a lane that stopped
+        answering, not one that is slow.
+      required: [pending, unsure, held, held_by_owner, stalled]
+      properties:
+        pending: { type: integer, minimum: 0 }
+        unsure: { type: integer, minimum: 0 }
+        held: { type: integer, minimum: 0 }
+        held_by_owner: { type: integer, minimum: 0 }
+        stalled: { type: integer, minimum: 0 }
 
     HeldThread:
       type: object
@@ -46594,6 +46828,13 @@ components:
             instead of printing an id.
         linked_deal_id: { type: [string, 'null'], format: uuid }
         linked_contact_id: { type: [string, 'null'], format: uuid }
+        may_be_done:
+          $ref: '#/components/schemas/WorklistMayBeDone'
+          description: |
+            Present on a promise task when we wrote to one of its recipients on its thread after the
+            promise. The task then asks whether that mail kept it, as the Worklist does, with the
+            same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
+            agent, which answers no such question.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -48484,6 +48725,7 @@ components:
         interactions_90d: { type: integer }
         inbound_90d: { type: integer }
         outbound_90d: { type: integer }
+        sent_90d: { type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on." }
         last_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.' }
         receipts:
           type: array
@@ -48606,6 +48848,7 @@ components:
         interactions_90d: { type: integer }
         inbound_90d: { type: integer }
         outbound_90d: { type: integer }
+        sent_90d: { type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on." }
         two_way:
           type: boolean
           description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
@@ -61004,6 +61247,12 @@ components:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
+        avatar_url:
+          type: string
+          description: >
+            Where the client fetches this seat's profile picture, absent when
+            the seat has none and the client draws initials. The URL changes whenever the
+            picture does.
         greeting_name:
           type: [string, 'null']
           maxLength: 100
@@ -61171,6 +61420,9 @@ components:
       properties:
         id: { type: string, format: uuid }
         display_name: { type: string }
+        avatar_url:
+          type: string
+          description: Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`.
         departed:
           type: boolean
           description: >
@@ -71199,6 +71451,9 @@ components:
           minimum: 1
           maximum: 2160
           description: Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time.
+        areas:
+          allOf: [ { $ref: '#/components/schemas/PassportAreas' } ]
+          description: Where the passport may act. Absent means all areas.
 
     IssuePassportResponse:
       type: object
@@ -71306,7 +71561,7 @@ components:
         own scope request does not narrow it; every mainstream MCP client sends none at all.
         The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
         the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
-      required: [client_name, offline, scopes]
+      required: [client_name, offline, scopes, areas]
       properties:
         client_name: { type: string }
         offline:
@@ -71315,14 +71570,47 @@ components:
         scopes:
           type: array
           items: { type: string, enum: [read, draft, write, send, enrich] }
+        areas:
+          type: array
+          items: { $ref: '#/components/schemas/WorkArea' }
+          description: |
+            The work areas the human's role reaches, which the screen offers to choose from. The
+            screen posts the choice back as `areas`: `all`, or the chosen areas separated by spaces.
+            The screen shows no choice when this holds one area or none, and posts `all`.
+
+    WorkArea:
+      type: string
+      enum: [business, compliance, capture, workspace_settings, admin_settings, own_account]
+      description: |
+        One area of work a passport may be limited to. Each operation an agent can call sits in one
+        group, as `docs/reference/mcp-parity.md` places it, and that page names the area each group
+        is held to. The values are the groups a user can choose, held to that placement by a gate.
+
+    PassportAreas:
+      type: object
+      additionalProperties: false
+      required: [mode, areas]
+      properties:
+        mode:
+          type: string
+          enum: [all, custom]
+          description: |
+            `all` admits every area, those added later included. `custom` admits only `areas`, so an
+            area added later starts off.
+        areas:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/WorkArea' }
+          description: The chosen areas, at least one, when `mode` is `custom`. Empty when it is `all`.
     PassportSummary:
       type: object
       description: Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token.
-      required: [id, label, scopes, created_at]
+      required: [id, label, scopes, areas, created_at]
       properties:
         id: { type: string, format: uuid }
         label: { type: string, description: Human-given name for the passport (e.g. "Marcus's Claude"). }
         scopes: { type: array, items: { type: string }, description: The granted MCP scopes (intersected with the minting human's role at bind time). }
+        areas: { $ref: '#/components/schemas/PassportAreas' }
         agent_id: { type: [string, 'null'], description: 'The agent this passport is bound to, if any.' }
         connection:
           allOf: [ { $ref: '#/components/schemas/PassportConnection' } ]

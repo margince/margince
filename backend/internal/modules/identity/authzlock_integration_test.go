@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -465,5 +466,69 @@ func TestAnAuthorityReadWaitsForARoleEditInProgress(t *testing.T) {
 	}
 	if <-read {
 		t.Error("an authority read waiting on the edit still granted deal:update")
+	}
+}
+
+// An authority hold keeps the member's row from changing while its write is
+// open. A write that only names the member in a foreign key goes on beside it.
+// So a write that locked a record first cannot wait on the hold.
+func TestAnAuthorityHoldLetsAWriteNameTheMember(t *testing.T) {
+	e := setupRevocationEnv(t, "authority-reference")
+	ctx := e.wsCtx(e.admin)
+	_, member := e.dealCloser(t)
+	err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := e.dealUpdateInTx(ctx, tx, member); err != nil {
+			return err
+		}
+		// The check every foreign key to app_user makes, and a change to the row.
+		e.wantMemberLock(t, member, "FOR KEY SHARE", false)
+		e.wantMemberLock(t, member, "FOR NO KEY UPDATE", true)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// An archived member has no row left to hold, so the hold answers not found.
+func TestAnAuthorityHoldOnAnArchivedMemberIsNotFound(t *testing.T) {
+	e := setupRevocationEnv(t, "authority-archived")
+	ctx := e.wsCtx(e.admin)
+	_, member := e.dealCloser(t)
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE app_user SET archived_at = now() WHERE id = $1`, member.UserID.UUID); err != nil {
+		t.Fatal(err)
+	}
+	err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := e.dealUpdateInTx(ctx, tx, member)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("the hold on an archived member: %v, want not found", err)
+	}
+}
+
+// wantMemberLock takes mode on the member's row without waiting, in a
+// transaction of its own. It fails unless the hold refuses it when refused says so.
+func (e *revocationEnv) wantMemberLock(t *testing.T, member Identity, mode string, refused bool) {
+	t.Helper()
+	probe, err := e.owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := probe.Rollback(context.Background()); err != nil {
+			t.Error(err)
+		}
+	}()
+	_, err = probe.Exec(context.Background(),
+		`SELECT 1 FROM app_user WHERE id = $1 `+mode+` NOWAIT`, member.UserID.UUID)
+	switch {
+	case err == nil && refused:
+		t.Errorf("%s on the member went through beside the authority hold", mode)
+	case err != nil && !storekit.IsLockTimeout(err):
+		t.Fatalf("%s on the member: %v", mode, err)
+	case err != nil && !refused:
+		t.Errorf("%s on the member waits for the authority hold", mode)
 	}
 }

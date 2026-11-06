@@ -34,13 +34,14 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // aggregateWorkflow is the merge gate, and aggregateJob is the one job in it
@@ -69,7 +70,7 @@ type aggregateJobs struct {
 
 func TestEveryAggregatedJobCanRunOnTheMergeQueue(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
+	raw, err := gatekit.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
 	if err != nil {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
@@ -175,7 +176,7 @@ func TestNoLaneWorkflowDecidesItsOwnScope(t *testing.T) {
 	}
 
 	for _, path := range lanes {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative path from the glob above
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative path from the glob above
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

@@ -139,6 +139,7 @@ function passport(
     id: `00000000-0000-4000-8000-0000000000c${clientName ? 1 : 2}`,
     label: clientName ?? "Nightly script",
     scopes: ["read"],
+    areas: { mode: "all", areas: [] },
     created_at: "2026-11-01T08:00:00Z",
     last_used_at: null,
     expires_at: expiry?.at ?? null,

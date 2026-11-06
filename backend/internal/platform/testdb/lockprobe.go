@@ -143,6 +143,31 @@ func QueuedBehind(ctx context.Context, conn *pgx.Conn, holder int32) (int, error
 	return queued, nil
 }
 
+// AwaitReturnWithoutWaiting fails unless the racer running on backend pid
+// returns before that backend waits on any lock.
+func AwaitReturnWithoutWaiting(t *testing.T, conn *pgx.Conn, pid int32, racerReturned <-chan struct{}, racer string) {
+	t.Helper()
+	WaitForContention(t, nil, "", fmt.Sprintf("%s neither returned nor waited within %s", racer, ProbeBudget),
+		func(ctx context.Context) (bool, error) {
+			select {
+			case <-racerReturned:
+				return true, nil
+			default:
+			}
+			if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+				return false, fmt.Errorf("clearing the stats snapshot before probing backend %d: %w", pid, err)
+			}
+			var waiting bool
+			err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids($1)) > 0`, pid).Scan(&waiting)
+			return waiting, err
+		})
+	select {
+	case <-racerReturned:
+	default:
+		t.Fatalf("%s waited on a lock instead of returning", racer)
+	}
+}
+
 // AwaitQueuedBehind returns once n sessions wait behind holder. Scoped to that
 // backend, so no unrelated lock wait stands in for the racer the failures name.
 func AwaitQueuedBehind(t *testing.T, conn *pgx.Conn, holder int32, n int, racerReturned <-chan struct{}, racer string) {

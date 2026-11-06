@@ -971,7 +971,7 @@ func (stubs) PurgeCaptureExclusion(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "PurgeCaptureExclusion")
 }
 
-func (stubs) ListHeldThreads(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListHeldThreads(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListHeldThreadsParams) {
 	httperr.NotImplemented(w, r, "ListHeldThreads")
 }
 
@@ -2807,6 +2807,14 @@ func (stubs) UpdateApprovalPreference(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "UpdateApprovalPreference")
 }
 
+func (stubs) DeleteMyAvatar(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteMyAvatar")
+}
+
+func (stubs) UploadMyAvatar(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UploadMyAvatar")
+}
+
 func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyBriefDelivery")
 }
@@ -3041,6 +3049,10 @@ func (stubs) IssuePassport(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) RevokePassport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RevokePassport")
+}
+
+func (stubs) SetPassportAreas(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SetPassportAreas")
 }
 
 func (stubs) ListPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPipelinesParams) {
@@ -3825,6 +3837,10 @@ func (stubs) UpdateMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetUserAccess")
+}
+
+func (stubs) GetUserAvatar(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetUserAvatarParams) {
+	httperr.NotImplemented(w, r, "GetUserAvatar")
 }
 
 func (stubs) DeactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

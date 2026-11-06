@@ -99,7 +99,7 @@ func refusalFiles(t *testing.T) []refusalFile {
 	byDir := map[string][]*ast.File{}
 	paths := map[*ast.File]string{}
 	for _, root := range refusalSurfaceRoots {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}

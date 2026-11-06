@@ -8,6 +8,7 @@
 // machine-authored, so the indigo AI treatment never appears.
 
 import type { components } from "../../../api/schema";
+import { SeatAvatar } from "../../../components/seatavatar";
 import { Avatar, Badge, Button } from "../../../design-system/atoms";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Panel } from "../../../design-system/panel";
@@ -91,9 +92,9 @@ export function LeadPanel({
             data-strength={route.strength_bucket ?? undefined}
           >
             <div className="pn-hero-who">
-              <Avatar
+              <SeatAvatar
+                id={route.via_user_id}
                 name={route.via_display_name}
-                identity={route.via_user_id}
                 size="lg"
               />
               <strong>

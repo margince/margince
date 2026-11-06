@@ -213,6 +213,10 @@ from this count, so a team member who was only copied is neither. A reader witho
 gets the edge without the count. A row folded before the column existed holds NULL, and readers keep
 the outbound count's reading until the row is folded again.
 
+The graph's ways in read the same two-way verdict from the same count. The edge and the route
+evidence carry it as `sent_90d`. The ranking and the proof line then follow it. One function decides
+the verdict for all of them: `twoWayExchange` in `compose/network/memberwrote.go`.
+
 **What does not make an edge**, and why:
 
 - **Anything outside `email`, `call`, `meeting`** (`relstrength.IsInteractionKind`, written into SQL

@@ -7,7 +7,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -89,7 +88,7 @@ func TestSourceAssessmentVocabularyMatchesTheDutyDecision(t *testing.T) {
 	if !reflect.DeepEqual(apiKinds, eligible) {
 		t.Errorf("API assessment kinds %v differ from duty decisions %v", apiKinds, eligible)
 	}
-	source, err := os.ReadFile(filepath.Join(root, "../frontend/src/lib/sourcequestion.ts"))
+	source, err := gatekit.ReadFile(filepath.Join(root, "../frontend/src/lib/sourcequestion.ts"))
 	if err != nil {
 		t.Fatal(err)
 	}

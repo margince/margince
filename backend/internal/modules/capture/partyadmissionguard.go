@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -217,6 +218,18 @@ func (s *Sink) holdPartyAuthorityTx(ctx context.Context, tx pgx.Tx, user ids.UUI
 		// The admission refuses a member who is not live; the lock is held either way.
 		return nil
 	}
+	return err
+}
+
+// holdEnsureLocksTx takes the authority locks, then the activity, before an
+// ensure writes. The ensure's link insert shares the activity through a trigger.
+// Locking it only after that share would wait on a colleague's import whose
+// audience recompute waits on the share.
+func (s *Sink) holdEnsureLocksTx(ctx context.Context, tx pgx.Tx, user ids.UUID, activity ids.ActivityID) error {
+	if err := s.holdPartyAuthorityTx(ctx, tx, user); err != nil {
+		return err
+	}
+	_, err := storekit.LockRow(ctx, tx, "activity", activity.UUID, storekit.LiveOnly)
 	return err
 }
 

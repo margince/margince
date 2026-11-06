@@ -64,7 +64,8 @@ func NewGate(authority authz.Resolver, opts ...GateOption) *Gate {
 // building it may cost a database read (the target stage's semantic).
 //
 // The decision order matters. Scope comes first, so a caller without the verb
-// never learns the tier and pays no authority read. Then the live seat ceiling,
+// never learns the tier and pays no authority read. The passport's work areas
+// follow that read, which answers them as they stand. Then the live seat ceiling,
 // the volume ceilings and the tier. A 🟡 outcome (declared or dynamically
 // resolved) returns ErrRequiresApproval. On admission the returned context
 // carries the principal refreshed with the re-derived authority, so downstream
@@ -141,7 +142,15 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 		return ctx, deniedIfGone("the credential or the human behind it", spec.Name, err)
 	}
 	p.SeatType, p.Permissions, p.TeamIDs = seat, rbac.Permissions, rbac.TeamIDs
+	// A passport's areas come from this same read, so a run that authenticated
+	// once is held to a change from its next call.
+	if !p.PassportID.IsZero() {
+		p.Areas = rbac.PassportAreas
+	}
 	ctx = principal.WithActor(ctx, p)
+	if err := AreaRefusal(p, spec); err != nil {
+		return ctx, err
+	}
 
 	// The seat ceiling is checked before tier (A62/ADR-0047): a read seat —
 	// or an agent acting for one — may run only read-scoped tools, whatever

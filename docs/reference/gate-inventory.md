@@ -104,6 +104,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendnoevidencemarker_test.go` | H3 | The server stores one sentence for a manual signal whose evidence was taken away. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
 | `frontendphoneparse_test.go` | H3 | The browser reads a phone number with ParsePhone's trunk mark, separators, dial prefix and E.164 pattern. |
+| `frontendpicturelimits_test.go` | H3 | The profile picture row refuses a file before it is sent, so its list and its cap must be the server's. |
 | `frontendportfaultcopy_test.go` | H3 | A port error that answers a reader with its own code through MessageFault needs catalog copy on the screen. |
 | `frontendpriceinput_test.go` | H3 | The frontend's price pattern accepts what the server's price parser and the contract pattern accept, so a value the form lets through is not refused for its shape. |
 | `frontendproblemcodecopy_test.go` | H3 | Every problem code an httperr builder sends for a reader has catalog copy on the screen, keyed by the wire code (PROBLEM\_CODE\_COPY in problemcodecopy.ts). |
@@ -146,6 +147,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mailbodycompleteness_test.go` | H2 | TestAutomaticWorkReadsOnlyMailReadInFull holds the clauses that keep automatic work current to provenance.MailBodyCompleteSQL. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it, and outbound mail links to it before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly panel's labels. |
+| `mcpparityareas_test.go` | H2 | The work-area table the server reads matches the parity catalog's placement and the contract's WorkArea enum. |
 | `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has one answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale (100 for EUR, 1000 for KWD, 1 for VND) is one fact, and the table that holds it lives in shared/kernel/values. |
@@ -211,6 +213,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
 | `wonreasondetailbound_test.go` | H2 | The paperless-win detail's length bound is one number, in three places that each need it. |
+| `workareacopy_test.go` | H2 | The passport page names each work area, and shows what an agent is told in one that is off, in the words the server uses. |
 | `workflowactor_test.go` | H2 | The id a workflow write is attributed to, and the id the selectors that recognise those writes look for, are one id. |
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings are the deal card's, and this derives them from the card rather than keeping a second list of them. |
@@ -627,6 +630,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `runtimeddlwholerow_test.go` | H1 | A table an administrator can ALTER at runtime is never read whole-row. |
 | `seatfixturepick_test.go` | H1 | A fixture that needs this session's seat does not pick one out of app\_user. |
 | `seenaddressrule_test.go` | H2 | SPDX-License-Identifier: BUSL-1.1 SPDX-FileCopyrightText: 2026 Gradion |
+| `sharedtreereads_test.go` | H2 | A gate reads the tree through gatekit's shared view, never from the disk on its own. |
 | `storedoriginal_test.go` | H2 | An activity is correlated to its stored original in one place. |
 | `subjectphotobytes_test.go` | H2 | A subject's photo may not be stored until erasure can destroy the bytes. |
 | `systemprovenance_test.go` | H2 | A scheduled pass binds its provenance through one helper. |

@@ -30,6 +30,7 @@ export function buildColumns(
   totalsWithheld?: string,
   owners?: OwnerNaming,
   uncounted: ReadonlySet<string> = new Set(),
+  ownerPhotos?: ReadonlyMap<string, string>,
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -46,7 +47,9 @@ export function buildColumns(
         rawMinor: stageTotals?.baseMinor ?? null,
         weightedMinor: stageTotals?.weightedBaseMinor ?? null,
         currency: stageTotals?.currency ?? null,
-        deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
+        deals: stageDeals.map((deal) =>
+          toBoardDeal(deal, naming, owners, ownerPhotos),
+        ),
         count: columnCount(
           stageTotals,
           uncounted.has(stage.id) ? null : stageDeals.length,

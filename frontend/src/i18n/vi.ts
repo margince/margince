@@ -2259,6 +2259,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trust.relayForColleague": "Margince đã gửi thay đồng nghiệp",
   "trust.relaySent": "Margince đã gửi",
   "trust.relayFrom": "Địa chỉ gửi: {address}",
+  "systemJob.provider_picture": "Ảnh hồ sơ Google",
   "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
@@ -5807,8 +5808,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.valueProposition": "Giá trị mang lại",
   "legalEntities.usp": "Điểm khác biệt",
   "legalEntities.sectionLogo": "Logo công ty",
-  "legalEntities.logoAdd": "Thêm logo",
-  "legalEntities.logoReplace": "Thay logo",
+  "legalEntities.logoAdd": "Tải logo lên",
+  "legalEntities.logoEdit": "Sửa logo",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO hoặc SVG. Logo được lưu ngay khi bạn chọn.",
   "legalEntities.logoEmpty": "Thả ảnh vào đây hoặc chọn ảnh",
@@ -8538,7 +8539,50 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "passport.scope.draft": "Soạn nháp tin nhắn",
   "passport.scope.write": "Sửa hồ sơ",
   "passport.scope.send": "Gửi tin nhắn",
-  "passport.scope.enrich": "Mua dữ liệu liên hệ",
+  "passport.scope.enrich": "Dùng AI và mua dữ liệu",
+  "workArea.name.business": "Công việc bán hàng",
+  "workArea.name.compliance": "Tuân thủ và quyền riêng tư",
+  "workArea.name.capture": "Thu thập email và lịch",
+  "workArea.name.workspace_settings": "Cài đặt công ty",
+  "workArea.name.admin_settings": "Cài đặt quản trị",
+  "workArea.name.own_account": "Tài khoản của tôi",
+  "workArea.hint.business":
+    "Hồ sơ, deal, hoạt động, báo giá, báo cáo và danh sách",
+  "workArea.hint.compliance":
+    "Sự đồng ý, yêu cầu về quyền riêng tư, lưu trữ và nhật ký hoạt động",
+  "workArea.hint.capture":
+    "Thu thập email và lịch cùng các kết nối mà dữ liệu đi qua",
+  "workArea.hint.workspace_settings":
+    "Cách công ty được thiết lập, ở những chỗ vai trò của bạn được phép đổi",
+  "workArea.hint.admin_settings":
+    "Các cài đặt cần nhiều quyền hơn nhân viên bán hàng",
+  "workArea.hint.own_account": "Hồ sơ cá nhân và tùy chọn của bạn",
+  "workArea.legend": "Được làm việc ở đâu",
+  "workArea.mode.all": "Mọi khu vực",
+  "workArea.mode.allNote":
+    "Mọi thứ vai trò của bạn với tới, kể cả các khu vực thêm sau này",
+  "workArea.mode.custom": "Chọn khu vực",
+  "workArea.mode.customNote":
+    "Chỉ các khu vực bạn đánh dấu. Khu vực mới sẽ bắt đầu ở trạng thái tắt",
+  "workArea.pickLegend": "Các khu vực được làm việc",
+  "workArea.pickOne": "Chọn ít nhất một khu vực.",
+  "passportAreas.open": "Đổi khu vực",
+  "passportAreas.openNamed": "Đổi khu vực cho {name}",
+  "passportAreas.for": "Cho {name}. Các quyền vẫn giữ nguyên.",
+  "passportAreas.gains": "Từ giờ sẽ làm việc thêm ở: {areas}.",
+  "passportAreas.loses":
+    "Sẽ không còn làm việc ở: {areas}. Lệnh gọi tiếp theo ở đó sẽ bị từ chối.",
+  "passportAreas.unchanged": "Đổi một khu vực trước.",
+  "passportAreas.closesLater":
+    "Các khu vực thêm sau và công cụ do tiện ích mở rộng thêm vẫn tắt với nó.",
+  "passportAreas.refusalTitle": "Agent được báo gì khi một khu vực bị tắt",
+  "passportAreas.refusal":
+    "Passport này không được làm việc ở khu vực “{area}”. Hãy đề nghị bật khu vực đó cho passport này trong Cài đặt → Quyền truy cập AI, mục Passport của bạn hoặc Kết nối của bạn.",
+  "passportAreas.cancel": "Hủy",
+  "passportAreas.save": "Lưu khu vực",
+  "passportAreas.saving": "Đang lưu khu vực…",
+  "passportAreas.failed": "Chưa đổi được khu vực",
+  "settings.passportColAreas": "Khu vực",
   "passport.select": "Passport",
   "passport.noneOption": "Không dùng passport",
   "settings.passportUseAi": "Trong script hoặc công cụ AI khác",
@@ -11026,6 +11070,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{provider} không có khóa, nên liên kết đã lưu chưa chạy và mô hình trước đó vẫn đang trả lời. Hãy đặt {env}.",
   "aiHealth.callCounts_one": "{count} lượt gọi, {failures} lượt bị lỗi",
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} lượt bị lỗi",
+  "heldThreads.search": "Tìm theo tiêu đề hoặc bên liên quan",
+  "heldThreads.statusFilter": "Trạng thái",
+  "heldThreads.statusAll": "Mọi trạng thái",
+  "heldThreads.noMatch": "Không có chuỗi thư nào khớp.",
+  "heldThreads.showMore": "Xem thêm",
+  "heldThreads.count.pending": "đang chờ phân loại",
+  "heldThreads.count.unsure": "chưa rõ",
+  "heldThreads.count.held": "đang giữ lại",
+  "heldThreads.count.heldByOwner": "do bạn giữ lại",
   "heldThreads.title": "Chuỗi thư đang giữ lại",
   "heldThreads.sub":
     "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ bạn mới chia sẻ được chuỗi thư của chính mình.",
@@ -14078,9 +14131,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ dùng mục đã xác nhận. Văn bản trên trang web không bao giờ trở thành chỉ dẫn.",
   "settings.companyMarkWide": "Logo rộng",
   "settings.companyMarkIcon": "Biểu tượng vuông",
-  "settings.companyMarkAdd": "Thêm",
-  "settings.companyMarkReplace": "Thay thế",
-  "settings.companyMarkRemove": "Gỡ",
   "settings.companyMarkUploadFailedWide": "Không thể tải lên logo rộng",
   "settings.companyMarkRemoveFailedWide": "Không thể gỡ logo rộng",
   "settings.companyMarkUploadFailedIcon": "Không thể tải lên biểu tượng vuông",
@@ -14092,12 +14142,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tệp SVG này có phần không thể hiển thị ở đây, hoặc không hiển thị gì. Xuất logo dưới dạng tệp PNG từ công cụ thiết kế.",
   "settings.companyMarkSvgText":
     "Tệp SVG này chứa chữ chưa chuyển thành đường nét nên không thể hiển thị. Chuyển chữ thành đường nét (outline) trong công cụ thiết kế, hoặc tải lên tệp PNG.",
-  "settings.companyMarkAddWide": "Thêm logo rộng",
-  "settings.companyMarkReplaceWide": "Thay logo rộng",
+  "settings.companyMarkUploadWide": "Tải logo rộng lên",
   "settings.companyMarkRemoveWide": "Gỡ logo rộng",
-  "settings.companyMarkAddIcon": "Thêm biểu tượng vuông",
-  "settings.companyMarkReplaceIcon": "Thay biểu tượng vuông",
+  "settings.companyMarkEditWide": "Sửa logo rộng",
+  "settings.companyMarkUploadIcon": "Tải biểu tượng vuông lên",
   "settings.companyMarkRemoveIcon": "Gỡ biểu tượng vuông",
+  "settings.companyMarkEditIcon": "Sửa biểu tượng vuông",
+  "settings.imageEdit": "Sửa",
   "settings.companyMarkEmpty": "Thả logo vào đây, hoặc chọn tệp",
   "settings.companyMarkIconEmpty": "Thả biểu tượng vào đây, hoặc chọn tệp",
   "settings.companyWebsite": "Trang web công khai của công ty",
@@ -15054,6 +15105,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.reminder.progress": "Tiến độ thiết lập",
   // end polish: setup-popover
   "account.profileCard": "Hồ sơ",
+  "account.pictureLabel": "Ảnh hồ sơ",
+  "account.pictureHelp":
+    "PNG, JPEG hoặc WebP tối đa 5 MB, đồng nghiệp thấy bên cạnh tên bạn.",
+  "account.pictureEmpty": "Thả ảnh vào đây, hoặc chọn tệp",
+  "account.pictureAdd": "Tải ảnh lên",
+  "account.pictureRemove": "Gỡ ảnh",
+  "account.pictureEdit": "Sửa ảnh hồ sơ",
+  "account.pictureSaved": "Đã lưu ảnh",
+  "account.pictureRemoved": "Đã gỡ ảnh",
+  "account.pictureWrongType":
+    "Không thể tải ảnh lên. Hãy dùng tệp PNG, JPEG hoặc WebP.",
+  "account.pictureTooLarge": "Không thể tải ảnh lên. Hãy dùng tệp tối đa 5 MB.",
+  "account.pictureNoStorage":
+    "Bản cài đặt này chưa có nơi lưu ảnh. Liên hệ quản trị viên.",
+  "account.pictureUploadFailed":
+    "Không thể tải ảnh lên. Thử lại hoặc tải lại trang.",
+  "account.pictureRemoveFailed":
+    "Không thể gỡ ảnh. Thử lại hoặc tải lại trang.",
   "account.signInCard": "Đăng nhập",
   "account.timezoneLabel": "Múi giờ",
   "account.timezoneHelp":
@@ -16564,8 +16633,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
     "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
-  "consent.scopeNote.enrich":
-    "tiêu credit bổ sung dữ liệu; mỗi lần mua vẫn hỏi bạn trước",
+  "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
   "consent.preset.label": "Quyền của trợ lý",
@@ -19089,7 +19157,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào “APIs & Services”, sau đó “Credentials”. Chọn “Create credentials”, rồi “OAuth client ID”, và chọn “Web application”.",
   "firstRun.google.helpStep2":
-    "Bật Gmail API và thêm cả hai scope gmail.readonly và gmail.send vào màn hình đồng ý. Hai scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin quyền gửi sau này thì phải kết nối lại hộp thư.",
+    "Bật Gmail API và thêm các scope gmail.readonly, gmail.send và userinfo.profile vào màn hình đồng ý (userinfo.profile cung cấp ảnh của tài khoản Google). Các scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin thêm scope sau này thì phải kết nối lại hộp thư.",
   "firstRun.google.helpStep3":
     "Trong Authorized redirect URIs, thêm các URI liệt kê ở trên. Hộp thư là bắt buộc để nhận thư; Lịch và Đăng nhập bật các tính năng tương ứng.",
   "firstRun.google.helpStep4":

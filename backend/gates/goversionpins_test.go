@@ -20,13 +20,14 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // goDirective matches the `go 1.27.0` line a module or workspace file carries.
@@ -120,7 +121,7 @@ func everyModuleFile(t *testing.T) []string {
 	t.Helper()
 	var found []string
 	for _, root := range moduleRoots {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -160,7 +161,7 @@ func goVersionOf(t *testing.T, path string) string {
 
 func readFile(t *testing.T, path string) string {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

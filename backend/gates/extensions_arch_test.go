@@ -30,7 +30,7 @@ func extensionTrees(t *testing.T) map[string]string {
 	t.Helper()
 	trees := map[string]string{}
 	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
-		entries, err := os.ReadDir(root)
+		entries, err := gatekit.ReadDir(root)
 		if os.IsNotExist(err) {
 			continue
 		}
@@ -52,7 +52,7 @@ func extensionModulePaths(t *testing.T, trees map[string]string) map[string]stri
 	t.Helper()
 	paths := map[string]string{}
 	for dir := range trees {
-		raw, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+		raw, err := gatekit.ReadFile(filepath.Join(dir, "go.mod"))
 		if os.IsNotExist(err) {
 			continue // frontend-only unit: no Go module to constrain
 		}
@@ -80,7 +80,7 @@ func extensionModulePaths(t *testing.T, trees map[string]string) map[string]stri
 func goImports(t *testing.T, dir string) map[string][]string {
 	t.Helper()
 	out := map[string][]string{}
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}
@@ -114,11 +114,11 @@ const extensionSurfaceMarker = "//margince:extension-surface"
 func allowlistedSurface(t *testing.T) map[string]bool {
 	t.Helper()
 	marked := map[string]bool{}
-	err := filepath.WalkDir("pkg", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("pkg", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		src, err := os.ReadFile(path) // #nosec G304 -- path from walking the trusted source tree
+		src, err := gatekit.ReadFile(path) // #nosec G304 -- path from walking the trusted source tree
 		if err != nil {
 			return err
 		}
@@ -178,7 +178,7 @@ func TestExtensionsImportOnlyTheAllowlistedSurface(t *testing.T) {
 // derivation never reads them (this file's own constant included).
 func TestSurfaceMarkerLivesOnlyUnderPkg(t *testing.T) {
 	t.Parallel()
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
@@ -186,7 +186,7 @@ func TestSurfaceMarkerLivesOnlyUnderPkg(t *testing.T) {
 		if strings.HasPrefix(rel, "pkg/") {
 			return nil
 		}
-		src, err := os.ReadFile(path) // #nosec G304 -- path from walking the trusted source tree
+		src, err := gatekit.ReadFile(path) // #nosec G304 -- path from walking the trusted source tree
 		if err != nil {
 			return err
 		}

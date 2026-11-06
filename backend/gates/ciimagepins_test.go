@@ -15,12 +15,13 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const ciImageDockerfile = ".github/ci-image/Dockerfile"
@@ -145,7 +146,7 @@ func TestTheCIImageChromiumIsTheLockedPlaywrights(t *testing.T) {
 	if pinned == nil {
 		t.Fatalf("%s carries no `ARG PLAYWRIGHT_VERSION=`", ciImageDockerfile)
 	}
-	lock, err := os.ReadFile(filepath.Join(repoRoot, "pnpm-lock.yaml"))
+	lock, err := gatekit.ReadFile(filepath.Join(repoRoot, "pnpm-lock.yaml"))
 	if err != nil {
 		t.Fatalf("reading pnpm-lock.yaml: %v", err)
 	}
@@ -162,7 +163,7 @@ func TestTheCIImageChromiumIsTheLockedPlaywrights(t *testing.T) {
 
 func readCIImageDockerfile(t *testing.T) string {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join(repoRoot, ciImageDockerfile))
+	body, err := gatekit.ReadFile(filepath.Join(repoRoot, ciImageDockerfile))
 	if err != nil {
 		t.Fatalf("reading the CI image's Dockerfile: %v", err)
 	}

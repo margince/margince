@@ -2237,6 +2237,7 @@ export const en = {
   "trust.relayForColleague": "Sent by Margince for a colleague",
   "trust.relaySent": "Sent by Margince",
   "trust.relayFrom": "From {address}",
+  "systemJob.provider_picture": "Google profile picture",
   "systemJob.public_record_preview": "Public record preview",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
@@ -5928,8 +5929,8 @@ export const en = {
   "legalEntities.valueProposition": "Value proposition",
   "legalEntities.usp": "What sets it apart",
   "legalEntities.sectionLogo": "Logo",
-  "legalEntities.logoAdd": "Add a logo",
-  "legalEntities.logoReplace": "Replace the logo",
+  "legalEntities.logoAdd": "Upload logo",
+  "legalEntities.logoEdit": "Edit logo",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO or SVG. It is saved as soon as you choose it.",
   "legalEntities.logoEmpty": "Drop an image here or choose one",
@@ -8733,9 +8734,52 @@ export const en = {
   "passport.scope.draft": "Draft messages",
   "passport.scope.write": "Change records",
   "passport.scope.send": "Send messages",
-  "passport.scope.enrich": "Buy contact data",
+  "passport.scope.enrich": "Use AI and buy data",
   "passport.select": "Passport",
   "passport.noneOption": "No passport",
+  // Where a passport may act, beside what it may do. "Workspace" is retired
+  // vocabulary, so the workspace_settings area reads as company settings.
+  "workArea.name.business": "Sales work",
+  "workArea.name.compliance": "Compliance and privacy",
+  "workArea.name.capture": "Email and calendar capture",
+  "workArea.name.workspace_settings": "Company settings",
+  "workArea.name.admin_settings": "Admin settings",
+  "workArea.name.own_account": "My account",
+  "workArea.hint.business":
+    "Records, deals, activities, offers, reports and lists",
+  "workArea.hint.compliance":
+    "Consent, privacy requests, retention and the audit trail",
+  "workArea.hint.capture":
+    "Mail and calendar capture and the connections it comes through",
+  "workArea.hint.workspace_settings":
+    "How the company is set up, where your role may change it",
+  "workArea.hint.admin_settings": "Settings a sales rep may not change",
+  "workArea.hint.own_account": "Your profile and preferences",
+  "workArea.legend": "Where it may work",
+  "workArea.mode.all": "All areas",
+  "workArea.mode.allNote":
+    "Everything your role reaches, including areas added later",
+  "workArea.mode.custom": "Choose areas",
+  "workArea.mode.customNote": "Only the areas you tick. A new area starts off",
+  "workArea.pickLegend": "Areas it may work in",
+  "workArea.pickOne": "Tick at least one area.",
+  "passportAreas.open": "Change areas",
+  "passportAreas.openNamed": "Change areas for {name}",
+  "passportAreas.for": "For {name}. Its permissions stay as they are.",
+  "passportAreas.gains": "It will also work in: {areas}.",
+  "passportAreas.loses":
+    "It will no longer work in: {areas}. Its next call there is refused.",
+  "passportAreas.unchanged": "Change an area first.",
+  "passportAreas.closesLater":
+    "Areas added later, and tools an extension adds, stay off for it.",
+  "passportAreas.refusalTitle": "What an agent is told when an area is off",
+  "passportAreas.refusal":
+    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI access, under Your passports or Your connections.",
+  "passportAreas.cancel": "Cancel",
+  "passportAreas.save": "Save areas",
+  "passportAreas.saving": "Saving areas…",
+  "passportAreas.failed": "Areas not changed",
+  "settings.passportColAreas": "Areas",
   "settings.passportUseAi": "In a script or another AI tool",
   "settings.passportUseAiDetail":
     "Install the Margince skill in a tool that cannot sign in by itself, then give it your passport. Claude Code, Codex, Cursor and the editors sign in without one, under Connect your AI tool.",
@@ -11293,6 +11337,15 @@ export const en = {
     "{provider} holds no key, so the saved binding is not running and the previous model keeps answering. Set {env}.",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
+  "heldThreads.search": "Search subject or party",
+  "heldThreads.statusFilter": "Status",
+  "heldThreads.statusAll": "Any status",
+  "heldThreads.noMatch": "No held thread matches.",
+  "heldThreads.showMore": "Show more",
+  "heldThreads.count.pending": "waiting to be classified",
+  "heldThreads.count.unsure": "unclear",
+  "heldThreads.count.held": "held",
+  "heldThreads.count.heldByOwner": "held by you",
   "heldThreads.title": "Held threads",
   "heldThreads.sub":
     "Threads your mailbox is withholding. Releasing a thread lets every colleague read it; only you can release yours.",
@@ -14391,9 +14444,6 @@ export const en = {
     "Confirmed statements only. Website text never becomes instructions.",
   "settings.companyMarkWide": "Wide logo",
   "settings.companyMarkIcon": "Square icon",
-  "settings.companyMarkAdd": "Add",
-  "settings.companyMarkReplace": "Replace",
-  "settings.companyMarkRemove": "Remove",
   "settings.companyMarkUploadFailedWide": "Wide logo not uploaded",
   "settings.companyMarkRemoveFailedWide": "Wide logo not removed",
   "settings.companyMarkUploadFailedIcon": "Square icon not uploaded",
@@ -14405,12 +14455,13 @@ export const en = {
     "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
   "settings.companyMarkSvgText":
     "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
-  "settings.companyMarkAddWide": "Add wide logo",
-  "settings.companyMarkReplaceWide": "Replace wide logo",
+  "settings.companyMarkUploadWide": "Upload wide logo",
   "settings.companyMarkRemoveWide": "Remove wide logo",
-  "settings.companyMarkAddIcon": "Add square icon",
-  "settings.companyMarkReplaceIcon": "Replace square icon",
+  "settings.companyMarkEditWide": "Edit wide logo",
+  "settings.companyMarkUploadIcon": "Upload square icon",
   "settings.companyMarkRemoveIcon": "Remove square icon",
+  "settings.companyMarkEditIcon": "Edit square icon",
+  "settings.imageEdit": "Edit",
   "settings.companyMarkEmpty": "Drop logo here, or choose a file",
   "settings.companyMarkIconEmpty": "Drop icon here, or choose a file",
   "settings.companyWebsite": "Public company website",
@@ -15356,6 +15407,24 @@ export const en = {
   "setup.reminder.progress": "Setup progress",
   // end polish: setup-popover
   "account.profileCard": "Profile",
+  "account.pictureLabel": "Profile picture",
+  "account.pictureHelp":
+    "PNG, JPEG or WebP up to 5 MB, shown to colleagues beside your name.",
+  "account.pictureEmpty": "Drop picture here, or choose a file",
+  "account.pictureAdd": "Upload picture",
+  "account.pictureRemove": "Remove picture",
+  "account.pictureEdit": "Edit profile picture",
+  "account.pictureSaved": "Picture saved",
+  "account.pictureRemoved": "Picture removed",
+  "account.pictureWrongType":
+    "Picture not uploaded. Use a PNG, JPEG or WebP file.",
+  "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",
+  "account.pictureNoStorage":
+    "This installation has no file storage for pictures. Contact your system administrator.",
+  "account.pictureUploadFailed":
+    "Picture not uploaded. Retry, or reload the page.",
+  "account.pictureRemoveFailed":
+    "Picture not removed. Retry, or reload the page.",
   "account.signInCard": "Sign-in",
   "account.timezoneLabel": "Time zone",
   "account.timezoneHelp":
@@ -16835,8 +16904,7 @@ export const en = {
   "consent.scopeNote.draft": "prepares messages for your review",
   "consent.scopeNote.write": "creates, edits and archives records as you",
   "consent.scopeNote.send": "sends messages as you, without asking first",
-  "consent.scopeNote.enrich":
-    "spends enrichment credits; each purchase still asks you first",
+  "consent.scopeNote.enrich": "runs AI work and buys contact data",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
   "consent.preset.label": "Assistant permissions",
@@ -19384,7 +19452,7 @@ export const en = {
   "firstRun.google.helpStep1":
     "In the Google Cloud console, open a project and go to “APIs & Services”, then “Credentials”. Select “Create credentials”, then “OAuth client ID”, and choose “Web application”.",
   "firstRun.google.helpStep2":
-    "Enable the Gmail API and add both the gmail.readonly and gmail.send scopes to the consent screen. They share one consent because Google does not add a scope to an issued refresh token; requesting send later means connecting the mailbox again.",
+    "Enable the Gmail API and add the gmail.readonly, gmail.send and userinfo.profile scopes to the consent screen (userinfo.profile supplies the Google account picture). They share one consent because Google does not add a scope to an issued refresh token; requesting one later means connecting the mailbox again.",
   "firstRun.google.helpStep3":
     "Under Authorized redirect URIs, add the URIs listed above. Mailbox is required for mail; Calendar and Sign-in enable those features.",
   "firstRun.google.helpStep4":

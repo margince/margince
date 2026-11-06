@@ -138,7 +138,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// through to replayClaimIsProvenTx — which is the right question for a
 		// natural-key collision and the gate that covered this case before the
 		// identity resolve existed.
-		wasCapturedBy, asserted, err := assertedIncumbent(ctx, tx, id)
+		wasCapturedBy, asserted, err := replayIncumbent(ctx, tx, id, fields)
 		if err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}

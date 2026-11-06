@@ -38,8 +38,9 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const mcpInfoPath = "../docs/reference/mcp-info.json"
@@ -130,7 +131,7 @@ type mcpInfoFile struct {
 
 func TestThePublishedToolCountStaysUnderItsCeiling(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(mcpInfoPath)
+	raw, err := gatekit.ReadFile(mcpInfoPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", mcpInfoPath, err)
 	}

@@ -23,8 +23,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -84,11 +82,11 @@ func tablesWithFrozenRateColumn(t *testing.T) []string {
 	t.Helper()
 	found := map[string]bool{}
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}
@@ -167,11 +165,11 @@ var noArchiveColumnCall = regexp.MustCompile(`"([a-z_][a-z0-9_]*)",[^)]*storekit
 func tablesPassedNoArchiveColumn(t *testing.T) map[string]string {
 	t.Helper()
 	found := map[string]string{}
-	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		raw, err := os.ReadFile(path) // #nosec G304 G122 -- a *.go file from walking the trusted source tree
+		raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a *.go file from walking the trusted source tree
 		if err != nil {
 			return err
 		}
@@ -192,11 +190,11 @@ func tablesWithArchivedAt(t *testing.T) map[string]bool {
 	t.Helper()
 	found := map[string]bool{}
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}

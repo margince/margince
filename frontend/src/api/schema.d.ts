@@ -659,6 +659,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/passports/{id}/areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose the work areas one of the caller's own passports may act in.
+         * @description Sets where the passport may act: `all` admits every area, those added later included, and
+         *     `custom` admits only the areas listed. The change holds from the passport's next call, in an
+         *     MCP session that is already connected too. On a connection's passport it also holds for the
+         *     credentials its renewals mint. Only the passport's own user changes it; another user's
+         *     passport answers 404. A refused choice answers 422 with `no_area_chosen`, `unknown_area`,
+         *     `area_repeated`, `area_not_reachable` (the caller's role reaches nothing there), `areas_with_all`
+         *     or `unknown_mode`. Audited. Human-only: an agent that could widen its own areas would be
+         *     self-granted authority.
+         */
+        put: operations["setPassportAreas"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/agent-bundle": {
         parameters: {
             query?: never;
@@ -12086,6 +12116,12 @@ export interface paths {
          *     Your own mailbox and nobody else's. What a contact is holding is the most private thing this
          *     module knows — the list names threads judged legal, personnel or personal — so there is no
          *     id here that reaches a colleague's list and no admin view of one.
+         *
+         *     A page at a time, pending first and then newest. `q` matches the opening message's subject
+         *     and a party's address or name, within what the reader may read. A thread whose message
+         *     was erased is found by the addresses its hold kept, less any contact erased since. `counts`
+         *     counts the whole list whatever a page narrows to. The order is fixed, so this list takes
+         *     no `sort`.
          */
         get: operations["listHeldThreads"];
         put?: never;
@@ -18163,6 +18199,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Stream a colleague's profile picture.
+         * @description The bytes behind `User.avatar_url` and `SeatName.avatar_url`: always `image/png`,
+         *     this server's own re-encode, whatever the source was. Any member may read any
+         *     colleague's picture, as any member may read the roster.
+         *
+         *     404 when the seat has no picture, is archived, or does not exist; a client draws
+         *     initials for all three alike. 501 when the deployment has no object store configured.
+         *
+         *     When `v` names the revision served, the answer may be cached for a day without
+         *     asking again. Any other `v`, or none, is answered with the current picture under
+         *     `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
+         *     `ETag` answers 304.
+         */
+        get: operations["getUserAvatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/role": {
         parameters: {
             query?: never;
@@ -22850,6 +22919,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload your own profile picture.
+         * @description Always the CALLER's own picture, never anybody else's: there is no id to pass.
+         *     Colleagues see it beside your name wherever the app draws you.
+         *
+         *     Multipart upload with one `file` part of at most 5,000,000 bytes. The request may
+         *     be 16 KiB larger, for the form's own boundary lines and part headers; a larger
+         *     request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
+         *     GIF included, is refused as 415. The image is cropped to a centred square and
+         *     re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
+         *     is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
+         *     many pictures at once; the same file may be sent again.
+         *
+         *     Which picture a seat shows: an uploaded one, else the picture of the Google
+         *     account the member signs in with, else no picture and the client draws initials.
+         *     An upload replaces either, and is the only way back to a picture after a delete.
+         */
+        post: operations["uploadMyAvatar"];
+        /**
+         * Take your own profile picture off for good.
+         * @description The seat shows initials from now on, whether the picture was uploaded or came from
+         *     the Google account. A later Google sign-in does not bring the Google picture back;
+         *     only a new upload does.
+         *
+         *     Removing a picture the seat does not have is not an error: the seat still shows
+         *     initials from then on.
+         */
+        delete: operations["deleteMyAvatar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -27278,8 +27389,18 @@ export interface components {
         };
         HeldThreadListResponse: {
             data: components["schemas"]["HeldThread"][];
+            page: components["schemas"]["PageInfo"];
+            counts: components["schemas"]["HeldThreadCounts"];
             /** @description When the thread verdict next runs — what a `pending` row above is waiting for. A held thread with no time beside it leaves its owner two readings, broken and slow, and both are wrong. Absent where the deployment composed no queue to ask. */
             thread_verdict?: components["schemas"]["CaptureVerdictClock"];
+        };
+        /** @description The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow. */
+        HeldThreadCounts: {
+            pending: number;
+            unsure: number;
+            held: number;
+            held_by_owner: number;
+            stalled: number;
         };
         /** @description One thread your mailbox is withholding, and what is known about why. */
         HeldThread: {
@@ -32970,6 +33091,13 @@ export interface components {
             /** Format: uuid */
             linked_contact_id?: string | null;
             /**
+             * @description Present on a promise task when we wrote to one of its recipients on its thread after the
+             *     promise. The task then asks whether that mail kept it, as the Worklist does, with the
+             *     same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
+             *     agent, which answers no such question.
+             */
+            may_be_done?: components["schemas"]["WorklistMayBeDone"];
+            /**
              * @description The task's version, carried so the tick and the snooze beside this row can write with
              *     `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
              *     from has to name the row it will act on, or every press is last-write-wins.
@@ -34382,6 +34510,8 @@ export interface components {
             interactions_90d: number;
             inbound_90d?: number;
             outbound_90d?: number;
+            /** @description Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on. */
+            sent_90d?: number;
             /**
              * Format: date-time
              * @description The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
@@ -34470,6 +34600,8 @@ export interface components {
             interactions_90d: number;
             inbound_90d?: number;
             outbound_90d?: number;
+            /** @description Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on. */
+            sent_90d?: number;
             /** @description Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list. */
             two_way: boolean;
             /** Format: date-time */
@@ -44849,6 +44981,8 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
+            /** @description Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does. */
+            avatar_url?: string;
             /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
             /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
@@ -44918,6 +45052,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             display_name: string;
+            /** @description Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`. */
+            avatar_url?: string;
             /** @description True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out. */
             departed: boolean;
         };
@@ -52878,6 +53014,8 @@ export interface components {
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
             /** @description Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time. */
             ttl_hours?: number | null;
+            /** @description Where the passport may act. Absent means all areas. */
+            areas?: components["schemas"]["PassportAreas"];
         };
         IssuePassportResponse: {
             /** Format: uuid */
@@ -52974,6 +53112,29 @@ export interface components {
             /** @description The client asked to stay connected without asking again (offline_access). */
             offline: boolean;
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
+            /**
+             * @description The work areas the human's role reaches, which the screen offers to choose from. The
+             *     screen posts the choice back as `areas`: `all`, or the chosen areas separated by spaces.
+             *     The screen shows no choice when this holds one area or none, and posts `all`.
+             */
+            areas: components["schemas"]["WorkArea"][];
+        };
+        /**
+         * @description One area of work a passport may be limited to. Each operation an agent can call sits in one
+         *     group, as `docs/reference/mcp-parity.md` places it, and that page names the area each group
+         *     is held to. The values are the groups a user can choose, held to that placement by a gate.
+         * @enum {string}
+         */
+        WorkArea: "business" | "compliance" | "capture" | "workspace_settings" | "admin_settings" | "own_account";
+        PassportAreas: {
+            /**
+             * @description `all` admits every area, those added later included. `custom` admits only `areas`, so an
+             *     area added later starts off.
+             * @enum {string}
+             */
+            mode: "all" | "custom";
+            /** @description The chosen areas, at least one, when `mode` is `custom`. Empty when it is `all`. */
+            areas: components["schemas"]["WorkArea"][];
         };
         /** @description Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token. */
         PassportSummary: {
@@ -52983,6 +53144,7 @@ export interface components {
             label: string;
             /** @description The granted MCP scopes (intersected with the minting human's role at bind time). */
             scopes: string[];
+            areas: components["schemas"]["PassportAreas"];
             /** @description The agent this passport is bound to, if any. */
             agent_id?: string | null;
             /**
@@ -58885,6 +59047,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PassportSummary"][];
+                        /** @description The work areas the caller's role reaches, which a passport's areas are chosen from. Settings shows no choice of areas when this holds one area or none. */
+                        reachable_areas: components["schemas"]["WorkArea"][];
                         /**
                          * Format: uri
                          * @description The address a passport calls this API at, `/v1` included: the configured API base URL, else the public base URL, else the origin this request arrived on. The skill bundle's `openapi.yaml` names the same address.
@@ -58949,6 +59113,36 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setPassportAreas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PassportAreas"];
+            };
+        };
+        responses: {
+            /** @description The passport's areas as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PassportAreas"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
@@ -77196,6 +77390,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     deleteAnchorCompanyLogo: {
@@ -77278,6 +77481,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -77531,6 +77743,15 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -78193,7 +78414,26 @@ export interface operations {
     };
     listHeldThreads: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Matches the subject, and a party's address or name. */
+                q?: string;
+                status?: "pending" | "unsure" | "held" | "held_by_owner";
+                /** @description Only the threads with this contact. A contact you may not read, or one that is archived, answers 404. */
+                contact_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -78211,6 +78451,8 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listCaptureSenders: {
@@ -85846,6 +86088,60 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getUserAvatar: {
+        parameters: {
+            query?: {
+                /** @description The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The picture's bytes. */
+            200: {
+                headers: {
+                    /** @description The revision served, the same token `avatar_url` carries, quoted. */
+                    ETag?: string;
+                    /** @description `private, max-age=86400, immutable` when `v` names this revision, else `private, no-cache`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            /** @description The client already holds this revision. */
+            304: {
+                headers: {
+                    /** @description The revision the client holds, quoted. */
+                    ETag?: string;
+                    /** @description The freshness a 200 for the same request would carry. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no picture can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     changeUserRole: {
         parameters: {
             query?: never;
@@ -92766,6 +93062,88 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    uploadMyAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The caller's seat, carrying the `avatar_url` the upload now answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description The upload is not a PNG, JPEG or WebP image this server can read. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The deployment has no object store configured, so no picture can be stored or served. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Every picture decode stayed busy; send the same file again after `Retry-After`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteMyAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's seat, with no `avatar_url`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMyAiActivity: {

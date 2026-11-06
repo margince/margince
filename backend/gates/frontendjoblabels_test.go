@@ -15,7 +15,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -38,7 +37,7 @@ var systemPrincipalText = regexp.MustCompile(`^system:[a-z0-9_.-]+$`)
 
 func TestEverySystemPrincipalHasAFrontendLabel(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendCatalogue)
+	source, err := gatekit.ReadFile(frontendCatalogue)
 	if err != nil {
 		t.Fatalf("reading the frontend catalogue: %v", err)
 	}
