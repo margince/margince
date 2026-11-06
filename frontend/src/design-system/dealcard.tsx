@@ -404,15 +404,9 @@ export function DealCard({
     draggable: true;
     onDragStart: (event: React.DragEvent) => void;
   };
-  /**
-   * Where the deal stands, for a card shown off the board: its stage, and the
-   * seat the record around it holds. A board column already says the stage.
-   */
+  /** Stage and seat, for a card off the board; a board column says the stage. */
   standing?: ReactNode;
-  /**
-   * The day a won or lost deal closed, worded. Null means it closed on no
-   * recorded day. The board shows open deals only, so it leaves this out.
-   */
+  /** A closed deal's day, worded; null when no day was recorded. */
   closed?: string | null;
 }>) {
   const t = useT();

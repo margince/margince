@@ -270,7 +270,7 @@ function DealFigures({
                 ? formatDayMonth(next.expected_close_date, locale, readerZone)
                 : t("contact.deals.noClose")
         }
-        detail={next?.name}
+        detail={complete ? next?.name : undefined}
       />
     </StatStrip>
   );
