@@ -410,8 +410,8 @@ export function DealCard({
    */
   standing?: ReactNode;
   /**
-   * Given for a won or lost deal (the board shows open ones only): the day it
-   * closed, worded, or null for one closed on no recorded day.
+   * The day a won or lost deal closed, worded. Null means it closed on no
+   * recorded day. The board shows open deals only, so it leaves this out.
    */
   closed?: string | null;
 }>) {

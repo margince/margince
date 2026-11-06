@@ -14,7 +14,7 @@ export type OpenValue =
 
 /**
  * The sum of deals in one currency. A deal with no readable amount, or a set
- * not read in full, has no sum: a total of the visible part would read as the
+ * not read in full, has no sum. A total of the visible part would read as the
  * whole. Unlike money is never added.
  */
 export function openValue(

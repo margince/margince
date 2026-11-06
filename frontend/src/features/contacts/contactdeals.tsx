@@ -44,8 +44,8 @@ function useDealSummary(dealId: string) {
   return useQuery(dealSummaryQuery(dealId));
 }
 
-// The same read for every deal on the tab at once, so the figures above the
-// cards and each card share one cache entry per deal.
+// One read per deal on the tab. The figures and each card share that one
+// cache entry.
 function dealSummaryQuery(dealId: string) {
   return {
     queryKey: ["deal", dealId],
@@ -203,8 +203,8 @@ function DealRow({
 }
 
 // The deals in figures: how many are open, what they are worth together, and
-// which closes next. Until every deal is read, and read in full, a figure says
-// it is a floor or says nothing rather than print part of the answer.
+// which closes next. Until every deal is read in full, a figure says it is a
+// floor or says nothing. It never prints part of the answer.
 function DealFigures({ roles }: Readonly<{ roles: DealRole[] }>) {
   const t = useT();
   const plural = usePlural();

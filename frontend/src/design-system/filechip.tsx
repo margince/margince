@@ -88,9 +88,8 @@ export function useStoredFileClick(
   const preview = useFilePreview();
   const mediaType = factsFor(fileKind(filename)).preview;
   return (event) => {
-    // Three ways this stays a download, and each is a reader getting what
-    // they asked for: nothing here can draw the file, no preview is mounted
-    // (a story, a unit test), or a modifier asks for a new tab or a saved copy.
+    // Three cases stay a plain download. Nothing here can draw the file, or no
+    // preview is mounted (a story, a unit test). Or a modifier asks for a new tab.
     if (preview === null || mediaType === null || opensElsewhere(event)) {
       return;
     }

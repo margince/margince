@@ -14,10 +14,10 @@ export type DocumentAnchor = Readonly<{
 }>;
 
 /**
- * One document as a tile in a gallery: a page-shaped stage stamped with its
- * kind, then its title, one line of facts and whatever the caller adds. The
- * title is the tile's door, stretched over the whole tile, so pressing the
- * paper opens it while the caller's own verbs keep their presses.
+ * One document as a tile in a gallery. A page-shaped stage is stamped with
+ * its kind, then come its title, one line of facts and the caller's parts. The
+ * title is the tile's door, stretched over the whole tile. Pressing the
+ * paper opens it, and the caller's own verbs keep their presses.
  */
 export function DocumentTile({
   filename,
@@ -79,8 +79,8 @@ export function DocumentTile({
   );
 }
 
-// The title, as the door the tile opens by: a button for a dialog, a link for
-// a file, or plain text when there is nothing to open.
+// The title is the tile's door. It is a button for a dialog and a link for a
+// file, or plain text when there is nothing to open.
 function DocumentDoor({
   title,
   open,

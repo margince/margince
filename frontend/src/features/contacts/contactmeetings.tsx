@@ -184,8 +184,8 @@ function heldState(
   return listed.isPending ? "loading" : "empty";
 }
 
-// A count only once it is the whole count: meetings still ahead can sit on a
-// page not read yet until the list has reached the past.
+// A count only once it is the whole count. Until the list reaches the past,
+// meetings still ahead can sit on a page not read yet.
 function bookedCount(
   upcoming: string,
   listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
@@ -200,9 +200,9 @@ function bookedCount(
 /**
  * ContactMeetingsTab reads as its figures, then three panels: what is
  * booked, what is still waiting on the contact's answer, and what has already
- * been held. The booked meeting leads, from the server's own next-meeting read taken through this
- * contact's activity link rather than their account's — the company's answer
- * names a meeting this contact may not be in.
+ * been held. The booked meeting leads, from the server's own next-meeting read.
+ * That read goes through this contact's activity link, not their account's.
+ * The company's answer names a meeting this contact may not be in.
  */
 export function ContactMeetingsTab({
   view,

@@ -37,8 +37,8 @@ const STATE_LABELS: Record<DocState, MessageKey> = {
 };
 
 /**
- * A record's file as a tile: the name opens it, the stage says its kind and
- * the state somebody asserted, and one line says its category and when it
+ * A record's file as a tile. The name opens it, and the stage says its kind
+ * and the state somebody asserted. One line says its category and when it
  * arrived. Superseded is the one state that changes how a file reads: it is
  * history, so it warns and its paper recedes.
  */

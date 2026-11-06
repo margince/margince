@@ -101,8 +101,8 @@ export function DealsCard({
   );
 }
 
-// The account's deals in four figures: what is open and what it is worth,
-// what was won to date, and how many were lost, which opens those deals. A
+// The account's deals in four figures: what is open, what it is worth, what
+// was won to date and how many were lost. The lost figure opens those deals. A
 // sum is stated only in one currency rather than adding unlike money.
 function DealFigures({
   deals,

@@ -9,9 +9,9 @@ import { MeetingRow } from "./contactmeetings.rows";
 type Activity = components["schemas"]["Activity"];
 
 /**
- * The meetings already behind the read, drawn as the upcoming ones are: the
- * day as a calendar page, what it was and what became of it, the colleague
- * who hosted it, and its verbs.
+ * The meetings already held, drawn as the upcoming ones are. Each shows its
+ * day as a calendar page, what it was and what became of it. It also names
+ * the colleague who hosted it and carries its verbs.
  */
 export function HeldMeetingsList({
   held,

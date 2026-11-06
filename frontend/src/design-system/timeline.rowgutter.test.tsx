@@ -22,7 +22,7 @@ function note(id: string, atIso: string): TimelineEntry {
     title: `Note ${id}`,
     atIso,
     atPrecision: "instant",
-    provenance: { kind: "human" },
+    provenance: { kind: "human", self: false },
   };
 }
 
