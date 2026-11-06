@@ -224,7 +224,15 @@ type Finding = { where: string; line: number; says: string };
 function castsIn(source: ts.SourceFile, where: string): Finding[] {
   const out: Finding[] = [];
   const aliases = contractAliases(source, join(frontendRoot, where));
-  const lines = source.getFullText().split("\n");
+  // TypeScript's own line starts, so the lines are the ones its line numbers
+  // count, at every terminator it reads.
+  const text = source.getFullText();
+  const starts = source.getLineStarts();
+  const lines = starts.map((start, at) =>
+    text
+      .slice(start, starts[at + 1])
+      .replace(/(?:\r\n|[\n\r\u2028\u2029])$/, ""),
+  );
   const visit = (node: ts.Node) => {
     if (
       ts.isAsExpression(node) &&
@@ -374,6 +382,14 @@ describe("what counts as a contract type cast", () => {
     expect(found("const m = fetch as unknown as { calls: number };")).toEqual(
       [],
     );
+  });
+
+  // A waiver is read on the lines TypeScript counts, whatever ends them.
+  it("finds a reasoned waiver above a cast at every line terminator", () => {
+    for (const end of ["\r\n", "\r", "\u2028", "\u2029"]) {
+      const code = `${aliasing}// contract:cast \`{}\` is not a page, on purpose.${end}const w = {} as unknown as Worklist;`;
+      expect(found(code), JSON.stringify(end)).toEqual([]);
+    }
   });
 
   it("takes a reason from anywhere in the comment block above", () => {
