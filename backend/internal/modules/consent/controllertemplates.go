@@ -261,8 +261,8 @@ func RenderControllerPresentation(rendered Rendered, brand string) string {
 			content.Paragraph(strings.TrimSpace(paragraph))
 		}
 		message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
-		message.Text, message.Brand = rendered.Body, brand
-		return emailview.Render(message)
+		message.Text = rendered.Body
+		return emailview.Render(message, controllerLetterhead(brand, words))
 	}
 	var content emailview.Content
 	for paragraph := range strings.SplitSeq(before, "\n\n") {
@@ -273,8 +273,14 @@ func RenderControllerPresentation(rendered Rendered, brand string) string {
 		content.Paragraph(strings.TrimSpace(paragraph))
 	}
 	message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
-	message.Text, message.Brand, message.ActionPlaceholder = rendered.Body, brand, linkPlaceholder
-	return emailview.Render(message)
+	message.Text, message.ActionPlaceholder = rendered.Body, linkPlaceholder
+	return emailview.Render(message, controllerLetterhead(brand, words))
+}
+
+// controllerLetterhead is the letterhead a privacy notice is drawn under: the
+// installation's name, over the attribution every system mail carries.
+func controllerLetterhead(brand string, words mailcopy.Copy) emailview.Letterhead {
+	return emailview.Letterhead{Name: brand, Attribution: words.PoweredBy}
 }
 
 func historicalControllerVersion(key string, version int) bool {

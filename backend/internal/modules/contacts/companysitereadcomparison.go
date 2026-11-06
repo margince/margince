@@ -157,7 +157,7 @@ func classifySiteReadValue(key, kind, proposed, current, source string, found bo
 	switch {
 	case samePrintedValue(current, proposed):
 		comparison.Classification = siteReadComparisonUnchanged
-	case source == CompanySourceHuman:
+	case source == CompanySourceHuman || source == CompanySourceAgent:
 		comparison.Classification = siteReadComparisonHumanConflict
 	default:
 		comparison.Classification = siteReadComparisonMachineChange

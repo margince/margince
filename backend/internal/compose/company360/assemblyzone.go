@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -30,7 +32,13 @@ func (a *assembly) installationBaseCurrency() (string, error) {
 	if a.baseCurrencyRead {
 		return a.baseCurrency, nil
 	}
-	base, err := identity.BaseCurrencyOf(a.ctx, a.tx)
+	// A caller who may not read it loses the sections that read it: money, the
+	// state strip and the suggestions. The rest of the page still answers.
+	readCtx, err := auth.Unrecorded(a.ctx, identity.BaseCurrency.Object(), principal.ActionRead)
+	if err != nil {
+		return "", err
+	}
+	base, err := identity.BaseCurrencyOf(readCtx, a.tx)
 	if err != nil {
 		return "", err
 	}

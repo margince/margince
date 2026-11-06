@@ -83,7 +83,7 @@ func seedTargetQuarter(t *testing.T) targetQuarter {
 	q.service = newReportingService(e.Pool, func() time.Time { return q.at })
 	q.writer = principal.WithCorrelationID(principal.SystemActing(q.human, "system:target-quarter"), ids.NewV7())
 	clock := quarter
-	q.deals = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(func() time.Time { return clock })
+	q.deals = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(func() time.Time { return clock })
 	q.closeOn = quarter.AddDate(0, 3, -1)
 	q.won = e.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Won',10,'won',100)`, e.pipeline)
 	booked := q.openDeal(t, e.Rep1, "Booked this quarter", 42_000_000)
@@ -185,7 +185,7 @@ func TestAComparisonTheQuarterCannotSupportSaysWhyAndOffersOneItCan(t *testing.T
 	if got.Status != "incompatible" || *got.Incompatibility != "manager_call_pipeline" || got.SupportedSelection.PipelineId != nil {
 		t.Fatalf("pipeline comparison %+v, want the call refused for one pipeline and every pipeline offered", got)
 	}
-	if err := config.Save(q.human, StoredConfig(q.env.Pool), identity.ForecastForwardMeasure, string(forecasting.MeasureCommitEvidence)); err != nil {
+	if err := config.Save(q.human, StoredConfig(q.env.Pool), identity.ForecastForwardMeasure, string(forecasting.MeasureLikely)); err != nil {
 		t.Fatal(err)
 	}
 	_, got = q.comparison(t, pipeline)

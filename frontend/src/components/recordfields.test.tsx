@@ -3,12 +3,19 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
 import { RecordFields } from "./recordfields";
 import type { RecordFieldSave } from "./recordfieldtypes";
@@ -59,7 +66,7 @@ describe("record fields", () => {
     const save = vi.fn<RecordFieldSave>(async () => undefined);
     const user = userEvent.setup();
     const view = render(editor(save), { wrapper });
-    await user.click(screen.getByRole("button", { name: "Change Name" }));
+    await user.click(screen.getByRole("button", { name: /^Change Name/ }));
     await user.clear(screen.getByRole("textbox", { name: "Name" }));
     await user.type(
       screen.getByRole("textbox", { name: "Name" }),
@@ -70,7 +77,9 @@ describe("record fields", () => {
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith({ name: "My correction" }, {}, record),
     );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
   });
   it("retains a failed draft and permits cancelling without another write", async () => {
     const save = vi.fn<RecordFieldSave>(async () => {
@@ -78,16 +87,21 @@ describe("record fields", () => {
     });
     const user = userEvent.setup();
     render(editor(save), { wrapper });
-    await user.click(screen.getByRole("button", { name: "Change Name" }));
+    await user.click(screen.getByRole("button", { name: /^Change Name/ }));
     const input = screen.getByRole("textbox", { name: "Name" });
     await user.clear(input);
     await user.type(input, "Keep my work{Enter}");
     await screen.findByRole("alert");
     expect(input).toHaveValue("Keep my work");
     await user.keyboard("{Escape}");
-    expect(
-      screen.queryByRole("textbox", { name: "Name" }),
-    ).not.toBeInTheDocument();
+    await user.click(
+      await screen.findByRole("button", { name: en["unsaved.discard"] }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("textbox", { name: "Name" }),
+      ).not.toBeInTheDocument(),
+    );
     expect(save).toHaveBeenCalledTimes(1);
   });
   it("shows a date field in the reader's format, never the stored ISO day", () => {
@@ -110,9 +124,9 @@ describe("record fields", () => {
     const user = userEvent.setup();
     render(editor(save, { ...record, title: "" }), { wrapper });
     expect(
-      screen.getByRole("button", { name: "Change Title" }),
+      screen.getByRole("button", { name: /^Change Title/ }),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Change Name" }));
+    await user.click(screen.getByRole("button", { name: /^Change Name/ }));
     await user.keyboard("{Enter}");
     expect(save).not.toHaveBeenCalled();
   });
@@ -146,7 +160,7 @@ describe("record fields", () => {
       { wrapper },
     );
     await user.click(
-      screen.getByRole("button", { name: "Change Email addresses" }),
+      screen.getByRole("button", { name: /^Change Email addresses/ }),
     );
     const inputs = screen.getAllByRole("textbox", { name: /Email/ });
     await user.clear(inputs[0]);
@@ -240,14 +254,19 @@ it("protects changed Details drafts without blocking an unchanged editor or anot
     { wrapper },
   );
   const toggle = await screen.findByRole("button", { name: "Hide details" });
-  await user.click(screen.getByRole("button", { name: "Change Name" }));
+  await user.click(screen.getByRole("button", { name: /^Change Name/ }));
   expect(toggle).toBeEnabled();
   await user.type(screen.getByRole("textbox", { name: "Name" }), " changed");
   expect(screen.getByRole("button", { name: "Hide details" })).toBeDisabled();
   await user.keyboard("{Escape}");
-  expect(screen.getByRole("button", { name: "Hide details" })).toBeEnabled();
+  await user.click(
+    await screen.findByRole("button", { name: en["unsaved.discard"] }),
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Hide details" })).toBeEnabled(),
+  );
 });
-it("focuses a refused email draft after blur so Escape can cancel it", async () => {
+it("refuses an address it cannot read and keeps the dialog open", async () => {
   const user = userEvent.setup();
   const save = vi.fn<RecordFieldSave>(async () => undefined);
   render(
@@ -261,14 +280,13 @@ it("focuses a refused email draft after blur so Escape can cancel it", async () 
     />,
     { wrapper },
   );
-  await user.click(screen.getByRole("button", { name: "Change Email" }));
+  await user.click(screen.getByRole("button", { name: /^Change Email/ }));
   const input = screen.getByRole("textbox", { name: "Email" });
+  expect(input).toHaveAttribute("type", "email");
   await user.clear(input);
   await user.type(input, "invalid");
-  await user.tab();
-  expect(input).toHaveFocus();
-  await user.keyboard("{Escape}");
-  expect(screen.queryByRole("textbox")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(screen.getByRole("dialog", { name: "Email" })).toBeInTheDocument();
   expect(save).not.toHaveBeenCalled();
 });
 it("connects the reference label to its search input", async () => {
@@ -290,14 +308,14 @@ it("connects the reference label to its search input", async () => {
     />,
     { wrapper },
   );
-  await user.click(screen.getByRole("button", { name: "Change Parent" }));
+  await user.click(screen.getByRole("button", { name: /^Change Parent/ }));
   const label = document.querySelector("label");
   if (!label) throw new Error("Reference field has no label");
   await user.click(label);
   expect(screen.getByRole("searchbox", { name: "Parent" })).toHaveFocus();
 });
 
-it("keeps a rendered group's edit verb in place, disabled, while another field saves", async () => {
+it("keeps a rendered group's link in place and pauses its edit while another field saves", async () => {
   const user = userEvent.setup();
   let release = () => {};
   const save = vi.fn<RecordFieldSave>(
@@ -321,14 +339,39 @@ it("keeps a rendered group's edit verb in place, disabled, while another field s
     />,
     { wrapper },
   );
-  await user.click(screen.getByRole("button", { name: "Change Name" }));
+  expect(screen.getByRole("button", { name: "Change Tags" })).toBeEnabled();
+  await user.click(screen.getByRole("button", { name: /^Change Name/ }));
   await user.type(screen.getByRole("textbox", { name: "Name" }), "!{Enter}");
   await waitFor(() => expect(save).toHaveBeenCalled());
-  expect(screen.getByRole("button", { name: "Change Tags" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "Change Tags" })).toBeNull();
+  expect(screen.getByRole("link", { name: "a" })).toBeInTheDocument();
   release();
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Change Tags" })).toBeEnabled(),
   );
+});
+
+it("edits a group in a dialog titled by the row, never inside the row", async () => {
+  const user = userEvent.setup();
+  render(
+    <RecordFields
+      title="Details"
+      kind="contact"
+      fields={[{ key: "tags", labelText: "Tags", type: "multiselect" }]}
+      record={{ ...record, tags: "a" }}
+      renderValues={{ tags: <a href="https://tags.example">a</a> }}
+      canEdit
+      save={async () => undefined}
+    />,
+    { wrapper },
+  );
+  await user.click(screen.getByRole("button", { name: "Change Tags" }));
+  const dialog = await screen.findByRole("dialog", { name: "Tags" });
+  expect(dialog).not.toContainElement(screen.getByRole("link", { name: "a" }));
+  const shown = within(dialog)
+    .getAllByText("Tags")
+    .filter((label) => !label.classList.contains("sr-only"));
+  expect(shown).toHaveLength(1);
 });
 
 // The anchor's name is also /me's brand and the settings company profile.
@@ -362,7 +405,7 @@ it.each([
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    await user.click(screen.getByRole("button", { name: "Change Name" }));
+    await user.click(screen.getByRole("button", { name: /^Change Name/ }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "!{Enter}");
 
     await waitFor(() =>
@@ -372,3 +415,52 @@ it.each([
     expect(client.getQueryState(["company"])?.isInvalidated).toBe(refreshed);
   },
 );
+
+it("holds a group dialog's corner close and Escape while its save is out", async () => {
+  const user = userEvent.setup();
+  let release = () => {};
+  const save = vi.fn<RecordFieldSave>(
+    () =>
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+  );
+  render(
+    <RecordFields
+      title="Details"
+      kind="contact"
+      record={{ id: "c-1", version: 3, emails: [{ email: "a@example.test" }] }}
+      fields={[
+        {
+          key: "emails",
+          labelText: "Email addresses",
+          type: "repeatable",
+          rowFields: [{ key: "email", label: "create.email", type: "email" }],
+          addLabel: "field.addEmail",
+        },
+      ]}
+      canEdit
+      save={save}
+    />,
+    { wrapper },
+  );
+  await user.click(
+    screen.getByRole("button", { name: /^Change Email addresses/ }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Email addresses" });
+  const close = within(dialog).getByRole("button", {
+    name: en["common.close"],
+  });
+  expect(close).toBeEnabled();
+  await user.type(within(dialog).getByRole("textbox", { name: /Email/ }), "m");
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(save).toHaveBeenCalled());
+  expect(close).toBeDisabled();
+  await user.keyboard("{Escape}");
+  expect(screen.getByRole("dialog", { name: "Email addresses" })).toBe(dialog);
+  expect(
+    screen.queryByRole("dialog", { name: en["unsaved.title"] }),
+  ).toBeNull();
+  release();
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});

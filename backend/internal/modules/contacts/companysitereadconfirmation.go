@@ -22,17 +22,17 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 	if confirmation.target.created {
 		action = actionCreate
 	}
-	before, after, err := anchorSaveImages(ctx, tx, confirmation.target)
+	before, after, receipts, err := anchorSaveImages(ctx, tx, confirmation.target)
 	if err != nil {
 		return nil, err
 	}
 	// Confirmation provenance belongs in evidence; field history treats every
 	// key in the before/after image as a changed company field.
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", confirmation.target.id.UUID, before, after, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", confirmation.target.id.UUID, before, after, withProfileFieldReceipts(map[string]any{
 		auditKeySource: companySourceSiteRead, auditKeySourceURL: read.SeedURL,
 		auditKeyFields: confirmation.appliedSite, "human_fields": confirmation.appliedHuman,
 		auditKeyFacts: confirmation.appliedFacts, "site_read_id": read.ID, "draft_version": read.DraftVersion,
-	})
+	}, receipts))
 	if err != nil {
 		return nil, fmt.Errorf("audit company site-read confirmation: %w", err)
 	}

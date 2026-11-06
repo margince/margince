@@ -56,12 +56,12 @@ func TestSignatureEvidenceSettlesOnlyItsMatchingRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	o.capture(t, owedMail{
-		from: "pat@customer.example", to: o.seat, subject: "Re: Signature requested",
+		from: "pat@customer.example", to: o.seat, subject: "Signature completed",
 		messageID: "unverified-completion@customer.example", inReplyTo: "signature-alpha@customer.example",
 		at: o.now.Add(-30 * time.Minute), body: forged,
 	})
 	completion := owedMail{
-		from: "pat@customer.example", to: o.seat, subject: "Re: Signature requested",
+		from: "pat@customer.example", to: o.seat, subject: "Signature completed",
 		authenticated: true, messageID: "signature-complete@customer.example", inReplyTo: "signature-alpha@customer.example",
 		at: o.now.Add(-time.Hour), body: "Envelope ALPHA-104 is fully signed. Your signing is complete.",
 	}

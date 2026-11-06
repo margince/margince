@@ -14,6 +14,7 @@ import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { ReportingCharts } from "./reporting.charts";
@@ -161,7 +162,7 @@ function PreparedPreview({
     JSON.stringify(selection),
   );
   const evaluation = useQuery({
-    queryKey: ["reporting-evaluation", selection],
+    queryKey: [...REPORTING_EVALUATION_KEY, selection],
     queryFn: async () =>
       unwrap(
         await api.GET("/analytics/evaluate", {

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Outlook is one horizon's landing, frozen.
@@ -48,9 +49,9 @@ type Outlook struct {
 	ForwardMeasure string
 	BaseCurrency   string
 	// The readings behind the landing, copied for the same reason.
-	WonMinor      int64
-	CommitMinor   int64
-	BestCaseMinor int64
+	WonMinor int64
+	// LikelyMinor is the Likely reading, frozen in the commit_minor column.
+	LikelyMinor   int64
 	WeightedMinor int64
 	// Movement is how this window got from its opening landing to its closing
 	// one. Empty where there was no opening snapshot to move from.
@@ -185,8 +186,7 @@ func insertOutlookInto(
 	add("period_end", out.PeriodEnd)
 	add("base_currency", out.BaseCurrency)
 	add("won_minor", out.WonMinor)
-	add("commit_minor", out.CommitMinor)
-	add("best_case_minor", out.BestCaseMinor)
+	add("commit_minor", out.LikelyMinor)
 	add("weighted_minor", out.WeightedMinor)
 	// The opening side travels whole or not at all, which is what the table's
 	// own CHECK holds. An absent Monday writes nulls, and the panel says "no
@@ -266,7 +266,7 @@ func readOutlookFrom(
 	// Identifiers from this package's own constants, never from a request.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT period_kind, period_start, period_end, base_currency,
-		       won_minor, commit_minor, best_case_minor, weighted_minor,
+		       won_minor, commit_minor, weighted_minor,
 		       opening_snapshot_id, opening_landing_minor,
 		       closing_snapshot_id, closing_landing_minor, forward_measure
 		  FROM %s
@@ -283,7 +283,7 @@ func readOutlookFrom(
 		var openLanding, closeLanding *int64
 		var measure *string
 		err := row.Scan(&o.PeriodKind, &o.PeriodStart, &o.PeriodEnd, &o.BaseCurrency,
-			&o.WonMinor, &o.CommitMinor, &o.BestCaseMinor, &o.WeightedMinor,
+			&o.WonMinor, &o.LikelyMinor, &o.WeightedMinor,
 			&openID, &openLanding, &closeID, &closeLanding, &measure)
 		if openID != nil && openLanding != nil {
 			o.Opening = OutlookSide{Known: true, SnapshotID: *openID, LandingMinor: *openLanding}
@@ -292,7 +292,11 @@ func readOutlookFrom(
 			o.Closing = OutlookSide{Known: true, SnapshotID: *closeID, LandingMinor: *closeLanding}
 		}
 		if measure != nil {
-			o.ForwardMeasure = *measure
+			parsed, parseErr := values.ParseForwardMeasure(measure, "forward_measure")
+			if parseErr != nil {
+				return o, parseErr
+			}
+			o.ForwardMeasure = string(parsed)
 		}
 		return o, err
 	})

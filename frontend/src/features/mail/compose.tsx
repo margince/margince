@@ -14,6 +14,7 @@ import {
   AttachedFiles,
   useCarriageBlocks,
 } from "./composeattachments";
+import { useKeptDraft } from "./composeautosave";
 import { ComposeBlockers } from "./composeblockers";
 import { type ComposeDock, ComposeDockContext } from "./composedockcontext";
 import { useComposeFields } from "./composefields";
@@ -21,6 +22,7 @@ import { useAccountRecipient, useComposeRecords } from "./composefiling";
 import { useRecipientOffer } from "./composerecipientoffer";
 import type { RelinkKind } from "./composerelink";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
+import { savedFieldsOf } from "./composesaveddraftfields";
 
 import { ScheduleDialog } from "./composeschedule";
 import { sendWording, useComposeSend } from "./composesend";
@@ -33,6 +35,7 @@ import {
 import { ThreadBar } from "./composethreadbar";
 import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
 import type { EditSeed } from "./schedulededit";
+import { SendRefusalRemedies } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
@@ -251,6 +254,7 @@ export function ComposeWindow({
     settle,
     restoreSaved,
     adoptSavedSubject,
+    setFiles: attached.setFiles,
     account: fields.account,
   });
   const savedDraft = useSavedDraft({
@@ -261,14 +265,7 @@ export function ComposeWindow({
       isChannelReply,
     },
     open,
-    fields: {
-      to: fields.to,
-      cc: fields.cc,
-      bcc: fields.bcc,
-      subject: fields.subject,
-      body: fields.body,
-      html: fields.html,
-    },
+    fields: savedFieldsOf(fields, attached.files),
     replyTo: thread.anchorActivity,
     offeredRecipient: offer.standing.offeredAddress,
     onRestore: restoreFields,
@@ -321,6 +318,10 @@ export function ComposeWindow({
     control: voice.control,
   });
   const busy = sendPending || voice.rejectionInFlight;
+  const held = voice.rejectionInFlight || savedDraft.saving;
+  // Every hold on the Send button, so Cmd/Ctrl+Enter waits for the same ones.
+  const sendBlocked = [held, sendPending, fields.addressRefused].includes(true);
+  useKeptDraft(savedDraft.keeper, sendPending);
   const selectMessage = useConversationSwitch({
     answering,
     choose,
@@ -416,7 +417,8 @@ export function ComposeWindow({
                 voiceMaturity={voiceProfile.data?.maturity}
                 channelLabel={dial.channel?.label}
                 carriageBlocks={carriageBlocks}
-                flagged={send.flagged}
+                send={send}
+                sendBlocked={sendBlocked}
                 voice={voice}
                 marksIn={markRow}
                 attach={
@@ -442,13 +444,21 @@ export function ComposeWindow({
               send={send}
               anchorActivity={thread.anchorActivity}
               contactOf={records.contactOf}
-              contactId={contactId}
               bodyKey={wording.body}
               permission={(override, picksReason) => (
                 <SendPermission
                   {...send.permission}
+                  refusal={
+                    send.permission.refusal && {
+                      ...send.permission.refusal,
+                      remedies: (
+                        <SendRefusalRemedies review={send.sendReview} />
+                      ),
+                    }
+                  }
                   override={override}
                   picksReason={picksReason}
+                  namesRecipients
                 />
               )}
             />
@@ -459,11 +469,12 @@ export function ComposeWindow({
             isChannelReply={isChannelReply}
             // The button stays live with fields outstanding, so a press can
             // name them. A rejection or a draft save in flight holds it.
-            held={voice.rejectionInFlight || savedDraft.saving}
+            held={held}
             onPickMoment={() => setPickingMoment(true)}
             sendAt={fields.sendAt}
             savedDraft={savedDraft}
             busy={busy}
+            addressRefused={fields.addressRefused}
             marksRef={setMarkRow}
           />
         </ComposeFrame>

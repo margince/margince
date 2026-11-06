@@ -38,7 +38,7 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 		out.ConnectionConcerns = append(out.ConnectionConcerns, crmcontracts.CaptureConnectionConcern{
 			UserId: openapi_types.UUID(concern.UserID), DisplayName: concern.DisplayName, ConnectionId: openapi_types.UUID(v.ID),
 			Provider: v.Provider, AccountLabel: v.AccountLabel, Concern: crmcontracts.CaptureConcernKind(v.Concern),
-			Since: v.ConcernSince, LastSuccessAt: v.LastSuccessAt,
+			Since: v.ConcernSince, LastSuccessAt: v.LastSuccessAt, ErrorClass: v.LastErrorClass,
 		})
 	}
 	mailboxes, err := captureMailboxHealth(ctx, tx, now)

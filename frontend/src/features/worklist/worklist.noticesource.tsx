@@ -9,10 +9,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { useTaskUpdate } from "../../components/taskactions";
-import { viewerZone } from "../../format/timezone";
 import { TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
+import { useViewerZone } from "../../lib/viewerzone";
 import { rowHref } from "../../lib/worklistcopy";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
@@ -124,7 +124,7 @@ function SourceDrawer({
   const read = useActivity(activityId);
   const answered = read.data !== undefined || read.isError;
   const email = read.data?.kind === "email";
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <>
       <OpenEmailDrawer

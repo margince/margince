@@ -101,7 +101,7 @@ export function Modal({
    * of a surface covering their page.
    */
   closeReason?: string;
-  /** Holds the corner X while a write the dialog started is still out. */
+  /** Holds the X, Escape and the backdrop while a write the dialog started is out. */
   closeDisabled?: boolean;
   /**
    * The caller holds an unsaved draft of this dialog's form. A form inside the
@@ -129,12 +129,13 @@ export function Modal({
   // before it throws away a draft. A save closes through the caller instead.
   const dirty = unsaved || drafts.dirty;
   const requestClose = useCallback(() => {
+    if (closeDisabled) return;
     if (dirty) {
       setAsking(true);
     } else {
       onClose();
     }
-  }, [dirty, onClose]);
+  }, [closeDisabled, dirty, onClose]);
   // The palette shares keyboard behavior without sharing modal chrome. Keyed on
   // `open`, not on `mounted`: focus goes back to the opener the moment the
   // reader dismisses the dialog, rather than waiting out an animation they have

@@ -209,17 +209,13 @@ func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, e
 // UpdateRoom edits the room's title and welcome message — the words a buyer
 // reads at the top of the page, and reads AS SOON AS they are saved.
 //
-// Human-only, and that is a change: this used to shape a draft nobody outside
-// could read, so an agent writing a better welcome paragraph changed nothing an
-// outside party would see. With the room live from creation, the same write
-// now reaches every invited buyer immediately, which puts it on the side of the
-// line the rest of this module already draws — anything an outside party reads
-// is a contact's to say.
+// The write reaches every invited buyer at once. Anything an outside party
+// reads is the user's to say, or their agent's, never passportless work's.
 func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoomInput) (crmcontracts.DealRoom, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	var out crmcontracts.DealRoom
@@ -301,10 +297,8 @@ func buildRoomPatch(current crmcontracts.DealRoom, in UpdateRoomInput) *storekit
 
 // SetExpiry moves — or removes — the moment a buyer loses access.
 //
-// Human-only, and separated from UpdateRoom for exactly that reason: editing a
-// room's text is an auto-execute act an agent may perform, while widening the
-// window in which an outside party can read the deal's material is not. Three
-// places said so in prose before anything enforced it.
+// Widening the window in which an outside party reads the deal's material is
+// the user's act, or their agent's for them, never automatic work's.
 //
 // A nil expiry removes the bound. A past instant is accepted and binds at once,
 // which is how access is cut short without ending the room.
@@ -312,7 +306,7 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	var out crmcontracts.DealRoom

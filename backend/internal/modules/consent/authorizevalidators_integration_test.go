@@ -257,6 +257,7 @@ func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 	invoice := e.invoice(t, company, false)
 	e.employ(t, company)
 	deal := e.openDeal(t, "open", true)
+	e.enquiredAbout(t, deal)
 
 	// A seat that may write mail and read contacts, and may NOT read finance.
 	// Everything else about the context is the ordinary sending principal.
@@ -638,8 +639,8 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 	}
 }
 
-// A VOIDED INVOICE AUTHORIZES NOTHING. Neither does an archived one, an
-// archived offer, a draft one, or a quote on a deal that closed.
+// A voided invoice authorizes nothing, and neither does an archived one. The
+// offer cases are in quoteondeal_integration_test.go.
 //
 // Mutation: drop any one of the added clauses and its own row here fails.
 func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {

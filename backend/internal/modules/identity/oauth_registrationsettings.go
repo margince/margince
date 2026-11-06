@@ -5,8 +5,10 @@ package identity
 
 import (
 	"context"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // agentClientObject gates the AI tool sign-in clients and the two switches
@@ -35,6 +37,33 @@ var (
 		Doc:     "AI tools may sign in with a client ID that is the URL of their metadata document (CIMD).",
 	}, config.Store{RBACObject: agentClientObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 )
+
+// McpClientCheck turns on the admin-only check_client tool. The tool asks an AI
+// tool's user to fill in a form. Off, no tool list or call shows that it exists.
+var McpClientCheck = config.DefineStored(config.Spec[bool]{
+	Key:     "identity.mcp_client_check",
+	Env:     "MARGINCE_IDENTITY_MCP_CLIENT_CHECK",
+	Type:    config.Bool,
+	Default: config.Some(false),
+	Doc:     "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
+}, config.Store{RBACObject: agentClientObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+
+// clientCheckReadActor names the principal of the tool gate's read below.
+const clientCheckReadActor = "system:client_check_read"
+
+// ReadClientCheck reads the switch as the system for the tool gate. The gate asks
+// on a passport's behalf, and a passport's scopes are not a settings grant.
+func ReadClientCheck(ctx context.Context, cfg *config.Config) (bool, error) {
+	return config.StoredVal(principal.SystemActing(ctx, clientCheckReadActor), cfg, McpClientCheck)
+}
+
+func (p InstallationPatch) clientCheckWrites() ([]pendingWrite, error) {
+	write, err := encodeStoredField(McpClientCheck, p.McpClientCheck)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{write}, nil
+}
 
 // AdminRegistrationSwitches reads the two switches above, as the system. The
 // user a tool signs in cannot read agent_client, and must not need to.
@@ -94,4 +123,21 @@ func (m RegistrationMethods) admits(createdVia string) bool {
 		return m.MetadataDocument
 	}
 	return true
+}
+
+// errClientCheckUnwired refuses a read on a service composed without the
+// configuration, which would otherwise show the switch off whatever is stored.
+var errClientCheckUnwired = errors.New("identity: this service reads no client check switch, because its configuration is not wired")
+
+// ClientCheck reads the switch for the admin's client list, under the reader's
+// own agent_client grant.
+func (s *Service) ClientCheck(ctx context.Context, actor Identity) (bool, error) {
+	ctx, err := admit(ctx, actor, agentClientObject, principal.ActionRead)
+	if err != nil {
+		return false, err
+	}
+	if s.config == nil {
+		return false, errClientCheckUnwired
+	}
+	return config.StoredVal(ctx, s.config, McpClientCheck)
 }

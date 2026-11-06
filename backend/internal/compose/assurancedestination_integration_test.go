@@ -75,8 +75,8 @@ func modesByFinding(list assurance.InputCheckList) map[string]crmcontracts.Input
 func TestEachFindingSaysWhetherItsReaderMayAnswerIt(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(4_800_000)
-	mine := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &amount, nil)
-	theirs := e.seedOpenDeal(t, "Marlow workshop suite", 20, &e.Rep3, &amount, nil)
+	mine := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &amount)
+	theirs := e.seedOpenDeal(t, "Marlow workshop suite", 20, &e.Rep3, &amount)
 	minePast := e.seedFinding(t, "close_past", mine, amount)
 	theirsPast := e.seedFinding(t, "close_past", theirs, amount)
 
@@ -100,8 +100,8 @@ func TestEachFindingSaysWhetherItsReaderMayAnswerIt(t *testing.T) {
 func TestGroupsCountFindingsAndDistinctDealsOverTheWholeList(t *testing.T) {
 	e := setupForecast(t)
 	harbour, marlow := int64(4_800_000), int64(2_900_000)
-	first := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &harbour, nil)
-	second := e.seedOpenDeal(t, "Marlow workshop suite", 20, &e.Rep3, &marlow, nil)
+	first := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &harbour)
+	second := e.seedOpenDeal(t, "Marlow workshop suite", 20, &e.Rep3, &marlow)
 	e.seedFinding(t, "close_past", first, harbour)
 	e.seedFinding(t, "no_next_step", first, harbour)
 	e.seedFinding(t, "close_past", second, marlow)
@@ -133,8 +133,8 @@ func TestGroupsCountFindingsAndDistinctDealsOverTheWholeList(t *testing.T) {
 func TestMergedFindingsRankByMoneyBeforeRecency(t *testing.T) {
 	e := setupForecast(t)
 	big, small := int64(9_000_000), int64(1_000_000)
-	older := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &big, nil)
-	newer := e.seedOpenDeal(t, "Quayside fleet tools", 20, &e.Rep1, &small, nil)
+	older := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &big)
+	newer := e.seedOpenDeal(t, "Quayside fleet tools", 20, &e.Rep1, &small)
 	olderFinding := e.seedFinding(t, "close_past", older, big)
 	newerFinding := e.seedFinding(t, "close_past", newer, small)
 	if _, err := e.owner.Exec(t.Context(), `UPDATE assurance_exception SET first_seen_at = now() - interval '30 days',

@@ -7,6 +7,7 @@ const (
 	importRowSkip                  = "skip"
 	operationAdvanceProjectPhase   = "advance_project_phase"
 	operationBookMeeting           = "book_meeting"
+	previewHostNamedAttendee       = "attendee_host_named"
 	operationCommitImport          = "commit_import"
 	operationCreateOffer           = "createOffer"
 	operationDemoteLead            = "demote_lead"

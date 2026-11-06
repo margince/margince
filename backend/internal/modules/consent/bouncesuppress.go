@@ -250,7 +250,7 @@ func bounceSource(deliveryID ids.UUID) string {
 func (s *Store) LiftAddressStop(ctx context.Context, address, reason string) error {
 	address = strings.ToLower(strings.TrimSpace(address))
 	if address == "" {
-		return &ValidationError{Field: "address", Reason: "lifting a stop names the address"}
+		return &ValidationError{Field: fieldAddress, Reason: "lifting a stop names the address"}
 	}
 	if err := boundReason(reason); err != nil {
 		return err

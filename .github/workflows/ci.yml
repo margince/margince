@@ -58,6 +58,10 @@ defaults:
 # backend/gates/buildinputfetch_test.go, which holds this line.
 env:
   GOPROXY: https://proxy.golang.org|direct
+  # The diff-scoped gates (strict lint, comment checks) judge what a pull request
+  # adds to the branch it merges into, so one into develop is not held to all of
+  # develop's lines. The develop into main pull request judges those.
+  CHECK_BASE_REF: origin/${{ github.base_ref || 'main' }}
 
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
@@ -117,6 +121,10 @@ jobs:
       # docs/explanation/ci-pipeline.md rather than left to be inferred from
       # this filter.
       images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
+      # A pull request into `develop` takes the fast lanes only. The slow ones run
+      # each night on develop's tip, before develop is merged into main: see
+      # docs/how-to/land-through-develop.md.
+      full_lane: ${{ github.event_name != 'pull_request' || github.base_ref != 'develop' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -369,13 +377,24 @@ jobs:
   # script gates (image pins, contract breaking, test lanes, file length, RLS
   # store-path, jurisdiction isolation).
   deterministic-gates:
-    name: deterministic-gates
+    name: deterministic-gates (${{ matrix.part }})
     timeout-minutes: 30
     needs: [changes]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # The uncached root fitness packages were most of the test leg, so they get
+    # a runner; both legs still run the build and the root script gates.
+    # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: unit
+            legs: test-cached test-extensions
+          - part: gates
+            legs: test-uncached
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -397,49 +416,24 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      # Cache the compiled gate binaries. `make tools` compiles golangci-lint,
-      # go-arch-lint, govulncheck, and oasdiff from source into ~/go/bin — ~75s
-      # that setup-go's module/build cache does not cover (it caches ~/go/pkg/mod
-      # and ~/.cache/go-build, not installed binaries). The pinned versions live
-      # in backend/Makefile and the Go toolchain version — which `go install`
-      # embeds in every binary, so a bump makes it reject and recompile the
-      # cached tools — lives in backend/go.mod, so the key hashes both: a change
-      # to either reseeds, otherwise a hit skips the compile. arch is in the key
-      # so a binary built for one runner CPU is never restored onto another.
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
+      # `make tools` compiles golangci-lint, go-arch-lint, govulncheck and
+      # oasdiff into ~/go/bin, which setup-go's caches do not cover. Restored,
+      # never saved: an entry a PR saves serves that PR alone, so cache-warm.yml
+      # writes the one on main that every PR reads.
+      - name: Gate binaries on PATH
+        uses: ./.github/actions/gate-binaries
       # golangci-lint's analysis cache (~/.cache/golangci-lint) is separate
       # from Go's build cache, so without it the two lint passes recompute the
-      # whole repo. cache-warm.yml writes the entry a PR's first push restores.
+      # whole repo. Restored, never saved, for the same reason as above.
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      # Install the pinned gate binaries (golangci-lint, go-arch-lint, oasdiff) so
-      # `make check` runs golangci and the oasdiff contract gate itself — one run
-      # of every gate, instead of the golangci-lint-action + per-gate steps that
-      # `make check` then re-ran as its prerequisites. Skipped entirely on a
-      # cache hit: the key hashes the pinned versions (backend/Makefile) and
-      # the toolchain (backend/go.mod), so a hit proves the binaries current —
-      # and `go install ...@version` would NOT short-circuit on an existing
-      # binary; it recomputes the whole build against a cold build cache
-      # (~75s), since setup-go's caches are keyed to the product module, not
-      # the tools' dependency graphs. The PATH export runs regardless.
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
       # test-lanes, file-length,
@@ -471,26 +465,65 @@ jobs:
         # so lint and the unit tests stop sharing four cores.
         run: |
           set -o pipefail
-          make check-backend CHECK_LEGS="test test-extensions" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
-      # Here and not in check-backend: only a CI runner's timings are steady
-      # enough to hold a package to a budget.
-      - name: Unit-test time budget per package
+          make check-backend CHECK_LEGS="${{ matrix.legs }}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+      # Judged in test-budget over both legs' logs: a waiver for a package
+      # this leg never ran is stale only if the other leg never ran it either.
+      - name: Upload the test log for the budget
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: check-backend-log-${{ matrix.part }}
+          path: ${{ runner.temp }}/check-backend.log
+          if-no-files-found: error
+
+  # Here and not in check-backend: only a CI runner's timings are steady enough
+  # to hold a package to a budget.
+  test-budget:
+    name: test-budget
+    timeout-minutes: 10
+    needs: [deterministic-gates]
+    if: ${{ !cancelled() && needs.deterministic-gates.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
         working-directory: .
-        run: make test-budget LOG="$RUNNER_TEMP/check-backend.log"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download every leg's test log
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: check-backend-log-*
+          path: ${{ runner.temp }}/logs
+      - name: Unit-test time budget per package
+        run: make test-budget LOG="$RUNNER_TEMP/logs/*/check-backend.log"
 
   # The static half of the backend gate (`make check-static`: lint, vet,
   # arch-lint), beside deterministic-gates rather than inside it. On one runner
   # the two halves took turns on four cores, and lint finished last.
   backend-lint:
-    name: backend-lint
+    name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
     needs: [changes]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # The two golangci passes each load the whole tree, so each gets a runner.
+    # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pass: baseline
+            legs: lint-base vet arch-lint
+          - pass: strict
+            legs: lint-strict
     # Setup mirrors deterministic-gates, which says why each step is there.
-    # Full history, because the strict lint diffs against origin/main.
+    # Full history, because the strict lint diffs against CHECK_BASE_REF.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -505,36 +538,29 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
+      - name: Gate binaries on PATH
+        uses: ./.github/actions/gate-binaries
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore only: lint-cache.yml and cache-warm.yml write the entry on main.
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Backend static gate (make check-static)
         working-directory: .
-        run: make check-static
+        run: make check-static STATIC_LEGS="${{ matrix.legs }}"
       # A test read outside its module that skips the tree digest merges green
       # and breaks cache-warm's save hours later. Here it fails the PR that
-      # adds it. On this job because it finishes minutes before
-      # deterministic-gates, so the census's uncached pass adds no wall clock.
+      # adds it. On the strict leg, the shorter golangci pass, so the census's
+      # uncached pass evens the two legs out instead of lengthening the longer.
+      # Skipped into develop: it guards main's cache-warm, and the develop into
+      # main pull request runs it.
       - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.pass == 'strict' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census
 
@@ -785,7 +811,7 @@ jobs:
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.
   integration:
     needs: [changes]
-    if: needs.changes.outputs.backend_db == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.backend_db == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/_lane-integration.yml
 
   vuln:
@@ -957,9 +983,12 @@ jobs:
     # aggregate deliberately omits sonarcloud from its own needs, so nothing waits
     # on this job to reach a verdict — the queue merges on `ci` alone and this scan
     # may finish after the merge.
-    needs: [ci, deterministic-gates, integration, frontend, extension-reference]
+    # A pull request into develop skips the scan: develop's pull request into
+    # main is scanned before any of it reaches main.
+    needs: [ci, changes, deterministic-gates, integration, frontend, extension-reference]
     if: >-
       !cancelled()
+      && needs.changes.outputs.full_lane == 'true'
       && (needs.deterministic-gates.result == 'success' || needs.deterministic-gates.result == 'skipped')
       && (needs.integration.result == 'success' || needs.integration.result == 'skipped')
       && (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
@@ -1038,8 +1067,10 @@ jobs:
       # "became main".
       - name: SonarCloud scan
         if: ${{ env.SONAR_TOKEN != '' }}
-        # A CAP ON THE HANG, not on the scan. The scan itself runs in 72-125
-        # seconds; eight minutes is a hang, not a slow day.
+        # A CAP ON THE HANG, not on the scan. A whole scan, upload and
+        # dependency data included, runs well under twenty minutes, so twenty
+        # is a hang and not a slow day. It still ends inside the job's thirty
+        # with the step's own message.
         #
         # What it bounds is the action's signature verification of the scanner
         # download, which fetches SonarSource's key from a public keyserver. On
@@ -1052,7 +1083,7 @@ jobs:
         # NOT skipSignatureVerification. That would make the hang impossible by
         # not verifying the scanner binary at all, trading an occasional lost
         # scan for permanently trusting an unverified download.
-        timeout-minutes: 8
+        timeout-minutes: 20
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         with:
           # WHICH BRANCH THIS ANALYSIS IS FILED UNDER, said for every event
@@ -1104,7 +1135,7 @@ jobs:
     name: live-boot (compose + seed + verify)
     timeout-minutes: 20
     needs: [changes]
-    if: needs.changes.outputs.e2e == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1229,7 +1260,7 @@ jobs:
     # every frontend change. What the order saved was this job's runner minutes
     # on a change biome would have refused, which is cheaper than the wait.
     needs: [changes]
-    if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.frontend == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1337,6 +1368,7 @@ jobs:
     needs: [changes]
     if: >-
       needs.changes.outputs.images == 'true'
+      && needs.changes.outputs.full_lane == 'true'
       && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
@@ -1362,6 +1394,7 @@ jobs:
     if: always()
     needs:
       - deterministic-gates
+      - test-budget
       - backend-lint
       - craftsmanship
       - craft-residue

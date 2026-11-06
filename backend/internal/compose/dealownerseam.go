@@ -118,3 +118,29 @@ func (a dealOwnerAuthority) asOwner(ctx context.Context, owner ids.UUID) (contex
 		Permissions: rbac.Permissions,
 	}), nil
 }
+
+// ownersAgent binds the product acting FOR the owner: an agent principal named
+// actorID, carrying OnBehalfOf and the owner's grants as they are now. An owner
+// who left answers apperrors.ErrNotFound, and the caller does not act.
+func ownersAgent(ctx context.Context, users *identity.Service, owner ids.UUID, actorID string) (context.Context, error) {
+	wsID, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return nil, errors.New("compose: acting for a deal owner outside a bound workspace")
+	}
+	rbac, seat, err := users.EffectiveAuthority(ctx, wsID, owner)
+	if err != nil {
+		return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
+	}
+	return principal.WithActor(ctx, principal.Principal{
+		Type:       principal.PrincipalAgent,
+		ID:         actorID,
+		UserID:     owner,
+		OnBehalfOf: owner,
+		SeatType:   seat,
+		TeamIDs:    rbac.TeamIDs,
+		// Write, and only write: a pass acting unattended changes records and
+		// never puts a message on the wire.
+		Scopes:      principal.ScopeSet{principal.ScopeWrite: struct{}{}},
+		Permissions: rbac.Permissions,
+	}), nil
+}

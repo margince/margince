@@ -13,7 +13,7 @@ export const readingsFixture: Envelope = {
     scope_kind: "owner",
     won_minor: 4_000_000,
     evidence_minor: 6_500_000,
-    best_case_minor: 9_000_000,
+    likely_threshold: 90,
     open_minor: 12_000_000,
     weighted_minor: 7_300_000,
     eligible_count: 14,

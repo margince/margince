@@ -202,13 +202,14 @@ the name "Erased Subject": erasure removes who said it, not what was said.
 
 ## What an agent may do in a Deal Room
 
-An agent may **open** a Deal Room, list rooms, read one, read its participants
-and documents, and add a thread or comment on your side.
+An agent you connected can open, edit, pause, resume or close a Deal Room, and
+set the end date. It can work the documents and threads, and correct or revoke a
+participant. It can also archive a room, which has no button in the app. It should
+ask you before it invites someone or resends an invitation, because either sends
+mail and needs the send permission.
 
-**An agent may not** edit a room, or pause, resume, close or archive one. It
-may not set the end date, preview a room, add or remove a document, or resolve
-a thread. It may not touch a participant in any way (invite, correct, send again
-or revoke). Only a human decides which outsiders read the papers of a deal.
+An agent never receives the link a buyer signs in with, and it cannot preview a
+room.
 
 An agent also has no access to the buyer's side of the room.
 

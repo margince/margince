@@ -15,7 +15,6 @@ import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
 import { calendarMonth } from "../../format/calendarday";
 import { formatMoney, formatNumber, monthAndYear } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRouting } from "../../lib/ai-routing-query";
 import { aiTaskLabel } from "../../lib/ai-task-label";
@@ -24,6 +23,7 @@ import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { settingsHref } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { DecisionSummary } from "./aiusage-decisions";
 import {
   aggregate,
@@ -77,8 +77,8 @@ function monthAround(seed: string, offset: number): Month {
 // minus one is August, which is the month already on screen — and on the last
 // evening west of UTC it skipped a month entirely. One reading of "this month",
 // used for the first window and every step from it.
-export function currentMonth(): Month {
-  return monthAround(`${calendarMonth(new Date(), viewerZone())}-01`, 0);
+export function currentMonth(zone: string): Month {
+  return monthAround(`${calendarMonth(new Date(), zone)}-01`, 0);
 }
 
 function adjacentMonth(month: Month, offset: number): Month {
@@ -89,8 +89,8 @@ function adjacentMonth(month: Month, offset: number): Month {
 // east of UTC the two disagree — the reader has turned the page and UTC has not
 // — and the page then refuses the Next arrow for a month they have already
 // left.
-function isCurrentMonth(month: Month): boolean {
-  return month.from.slice(0, 7) >= calendarMonth(new Date(), viewerZone());
+function isCurrentMonth(month: Month, zone: string): boolean {
+  return month.from.slice(0, 7) >= calendarMonth(new Date(), zone);
 }
 
 // The arrows keep their own names: an icon announces as nothing.
@@ -99,6 +99,7 @@ function MonthSwitch({
   onMonth,
 }: Readonly<{ month: Month; onMonth: (next: Month) => void }>) {
   const t = useT();
+  const zone = useViewerZone();
   const { locale } = useLocale();
   return (
     <span className="aiusage-month">
@@ -115,7 +116,7 @@ function MonthSwitch({
       <Button
         iconOnly
         aria-label={t("aiusage.nextMonth")}
-        disabled={isCurrentMonth(month)}
+        disabled={isCurrentMonth(month, zone)}
         onClick={() => onMonth(adjacentMonth(month, 1))}
       >
         <ChevronRight aria-hidden="true" />
@@ -290,7 +291,8 @@ export function AiUsageCard() {
   // Read once, at mount: the reader's month is what this card is about, and
   // recomputing it per render would churn the query key on the one day of the
   // month it could change.
-  const [month, setMonth] = useState<Month>(currentMonth);
+  const zone = useViewerZone();
+  const [month, setMonth] = useState<Month>(() => currentMonth(zone));
   // Held here, so the reader's view outlives the body a month step remounts.
   const [view, setView] = useState<SpendView>("task");
   const query = useAiUsage(month, canSee);

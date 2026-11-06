@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,8 +29,12 @@ import (
 // searchEmailStore is the search store wired the way compose wires it: with
 // the activities reader behind an email hit's summary. A test that built the
 // store bare would prove nothing about the surface a contact searches.
-func searchEmailStore(e *Env) *search.Store {
-	return search.NewStore(e.DB()).WithEmailSummaries(activities.EmailSummariesByIDBatch)
+func searchEmailStore(t *testing.T, e *Env) *search.Store {
+	t.Helper()
+	at := clocktest.Now(t)
+	return search.NewStore(e.DB()).WithEmailSummaries(func(ctx context.Context, tx pgx.Tx, wanted []ids.UUID) (map[ids.UUID]crmcontracts.EmailSummary, error) {
+		return activities.EmailSummariesByIDBatch(ctx, tx, wanted, at)
+	})
 }
 
 func hitFor(page search.Page, id ids.UUID) *search.Hit {
@@ -59,7 +64,7 @@ func TestAnEmailSearchHitCarriesTheCanonicalRow(t *testing.T) {
 	}
 	id := ids.UUID(logged.Id)
 
-	page, err := searchEmailStore(e).Search(author, search.Input{
+	page, err := searchEmailStore(t, e).Search(author, search.Input{
 		Query: "Rennsteig", Types: []string{"activity"},
 	})
 	if err != nil {
@@ -116,7 +121,7 @@ func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
 		t.Fatalf("log: %v", err)
 	}
 	id := ids.UUID(logged.Id)
-	store := searchEmailStore(e)
+	store := searchEmailStore(t, e)
 
 	// Before limiting, the colleague finds it — which is what makes the
 	// disappearance below the audience's doing rather than the query's.
@@ -174,7 +179,7 @@ func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
-	store := searchEmailStore(e)
+	store := searchEmailStore(t, e)
 
 	for _, kind := range []string{"call", "note", "task", "meeting"} {
 		subject := "Rennsteig " + kind + " follow-up"
@@ -224,7 +229,7 @@ func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
 		}
 	}
 
-	page, err := searchEmailStore(e).Search(author, search.Input{
+	page, err := searchEmailStore(t, e).Search(author, search.Input{
 		Query: "Rennsteig", Types: []string{"activity"}, Limit: mails,
 	})
 	if err != nil {
@@ -268,7 +273,7 @@ func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
 		var got map[ids.UUID]crmcontracts.EmailSummary
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var readErr error
-			got, readErr = activities.EmailSummariesByIDBatch(ctx, tx, []ids.UUID{id})
+			got, readErr = activities.EmailSummariesByIDBatch(ctx, tx, []ids.UUID{id}, clocktest.Now(t))
 			return readErr
 		}); err != nil {
 			t.Fatalf("batch read: %v", err)

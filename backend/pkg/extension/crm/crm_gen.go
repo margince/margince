@@ -11,6 +11,7 @@ import (
 
 // Defines values for ActivityAutomaticKind.
 const (
+	Bulk          ActivityAutomaticKind = "bulk"
 	Calendar      ActivityAutomaticKind = "calendar"
 	Product       ActivityAutomaticKind = "product"
 	SendingSystem ActivityAutomaticKind = "sending_system"
@@ -19,11 +20,40 @@ const (
 // Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
 func (e ActivityAutomaticKind) Valid() bool {
 	switch e {
+	case Bulk:
+		return true
 	case Calendar:
 		return true
 	case Product:
 		return true
 	case SendingSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityCallOutcome.
+const (
+	ActivityCallOutcomeCallBackLater ActivityCallOutcome = "put_through"
+	ActivityCallOutcomeNone          ActivityCallOutcome = "reached"
+	ActivityCallOutcomeNotReached    ActivityCallOutcome = "voicemail"
+	ActivityCallOutcomeReached       ActivityCallOutcome = "not_reached"
+	ActivityCallOutcomeVoicemail     ActivityCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the ActivityCallOutcome enum.
+func (e ActivityCallOutcome) Valid() bool {
+	switch e {
+	case ActivityCallOutcomeCallBackLater:
+		return true
+	case ActivityCallOutcomeNone:
+		return true
+	case ActivityCallOutcomeNotReached:
+		return true
+	case ActivityCallOutcomeReached:
+		return true
+	case ActivityCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -672,6 +702,33 @@ func (e ComputedFieldKind) Valid() bool {
 	}
 }
 
+// Defines values for CreateActivityRequestCallOutcome.
+const (
+	CreateCallOutcomeCallBackLater CreateActivityRequestCallOutcome = "put_through"
+	CreateCallOutcomeNone          CreateActivityRequestCallOutcome = "reached"
+	CreateCallOutcomeNotReached    CreateActivityRequestCallOutcome = "voicemail"
+	CreateCallOutcomeReached       CreateActivityRequestCallOutcome = "not_reached"
+	CreateCallOutcomeVoicemail     CreateActivityRequestCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityRequestCallOutcome enum.
+func (e CreateActivityRequestCallOutcome) Valid() bool {
+	switch e {
+	case CreateCallOutcomeCallBackLater:
+		return true
+	case CreateCallOutcomeNone:
+		return true
+	case CreateCallOutcomeNotReached:
+		return true
+	case CreateCallOutcomeReached:
+		return true
+	case CreateCallOutcomeVoicemail:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateActivityRequestDirection.
 const (
 	CreateActivityRequestDirectionInbound  CreateActivityRequestDirection = "inbound"
@@ -801,30 +858,6 @@ func (e DealCommercialMotion) Valid() bool {
 	}
 }
 
-// Defines values for DealForecastCategory.
-const (
-	BestCase DealForecastCategory = "best_case"
-	Commit   DealForecastCategory = "commit"
-	Omitted  DealForecastCategory = "omitted"
-	Pipeline DealForecastCategory = "pipeline"
-)
-
-// Valid indicates whether the value is a known member of the DealForecastCategory enum.
-func (e DealForecastCategory) Valid() bool {
-	switch e {
-	case BestCase:
-		return true
-	case Commit:
-		return true
-	case Omitted:
-		return true
-	case Pipeline:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for DealLostReasonBasis.
 const (
 	Mapped   DealLostReasonBasis = "mapped"
@@ -897,6 +930,27 @@ func (e DealStatus) Valid() bool {
 	case DealStatusOpen:
 		return true
 	case DealStatusWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealWinProbabilitySource.
+const (
+	DealWinProbabilitySourceHuman    DealWinProbabilitySource = "human"
+	DealWinProbabilitySourceMargince DealWinProbabilitySource = "margince"
+	DealWinProbabilitySourceStage    DealWinProbabilitySource = "stage"
+)
+
+// Valid indicates whether the value is a known member of the DealWinProbabilitySource enum.
+func (e DealWinProbabilitySource) Valid() bool {
+	switch e {
+	case DealWinProbabilitySourceHuman:
+		return true
+	case DealWinProbabilitySourceMargince:
+		return true
+	case DealWinProbabilitySourceStage:
 		return true
 	default:
 		return false
@@ -1220,25 +1274,25 @@ func (e PartnerStageMeaning) Valid() bool {
 
 // Defines values for PrincipalAttributionActorType.
 const (
-	Agent     PrincipalAttributionActorType = "agent"
-	Buyer     PrincipalAttributionActorType = "buyer"
-	Connector PrincipalAttributionActorType = "connector"
-	Human     PrincipalAttributionActorType = "human"
-	System    PrincipalAttributionActorType = "system"
+	PrincipalAttributionActorTypeAgent     PrincipalAttributionActorType = "agent"
+	PrincipalAttributionActorTypeBuyer     PrincipalAttributionActorType = "buyer"
+	PrincipalAttributionActorTypeConnector PrincipalAttributionActorType = "connector"
+	PrincipalAttributionActorTypeHuman     PrincipalAttributionActorType = "human"
+	PrincipalAttributionActorTypeSystem    PrincipalAttributionActorType = "system"
 )
 
 // Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
 func (e PrincipalAttributionActorType) Valid() bool {
 	switch e {
-	case Agent:
+	case PrincipalAttributionActorTypeAgent:
 		return true
-	case Buyer:
+	case PrincipalAttributionActorTypeBuyer:
 		return true
-	case Connector:
+	case PrincipalAttributionActorTypeConnector:
 		return true
-	case Human:
+	case PrincipalAttributionActorTypeHuman:
 		return true
-	case System:
+	case PrincipalAttributionActorTypeSystem:
 		return true
 	default:
 		return false
@@ -1555,7 +1609,7 @@ type Activity struct {
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
 
-	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
 
 	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
@@ -1570,6 +1624,9 @@ type Activity struct {
 
 	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
 	CalendarManaged *bool `json:"calendar_managed,omitempty"`
+
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -1588,7 +1645,7 @@ type Activity struct {
 	// CommitmentAdmissions Decisions about promises read from this source, included on list and detail reads when its content is visible.
 	CommitmentAdmissions *[]CommitmentAdmission `json:"commitment_admissions,omitempty"`
 
-	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
@@ -1609,6 +1666,9 @@ type Activity struct {
 
 	// DueAt Task only.
 	DueAt *time.Time `json:"due_at,omitempty"`
+
+	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
@@ -1639,7 +1699,7 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
-	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// Language What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
@@ -1653,7 +1713,8 @@ type Activity struct {
 	// MessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
 	// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
 	// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
-	// word with them, `none` otherwise.
+	// word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+	// a message owed our answer is `none`, as for mail.
 	MessageMove *ActivityMessageMove `json:"message_move,omitempty"`
 	OccurredAt  time.Time            `json:"occurred_at"`
 
@@ -1699,13 +1760,16 @@ type Activity struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 type ActivityAutomaticKind string
+
+// ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type ActivityCallOutcome string
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
 
-// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
@@ -1717,7 +1781,7 @@ type ActivityInvitationStatus string
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
 
-// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// ActivityLanguage What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
@@ -1728,7 +1792,8 @@ type ActivityMeetingStatus string
 // ActivityMessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
 // message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
 // still owed our answer, `waiting_for_them` on one a seat sent that is still the last
-// word with them, `none` otherwise.
+// word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+// a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -1771,6 +1836,7 @@ type ActivityFollowUpTask struct {
 	AssigneeId *string    `json:"assignee_id,omitempty"`
 	Body       *string    `json:"body,omitempty"`
 	DueAt      *time.Time `json:"due_at,omitempty"`
+	DueHasTime *bool      `json:"due_has_time,omitempty"`
 	Subject    string     `json:"subject"`
 }
 
@@ -2104,13 +2170,16 @@ type ControllerSend struct {
 	FromAddress *string `json:"from_address"`
 }
 
-// CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
+// CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
 	AssigneeId *string `json:"assignee_id,omitempty"`
 
 	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]string `json:"attendee_user_ids,omitempty"`
 	Body            *string   `json:"body,omitempty"`
+
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *CreateActivityRequestCallOutcome `json:"call_outcome,omitempty"`
 
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns
@@ -2119,8 +2188,11 @@ type CreateActivityRequest struct {
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
-	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
-	FollowUpTask    *ActivityFollowUpTask           `json:"follow_up_task,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
+	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -2136,6 +2208,8 @@ type CreateActivityRequest struct {
 		EntityId   string                               `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
+
+	// MeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -2182,6 +2256,9 @@ type CreateActivityRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// CreateActivityRequestCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type CreateActivityRequestCallOutcome string
+
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
 type CreateActivityRequestDirection string
 
@@ -2191,7 +2268,7 @@ type CreateActivityRequestKind string
 // CreateActivityRequestLinksEntityType defines model for CreateActivityRequest.Links.EntityType.
 type CreateActivityRequestLinksEntityType string
 
-// CreateActivityRequestMeetingStatus defines model for CreateActivityRequest.MeetingStatus.
+// CreateActivityRequestMeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 type CreateActivityRequestMeetingStatus string
 
 // Deal A deal. Mirrors the `deal` table.
@@ -2214,7 +2291,7 @@ type Deal struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.
+	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.
 	CloseDateProvisional *bool      `json:"close_date_provisional,omitempty"`
 	ClosedAt             *time.Time `json:"closed_at,omitempty"`
 
@@ -2244,9 +2321,8 @@ type Deal struct {
 	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
 
 	// ExpectedCloseDate An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
-	ExpectedCloseDate *string               `json:"expected_close_date,omitempty"`
-	ForecastCategory  *DealForecastCategory `json:"forecast_category,omitempty"`
-	FxRateDate        *string               `json:"fx_rate_date,omitempty"`
+	ExpectedCloseDate *string `json:"expected_close_date,omitempty"`
+	FxRateDate        *string `json:"fx_rate_date,omitempty"`
 
 	// FxRateToBase Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.
 	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
@@ -2298,6 +2374,9 @@ type Deal struct {
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *string `json:"stage_id"`
 
+	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
+	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+
 	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
@@ -2313,6 +2392,12 @@ type Deal struct {
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *string `json:"wait_until,omitempty"`
 
+	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	WinProbability *int `json:"win_probability,omitempty"`
+
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
+
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
 	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
 
@@ -2327,9 +2412,6 @@ type Deal struct {
 // DealCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 type DealCommercialMotion string
 
-// DealForecastCategory defines model for Deal.ForecastCategory.
-type DealForecastCategory string
-
 // DealLostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
 type DealLostReasonBasis string
 
@@ -2341,6 +2423,9 @@ type DealPriority string
 
 // DealStatus defines model for Deal.Status.
 type DealStatus string
+
+// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+type DealWinProbabilitySource string
 
 // DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
@@ -2483,6 +2568,9 @@ type EmailSummary struct {
 	// that is still the last word with them. A calendar invitation, update, cancellation
 	// or answer is `none` unless someone confirmed it asks us something. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
+	// A message older than the waiting horizon that nobody kept is `none` too: it is
+	// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+	// The message stays on the timeline; `none` does not mean it was answered.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
 
@@ -2512,6 +2600,9 @@ type EmailSummaryDirection string
 // that is still the last word with them. A calendar invitation, update, cancellation
 // or answer is `none` unless someone confirmed it asks us something. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
+// A message older than the waiting horizon that nobody kept is `none` too: it is
+// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+// The message stays on the timeline; `none` does not mean it was answered.
 type EmailSummaryMove string
 
 // MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
@@ -3145,6 +3236,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "calendar_managed")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["capture_label"]; found {
 		err = json.Unmarshal(raw, &a.CaptureLabel)
 		if err != nil {
@@ -3239,6 +3338,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'due_at': %w", err)
 		}
 		delete(object, "due_at")
+	}
+
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
 	}
 
 	if raw, found := object["duration_seconds"]; found {
@@ -3599,6 +3706,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
 	if a.CaptureLabel != nil {
 		object["capture_label"], err = json.Marshal(a.CaptureLabel)
 		if err != nil {
@@ -3676,6 +3790,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -4754,6 +4875,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "body")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["channel_provider"]; found {
 		err = json.Unmarshal(raw, &a.ChannelProvider)
 		if err != nil {
@@ -4776,6 +4905,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'due_at': %w", err)
 		}
 		delete(object, "due_at")
+	}
+
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
 	}
 
 	if raw, found := object["duration_seconds"]; found {
@@ -5010,6 +5147,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
 	if a.ChannelProvider != nil {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
@@ -5028,6 +5172,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_at"], err = json.Marshal(a.DueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
 		}
 	}
 
@@ -5373,14 +5524,6 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "expected_close_date")
 	}
 
-	if raw, found := object["forecast_category"]; found {
-		err = json.Unmarshal(raw, &a.ForecastCategory)
-		if err != nil {
-			return fmt.Errorf("error reading 'forecast_category': %w", err)
-		}
-		delete(object, "forecast_category")
-	}
-
 	if raw, found := object["fx_rate_date"]; found {
 		err = json.Unmarshal(raw, &a.FxRateDate)
 		if err != nil {
@@ -5549,6 +5692,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "stage_id")
 	}
 
+	if raw, found := object["stage_win_probability"]; found {
+		err = json.Unmarshal(raw, &a.StageWinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'stage_win_probability': %w", err)
+		}
+		delete(object, "stage_win_probability")
+	}
+
 	if raw, found := object["stalled"]; found {
 		err = json.Unmarshal(raw, &a.Stalled)
 		if err != nil {
@@ -5595,6 +5746,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'wait_until': %w", err)
 		}
 		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_probability"]; found {
+		err = json.Unmarshal(raw, &a.WinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability': %w", err)
+		}
+		delete(object, "win_probability")
+	}
+
+	if raw, found := object["win_probability_source"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySource)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_source': %w", err)
+		}
+		delete(object, "win_probability_source")
 	}
 
 	if raw, found := object["won_without_contract_detail"]; found {
@@ -5762,13 +5929,6 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if a.ForecastCategory != nil {
-		object["forecast_category"], err = json.Marshal(a.ForecastCategory)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'forecast_category': %w", err)
-		}
-	}
-
 	if a.FxRateDate != nil {
 		object["fx_rate_date"], err = json.Marshal(a.FxRateDate)
 		if err != nil {
@@ -5906,6 +6066,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'stage_id': %w", err)
 	}
 
+	if a.StageWinProbability != nil {
+		object["stage_win_probability"], err = json.Marshal(a.StageWinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'stage_win_probability': %w", err)
+		}
+	}
+
 	if a.Stalled != nil {
 		object["stalled"], err = json.Marshal(a.Stalled)
 		if err != nil {
@@ -5941,6 +6108,20 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinProbability != nil {
+		object["win_probability"], err = json.Marshal(a.WinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySource != nil {
+		object["win_probability_source"], err = json.Marshal(a.WinProbabilitySource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_source': %w", err)
 		}
 	}
 

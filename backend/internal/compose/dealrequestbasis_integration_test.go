@@ -71,7 +71,13 @@ func TestCachedDealCardRefreshesTheRequestEvaluationWithoutRebuildingItsWords(t 
 		t.Fatal("missing reader")
 	}
 	actor.Type, actor.ID = principal.PrincipalAgent, "agent:"+ids.NewV7().String()
-	actor.PassportID, actor.OnBehalfOf = ids.NewV7(), actor.UserID
+	// A passport's agent reads its user's own mailbox health; automatic work does not.
+	passport := actor
+	passport.PassportID, passport.OnBehalfOf = ids.NewV7(), actor.UserID
+	own, err := cards.Get(principal.WithActor(reader, passport), ids.From[ids.DealKind](e.booked), true)
+	if err != nil || own.MailCoverage == nil || own.MailCoverage.State == crmcontracts.MailCaptureCoverageStateWithheld {
+		t.Fatalf("a passport's observation = %+v, %v", own.MailCoverage, err)
+	}
 	agent := principal.WithActor(reader, actor)
 	moves, err = cards.CurrentMoves(agent, []ids.UUID{e.booked})
 	if err != nil {

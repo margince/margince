@@ -239,6 +239,9 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		if err := requireMarginTierGrant(ctx, in); err != nil {
 			return err
 		}
+		if err := refuseAgentPromotion(ctx, tx, in); err != nil {
+			return err
+		}
 		if in.MustCreate {
 			if err := checkPartnerSetUp(ctx, tx, in.CompanyID); err != nil {
 				return err

@@ -109,8 +109,10 @@ func (s *Store) meetingReminderInput(ctx context.Context, row invitationRow) (Se
 	}
 	zone := hours.Location
 	words := mailcopy.For(string(s.footerLanguage(ctx, row.Appointment.Description, row.Appointment.Subject)))
+	// No letterhead: the reminder leaves through the host's own mailbox, not
+	// the system relay, so it does not speak as the installation.
 	message := words.MeetingMessage(row.Appointment.Subject, row.Appointment.Description, row.Appointment.Location, link, row.Appointment.Start.In(zone), row.Appointment.End.In(zone))
-	return SendEmailInput{Recipients: row.Appointment.Attendees, Subject: message.Title, Body: message.Text, HTMLBody: emailview.Render(message), ConsentPurpose: "transactional", Context: commsauthz.CategoryRequestedFollowup, Evidence: commsauthz.Evidence{ActivityID: row.ID}}, nil
+	return SendEmailInput{Recipients: row.Appointment.Attendees, Subject: message.Title, Body: message.Text, HTMLBody: emailview.Render(message, emailview.Letterhead{}), ConsentPurpose: "transactional", Context: commsauthz.CategoryRequestedFollowup, Evidence: commsauthz.Evidence{ActivityID: row.ID}}, nil
 }
 
 func (s *Store) markMeetingReminderUnavailable(ctx context.Context, observed invitationRow) error {

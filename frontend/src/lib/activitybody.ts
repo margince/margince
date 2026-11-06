@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import {
   dayOccurredAt,
@@ -25,6 +26,20 @@ export function isActivityKind(value: string): value is ActivityDraft["kind"] {
   );
 }
 
+/** How a call ended, from the contract's fixed list. */
+export type CallOutcome = NonNullable<
+  components["schemas"]["Activity"]["call_outcome"]
+>;
+
+/** The outcomes in the order a rep reads them. */
+export const CALL_OUTCOMES: readonly CallOutcome[] = [
+  "reached",
+  "not_reached",
+  "voicemail",
+  "call_back_later",
+  "put_through",
+];
+
 export type ActivityDraft = {
   kind: "note" | "task" | "meeting" | "call";
   subject: string;
@@ -32,6 +47,9 @@ export type ActivityDraft = {
   // yyyy-mm-dd from the date input. Its meaning follows the kind: a task's
   // due date, otherwise the day the note or meeting happened.
   day: string;
+  // A task's callback time, `HH:MM` on the record's clock, "" for none. It
+  // means nothing without a day.
+  time: string;
   // A meeting's body is ordinary notes UNLESS this is explicitly checked —
   // otherwise "discussed pricing, follow up Tuesday" typed while logging a
   // meeting would silently carry source_system: transcript, which the
@@ -43,6 +61,9 @@ export type ActivityDraft = {
   // note or meeting is not held by a colleague — so it only reaches the wire on
   // a task, the same way `day` only becomes a due date there.
   assigneeId: string;
+  // How a call ended, "" for no outcome. Reaches the wire on a call only, so a
+  // draft switched from Call to Note sends none.
+  callOutcome: CallOutcome | "";
   sourceActivityId?: string;
   followUp?: TaskDraft;
   // The workspace's custom-field values, as the create body's cf_ keys.
@@ -51,15 +72,32 @@ export type ActivityDraft = {
 
 export type TaskDraft = Pick<
   ActivityDraft,
-  "subject" | "body" | "day" | "assigneeId"
+  "subject" | "body" | "day" | "time" | "assigneeId"
 >;
 
 export function taskRequestFields(input: TaskDraft, recordZone: string) {
   return {
     subject: input.subject.trim(),
     body: outgoingBody(input.body, false),
-    ...(input.day ? { due_at: dueInstant(input.day, recordZone) } : {}),
+    ...(input.day ? taskDueFields(input.day, input.time, recordZone) : {}),
     ...(input.assigneeId ? { assignee_id: input.assigneeId } : {}),
+  };
+}
+
+/**
+ * The due fields of a task picked as a day and an optional time of day. The
+ * flag says which one it is; the server reads it, never the clock. A task with
+ * a time also reminds its assignee then, and that rule is the server's, for
+ * every writer, so this sends no reminder of its own.
+ */
+export function taskDueFields(
+  day: string,
+  time: string,
+  recordZone: string,
+): { due_at: string; due_has_time: boolean } {
+  return {
+    due_at: dueInstant(day, recordZone, time),
+    due_has_time: time !== "",
   };
 }
 
@@ -148,6 +186,10 @@ export function activityRequestBody(
     // Held: a hand-logged meeting already took place (the date caps at
     // today), and held is what the lead ladder reads as engagement.
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
+    // A call always names its outcome; "No outcome" is an explicit null.
+    ...(input.kind === "call"
+      ? { call_outcome: input.callOutcome === "" ? null : input.callOutcome }
+      : {}),
     ...(isTranscript ? { source_system: "transcript" } : {}),
     // Only for the kinds that ask who attended. Switching to a note hides the
     // fields but keeps their picks in state. A note must not be filed against them.
@@ -189,8 +231,10 @@ const EMPTY_DRAFT: ActivityDraft = {
   subject: "",
   body: "",
   day: "",
+  time: "",
   asTranscript: false,
   assigneeId: "",
+  callOutcome: "",
 };
 
 // The record zone keeps the entered day aligned with the stored deadline.
@@ -206,4 +250,31 @@ export function freshDraft(
   kind: ActivityDraft["kind"] = "note",
 ): ActivityDraft {
   return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
+}
+
+/**
+ * Whether the draft says what happened. A call does so by its outcome or its
+ * body alone; every other kind needs a subject. The server's
+ * CheckEntryHasContent holds the same rule for a call.
+ */
+export function draftSaysSomething(draft: ActivityDraft): boolean {
+  if (draft.subject.trim() !== "") {
+    return true;
+  }
+  return (
+    draft.kind === "call" &&
+    (draft.callOutcome !== "" || draft.body.trim() !== "")
+  );
+}
+
+/**
+ * Whether closing the form would lose work: typed words, or a call outcome
+ * the rep picked. The kind and day are a pick and are not counted.
+ */
+export function draftHoldsWork(draft: ActivityDraft): boolean {
+  return (
+    draft.subject.trim() !== "" ||
+    draft.body.trim() !== "" ||
+    (draft.kind === "call" && draft.callOutcome !== "")
+  );
 }

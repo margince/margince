@@ -7,11 +7,11 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { humanizeToken } from "../settings/audit";
 import { CAPABILITIES, CAPABILITY_LABELS } from "./dealroomcapability";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../../design-system/surfacestate";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   CapabilityDialog,
   InviteDialog,
@@ -142,7 +142,7 @@ function ParticipantRow({
 }: Readonly<{ room: DealRoom; participant: Participant; mayManage: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [confirming, setConfirming] = useState<
     "revoke" | "reissue" | "capability" | null
   >(null);
@@ -177,7 +177,7 @@ function ParticipantRow({
               ? t("access.state.active")
               : t("access.state.invited")}
           {participant.last_seen_at
-            ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
+            ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, readerZone) })}`
             : ""}
           {readingSoFar}
         </p>
@@ -188,7 +188,7 @@ function ParticipantRow({
               when: formatDateAbbrev(
                 participant.link_requested_at,
                 locale,
-                recordZone,
+                readerZone,
               ),
             })}
           </p>

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   AccountMenuFrame,
   openMenu,
@@ -14,18 +15,11 @@ import { AccountMenu } from "./account";
  * Who is signed in, and the two things the product now offers nowhere else: the
  * door into settings, and the appearance choice.
  *
- * ONE chrome: the avatar at the end of the strip's trail, with the menu dropping
- * out of it and the theme flyout opening LEFT because there is no room on the
- * right. The block had a sidebar form once — a row at the foot of the column,
- * menu rising, flyout mirrored — and it went with the foot it stood in; the
- * sidebar carries the installation's entitlement there now (Shell/Navigation
- * shell). Nothing here photographs an arrangement a reader cannot reach.
+ * One chrome: a contact glyph at the end of the strip's trail. The menu drops
+ * out of it, and the theme flyout opens left because the right has no room.
  *
- * The chip is the design system's `Avatar` rather than a mark of this block's
- * own: the monogram is taken the same way everywhere, and the mesh is keyed on
- * the seat's USER ID, so the reader carries one colour from the chrome to their
- * own account page, and neither a rename nor a new address moves them to
- * another one.
+ * The menu's head carries the chip, the design system's `Avatar`. Its mesh is
+ * keyed on the seat's user id, so a rename or a new address keeps its colour.
  *
  * fullscreen: the block measures itself against the container it sits in — the
  * strip's trail is flush to the content column's right edge, and the menu's drop
@@ -42,7 +36,7 @@ export default meta;
 type Story = StoryObj<typeof AccountMenu>;
 
 /**
- * The top bar: the avatar alone, 32px, at the end of the trail.
+ * The top bar: a contact glyph alone, at the size the bar gives every glyph.
  *
  * Nothing beside it is drawn — no name, no address, no chevron — so the mark is
  * the whole of the affordance, and the sentence it stands for reaches a screen
@@ -50,6 +44,18 @@ type Story = StoryObj<typeof AccountMenu>;
  */
 export const TopBar: Story = {
   name: "Top bar trigger",
+  play: async ({ canvasElement }) => {
+    const trigger = await within(canvasElement).findByRole("button", {
+      name: /Account$/,
+    });
+    const icon = trigger.querySelector("svg");
+    if (!icon) throw new Error("the account trigger draws no glyph");
+    const size = getComputedStyle(trigger).getPropertyValue("--controlIcon");
+    await expect(icon.getBoundingClientRect().width).toBe(
+      Number.parseFloat(size),
+    );
+    await expect(trigger.querySelector(".avatar")).toBeNull();
+  },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;
@@ -57,14 +63,31 @@ export const TopBar: Story = {
 };
 
 /**
- * The panel, open: who you are, settings, theme, the booking link, help and
- * feedback, and sign out under its own rule. Only Sign out has a leading glyph,
- * because it is the row nobody wants to press by accident. A chevron says a
- * layer is behind its row.
+ * The panel, open: who you are, with the chip before the name and address. The
+ * menu is named "Account", like the trigger, and focus lands on that head row.
+ * Then settings, theme, the booking link, help and feedback, and sign out under
+ * its own rule. Only Sign out has a leading glyph, because nobody wants to press
+ * it by accident. A chevron says a layer is behind its row.
  */
 export const TopBarMenu: Story = {
   name: "Top bar menu",
-  play: openMenu,
+  play: async (context) => {
+    await openMenu(context);
+    const who = document.querySelector(".acctmenuwho");
+    const chip = who?.querySelector(".avatar");
+    const lines = who?.querySelector(".acctwho");
+    if (!chip || !lines)
+      throw new Error("the menu head lost its chip or lines");
+    const middle = (box: DOMRect) => box.top + box.height / 2;
+    const chipBox = chip.getBoundingClientRect();
+    const linesBox = lines.getBoundingClientRect();
+    await expect(chipBox.right).toBeLessThan(linesBox.left);
+    await expect(middle(chipBox)).toBeCloseTo(middle(linesBox), 0);
+    // Named as the trigger is; the head, which names the seat, takes focus.
+    const menu = within(document.body).getByRole("menu", { name: "Account" });
+    await expect(menu.contains(who)).toBe(true);
+    await expect(document.activeElement).toBe(who);
+  },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;
@@ -97,6 +120,31 @@ export const TopBarThemeFlyoutDark: Story = {
   name: "Top bar theme flyout (dark)",
   globals: { theme: "dark" },
   play: openThemeFlyout,
+  render: () => {
+    stubSession();
+    return <AccountMenuFrame />;
+  },
+};
+
+/**
+ * On a phone, open. The trigger's box and the menu both end at the gutter.
+ */
+export const TopBarMenuPhone: Story = {
+  name: "Top bar menu (phone)",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async (context) => {
+    await openMenu(context);
+    const bar = context.canvasElement.querySelector<HTMLElement>(".topbar");
+    if (!bar) throw new Error("the top bar is missing");
+    const trigger = within(bar).getByRole("button", { name: /Account$/ });
+    const menu = await within(document.body).findByRole("menu");
+    const inner =
+      bar.getBoundingClientRect().right -
+      Number.parseFloat(getComputedStyle(bar).paddingRight);
+    await expect(trigger.getBoundingClientRect().right).toBe(inner);
+    await expect(menu.getBoundingClientRect().right).toBe(inner);
+  },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;

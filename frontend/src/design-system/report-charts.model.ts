@@ -40,3 +40,32 @@ export function readingScale(readings: readonly ChartReading[], reference = 0) {
     ]),
   );
 }
+
+export function lineSegments(
+  readings: readonly ChartReading[],
+  field: "value" | "comparison",
+  width: number,
+  y: (value: number) => number,
+) {
+  const lines: string[] = [];
+  let points: string[] = [];
+  readings.forEach((reading, index) => {
+    const value = reading[field];
+    if (value == null) {
+      if (points.length) lines.push(points.join(" "));
+      points = [];
+    } else points.push(`${chartX(index, readings.length, width)},${y(value)}`);
+  });
+  if (points.length) lines.push(points.join(" "));
+  return lines;
+}
+
+// A line's points closed down to the baseline, for the fill beneath it.
+export function areaUnder(points: string, baseline: number): string {
+  const xs = points.split(" ").map((point) => point.split(",")[0]);
+  return `${xs[0]},${baseline} ${points} ${xs.at(-1)},${baseline}`;
+}
+
+export function chartX(index: number, count: number, width: number) {
+  return 56 + (index / Math.max(1, count - 1)) * (width - 76);
+}
