@@ -4,8 +4,9 @@
 
 Both parts of `deterministic-gates` and of `backend-lint`, the jobs of the frontend lane and `uat` run
 in one container image, `ghcr.io/margince/ci`. It holds Go, the gate binaries, Node with pnpm, the Chromium build
-Playwright starts, and the Ubuntu packages Chromium needs. So these jobs install no toolchain, and
-`uat` does not reach a package mirror. A mirror that stopped answering during a font fetch has
+Playwright starts, and the Ubuntu packages Chromium needs. So when the image can be pulled, these jobs
+install no toolchain and `uat` does not reach a package mirror. Without it they set up on the runner
+as before (below). A mirror that stopped answering during a font fetch has
 stopped a UAT shard before a test ran.
 
 The rest of the merge gate is in [ci-pipeline.md](ci-pipeline.md).
