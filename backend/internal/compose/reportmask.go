@@ -15,10 +15,12 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
@@ -56,4 +58,26 @@ func countMaskExcluded(ctx context.Context, tx pgx.Tx, frame reportFrame, spec r
 		return 0, fmt.Errorf("report mask exclusion count: %w", err)
 	}
 	return int(excluded), nil
+}
+
+func analyticsMaskExcluded(ctx context.Context, tx pgx.Tx, frame reportFrame, spec reportSpec, plan analyticsquery.Plan, masks []string) (*int, error) {
+	if len(masks) == 0 {
+		return nil, nil //nolint:nilnil // No field mask means the optional exclusion count is absent.
+	}
+	base := withoutMaskClauses(plan.PopulationWhere, masks)
+	count, err := countMaskExcluded(ctx, tx, frame, spec, base, masks, plan.PopulationArgs)
+	if err != nil {
+		return nil, err
+	}
+	return &count, nil
+}
+
+func withoutMaskClauses(where, masks []string) []string {
+	base := slices.Clone(where)
+	for _, mask := range masks {
+		if i := slices.Index(base, mask); i >= 0 {
+			base = slices.Delete(base, i, i+1)
+		}
+	}
+	return base
 }

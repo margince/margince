@@ -19125,6 +19125,18 @@ paths:
           schema: {type: string, format: uuid}
           description: >-
             The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
+        - name: product_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Narrows deal findings to this product. Other findings cover the selected population.
+        - name: country
+          in: query
+          schema: {type: string}
+          description: Narrows deal findings by the readable company's country.
+        - name: industry
+          in: query
+          schema: {type: string}
+          description: Narrows deal findings by the readable company's industry.
       responses:
         '200':
           description: The open findings, most material first.
@@ -33204,7 +33216,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task, webhook]
+      required: [lead, contact, company, deal, project, task, webhook, list]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -33213,6 +33225,7 @@ components:
         project: {type: integer, minimum: 0}
         task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
         webhook: {type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.'}
+        list: {type: integer, minimum: 0, description: Live lists owned by the member.}
     UserHandover:
       type: object
       required: [owned]
@@ -40820,6 +40833,9 @@ components:
             Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
         labels: {$ref: '#/components/schemas/AnalyticsIdLabels'}
         population_narrowed: {$ref: '#/components/schemas/PopulationNarrowed'}
+        base_currency: {type: string, description: Base currency used by this answer.}
+        rate_date: {type: string, format: date-time, description: Reference instant used to select conversion rates for this answer.}
+        excluded_by_permission: {type: integer, minimum: 0, description: 'Visible records excluded by field masks. Absent when no mask applies.'}
       additionalProperties: false
     PopulationNarrowed:
       type: [string, 'null']
@@ -44106,6 +44122,28 @@ components:
             with both the year and that date read in the installation's time zone
             (`installation.timezone`), and past that date until this is false again.
         created_at: {type: string, format: date-time}
+        identity_verified: {type: boolean, description: The request arrived through the subject's own confirmation link.}
+        proof: {$ref: '#/components/schemas/DataSubjectRequestProof'}
+    DataSubjectRequestProof:
+      type: object
+      required: [request_number, received_at, request_kind, identity_check, result, erased_counts, erased_uncounted, erased_counts_known, answered_at, keep_until]
+      properties:
+        request_number: {type: string}
+        requester_email: {type: [string, 'null']}
+        received_at: {type: string, format: date-time}
+        request_kind: {type: string}
+        identity_check: {type: string}
+        result: {type: string}
+        erased_counts:
+          type: object
+          additionalProperties: {type: integer}
+        erased_uncounted: {type: array, items: {type: string}}
+        erased_counts_known: {type: boolean}
+        completed_by_type: {type: [string, 'null']}
+        completed_by_id: {type: [string, 'null']}
+        answered_at: {type: string, format: date-time}
+        keep_until: {type: string, format: date-time}
+      additionalProperties: false
     ControllerParticulars:
       type: object
       description: |-

@@ -68,6 +68,24 @@ const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
 const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        strictExecutionOrder: true,
+        codeSplitting: {
+          groups: [
+            {
+              name: "shared",
+              minShareCount: 2,
+              entriesAware: true,
+              entriesAwareMergeThreshold: 64000,
+              includeDependenciesRecursively: false,
+            },
+          ],
+        },
+      },
+    },
+  },
   // serveMcpApps is `apply: "serve"` — a dev-only middleware that adds nothing
   // to the SPA build. It has to live HERE rather than in vite.mcp-apps.config.ts
   // because `make dev` starts this config: without it, a request for a view

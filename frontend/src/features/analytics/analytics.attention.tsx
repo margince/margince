@@ -1,3 +1,4 @@
+import type { Dimensions } from "./reporting.overview";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -159,12 +160,13 @@ function findingDetail(
 export function useAttentionList(
   scope: AnalyticsScope,
   withReadings = true,
+  dimensions?: Dimensions,
 ): Readonly<{ items: AttentionItem[]; state: AttentionState }> {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const canReadForecast = useCan("forecast", "read");
-  const checks = useInputChecks(canReadForecast, scope);
+  const checks = useInputChecks(canReadForecast, scope, dimensions);
   // An undefined scope holds the read, which is what a reader without the
   // forecast grant needs: no request, rather than a refused one.
   const readings = useForecastReadings(
@@ -214,7 +216,7 @@ export function useAttentionList(
         priced: formatAnalyticsNumber(forecast.priced_count, locale),
         eligible: formatAnalyticsNumber(forecast.eligible_count, locale),
       }),
-      detail: t("analytics.attentionUnpricedDetail"),
+      detail: unpricedDetail(t, dimensions),
       action: t("analytics.attentionUnpricedAction"),
       section: "forecast",
     });
@@ -246,4 +248,18 @@ export function attentionState(
   if (!reads) return "ready";
   if (checks.isError) return "failed";
   return checks.isPending ? "pending" : "ready";
+}
+
+function unpricedDetail(
+  t: ReturnType<typeof useT>,
+  dimensions?: Dimensions,
+): string {
+  const filtered =
+    dimensions?.product_id || dimensions?.country || dimensions?.industry;
+  return [
+    t("analytics.attentionUnpricedDetail"),
+    filtered ? t("analytics.wholeScopeForecast") : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

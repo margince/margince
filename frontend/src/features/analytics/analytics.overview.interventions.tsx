@@ -1,3 +1,4 @@
+import type { Dimensions } from "./reporting.overview";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -49,9 +50,12 @@ export type Interventions = Readonly<{
  * The findings Sales review acts on and the sources behind them, read under
  * the keys their own sections read them by.
  */
-export function useInterventions(scope: AnalyticsScope): Interventions {
+export function useInterventions(
+  scope: AnalyticsScope,
+  dimensions?: Dimensions,
+): Interventions {
   const canReadForecast = useCan("forecast", "read");
-  const checks = useInputChecks(canReadForecast, scope);
+  const checks = useInputChecks(canReadForecast, scope, dimensions);
   const coverage = useDataCoverage();
   const canReadCoverage = useCan("data_coverage", "read");
   const unread =

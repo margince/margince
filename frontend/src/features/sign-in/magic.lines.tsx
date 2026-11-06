@@ -19,7 +19,7 @@ import {
   magicWhyKey,
 } from "../../lib/magickeys";
 import { routeHash } from "../../lib/router";
-import { approvalHref } from "../automations/approvaldrawer";
+import { approvalHref } from "../../lib/approvalhref";
 import { MagicApproval } from "./magic.approval";
 import { axisLabel, markKind } from "./magic.marks";
 import { LineRecordsOpener } from "./magic.records";

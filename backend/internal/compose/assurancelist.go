@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -55,10 +56,17 @@ func AssuranceExceptionsIn(
 		if population.ID != nil {
 			return nil, fmt.Errorf("scope_id names a team or owner and needs scope_kind: %w", apperrors.ErrInvalidArgument)
 		}
-		return AssuranceExceptions(ctx, tx)
 	}
-	requested := RequestedScope{Kind: population.Kind, ID: population.ID}
-	return assuranceExceptionsOwnedBy(ctx, tx, nil, &requested, 0)
+	var requested *RequestedScope
+	if population.Kind != "" {
+		requested = &RequestedScope{Kind: population.Kind, ID: population.ID}
+	}
+	frame := crmcontracts.ReportingContext{}
+	selection := crmcontracts.ReportingSelection{ProductId: (*crmcontracts.ReportingProductId)(population.ProductID), Country: population.Country, Industry: population.Industry}
+	if err := reportingDimensionContext(ctx, tx, selection, &frame); err != nil {
+		return nil, err
+	}
+	return assuranceExceptionsWith(ctx, tx, nil, requested, 0, nil, frame)
 }
 
 // TeamAssuranceExceptions reads the open findings on deals the members own
@@ -84,7 +92,7 @@ func TeamAssuranceExceptions(
 // assuranceDealExceptionsOwnedBy is both deal readers' body. Nil owners reads every
 // finding the caller may see; a zero limit reads them all.
 func assuranceDealExceptionsOwnedBy(
-	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int, dimensions ...crmcontracts.ReportingContext,
 ) ([]assurance.Exception, error) {
 	// Both halves, and the object half first. Every finding here is ABOUT a
 	// deal and carries its name, so the row scope below answers which deals
@@ -120,6 +128,15 @@ func assuranceDealExceptionsOwnedBy(
 		if population != "" {
 			scopeClause = "(" + scopeClause + ") AND " + population
 		}
+	}
+	if len(dimensions) > 0 {
+		bindings := reportingBindings{values: args}
+		dimensionWhere, err := dealDimensionSQL(ctx, dimensions[0], &bindings, "d")
+		if err != nil {
+			return nil, err
+		}
+		args = bindings.values
+		scopeClause = "(" + scopeClause + ")" + dimensionWhere
 	}
 	// The finding's amount is the deal figure this statement selects and ranks
 	// by, so its mask is rendered here, beside the statement.

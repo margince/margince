@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -109,11 +110,17 @@ func (s handoverSeam) countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID
 		return crmcontracts.HandoverCounts{}, err
 	}
 	for table, count := range handoverTally(&counts) {
+		if table == string(recordTypeList) {
+			continue
+		}
 		owned, err := visibleOwnedIDs(ctx, tx, table, member)
 		if err != nil {
 			return crmcontracts.HandoverCounts{}, err
 		}
 		*count = len(owned)
+	}
+	if counts.List, err = collections.MemberListsCountTx(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
+		return crmcontracts.HandoverCounts{}, err
 	}
 	if !privateUnseen(ctx, member) {
 		return counts, nil
@@ -146,6 +153,7 @@ func handoverTally(counts *crmcontracts.HandoverCounts) map[string]*int {
 	return map[string]*int{
 		tableLead: &counts.Lead, tableContact: &counts.Contact, tableCompany: &counts.Company,
 		tableDeal: &counts.Deal, tableProject: &counts.Project,
+		"list": &counts.List,
 	}
 }
 
@@ -211,6 +219,9 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.Webhook = webhooksMoved
+	if moved.List, err = collections.TransferMemberListsTx(ctx, tx, ids.From[ids.UserKind](member), receiver); err != nil {
+		return crmcontracts.UserHandoverResult{}, err
+	}
 	// Whoever now owns the contacts decides who may see them. A share request
 	// put to the member who handed them over is withdrawn with the handover.
 	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {

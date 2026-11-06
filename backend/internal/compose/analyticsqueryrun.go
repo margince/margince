@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -36,7 +37,10 @@ type AnalyticsAnswer struct {
 	TotalSafe bool
 	// SchemaVersion is the vocabulary this ran against. A caller comparing two
 	// answers needs to know they were asked in the same language.
-	SchemaVersion string
+	SchemaVersion        string
+	BaseCurrency         string
+	RateDate             time.Time
+	ExcludedByPermission *int
 	// PopulationNarrowed is reportOutcome's: why the answer covers fewer
 	// owners than the report's population, or "".
 	PopulationNarrowed string
@@ -92,7 +96,8 @@ func RunAnalyticsQuery(
 		return AnalyticsAnswer{}, err
 	}
 	var narrowed string
-	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, q, &narrowed))
+	var masks []string
+	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, q, &narrowed, &masks))
 	if err != nil {
 		return AnalyticsAnswer{}, err
 	}
@@ -139,6 +144,12 @@ func RunAnalyticsQuery(
 	}
 	answer := withheldAnswer(raw, plan, floor, schema.Version)
 	answer.PopulationNarrowed = narrowed
+	answer.BaseCurrency, answer.RateDate = frame.BaseCurrency, frame.AsOf
+	answer.ExcludedByPermission, err = analyticsMaskExcluded(ctx, tx, frame, spec, plan, masks)
+	if err != nil {
+		return AnalyticsAnswer{}, err
+	}
+
 	return answer, nil
 }
 
@@ -191,14 +202,18 @@ func refuseIfTheFilterHidesTooLittle(
 // narrowed receives the narrowing the answer must announce, since the compiler
 // takes clauses and has no place to carry it back.
 func analyticsScope(
-	ctx context.Context, tx pgx.Tx, spec reportSpec, q analyticsquery.Query, narrowed *string,
+	ctx context.Context, tx pgx.Tx, spec reportSpec, q analyticsquery.Query, narrowed *string, masks *[]string,
 ) analyticsquery.ScopeClauses {
 	named := namedByAnalyticsQuery(spec, q)
 	breakdown := typedOwnerBreakdown(spec, q)
+	captured := false
 	return func(arg func(any) int) ([]string, error) {
-		clauses, reason, err := specNarrowings(ctx, tx, spec, requestedFromQuery(q), named, breakdown, arg)
-		*narrowed = reason
-		return clauses, err
+		parts, err := specNarrowings(ctx, tx, spec, requestedFromQuery(q), named, breakdown, arg)
+		*narrowed = parts.reason
+		if masks != nil && !captured {
+			*masks, captured = parts.masks, true
+		}
+		return parts.clauses, err
 	}
 }
 

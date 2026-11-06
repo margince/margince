@@ -34,7 +34,7 @@ import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
-import { approvalHref } from "./approvalhref";
+import { approvalHref } from "../../lib/approvalhref";
 import {
   EDITABLE_FIELDS,
   type EditableField,

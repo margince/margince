@@ -22,6 +22,10 @@ touches or names a record you cannot open, the card shows none of the plan. It s
 see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
 that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 
+The approval email and an agent's approval read use the card's detail labels and value words.
+They also carry its conflicts, files and import rows.
+A preview whose plan is hidden carries none of these sections.
+
 ## Reading an import proposal
 
 An import proposal shows each source row, its planned result, and the values to create or change.

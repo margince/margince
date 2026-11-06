@@ -286,7 +286,7 @@ function DerivationRows({
 
 // A field mask took these records out of the figure AND the rows, so the two
 // reconcile; said, so a smaller number reads as governed rather than missing.
-function ExcludedNote({
+export function ExcludedNote({
   count,
 }: Readonly<{ count: number | null | undefined }>) {
   const t = useT();

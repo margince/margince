@@ -10,16 +10,16 @@
   "totals": {
     "tools": 47,
     "resources": 13,
-    "tool_catalog_bytes": 212445,
+    "tool_catalog_bytes": 217229,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 54426,
+    "approx_wire_tokens_total": 55622,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 49396,
-      "input_schema_bytes": 103778,
-      "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 153174
+      "input_schema_bytes": 104158,
+      "output_schema_bytes": 51838,
+      "description_plus_input_schema_bytes": 153554
     }
   },
   "tools": {
@@ -3850,6 +3850,10 @@
               "minItems": 1,
               "type": "array"
             },
+            "compact": {
+              "description": "list, query only: Activity identifying facts and body_length without long prose. Default false returns full records.",
+              "type": "boolean"
+            },
             "cursor": {
               "description": "list, search only: Keyset cursor from a previous page's next_cursor",
               "type": "string"
@@ -4323,6 +4327,28 @@
                         },
                         "type": "array"
                       },
+                      "conflicts": {
+                        "items": {
+                          "properties": {
+                            "blocks_approval": {
+                              "type": "boolean"
+                            },
+                            "kind": {
+                              "type": "string"
+                            },
+                            "summary": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "blocks_approval",
+                            "kind",
+                            "summary"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
                       "created_at": {
                         "format": "date-time",
                         "type": "string"
@@ -4424,6 +4450,227 @@
                       "expires_at": {
                         "format": "date-time",
                         "type": "string"
+                      },
+                      "files": {
+                        "items": {
+                          "properties": {
+                            "byte_size": {
+                              "type": "integer"
+                            },
+                            "content_type": {
+                              "type": "string"
+                            },
+                            "filename": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "byte_size",
+                            "content_type",
+                            "filename",
+                            "id"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "import_rows": {
+                        "items": {
+                          "properties": {
+                            "changes": {
+                              "items": {
+                                "properties": {
+                                  "after": {
+                                    "properties": {
+                                      "currency": {
+                                        "type": "string"
+                                      },
+                                      "entity_id": {
+                                        "format": "uuid",
+                                        "type": "string"
+                                      },
+                                      "entity_type": {
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "text": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "before": {
+                                    "properties": {
+                                      "currency": {
+                                        "type": "string"
+                                      },
+                                      "entity_id": {
+                                        "format": "uuid",
+                                        "type": "string"
+                                      },
+                                      "entity_type": {
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "text": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "field": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "after",
+                                  "before",
+                                  "field",
+                                  "label"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "details": {
+                              "items": {
+                                "properties": {
+                                  "field": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "properties": {
+                                      "currency": {
+                                        "type": "string"
+                                      },
+                                      "entity_id": {
+                                        "format": "uuid",
+                                        "type": "string"
+                                      },
+                                      "entity_type": {
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "text": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "field",
+                                  "label",
+                                  "value"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "effects": {
+                              "items": {
+                                "properties": {
+                                  "effect": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "effect",
+                                  "label"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "line": {
+                              "type": "integer"
+                            },
+                            "object": {
+                              "type": "string"
+                            },
+                            "object_label": {
+                              "type": "string"
+                            },
+                            "outcome": {
+                              "type": "string"
+                            },
+                            "outcome_label": {
+                              "type": "string"
+                            },
+                            "source_key": {
+                              "type": "string"
+                            },
+                            "target": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "changes",
+                            "details",
+                            "effects",
+                            "line",
+                            "object",
+                            "object_label",
+                            "outcome",
+                            "outcome_label",
+                            "source_key"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
                       },
                       "kind": {
                         "type": "string"
@@ -5661,6 +5908,28 @@
                   },
                   "type": "array"
                 },
+                "conflicts": {
+                  "items": {
+                    "properties": {
+                      "blocks_approval": {
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "blocks_approval",
+                      "kind",
+                      "summary"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "created_at": {
                   "format": "date-time",
                   "type": "string"
@@ -5762,6 +6031,227 @@
                 "expires_at": {
                   "format": "date-time",
                   "type": "string"
+                },
+                "files": {
+                  "items": {
+                    "properties": {
+                      "byte_size": {
+                        "type": "integer"
+                      },
+                      "content_type": {
+                        "type": "string"
+                      },
+                      "filename": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "byte_size",
+                      "content_type",
+                      "filename",
+                      "id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "import_rows": {
+                  "items": {
+                    "properties": {
+                      "changes": {
+                        "items": {
+                          "properties": {
+                            "after": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "before": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "after",
+                            "before",
+                            "field",
+                            "label"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "details": {
+                        "items": {
+                          "properties": {
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "label",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "effects": {
+                        "items": {
+                          "properties": {
+                            "effect": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "effect",
+                            "label"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "line": {
+                        "type": "integer"
+                      },
+                      "object": {
+                        "type": "string"
+                      },
+                      "object_label": {
+                        "type": "string"
+                      },
+                      "outcome": {
+                        "type": "string"
+                      },
+                      "outcome_label": {
+                        "type": "string"
+                      },
+                      "source_key": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "changes",
+                      "details",
+                      "effects",
+                      "line",
+                      "object",
+                      "object_label",
+                      "outcome",
+                      "outcome_label",
+                      "source_key"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "kind": {
                   "type": "string"
@@ -7709,9 +8199,17 @@
               "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
               "type": "boolean"
             },
+            "country": {
+              "description": "input_exceptions only",
+              "type": "string"
+            },
             "from": {
               "description": "movement only: The opening snapshot.",
               "format": "uuid",
+              "type": "string"
+            },
+            "industry": {
+              "description": "input_exceptions only",
               "type": "string"
             },
             "period": {
@@ -7721,6 +8219,11 @@
                 "month",
                 "week"
               ],
+              "type": "string"
+            },
+            "product_id": {
+              "description": "input_exceptions only",
+              "format": "uuid",
               "type": "string"
             },
             "reading": {

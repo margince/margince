@@ -75,11 +75,19 @@ class RenderErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 // state.
 export function AppErrorBoundary({
   children,
-}: Readonly<{ children: ReactNode }>) {
+  onReset,
+}: Readonly<{ children: ReactNode; onReset?: () => void }>) {
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (
-        <RenderErrorBoundary onReset={reset}>{children}</RenderErrorBoundary>
+        <RenderErrorBoundary
+          onReset={() => {
+            reset();
+            onReset?.();
+          }}
+        >
+          {children}
+        </RenderErrorBoundary>
       )}
     </QueryErrorResetBoundary>
   );

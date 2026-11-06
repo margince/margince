@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -277,5 +278,39 @@ func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
 	}
 	if n := e.proofCount(t, request); n != 0 {
 		t.Fatalf("%d proofs after a refused close", n)
+	}
+}
+
+func TestAClosedRequestReadsAndExportsOnlyItsSubjectsProof(t *testing.T) {
+	e := setupProofs(t)
+	subjectContact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Exported subject", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "subject@demo.test", EmailType: "work", IsPrimary: true}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.UUID(subjectContact.Id)
+	other := e.SeedContact(t, "Other subject", nil)
+	request := e.openRequest(t, "access", contact.String())
+	otherRequest := e.openRequest(t, "access", other.String())
+	e.patch(t, request, `{"status":"fulfilled","identity_check":"id_document","requester_email":"subject@demo.test","resolution":"Export supplied"}`)
+	e.patch(t, otherRequest, `{"status":"rejected","identity_check":"not_verified","resolution":"Identity not verified","requester_email":"subject@demo.test"}`)
+	row, err := e.store.GetDSR(e.Admin(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.Proof == nil || row.Proof.Result != "fulfilled" || row.Proof.IdentityCheck != "id_document" {
+		t.Fatalf("closed proof = %+v", row.Proof)
+	}
+	exported, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contact))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(exported.RequestProofs) != 1 {
+		t.Fatalf("exported proofs = %d", len(exported.RequestProofs))
+	}
+	if exported.RequestProofs[0]["request_number"] != row.Proof.RequestNumber {
+		t.Fatalf("wrong proof exported: %+v", exported.RequestProofs)
+	}
+	if _, found := exported.RequestProofs[0]["completed_by_id"]; found {
+		t.Fatal("subject export includes a workspace actor identifier")
 	}
 }

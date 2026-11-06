@@ -11,7 +11,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
-import { approvalHref } from "../features/automations/approvaldrawer";
+import { approvalHref } from "../lib/approvalhref";
 import {
   NOTIFICATIONS_KEY,
   type NotificationItem,

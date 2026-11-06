@@ -171,10 +171,7 @@ func TestTheReadKeepsAtMostItsCapAndSaysNothingOfTheRest(t *testing.T) {
 	}
 }
 
-// A finding that asks for a step carries the step as the page writes it: the
-// finding's own words as the subject, hung on the account, so the sentence
-// the reader accepts and the task they get are one sentence.
-func TestAFindingThatAsksForAStepCarriesTheStepItself(t *testing.T) {
+func TestAScanFindingNeverBuildsATaskForItsReader(t *testing.T) {
 	in, nudge := scanInput()
 	company := ids.New[ids.CompanyKind]()
 	step := finding(nudge, "did the sample reports get held up")
@@ -184,16 +181,10 @@ func TestAFindingThatAsksForAStepCarriesTheStepItself(t *testing.T) {
 		t.Fatalf("kept %d, refused %v, err %v; want the one finding", len(kept), refused, err)
 	}
 	action := kept[0].Action
-	if action == nil || action.Kind != crmcontracts.Company360SuggestionActionKindAddTask || action.Task == nil {
-		t.Fatalf("action = %+v, want add_task with its body", action)
+	if action != nil {
+		t.Fatalf("model scan still creates a task: %+v", action)
 	}
-	if action.Task.Subject != *kept[0].Title || action.Task.Links == nil || len(*action.Task.Links) != 1 {
-		t.Errorf("body = %+v, want the finding's title as the subject, linked once", action.Task)
-	}
-	link := (*action.Task.Links)[0]
-	if string(link.EntityType) != "company" || link.EntityId.String() != company.String() {
-		t.Errorf("link = %+v, want the account itself", link)
-	}
+
 }
 
 // A quote is bounded on both sides: too short to check a claim against, or

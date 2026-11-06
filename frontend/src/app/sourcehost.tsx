@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useCallback, useState } from "react";
-import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
-import { OpenActivityDrawer } from "../features/voice-knowledge/activitydrawer";
+import { lazy, type ReactNode, Suspense, useCallback, useState } from "react";
+
+const OpenEmailDrawer = lazy(() =>
+  import("../features/mail/openemaildrawer").then((module) => ({
+    default: module.OpenEmailDrawer,
+  })),
+);
+const OpenActivityDrawer = lazy(() =>
+  import("../features/voice-knowledge/activitydrawer").then((module) => ({
+    default: module.OpenActivityDrawer,
+  })),
+);
+
 import { useActivity } from "../lib/activityread";
 import { OpenSourceProvider } from "../lib/opensource";
 import { useViewerZone } from "../lib/viewerzone";
@@ -39,7 +49,7 @@ function SourceDrawer({
   const email = read.data?.kind === "email";
   const zone = useViewerZone();
   return (
-    <>
+    <Suspense fallback={null}>
       <OpenEmailDrawer
         activityId={answered && email ? activityId : null}
         zone={zone}
@@ -52,6 +62,6 @@ function SourceDrawer({
         onClose={onClose}
         activity={read.data}
       />
-    </>
+    </Suspense>
   );
 }

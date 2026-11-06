@@ -148,6 +148,20 @@ export const en = {
   "users.work.projects": "Projects",
   "users.work.alerts": "Open alerts",
   "users.work.tasks": "Tasks",
+  "users.work.lists": "Lists",
+  "privacy.proofReference": "Request reference",
+  "privacy.proofAnswered": "Answered on",
+  "privacy.proofKeptUntil": "Proof kept until",
+  "privacy.proofCompletedBy": "Completed by",
+  "privacy.proofAutomated": "Automated process",
+  "privacy.proofErasureChanges": "Recorded erasure changes",
+  "privacy.proofPartialCounts":
+    "Some erasure work cannot be counted. The access export includes the recorded breakdown.",
+  "privacy.proofExportCounts":
+    "The access export includes the recorded breakdown.",
+  "privacy.proofUnknown": "Not recorded",
+  "analytics.q.conversionFrame":
+    "Base currency: {currency}. Rates as of {date}.",
 
   "homeRepair.taskPermission":
     "Activity archive permission is required to archive reviewed tasks.",
@@ -8106,6 +8120,8 @@ export const en = {
   "analytics.emptyTeamBody": "No deal is owned by anyone in {scope}.",
   "analytics.deliveryCoversAll":
     "These numbers cover every project you can read.",
+  "analytics.wholeScopeForecast":
+    "Forecast figures and non-deal checks cover the whole selected population, regardless of product, country or industry filters.",
   "analytics.attention": "Needs your attention",
   "analytics.attentionNoOwner": "No owner",
   "analytics.attentionOutOfDate": "out of date, changed since the check",
@@ -14239,6 +14255,8 @@ export const en = {
   "users.handover.tasks_other": "{count} open tasks",
   "users.handover.webhooks_one": "{count} webhook",
   "users.handover.webhooks_other": "{count} webhooks",
+  "users.handover.lists_one": "{count} list",
+  "users.handover.lists_other": "{count} lists",
   "users.removeMfa": "Remove two-step sign-in",
   "users.removeMfaConfirmTitle": "Remove two-step sign-in for {name}?",
   "users.removeMfaConfirmBody":

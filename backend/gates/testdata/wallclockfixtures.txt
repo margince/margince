@@ -404,7 +404,7 @@ internal/modules/contacts/geocode_test.go 1
 internal/modules/contacts/leadconstraints_integration_test.go 2
 internal/modules/contacts/leadladder_integration_test.go 2
 internal/modules/contacts/leadreopen_integration_test.go 2
-internal/modules/contacts/leadsla_integration_test.go 21
+internal/modules/contacts/leadsla_integration_test.go 17
 internal/modules/contacts/leadsla_test.go 1
 internal/modules/contacts/leadworkqueue_test.go 1
 internal/modules/contacts/nudgedismissal_integration_test.go 6

@@ -153,7 +153,9 @@ func shippedLocales(t *testing.T, dir string) []string {
 		// A register of catalogue KEYS, not a catalogue: it ships no copy a
 		// user reads, and asking it for a phrasing of "nothing sends without
 		// your approval" would be asking a list of identifiers to speak.
-		"plural-debt.ts": true,
+		"plural-debt.ts":       true,
+		"catalogs.ts":          true, // Loads catalogs; contains no user copy.
+		"bootstrapcopy_gen.ts": true, // Generated projection of en.ts, which this gate reads.
 	}
 
 	var locales []string

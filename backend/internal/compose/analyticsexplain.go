@@ -81,7 +81,7 @@ func ExplainAnalyticsCell(
 	// its own headline opens records the number never counted.
 	var narrowed string
 	plan, err := analyticsquery.CompileExplain(
-		in, schema, analyticsScope(ctx, tx, spec, in.Query, &narrowed))
+		in, schema, analyticsScope(ctx, tx, spec, in.Query, &narrowed, nil))
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}

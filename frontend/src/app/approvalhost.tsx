@@ -1,8 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useCallback, useRef, useState } from "react";
-import { ApprovalDecisionDrawer } from "../features/automations/approvaldrawer";
+import {
+  lazy,
+  type ReactNode,
+  Suspense,
+  useCallback,
+  useRef,
+  useState,
+} from "react";
+
+const ApprovalDecisionDrawer = lazy(() =>
+  import("../features/automations/approvaldrawer").then((module) => ({
+    default: module.ApprovalDecisionDrawer,
+  })),
+);
+
 import { OpenApprovalProvider } from "../lib/openapproval";
 
 /** The shell's drawer for a decision opened from a record page under it. */
@@ -22,12 +35,14 @@ export function ApprovalHost({ children }: Readonly<{ children: ReactNode }>) {
       {children}
       {/* Mounted only while open, so a closed drawer keeps no read. */}
       {opened !== null && (
-        <ApprovalDecisionDrawer
-          approvalId={opened}
-          open
-          onClose={() => setOpened(null)}
-          returnFocusTo={() => opener.current}
-        />
+        <Suspense fallback={null}>
+          <ApprovalDecisionDrawer
+            approvalId={opened}
+            open
+            onClose={() => setOpened(null)}
+            returnFocusTo={() => opener.current}
+          />
+        </Suspense>
       )}
     </OpenApprovalProvider>
   );

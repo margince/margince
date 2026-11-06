@@ -201,7 +201,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"scheduled_at": aheadStamp, "remind_at": aheadStamp, "due_at": aheadStamp, "next_step_due_at": aheadStamp,
 	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp, "next_expiry_at": aheadStamp,
 
-	"accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
+	"answered_at": actStamp, "accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
 	"resolved_at": actStamp, "closed_at": actStamp, "submitted_at": actStamp, "requested_at": actStamp,
 	"delivered_at": actStamp, "read_at": actStamp, "assigned_at": actStamp, "routed_at": actStamp,
 	"promoted_at": actStamp, "qualified_at": actStamp, "taken_at": actStamp, "issued_at": actStamp,

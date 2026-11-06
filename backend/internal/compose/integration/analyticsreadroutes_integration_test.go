@@ -209,7 +209,8 @@ func TestAnalyticsAndReportRoutesAnswerAsTheirTools(t *testing.T) {
 		"measures": []any{map[string]any{"fn": "count", "as": "dealcount"}},
 	}
 	sameDocument(t, "analytics query",
-		d.rest(t, "POST", "/v1/analytics/query", query), d.tool(t, "run_analytics_query", query))
+		analyticsWithoutRateInstant(t, d.rest(t, "POST", "/v1/analytics/query", query)),
+		analyticsWithoutRateInstant(t, d.tool(t, "run_analytics_query", query)))
 
 	// The route adds derivation links and the tool a row count.
 	// The rows' figures must agree.
@@ -219,6 +220,25 @@ func TestAnalyticsAndReportRoutesAnswerAsTheirTools(t *testing.T) {
 	if len(got.Rows) != 1 || got.Rows[0].Deals != 6 {
 		t.Errorf("the report counts %+v, want the 6 seeded deals in one stage", got.Rows)
 	}
+}
+
+func analyticsWithoutRateInstant(t *testing.T, raw json.RawMessage) json.RawMessage {
+	t.Helper()
+	var answer map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &answer); err != nil {
+		t.Fatal(err)
+	}
+	var stamp time.Time
+	if err := json.Unmarshal(answer["rate_date"], &stamp); err != nil || stamp.IsZero() {
+		t.Fatalf("analytics rate reference = %s, want a timestamp: %v", answer["rate_date"], err)
+	}
+	// Separate transactions select rates at their own start time.
+	delete(answer, "rate_date")
+	withoutInstant, err := json.Marshal(answer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return withoutInstant
 }
 
 type sharedReport struct {

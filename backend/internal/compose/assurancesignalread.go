@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -30,9 +31,9 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 // reach merged in before ranking, so the cap cuts one list.
 func assuranceExceptionsWith(
 	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
-	extra []assurance.Exception,
+	extra []assurance.Exception, dimensions ...crmcontracts.ReportingContext,
 ) ([]assurance.Exception, error) {
-	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0)
+	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0, dimensions...)
 	if err != nil {
 		return nil, err
 	}

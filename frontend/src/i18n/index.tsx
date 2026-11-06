@@ -2,6 +2,8 @@ import { extensionCopy } from "@composition/copy";
 import {
   createContext,
   type ReactNode,
+  Suspense,
+  use,
   useCallback,
   useContext,
   useEffect,
@@ -11,15 +13,14 @@ import {
 import { pluralCategory } from "../format/plural";
 import { useDateTimePreferences } from "../format/preferences";
 import { STORAGE_KEYS, writeStored } from "../lib/storage";
-import { de } from "./de";
-import { en, type MessageKey } from "./en";
+import { catalogs, loadedCatalogs, localeReady } from "./catalogs";
+import type { MessageKey } from "./en";
 import {
   DEFAULT_LOCALE,
   isLocale,
   type Locale,
   preferredLocale,
 } from "./locale";
-import { vi } from "./vi";
 
 export {
   DEFAULT_LOCALE,
@@ -45,13 +46,15 @@ export {
 // here: it governs what AI writes for the whole team, not what any one contact
 // reads the interface in.
 
-// `Locale` is written in ./locale, which must load without the catalogs. The
-// annotation fails the build when a locale is added to only one of the two.
-export const catalogs: Record<Locale, Record<MessageKey, string>> = {
-  en,
-  de,
-  vi,
-};
+export { catalogs, loadLocale } from "./catalogs";
+
+function LocaleReady({
+  locale,
+  children,
+}: Readonly<{ locale: Locale; children: ReactNode }>) {
+  if (!loadedCatalogs.has(locale)) use(localeReady(locale));
+  return children;
+}
 
 /**
  * A key an extension unit's own copy supplies, namespaced to the unit the way
@@ -128,7 +131,9 @@ export type PluralBase = BaseOfPluralKey<MessageKey> &
 // catalogue may not carry (e.g. a scope token) and needs to fall back to the
 // raw value rather than render whatever `translate` does with a miss.
 export function isMessageKey(value: string): value is MessageKey {
-  return value in en;
+  return Object.values(catalogs).some((catalog) =>
+    Object.hasOwn(catalog, value),
+  );
 }
 
 /**
@@ -302,7 +307,11 @@ export function LocaleProvider({
     [locale, setLocale, adoptLocale],
   );
   return (
-    <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+    <LocaleContext.Provider value={value}>
+      <Suspense fallback={null}>
+        <LocaleReady locale={locale}>{children}</LocaleReady>
+      </Suspense>
+    </LocaleContext.Provider>
   );
 }
 

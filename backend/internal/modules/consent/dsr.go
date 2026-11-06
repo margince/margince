@@ -65,7 +65,7 @@ func illegalTransition(from, to string) *ValidationError {
 	}
 }
 
-const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id, due_rule, due_overridden, dispute_open`
+const dsrColumns = `id, kind, status, subject_ref, assignee_id, due_at, resolution, created_at, contact_id, due_rule, due_overridden, dispute_open, channel, (SELECT to_jsonb(proof) - 'id' - 'request_id' FROM privacy_request_proof proof WHERE proof.request_id = data_subject_request.id) AS proof`
 
 // dsrSelectByID is the single-row fetch GetDSR and lockDSR share, so their
 // projected columns cannot drift.
@@ -103,12 +103,14 @@ type dsrRow struct {
 	DueOverridden bool
 	// DisputeOpen holds the request's proof past its retention date.
 	DisputeOpen bool
+	Channel     *string
+	Proof       *crmcontracts.DataSubjectRequestProof
 }
 
 func scanDSR(r pgx.Row) (dsrRow, error) {
 	var d dsrRow
 	err := r.Scan(&d.ID, &d.Kind, &d.Status, &d.SubjectRef, &d.AssigneeID, &d.DueAt, &d.Resolution,
-		&d.CreatedAt, &d.ContactID, &d.DueRule, &d.DueOverridden, &d.DisputeOpen)
+		&d.CreatedAt, &d.ContactID, &d.DueRule, &d.DueOverridden, &d.DisputeOpen, &d.Channel, &d.Proof)
 	return d, err
 }
 
@@ -351,9 +353,11 @@ func wireDSR(d dsrRow, subjects map[ids.UUID]dsrSubject) crmcontracts.DataSubjec
 		CreatedAt:  d.CreatedAt,
 		// Null on a request filed before deadlines were computed, which the
 		// screen reads as "set by hand, rule unknown".
-		DueRule:       d.DueRule,
-		DueOverridden: d.DueOverridden,
-		DisputeOpen:   d.DisputeOpen,
+		DueRule:          d.DueRule,
+		DueOverridden:    d.DueOverridden,
+		DisputeOpen:      d.DisputeOpen,
+		IdentityVerified: new(d.Channel != nil && *d.Channel == channelConfirmLink),
+		Proof:            d.Proof,
 	}
 	if d.AssigneeID != nil {
 		assignee := openapi_types.UUID(d.AssigneeID.UUID)

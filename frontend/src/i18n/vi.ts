@@ -171,6 +171,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.work.projects": "Dự án",
   "users.work.alerts": "Cảnh báo đang mở",
   "users.work.tasks": "Nhiệm vụ",
+  "users.work.lists": "Danh sách",
+  "privacy.proofReference": "Mã yêu cầu",
+  "privacy.proofAnswered": "Ngày trả lời",
+  "privacy.proofKeptUntil": "Giữ bằng chứng đến",
+  "privacy.proofCompletedBy": "Hoàn tất bởi",
+  "privacy.proofAutomated": "Quy trình tự động",
+  "privacy.proofErasureChanges": "Thay đổi xóa đã ghi nhận",
+  "privacy.proofPartialCounts":
+    "Một phần công việc xóa không thể đếm được. Bản xuất dữ liệu có bảng phân tích đã ghi nhận.",
+  "privacy.proofExportCounts":
+    "Bản xuất dữ liệu có bảng phân tích đã ghi nhận.",
+  "privacy.proofUnknown": "Chưa ghi nhận",
+  "analytics.q.conversionFrame":
+    "Tiền tệ cơ sở: {currency}. Tỷ giá tại ngày {date}.",
 
   "homeRepair.taskPermission":
     "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",
@@ -7907,6 +7921,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.emptyTeamBody": "Không ai trong {scope} sở hữu deal nào.",
   "analytics.deliveryCoversAll":
     "Các số liệu này bao gồm mọi dự án bạn đọc được.",
+  "analytics.wholeScopeForecast":
+    "Dự báo và kiểm tra không thuộc giao dịch áp dụng cho toàn bộ nhóm đã chọn, không phụ thuộc bộ lọc sản phẩm, quốc gia hay ngành.",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionNoOwner": "Chưa giao",
   "analytics.attentionOutOfDate": "đã cũ, đã thay đổi kể từ lần kiểm tra",
@@ -13919,6 +13935,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} việc cần làm đang mở",
   "users.handover.webhooks_one": "{count} đăng ký webhook",
   "users.handover.webhooks_other": "{count} đăng ký webhook",
+  "users.handover.lists_one": "{count} danh sách",
+  "users.handover.lists_other": "{count} danh sách",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
   "users.removeMfaConfirmTitle": "Gỡ đăng nhập hai bước của {name}?",
   "users.removeMfaConfirmBody":
