@@ -71,6 +71,10 @@ func (e *closeDateEnv) grantOwnerWithoutContacts(t *testing.T, userID ids.UUID) 
 func (e *closeDateEnv) grantOwnerRole(t *testing.T, userID ids.UUID, document string) {
 	t.Helper()
 	ctx := context.Background()
+	// Grants add up across roles, so the role under test has to be the only one.
+	if _, err := e.owner.Exec(ctx, `DELETE FROM role_assignment WHERE user_id = $1`, userID); err != nil {
+		t.Fatalf("clearing the owner's roles: %v", err)
+	}
 	roleID := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO role (id, key, name, permissions)

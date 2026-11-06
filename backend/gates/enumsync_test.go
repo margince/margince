@@ -107,6 +107,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// of them legitimately moved. The pairs below are the ones where the schema
 	// NAMES the column's concept, which is a judgement a scan cannot make.
 	"activity.audience":                       {"internal/contracts", "ActivityAudience"},
+	"capture_counterparty_hold.kind":          {"internal/contracts", "CaptureCounterpartyHoldKind"},
 	"capture_exclusion.kind":                  {"internal/contracts", "CaptureExclusionKind"},
 	"capture_exclusion.scope":                 {"internal/contracts", "CaptureExclusionScope"},
 	"capture_owner_identity.kind":             {"internal/contracts", "CaptureOwnerIdentityKind"},
@@ -149,6 +150,13 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company_scan.generated_by":       {"internal/contracts", "WrittenBy"},
 	"contact_brief.generated_by":      {"internal/contracts", "WrittenBy"},
 	"deal_status_card.generated_by":   {"internal/contracts", "WrittenBy"},
+}
+
+// requestEnumBindings maps a create request's inline enum to the column it
+// writes. The map above holds one type per column, and a route that decodes its
+// own enum would otherwise widen apart from the row it stores.
+var requestEnumBindings = []struct{ typeName, col string }{
+	{"CreateCaptureCounterpartyHoldRequestKind", "capture_counterparty_hold.kind"},
 }
 
 // checkInList captures CHECK (col IN ('a','b',…)) allowing an optional
@@ -303,7 +311,16 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 	t.Parallel()
 	checks := tableCheckSets(t)
-	for col, binding := range enumBindings {
+	type binding struct{ col, pkgDir, typeName string }
+	var bindings []binding
+	for col, bound := range enumBindings {
+		bindings = append(bindings, binding{col, bound.pkgDir, bound.typeName})
+	}
+	for _, request := range requestEnumBindings {
+		bindings = append(bindings, binding{request.col, "internal/contracts", request.typeName})
+	}
+	for _, binding := range bindings {
+		col := binding.col
 		want, ok := checks[col]
 		if !ok {
 			t.Errorf("enumBindings[%s]: no CHECK (… IN (…)) found in the migrations — stale binding or broken derivation", col)

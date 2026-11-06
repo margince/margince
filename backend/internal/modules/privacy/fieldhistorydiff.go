@@ -129,6 +129,8 @@ func diffAuditRowFields(row auditDiffRow, mask entityFieldMask, fieldFilter *str
 	}
 	before := applyFieldMask(applyFieldMask(row.before, mask), writerBookkeepingKeys)
 	after := applyFieldMask(applyFieldMask(row.after, mask), writerBookkeepingKeys)
+	// An agent's evidence surfaces with the entry, so it meets the same mask.
+	row.evidence = applyFieldMask(row.evidence, mask)
 
 	keyset := make(map[string]struct{}, len(before)+len(after))
 	for k := range before {

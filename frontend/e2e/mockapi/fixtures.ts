@@ -202,6 +202,7 @@ export const seededLead = {
 
 export const anna = {
   id: "p-anna",
+  attachable: true,
   workspace_id: "w",
   full_name: "Anna Weber",
   title: "Head of Procurement",

@@ -51,7 +51,7 @@ Also called: remove a contact, hard delete, purge, wipe.
 To erase a contact on request, an admin opens **Settings → Privacy and retention**, chooses **Privacy** in the **Requests** panel and then **New request**.
 1. Set **Kind** to **Erasure** and pick the **Contact** (required).
 2. Set **Due**, then choose **Open request**.
-3. Choose the request in the list to open it and write the **Resolution**.
+3. Choose the request in the list to open it. Leave **Resolution** empty: the erasure records its own answer.
 4. Fill **How the identity was checked** and choose **Fulfill**.
 5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
@@ -64,6 +64,8 @@ Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
 ### How do I archive a record?
 To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived records on a list, choose **Show archived**.
+
+Team lead, Management, Ops and Admin may archive a contact, company or deal. So may its owner, if they created it or were given it.
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
@@ -201,7 +203,7 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 The list of privacy requests, **Settings → Privacy and retention → Requests → Privacy**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
-A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." To give a request back, set **Assignee** to **Unassigned**.
+A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Fulfilling an erasure is the exception: it records its own answer. To give a request back, set **Assignee** to **Unassigned**.
 
 To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
 
@@ -249,6 +251,13 @@ Carrying one out is hard to do by mistake. You type **ERASE** to confirm, and th
 > audited.
 
 The confirm button reads **Erase and suppress**.
+
+An erasure is not answered in your own words. Typed words could name the contact the erasure removes. Fulfilling records one of two answers:
+
+- **Erased**: the erasure removed or anonymized the contact's data.
+- **Nothing held (already erased)**: there was nothing left to erase, for example after an earlier erasure.
+
+Use the **Resolution** box only when you choose **Reject**. If you typed something and then choose **Fulfill**, the dialog says that your text is not kept.
 
 ## When erasure does not win: the retention floor
 

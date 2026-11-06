@@ -12,6 +12,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -352,5 +353,117 @@ func TestAnAgentsTeamCheckDoesNotGrowWithTheTeam(t *testing.T) {
 	var limit *httperr.DetailedError
 	if err := refuseAgentTeamReach(e.agentOf(e.admin), tx, team.ID); !errors.As(err, &limit) {
 		t.Errorf("a team holding an administrator: %v, want the agent limit", err)
+	}
+}
+
+// dealUpdateInTx reads the member's authority the way a deal write does and
+// reports whether it grants deal:update.
+func (e *revocationEnv) dealUpdateInTx(ctx context.Context, tx pgx.Tx, member Identity) (bool, error) {
+	rbac, _, err := e.svc.EffectiveAuthorityTx(ctx, tx, member.UserID.UUID)
+	return rbac.Permissions.Allows("deal", principal.ActionUpdate), err
+}
+
+// dealCloser puts the env's live member on a custom role that grants deal:update.
+func (e *revocationEnv) dealCloser(t *testing.T) (string, Identity) {
+	t.Helper()
+	role := e.customRole(t, "Closer", "rep", map[string]storedGrant{"deal": fullGrant})
+	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, role); err != nil {
+		t.Fatal(err)
+	}
+	return role, e.member
+}
+
+// A role edit that starts after a write read its owner's authority waits until
+// that write commits. So the write never lands on a grant already taken away.
+func TestARoleEditWaitsForTheWriteAnAuthorityReadAdmitted(t *testing.T) {
+	e := setupRevocationEnv(t, "authority-hold")
+	ctx := e.wsCtx(e.admin)
+	role, owner := e.dealCloser(t)
+
+	edited := make(chan error, 1)
+	err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		allowed, err := e.dealUpdateInTx(ctx, tx, owner)
+		if err != nil || !allowed {
+			t.Fatalf("the owner's authority before the edit: deal:update=%v, %v", allowed, err)
+		}
+		go func() {
+			_, err := e.svc.SetRoleObjectGrant(ctx, e.admin, role, "deal", storedGrant{Read: true}, nil)
+			edited <- err
+		}()
+		waitForAnAuthorizationWaiter(t, tx)
+		select {
+		case err := <-edited:
+			t.Fatalf("the edit returned (%v) while the write it would narrow was still open", err)
+		default:
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := <-edited; err != nil {
+		t.Fatalf("the edit, once the write committed: %v", err)
+	}
+	err = e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+		allowed, err := e.dealUpdateInTx(ctx, tx, owner)
+		if allowed {
+			t.Error("the owner still holds deal:update after the edit")
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// An authority read that starts while a role edit is open waits for the edit,
+// and reads the narrowed grant.
+func TestAnAuthorityReadWaitsForARoleEditInProgress(t *testing.T) {
+	e := setupRevocationEnv(t, "authority-wait")
+	ctx := e.wsCtx(e.admin)
+	role, owner := e.dealCloser(t)
+
+	applied, release, edited := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	finishEdit := sync.OnceFunc(func() { close(release) })
+	t.Cleanup(finishEdit)
+	go func() {
+		edited <- e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+			if err := lockAuthorization(ctx, tx); err != nil {
+				return err
+			}
+			if _, err := applyRoleObjectGrant(ctx, tx, e.admin, role, "deal", storedGrant{Read: true}, nil); err != nil {
+				return err
+			}
+			close(applied)
+			<-release
+			return nil
+		})
+	}()
+	<-applied
+	read := make(chan bool, 1)
+	go func() {
+		err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+			allowed, err := e.dealUpdateInTx(ctx, tx, owner)
+			read <- allowed
+			return err
+		})
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+	probe, err := e.owner.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForAnAuthorizationWaiter(t, probe)
+	if err := probe.Rollback(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	finishEdit()
+	if err := <-edited; err != nil {
+		t.Fatal(err)
+	}
+	if <-read {
+		t.Error("an authority read waiting on the edit still granted deal:update")
 	}
 }

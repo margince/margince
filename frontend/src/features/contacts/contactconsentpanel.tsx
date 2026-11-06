@@ -14,7 +14,7 @@ import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
-import { consentWord } from "./contactreadings";
+import { scopedConsentWord } from "./contactreadings";
 import { ContactStops } from "./contactstops";
 import {
   RetractAcquisitionRequest,
@@ -105,14 +105,14 @@ export function useConsentRows(
     key: `chat-${channel.provider}`,
     label: providerLabel(channel.provider),
     reachable: channel.reachable,
-    verdict: correspondence?.verdict,
+    entry: correspondence,
     unreachableWord: t("contact.rail.channelNotDeliverable"),
   }));
   return [...transports, ...chats].map((row) => ({
     key: row.key,
     term: row.label,
     value: row.reachable ? (
-      <VerdictWord verdict={row.verdict} />
+      <VerdictWord entry={row.entry} />
     ) : (
       <span className="pe-detail-unknown">{row.unreachableWord}</span>
     ),
@@ -129,7 +129,7 @@ type TransportReading = Readonly<{
 type TransportRow = Readonly<{
   label: string;
   reachable: boolean;
-  verdict: GuardEntry["verdict"] | undefined;
+  entry: GuardEntry | undefined;
   unreachableWord: string;
 }>;
 
@@ -143,30 +143,30 @@ const TRANSPORT_ROWS: Record<
   email: ({ contact, correspondence, t }) => ({
     label: t("contact.consent.businessMail"),
     reachable: (contact.emails?.length ?? 0) > 0,
-    verdict: correspondence?.verdict,
+    entry: correspondence,
     unreachableWord: t("contact.rail.noEmailAddress"),
   }),
   phone: ({ contact, entries, t }) => ({
     label: t("contact.rail.phone"),
     reachable: (contact.phones?.length ?? 0) > 0,
-    verdict: entries.find((entry) => entry.channel === "phone")?.verdict,
+    entry: entries.find((entry) => entry.channel === "phone"),
     unreachableWord: t("contact.rail.noPhoneNumber"),
   }),
 };
 
-// Paired with consentWord's table, with the same fallback. A verdict is a
-// state, so it reads as a badge. A verdict off a newer server reads as
-// unknown, which is a gap and stays grey text.
+// The verdict colours the badge and scopedConsentWord words it. A verdict off
+// a newer server is a gap and stays grey text.
 const VERDICT_BADGE = {
   allowed: { tone: "success", icon: Check },
   blocked: { tone: "warning", icon: Ban },
 } as const;
 
-function VerdictWord({
-  verdict,
-}: Readonly<{ verdict: GuardEntry["verdict"] | undefined }>) {
+function VerdictWord({ entry }: Readonly<{ entry: GuardEntry | undefined }>) {
   const t = useT();
-  const word = consentWord(verdict, t);
+  const verdict = entry?.verdict;
+  const word = entry
+    ? scopedConsentWord(entry, t)
+    : t("contact.consent.fact.nothingRecorded");
   const badge =
     verdict === "allowed" || verdict === "blocked"
       ? VERDICT_BADGE[verdict]
@@ -223,7 +223,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
                     <Mail size={15} aria-hidden="true" />
                     {consentPurposeName(entry, t)}
                   </span>
-                  <VerdictWord verdict={entry.verdict} />
+                  <VerdictWord entry={entry} />
                 </div>
                 {entry.reason && (
                   <p className="pe-colleague-proof t-caption">

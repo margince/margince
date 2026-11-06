@@ -9,6 +9,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
+import { runOutcomeWord, runReasonWords } from "../../lib/automationrun";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import {
@@ -408,5 +409,9 @@ function readableValues(
     ...values,
     ...(values.kind && { kind: approvalKindLabel(values.kind, t) }),
     ...(values.provider && { provider: providerName(values.provider, t) }),
+    ...(values.outcome && { outcome: runOutcomeWord(values.outcome, t) }),
+    ...(values.reason_code && {
+      reason: runReasonWords(values.reason_code, t),
+    }),
   };
 }

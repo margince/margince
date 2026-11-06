@@ -57,47 +57,40 @@ import (
 // (somebody got there first), and a field a contact has since edited (their work
 // would be overwritten). Both are 409s about the state of a record rather than
 // anything malformed in the request.
-type CorrectionReversalError struct{ Reason string }
+type CorrectionReversalError struct {
+	Reason string
+	// MovedSince marks a stage reversal whose deal moved again after
+	// Margince's move. It holds the whole deal; the others hold one change.
+	MovedSince bool
+}
 
 // alreadyTakenBack is the refusal a second Undo gets. One spelling, because
 // three paths reach it — the pre-check, the stamp losing its race, and the
 // hand-restored case — and three wordings would read as three situations.
 const alreadyTakenBack = "this correction has already been taken back"
 
+// AlreadyAccepted refuses the Undo of a change its owner kept.
+const AlreadyAccepted = "You already accepted this change"
+
 func (e *CorrectionReversalError) Error() string { return e.Reason }
 
-// RevertCorrection puts back every field one machine correction changed.
+// RevertCorrection puts back every field one machine correction changed, read
+// from the correction's own audit row. The restore, its audit row and the
+// lifecycle stamp commit together. evidence rides into the reversal's audit row.
 //
-// THE WHOLE FIELD SET, from the correction's own audit row. A correction can
-// move the date, the provisional flag and the forecast category together, and
-// restoring one of three would leave the deal in a state no writer ever produced
-// — a date nobody chose sitting under a category that was notched for a reason
-// that no longer applies.
-//
-// ONE TRANSACTION for the restore, the audit row and the lifecycle stamp. Split
-// apart, a failure between them leaves the deal restored while the correction
-// still reads live, and the next sweep would take the reversal for a fresh
-// correction to repeat.
-//
-// evidence rides straight into the reversal's own audit row (nil is fine — it
-// is operational context ABOUT the write, not a fact this store has an opinion
-// on). A caller reversing this on a reader's behalf, rather than redoing the
-// module's own record of what it did, is what lets that reader's read and this
-// write agree on which audit row the result belongs to.
-//
-// ifVersion is the deal's last-seen version, checked under the row lock below
-// (nil skips the check — a caller with no client-observed version to pin, the
-// same posture ClaimDeal/ArchiveDeal/UpdateDeal already take). It is a
-// different guard from buildReversalPatch's own per-field conflict check
-// below, and both matter: the per-field check is what lets a rename between
-// read and Undo through while a re-date does not (deliberate — see this
-// file's own header), but it compares VALUES, and an unrelated field edited
-// away and back to the value the correction itself would produce reads as no
-// conflict at all under a value-only compare — an ABA gap a monotonic version
-// pin closes because it does not care what the value became, only that it
-// moved.
+// ifVersion is the deal's last-seen version, checked under the row lock (nil
+// skips it). A value-only compare per field misses an edit made and undone
+// again; the version pin does not.
 func (s *Store) RevertCorrection(
 	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any,
+) (crmcontracts.Deal, error) {
+	return s.RevertCorrectionConfirmed(ctx, correctionID, ifVersion, evidence, "")
+}
+
+// RevertCorrectionConfirmed is RevertCorrection where the owner confirmed
+// archiving an opened deal over the team's work named by archiveConfirmedFor.
+func (s *Store) RevertCorrectionConfirmed(
+	ctx context.Context, correctionID ids.UUID, ifVersion *int64, evidence map[string]any, archiveConfirmedFor string,
 ) (crmcontracts.Deal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
@@ -111,32 +104,7 @@ func (s *Store) RevertCorrection(
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		// AUTHORITY BEFORE ANY CONFLICT, the module's rule everywhere. The row
-		// is located and locked first because the deal it belongs to is not
-		// known until then — but nothing about its STATE reaches a caller before
-		// the probe: an already-reversed correction on a deal somebody may not
-		// see would otherwise answer "already taken back" where it owes a 404,
-		// and the shape of the refusal would tell them the deal exists.
-		correction, err := lockCorrection(ctx, tx, correctionID)
-		if err != nil {
-			return err
-		}
-		// The deal row lock comes after the correction lock, the order
-		// restoreCorrectedFields already takes, and before the write check.
-		if _, err := storekit.LockRow(ctx, tx, dealTable, correction.DealID.UUID, storekit.LiveOnly); err != nil {
-			return err
-		}
-		if err := auth.EnsureWritable(ctx, tx, dealTable, correction.DealID.UUID); err != nil {
-			return err
-		}
-		if correction.Reversed() {
-			return &CorrectionReversalError{Reason: alreadyTakenBack}
-		}
-		if correction.Correction == CloseLostCorrection {
-			err = s.revertCloseLost(ctx, tx, correction, ifVersion, evidence, active)
-		} else {
-			err = s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence)
-		}
+		correction, err := s.revertCorrectionTx(ctx, tx, correctionID, ifVersion, evidence, active, archiveConfirmedFor)
 		if err != nil {
 			return err
 		}
@@ -144,7 +112,11 @@ func (s *Store) RevertCorrection(
 		// deal. GetDeal would take a VISIBILITY probe instead, which a manual
 		// read-share satisfies — the wrong question on a path that has just
 		// changed the record.
-		out, err = readDealForCaller(ctx, tx, correction.DealID, storekit.LiveOnly, active)
+		archived := storekit.LiveOnly
+		if correction.Correction == DealOpenCorrection {
+			archived = storekit.IncludeArchived
+		}
+		out, err = readDealForCaller(ctx, tx, correction.DealID, archived, active)
 		return err
 	})
 	return out, err
@@ -225,13 +197,13 @@ func lockCorrection(ctx context.Context, tx pgx.Tx, id ids.UUID) (DealCorrection
 	var c DealCorrection
 	err := tx.QueryRow(ctx, `
 		SELECT id, deal_id, audit_log_id, correction, fields, applied_at,
-		       reversed_at, reversed_by,
+		       reversed_at, reversed_by, accepted_at,
 		       remaining_open_stages, asking, standing_close_date, stage_history_id
 		  FROM deal_correction
 		 WHERE id = $1
 		   FOR UPDATE`, id).
 		Scan(&c.ID, &c.DealID, &c.AuditLogID, &c.Correction, &c.Fields, &c.AppliedAt,
-			&c.ReversedAt, &c.ReversedBy,
+			&c.ReversedAt, &c.ReversedBy, &c.AcceptedAt,
 			&c.Evidence.RemainingOpenStages, &c.Evidence.Asking, &c.Evidence.StandingCloseDate,
 			&c.StageHistoryID)
 	if errors.Is(err, pgx.ErrNoRows) {

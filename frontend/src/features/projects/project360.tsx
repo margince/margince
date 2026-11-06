@@ -306,7 +306,6 @@ function useNextTaskVerbs(
   if (!next || !task) {
     return {};
   }
-  const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
   return {
     // No due date here: the bar draws its own Snooze beside Done.
     action: (
@@ -317,14 +316,17 @@ function useNextTaskVerbs(
         update={update}
       />
     ),
-    snooze: nextDue
+    snooze: next.dueAt
       ? {
-          onSnooze: () =>
-            update.mutate({
-              id: next.activityId,
-              version: task.version,
-              body: nextDue,
-            }),
+          onSnooze: () => {
+            const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
+            if (nextDue)
+              update.mutate({
+                id: next.activityId,
+                version: task.version,
+                body: nextDue,
+              });
+          },
           pending: update.isPending && update.variables?.id === next.activityId,
         }
       : undefined,

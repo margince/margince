@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
-	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // Deal is what a reading needs to know about one opportunity, already resolved
@@ -61,12 +60,6 @@ type Deal struct {
 	// ask what happened to deals that REACHED a stage — a question the deal's
 	// current stage cannot answer, because it has moved since.
 	StageID string
-	// Qualification is how the qualified readings treat this deal, decided by
-	// the caller from its viability receipt and any open review. NotApplied on
-	// every deal means enforcement is off and no qualified reading exists.
-	Qualification viability.Qualification
-	// Basis is what the qualification rested on, nil while enforcement is off.
-	Basis *ViabilityBasis
 }
 
 // Readings are the four money answers plus the counts that say what they do not
@@ -103,13 +96,6 @@ type Readings struct {
 	// Per-deal rows behind the sums, in the order they were given. What gets
 	// frozen as contributions, and what a drill-through reads.
 	Contributions []Contribution
-
-	// Qualified is nil unless the caller qualified the deals, or set a policy.
-	Qualified *QualifiedReadings
-	// QualifiedPolicy is the viability policy enforced for this read, empty
-	// while enforcement is off. Carried apart from Qualified so an enforced
-	// read over no deals still answers with a zero block.
-	QualifiedPolicy string
 
 	// Range is the central 80% of finishes, set by the assembler; nil if not drawn.
 	Range *Range
@@ -157,12 +143,6 @@ type Contribution struct {
 	// inferred from a nil amount, because "we have no price" and "we could not
 	// convert it" are different facts and a reader is owed which one.
 	ExclusionReason string
-	// Qualification is the deal's treatment in the qualified readings. A
-	// different question from ExclusionReason, which is about money.
-	Qualification viability.Qualification
-	// Basis is what the qualification rested on, frozen with it. Nil on a row
-	// frozen while enforcement was off or before the basis was recorded.
-	Basis *ViabilityBasis
 
 	// What changed this deal since the previous snapshot, recorded at write
 	// time. audit_log has no correlation column to join on later, so
@@ -280,9 +260,6 @@ func Compute(period Period, in []Deal, rules Rules) (Readings, error) {
 		if err := addBySource(&out, contribution, base); err != nil {
 			return Readings{}, fmt.Errorf("forecasting: totalling deal %s: %w", deal.ID, err)
 		}
-		if err := qualify(&out, contribution, base); err != nil {
-			return Readings{}, fmt.Errorf("forecasting: qualifying deal %s: %w", deal.ID, err)
-		}
 		out.Contributions = append(out.Contributions, contribution)
 	}
 	return out, nil
@@ -345,8 +322,6 @@ func contribute(period Period, deal Deal, rules Rules) (Contribution, error) {
 		Signals:          deal.Signals,
 		Effect:           deal.Effect,
 		StageID:          deal.StageID,
-		Qualification:    deal.Qualification,
-		Basis:            deal.Basis,
 	}
 	switch {
 	case deal.AmountMinor == nil:

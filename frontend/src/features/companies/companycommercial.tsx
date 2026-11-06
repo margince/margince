@@ -151,7 +151,7 @@ export function offerAmount(
   // The GROSS, which is what a buyer sees on the document. `net_minor` is the
   // line sum before tax and would understate the offer beside every other
   // money figure on this page.
-  if (offer.gross_minor == null || !offer.currency) {
+  if (offer.money_withheld || !offer.currency) {
     return "—";
   }
   return formatMoney(offer.gross_minor, offer.currency, locale);

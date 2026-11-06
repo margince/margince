@@ -9,7 +9,7 @@ go 1.27.3
 replace github.com/margince/margince/composition => ../composition
 
 require (
-	github.com/andybalholm/brotli v1.2.4
+	github.com/andybalholm/brotli v1.2.7
 	github.com/emersion/go-imap/v2 v2.0.0-beta.8
 	github.com/emersion/go-message v0.18.2
 	github.com/getkin/kin-openapi v0.149.0
