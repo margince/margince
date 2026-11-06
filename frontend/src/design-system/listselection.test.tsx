@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
 import { useRowSelection } from "./listselection";
@@ -22,15 +22,18 @@ function PagedList({
   perRead,
   limit,
   selectable,
+  body,
 }: Readonly<{
   total: number;
   perRead: number;
   limit?: number;
   selectable?: (row: Row) => boolean;
+  body?: ReactNode;
 }>) {
   const all = testRows(total);
   const [held, setHeld] = useState(perRead);
-  const rows = all.slice(0, held);
+  const [narrowed, setNarrowed] = useState(false);
+  const rows = narrowed ? all.slice(0, 3) : all.slice(0, held);
   const chosen = useRowSelection({ rows, keyOf: (row) => row.id, limit });
   return (
     <ListTable<Row>
@@ -40,6 +43,12 @@ function PagedList({
       unit="rows"
       hasMore={held < total}
       onLoadMore={() => setHeld((now) => Math.min(total, now + perRead))}
+      body={body}
+      action={
+        <button type="button" onClick={() => setNarrowed(!narrowed)}>
+          Narrow
+        </button>
+      }
       selection={{
         selected: chosen.selected,
         limit: chosen.limit,
@@ -143,5 +152,28 @@ describe("selecting every row of a list", () => {
     expect(
       screen.getByRole("checkbox", { name: "Select Row 03" }),
     ).toBeChecked();
+  });
+
+  it("drops a selection the list stopped holding, and does not bring it back", async () => {
+    const user = userEvent.setup();
+    render(<PagedList total={10} perRead={10} />);
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 05" }));
+    expect(screen.getByText("1 chosen")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Narrow" }));
+    expect(screen.queryByText(/chosen/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Narrow" }));
+    expect(screen.queryByText(/chosen/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "Select Row 05" }),
+    ).not.toBeChecked();
+  });
+
+  it("draws no bulk bar while another body stands in for the grid", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<PagedList total={10} perRead={10} />);
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
+    expect(screen.getByText("1 chosen")).toBeInTheDocument();
+    rerender(<PagedList total={10} perRead={10} body={<p>Board</p>} />);
+    expect(screen.queryByText(/chosen/)).not.toBeInTheDocument();
   });
 });

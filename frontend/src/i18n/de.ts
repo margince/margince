@@ -6268,9 +6268,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.selectAll": "Alle auswählen",
   "bulk.clearSelection": "Auswahl aufheben",
   "bulk.selectionLimit_one":
-    "Eine Änderung umfasst höchstens {count} Datensatz, daher ist der erste ausgewählt.",
+    "Eine Änderung umfasst höchstens {count} Datensatz, daher endet die Auswahl dort.",
   "bulk.selectionLimit_other":
-    "Eine Änderung umfasst höchstens {count} Datensätze, daher sind die ersten {count} ausgewählt.",
+    "Eine Änderung umfasst höchstens {count} Datensätze, daher endet die Auswahl dort.",
   "bulk.owner": "Neue Verantwortung",
   "bulk.ownerPick": "Verantwortung wählen",
   "bulk.assign": "Verantwortung zuweisen",

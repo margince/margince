@@ -14,6 +14,7 @@ import {
 import { api, FIRST_PAGE } from "../../api/client";
 import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { BulkVerbs } from "../../components/bulkverbs";
+import { ErrorLine } from "../../design-system/errorline";
 import { useRowSelection } from "../../design-system/listselection";
 import {
   type ListColumn,
@@ -126,7 +127,8 @@ function useListMembers(list: List, source: MemberSource | undefined) {
     members.data?.pages.flatMap((page) => [...page.data]) ?? [];
   const state: SectionState = members.isPending
     ? "loading"
-    : members.isError
+    : // A failed later page keeps the rows already read; the table says why.
+      members.isError && shown.length === 0
       ? "unavailable"
       : shown.length > 0
         ? "ready"
@@ -216,6 +218,9 @@ export function MembersPanel({
           hasMore={members.hasNextPage}
           onLoadMore={() => members.fetchNextPage()}
           pending={members.isFetchingNextPage}
+          problem={
+            members.isError ? <ErrorLine error={members.error} /> : undefined
+          }
         />
       </SurfaceState>
     </Panel>

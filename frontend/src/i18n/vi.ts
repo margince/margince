@@ -6115,9 +6115,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.selectAll": "Chọn tất cả",
   "bulk.clearSelection": "Bỏ chọn",
   "bulk.selectionLimit_one":
-    "Mỗi lần thay đổi tối đa {count} bản ghi, nên bản ghi đầu tiên được chọn.",
+    "Mỗi lần thay đổi tối đa {count} hồ sơ, nên lựa chọn dừng ở đó.",
   "bulk.selectionLimit_other":
-    "Mỗi lần thay đổi tối đa {count} bản ghi, nên {count} bản ghi đầu tiên được chọn.",
+    "Mỗi lần thay đổi tối đa {count} hồ sơ, nên lựa chọn dừng ở đó.",
   "bulk.owner": "Người chịu trách nhiệm mới",
   "bulk.ownerPick": "Chọn người chịu trách nhiệm",
   "bulk.assign": "Giao người chịu trách nhiệm",

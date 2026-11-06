@@ -190,6 +190,12 @@ describe("acting on a list's members", () => {
         en["bulk.selectionLimit_other"].replaceAll("{count}", "500"),
       ),
     ).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: selectMiTek }));
+    expect(
+      await screen.findByText(
+        en["bulk.selected_other"].replace("{count}", "499"),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("exports the list's members through the list's own export", async () => {

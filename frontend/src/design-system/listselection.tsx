@@ -26,6 +26,11 @@ export function useRowSelection<Row>({
 }>) {
   const [picked, setPicked] = useState<ReadonlySet<string>>(NOTHING);
   const heldKeys = new Set(rows.map(keyOf));
+  // A key the list no longer holds is dropped, so returning to an earlier
+  // filter does not bring an old selection back.
+  if ([...picked].some((key) => !heldKeys.has(key))) {
+    setPicked(new Set([...picked].filter((key) => heldKeys.has(key))));
+  }
   const selectedRows = rows.filter((row) => picked.has(keyOf(row)));
   const selected: ReadonlySet<string> = new Set(selectedRows.map(keyOf));
   return {
@@ -34,8 +39,7 @@ export function useRowSelection<Row>({
     limit,
     onChange: (changed: readonly Row[], on: boolean) =>
       setPicked((prev) => {
-        // A key the list no longer holds must not count against the limit.
-        const next = new Set([...prev].filter((key) => heldKeys.has(key)));
+        const next = new Set(prev);
         for (const row of changed) {
           const key = keyOf(row);
           if (!on) {
@@ -77,7 +81,9 @@ export function useSelectAll<Row>({
   onLoadMore?: () => void;
   failed: boolean;
 }>) {
-  const [walking, setWalking] = useState(false);
+  // The row count when Select all was pressed; null while not walking.
+  const [walkFrom, setWalkFrom] = useState<number | null>(null);
+  const walking = walkFrom !== null;
   // The row count when the walk last asked for a page.
   const askedAt = useRef(-1);
   const isSelectable = (row: Row) => selection?.selectable?.(row) !== false;
@@ -91,14 +97,15 @@ export function useSelectAll<Row>({
   const holdsEnough = !canLoad || held.length >= limit;
   const complete = !canLoad && held.every(isSelected);
   const atLimit = count >= limit;
-  // The walk ends once the ticks it asked for have landed, or a read failed.
-  // Set while rendering, so no effect has to clear it.
-  if (walking && (failed || complete || atLimit)) {
-    setWalking(false);
+  // The walk ends once its ticks have landed or a read failed. Fewer rows than
+  // at the press means the list was narrowed, which ends it too.
+  const narrowed = walkFrom !== null && rows.length < walkFrom;
+  if (walking && (failed || complete || atLimit || narrowed)) {
+    setWalkFrom(null);
   }
 
   useEffect(() => {
-    if (!walking || failed || !selection) {
+    if (!walking || failed || narrowed || !selection) {
       return;
     }
     if (holdsEnough) {
@@ -107,7 +114,16 @@ export function useSelectAll<Row>({
       askedAt.current = rows.length;
       onLoadMore?.();
     }
-  }, [walking, failed, holdsEnough, rows.length, selection, held, onLoadMore]);
+  }, [
+    walking,
+    failed,
+    narrowed,
+    holdsEnough,
+    rows.length,
+    selection,
+    held,
+    onLoadMore,
+  ]);
 
   const pageOn = onPage.length > 0 && onPage.every(isSelected);
   return {
@@ -124,7 +140,7 @@ export function useSelectAll<Row>({
     pending: walking,
     run: () => {
       askedAt.current = -1;
-      setWalking(true);
+      setWalkFrom(rows.length);
     },
     clear: () => selection?.onChange(held, false),
     limit,
@@ -187,8 +203,14 @@ export function SelectAllControls({
 export function ListBulkBar<Row>({
   selection,
   all,
-}: Readonly<{ selection?: ListSelection<Row>; all: SelectAll }>) {
-  if (!selection || selection.selected.size === 0) {
+  hidden,
+}: Readonly<{
+  selection?: ListSelection<Row>;
+  all: SelectAll;
+  /** Another body stands in for the grid; its rows cannot be seen or unticked. */
+  hidden: boolean;
+}>) {
+  if (hidden || !selection || selection.selected.size === 0) {
     return null;
   }
   return (

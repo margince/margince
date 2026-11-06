@@ -452,7 +452,7 @@ export function ListTable<Row>({
         </>
       }
     >
-      <ListBulkBar selection={selection} all={all} />
+      <ListBulkBar selection={selection} all={all} hidden={!drawsOwnTable} />
       {short && !problem && rows.length === 0 ? (
         <div className="lt-emptyline">
           <EmptyState>{emptyLine}</EmptyState>

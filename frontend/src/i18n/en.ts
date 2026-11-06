@@ -6241,9 +6241,9 @@ export const en = {
   "bulk.selectAll": "Select all",
   "bulk.clearSelection": "Clear selection",
   "bulk.selectionLimit_one":
-    "One change takes at most {count} record, so the first is selected.",
+    "One change takes at most {count} record, so the selection stops there.",
   "bulk.selectionLimit_other":
-    "One change takes at most {count} records, so the first {count} are selected.",
+    "One change takes at most {count} records, so the selection stops there.",
   "bulk.owner": "New owner",
   "bulk.ownerPick": "Pick an owner",
   "bulk.assign": "Assign owner",
