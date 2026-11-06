@@ -239,4 +239,17 @@ if ! grep -q 'review-coverage-report' "$workflow"; then
 fi
 echo "ok: the finding is published where the reader already is, and withdraws itself"
 
+# The author's own reviews are replies to threads, not coverage. Each one is a
+# submitted review, so without both halves a batch of replies starts a run per
+# reply and lists the author as a reviewer of their own branch.
+if ! grep -qF 'github.event.review.user.login != github.event.pull_request.user.login' "$workflow"; then
+	echo "FAIL: the job runs on the author's own review, so every reply to a thread starts a run."
+	exit 1
+fi
+if ! grep -qF '.user.login != env.AUTHOR' "$workflow"; then
+	echo "FAIL: the report counts the author's own reviews as coverage of their branch."
+	exit 1
+fi
+echo "ok: the author's replies neither start a run nor count as coverage"
+
 echo "OK: test-review-coverage — every arm of the report, including the quiet ones"

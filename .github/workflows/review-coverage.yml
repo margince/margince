@@ -73,9 +73,15 @@ jobs:
     # A fork still gets the report on every push, where the token GitHub hands
     # the job is read-only and that downgrade is the control. What a fork loses
     # is the refresh on a submitted review.
+    #
+    # Not on the author's own review either. A reply to a review thread is
+    # recorded as a review by whoever replied, so a batch of replies would start
+    # a run each, every one cancelling the last. None can change the report:
+    # the author reading their own branch is not coverage.
     if: >-
       github.event_name == 'pull_request'
-      || github.event.pull_request.head.repo.full_name == github.repository
+      || (github.event.pull_request.head.repo.full_name == github.repository
+          && github.event.review.user.login != github.event.pull_request.user.login)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -101,6 +107,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -euo pipefail
           # A review's `commit_id` is the tree it was made against — the one
@@ -110,7 +117,7 @@ jobs:
           # read the first page would go quiet on exactly the pull requests
           # most likely to need it.
           reviews="$(gh api --paginate "repos/${{ github.repository }}/pulls/${PR}/reviews" \
-            --jq '[.[] | select(.commit_id != null) | {reviewer: .user.login, sha: .commit_id, at: .submitted_at}]' \
+            --jq '[.[] | select(.commit_id != null and .user.login != env.AUTHOR) | {reviewer: .user.login, sha: .commit_id, at: .submitted_at}]' \
             | jq -s 'add // []')"
 
           # This branch only, WITH its parent edges. `git rev-list base..head`
