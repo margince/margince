@@ -48,7 +48,12 @@ export function ReceiptDetail({ receipt }: Readonly<{ receipt: Receipt }>) {
       key: "source",
       term: t("receipt.detail.source"),
       value: openSource ? (
-        <Button variant="link" onClick={() => openSource(source.id)}>
+        <Button
+          variant="link"
+          align="start"
+          className="btn-valuelabel"
+          onClick={() => openSource(source.id)}
+        >
           {source.label}
         </Button>
       ) : (

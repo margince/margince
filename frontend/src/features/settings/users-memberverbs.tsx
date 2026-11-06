@@ -29,7 +29,7 @@ function deactivateBodyKey(member: User) {
     : "users.deactivateConfirmBody";
 }
 
-// Mails an invited member a new link after the relay refused the first one.
+// Mails an invited member a new link, which replaces any older one.
 // Draws nothing unless the server offers it.
 function ResendInvite({
   member,

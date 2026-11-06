@@ -27,6 +27,7 @@ run:
     # The vendor live check (make vendor-live). Its scheduled job compiles it
     # only when the vendor key is set, so this pass is what keeps it building.
     - vendorlive
+    - rolesweep
 
 linters:
   default: standard

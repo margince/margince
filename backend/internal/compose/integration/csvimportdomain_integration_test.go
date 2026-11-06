@@ -17,6 +17,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // A company file's domain column lands, and a re-import of it converges.
@@ -32,7 +34,7 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 	const companies = "Company,Website\n" +
 		"Northwind,https://www.northwind.example/\n" +
 		"Contoso,contoso.example\n"
-	profile, status := uploadCSV(t, e, "company", companies)
+	profile, status := importjobtest.UploadCSV(t, e, "company", companies)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
@@ -41,11 +43,11 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 	}
 	mapping := map[string]string{"Company": "display_name", "Website": "domain"}
 
-	run, runStatus := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
@@ -77,11 +79,11 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 
 	// The identical file again: nothing changed, so nothing is written. A domain
 	// the comparison could not read would report two updates instead.
-	second, secondStatus := uploadCSV(t, e, "company", companies)
+	second, secondStatus := importjobtest.UploadCSV(t, e, "company", companies)
 	if secondStatus != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", secondStatus)
 	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "company", second.SourceRef, mapping)
+	rerun, rerunStatus := importjobtest.CreateRunWithMapping(t, e, "company", second.SourceRef, mapping)
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("create re-run → %d, want 202", rerunStatus)
 	}
@@ -111,11 +113,11 @@ func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	const companies = "Company,Website\n" +
 		"Northwind Copy,northwind.example\n" +
 		"Contoso,contoso.example\n"
-	profile, status := uploadCSV(t, e, "company", companies)
+	profile, status := importjobtest.UploadCSV(t, e, "company", companies)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "company", profile.SourceRef,
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Company": "display_name", "Website": "domain"})
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
@@ -131,7 +133,7 @@ func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 		t.Fatalf("preview = %+v, want the taken domain predicted as a skip", preview.Disposition)
 	}
 
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
@@ -172,15 +174,15 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 	mapping := map[string]string{"Company": "display_name", "Website": "domain"}
 
 	const first = "Company,Website\nFabrikam,fabrikam.example\n"
-	profile, status := uploadCSV(t, e, "company", first)
+	profile, status := importjobtest.UploadCSV(t, e, "company", first)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
@@ -214,15 +216,15 @@ func TestCSVImportOfOneDomainKeepsTheCompanysOthers(t *testing.T) {
 
 	// The corrected file names only the primary. The hand-added one must survive.
 	const second = "Company,Website\nFabrikam,fabrikam-group.example\n"
-	profile2, status2 := uploadCSV(t, e, "company", second)
+	profile2, status2 := importjobtest.UploadCSV(t, e, "company", second)
 	if status2 != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", status2)
 	}
-	run2, run2Status := createRunWithMapping(t, e, "company", profile2.SourceRef, mapping)
+	run2, run2Status := importjobtest.CreateRunWithMapping(t, e, "company", profile2.SourceRef, mapping)
 	if run2Status != http.StatusAccepted {
 		t.Fatalf("create second run → %d, want 202", run2Status)
 	}
-	var approved2 importRunDTO
+	var approved2 importjobtest.Run
 	if s := importCall(t, e, run2.ID, "approve", nil, &approved2); s != http.StatusAccepted {
 		t.Fatalf("approve second → %d, want 202", s)
 	}

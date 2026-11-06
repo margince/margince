@@ -29,8 +29,7 @@ func TestRenderDefinitionReadsAsPlainLanguage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `Over open, unarchived deals (win probability read live from the deal's current stage; ` +
-		`a commit/best_case deal whose close date is past, missing, or provisional reports as 'slipped' instead, per formulas §11), ` +
+	want := `Over open, unarchived deals (win probability is the deal's own where set, else its current stage's), ` +
 		`filtered to pipeline_id = "018f-pipe", within the group where owner_id = "018f-owner": ` +
 		`the number of matching records as deals; the sum of amount_minor as unweighted_minor; ` +
 		`the sum of weighted_amount_minor as weighted_minor.`
@@ -46,8 +45,7 @@ func TestRenderDefinitionSpellsOutTheNullGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `Over open, unarchived deals (win probability read live from the deal's current stage; ` +
-		`a commit/best_case deal whose close date is past, missing, or provisional reports as 'slipped' instead, per formulas §11), ` +
+	want := `Over open, unarchived deals (win probability is the deal's own where set, else its current stage's), ` +
 		`within the group where owner_id is not set: the number of matching records.`
 	if got != want {
 		t.Errorf("definition:\n got %q\nwant %q", got, want)
@@ -95,9 +93,9 @@ func TestDerivationURLRoundTrip(t *testing.T) {
 	}
 	minted := derivationURL("forecast",
 		map[string]any{"pipeline_id": "018f-pipe"},
-		[]string{"owner_id", "forecast_category"},
+		[]string{"owner_id", "win_probability_band"},
 		aggs,
-		map[string]any{"owner_id": "018f-owner", "forecast_category": nil, "deals": int64(3)},
+		map[string]any{"owner_id": "018f-owner", "win_probability_band": nil, "deals": int64(3)},
 		time.Time{}, "")
 
 	parsed, err := url.Parse(minted)
@@ -111,7 +109,7 @@ func TestDerivationURLRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(q.GroupBy, []string{"forecast_category", "owner_id"}) {
+	if !reflect.DeepEqual(q.GroupBy, []string{"owner_id", "win_probability_band"}) {
 		t.Errorf("group_by = %v", q.GroupBy)
 	}
 	if !reflect.DeepEqual(q.Aggregates, aggs) {
@@ -126,8 +124,8 @@ func TestDerivationURLRoundTrip(t *testing.T) {
 	}
 	// An unset group key is NAMED as unset rather than carried as an empty
 	// value, so it cannot be confused with a column holding the empty string.
-	if !reflect.DeepEqual(q.Unset, map[string]bool{"forecast_category": true}) {
-		t.Errorf("unset = %v, want forecast_category", q.Unset)
+	if !reflect.DeepEqual(q.Unset, map[string]bool{"win_probability_band": true}) {
+		t.Errorf("unset = %v, want win_probability_band", q.Unset)
 	}
 }
 

@@ -61,7 +61,7 @@ func analyticsQueryToolRunner(db *database.DB) agents.AnalyticsQueryRunner {
 
 		var answer AnalyticsAnswer
 		var runID *ids.UUID
-		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 			var err error
 			answer, err = RunAnalyticsQuery(ctx, tx, q, floor)
 			if err != nil {
@@ -170,7 +170,7 @@ func (a analyticsSchemaResource) ReadResource(ctx context.Context, uri string) (
 func analyticsVocabularyText(ctx context.Context, db *database.DB) (string, error) {
 	schema := AnalyticsSchemaFor(ctx)
 	if db != nil {
-		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 			var err error
 			schema, err = AnalyticsSchemaWithCoverage(ctx, tx)
 			return err

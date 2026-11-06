@@ -117,6 +117,17 @@ func TestAViewRefusalKeepsItsKind(t *testing.T) {
 	}
 }
 
+// A route this installation does not offer answers as not offered here, with
+// or without words of its own.
+func TestAViewTheInstallationDoesNotOfferIsNotOfferedHere(t *testing.T) {
+	bare := &viewDoor{api: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotImplemented) })}
+	_, err := readViewThrough(bare)(context.Background(), agents.ReadView{Pattern: "/v1/x"}, nil, nil)
+	var detailed *httperr.DetailedError
+	if !errors.As(err, &detailed) || detailed.Status != http.StatusNotImplemented || detailed.Detail != http.StatusText(http.StatusNotImplemented) {
+		t.Errorf("a bare 501 surfaced as %v, want not offered here", err)
+	}
+}
+
 // The marker a tool sets admits only the route it meant. A path value that
 // spells a fixed sibling lands on that route instead, and a human-only one must
 // still be refused there.

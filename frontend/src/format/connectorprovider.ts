@@ -49,19 +49,25 @@ export function providerName(id: string, t: (key: MessageKey) => string) {
   return isCaptureProvider(id) ? t(PROVIDER_NAME[id]) : id;
 }
 
-/** The two vendors whose mail and calendar are separate grants of one account. */
+/** The two vendors whose mail and calendar are separate connections of one account. */
 export type AccountVendor = "google" | "microsoft";
 
 /** Each vendor's mailbox and calendar, the same pairs the server chains with
- *  `also_connect` (gmail then gcal, graph then graphcal). */
+ *  `also_connect` (gmail then gcal, graph then graphcal). `oneConsent` mirrors
+ *  the server's `sharedConsentCalendars`: Google asks for both on one screen,
+ *  Microsoft asks once for mail and once more for the calendar. */
 export const VENDOR_SERVICES: Readonly<
   Record<
     AccountVendor,
-    Readonly<{ mail: "gmail" | "graph"; calendar: "gcal" | "graphcal" }>
+    Readonly<{
+      mail: "gmail" | "graph";
+      calendar: "gcal" | "graphcal";
+      oneConsent: boolean;
+    }>
   >
 > = {
-  google: { mail: "gmail", calendar: "gcal" },
-  microsoft: { mail: "graph", calendar: "graphcal" },
+  google: { mail: "gmail", calendar: "gcal", oneConsent: true },
+  microsoft: { mail: "graph", calendar: "graphcal", oneConsent: false },
 };
 
 /** The vendor a provider belongs to, or null for IMAP, the test mailbox and

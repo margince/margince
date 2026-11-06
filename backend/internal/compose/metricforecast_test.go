@@ -18,14 +18,14 @@ func TestForecastContributionsKeepWonSupportedAndUpsideDisjoint(t *testing.T) {
 	owner := ids.NewV7().String()
 	contributions := []forecasting.Contribution{
 		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InWon: true},
-		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InEvidence: true, InBestCase: true},
-		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InBestCase: true},
+		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InEvidence: true},
+		{DealID: ids.NewV7().String(), Owner: owner, BaseMinor: &amount, InOpen: true},
 	}
-	facts, err := forecastMetricFacts(crmcontracts.ReportingContext{}, forecasting.Readings{Contributions: contributions}, forecasting.Landing{AmountMinor: 20000, Measure: forecasting.MeasureCommitEvidence}, &call)
+	facts, err := forecastMetricFacts(crmcontracts.ReportingContext{}, forecasting.Readings{Contributions: contributions}, forecasting.Landing{AmountMinor: 20000, Measure: forecasting.MeasureLikely}, &call)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]float64{"forecast_won": 10000, "forecast_supported": 10000, "forecast_upside": 10000, "forecast_landing": 20000, "forecast_call": 45000}
+	want := map[string]float64{"forecast_won": 10000, "forecast_supported": 10000, "forecast_upside": 10000, "forecast_period_deals": 10000, "forecast_landing": 20000, "forecast_call": 45000}
 	if len(facts) != len(want) {
 		t.Fatalf("double-counted support: %+v", facts)
 	}
@@ -100,7 +100,7 @@ func TestForecastLanguageChangesOnlyEvidenceAndChartLabels(t *testing.T) {
 	readings := forecasting.Readings{Contributions: []forecasting.Contribution{
 		{DealID: ids.NewV7().String(), Owner: ids.NewV7().String(), BaseMinor: &amount, InWon: true},
 	}}
-	landing := forecasting.Landing{AmountMinor: amount, Measure: forecasting.MeasureCommitEvidence}
+	landing := forecasting.Landing{AmountMinor: amount, Measure: forecasting.MeasureLikely}
 	var original []reporting.Fact
 	var originalChart crmcontracts.ReportingChart
 	for _, lang := range []string{"en", "de", "vi"} {

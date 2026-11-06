@@ -50,7 +50,12 @@ function readings(over: Partial<Readings> = {}): Readings {
     qualification_mode: "off",
     won_minor: 92_000_00,
     evidence_minor: 148_000_00,
-    best_case_minor: 260_000_00,
+    likely_threshold: 90,
+    by_source: {
+      stage: { open_minor: 240_000_00, weighted_minor: 132_000_00 },
+      human: { open_minor: 0, weighted_minor: 0 },
+      margince: { open_minor: 0, weighted_minor: 0 },
+    },
     open_minor: 240_000_00,
     weighted_minor: 132_000_00,
     eligible_count: 52,
@@ -133,6 +138,38 @@ export const SomeDealsUnpriced: Story = {
   },
 };
 
+// Where the quarter lands, beside the sheet: the landing and the modelled
+// range stand in the rail above the receipt.
+export const WithLanding: Story = {
+  render: () => {
+    const landed = readings({
+      range_low_minor: 180_000_00,
+      range_high_minor: 310_000_00,
+    });
+    installFetchStub(
+      routes({
+        ...landed,
+        landing: {
+          amount_minor: landed.won_minor + landed.evidence_minor,
+          measure: "likely",
+          won_minor: landed.won_minor,
+          remaining_minor: landed.evidence_minor,
+        },
+      }),
+    );
+    return (
+      <StoryProviders>
+        <ForecastView selection={SELECTION} canSubmit={false} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const WithLandingDark: Story = {
+  ...WithLanding,
+  globals: { theme: "dark" },
+};
+
 // Recording what somebody believes will close, opened. The editor is a panel of
 // its own: the lead sentence says a call moves no deal, the two fields are its
 // body, and cancel and save stand in the action band under them.
@@ -197,7 +234,7 @@ function recipient(kind: "live" | "snapshot", landingKept = true) {
             ...shared,
             landing: {
               amount_minor: shared.won_minor + shared.evidence_minor,
-              measure: "commit_evidence",
+              measure: "likely",
               won_minor: shared.won_minor,
               remaining_minor: shared.evidence_minor,
             },

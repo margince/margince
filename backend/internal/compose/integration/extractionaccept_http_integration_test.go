@@ -19,7 +19,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
@@ -29,7 +28,7 @@ import (
 // only speaks JSON) and returns the new attachment's id.
 func uploadAttachmentHTTP(t *testing.T, e *apptest.AppEnv, entityType, entityID, filename string) string {
 	t.Helper()
-	body, ctype := multipartAttachment(t, entityType, entityID, filename, []byte("attachment bytes"))
+	body, ctype := apptest.MultipartAttachment(t, entityType, entityID, filename, []byte("attachment bytes"))
 	req, err := http.NewRequest(http.MethodPost, e.TS.URL+"/v1/attachments", body)
 	if err != nil {
 		t.Fatalf("building upload request: %v", err)
@@ -162,7 +161,7 @@ func TestAcceptAttachmentExtractionHTTP(t *testing.T) {
 	}
 	dealID := deal["id"].(string)
 	attID := uploadAttachmentHTTP(t, e, "deal", dealID, "quote.pdf")
-	readingID := seedExtractionReadingHTTP(e, t, attID, []extraction.ExtractedField{
+	readingID := apptest.SeedExtractionReading(e, t, attID, []extraction.ExtractedField{
 		{Field: "amount_minor", Value: "150000", SourceQuote: "Total: EUR 1,500.00", PageOrSection: "p.2", Confidence: "high"},
 		{Field: "currency", Value: "EUR", SourceQuote: "all amounts in EUR", PageOrSection: "p.2", Confidence: "medium"},
 	})
@@ -195,41 +194,4 @@ func TestAcceptAttachmentExtractionHTTP(t *testing.T) {
 			t.Errorf("accept naming an unknown reading = %d, want 404", status)
 		}
 	})
-}
-
-// seedExtractionReadingHTTP writes one finished reading through the production
-// store and answers its id, for the wire suites whose subject is the ACCEPT.
-//
-// Starting a reading over HTTP would need a job runner and a worker and a model
-// to finish one, none of which this suite is about; writing the row by hand
-// would prove nothing about the writer that fills it in production. Driving the
-// real store is the middle path, and it is the same path the lower harness
-// takes.
-func seedExtractionReadingHTTP(
-	e *apptest.AppEnv, t *testing.T, attachmentID string, fields []extraction.ExtractedField,
-) string {
-	t.Helper()
-	ctx := e.DealWriterContext(t)
-	store := activities.NewStore(e.DB())
-	id, err := ids.Parse(attachmentID)
-	if err != nil {
-		t.Fatalf("parse attachment id %q: %v", attachmentID, err)
-	}
-	read, _, err := store.StartExtractionReadQueued(ctx, id, "seed", nil)
-	if err != nil {
-		t.Fatalf("StartExtractionReadQueued: %v", err)
-	}
-	claim, err := store.BeginExtractionRead(ctx, read.ID, activities.ExtractionReadLease)
-	if err != nil {
-		t.Fatalf("BeginExtractionRead: %v", err)
-	}
-	if claim.StartedAt == nil {
-		t.Fatal("a claimed reading carries no start time")
-	}
-	if err := store.FinishExtractionRead(ctx, read.ID, activities.ExtractionReadOutcome{
-		Status: activities.ExtractionReadDone, Fields: fields, ClaimedAt: *claim.StartedAt,
-	}); err != nil {
-		t.Fatalf("FinishExtractionRead: %v", err)
-	}
-	return read.ID.String()
 }

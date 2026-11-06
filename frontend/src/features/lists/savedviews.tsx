@@ -2,9 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bookmark } from "lucide-react";
-import type { ListQuery, SavedViewTab } from "../../components/listquery";
+import {
+  isNarrowed,
+  type ListOpening,
+  type ListQuery,
+  type SavedViewTab,
+} from "../../components/listquery";
+import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { NamePrompt } from "../../design-system/nameprompt";
-import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { ViewResource } from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
@@ -119,7 +125,7 @@ function listStateFrom(query: ListQuery): Record<string, unknown> {
  * `/views` has re-ordered the rail around a rename.
  *
  * A failed read answers with no tabs, which is indistinguishable from a reader
- * who has saved none. `SaveViewAction` says which it was, because a hook can
+ * who has saved none. `SavedViewsFailure` says which it was, because a hook can
  * only answer with tabs.
  */
 export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
@@ -180,53 +186,50 @@ function SaveViewButton({
   );
 }
 
-/**
- * "Save this view" beside a list's own tools, and the one place that says the
- * saved-view rail failed to load.
- *
- * Saving is offered only when the list is actually narrowed. Saving the
- * unfiltered default would create a tab that does what the All tab already
- * does, and a rail of those is how a useful feature becomes clutter.
- *
- * The failure is reported here rather than on the rail because the rail is a
- * row of tabs: with no tabs there is nothing to hang the state on, and an empty
- * rail says "you have saved none" — a claim the screen cannot make when the
- * read failed. This is the control that manages saved views, so it is where a
- * reader looks, and it is `failed` rather than `unavailable` because a retry is
- * offered with it. It is NAMED, because it lands in the list's tools slot beside
- * Columns and Compact: "this section did not load" under a toolbar covering
- * three controls says which one only if the part is named.
- */
-export function SaveViewAction({
+/** A failed views read, on the toolbar where it is seen without opening View:
+ * an empty rail would claim the reader saved none. */
+export function SavedViewsFailure({
   resource,
-  query,
-}: Readonly<{ resource: ViewResource; query: ListQuery }>) {
+}: Readonly<{ resource: ViewResource }>) {
   const t = useT();
   // The same query the rail reads, so this costs no second request: one read of
   // /views answers both, and the rail cannot be shown as loaded here and failed
   // there.
   const views = useSavedViews(resource);
-  const narrowed =
-    Boolean(query.q) ||
-    Boolean(query.sort) ||
-    query.includeArchived ||
-    Object.values(query.filters).some(Boolean);
+  if (!views.isError) {
+    return null;
+  }
+  return (
+    <ErrorLine
+      actions={
+        <Button
+          variant="link"
+          pending={views.isFetching}
+          onClick={() => void views.refetch()}
+        >
+          {t("common.retry")}
+        </Button>
+      }
+    >
+      {t("views.loadFailed")}
+    </ErrorLine>
+  );
+}
+
+/** Save view only once the reader has narrowed the list from how it opens. */
+export function SaveViewAction({
+  resource,
+  state,
+}: Readonly<{
+  resource: ViewResource;
+  state: ListOpening & Readonly<{ query: ListQuery }>;
+}>) {
+  const views = useSavedViews(resource);
   return (
     <>
-      {views.isError && (
-        <SurfaceState
-          loadingLabel={t("views.rail")}
-          state="failed"
-          label={t("views.rail")}
-          // Read by the `empty` arm alone, which this call never reaches: what
-          // there is none of is not a question a failed read has an answer to.
-          emptyLabel={t("common.empty")}
-          detail={{ onRetry: () => void views.refetch() }}
-        >
-          {null}
-        </SurfaceState>
+      {isNarrowed(state.query, state) && (
+        <SaveViewButton resource={resource} query={state.query} />
       )}
-      {narrowed && <SaveViewButton resource={resource} query={query} />}
       {/* Beside Save, because it is the same set of the reader's own views:
           a tab can be pressed but not named or removed, so this is the only
           place a view that has served its purpose can go. */}

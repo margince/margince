@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import type { OpenReceipt } from "../../components/citations";
 import { RecordCustomFields } from "../../components/recordcustomfields";
+import { RelationshipsTab } from "../../components/relationshiprows";
 import { DisclosureGroup } from "../../design-system/disclosure";
 import { Panel } from "../../design-system/panel";
-import { RelationshipsTab } from "../records/relationshiprows";
 import type { Company, Company360View } from "./companies";
 import { HierarchyRollupPanel } from "./companies.hierarchy";
 import { AssistantPanel } from "./companyassistant";

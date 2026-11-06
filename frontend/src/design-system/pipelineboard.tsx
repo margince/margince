@@ -121,10 +121,11 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    * loaded. A caller with a capped/paginated card fetch (the Kanban board) has
    * a real count from a server aggregate that `deals.length` cannot give it.
    * Falls back to `deals.length` when absent, which is correct for a caller
-   * whose card list is the whole stage.
+   * whose card list is the whole stage. `null`, not known yet, states no figure.
    */
-  count?: number;
-  /** Totals withheld because the aggregate cannot measure the card filters. */
+  count?: number | null;
+  /** Totals withheld because the aggregate cannot measure the card filters.
+   *  A plain board's one total is its count, so its head drops the figure. */
   sumHidden?: boolean;
   /** The caller's explanation of the withheld total. */
   sumHiddenReason?: string;
@@ -231,6 +232,12 @@ function BoardLayout<Record extends BoardRecord>({
   const t = useT();
   const { locale } = useLocale();
   const sections = useRef(new Map<string, HTMLElement>());
+  const spokenCount =
+    countLabel ??
+    ((count: number) =>
+      translatePlural(locale, "board.count", count, {
+        count: formatNumber(count, locale),
+      }));
   const board = useRef<HTMLDivElement>(null);
   // The search the cards answer, from the list the board is drawn in. With no
   // match in view, the board scrolls to the first and says where they are.
@@ -286,6 +293,8 @@ function BoardLayout<Record extends BoardRecord>({
         {columns.map((column) => {
           const money = moneyFor(column);
           const dealCount = column.count ?? column.deals.length;
+          const countHidden =
+            column.count === null || (!money && column.sumHidden);
           return (
             <section
               key={column.stage}
@@ -341,7 +350,11 @@ function BoardLayout<Record extends BoardRecord>({
                   deals" below, with the unit a bare figure leaves out. So the
                   whole chip, separator included, stays out of the accessible
                   tree rather than announcing the number twice. */}
-                <span className="board-col-count" aria-hidden="true">
+                <span
+                  className="board-col-count"
+                  aria-hidden="true"
+                  hidden={countHidden}
+                >
                   <OptionCount count={dealCount} />
                 </span>
                 {money && (
@@ -356,14 +369,10 @@ function BoardLayout<Record extends BoardRecord>({
                 {money && !column.sumHidden && (
                   <ColumnTotals money={money} scaleMinor={scaleMinor} />
                 )}
-                <span className="sr-only">
-                  {countLabel
-                    ? countLabel(dealCount)
-                    : translatePlural(locale, "board.count", dealCount, {
-                        count: formatNumber(dealCount, locale),
-                      })}
+                <span className="sr-only" hidden={countHidden}>
+                  {spokenCount(dealCount)}
                 </span>
-                {money && column.sumHidden && dealCount > 0 && (
+                {column.sumHidden && (countHidden || dealCount > 0) && (
                   <span className="board-col-refusal">
                     {column.sumHiddenReason}
                   </span>

@@ -90,7 +90,7 @@ func (p *preflightEnv) auditActor(t *testing.T, entityType string, entityID ids.
 // may do.
 func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	// A REAL passport row, not an invented id: the fire path re-authenticates
@@ -158,7 +158,7 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 // honest record of an actor that named nobody, and the identity survives.
 func TestAnAgentWithNoHumanBehindItStillRecordsWhichAgent(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	// No OnBehalfOf and no passport. UserID is the agent's OWN row, which is
@@ -237,7 +237,7 @@ func (p *preflightEnv) storedProvenance(t *testing.T, id ids.UUID) (actorID *str
 // schedule time.
 func TestARevokedPassportHoldsTheMessageItWasScheduledUnder(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	passport := p.issuePassport(t)
 	agent := principal.Principal{

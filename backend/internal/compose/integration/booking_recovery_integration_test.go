@@ -11,12 +11,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	monday := nextMonday()
 	body := AnyMap{"start": monday.Add(time.Hour), "end": monday.Add(90 * time.Minute), "booker": AnyMap{"name": "Guest", "email": "guest@visitor.example"}, "consent": AnyMap{"policy_version": "2026-01", "wording": "Contact me about this meeting."}}
@@ -66,7 +68,7 @@ func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 func TestProposalReplayRehydratesTheVaultWithoutStoringTheCapability(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	var contact struct {
 		ID string `json:"id"`
 	}

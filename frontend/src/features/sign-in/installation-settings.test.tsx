@@ -59,6 +59,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     call_zalo: true,
     individual_performance: true,
     forecast_self_correcting: true,
+    forecast_likely_threshold: 90,
     ...(opts.lockedReason
       ? { base_currency_locked_reason: opts.lockedReason }
       : {}),
@@ -186,6 +187,26 @@ describe("InstallationSettingsCard", () => {
     // unchanged base currency may be frozen, and the server would refuse it.
     await waitFor(() =>
       expect(patch()).toEqual({ timezone: "Europe/Vilnius" }),
+    );
+  });
+
+  it("edits the Likely threshold from its own row, and sends it alone", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard />);
+
+    expect(await screen.findByText("90%")).toBeTruthy();
+    const dialog = await openFrom(user, /edit likely threshold/i);
+    const threshold = within(dialog).getByLabelText(/likely threshold/i);
+    await waitFor(() => expect(document.activeElement).toBe(threshold));
+    await user.clear(threshold);
+    await user.type(threshold, "75");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() =>
+      expect(patch()).toEqual({ forecast_likely_threshold: 75 }),
     );
   });
 

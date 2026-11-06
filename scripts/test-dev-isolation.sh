@@ -13,6 +13,8 @@
 # rather than reimplemented here: a copy would prove nothing about production.
 set -euo pipefail
 
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$(cd "$(dirname "$0")" && pwd)/lib-git-fixture.sh"
 root="$(git rev-parse --show-toplevel)"
 dev="$root/scripts/dev.sh"
 failures=0
