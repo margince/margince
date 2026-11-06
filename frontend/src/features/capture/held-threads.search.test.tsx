@@ -4,12 +4,12 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { linkedInReachFixture } from "../../testing/reachfixture";
+import { steppedClock } from "../../testing/steppedclock";
 import {
   installFetchStub,
   jsonResponse,
@@ -22,6 +22,7 @@ type HeldThread = components["schemas"]["HeldThread"];
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   globalThis.fetch = originalFetch;
 });
@@ -67,7 +68,7 @@ function serveHeld(
 }
 
 async function openDrawer() {
-  const user = userEvent.setup();
+  const user = steppedClock();
   renderWithQueryClient(
     <StoryProviders>
       <ConnectionOutcomesCard />

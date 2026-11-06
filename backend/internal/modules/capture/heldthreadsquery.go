@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -18,8 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// heldSearchMax bounds a search, as the contract does.
-const heldSearchMax = 200
+// HeldSearchMax bounds a search, as the contract does.
+const HeldSearchMax = 200
 
 // HeldThreadQuery narrows and pages one seat's held threads.
 type HeldThreadQuery struct {
@@ -57,22 +56,20 @@ type heldCursor struct {
 // the same three values by their aliases, each descending.
 const heldOrder = `(v.status = 'pending', coalesce(a.occurred_at, v.created_at), v.id)`
 
-// ledgerReadable admits a thread to a match on its ledger's addresses. Those
-// carry no content gate, so a message the reader may not read matches nothing:
-// a match would name its parties. An erased message has no gate left to hold.
-const ledgerReadable = `(a.id IS NOT NULL OR present.id IS NULL)`
+// messageErased admits a thread to a match on its ledger's addresses. Those
+// carry no content gate and outlast the opening message, so they answer only
+// where that message is gone. Any other thread matches through its gated
+// participants: an archived or withheld message must not confirm a party.
+const messageErased = `v.first_activity_id IS NULL`
 
-// checked refuses a query before any transaction opens, and reads its cursor.
-// The first page has none, which is the zero cursor.
-func (q HeldThreadQuery) checked() (heldCursor, error) {
-	if utf8.RuneCountInString(q.Q) > heldSearchMax {
-		return heldCursor{}, fmt.Errorf("a search is at most %d characters: %w", heldSearchMax, apperrors.ErrInvalidArgument)
-	}
+// cursor reads the query's cursor before any transaction opens. The first page
+// has none, which is the zero cursor.
+func (q HeldThreadQuery) cursor() (heldCursor, error) {
 	if q.Cursor == "" {
 		return heldCursor{}, nil
 	}
 	after, err := storekit.DecodeOpaque[heldCursor](q.Cursor)
-	if err != nil || after.ID == ids.Nil {
+	if err != nil || after.ID == ids.Nil || after.At.IsZero() {
 		return heldCursor{}, &storekit.MalformedCursorError{}
 	}
 	return after, nil
@@ -91,8 +88,8 @@ func (q HeldThreadQuery) ensureContactReadable(ctx context.Context, tx pgx.Tx) e
 }
 
 // filters renders the query's narrowing over the verdict `v`, the gated message
-// `a` and the ungated one `present`. Every match goes through `a` or
-// ledgerReadable, so a filter cannot test a party of a withheld message.
+// `a`. Every match goes through `a` or messageErased, so a filter cannot test a
+// party of a message the reader may not read.
 func (q HeldThreadQuery) filters(after heldCursor, arg func(any) int) string {
 	var where strings.Builder
 	if q.Status != "" {
@@ -101,14 +98,14 @@ func (q HeldThreadQuery) filters(after heldCursor, arg func(any) int) string {
 	if term := strings.TrimSpace(q.Q); term != "" {
 		pattern := arg("%" + storekit.EscapeLike(term) + "%")
 		fmt.Fprintf(&where, ` AND (a.subject ILIKE $%[1]d
-			OR (`+ledgerReadable+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen WHERE seen ILIKE $%[1]d))
+			OR (`+messageErased+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen WHERE seen ILIKE $%[1]d))
 			OR EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id
 			            AND (p.address ILIKE $%[1]d OR p.display_name ILIKE $%[1]d)))`, pattern)
 	}
 	if q.ContactID != nil {
 		contact := arg(*q.ContactID)
 		fmt.Fprintf(&where, ` AND (EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND p.contact_id = $%[1]d)
-			OR (`+ledgerReadable+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen
+			OR (`+messageErased+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) seen
 			            JOIN contact_email ce ON lower(ce.email) = lower(seen)
 			           WHERE ce.contact_id = $%[1]d AND ce.archived_at IS NULL)))`, contact)
 	}

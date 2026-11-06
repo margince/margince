@@ -99,7 +99,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 	if !ok || actor.UserID == ids.Nil {
 		return HeldThreadPage{}, apperrors.ErrPermissionDenied
 	}
-	after, err := query.checked()
+	after, err := query.cursor()
 	if err != nil {
 		return HeldThreadPage{}, err
 	}
@@ -149,7 +149,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 		// It discloses nothing new: the reader is looking at their own verdict
 		// row, which names first_activity_id. Only the boolean crosses over —
 		// no subject, no id, no occurred_at. A filter reads `a`, or the ledger
-		// through ledgerReadable, so no match crosses over either.
+		// through messageErased, so no match crosses over either.
 		rows, err := tx.Query(ctx, `
 			SELECT v.thread_key,
 			       v.status,

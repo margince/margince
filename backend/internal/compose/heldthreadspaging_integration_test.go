@@ -8,6 +8,8 @@ package compose
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -171,6 +174,23 @@ func TestAFilterCannotTestThePartiesOfAWithheldMessage(t *testing.T) {
 	}
 }
 
+// The ledger's addresses answer only where the opening message is gone. An
+// archived message keeps its parties from a search, and a readable one matches
+// through its participants alone.
+func TestTheLedgerAnswersOnlyForAnErasedMessage(t *testing.T) {
+	e := integration.Setup(t)
+	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	archived := seedHeldThread(t, e, e.Rep1, "archived", "held", 1, day, false, "archived@party.test")
+	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, archived)
+	seedHeldThread(t, e, e.Rep1, "readable", "held", 1, day, false, "later@party.test")
+
+	for _, term := range []string{"archived@party", "later@party"} {
+		if page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{Q: term}); len(page.Threads) != 0 {
+			t.Errorf("searching %q matched the ledger: %+v", term, page.Threads)
+		}
+	}
+}
+
 // Erasing a contact takes their address out of the ledger through the real
 // writer, so a search no longer finds it. Another party on the row stays.
 func TestAnErasedAddressIsNoLongerSearchable(t *testing.T) {
@@ -206,16 +226,31 @@ func TestThreadsAtOneInstantPageEachOnce(t *testing.T) {
 	}
 }
 
-// A malformed cursor and an over-long search are refused.
-func TestTheHeldListRefusesABadCursorAndAnOverlongSearch(t *testing.T) {
+// A cursor the list did not mint is refused, even one that names a row.
+func TestTheHeldListRefusesACursorItDidNotMint(t *testing.T) {
 	e := integration.Setup(t)
-	_, err := capture.HeldThreadsFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.HeldThreadQuery{Cursor: "not-a-cursor"})
-	if _, malformed := errors.AsType[*storekit.MalformedCursorError](err); !malformed {
-		t.Errorf("a malformed cursor answered %v", err)
+	incomplete, err := storekit.EncodeOpaque(map[string]ids.UUID{"id": ids.NewV7()})
+	if err != nil {
+		t.Fatalf("encoding a cursor: %v", err)
 	}
-	_, err = capture.HeldThreadsFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.HeldThreadQuery{Q: strings.Repeat("x", 201)})
-	if !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Errorf("an over-long search answered %v", err)
+	for _, cursor := range []string{"not-a-cursor", incomplete} {
+		_, err := capture.HeldThreadsFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.HeldThreadQuery{Cursor: cursor})
+		if _, malformed := errors.AsType[*storekit.MalformedCursorError](err); !malformed {
+			t.Errorf("cursor %q answered %v", cursor, err)
+		}
+	}
+}
+
+// An over-long search is a 422 naming the field, as the contract declares.
+func TestAnOverlongSearchIsRefusedByField(t *testing.T) {
+	e := integration.Setup(t)
+	handlers := captureSenderHandlers{db: InstallationDB(e.Pool)}
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/v1/capture/held-threads", nil).WithContext(purgeCtx(e, e.Rep1))
+	q := strings.Repeat("x", capture.HeldSearchMax+1)
+	handlers.ListHeldThreads(w, r, crmcontracts.ListHeldThreadsParams{Q: &q})
+	if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), `"q"`) {
+		t.Errorf("status %d: %s", w.Code, w.Body.String())
 	}
 }
 

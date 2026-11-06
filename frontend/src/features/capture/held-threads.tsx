@@ -116,26 +116,28 @@ export function HeldThreads() {
     <div className="form-stack">
       {first?.counts && <HeldThreadNotices list={first} />}
       {first?.counts && <HeldCounts counts={first.counts} />}
-      <div className="held-threads-filters">
-        <SearchField
-          aria-label={t("heldThreads.search")}
-          placeholder={t("heldThreads.search")}
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-        />
-        <Select
-          aria-label={t("heldThreads.statusFilter")}
-          value={status}
-          options={[
-            { value: "", label: t("heldThreads.statusAll") },
-            ...HELD_STATUSES.map((value) => ({
-              value,
-              label: t(heldStatusLabel[value]),
-            })),
-          ]}
-          onChange={(value) => setStatus(value as HeldStatus | "")}
-        />
-      </div>
+      {first?.counts && (
+        <div className="held-threads-filters">
+          <SearchField
+            aria-label={t("heldThreads.search")}
+            placeholder={t("heldThreads.search")}
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+          />
+          <Select
+            aria-label={t("heldThreads.statusFilter")}
+            value={status}
+            options={[
+              { value: "", label: t("heldThreads.statusAll") },
+              ...HELD_STATUSES.map((value) => ({
+                value,
+                label: t(heldStatusLabel[value]),
+              })),
+            ]}
+            onChange={(value) => setStatus(value as HeldStatus | "")}
+          />
+        </div>
+      )}
       {held.isError && <ErrorLine error={held.error} />}
       {first && rows.length === 0 ? (
         <EmptyState>

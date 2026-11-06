@@ -9,6 +9,7 @@ package compose
 import (
 	"log/slog"
 	"net/http"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -79,6 +80,10 @@ func (h captureSenderHandlers) ListCaptureContactsAwaitingDecision(w http.Respon
 // this seat's view of what the capture posture decided on their behalf. Both
 // are owner-scoped and read from the same db.
 func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListHeldThreadsParams) {
+	if params.Q != nil && utf8.RuneCountInString(*params.Q) > capture.HeldSearchMax {
+		httperr.Write(w, r, httperr.Validation("q", "too_long", "Search for at most 200 characters."))
+		return
+	}
 	page, err := capture.HeldThreadsFor(r.Context(), h.db, heldThreadQuery(params))
 	if err != nil {
 		httperr.Write(w, r, err)
