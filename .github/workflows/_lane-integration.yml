@@ -183,8 +183,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      # Shallow: the one unit test that reads history is in backend/gates, which
-      # this pass skips, and deterministic-gates runs it with full history.
+      # Shallow: the unit tests that read history all live in backend/gates,
+      # which this pass skips, and deterministic-gates runs them with full history.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

@@ -165,11 +165,9 @@ func assertCommitIsTheUpgradeFloor(t *testing.T) {
 
 // baselineEraFromHistory reads the seeded matrix as it stood at the baseline.
 //
-// It FAILS rather than skipping when history is unreachable. The backend unit
-// lane checks out at fetch-depth: 0 today; if that ever changes the honest
-// outcome is a red gate naming the cause, because a gate that degraded to "no
-// history, nothing to compare" would look exactly like a passing one — and what
-// it stops being able to see is a fixture edited to excuse a missing backfill.
+// It fails rather than skips when history is unreachable. deterministic-gates
+// runs it with fetch-depth: 0, and a shallow checkout must show as red. A skip
+// would look like a pass, and hide a fixture edited to excuse a missing backfill.
 func baselineEraFromHistory(t *testing.T) map[string]any {
 	t.Helper()
 	raw := gitAtBaselineEra(t, "show", baselineEraCommit+":"+baselineEraSource)
@@ -178,12 +176,9 @@ func baselineEraFromHistory(t *testing.T) map[string]any {
 
 // gitAtBaselineEra runs one read-only git command against the repository root.
 //
-// It FAILS rather than skipping when history is unreachable. Both lanes that run
-// this gate check out at fetch-depth: 0 today; if that changes, the honest
-// outcome is a red gate naming the cause, because a gate that degraded to "no
-// history, nothing to compare" would look exactly like a passing one — and what
-// it stops being able to see is a pre-state edited or repointed to excuse a
-// missing backfill.
+// It fails rather than skips when history is unreachable. deterministic-gates,
+// the one job that runs this gate, checks out at fetch-depth: 0. A skip would
+// look like a pass, and hide a pre-state edited to excuse a missing backfill.
 //
 // Every argument is a compile-time constant: nothing from a fixture, an
 // environment variable or a test name reaches the argv.
@@ -199,8 +194,8 @@ func gitAtBaselineEra(t *testing.T, args ...string) string {
 			detail = strings.TrimSpace(string(exit.Stderr))
 		}
 		t.Fatalf("git %s: %s\nThis gate derives the composition arm's pre-state from history, so it "+
-			"needs FULL history. If this is CI, the job running the backend unit lane checks out "+
-			"shallow — give it `fetch-depth: 0`, as deterministic-gates already has. Deepen "+
+			"needs FULL history. If this is CI, the job running backend/gates checks out "+
+			"shallow: give it `fetch-depth: 0`, as deterministic-gates already has. Deepen "+
 			"the checkout; do not weaken the gate.", strings.Join(args, " "), detail)
 	}
 	return string(out)

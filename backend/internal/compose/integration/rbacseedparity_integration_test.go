@@ -67,12 +67,11 @@ const seededDefaults = "../../../migrations/testdata/rbac_seeded_defaults.json"
 // records it as "foundation". Such a database cannot be repaired forward; the
 // migrator says so and tells the operator to rebuild.
 //
-// DERIVED, not hand-written, and checked elsewhere: backend's
-// rbacbaselineerafixture_test.go pins this file to `git show <baseline>:<the
-// seeded-matrix fixture>` on every unit pass. That matters because the pre-state
-// is exactly what an unwilling author would edit — move the object into the
-// starting state and the convergence a broken backfill never delivered is
-// already there, with nothing else changed to give it away.
+// DERIVED, not hand-written, and checked elsewhere. In deterministic-gates,
+// backend's rbacbaselineerafixture_test.go pins this file to `git show
+// <baseline>:<the seeded-matrix fixture>`. The pre-state is what an unwilling
+// author would edit. Move the object into the starting state, and the
+// convergence a broken backfill never delivered is already there.
 //
 // The derivation is checked in backend/gates, not here, because it needs full
 // history. ci.yml gives that to deterministic-gates, while the integration
