@@ -3210,9 +3210,10 @@ export interface paths {
          *     set here — ADR-0079 replaced it, because what a company IS to us is multi-valued.)
          *     Company identity is never duplicated. Admin write.
          *
-         *     An agent asks its user first, and is refused `margin_tier` (422) for the reason
+         *     An agent asks its user first, and is refused `margin_tier` (403) for the reason
          *     `decideCommissionEntry` is human-only: it is the rate the commission ledger multiplies a
-         *     won deal by, so it sets what a partner is paid on every future deal.
+         *     won deal by, so it sets what a partner is paid on every future deal. An agent changes the
+         *     terms of a live partner only (403 otherwise): `setUpPartner` is how it proposes a new one.
          */
         put: operations["upsertPartner"];
         post?: never;
@@ -7894,8 +7895,9 @@ export interface paths {
          *       synthesizes its trigger id per evaluation pass and never stages it, so those are
          *       unreplayable by construction. Nothing is lost: the schedule re-examines the same
          *       condition on its own next pass.
-         *     - `passport_revoked` — the agent that set the rule up lost its passport, so the rule
-         *       is paused. A user resuming it makes it their own.
+         *     - `passport_revoked` — the agent that set the rule up no longer has a live passport or
+         *       connection, whether revoked or expired, so the rule is paused. A user resuming it makes
+         *       it their own. The audit row of the pause says which it was.
          *
          *     A retry is a NEW firing with its own run record, so the history shows both the
          *     failure and what followed it. Retrying a run whose retry also failed is allowed and
@@ -11889,7 +11891,8 @@ export interface paths {
         /**
          * Lift an exclusion.
          * @description A workspace rule by admin or ops; a user rule by the user it names. Mail from the address or
-         *     domain is captured again from the next message on; nothing already dropped comes back.
+         *     domain is captured again from the next message on; nothing already dropped comes back. An
+         *     agent lifts only a rule an agent added, and a user's rule answers `409`.
          */
         delete: operations["deleteCaptureExclusion"];
         options?: never;
@@ -12213,7 +12216,8 @@ export interface paths {
          *     Lifting widens NOTHING already captured. Mail held while the hold stood was held for a
          *     reason that was true at the time, and re-opening a year of correspondence as a side effect
          *     of tidying a list is not something anybody asked for. New mail from that party is captured
-         *     under the mailbox's ordinary posture again.
+         *     under the mailbox's ordinary posture again. An agent lifts only a hold an agent added, and a
+         *     user's hold answers `409`.
          */
         delete: operations["deleteCaptureCounterpartyHold"];
         options?: never;
@@ -18168,7 +18172,7 @@ export interface paths {
          *     owner. For a member who left, the contacts and companies only they can see move too and
          *     stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
-         *     owner (an active human seat that can write, inside the caller's write scope), else `422`
+         *     owner (an active human seat that can write), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Open tasks assigned to the member move too, each through the ordinary update; a task the
          *     caller may not change stays with the member. Automations and deal-room stewardships are not moved.
          */
@@ -19233,12 +19237,11 @@ export interface paths {
         head?: never;
         /**
          * Edit a Deal Room's title and welcome message (partial).
-         * @description Edits the WORKING copy only. A live room keeps serving its last published
-         *     release until a human publishes again, so changing the title or welcome text
-         *     here never changes what a buyer is currently reading.
+         * @description The buyer reads the new title and welcome text as soon as they are saved, so an
+         *     agent spends `send` on it.
          *
          *     `state` is not editable — it moves through the lifecycle operations
-         *     (publish/pause/resume/close).
+         *     (pause/resume/close).
          */
         patch: operations["updateDealRoom"];
         trace?: never;
@@ -19337,7 +19340,8 @@ export interface paths {
          * Set or clear when buyer access lapses.
          * @description Null clears the bound, leaving access open until the room is closed or
          *     archived. A past instant is accepted and takes effect immediately — that is
-         *     how access is cut short without ending the room.
+         *     how access is cut short without ending the room. It decides how long a buyer can
+         *     read the room, so an agent spends `send` on it.
          */
         put: operations["setDealRoomExpiry"];
         post?: never;
@@ -19571,8 +19575,8 @@ export interface paths {
          * Put an attachment of the deal in front of the buyer.
          * @description The attachment must be filed on THIS room's deal (`entity_type: deal`, the
          *     room's `deal_id`); any other id is 404. The attachment row is the exact
-         *     version the buyer will be shown. Editorial: the buyer sees it at the next
-         *     publish. Refused once the room can no longer reach a buyer.
+         *     version the buyer will be shown. The buyer sees it at once, so an agent spends
+         *     `send` on it. Refused once the room can no longer reach a buyer.
          */
         post: operations["addDealRoomDocument"];
         delete?: never;
@@ -19598,15 +19602,14 @@ export interface paths {
         /**
          * Take a document out of the room.
          * @description Marks the entry removed; the attachment itself is untouched. The buyer stops
-         *     seeing it at the next publish — a release already published keeps naming it,
-         *     because that release is what they were shown.
+         *     seeing it at once, so an agent spends `send` on it.
          */
         delete: operations["removeDealRoomDocument"];
         options?: never;
         head?: never;
         /**
          * Rename, regroup or reorder a room document.
-         * @description Editorial, like adding one — the buyer sees the change at the next publish.
+         * @description The buyer reads the change at once, like adding one, so an agent spends `send` on it.
          */
         patch: operations["updateDealRoomDocument"];
         trace?: never;
@@ -19630,7 +19633,8 @@ export interface paths {
         put?: never;
         /**
          * Open a thread as the seller's side — a question on a document, or a room-level update.
-         * @description The first comment is the body. Refused once the room can no longer reach a
+         * @description The first comment is the body. The buyer reads it at once, so an agent spends
+         *     `send` on it. Refused once the room can no longer reach a
          *     buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
          *     document thread is pinned to the document's current version.
          */
@@ -19656,8 +19660,8 @@ export interface paths {
         put?: never;
         /**
          * Reply in a thread as the seller's side.
-         * @description Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
-         *     thread instead) and in a room that can no longer reach a buyer
+         * @description The buyer reads it at once, so an agent spends `send` on it. Refused on a resolved
+         *     thread (`409 deal_room_thread_resolved`: open a new thread instead) and in a room that can no longer reach a buyer
          *     (`409 deal_room_content_not_editable`).
          */
         post: operations["replyDealRoomThread"];
@@ -24951,6 +24955,12 @@ export interface components {
              *     Needs `agent_client` update. The deployment file can hold it off.
              */
             metadata_document_clients?: boolean;
+            /**
+             * @description Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+             *     answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+             *     update. Read as `client_check` on `GET /installation/agent-clients`.
+             */
+            mcp_client_check?: boolean;
             /**
              * @description Directory groups that GRANT roles at corporate sign-in. Each key is a group
              *     exactly as the IdP spells it in the ID token's `groups` claim; each value is
@@ -40093,6 +40103,29 @@ export interface components {
             body?: string;
             /** @description The editor's markup beside the plain body, so reopening restores the formatting. */
             html_body?: string | null;
+            /**
+             * @description The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+             *     whole draft, so omitting this clears the files; a client keeps them by sending back
+             *     the `id` of each entry in the draft's `attachments`.
+             *
+             *     Held to the send's own cap. A file the caller cannot see, or one the send would
+             *     refuse, is left out rather than refused, so a save never loses the words; the answer
+             *     counts it in `attachments_unavailable`.
+             */
+            attachment_ids?: string[];
+            /**
+             * @description The reason for contact the rep chose, checked as the send checks it: a category
+             *     reserved for the installation's own notices is refused 422. Omit it for none.
+             */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /**
+             * Format: date-time
+             * @description The moment the rep picked to send at, checked as the send checks it: with
+             *     `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+             */
+            scheduled_at?: string | null;
+            /** @description The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`. */
+            scheduled_tz?: string | null;
         };
         /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
         MailDraft: {
@@ -40113,6 +40146,28 @@ export interface components {
             version: number;
             /** @description An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it. */
             agent_drafted: boolean;
+            /**
+             * @description The chosen files the author can still attach, in the order chosen, so the composer
+             *     draws each one without asking again. Resolved only by the draft read and the save
+             *     answer: absent elsewhere, so its absence there does not mean the draft has no files.
+             */
+            attachments?: components["schemas"]["ApprovalPreviewFile"][];
+            /**
+             * @description How many chosen files the send would now refuse: removed, out of the author's sight,
+             *     kept without bytes, or empty. Not named, because a file the author cannot see answers
+             *     404 everywhere else. Absent when every file resolves.
+             */
+            attachments_unavailable?: number;
+            /** @description The reason for contact the author chose. Absent when none was. */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /**
+             * Format: date-time
+             * @description The moment the author picked to send at, as saved. It may have passed since; the
+             *     draft schedules nothing. Absent when none was picked.
+             */
+            scheduled_at?: string;
+            /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
+            scheduled_tz?: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -44025,8 +44080,10 @@ export interface components {
             greeting_name?: string | null;
             /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
             timezone?: string;
-            /** @description Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster. */
+            /** @description Whether the user chose `timezone` themselves, rather than the app storing the browser's guess or an agent setting it. Present on the caller's own seat; absent on the roster. */
             timezone_chosen?: boolean;
+            /** @description The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster. */
+            timezone_set_by?: string;
             /**
              * @description The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
              *     Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -44047,9 +44104,9 @@ export interface components {
             is_agent: boolean;
             /** @description The extension unit this seat is the service member of: the identity that unit's scheduled feed runs as. Null for every other seat, including an AI agent seat, so a client tells the two apart by this field and not by `is_agent`. Present only for an admin caller, with `roles`. */
             service_extension?: string | null;
-            /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
+            /** @description Whether the CALLER may name this member as an owner an automation runs as: an active human seat that can write, inside the caller's own write scope. An automation's owner picker is built on it. A record's owner picker reads `can_own_records` instead. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
             assignable?: boolean;
-            /** @description Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed. */
+            /** @description Whether this member's seat may own records: an active human seat that can write. The answer is the same for every caller. A record's owner change asks this of the new owner. It also needs the caller to be allowed to change the record, unless the record has no owner and the caller is a human. Every record owner picker and a website form's owner of new leads read it. A form's new leads may also go to an invited colleague, so its picker offers fewer members than its write accepts. Present on `listUsers`; absent means not computed. */
             can_own_records?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];
@@ -49585,6 +49642,11 @@ export interface components {
             data: components["schemas"]["AgentClient"][];
             page: components["schemas"]["PageInfo"];
             registration: components["schemas"]["AgentClientRegistration"];
+            /**
+             * @description Whether admins' AI tools are offered the `check_client` tool. Change it with
+             *     `mcp_client_check` on `PATCH /installation/settings`.
+             */
+            client_check: boolean;
         };
         RegisterAgentClientRequest: {
             /** @description Shown on the consent screen and in the client list. */
@@ -50508,10 +50570,15 @@ export interface components {
              */
             owner_id?: string | null;
             /**
-             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+             * @description Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
              * @enum {string|null}
              */
             paused_reason?: "list_archived" | "list_invalid" | "list_unavailable" | "burst" | "passport_revoked" | null;
+            /**
+             * Format: uuid
+             * @description The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
+             */
+            setter_passport_id?: string | null;
             params: {
                 [key: string]: unknown;
             };
@@ -50647,7 +50714,8 @@ export interface components {
              *     means nobody has established that running this handler twice is safe.
              *     `trigger_event_unavailable` means the event cannot be rebuilt, which is
              *     permanent for a scheduled firing rather than a condition that clears.
-             *     `passport_revoked` means the rule stopped with the passport that set it up.
+             *     `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+             *     or connection was revoked or expired.
              * @enum {string}
              */
             refusal?: "not_failed" | "repeats_its_effect" | "trigger_event_unavailable" | "passport_revoked";
@@ -51562,7 +51630,7 @@ export interface components {
             body: string;
             /** @description Only with a document. Marks the thread as one the seller still owes an answer on. */
             required_change?: boolean;
-            /** @description Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product. */
+            /** @description Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential. */
             source?: string;
             /**
              * Format: uuid
@@ -51582,6 +51650,7 @@ export interface components {
         };
         PostDealRoomCommentRequest: {
             body: string;
+            /** @description Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential. */
             source?: string;
             /**
              * Format: uuid
@@ -52116,11 +52185,11 @@ export interface components {
             /** Format: date-time */
             recorded_at: string;
             /**
-             * @description A colleague recorded the stop. False when the contact recorded it on a link in a mail or
-             *     Margince recorded it, for example for a bounce.
+             * @description A colleague recorded the stop, by hand or through their agent. False when the contact recorded
+             *     it on a link in a mail or Margince recorded it, for example for a bounce.
              */
             recorded_by_colleague: boolean;
-            /** @description The colleague's current name. Null when no colleague recorded it, or their seat is gone. */
+            /** @description The colleague's current name, the user an agent acted for included. Null when no colleague recorded it, or their seat is gone. */
             recorded_by_name?: string | null;
             /** @description This caller may take the stop back now, with a reason. */
             may_lift: boolean;
@@ -61402,6 +61471,7 @@ export interface operations {
                     "application/json": components["schemas"]["Partner"];
                 };
             };
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -67595,6 +67665,8 @@ export interface operations {
             /**
              * @description `code: version_skew` — the draft is not at the version you last read: another
              *     composer saved or discarded it, or one exists and you sent no `If-Match`.
+             *     `code: own_draft_waiting` — an agent's save, where the user keeps a draft of their
+             *     own here; the agent leaves it to them.
              */
             409: {
                 headers: {
@@ -67635,6 +67707,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -76894,6 +76967,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77176,6 +77250,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

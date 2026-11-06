@@ -47,6 +47,9 @@ const (
 type rulePause struct {
 	reason string
 	count  int
+	// setter says how a setter lapsed, for the audit row. The one reason covers
+	// both, because the owner resumes either the same way.
+	setter string
 }
 
 // fireListRule fans one check out into a firing per changed record, or
@@ -253,8 +256,11 @@ func (p *RulePauser) pauseRule(ctx context.Context, seen ruleVersion, pause rule
 		if err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "automation", rule.ID,
-			map[string]any{auditEnabled: true}, map[string]any{auditEnabled: false, "paused_reason": pause.reason}); err != nil {
+		after := map[string]any{auditEnabled: false, "paused_reason": pause.reason}
+		if pause.setter != "" {
+			after[keySetterPassport+"_state"] = pause.setter
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", "automation", rule.ID, map[string]any{auditEnabled: true}, after); err != nil {
 			return err
 		}
 		return p.tellOwner(ctx, tx, rule, pause, listID)
@@ -283,7 +289,7 @@ func pauseSentence(pause rulePause) string {
 	case PausedListInvalid:
 		return "The filter of the Live List this rule watches no longer works. Fixing the filter does not resume the rule; resume it in Settings."
 	case PausedPassportRevoked:
-		return "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it in Settings to keep it running as your own."
+		return "The agent that set this rule up no longer has a live passport or connection, so the rule stopped. Resume it in Settings to keep it running as your own."
 	case PausedBurst:
 		return fmt.Sprintf("One check of the list moved %d records, more than the %d this rule acts on at once, so it acted on none of them. Resume it in Settings when you are ready.",
 			pause.count, burstCap)

@@ -9,6 +9,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
 
@@ -88,6 +89,26 @@ func requireMarginTierGrant(ctx context.Context, in UpsertPartnerInput) error {
 		}
 	}
 	return auth.Require(ctx, "partner", principal.ActionUpdate)
+}
+
+// refuseAgentPromotion keeps an agent to the terms of a live partner. Making a
+// company a partner waits for a user on set_up_partner, whose approved run is
+// the one agent write that names MustCreate. The caller holds the company's lock.
+func refuseAgentPromotion(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) error {
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalAgent || in.MustCreate {
+		return nil
+	}
+	live, err := hasPartnerRow(ctx, tx, in.CompanyID)
+	if err != nil {
+		return fmt.Errorf("contacts: reading whether the company is a partner: %w", err)
+	}
+	if live {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "agent_promotes_no_partner",
+		Detail: "this company is not a partner yet, and an agent does not make it one here; use set_up_partner, which waits for a user's approval",
+	}
 }
 
 // asFreshProgram makes a set-up start from the column defaults even when it

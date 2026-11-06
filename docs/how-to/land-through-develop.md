@@ -17,6 +17,12 @@ The `changes` job sets `full_lane` to false when the base is `develop`. These jo
 - `images`;
 - `sonarcloud`.
 
+`backend-lint` also skips the test-input census, which guards the cache warm-up on `main`.
+
+CI sets `CHECK_BASE_REF` to the base branch. So strict lint, `comment-budget`, the citation check, the contract check and
+the migration check judge only what the pull request adds to `develop`. Into `main` they judge what it adds
+to `main`, so the nightly pull request judges all of `develop`'s new code.
+
 Everything else runs as it does for `main`: the Go build and gates, lint, craftsmanship, the license and
 secret scans, the extension lane and the frontend lane. `ci` stays the required check.
 

@@ -17,18 +17,24 @@ import { Select } from "../../design-system/select";
 import {
   type TokenCard,
   TokenInput,
+  type TokenParse,
   type TokenSuggestion,
 } from "../../design-system/tokeninput";
-import { useT } from "../../i18n";
+import { usePlural, useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
+import { readAddressList } from "./composeaddresslist";
 import "./composehead.css";
 
 type Contact360 = components["schemas"]["Contact360"];
 type Company360 = components["schemas"]["Company360"];
 type User = components["schemas"]["User"];
 type Team = components["schemas"]["Team"];
+
+export type AddressLine = "to" | "cc" | "bcc";
+
+const ADDRESS_KEYS = [",", ";"];
 
 const MAILABLE_STATUS: ReadonlySet<User["status"]> = new Set([
   "active",
@@ -183,6 +189,8 @@ export function AddressBlock({
   onOpenCopies,
   suggestions,
   onToEditing,
+  refused,
+  onRefuse,
   invalidTo,
   needTo,
   deadRecipients,
@@ -199,6 +207,9 @@ export function AddressBlock({
   suggestions: readonly TokenSuggestion[];
   /** The reader has taken the To line over — see TokenInput's own prop. */
   onToEditing: () => void;
+  /** Text each line could not read as addresses. */
+  refused: Readonly<Record<AddressLine, readonly string[]>>;
+  onRefuse: (line: AddressLine, parts: readonly string[]) => void;
   invalidTo: boolean;
   needTo: string;
   /** The recipients on this draft that are known not to arrive. */
@@ -206,6 +217,18 @@ export function AddressBlock({
   disabled?: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const parse = (line: AddressLine): TokenParse => ({
+    keys: ADDRESS_KEYS,
+    read: readAddressList,
+    onRefuse: (parts) => onRefuse(line, parts),
+  });
+  const refusal = (line: AddressLine) =>
+    refused[line].length === 0
+      ? undefined
+      : plural("compose.notAnAddress", refused[line].length, {
+          parts: refused[line].join(", "),
+        });
   const commit = (next: readonly string[]) => [...next];
   const copies = copiesOpen || cc.length > 0 || bcc.length > 0;
   return (
@@ -213,7 +236,7 @@ export function AddressBlock({
       <Field
         className="compose-address-field"
         label={t("compose.to")}
-        error={invalidTo ? needTo : undefined}
+        error={refusal("to") ?? (invalidTo ? needTo : undefined)}
         trailing={
           copies ? undefined : (
             // Against the field it extends, not at the dialog's margin.
@@ -228,6 +251,7 @@ export function AddressBlock({
             {...control}
             values={to}
             onChange={(next) => onToChange(commit(next))}
+            parse={parse("to")}
             suggestions={suggestions}
             onEditing={onToEditing}
             disabled={disabled}
@@ -237,23 +261,33 @@ export function AddressBlock({
       </Field>
       {copies && (
         <>
-          <Field className="compose-address-field" label={t("compose.cc")}>
+          <Field
+            className="compose-address-field"
+            label={t("compose.cc")}
+            error={refusal("cc")}
+          >
             {(control) => (
               <TokenInput
                 {...control}
                 values={cc}
                 onChange={(next) => onCcChange(commit(next))}
+                parse={parse("cc")}
                 suggestions={suggestions}
                 disabled={disabled}
               />
             )}
           </Field>
-          <Field className="compose-address-field" label={t("compose.bcc")}>
+          <Field
+            className="compose-address-field"
+            label={t("compose.bcc")}
+            error={refusal("bcc")}
+          >
             {(control) => (
               <TokenInput
                 {...control}
                 values={bcc}
                 onChange={(next) => onBccChange(commit(next))}
+                parse={parse("bcc")}
                 suggestions={suggestions}
                 disabled={disabled}
               />

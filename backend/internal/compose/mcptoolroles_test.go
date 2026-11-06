@@ -4,28 +4,26 @@
 package compose
 
 import (
-	"bytes"
 	"encoding/json"
-	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
-)
 
-var updateMCPToolRolesPage = flag.Bool("update-mcp-tool-roles-page", false,
-	"rewrite docs/reference/mcp-tool-roles.md from docs/reference/mcp-tool-roles.json")
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
 
 type toolRolesDoc struct {
 	Roles []string `json:"roles"`
 	Rows  []struct {
-		Tool     string   `json:"tool"`
-		Action   string   `json:"action"`
-		Allowed  []string `json:"allowed_for"`
-		Refused  []string `json:"refused_for"`
-		Unproven []string `json:"unproven_for"`
+		Tool    string   `json:"tool"`
+		Action  string   `json:"action"`
+		Verb    string   `json:"verb"`
+		Allowed []string `json:"allowed_for"`
+		Refused []string `json:"refused_for"`
 	} `json:"rows"`
 }
 
@@ -49,7 +47,7 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 	published := map[string]bool{}
 	for _, row := range doc.Rows {
 		published[row.Tool+"."+row.Action] = true
-		every := slices.Concat(row.Allowed, row.Refused, row.Unproven)
+		every := slices.Concat(row.Allowed, row.Refused)
 		slices.Sort(every)
 		roles := slices.Sorted(slices.Values(doc.Roles))
 		if !slices.Equal(every, roles) {
@@ -73,7 +71,7 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 	}
 	for row := range served {
 		if !published[row] {
-			t.Errorf("%s is served and docs/reference/mcp-tool-roles.json has no row for it. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished", row)
+			t.Errorf("%s is served and docs/reference/mcp-tool-roles.json has no row for it. Run: UPDATE_MCP_TOOL_ROLES=1 make test-roles", row)
 		}
 	}
 	for row := range published {
@@ -83,115 +81,48 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 	}
 }
 
-func TestTheToolRolePageIsTheMatrix(t *testing.T) {
-	page := filepath.Join(mcpDocsDir, "mcp-tool-roles.md")
-	rendered := renderToolRoles(readToolRoles(t))
-	if *updateMCPToolRolesPage {
-		if err := os.WriteFile(page, rendered, 0o600); err != nil {
-			t.Fatal(err)
-		}
-		return
-	}
-	committed, err := os.ReadFile(page)
+// readToolChecks is the table the binary embeds, which tools/list narrows by.
+func readToolChecks(t *testing.T) agents.ToolChecksFile {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "modules", "agents", "toolchecks.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(committed, rendered) {
-		t.Errorf("%s is not its JSON. Run: go test ./internal/compose/ -run TestTheToolRolePageIsTheMatrix -update-mcp-tool-roles-page", page)
+	var table agents.ToolChecksFile
+	if err := json.Unmarshal(raw, &table); err != nil {
+		t.Fatal(err)
 	}
+	return table
 }
 
-const toolRolesPageHead = `# Which role can use which MCP tool
-
-<!-- Generated together with mcp-tool-roles.json; do not edit by hand. -->
-
-An agent has the access of the user it acts for. This page shows what that gives on each role a new
-workspace starts with. [rbac-matrix.md](rbac-matrix.md) lists the grants themselves;
-[agent-tools.md](agent-tools.md) lists the tools.
-
-Nobody types this table. ` + "`TestTheToolRoleMatrixIsPublished`" + ` calls every tool and action as a passport on
-each role, on records that user owns where the sweep can make one, and writes
-[mcp-tool-roles.json](mcp-tool-roles.json). The test fails when the answers change and the file does not.
-
-| Mark | Meaning |
-|---|---|
-| ✓ | The call ran for this role. |
-| ✗ | A gate refused this role. |
-| ? | Not proven either way. The call stopped first: no such record, an invalid body, a service this test does not start, or a relation it lacks. |
-
-A cell with counts, such as ` + "`5✓ 2✗ 3?`" + `, covers the actions of one router. Row scope, the seat and the passport's
-scopes still apply to each call. A ✓ says the role passed on a record it owns, not on every record.
-
-Regenerate from the repository root, then from ` + "`backend/`" + `:
-
-    UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished
-    go test ./internal/compose/ -run TestTheToolRolePageIsTheMatrix -update-mcp-tool-roles-page
-
-`
-
-func renderToolRoles(doc toolRolesDoc) []byte {
-	var b bytes.Buffer
-	b.WriteString(toolRolesPageHead)
-	b.WriteString("| Tool | " + strings.Join(doc.Roles, " | ") + " | Actions some role is refused |\n")
-	b.WriteString("|---|" + strings.Repeat("---|", len(doc.Roles)+1) + "\n")
-	var tools []string
-	for _, row := range doc.Rows {
-		if !slices.Contains(tools, row.Tool) {
-			tools = append(tools, row.Tool)
-		}
-	}
-	for _, tool := range tools {
-		cells := make([]string, 0, len(doc.Roles))
-		for _, role := range doc.Roles {
-			cells = append(cells, toolRoleCell(doc, tool, role))
-		}
-		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", tool, strings.Join(cells, " | "), refusedActions(doc, tool))
-	}
-	return b.Bytes()
-}
-
-func toolRoleCell(doc toolRolesDoc, tool, role string) string {
-	var allowed, refused, unproven int
-	for _, row := range doc.Rows {
-		switch {
-		case row.Tool != tool:
-		case slices.Contains(row.Allowed, role):
-			allowed++
-		case slices.Contains(row.Refused, role):
-			refused++
-		case slices.Contains(row.Unproven, role):
-			unproven++
-		}
-	}
-	marks := []struct {
-		count int
-		mark  string
-	}{{allowed, "✓"}, {refused, "✗"}, {unproven, "?"}}
-	if allowed+refused+unproven == 1 {
-		for _, m := range marks {
-			if m.count == 1 {
-				return m.mark
+// everyMeasuredGrant holds the admin role key, every grant the table names and
+// a row scope every scope check admits. A listing under it is narrowed by
+// nothing the table measured.
+func everyMeasuredGrant(t *testing.T) principal.Permissions {
+	t.Helper()
+	perms := principal.Permissions{RoleKeys: []string{"admin"}, Objects: map[string]principal.ObjectGrant{}}
+	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	var scopeChecks []auth.Check
+	for _, row := range readToolChecks(t).Verbs {
+		for _, name := range row.Checks {
+			check, err := auth.ParseCheck(name)
+			switch {
+			case err != nil:
+				t.Fatal(err)
+			case check.RowScope != "" || check.NarrowerThan != "":
+				scopeChecks = append(scopeChecks, check)
+			case check.Object != "" && !strings.HasPrefix(name, "*"):
+				perms.Objects[check.Object] = all
 			}
 		}
 	}
-	var parts []string
-	for _, m := range marks {
-		if m.count > 0 {
-			parts = append(parts, fmt.Sprintf("%d%s", m.count, m.mark))
+	for _, scope := range []principal.RowScope{principal.RowScopeAll, principal.RowScopeTeam, principal.RowScopeOwn} {
+		perms.RowScope = scope
+		holder := principal.Principal{Type: principal.PrincipalAgent, Permissions: perms}
+		if !slices.ContainsFunc(scopeChecks, func(c auth.Check) bool { return !c.HeldBy(holder) }) {
+			return perms
 		}
 	}
-	return strings.Join(parts, " ")
-}
-
-func refusedActions(doc toolRolesDoc, tool string) string {
-	var entries []string
-	for _, row := range doc.Rows {
-		if row.Tool == tool && row.Action != "" && len(row.Refused) > 0 {
-			entries = append(entries, fmt.Sprintf("`%s` (%s)", row.Action, strings.Join(row.Refused, ", ")))
-		}
-	}
-	if len(entries) == 0 {
-		return ""
-	}
-	return "<details><summary>" + fmt.Sprint(len(entries)) + "</summary>" + strings.Join(entries, " ") + "</details>"
+	t.Fatal("no row scope admits every scope check the table names")
+	return perms
 }

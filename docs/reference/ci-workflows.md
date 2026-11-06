@@ -9,14 +9,14 @@ workflow is outside the gate:
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
 | `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement` | Yes, for an author outside the Margince team |
-| `cache-warm.yml` | `main` every three hours, manual dispatch | No |
+| `cache-warm.yml` | `pace.yml`, `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
-| `main-health.yml` | `main-health-pace.yml`, `main` every six hours, manual dispatch | No |
-| `main-health-pace.yml` | every push to `main` | No (runs after the merge) |
+| `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
+| `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
@@ -36,11 +36,15 @@ the one in `CLA.md`.
 
 ## `cache-warm.yml`
 
-The only writer of the Go build cache. A red or cancelled run makes the next lane slower, and costs
-nothing else. It is a separate workflow because a merge queue build cannot fill the cache.
-`actions/cache` scopes a write to the branch that writes plus the default branch, and a queue ref
-does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
-for why it runs on a schedule and not on each push.
+The only writer of the Go build cache and of the golangci analysis cache, and one of the writers of
+the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
+separate workflow because a merge queue build cannot fill the cache. `actions/cache` scopes a write
+to the branch that writes plus the default branch, and a queue ref does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
+for why it does not run on each push.
+
+GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
+three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
+caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-only).
 
 ## `merge-attest.yml`
 
@@ -163,9 +167,9 @@ and holds only `issues: write`.
 Runs on `main` while commits are landing, with at least two hours between two runs.
 
 The GitHub scheduler can start a cron run hours behind its time, or not at all. It keeps no record
-of a run it did not start. So `main-health-pace.yml` runs on every push to `main` and starts this
+of a run it did not start. So `pace.yml` runs on every push to `main` and starts this
 workflow when the newest run is at least two hours old
-([`scripts/main-health-pace.sh`](../../scripts/main-health-pace.sh), `make test-main-health-pace`).
+([`scripts/pace-workflow.sh`](../../scripts/pace-workflow.sh), `make test-pace-workflow`).
 A cron line every six hours remains for a quiet `main`, when no push comes.
 
 Each run covers these lanes:
@@ -207,7 +211,7 @@ an hour, it cuts the list of commits that may have caused a red to about 12.
 
 ## `scheduled.yml`
 
-Daily on `main`, plus a weekly Monday cron for the two jobs that cost too much to run daily. These
+Daily on `main`, plus a weekly Monday cron for the jobs that cost too much to run daily. These
 checks answer "is `main` still good?", and that answer can change when nothing is merged. `ci.yml`
 asks "is this diff good?", and runs because a diff exists.
 
@@ -223,6 +227,7 @@ asks "is this diff good?", and runs because a diff exists.
 | `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
 | use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| MCP role sweep (`make test-roles`) | weekly | Every MCP tool and action called as every seeded role, held to `mcp-tool-roles.json` and `toolchecks.json` | It takes longer than a merge-gate job allows. Each PR still holds the committed table to the registry and to `tools/list`. |
 | weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:

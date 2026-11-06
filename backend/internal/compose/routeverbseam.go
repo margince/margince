@@ -127,7 +127,7 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 	if res.StatusCode < http.StatusBadRequest {
 		return routeSuccess(call, rec, res)
 	}
-	if res.StatusCode >= http.StatusInternalServerError {
+	if res.StatusCode >= http.StatusInternalServerError && res.StatusCode != http.StatusNotImplemented {
 		return nil, fmt.Errorf("%s: the route failed with %d", verb, res.StatusCode)
 	}
 	var problem struct {
@@ -137,6 +137,9 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil || problem.Detail == "" {
 		problem.Detail = http.StatusText(res.StatusCode)
 	}
+	if res.StatusCode == http.StatusNotImplemented {
+		return nil, notOfferedHere(problem.Detail)
+	}
 	if problem.Code == "version_skew" {
 		return nil, fmt.Errorf("%s: %s: %w", verb, problem.Detail, apperrors.ErrVersionSkew)
 	}
@@ -144,6 +147,12 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 		return nil, fmt.Errorf("%s: %s: %w", verb, problem.Detail, refusal)
 	}
 	return nil, httperr.Validation(verb, problem.Code, problem.Detail)
+}
+
+// notOfferedHere is a route's 501: this installation does not serve the call,
+// which no argument or retry changes, unlike a fault of the server's own.
+func notOfferedHere(detail string) error {
+	return &httperr.DetailedError{Status: http.StatusNotImplemented, Code: "not_implemented", Detail: detail}
 }
 
 // routeSuccess is the answer of a route that did what it was asked.

@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -39,6 +40,7 @@ const (
 	healthWorkspace     = crmcontracts.HealthSourceScopeWorkspace
 	healthInstallation  = crmcontracts.HealthSourceScopeInstallation
 	healthReadObject    = "job_health"
+	healthDataTasks     = "data_task"
 	healthSearchID      = string(crmcontracts.HealthActionDestinationSearch)
 )
 
@@ -59,18 +61,22 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	admitted := auth.Require(ctx, healthReadObject, principal.ActionRead) == nil ||
-		auth.Require(ctx, "data_task", principal.ActionRead) == nil ||
-		auth.Require(ctx, "embedding_reindex", principal.ActionRead) == nil ||
-		auth.Require(ctx, "installation_settings", principal.ActionUpdate) == nil
-	if !admitted {
-		httperr.Write(w, r, apperrors.ErrPermissionDenied)
+	read, update := []principal.Action{principal.ActionRead}, []principal.Action{principal.ActionUpdate}
+	if err := auth.RequireOneOf(ctx,
+		auth.Check{Object: healthReadObject, Actions: read}, auth.Check{Object: healthDataTasks, Actions: read},
+		auth.Check{Object: "embedding_reindex", Actions: read}, auth.Check{Object: "installation_settings", Actions: update},
+	); err != nil {
+		// The bare sentinel keeps the grants that open this page out of the answer.
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			err = apperrors.ErrPermissionDenied
+		}
+		httperr.Write(w, r, err)
 		return
 	}
 	ctx, cancel := context.WithTimeout(ctx, healthReadTimeout)
 	defer cancel()
 	out := composeHealth(ctx, s.healthReads(), utcNow)
-	if s.originProbe != nil && auth.Require(ctx, healthReadObject, principal.ActionRead) == nil {
+	if s.originProbe != nil && auth.Allows(ctx, healthReadObject, principal.ActionRead) {
 		origin := s.originProbe.Snapshot()
 		out.PublicOrigin = &crmcontracts.PublicOriginStatus{Origin: origin.Origin, Reachable: origin.Reachable, CheckedAt: origin.CheckedAt}
 		if origin.Detail != "" {
@@ -182,7 +188,7 @@ func (s Server) healthReads() []healthRead {
 		{"recovery", healthReadObject, s.recoverySummary},
 		{"automatic", healthReadObject, s.automaticSummary},
 		{healthSearchID, "embedding_reindex", s.searchSummary},
-		{"updates", "data_task", s.updatesSummary},
+		{"updates", healthDataTasks, s.updatesSummary},
 		{"providers", "ai_diagnostics", s.providersSummary},
 	}
 }

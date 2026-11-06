@@ -29,28 +29,22 @@ type RosterEntry = NonNullable<ReturnType<typeof useRoster>["data"]>[number];
 type MemberStatus = components["schemas"]["User"]["status"];
 
 /**
- * Whether the server says the reader may make this entry a record's owner.
- *
- * The rule is the server's and depends on the reader's own write scope. So the
- * roster answers it per row (`assignable`) and the client does not re-derive it.
- * An entry without the answer (an older server) is offered, and the write
+ * Whether the server says this entry's seat may own records: an active human
+ * seat that can write. An entry without the answer is offered, and the write
  * decides.
  */
 export function mayOwnRecords(entry: RosterEntry): boolean {
   if (!("display_name" in entry) || entry.is_agent) {
     return false;
   }
-  return entry.assignable !== false;
+  return entry.can_own_records !== false;
 }
 
-/**
- * The colleagues the reader may make a record's owner: an active human seat
- * that can write, inside the reader's own write scope. Every owner picker reads
- * this, so a picker never offers somebody the owner change then refuses.
- */
-export function useRecordOwnerOptions(enabled = true): UserOptions {
-  const roster = useRoster("user", enabled);
-  const options = (roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
+function ownerOptions(
+  roster: ReturnType<typeof useRoster>,
+  admits: (entry: RosterEntry) => boolean,
+): UserOptions {
+  const options = (roster.data ?? []).filter(admits).map((entry) => ({
     value: entry.id,
     label: "display_name" in entry ? entry.display_name : entry.id,
   }));
@@ -58,24 +52,25 @@ export function useRecordOwnerOptions(enabled = true): UserOptions {
 }
 
 /**
- * The colleagues a configured intake may hand its records to: the seat half of
- * `useRecordOwnerOptions`, without the reader's own scope. A website form's
- * owner of new leads reads this, because the installation writes those leads.
+ * The colleagues a record may be handed to. Every record owner picker reads
+ * this, and so does a website form's owner of new leads.
  */
-export function useSeatedOwnerOptions(enabled = true): UserOptions {
-  const roster = useRoster("user", enabled);
-  const options = (roster.data ?? [])
-    .filter(
-      (entry) =>
-        "display_name" in entry &&
-        !entry.is_agent &&
-        entry.can_own_records !== false,
-    )
-    .map((entry) => ({
-      value: entry.id,
-      label: "display_name" in entry ? entry.display_name : entry.id,
-    }));
-  return { options, roster };
+export function useRecordOwnerOptions(enabled = true): UserOptions {
+  return ownerOptions(useRoster("user", enabled), mayOwnRecords);
+}
+
+/**
+ * The colleagues an automation may run as. Each is a seat that may own records
+ * and lies inside the reader's own write scope, as the server answers it.
+ */
+export function useRunAsOwnerOptions(enabled = true): UserOptions {
+  return ownerOptions(
+    useRoster("user", enabled),
+    (entry) =>
+      mayOwnRecords(entry) &&
+      "display_name" in entry &&
+      entry.assignable !== false,
+  );
 }
 
 const STATUS_SUFFIX: Partial<

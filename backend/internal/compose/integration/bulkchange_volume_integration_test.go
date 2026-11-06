@@ -98,6 +98,6 @@ type bulkAgent struct {
 
 func mintPassport(t *testing.T, e *apptest.AppEnv) bulkAgent {
 	t.Helper()
-	header, id := passportWithID(t, e, "bulk agent", "read", "write")
+	header, id := apptest.PassportWithID(t, e, "bulk agent", "read", "write")
 	return bulkAgent{id: id, token: strings.TrimPrefix(header["Authorization"], "Bearer "), header: header}
 }

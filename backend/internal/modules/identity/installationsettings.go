@@ -108,6 +108,7 @@ type InstallationPatch struct {
 	// leaves the switch unchanged.
 	DynamicClientRegistration *bool
 	MetadataDocumentClients   *bool
+	McpClientCheck            *bool
 	CallWhatsApp              *bool
 	CallTelegram              *bool
 	CallZalo                  *bool
@@ -356,7 +357,10 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 		return nil, err
 	}
 	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
-	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites, in.forecastSelfCorrectingWrites, in.forecastLikelyThresholdWrites} {
+	for _, group := range []func() ([]pendingWrite, error){
+		in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites,
+		in.forecastSelfCorrectingWrites, in.forecastLikelyThresholdWrites, in.clientCheckWrites,
+	} {
 		writes, err := group()
 		if err != nil {
 			return nil, err

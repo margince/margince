@@ -141,10 +141,11 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	}
 	// A router refuses to unite two actions that give one name two shapes. A list
 	// published here fails at boot if another action takes that name as one value.
+	required := append([]string{}, v.PathParams...)
 	for _, q := range v.Query {
-		properties[q.Name] = `{"type":` + strconv.Quote(q.Type) + `}`
-		if q.Type == schemaArray {
-			properties[q.Name] = `{"type":"array","items":{"type":"string"}}`
+		properties[q.Name] = string(q.schema())
+		if q.Required {
+			required = append(required, q.Name)
 		}
 	}
 	if v.IfMatch {
@@ -156,8 +157,6 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 		unkeyed = map[string]string{"$." + routeBodyArg: "the body of " + v.Method + " " + v.Pattern + ", as its operation " + v.Op + " defines it"}
 	}
 	var maxArgs int64
-	var required []string
-	required = append(required, v.PathParams...)
 	if v.UploadField != "" {
 		properties[routeFileName] = `{"type":"string","description":"The file's name, with its extension"}`
 		properties[routeFileType] = `{"type":"string","description":"The file's media type, e.g. image/png"}`
@@ -168,9 +167,6 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	members := make([]string, 0, len(properties))
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
-	}
-	if required == nil {
-		required = []string{}
 	}
 	egress := v.Scope.Egresses()
 	answer := v.AnswerSchema
@@ -189,6 +185,24 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 			strings.Join(members, ",") + `},"additionalProperties":false}`),
 		OutputSchema: answer,
 	}
+}
+
+// querySchema is a query parameter's JSON schema. A list takes strings, and
+// its words and format, where it has any, are its items'.
+type querySchema struct {
+	Type   string       `json:"type"`
+	Items  *querySchema `json:"items,omitempty"`
+	Enum   []string     `json:"enum,omitempty"`
+	Format string       `json:"format,omitempty"`
+}
+
+func (q ViewQuery) schema() json.RawMessage {
+	words := querySchema{Type: q.Type, Enum: q.Enum, Format: q.Format}
+	if q.Type == schemaArray {
+		words.Type = schemaString
+		return mustMarshal(querySchema{Type: schemaArray, Items: &words})
+	}
+	return mustMarshal(words)
 }
 
 func (t routeVerbTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -8,7 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import {
@@ -22,7 +23,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { day, row } from "../../testing/worklist.testkit";
-import { MySdrWork } from "./analytics.outcomes.sdr";
+import { EVALUATION_WAIT_MS, MySdrWork } from "./analytics.outcomes.sdr";
 import { reportingSectionsCatalog } from "./reporting.story-fixtures";
 
 type SdrSummary = components["schemas"]["SdrSummary"];
@@ -110,6 +111,7 @@ function show(
     summary?: SdrSummary | "failed";
     worklist?: () => Response;
     evaluation?: unknown;
+    evaluationHeld?: Promise<unknown>;
   }> = {},
 ) {
   const asked: URL[] = [];
@@ -119,10 +121,12 @@ function show(
       report_definition: ["read"],
     }),
     "GET /analytics/metrics": () => jsonResponse(reportingSectionsCatalog),
-    "GET /analytics/evaluate": () =>
-      over.evaluation === undefined
+    "GET /analytics/evaluate": async () => {
+      await over.evaluationHeld;
+      return over.evaluation === undefined
         ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
-        : jsonResponse(over.evaluation),
+        : jsonResponse(over.evaluation);
+    },
     "GET /analytics/sdr-summary": () =>
       over.summary === "failed"
         ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
@@ -175,6 +179,40 @@ describe("MySdrWork", () => {
       url.pathname.endsWith("/analytics/sdr-summary");
     await waitFor(() => expect(asked.some(isSummary)).toBe(true));
     expect(asked.find(isSummary)?.searchParams.has("as_of")).toBe(false);
+  });
+
+  it("stops waiting for a stalled evaluation, then moves to its instant", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let release = () => {};
+      const evaluationHeld = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const asked = show({
+        evaluation: reportingStoryEvaluation,
+        evaluationHeld,
+      });
+      const summaries = () =>
+        asked.filter((url) => url.pathname.endsWith("/analytics/sdr-summary"));
+      await waitFor(() =>
+        expect(
+          asked.some((url) => url.pathname.endsWith("/analytics/evaluate")),
+        ).toBe(true),
+      );
+      expect(summaries()).toEqual([]);
+
+      await act(() => vi.advanceTimersByTimeAsync(EVALUATION_WAIT_MS));
+      await waitFor(() => expect(summaries()).toHaveLength(1));
+      expect(summaries()[0]?.searchParams.has("as_of")).toBe(false);
+
+      release();
+      await waitFor(() => expect(summaries()).toHaveLength(2));
+      expect(summaries()[1]?.searchParams.get("as_of")).toBe(
+        reportingStoryEvaluation.context.evaluated_at,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("names a blocked recipient and a restricted prospect, and pages on", async () => {

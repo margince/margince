@@ -22,12 +22,13 @@ func (s *Service) preflightBundle(ctx context.Context, p principal.Principal, bu
 		if err != nil {
 			return err
 		}
-		mine, err = s.decidableMembers(ctx, tx, p, rows, approve)
+		var visible int
+		mine, visible, err = s.decidableMembers(ctx, tx, p, rows, approve)
 		if err != nil {
 			return err
 		}
 		if len(mine) == 0 {
-			return apperrors.ErrNotFound
+			return hiddenBundle(ctx, len(rows), visible)
 		}
 		if oversized {
 			return &BundleTooLargeError{Cap: bundleDecisionCap}

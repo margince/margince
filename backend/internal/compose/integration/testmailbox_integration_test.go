@@ -66,7 +66,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 		t,
 		compose.WithCaptureConfig(compose.CaptureConfig{AllowTestMailbox: true}),
 		compose.WithKeyvault(vault),
-		compose.WithOperatorMail(discardingMailer{}),
+		compose.WithOperatorMail(apptest.DiscardingMailer{}),
 		compose.WithPublicBaseURL(preflightBaseURL),
 	)
 	e.Vault = vault
@@ -91,7 +91,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	// basis is silently changed by it.
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	dealID := apptest.StakeOnOpenDeal(t, e, "Test mailbox opportunity", stages, contact.ID)
-	askedAboutTheDeal(t, e, contact.ID, "buyer@preflight.test", dealID)
+	apptest.AskedAboutTheDeal(t, e, contact.ID, "buyer@preflight.test", dealID)
 
 	var activity struct {
 		ID string `json:"id"`

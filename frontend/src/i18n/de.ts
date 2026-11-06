@@ -2383,6 +2383,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.domain_triage": "Vorprüfung von Websites",
   "systemJob.employment_import_worker": "Import des Werdegangs",
   "systemJob.enabled_oidc_providers_read": "Lesen der Anmeldeanbieter",
+  "systemJob.client_check_read": "Lesen des Schalters für die KI-Tool-Prüfung",
   "systemJob.client_registration_read": "Lesen der Registrierung von KI-Tools",
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
@@ -3408,6 +3409,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
   "list.showArchived": "Archivierte anzeigen",
+  "list.viewToggleOn": "An",
+  "list.viewToggleOff": "Aus",
+  "list.viewMenu": "Ansicht",
+  "list.viewMenuBack": "zurück zu den Ansichtsoptionen",
+  "list.viewMenuChanged": "geändert",
+  "list.viewMenuFilters_one": "{count} Filter",
+  "list.viewMenuFilters_other": "{count} Filter",
+  "list.viewMenuNone": "Keine",
   "list.loadMore": "Mehr laden",
   "scrollSentinel.loading": "Mehr wird geladen…",
   "scrollSentinel.failed": "Weitere Einträge konnten nicht geladen werden.",
@@ -3425,15 +3434,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.rowsPerPage": "Zeilen pro Seite",
   "table.perPage": "{count} pro Seite",
   "table.sortedBy": "sortiert nach {column}",
-  "table.shownColumns": "Sichtbare Spalten",
-  "table.display": "Darstellung",
-  "table.density": "Dichte",
   "table.compact": "Kompakt",
+  "table.filters": "Filter",
+  "table.columns": "Spalten",
+  "table.columnsShown": "{shown} von {total}",
+  "table.sortValue": "{column}, {direction}",
   "table.columnHandle": "{name} verschieben, {position} von {total}",
   "table.columnMoved": "{name} auf {position} von {total} verschoben",
   "table.sort": "Sortieren",
-  "table.sortNamed": "Sortierung: {column}",
-  "table.sortMenu": "Sortieren nach",
   "table.sortDefault": "Standardreihenfolge",
   "table.sortAscending": "aufsteigend",
   "table.sortDescending": "absteigend",
@@ -3443,6 +3451,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
+  "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "Kontakte",
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
@@ -3451,9 +3460,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "unit.partners": "Partner",
   "unit.products": "Produkte",
   "unit.offerTemplates": "Angebotsvorlagen",
-  "table.filter": "Filter",
   "table.filterSearch": "Attribute durchsuchen",
-  "table.addFilter": "Filter hinzufügen",
   "table.filterIs": "ist",
   "table.filterCondition": "Bedingung",
   "table.filterMore": "Weitere Aktionen für den Filter {filter}",
@@ -3463,7 +3470,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.filterSearching": "Wird gesucht…",
   "table.filterSearchFailed": "Suche fehlgeschlagen. Bitte versuche es erneut.",
   "table.filterNoMatches": "Keine Treffer.",
-  "table.filterBack": "Zurück zu allen Filtern",
+  "table.filterBack": "zurück zu allen Filtern",
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",
@@ -3485,6 +3492,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.saveTitle": "Diese Ansicht speichern",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
+  "views.loadFailed":
+    "Die gespeicherten Ansichten konnten nicht geladen werden.",
   "views.manage": "Ansichten verwalten",
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",
@@ -6156,6 +6165,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayConfirm": "Abschlusstag speichern",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "Deal in {pipeline}: {count}",
+  "deals.countInPipeline_other": "Deals in {pipeline}: {count}",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
     "Nur geladene Deals. Nur Admins können dir erlauben, die Summen dieser verantwortlichen Person auszuwerten.",
@@ -7375,7 +7386,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Der Entwurf wurde dort gesendet oder gelöscht. Beim Speichern bleibt der Text auf dem Bildschirm als neuer Entwurf erhalten.",
   "compose.savedDraftFailed":
-    "Der Entwurf konnte nicht gespeichert werden. Speichere den Entwurf erneut oder schließe den Dialog noch einmal, um den Text zu verwerfen.",
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schließe noch einmal, um den Text zu verwerfen.",
+  "compose.savedDraftAutosaveFailed":
+    "Das Speichern des Entwurfs wurde nicht abgeschlossen. Es wird erneut versucht, sobald du weiterschreibst oder wieder online bist.",
+  "compose.savedDraftAutosaveRefused":
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schreibe weiter, um es erneut zu versuchen.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} Datei konnte nicht wiederhergestellt werden.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} Dateien konnten nicht wiederhergestellt werden.",
+  "compose.sendWaitsForAddress":
+    "Korrigiere oder entferne den Text, der keine E-Mail-Adresse ist.",
+  "compose.notAnAddress_one":
+    "Keine E-Mail-Adresse: {parts}. Korrigiere oder entferne sie.",
+  "compose.notAnAddress_other":
+    "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
@@ -9016,6 +9041,33 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Direkt unter „MCP-Clients“ registriert. Das Tool muss das Client-Secret senden.",
   "agentClients.methods.alwaysOn": "Immer aktiv",
   "agentClients.methods.readOnly": "Nur Admins können das ändern.",
+  "agentClients.experiments.title": "Experimente",
+  "agentClients.experiments.sub":
+    "Funktionen zum Ausprobieren, die sich ändern oder wegfallen können. Für alle deaktiviert, bis ein Admin sie hier aktiviert.",
+  "agentClients.experiments.clientCheck": "Tool-Unterstützung prüfen",
+  "agentClients.experiments.clientCheckHint":
+    "Lässt das KI-Tool eines Admins ein kleines Formular zeigen, um zu prüfen, ob es eines beantworten kann.",
+  "agentClients.experiments.about": "Über dieses Experiment",
+  "agentClients.experiments.whyTitle": "Warum",
+  "agentClients.experiments.why":
+    "Margince kann dich im Chat vor einer Massenänderung fragen, oder welchen Datensatz du meintest, wenn dein KI-Tool ein kleines Formular zeigen kann. Diese Prüfung zeigt, welche deiner KI-Tools das können. Änderungen, die eine Freigabe brauchen, warten weiter unter Freigaben.",
+  "agentClients.experiments.howTitle": "So testest du",
+  "agentClients.experiments.step1": "Aktiviere dies.",
+  "agentClients.experiments.step2":
+    "Verbinde Margince in deinem KI-Tool neu, damit es das neue Tool lädt.",
+  "agentClients.experiments.step3": "Frage es:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Nutze das Margince-Tool check_client, um zu prüfen, ob dieses KI-Tool ein Margince-Formular zeigen kann.",
+  "agentClients.experiments.clientCheckQuestionLabel": "Frage",
+  "agentClients.experiments.copy": "Frage kopieren",
+  "agentClients.experiments.copied": "Kopiert",
+  "agentClients.experiments.copyRemedy":
+    "Der Browser hat das Kopieren abgelehnt. Markiere die Frage und kopiere sie von Hand.",
+  "agentClients.experiments.step4":
+    "Wenn dein KI-Tool ein Formular zeigt, in dem du eine Farbe wählst, unterstützt es Formulare. Sonst nennt die Antwort das Tool, seine Version und den Grund.",
+  "agentClients.experiments.safeTitle": "Gefahrlos zu testen",
+  "agentClients.experiments.safe":
+    "Solange es aktiviert ist, sehen Admins das Tool in jedem KI-Tool, das sie verbinden. Es liest und ändert keine Daten. Deaktiviere es, wenn du fertig bist.",
   "agentClients.title": "MCP-Clients",
   "agentClients.sub":
     "Jeder Client, über den sich ein KI-Tool anmeldet, und wie er entstanden ist.",
@@ -12654,7 +12706,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listInvalid":
     "Pausiert, da der Filter der beobachteten Live-Liste nicht mehr funktioniert. Wenn du den Filter reparierst, läuft die Automatisierung nicht von selbst weiter.",
   "auto.pausedReason.passportRevoked":
-    "Die Regel wurde pausiert, da der Passport des Agenten, der sie eingerichtet hat, widerrufen wurde. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, da sein Passport abgelaufen oder widerrufen wurde oder seine Verbindung beendet wurde. Setze sie fort, dann läuft sie ohne Agenten weiter.",
+  "auto.setByYourAgent": "Von deinem Agenten",
+  "auto.setByAnAgent": "Von einem Agenten",
   "auto.pausedReason.listUnavailable":
     "Pausiert, da das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
   "auto.pausedReason.burst":
@@ -12703,8 +12757,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.action.addToShortlist": "zur Shortlist hinzufügen",
   "auto.pausedShort.listArchived": "Pausiert · Liste archiviert",
   "auto.pausedShort.listInvalid": "Pausiert · Listenfilter defekt",
-  "auto.pausedShort.passportRevoked":
-    "Pausiert · Passport des Agenten widerrufen",
+  "auto.pausedShort.passportRevoked": "Pausiert · Zugang des Agenten beendet",
   "auto.pausedShort.listUnavailable": "Pausiert · Liste nicht gefunden",
   "auto.pausedShort.burst": "Pausiert · zu viele Datensätze",
   "auto.withheld":
@@ -15242,6 +15295,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.timezoneLabel": "Zeitzone",
   "account.timezoneHelp":
     "Zeiten in Margince, deine buchbaren Zeiten und Mails an dich nutzen diese Zeitzone. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
+  "account.timezoneSetByAgent": "Von deinem Agenten",
   "workingHours.zoneIs": "Deine Zeiten gelten in {zone}.",
   "workingHours.changeZone": "Zeitzone ändern",
   "account.languageCard": "Sprache und Zeitzone",
@@ -17325,7 +17379,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link-URL (leer lassen, um den Link zu entfernen)",
+  "richtext.linkAdd": "Link einfügen",
+  "richtext.linkEdit": "Link bearbeiten",
+  "richtext.linkAddress": "Web- oder E-Mail-Adresse",
+  "richtext.linkPlaceholder": "example.com oder name@example.com",
+  "richtext.linkApply": "Anwenden",
+  "richtext.linkRemove": "Link entfernen",
+  "richtext.linkRefused":
+    "Das ist keine Web- oder E-Mail-Adresse. Gib eine ein, etwa example.com oder name@example.com.",
   "contact.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
   "contact.composer.intentReply":
@@ -18990,7 +19051,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryRefusedRepeats":
     "Diese Regel darf nicht zweimal ausgeführt werden, da ein erneuter Lauf ihre Aktionen wiederholen könnte.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "Der Passport des Agenten, der diese Regel eingerichtet hat, wurde widerrufen. Darum ist sie pausiert. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, darum ist die Regel pausiert. Setze sie fort, dann läuft sie ohne Agenten weiter.",
   "worklist.verb.retryRefusedEventGone":
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":

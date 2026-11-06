@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
@@ -44,6 +44,9 @@ const LEAD_READINGS = [
   "leads_awaiting_response",
 ] as const;
 
+// An evaluation may run for minutes, and the handoffs that wait on it should not.
+export const EVALUATION_WAIT_MS = 5_000;
+
 /**
  * An SDR's own work beside their results: their leads, the handoffs that wait
  * on somebody else, and what waits on them. Every figure is the server's; this
@@ -58,11 +61,13 @@ export function MySdrWork({
   const readsReports = useCan("report_definition", "read");
   const evaluation = useMyLeadsEvaluation(self, readsReports && readsLeads);
   // The summary counts at the evaluation's instant, so the two describe one
-  // moment. It waits only while that instant is unknown, never on a failure,
-  // and only a successful evaluation pins it.
+  // moment. It waits for that instant only briefly, never on a failure, and
+  // only a successful evaluation pins it, even one arriving after the wait.
+  const awaitsInstant = readsLeads && readsReports && evaluation.isPending;
+  const waitedLongEnough = useWaitedLongEnough(awaitsInstant);
   const summary = useSdrSummary(
     self,
-    readsLeads && !(readsReports && evaluation.isPending),
+    readsLeads && (!awaitsInstant || waitedLongEnough),
     readsReports && evaluation.isSuccess
       ? evaluation.data.context.evaluated_at
       : undefined,
@@ -113,6 +118,7 @@ export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
   return useQuery({
     queryKey: ["sdr-summary", self, asOf ?? null],
     enabled,
+    placeholderData: keepPreviousData,
     queryFn: async ({ signal }): Promise<SdrSummary> =>
       unwrap(
         await api.GET("/analytics/sdr-summary", {
@@ -123,6 +129,17 @@ export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
         }),
       ),
   });
+}
+
+/** Turns true once `waiting` has held for the evaluation wait. */
+function useWaitedLongEnough(waiting: boolean) {
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setTimeout(() => setWaited(true), EVALUATION_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [waiting]);
+  return waited;
 }
 
 /** The seat's lead readings for this month, which the summary is read beside. */
