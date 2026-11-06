@@ -1,0 +1,28 @@
+# CASE 73 — The weekly plan is a read_details panel. Reading it starts no plan.
+name: case73_read_my_weekly_plan
+criteria: [1]
+writes: false
+
+prompt: |
+  What is on my weekly plan right now? Only tell me, change nothing.
+
+must_call:
+  - read_details
+
+must_call_with:
+  - read_details.action=weekly_plan
+
+may_call:
+  - read_attention
+  - read_workspace
+  - whoami
+
+must_not_call_with:
+  - change_attention~.
+  - run_research~.
+
+must_mention:
+  - "(?i)plan"
+
+runs: 3
+pass_at: 2

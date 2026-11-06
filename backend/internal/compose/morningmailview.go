@@ -186,11 +186,11 @@ func (s *morningSelection) append(items []crmcontracts.WorklistItem, limit int, 
 		if settings.CombineRoutine != nil && *settings.CombineRoutine && string(item.Source) == "notice" {
 			continue
 		}
-		line := mailWorkItem(item, words, s.zone)
-		if line == "" {
+		row, ok := mailWorkItem(item, words, s.zone)
+		if !ok {
 			continue
 		}
-		s.body.Paragraph(line)
+		s.body.Item(row)
 		writeMailItemLink(&s.body, item, base, words)
 		s.seen[item.Id] = true
 		s.included = append(s.included, morningItem{source: string(item.Source), id: item.Id, team: s.team})

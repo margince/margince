@@ -235,11 +235,17 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		    updated_at = now(),
 		    -- A reopened row is a new episode, and its task link belongs to the
 		    -- old one: the new episode's review is delivered afresh. Every SET
-		    -- reads the row as it was, so all four test the same old status.
+		    -- reads the row as it was, so each tests the same old status.
 		    episode = CASE WHEN ` + reopensSQL + ` THEN assurance_exception.episode + 1
 		                   ELSE assurance_exception.episode END,
 		    task_activity_id = CASE WHEN ` + reopensSQL + ` THEN NULL
 		                            ELSE assurance_exception.task_activity_id END,
+		    delivery_state = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                          ELSE assurance_exception.delivery_state END,
+		    delivery_attempts = CASE WHEN ` + reopensSQL + ` THEN 0
+		                             ELSE assurance_exception.delivery_attempts END,
+		    delivered_assignee_id = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                                 ELSE assurance_exception.delivered_assignee_id END,
 		    status = CASE WHEN ` + reopensSQL + ` THEN 'open' ELSE assurance_exception.status END,
 		    -- The deal's owner tonight, not the one it had when first raised: a
 		    -- review of a deal that changed hands belongs to the new owner.
@@ -362,7 +368,10 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 		if err != nil {
 			return err
 		}
-		out.Freshness, err = readFreshness(ctx, tx)
+		if out.Freshness, err = readFreshness(ctx, tx); err != nil {
+			return err
+		}
+		out.Deliveries, err = reviewDeliveryCounts(ctx, tx)
 		return err
 	})
 	if err != nil {
@@ -384,7 +393,8 @@ type Run struct {
 	Readiness       *string
 	// Freshness is what changed after this reading. A reading the records
 	// moved past is never shown as current.
-	Freshness Freshness
+	Freshness  Freshness
+	Deliveries DeliveryCounts
 }
 
 // InTx runs fn inside one workspace transaction.

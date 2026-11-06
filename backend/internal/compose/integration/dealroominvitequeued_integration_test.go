@@ -38,7 +38,7 @@ func (refusingMailer) Send(context.Context, string, string, string) error {
 // A relay that accepts the message reads as queued.
 func TestAnAcceptedInvitationReadsAsQueued(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
-		compose.WithDealRoomInviteMail(discardingMailer{}),
+		compose.WithDealRoomInviteMail(apptest.DiscardingMailer{}),
 		compose.WithPublicBaseURL("https://rooms.example.test"))
 	e.BootstrapWorkspace(t)
 

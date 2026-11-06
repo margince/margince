@@ -18,6 +18,7 @@ import {
 } from "../../design-system/recordpicker";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useLegalEntities } from "../../lib/legalentities.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import type { Offer, OfferTemplate } from "./offers";
 import { OfferCurrencyField } from "./offers.currencyfield";
@@ -55,6 +56,8 @@ type HeaderEditValues = {
   buyer_company_id: string | null;
   valid_until: string;
   template_id: string | null;
+  legal_entity_id: string | null;
+  language: string;
   intro_text: string;
   terms_text: string;
 };
@@ -104,6 +107,8 @@ export function EditOfferHeaderModal({
     buyer_company_id: offer.buyer_company_id ?? null,
     valid_until: offer.valid_until ?? "",
     template_id: offer.template_id ?? null,
+    legal_entity_id: offer.legal_entity_id ?? null,
+    language: offer.language ?? "",
     intro_text: offer.intro_text ?? "",
     terms_text: offer.terms_text ?? "",
   });
@@ -122,6 +127,8 @@ export function EditOfferHeaderModal({
         buyer_company_id: offer.buyer_company_id ?? null,
         valid_until: offer.valid_until ?? "",
         template_id: offer.template_id ?? null,
+        legal_entity_id: offer.legal_entity_id ?? null,
+        language: offer.language ?? "",
         intro_text: offer.intro_text ?? "",
         terms_text: offer.terms_text ?? "",
       });
@@ -143,6 +150,17 @@ export function EditOfferHeaderModal({
             buyer_company_id: input.buyer_company_id,
             valid_until: input.valid_until || null,
             template_id: input.template_id,
+            // Sent only when the reader picked one: an offer from before
+            // offers named an entity keeps naming none until somebody does.
+            ...(input.legal_entity_id
+              ? { legal_entity_id: input.legal_entity_id }
+              : {}),
+            // Sent only when the reader changed it: lines added from now on
+            // take product text in it, and the ones already there keep theirs.
+            ...(input.language.trim() &&
+            input.language.trim().toLowerCase() !== (offer.language ?? "")
+              ? { language: input.language.trim().toLowerCase() }
+              : {}),
             intro_text: input.intro_text || null,
             terms_text: input.terms_text || null,
           },
@@ -227,6 +245,24 @@ export function EditOfferHeaderModal({
             />
           )}
         </Field>
+        <OfferEntityField
+          value={values.legal_entity_id}
+          onChange={(legal_entity_id) =>
+            setValues((prev) => ({ ...prev, legal_entity_id }))
+          }
+        />
+        <Field label={t("offer.language")} hint={t("offer.languageHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              maxLength={2}
+              value={values.language}
+              onChange={(event) =>
+                setValues((prev) => ({ ...prev, language: event.target.value }))
+              }
+            />
+          )}
+        </Field>
         <Field label={t("offer.introText")}>
           {(control) => (
             <TextInput
@@ -272,5 +308,34 @@ export function EditOfferHeaderModal({
         </Button>
       </div>
     </Modal>
+  );
+}
+
+// Which legal entity issues the offer. Shown only while the installation
+// trades as more than one: with one, there is nothing to choose.
+function OfferEntityField({
+  value,
+  onChange,
+}: Readonly<{ value: string | null; onChange: (id: string) => void }>) {
+  const t = useT();
+  const entities = useLegalEntities().data ?? [];
+  if (entities.length < 2) {
+    return null;
+  }
+  const fallback = entities.find((entity) => entity.is_default);
+  return (
+    <Field label={t("offer.legalEntity")} hint={t("offer.legalEntityHint")}>
+      {(control) => (
+        <Select
+          {...control}
+          value={value ?? fallback?.id ?? ""}
+          onChange={onChange}
+          options={entities.map((entity) => ({
+            value: entity.id,
+            label: entity.display_name || t("legalEntities.defaultUnnamed"),
+          }))}
+        />
+      )}
+    </Field>
   );
 }

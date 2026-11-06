@@ -28,6 +28,10 @@ const resetSendTimeout = 2 * time.Minute
 // the same reason as resetSendTimeout: a stuck relay must not pin a goroutine.
 const inviteSendTimeout = 2 * time.Minute
 
+// inviteOutcomeTimeout bounds writing the relay's answer onto the link, apart
+// from the send's own budget, which a timed-out send has already spent.
+const inviteOutcomeTimeout = 10 * time.Second
+
 // recoverDetached stops a panic in a goroutine that outlives its request.
 // The chassis recovery middleware cannot see it there.
 // An unrecovered panic ends the process. It logs the stack, since no request log exists to find the site.
@@ -36,4 +40,12 @@ func recoverDetached(what string) {
 	if panicked := recover(); panicked != nil {
 		slog.Error(what+" panicked", "panic", panicked, "stack", string(debug.Stack()))
 	}
+}
+
+// inviteSendBudget is the time one invitation send may take.
+func (h Handlers) inviteSendBudget() time.Duration {
+	if h.sendBudget > 0 {
+		return h.sendBudget
+	}
+	return inviteSendTimeout
 }

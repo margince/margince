@@ -5,13 +5,13 @@
 // imported deal named by its company and stage.
 
 import { describe, expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { translate } from "../../i18n";
 import { itemTitle, reasonText } from "../../lib/worklistcopy";
 import type { WorklistItem, WorklistReason } from "./worklist.queries";
 
-const zone = viewerZone();
+const zone = browserZone();
 const unknown: WorklistReason = { kind: "champion_unknown" };
 const uncovered: WorklistReason = { kind: "no_champion" };
 

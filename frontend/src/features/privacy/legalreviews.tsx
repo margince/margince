@@ -25,7 +25,6 @@ import {
 } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import {
@@ -41,6 +40,7 @@ import {
 } from "../../lib/legalreviews.queries";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { calendarDayLabel, LegalReviewPack } from "./legalreviewpack";
 
 /** The door from the deals page, for a reader who reviews. */
@@ -113,7 +113,7 @@ function LegalReviewsScreen() {
 function QueueRow({ item }: Readonly<{ item: LegalReviewQueueItem }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const open = () =>
     navigate({ screen: LEGAL_REVIEWS_SCREEN, id: item.review.id });
   return (

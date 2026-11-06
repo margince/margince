@@ -11,21 +11,9 @@ import { dealStatusLabel } from "../../components/dealdials";
 import { isMessageKey, type useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { writtenByLabel } from "../../lib/leadorigins";
+import { bandOfKey } from "../../lib/winprobabilitybands";
 import { LEAD_STATUS_FILTER_OPTIONS } from "../leads/leadpresentation";
 import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
-
-// forecast_category dimension values (report.go's forecastCategoryExpr):
-// the four the deal itself can carry, plus the server-derived "slipped" —
-// a claimed commit/best_case deal whose close date is past, missing, or
-// still provisional. Omitting it here doesn't shrink the
-// total; it moves the deal's amount into no tile at all.
-export const FORECAST_CATEGORIES = [
-  { key: "commit", labelKey: "deal.fcCommit" },
-  { key: "best_case", labelKey: "deal.fcBestCase" },
-  { key: "pipeline", labelKey: "deal.fcPipeline" },
-  { key: "omitted", labelKey: "deal.fcOmitted" },
-  { key: "slipped", labelKey: "deal.fcSlipped" },
-] as const;
 
 // The current standing a meeting can hold, in the order a week reads: what is
 // ahead, what happened, what did not, what was called off. A hand-kept mirror
@@ -58,8 +46,8 @@ function valueKey(
         ? LEAD_STATUS_FILTER_OPTIONS.find((option) => option.value === value)
             ?.label
         : dealStatusLabel(value);
-    case "forecast_category":
-      return keyed(FORECAST_CATEGORIES, value);
+    case "win_probability_band":
+      return bandOfKey(value)?.label;
     case "meeting_status":
       return keyed(MEETING_STATUSES, value);
     case "phase":

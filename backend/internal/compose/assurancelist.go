@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,15 +62,23 @@ func AssuranceExceptionsIn(
 }
 
 // TeamAssuranceExceptions reads the open findings on deals the members own
-// now. Ownership is the deal's live owner, never the finding's own owner_id,
-// which is set when the finding is first raised and not kept in step.
+// now, with the findings on the team's own calls. Ownership is the deal's live
+// owner, never the finding's own owner_id, which is set when the finding is
+// first raised and not kept in step.
 func TeamAssuranceExceptions(
-	ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int,
+	ctx context.Context, tx pgx.Tx, teamID ids.UUID, members []ids.UUID, limit int,
 ) ([]assurance.Exception, error) {
-	if len(members) == 0 {
-		return nil, nil
+	// A read for named owners skips call findings, so the team's are read by
+	// the team's scope and merged into the one ranking.
+	calls, err := assuranceCallExceptions(ctx, tx, nil, &RequestedScope{Kind: forecasting.ScopeTeam, ID: &teamID})
+	if err != nil {
+		return nil, err
 	}
-	return assuranceExceptionsOwnedBy(ctx, tx, members, nil, limit)
+	// Nil owners read every deal, so a team with nobody left keeps only its calls.
+	if len(members) == 0 {
+		return rankedWithin(ctx, tx, calls, limit)
+	}
+	return assuranceExceptionsWith(ctx, tx, members, nil, limit, calls)
 }
 
 // assuranceDealExceptionsOwnedBy is both deal readers' body. Nil owners reads every
@@ -136,9 +145,7 @@ func assuranceDealExceptionsOwnedBy(
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
 		%s
-		WHERE e.status = 'open'
-		  AND e.subject_kind = 'deal'
-		  AND d.archived_at IS NULL
+		WHERE `+openFindingOnLiveDealSQL("e", "d")+`
 		  AND %s
 		ORDER BY `+findingRank+`, e.id`+bound,
 		exceptionSelect(money), findingPricedJoin(money.affected), scopeClause)
@@ -197,52 +204,34 @@ func maskedFindingMoney(ctx context.Context, affected string, arg func(any) int)
 }
 
 // exceptionSelect is the select list every read of a finding shares, aliased
-// `e`. scanException binds its column order positionally, so every reader moves
-// with it, or the scan reads a currency into a status.
+// `e`. scanLabelledException binds its column order positionally, so every
+// reader moves with it, or the scan reads a currency into a status.
 func exceptionSelect(money findingMoney) string {
 	return `e.id, e.type, e.subject_kind, e.subject_id, e.severity,
 	       ` + money.affected + `, e.currency, e.owner_id, e.status,
 	       ` + money.claim + `, ` + money.observed + `, e.first_seen_at, e.last_seen_at`
 }
 
-// scanLabelledException reads one row of exceptionSelect plus the subject's
-// name and live owner, which only this reader selects.
-//
-// The two are appended rather than added to exceptionSelect. That list is
-// shared with bundleableFindings and bound POSITIONALLY. A column inserted there
-// would be read into a neighbouring field by the other scanner, silently.
-func scanLabelledException(row pgx.CollectableRow) (assurance.Exception, error) {
-	return scanExceptionInto(row, true)
-}
-
-// scanException reads one row of exceptionSelect.
+// scanLabelledException reads one row of exceptionSelect followed by the
+// subject's name and live owner. The live owner replaces the finding's own
+// owner_id, which is the scan's snapshot.
 //
 // The nullable columns are read through pointers and folded in afterwards
 // because assurance.Exception carries a plain string for the currency: SQL NULL
 // there is "no money was named", which is a different fact from the empty
 // string only in that nothing may print it as a currency.
-func scanException(row pgx.CollectableRow) (assurance.Exception, error) {
-	return scanExceptionInto(row, false)
-}
-
-// scanExceptionInto is both scanners' body; labelled says whether the row
-// carries the trailing subject name.
-func scanExceptionInto(row pgx.CollectableRow, labelled bool) (assurance.Exception, error) {
+func scanLabelledException(row pgx.CollectableRow) (assurance.Exception, error) {
 	var out assurance.Exception
 	var id, subjectID ids.UUID
-	var owner *ids.UUID
+	var snapshotOwner, liveOwner *ids.UUID
 	var currency *string
 	var firstSeen, lastSeen time.Time
-	targets := []any{
+	err := row.Scan(
 		&id, &out.Type, &out.SubjectKind, &subjectID, &out.Severity,
-		&out.AffectedMinor, &currency, &owner, &out.Status,
+		&out.AffectedMinor, &currency, &snapshotOwner, &out.Status,
 		&out.Claim, &out.Observed, &firstSeen, &lastSeen,
-	}
-	var dealOwner *ids.UUID
-	if labelled {
-		targets = append(targets, &out.SubjectLabel, &dealOwner)
-	}
-	err := row.Scan(targets...)
+		&out.SubjectLabel, &liveOwner,
+	)
 	out.ID = id
 	out.SubjectID = subjectID
 	out.FirstSeenAt = firstSeen
@@ -250,9 +239,6 @@ func scanExceptionInto(row pgx.CollectableRow, labelled bool) (assurance.Excepti
 	if currency != nil {
 		out.Currency = *currency
 	}
-	out.OwnerID = owner
-	if labelled {
-		out.OwnerID = dealOwner
-	}
+	out.OwnerID = liveOwner
 	return out, err
 }

@@ -135,7 +135,7 @@ func TestAReaderWithoutTheGrantForAKindOfEvidenceSeesNoSuggestionCitingIt(t *tes
 	if n := len(e.suggestions(noSignal, t, signalled)); n != 0 {
 		t.Errorf("a rep without signal read sees %d suggestions citing signals", n)
 	}
-	if n, err := e.Deals.CountOpenSuggestions(noSignal); err != nil || n != 1 {
+	if n, err := e.Deals.CountOpenSuggestions(noSignal, deals.SuggestionQuery{}); err != nil || n != 1 {
 		t.Errorf("a rep without signal read counts %d (err %v), want only the meeting's", n, err)
 	}
 }

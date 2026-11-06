@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Sparkles } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import type { components } from "../api/schema";
 import { Button, Skeleton } from "../design-system/atoms";
@@ -140,7 +139,6 @@ function RecordDraftStep({
     return (
       <>
         <Button variant="ai" reasonId={reasonId}>
-          <Sparkles aria-hidden="true" />
           {t("task.next.draftEmail")}
         </Button>
         <p id={reasonId} className="t-caption task-next-reason">
@@ -161,7 +159,6 @@ function RecordDraftStep({
         })
       }
     >
-      <Sparkles aria-hidden="true" />
       {t("task.next.draftEmail")}
     </Button>
   );
@@ -213,7 +210,6 @@ function EmailVerb({
   if (reasonId !== undefined) {
     return (
       <Button variant="ai" reasonId={reasonId}>
-        <Sparkles aria-hidden="true" />
         {t("task.next.draftEmail")}
       </Button>
     );

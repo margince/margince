@@ -450,6 +450,7 @@
 
 .ai-serving-reference {
   max-height: 24rem;
+  position: relative;
   overflow: auto;
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);

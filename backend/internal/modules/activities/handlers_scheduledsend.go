@@ -199,7 +199,7 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	return out
 }
 
-func withScheduledFiles(out *crmcontracts.ScheduledSend, files scheduledFiles) {
+func withScheduledFiles(out *crmcontracts.ScheduledSend, files resolvedFiles) {
 	if len(files.attachable) > 0 {
 		attachments := ApprovalPreviewFiles(files.attachable)
 		out.Attachments = &attachments

@@ -242,8 +242,8 @@ func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) 
 	for i := range 7 {
 		logReplyMessage(reader, t, e, thread, "Invoice and dinner", "Later invoice and dinner details", time.Duration(i+1)*time.Hour)
 	}
-	o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Re: Product materials", body: "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.", messageID: "newer-inbound@customer.test", inReplyTo: "materials-request@customer.test", at: time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC), authenticated: true})
-	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Product materials","body":"Guten Tag,\n\nwelche Version der Produktbroschüre und welche freigegebenen Produktbilder benötigen Sie für Ihre Prüfung?"}`}}
+	o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Invoice and dinner", body: "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.", messageID: "newer-inbound@customer.test", inReplyTo: "materials-request@customer.test", at: time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC), authenticated: true})
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Product materials","body":"Hello Alex,\n\nwhich version of the product brochure and approved product images do you need for your review?"}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	result, err := drafter.DraftEmailWithProvenance(reader, selected, draftfloor.Steering{Intent: "Answer the materials request"})
 	if err != nil {
@@ -253,10 +253,20 @@ func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) 
 		t.Fatalf("subject=%q", result.Subject)
 	}
 	content := brain.request.Messages[0].Content
-	if !strings.Contains(content, `"output_language":"de"`) || !strings.Contains(content, `"register":"Sie"`) {
-		t.Fatalf("newer correspondence did not supply language and register: %s", content)
+	if !strings.Contains(content, `"output_language":"en"`) || strings.Contains(content, `"register":"Sie"`) {
+		t.Fatalf("an unrelated conversation changed the reply language or register: %s", content)
 	}
 	if !strings.Contains(content, body) || !strings.Contains(content, `"thread":"inbound_mail"`) || strings.Contains(content, "Later invoice and dinner details") || strings.Contains(content, "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.") {
 		t.Fatalf("selected inbound request lost its scope: %s", content)
+	}
+}
+
+func TestNewerMailInTheSameConversationSuppliesReplyLanguage(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Alex Buyer", replyCorrespondent)
+	selected := o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Product materials", body: replyLangEnglish, messageID: "materials-request@customer.test", at: replyLangStart, authenticated: true})
+	o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Product materials updated", body: replyLangGerman, messageID: "newer-materials@customer.test", inReplyTo: "materials-request@customer.test", at: replyLangStart.Add(time.Hour), authenticated: true})
+	if got := replyLangDraft(t, o.e, selected); got != "de" {
+		t.Fatalf("reply language = %q, want the conversation's latest German", got)
 	}
 }

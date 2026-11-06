@@ -4,8 +4,8 @@
 package automation
 
 // The automations transport slice (B-E15.4): compose embeds Handlers so
-// the generated stubs are shadowed. Mutations are contract-annotated
-// human-only; the store re-gates on the `automation` RBAC object.
+// the generated stubs are shadowed. The store gates each mutation on the
+// `automation` RBAC object.
 
 import (
 	"encoding/json"
@@ -182,7 +182,7 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 			enabled := false
 			in.Enabled = &enabled
 		default:
-			httperr.Write(w, r, httperr.Validation("status", "invalid", "status is enabled or paused"))
+			httperr.Write(w, r, httperr.Validation(keyStatus, "invalid", "status is enabled or paused"))
 			return
 		}
 	}
@@ -367,6 +367,14 @@ func writeAutomationErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
+func wireSetter(setter *ids.UUID) *openapi_types.UUID {
+	if setter == nil {
+		return nil
+	}
+	id := openapi_types.UUID(*setter)
+	return &id
+}
+
 func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 	status := crmcontracts.AutomationStatus("paused")
 	if a.Enabled {
@@ -385,16 +393,17 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		paused = &reason
 	}
 	wire := crmcontracts.Automation{
-		PausedReason: paused,
-		Id:           openapi_types.UUID(a.ID.UUID),
-		Key:          a.Key,
-		Name:         a.Name,
-		Status:       status,
-		Params:       params,
-		OwnerId:      wireOwner(a.OwnerID),
-		Version:      &version,
-		CreatedAt:    a.CreatedAt,
-		UpdatedAt:    a.UpdatedAt,
+		PausedReason:     paused,
+		SetterPassportId: wireSetter(a.SetterPassportID),
+		Id:               openapi_types.UUID(a.ID.UUID),
+		Key:              a.Key,
+		Name:             a.Name,
+		Status:           status,
+		Params:           params,
+		OwnerId:          wireOwner(a.OwnerID),
+		Version:          &version,
+		CreatedAt:        a.CreatedAt,
+		UpdatedAt:        a.UpdatedAt,
 	}
 	if a.Runs != nil {
 		wire.LastRunAt = a.Runs.LastRunAt

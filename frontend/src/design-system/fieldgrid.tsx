@@ -48,7 +48,6 @@ export function FieldRow({
   label,
   icon,
   align = "top",
-  stacked = false,
   valueRef,
   children,
 }: Readonly<{
@@ -67,22 +66,12 @@ export function FieldRow({
   // chip): taller than the label naming it, and visibly hung too high when the
   // two share a top edge.
   align?: "top" | "middle";
-  /** A local group editor uses the whole pane beneath its label. */
-  stacked?: boolean;
   valueRef?: Ref<HTMLSpanElement>;
   children: ReactNode;
 }>) {
   const hasIconColumn = useContext(IconColumn);
-  const modifier = stacked
-    ? " fieldgrid-label--stacked"
-    : align === "middle"
-      ? " fieldgrid-label--middle"
-      : "";
-  const valueModifier = stacked
-    ? " fieldgrid-value--stacked"
-    : align === "middle"
-      ? " fieldgrid-value--middle"
-      : "";
+  const modifier = align === "middle" ? " fieldgrid-label--middle" : "";
+  const valueModifier = align === "middle" ? " fieldgrid-value--middle" : "";
   return (
     <>
       {hasIconColumn ? (

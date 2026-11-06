@@ -80,7 +80,7 @@ func reasonCodeOf(e BlockedDomain) (crmcontracts.BlockedDomainReasonCode, *strin
 			return crmcontracts.BlockedDomainReasonCodeBulkSender, nil, &kind
 		}
 		return crmcontracts.BlockedDomainReasonCodeBulkSender, nil, nil
-	case AdmissionSourceHuman:
+	case AdmissionSourceHuman, AdmissionSourceAgent:
 		switch e.Reason {
 		case claimedDomainReason:
 			return crmcontracts.BlockedDomainReasonCodeCompanyCreated, nil, nil

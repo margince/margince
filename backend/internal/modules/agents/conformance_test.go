@@ -79,7 +79,7 @@ func dispatchWith(t *testing.T, tool mcp.Tool, log *strings.Builder) *Dispatcher
 func scopedAgentCtx(scopes ...principal.Scope) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(),
+		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull, Permissions: everyRecordedGrant(),
 		Scopes: principal.NewScopeSet(scopes...),
 	})
 }
@@ -243,6 +243,10 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb, revertStageVerb, downloadVerbForTest}, func(context.Context, RouteCall) (json.RawMessage, error) {
+		return json.RawMessage(`{}`), nil
+	})
+	RegisterClientCheckTool(r, discardLog())
 	RegisterDocumentTools(r, &fakeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
@@ -262,6 +266,8 @@ func fullRegistry(t *testing.T) *Registry {
 // walks that only need a tool's SPEC and argument shape: they never reach a
 // handler, so a seam that answers nothing is the honest stand-in.
 type inertLifecycle struct{}
+
+func (inertLifecycle) CheckDisqualifyReason(context.Context, ids.UUID) error { return nil }
 
 func (inertLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
 	return MeetingPreparationResult{}, false, nil
@@ -283,7 +289,7 @@ func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.
 	return nil, nil
 }
 
-func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
+func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, LeadDisqualification, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
 

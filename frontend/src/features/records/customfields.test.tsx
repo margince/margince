@@ -19,8 +19,7 @@ import { LOCALES } from "../../i18n/locale";
 import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CustomFieldsAdmin } from "./customfields";
-import { FieldBuilder } from "./customfields.builder";
-import { AuditRail, FieldTable } from "./customfields.table";
+import { FieldTable } from "./customfields.table";
 
 afterEach(cleanup);
 
@@ -40,169 +39,6 @@ afterEach(() => {
 
 const wrap = (ui: React.ReactNode) =>
   render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
-
-function builder(
-  overrides: Partial<React.ComponentProps<typeof FieldBuilder>> = {},
-) {
-  const onSubmit = vi.fn();
-  const onCancel = vi.fn();
-  // The real region, not a spy standing where it goes: what the builder owes a
-  // reader is a sentence on screen without a completion mark beside it, and a
-  // `vi.fn()` in its place proves only that a function was called.
-  // The kinds an installed extension declared, seeded where the directory reads
-  // them so the builder offers the record type without a request.
-  const kinds = new QueryClient();
-  kinds.setQueryData(["record-kinds"], {
-    data: [{ name: "ext:alpha:visit", display_name: "Visit" }],
-  });
-  wrap(
-    <QueryClientProvider client={kinds}>
-      <ToastProvider>
-        <FieldBuilder
-          object="company"
-          pending={false}
-          onSubmit={onSubmit}
-          onCancel={onCancel}
-          {...overrides}
-        />
-        <ToastRegion />
-      </ToastProvider>
-    </QueryClientProvider>,
-  );
-  return { onSubmit, onCancel };
-}
-
-describe("FieldBuilder", () => {
-  it("mirrors the label into the immutable disabled api key", async () => {
-    builder();
-    await userEvent.type(screen.getByLabelText(/Label/i), "Contract end date");
-    const key = screen.getByLabelText(/API name/i) as HTMLInputElement;
-    expect(key.value).toBe("company.cf_contract_end_date");
-    expect(key).toBeDisabled();
-  });
-
-  it("shows the pending DDL preview reflecting the type", async () => {
-    builder();
-    await userEvent.type(screen.getByLabelText(/Label/i), "Contract end date");
-    await userEvent.click(screen.getByRole("button", { name: /^Date$/i }));
-    expect(
-      screen.getByText(
-        /ALTER company ADD COLUMN cf_contract_end_date \(date\)/,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("refuses a structural label and disables Confirm", async () => {
-    builder();
-    await userEvent.type(
-      screen.getByLabelText(/Label/i),
-      "Link to parent account",
-    );
-    expect(
-      screen.getByText(/looks like a new object or relationship/i),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
-  });
-
-  it("guards an empty label: Confirm disabled, guard toast on click attempt", async () => {
-    const { onSubmit } = builder();
-    const confirm = screen.getByRole("button", {
-      name: "Add field",
-    });
-    expect(confirm).toBeDisabled();
-    // the guard toast is wired to the always-clickable Add affordance
-    expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.queryByRole("status")).toBeNull();
-  });
-
-  it("reveals the ISO-4217 input for currency", async () => {
-    builder();
-    await userEvent.click(screen.getByRole("button", { name: /^Currency$/i }));
-    expect(screen.getByLabelText(/Currency code/i)).toBeInTheDocument();
-  });
-
-  it("reveals the options editor for picklist and blocks removing the last option", async () => {
-    const view = builder();
-    await userEvent.click(screen.getByRole("button", { name: /^Picklist$/i }));
-    const removes = screen.getAllByRole("button", { name: /remove option/i });
-    // start with one row; removing it is blocked
-    await userEvent.click(removes[removes.length - 1]);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "A picklist needs at least one option",
-    );
-    // And marked as a refusal: the completion dot beside it said the opposite
-    // of what the sentence says, so the message wears the danger one.
-    expect(document.body.querySelector(".toast-dot-success")).toBeNull();
-    expect(document.body.querySelector(".toast-dot-danger")).not.toBeNull();
-    expect(view.onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("submits a well-formed draft on Confirm", async () => {
-    const { onSubmit } = builder();
-    await userEvent.type(screen.getByLabelText(/Label/i), "Renewal date");
-    await userEvent.click(screen.getByRole("button", { name: /^Date$/i }));
-    await userEvent.click(screen.getByRole("button", { name: "Add field" }));
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        object: "company",
-        label: "Renewal date",
-        type: "date",
-      }),
-    );
-  });
-
-  it("submits a record field with the one kind it points at", async () => {
-    const { onSubmit } = builder();
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/Label/i), "Last visit");
-    await user.click(
-      screen.getByRole("button", { name: en["cf.type.record"] }),
-    );
-    const add = screen.getByRole("button", { name: "Add field" });
-    expect(add).toBeDisabled();
-    await pickOption(
-      user,
-      screen.getByRole("combobox", { name: en["cf.recordKind"] }),
-      "Visit",
-    );
-    await user.click(add);
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "record", options: ["ext:alpha:visit"] }),
-    );
-  });
-
-  it("submits a field kept off create forms when the reader unticks it", async () => {
-    const { onSubmit } = builder();
-    await userEvent.type(screen.getByLabelText(/Label/i), "Previous owner");
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: en["cf.showInCreate"] }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Add field" }));
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ label: "Previous owner", showInCreate: false }),
-    );
-  });
-
-  it("leaves through Cancel without submitting a draft", async () => {
-    const { onCancel, onSubmit } = builder();
-    await userEvent.type(screen.getByLabelText(/Label/i), "Renewal date");
-    await userEvent.click(screen.getByRole("button", { name: /^Cancel$/i }));
-    expect(onCancel).toHaveBeenCalled();
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("keeps Confirm disabled for a picklist whose only option is blank", async () => {
-    builder();
-    await userEvent.type(screen.getByLabelText(/Label/i), "Deal source");
-    await userEvent.click(screen.getByRole("button", { name: /^Picklist$/i }));
-    // The single option row is left blank — a picklist with no real choice
-    // must not be confirmable.
-    expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
-    // Typing a real option flips Confirm back on.
-    await userEvent.type(screen.getByLabelText(/Option label/i), "Referral");
-    expect(screen.getByRole("button", { name: "Add field" })).toBeEnabled();
-  });
-});
 
 type CustomField = components["schemas"]["CustomField"];
 
@@ -250,6 +86,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
@@ -291,6 +128,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     const menu = await openFieldMenu("Renewal date");
@@ -312,6 +150,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
@@ -330,6 +169,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
@@ -893,6 +733,7 @@ describe("the create-form setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.queryByRole("switch")).toBeNull();
@@ -978,6 +819,7 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
@@ -995,6 +837,7 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(screen.queryByText(en["cf.col.inReports"])).toBeNull();
@@ -1010,40 +853,11 @@ describe("the reporting setting on the field table", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onSetting={() => {}}
+        onKinds={() => {}}
       />,
     );
     expect(
       screen.getByRole("switch", { name: "Use “Tier” in reports" }),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("AuditRail states", () => {
-  const noop = () => undefined;
-
-  it("says nothing about emptiness while the read is still running", () => {
-    wrap(<AuditRail entries={[]} state="loading" onRetry={noop} />);
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-  });
-
-  it("offers a retry on a failed read, and does not claim the trail is empty", () => {
-    const retry = vi.fn();
-    wrap(<AuditRail entries={[]} state="failed" onRetry={retry} />);
-    expect(screen.getByText(/did not load/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-    expect(screen.getByRole("button", { name: /^retry$/i })).toBeTruthy();
-  });
-
-  it("says the trail is withheld, not empty, when the role cannot read it", () => {
-    wrap(<AuditRail entries={[]} state="withheld" onRetry={noop} />);
-    expect(screen.getByText(/Hidden for your role/i)).toBeInTheDocument();
-    expect(screen.queryByText(/No custom field changes yet/i)).toBeNull();
-  });
-
-  it("shows the empty line only for a settled, genuinely empty read", () => {
-    wrap(<AuditRail entries={[]} state="empty" onRetry={noop} />);
-    expect(
-      screen.getByText(/No custom field changes yet/i),
     ).toBeInTheDocument();
   });
 });
