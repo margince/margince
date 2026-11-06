@@ -33,11 +33,19 @@ func keptFromAnAgent(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, st
 		}
 		kept[field] = kept[field] || holds
 	}
-	var hasPhone bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact_phone WHERE contact_id = $1 AND archived_at IS NULL)`, contactID).Scan(&hasPhone); err != nil {
-		return nil, fmt.Errorf("contacts: reading whether the contact holds a phone: %w", err)
+	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	// Phone and address live on neither a sidecar row nor a mirrored column.
+	var hasPhone, hasAddress bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM contact_phone WHERE contact_id = c.id AND archived_at IS NULL),
+		       num_nonnulls(address_line1, address_line2, address_city, address_region, address_postal_code, address_country) > 0
+		  FROM contact c WHERE c.id = $1`, contactID).Scan(&hasPhone, &hasAddress); err != nil {
+		return nil, fmt.Errorf("contacts: reading whether the contact holds a phone or an address: %w", err)
 	}
 	kept[fieldPhone] = kept[fieldPhone] || hasPhone
+	kept[fieldAddress] = kept[fieldAddress] || hasAddress
 	return kept, nil
 }
 

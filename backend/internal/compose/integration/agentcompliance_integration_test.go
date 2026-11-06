@@ -307,6 +307,12 @@ func TestAnAgentWorksTheSubjectRequestQueue(t *testing.T) {
 // An erase cannot be taken back, so an agent works the request and a human closes it.
 func TestAnAgentDoesNotCloseAnErasure(t *testing.T) {
 	c := newComplianceDoors(t, "agent-no-erase")
+	var before struct {
+		FullName string `json:"full_name"`
+	}
+	if status := c.e.Call(t, "GET", "/v1/contacts/"+c.contact, nil, nil, &before); status != http.StatusOK || before.FullName == "" {
+		t.Fatalf("the contact before the erasure → %d, name %q", status, before.FullName)
+	}
 	var opened struct {
 		ID string `json:"id"`
 	}
@@ -323,8 +329,85 @@ func TestAnAgentDoesNotCloseAnErasure(t *testing.T) {
 	if !got.IsError || !strings.Contains(got.Text, "permission denied") {
 		t.Errorf("an agent fulfilling an erasure answered %+v, want a permission refusal", got)
 	}
-	if status := c.e.Call(t, "GET", "/v1/contacts/"+c.contact, nil, nil, nil); status != http.StatusOK {
-		t.Errorf("the contact after the refused erasure → %d", status)
+	var requests struct {
+		Data []struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	if status := c.e.Call(t, "GET", "/v1/data-subject-requests", nil, nil, &requests); status != http.StatusOK {
+		t.Fatalf("listing the requests → %d", status)
+	}
+	if len(requests.Data) != 1 || requests.Data[0].ID != opened.ID || requests.Data[0].Status != "open" {
+		t.Errorf("after the refused erasure the requests read %+v, want %s still open", requests.Data, opened.ID)
+	}
+	var contact struct {
+		FullName string `json:"full_name"`
+	}
+	if status := c.e.Call(t, "GET", "/v1/contacts/"+c.contact, nil, nil, &contact); status != http.StatusOK || contact.FullName != before.FullName {
+		t.Errorf("the contact after the refused erasure → %d, name %q, want %q: erasure anonymizes in place", status, contact.FullName, before.FullName)
+	}
+}
+
+// A passport agent's stamp is what the app reads to name its user, so this runs on a
+// real passport through the agent's own door.
+func TestAnObjectionARealPassportRecordedNamesItsUser(t *testing.T) {
+	c := newComplianceDoors(t, "agent-objection")
+	c.act(t, "suppress_contact", map[string]any{"id": c.contact, "request_body": AnyMap{"kind": "marketing_objection", "reason": "they said stop"}})
+	var stops struct {
+		Data []struct {
+			MayLift   bool    `json:"may_lift"`
+			Fix       bool    `json:"correction"`
+			Colleague bool    `json:"recorded_by_colleague"`
+			Name      *string `json:"recorded_by_name"`
+		} `json:"stops"`
+	}
+	if status := c.e.Call(t, "GET", "/v1/contacts/"+c.contact+"/consent/stops", nil, nil, &stops); status != http.StatusOK || len(stops.Data) != 1 {
+		t.Fatalf("the stops → %d, %+v", status, stops.Data)
+	}
+	got := stops.Data[0]
+	if !got.MayLift || !got.Fix || !got.Colleague || got.Name == nil || *got.Name == "" {
+		t.Errorf("the admin reads %+v, want a correction of a stop their colleague recorded", got)
+	}
+}
+
+// An agent repeating a request that is still open reaches the case already open. A
+// retry after a lost answer files no second one. Free text names nobody for certain,
+// so two such requests stay two cases.
+func TestAnAgentRepeatingAnOpenRequestReachesTheOneCase(t *testing.T) {
+	c := newComplianceDoors(t, "agent-one-case")
+	open := func() string {
+		t.Helper()
+		var opened struct {
+			ID string `json:"id"`
+		}
+		raw := c.act(t, "open_data_subject_request", map[string]any{"request_body": AnyMap{"kind": "access", "subject_ref": c.contact}})
+		if err := json.Unmarshal(raw, &opened); err != nil || opened.ID == "" {
+			t.Fatalf("opening the request answered %s (%v)", raw, err)
+		}
+		return opened.ID
+	}
+	first := open()
+	if again := open(); again != first {
+		t.Errorf("the repeat opened %s beside %s", again, first)
+	}
+	raw := c.act(t, "open_data_subject_request", map[string]any{"request_body": AnyMap{"kind": "erasure", "subject_ref": c.contact}})
+	if strings.Contains(string(raw), first) {
+		t.Errorf("a request of another kind reached the same case: %s", raw)
+	}
+	byName := func() string {
+		t.Helper()
+		var opened struct {
+			ID string `json:"id"`
+		}
+		named := c.act(t, "open_data_subject_request", map[string]any{"request_body": AnyMap{"kind": "access", "subject_ref": "Anna Schmidt"}})
+		if err := json.Unmarshal(named, &opened); err != nil || opened.ID == "" {
+			t.Fatalf("opening the request answered %s (%v)", named, err)
+		}
+		return opened.ID
+	}
+	if one, other := byName(), byName(); one == other {
+		t.Errorf("two requests naming one free-text subject merged into %s", one)
 	}
 }
 
@@ -422,7 +505,6 @@ func TestAnAgentIsRefusedTheComplianceActsSecurityKeeps(t *testing.T) {
 		{"DELETE", "/v1/knowledge/documents/00000000-0000-4000-8000-000000000001"},
 		{"POST", "/v1/exports"},
 		{"POST", "/v1/admin/reporting/pause"},
-		{"PUT", "/v1/forecast/assurance/enforcement"},
 	} {
 		if status := c.e.Call(t, closed.method, closed.route, AnyMap{}, c.bearer, nil); status != http.StatusForbidden {
 			t.Errorf("an agent on %s %s → %d, want 403", closed.method, closed.route, status)

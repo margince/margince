@@ -147,8 +147,9 @@ func outsideToolName(c rune) bool {
 // Offered is the tools/list this caller is shown. It narrows by the passport's
 // scopes, the seat and the checks each verb was measured to ask (grantedTo).
 // Invoke remains the authority on every one of them: this narrows what is
-// advertised and enforces nothing. An Unlisted tool is never offered. Each
-// description names a routed verb by the router action this listing offers.
+// advertised and enforces nothing. An Unlisted tool is offered only when it is
+// Gated and the tool gate admits this caller. Each description names a routed
+// verb by the router action this listing offers.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
@@ -164,6 +165,8 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	for i, spec := range out {
 		out[i] = words.listed(spec)
 	}
+	out = append(out, r.gatedFor(ctx, all)...)
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
 
@@ -174,7 +177,7 @@ func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
-		if invocableByCaller(ctx, spec) {
+		if !spec.Gated && invocableByCaller(ctx, spec) {
 			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}

@@ -95,8 +95,9 @@ type Face struct {
 
 var (
 	headingXLarge  = Face{"fontHeadingXLarge", 700, 28, 32, headingFamily, headingStack}
+	headingLarge   = Face{"fontHeadingLarge", 700, 24, 28, headingFamily, headingStack}
+	headingMedium  = Face{"fontHeadingMedium", 700, 20, 24, headingFamily, headingStack}
 	headingSmall   = Face{"fontHeadingSmall", 700, 16, 20, headingFamily, headingStack}
-	wordmark       = Face{"fontHeadingMedium", 700, 20, 24, headingFamily, headingStack}
 	headingXXSmall = Face{"fontHeadingXXSmall", 700, 12, 16, headingFamily, headingStack}
 	bodyLarge      = Face{"fontBodyLarge", 400, 16, 24, bodyFamily, bodyStack}
 	body           = Face{"fontBody", 400, 14, 20, bodyFamily, bodyStack}
@@ -114,7 +115,7 @@ const (
 
 // TypeScale lists the type rungs the mail layout uses.
 func TypeScale() []Face {
-	return []Face{headingXLarge, wordmark, headingSmall, headingXXSmall, bodyLarge, body, bodySmall}
+	return []Face{headingXLarge, headingLarge, headingMedium, headingSmall, headingXXSmall, bodyLarge, body, bodySmall}
 }
 
 func (f Face) font() string {

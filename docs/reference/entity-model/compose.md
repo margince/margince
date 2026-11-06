@@ -1221,7 +1221,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review
 
-35 columns · primary key `(id)` · referenced by 7 foreign keys
+36 columns · primary key `(id)` · referenced by 7 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1232,6 +1232,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `brief_items_dismissed` | `integer`, default `0` | yes |  |
 | `commitments_due` | `integer`, default `0` | yes |  |
 | `commitments_kept` | `integer`, default `0` | yes |  |
+| `daily_activity` | `jsonb` |  | What the rep did on each day of the week, Monday first, frozen with the review. |
 | `deals_lost` | `integer`, default `0` | yes |  |
 | `deals_moved` | `integer`, default `0` | yes |  |
 | `deals_won` | `integer`, default `0` | yes |  |

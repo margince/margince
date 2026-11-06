@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { formatMoneyCompact } from "../../format/format";
 import { forgetSeat } from "../../lib/storage";
+import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
   isSetup,
   OVERVIEW_SCENARIOS,
@@ -70,7 +71,7 @@ it("keeps committed business and modelled outcomes in different labelled reading
   expect(finish.queryByText(/€1,400,000/)).toBeNull();
   const model = await card("Modelled quarter finish");
   expect(
-    model.getByText(`${short(140000000)} – ${short(260000000)}`),
+    model.getByText(formatMoneyCompactRange(140000000, 260000000, "EUR", "en")),
   ).toBeVisible();
   expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
 });
@@ -174,8 +175,12 @@ it("keeps current-quarter pipeline separate from explicitly labelled all-open st
   expect(
     (await card("Pipeline due this quarter")).queryByText(money(520000000)),
   ).toBeNull();
+  // Said in the stage chart's head, with the deals it counts after it.
   expect(
-    screen.getByText(`All open pipeline: ${money(520000000)}`),
+    await screen.findByText(
+      `All open pipeline: ${money(520000000)} · 61 deals`,
+      { selector: ".reporting-meta" },
+    ),
   ).toBeVisible();
 });
 

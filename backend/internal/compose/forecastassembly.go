@@ -53,11 +53,6 @@ func assembleForecast(
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}
-	policy, err := forecastQualifiedPolicy(ctx, tx)
-	if err != nil {
-		return forecasting.Assembly{}, err
-	}
-	readings.ApplyQualifiedPolicy(policy)
 	if drawn, ok := forecasting.ForecastRange(readings.Contributions); ok {
 		readings.Range = &drawn
 	}

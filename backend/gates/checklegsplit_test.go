@@ -60,19 +60,16 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
-	testLegs, ok := legsPassedBy(t, wf, testLegsJob, "make check-backend", ciLegsOverride)
+	testLegs, ok := legsPassedBy(t, wf, testLegsJob)
 	if !ok {
 		t.Fatalf("job %q has no `make check-backend` step, so this test cannot tell which legs it runs", testLegsJob)
 	}
 	if testLegs == nil {
 		testLegs = all
 	}
-	staticRan, ok := legsPassedBy(t, wf, staticLegsJob, "make check-static", staticLegsOverride)
+	staticRan, ok := staticLegsRunBy(t, wf, static)
 	if !ok {
 		t.Fatalf("job %q has no `make check-static` step, so nothing in CI runs the legs %v", staticLegsJob, static)
-	}
-	if staticRan == nil {
-		staticRan = static
 	}
 
 	for _, job := range []string{testLegsJob, staticLegsJob} {
@@ -119,19 +116,37 @@ func backendCheckLegs(t *testing.T) (all, static []string) {
 	return all, static
 }
 
-// legsPassedBy answers the legs a job's step running command passes through
-// override, and nil when the step passes none, which runs the Makefile's own
-// list. The bool is false when the job has no such step.
-func legsPassedBy(t *testing.T, wf stepRuns, job, command string, override *regexp.Regexp) ([]string, bool) {
+// legsPassedBy answers the CHECK_LEGS a job's `make check-backend` step passes,
+// and nil when the step passes none, which runs every leg.
+func legsPassedBy(t *testing.T, wf stepRuns, job string) ([]string, bool) {
 	t.Helper()
 	for _, step := range wf.Jobs[job].Steps {
-		if !strings.Contains(step.Run, command) {
+		if !strings.Contains(step.Run, "make check-backend") {
 			continue
 		}
-		if match := override.FindStringSubmatch(step.Run); match != nil {
+		if match := ciLegsOverride.FindStringSubmatch(step.Run); match != nil {
 			return matrixLegs(t, wf, job, match[1]), true
 		}
 		return nil, true
+	}
+	return nil, false
+}
+
+// staticLegsRunBy answers the legs backend-lint's `make check-static` step runs:
+// the Makefile's own list, a literal STATIC_LEGS, or the union of a matrix value
+// over every matrix entry.
+func staticLegsRunBy(t *testing.T, wf stepRuns, static []string) ([]string, bool) {
+	t.Helper()
+	job := wf.Jobs[staticLegsJob]
+	for _, step := range job.Steps {
+		if !strings.Contains(step.Run, "make check-static") {
+			continue
+		}
+		match := staticLegsOverride.FindStringSubmatch(step.Run)
+		if match == nil {
+			return static, true
+		}
+		return matrixLegs(t, wf, staticLegsJob, match[1]), true
 	}
 	return nil, false
 }
@@ -152,7 +167,7 @@ func matrixLegs(t *testing.T, wf stepRuns, job, override string) []string {
 	for i, entry := range include {
 		legs := strings.Fields(entry[key[1]])
 		if len(legs) == 0 {
-			t.Errorf("job %q matrix include entry %d sets no %s, so that entry runs no check target", job, i, key[1])
+			t.Errorf("job %q matrix include entry %d sets no %s, so that leg runs no check target", job, i, key[1])
 		}
 		ran = append(ran, legs...)
 	}

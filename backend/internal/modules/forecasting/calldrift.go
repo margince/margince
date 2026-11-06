@@ -7,9 +7,8 @@ package forecasting
 //
 // A call keeps a snapshot of the reading it was made against, with what that
 // reading stood on. Comparing it with today runs the waterfall's per-deal
-// comparison. A change is material when it moves a deal's money in a reading,
-// moves the deal across the period, or changes its qualification. Age is not
-// a change.
+// comparison. A change is material when it moves a deal's money in a reading
+// or moves the deal across the period. Age is not a change.
 
 import (
 	"context"
@@ -33,10 +32,9 @@ type Limitation string
 
 // The limitations a comparison can meet.
 const (
-	LimitationPopulation      Limitation = "population_changed"
-	LimitationCurrency        Limitation = "currency_changed"
-	LimitationDefinition      Limitation = "definition_changed"
-	LimitationQualifiedPolicy Limitation = "qualified_policy_changed"
+	LimitationPopulation Limitation = "population_changed"
+	LimitationCurrency   Limitation = "currency_changed"
+	LimitationDefinition Limitation = "definition_changed"
 	// LimitationPeriod is a call whose window the financial calendar no
 	// longer has, such as after the year was moved to start in another month.
 	LimitationPeriod Limitation = "period_changed"
@@ -55,8 +53,6 @@ type CallDrift struct {
 	Deals []DealDelta
 	// Net is each reading's change from the baseline to today.
 	Net map[Reading]int64
-	// QualificationChanges counts deals whose qualification changed.
-	QualificationChanges int
 }
 
 // Material reports whether anything moved that the call depended on.
@@ -72,7 +68,6 @@ func TodaySide(today Baseline, at time.Time) snapshotSide {
 		TakenAt:               at,
 		PopulationFingerprint: today.PopulationFingerprint,
 		InputFingerprint:      InputFingerprint(today.Readings.Contributions),
-		QualifiedPolicy:       today.QualifiedPolicy,
 	}
 }
 
@@ -98,9 +93,6 @@ func CompareWithBaseline(baseline, today snapshotSide) CallDrift {
 		delta := contributionOf(ReadingOpen, now) - contributionOf(ReadingOpen, was)
 		bucket := classifyOne(ReadingOpen, was, existed, now)
 		out.Deals = append(out.Deals, dealDelta(dealID, bucket, delta, ReadingOpen, was, existed, now))
-		if existed && was.Qualification != now.Qualification {
-			out.QualificationChanges++
-		}
 	}
 	for dealID, was := range before {
 		if _, still := after[dealID]; still || !touchesForecast(was) {
@@ -127,20 +119,15 @@ func limitationOf(baseline, today snapshotSide) Limitation {
 		return LimitationCurrency
 	case baseline.DefinitionVersion != today.DefinitionVersion:
 		return LimitationDefinition
-	case baseline.QualifiedPolicy != today.QualifiedPolicy:
-		return LimitationQualifiedPolicy
 	default:
 		return ""
 	}
 }
 
 // materiallyChanged reports a deal whose money moved in any compared reading,
-// that crossed the period, or whose qualification changed. A deal that did not
-// exist before is compared against contributing nothing.
+// or that crossed the period. A deal that did not exist before is compared
+// against contributing nothing.
 func materiallyChanged(was Contribution, existed bool, now Contribution) bool {
-	if existed && was.Qualification != now.Qualification {
-		return true
-	}
 	for _, reading := range everyReading {
 		if contributionOf(reading, was) != contributionOf(reading, now) || inReading(reading, was) != inReading(reading, now) {
 			return true

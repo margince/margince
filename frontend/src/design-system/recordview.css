@@ -174,8 +174,9 @@
   color: var(--textPrimary);
 }
 /* One short word under the glyph, on one line in every language; the full
-   verb is the control's name and its tip. */
-.record-split-verbs .verb-word {
+   verb is the control's name and its tip. A verb that shows its own label
+   (`.verb-label`, an extension's entry) is cut at its end the same way. */
+.record-split-verbs :is(.verb-word, .verb-label) {
   display: block;
   max-inline-size: 100%;
   overflow: hidden;
@@ -282,12 +283,26 @@
   color: var(--textPrimary);
 }
 .record-split-tabs .recordtabs-tab .optioncount {
-  display: inline;
+  display: inline-block;
+  align-self: center;
   min-inline-size: 0;
-  padding: 0;
-  background: var(--ground);
+  padding: 0 var(--space-1);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgInset);
   color: var(--textSecondary);
-  font-weight: var(--fontWeightRegular);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  transition:
+    background-color var(--dur-state) var(--ease-out),
+    color var(--dur-state) var(--ease-out);
+}
+/* The open tab's count takes the ink of its underline, so the pill reads as
+   part of where the reader stands. */
+.record-split-tabs .recordtabs-tab[aria-pressed="true"] .optioncount,
+.record-split-tabs .recordtabs-tab[aria-current="page"] .optioncount {
+  background: var(--textPrimary);
+  color: var(--bgPage);
 }
 /* On a laptop the sheet is too narrow for eight tabs and their counts, and a
    strip that scrolls hides its last tabs. The details card gives up 40px, the
@@ -372,4 +387,31 @@
   .record-split-feed {
     padding: var(--padPane);
   }
+}
+
+/* A tab's empty section: a dashed plate says the space waits for something,
+   where one grey line read as content that failed to load. Past Overview only
+   (panel.css says how that is told). */
+.record-split-sheet:has(
+    > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+  )
+  .record-split-feed
+  :is(
+    .panel-body > :is(.surfacestate-empty, .surfacestate-nothing):only-child,
+    .panel > :is(.surfacestate-empty, .surfacestate-nothing)
+  ) {
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed var(--borderStrong);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
+  color: var(--textSecondary);
+  text-align: center;
+}
+.record-split-sheet:has(
+    > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+  )
+  .record-split-feed
+  .panel
+  > :is(.surfacestate-empty, .surfacestate-nothing) {
+  margin: 0 var(--padPanel) var(--padPanel);
 }

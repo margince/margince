@@ -33,10 +33,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/internal/shared/testsmtp"
@@ -191,7 +193,7 @@ func TestTheStagedMessageCarriesNoLiveLink(t *testing.T) {
 	// The token itself, as it appears in the sealed link. Searching for it
 	// rather than for a URL shape is what makes this catch a leak into a
 	// column that stores the token alone.
-	_, token, found := lastCut(l.vault.sealed, "#/confirm/")
+	token, found := sealedConfirmToken(l.vault.sealed)
 	if !found {
 		t.Fatalf("the sealed value is not a confirm link: %q", l.vault.sealed)
 	}
@@ -230,6 +232,14 @@ func lastCut(s, sep string) (before, after string, found bool) {
 		return s, "", false
 	}
 	return s[:at], s[at+len(sep):], true
+}
+
+// sealedConfirmToken is the token inside a sealed confirm link, without the
+// language the link carries after it.
+func sealedConfirmToken(sealed string) (string, bool) {
+	_, fragment, found := lastCut(sealed, "#/confirm/")
+	token, _, _ := strings.Cut(fragment, "?")
+	return token, found
 }
 
 func lastIndex(s, sub string) int {
@@ -406,5 +416,56 @@ func TestAReceiptPreparationSQLFailureCannotRollBackTheWithdrawal(t *testing.T) 
 	}
 	if count := lane.e.WsCount(t, `SELECT count(*) FROM comms_outbound`); count != 0 {
 		t.Fatalf("failed preparation staged %d receipts", count)
+	}
+}
+
+// A privacy notice is headed by the same company logo as other system mail.
+// The logo is staged with the notice and attached at send. A logo removed
+// between staging and sending leaves the company's name.
+func TestAPrivacyNoticeShowsTheCompanyLogoUntilItIsRemoved(t *testing.T) {
+	for _, removed := range []bool{false, true} {
+		lane := setupConfirmLane(t)
+		blob := blobstore.NewMemory()
+		putPNG(t, blob, "logos/anchor.png")
+		lane.e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+			VALUES ($1, 'Northstar GmbH', true, 'logos/anchor.png', 'upload', 'manual', 'human:x')`, ids.NewV7())
+		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
+			t.Fatal(err)
+		}
+		var deliveryID ids.UUID
+		var messageID, logoKey string
+		if err := lane.e.Pool.QueryRow(lane.ctx, `SELECT id, message_id, coalesce(inline_logo_key, '') FROM comms_outbound WHERE sender_kind='controller'`).
+			Scan(&deliveryID, &messageID, &logoKey); err != nil {
+			t.Fatal(err)
+		}
+		if logoKey != "logos/anchor.png" {
+			t.Fatalf("the notice was staged with logo %q, want the company's", logoKey)
+		}
+		if removed {
+			if err := blob.Delete(context.Background(), logoKey); err != nil {
+				t.Fatal(err)
+			}
+		}
+		relay := testsmtp.Start(t, false)
+		host, port := relay.Address(t)
+		dispatcher := newSendDispatcher(lane.e.Pool, nil, sendPace{limit: 10, window: time.Minute, maxAge: time.Hour}, blob, nil, nil).
+			WithControllerRelay(ControllerRelayFor(mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}), lane.vault)
+		if outcome, _, err := dispatcher.DispatchWithWait(sendWorkerScope(lane.ctx), deliveryID); err != nil || outcome != comms.OutcomeSent {
+			t.Fatalf("controller dispatch: %s %v", outcome, err)
+		}
+		// The markup is quoted-printable; joining its soft line breaks lets the
+		// content id be read whole.
+		received := strings.ReplaceAll(relay.Received(), "=\r\n", "")
+		if !strings.Contains(received, "Message-ID: <"+messageID+">") {
+			t.Fatal("the notice lost its staged Message-ID")
+		}
+		attached := strings.Contains(received, "Content-ID: <"+connector.LetterheadLogoContentID+">")
+		shown := strings.Contains(received, "cid:"+connector.LetterheadLogoContentID)
+		if attached == removed || shown == removed {
+			t.Fatalf("logo removed=%v: attached=%v shown=%v", removed, attached, shown)
+		}
+		if removed && !strings.Contains(received, "Northstar GmbH") {
+			t.Fatal("a notice whose logo was removed lost the company's name")
+		}
 	}
 }

@@ -37,9 +37,11 @@ A check is **Out of date** when a record it read changed after it ran. It reads 
 
 A change to one deal also starts a check of that deal alone. When it lands, it clears that deal's mark, and the screen does not wait for it. A manager forecast is checked against the pipeline it was recorded over. **Forecast call needs review** names the call and the deals that moved.
 
-A deal moved if its amount changed, it entered or left the period, or it left or came back to the qualified forecast. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
+A deal moved if its amount changed or it entered or left the period. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
 
-The **Reports** section lists saved reports, and **New custom report** opens the report builder. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
+The **Reports** section lists saved reports, and **New custom report** opens the report builder. Below them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. **Product sales** and **Sales initiatives** sit beside them.
+
+A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
@@ -86,7 +88,7 @@ The modelled range is separate from that forecast. A chart under the readings sh
 
 **Needs your attention** names the three most urgent open forecast checks. Each says which deal to review and why, who owns it (or **Unassigned**), when it was found and how much money it puts in question. **Answer** opens that check on the forecast review, and a seat that may only read it gets **Open**. Below, all open checks are counted by kind, in checks and in deals, and **Show** lists one kind. The checks cover every pipeline and close date of the record scope. A data source the last check could not read shows as **Connection maintenance**, apart from the checks.
 
-**All open pipeline** follows these words and decisions, then the open pipeline by stage and sales won by team member, in name order. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
+The open pipeline by stage follows these words and decisions, with **All open pipeline** and its count of deals in its heading. Sales won by team member follows, in name order. Two colleagues who share a name show their email after it. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
 
 **My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month. The readings below separate leads still waiting for a reply from those that came in during the selected period. They include **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
 
@@ -313,17 +315,14 @@ means is the **Projection basis** installation setting, and the card names it:
 
 - **Likely**: deals at the Likely threshold or above, with confirmed close dates. The strictest.
 - **Weighted**: every open deal at its probability ([how it is set](forecast-learning.md)).
-- **Supported Likely**, **Supported weighted**: the same, for deals the customer supports.
 - **Manager’s call**: the recorded number *replaces* the projection rather than adding to what is already won. **From the deal records** shows won plus Likely beside it, never added.
 
-With no basis chosen, the card uses supported Likely while **Count only deals the customer supports** is on. A chosen basis stays chosen.
-No deal is counted in both parts.
+With no basis chosen, the card uses Likely. No deal is counted in both parts.
 
-The card tells you about three caveats under **Landing has a caveat**:
+The card tells you about two caveats under **Landing has a caveat**:
 
 - "No call recorded for this period, so this shows the Likely deals."
 - "The call is below the amount already won. It is shown as recorded, not corrected."
-- "The count of supported deals is off, so this shows all deals."
 
 ### Deal value needed
 
@@ -349,7 +348,7 @@ pipeline with all it needs:
 Neither the landing nor this figure is shown under **My teams**. A total of
 teams that made their own calls would describe none of them.
 
-A deal whose customer stopped answering gets a review here, whatever its close
+Margince closes a deal whose customer stopped answering, whatever its close
 date: see [Deals the customer still supports](deals-the-customer-supports.md).
 
 ### The receipt

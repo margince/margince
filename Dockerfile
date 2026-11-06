@@ -59,7 +59,7 @@ WORKDIR /src
 # modules live IN the layer (no cache mount here) for exactly that reason.
 # The composed workspace folds in extensions/* on top; anything those need
 # beyond this set is fetched in the build steps below.
-COPY go.work go.work.sum ./
+COPY go.work go.work.sum go.mod ./
 COPY backend/go.mod backend/go.sum ./backend/
 COPY backend/tools/go.mod backend/tools/go.sum ./backend/tools/
 COPY composition/go.mod composition/go.sum ./composition/
@@ -78,7 +78,8 @@ COPY . .
 # mount across runs (see .github/workflows/release.yml).
 WORKDIR /src/backend
 RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
-    GOWORK=/src/go.work go run ./tools/gen-composition
+    GOWORK=/src/go.work go run ./tools/gen-composition \
+    && mkdir -p /src/build/extensions
 
 # ── api: build ────────────────────────────────────────────────────────────────
 # The api + migrate binaries under the COMPOSED workspace. migrate ships in the
@@ -253,6 +254,11 @@ RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
 # point, and CI=true above would otherwise flip the default to frozen against a
 # lockfile no image carries.
 COPY --from=gobase /src/build/composition-frontend/workspace/ ./build/composition-frontend/workspace/
+# The SPA resolves each unit's screen through the link gen-composition writes in
+# units/. A link to a downloaded unit lands in build/extensions/, made above even
+# when nothing was downloaded, so the COPY has a source.
+COPY --from=gobase /src/build/composition-frontend/units/ ./build/composition-frontend/units/
+COPY --from=gobase /src/build/extensions/ ./build/extensions/
 RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
     cd build/composition-frontend/workspace \
     && pnpm install --no-frozen-lockfile --prefer-offline --ignore-scripts --store-dir /pnpm-store

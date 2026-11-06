@@ -157,7 +157,12 @@ func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailD
 // ErrVersionSkew when a draft already exists. An expected version replaces the
 // draft at that version and answers ErrVersionSkew when it has moved or gone.
 // Two composers open on one place therefore cannot overwrite each other.
+//
+// An agent's save is an agent's draft, whichever door it came through.
 func (s *Store) SaveMailDraft(ctx context.Context, anchor MailDraftAnchor, content MailDraftContent, expected *int64) (MailDraft, error) {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return s.saveAgentDraft(ctx, anchor, groundedContent{content: content, keepsGrounding: true, expected: expected})
+	}
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return MailDraft{}, err
 	}
@@ -265,6 +270,9 @@ func (s *Store) DiscardMailDraft(ctx context.Context, id ids.UUID) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseAgentOverOwnDraft(ctx, tx, id, author); err != nil {
+			return err
+		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		discarded, err := deleteDrafts(ctx, tx, fmt.Sprintf(
@@ -277,94 +285,6 @@ func (s *Store) DiscardMailDraft(ctx context.Context, id ids.UUID) error {
 		}
 		return nil
 	})
-}
-
-// MailDraftRetention is how long a draft nobody saves again is kept. It is the
-// only way out for a draft whose anchor was deleted or fell out of its author's
-// scope: reading one answers not found, so its author cannot find it to
-// discard it.
-const MailDraftRetention = 90 * 24 * time.Hour
-
-// PurgeStaleMailDrafts deletes up to limit drafts not saved within
-// MailDraftRetention, oldest first, in one transaction, and answers how many
-// went. The retention sweep calls it as the system; a backlog deeper than
-// limit is left to its next pass, like ListOrphanedObjects.
-func (s *Store) PurgeStaleMailDrafts(ctx context.Context, limit int) (int, error) {
-	if err := auth.RequireSystem(ctx); err != nil {
-		return 0, err
-	}
-	var purged int
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		stale, err := deleteDrafts(ctx, tx, fmt.Sprintf(`id IN (
-			SELECT id FROM mail_draft WHERE updated_at < $%d ORDER BY updated_at LIMIT $%d)`,
-			arg(s.now().Add(-MailDraftRetention)), arg(limit)), args)
-		purged = len(stale)
-		return err
-	})
-	return purged, err
-}
-
-// discardComposedDraftTx removes the draft a message was composed in, inside
-// the transaction that sends or schedules it.
-//
-// The draft goes ONLY with a committed send or schedule. Every refusal — a
-// consent gate, a missing mailbox, one frozen for review — unwinds this
-// transaction, so the rep is left in the composer with their draft intact. The
-// id must be a human caller's own draft for this message's anchor; anything
-// else is ignored rather than refused, because a stale draft id must never
-// stop a message going out.
-func discardComposedDraftTx(ctx context.Context, tx pgx.Tx, draftID ids.UUID, origin SendOrigin) error {
-	actor, ok := principal.Actor(ctx)
-	if draftID.IsZero() || !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return nil
-	}
-	types, anchorIDs := origin.draftAnchors()
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	_, err := deleteDrafts(ctx, tx, fmt.Sprintf(`
-		id = $%d AND author_id = $%d
-		AND (anchor_type, anchor_id) IN (SELECT * FROM unnest($%d::text[], $%d::uuid[]))`,
-		arg(draftID), arg(actor.UserID), arg(types), arg(anchorIDs)), args)
-	return err
-}
-
-// draftAnchors names where a draft for this message could have been opened:
-// the conversation a reply answers, or a record an account-started message is
-// filed under.
-func (o SendOrigin) draftAnchors() (types []string, anchorIDs []ids.UUID) {
-	if o.isReply() {
-		return []string{string(crmcontracts.MailDraftAnchorTypeActivity)}, []ids.UUID{o.anchor.UUID}
-	}
-	for _, link := range o.links {
-		types = append(types, link.EntityType)
-		anchorIDs = append(anchorIDs, link.EntityID)
-	}
-	return types, anchorIDs
-}
-
-// deleteDrafts removes drafts and audits each one, so a discard by hand and a
-// discard by sending leave the same trail.
-//
-//craft:ignore naked-any the placeholder arguments of a predicate its callers derive
-func deleteDrafts(ctx context.Context, tx pgx.Tx, predicate string, args []any) ([]MailDraft, error) {
-	rows, err := tx.Query(ctx, `DELETE FROM mail_draft WHERE `+predicate+` RETURNING `+mailDraftColumns, args...)
-	if err != nil {
-		return nil, fmt.Errorf("mail draft: discarding: %w", err)
-	}
-	discarded, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (MailDraft, error) {
-		return scanMailDraft(row)
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, draft := range discarded {
-		if _, err := storekit.AuditEvent(ctx, tx, "delete", entityMailDraft, draft.ID, draftImage(draft)); err != nil {
-			return nil, err
-		}
-	}
-	return discarded, nil
 }
 
 // ensureDraftAnchorVisible asks whether the caller may still see what the

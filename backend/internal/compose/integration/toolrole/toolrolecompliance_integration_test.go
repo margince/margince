@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -79,7 +80,7 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 	"direct_communication_send": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("communication_review"), "request_body": map[string]any{
 			"reason_code": "contractual_necessity", "explanation": "The service agreement obliges us to send this notice.",
-			"warning_version": "override-v1", "acknowledged": true,
+			"warning_version": consent.OverrideWarningVersion, "acknowledged": true,
 		}}
 	},
 	"preview_controller_mail": func(p *recordPool) map[string]any {

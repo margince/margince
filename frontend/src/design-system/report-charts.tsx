@@ -10,6 +10,7 @@ import {
   areaUnder,
   chartX,
   lineSegments,
+  niceTop,
   readingScale,
 } from "./report-charts.model";
 
@@ -108,7 +109,8 @@ export function CumulativeChart({
     return () => observer.disconnect();
   }, []);
   const [active, setActive] = useState<string | null>(null);
-  const scale = readingScale(readings, reference?.value) * 1.08;
+  // A round top, so the two grid lines above zero read as round amounts.
+  const scale = niceTop(readingScale(readings, reference?.value));
   const y = (value: number) => chartY(value, scale, height);
   const selected = readings.find((reading) => reading.key === active);
   const ticks = [0, scale / 2, scale];
@@ -122,19 +124,22 @@ export function CumulativeChart({
       <figcaption id={title} className="sr-only">
         {label}
       </figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {comparisonLabel && (
-          <span className="report-chart-key report-chart-key-comparison">
-            {comparisonLabel}
-          </span>
-        )}
-        {reference && (
-          <span className="report-chart-key report-chart-key-target">
-            {reference.label} · {reference.amount}
-          </span>
-        )}
-      </div>
+      {/* One line alone needs no key: the legend names it beside another. */}
+      {(comparisonLabel || reference) && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key">{valueLabel}</span>
+          {comparisonLabel && (
+            <span className="report-chart-key report-chart-key-comparison">
+              {comparisonLabel}
+            </span>
+          )}
+          {reference && (
+            <span className="report-chart-key report-chart-key-target">
+              {reference.label} · {reference.amount}
+            </span>
+          )}
+        </div>
+      )}
       <div className="report-chart-line" data-size={size} ref={plot}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
@@ -258,14 +263,14 @@ export function BulletChart({
   return (
     <figure className="report-chart">
       <figcaption className="sr-only">{label}</figcaption>
-      {(hasTargets || !readings.some((reading) => reading.tone)) && (
+      {/* One key alone names nothing the bars do not: the legend is drawn
+          only to tell the actual from its target. */}
+      {hasTargets && (
         <div className="report-chart-legend">
           <span className="report-chart-key">{valueLabel}</span>
-          {hasTargets && (
-            <span className="report-chart-key report-chart-key-target">
-              {targetLabel}
-            </span>
-          )}
+          <span className="report-chart-key report-chart-key-target">
+            {targetLabel}
+          </span>
         </div>
       )}
       <ul className="report-chart-rows">
@@ -407,14 +412,17 @@ export function GroupedBars({
   return (
     <figure className="report-chart" data-size={size}>
       <figcaption className="sr-only">{label}</figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {comparisonLabel && (
-          <span className="report-chart-key report-chart-key-comparison">
+      {/* Swatches, not lines: the keys name bars. One series needs no key. */}
+      {comparisonLabel && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key report-chart-key-bar">
+            {valueLabel}
+          </span>
+          <span className="report-chart-key report-chart-key-bar report-chart-column-secondary">
             {comparisonLabel}
           </span>
-        )}
-      </div>
+        </div>
+      )}
       <div className="report-chart-columns">
         {readings.map((reading) => (
           <div key={reading.key} className="report-chart-column-group">

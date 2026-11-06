@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/components/connect-ai-tool.tsx frontend/src/lib/aiconnect.ts frontend/src/features/onboarding/onboarding-conversation/connect-also.tsx frontend/src/lib/setup-checklist.ts frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
+<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/components/connect-ai-tool.tsx frontend/src/lib/aiconnect.ts frontend/src/features/onboarding/onboarding-conversation/connect-also.tsx frontend/src/lib/setup-checklist.ts frontend/src/features/automations/agent-client-experiments.tsx backend/internal/modules/agents/tools_clientcheck.go backend/internal/compose/mcpclientcheck.go backend/internal/modules/identity/oauth_registrationsettings.go frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
 # Agents, passports and what they may do
 
 Margince is made to be worked in by AI agents as much as by humans. Here you
@@ -87,8 +87,8 @@ Yes. Before a change to many records, or an undo of one, your AI tool asks you t
 Also called: confirm a bulk change, undo a bulk update, can I undo what the assistant did, which requests cannot be undone.
 
 ### What happens when I name a record and several match?
-When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one.
-Also called: two contacts with the same name, name that matches twice, pick the right record.
+When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. An admin can test whether their own AI tool shows forms: turn on **Tool support check** on **Settings → MCP**.
+Also called: two contacts with the same name, name that matches twice, pick the right record, client check.
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
@@ -172,7 +172,7 @@ So:
 - The passport also carries its own narrower limits (see **Passports** below).
   Your permissions are the most an agent can ever have.
 - An agent can record consent, a stop or a legal hold for you, and work a privacy
-  request. It asks you first where the act has legal weight, and the record names it.
+  request. Where the act has legal weight, your AI tool is told to ask you first. Margince does not check that it did: the record names the agent and you, and it cannot show you said yes.
 
 ## Things the AI is refused outright
 
@@ -210,7 +210,7 @@ widen anything. So an agent can take its own request back off your list.
 
 **Decisions that remove data or set company rules.** An agent cannot carry out an erasure
 request, lift a legal hold, release a held record or change retention rules. It cannot destroy
-the mail from an address, or change what you decided about one. Those stay with you in the app.
+the mail from an address. It cannot change what you decided about a sender, a domain or a rule that keeps mail out. Those stay with you in the app.
 
 **What closes a deal.** The stage ladder is what the "advance a deal" approval is
 judged against. An agent can add open stages and move stages, but it cannot decide whether a
@@ -245,7 +245,7 @@ Where a purpose requires double opt-in, consent that was granted but not yet
 confirmed does not send. Every recipient is checked, including anyone copied in.
 
 Where a refusal allows it, someone with that permission can read the warning and still send.
-An agent does so only after you have seen the warning and said yes. The record names you both.
+Your AI tool is told to do so only after you have seen the warning and said yes. Margince does not check that you did. The record names you both, and it cannot show you said yes.
 
 **Your seat, checked again at sending.** It is checked when the message goes
 out, not only when the message is staged. Someone moved to a read-only seat
@@ -291,8 +291,8 @@ permissions**:
 - **Draft messages**: proposes text. This is not read-only: one drafting action
   saves a draft on the deal's timeline.
 - **Change records**: every change that stays inside your company.
-- **Send messages**: the four actions that send something out of Margince,
-  booking a meeting included.
+- **Send messages**: the actions that send something out of Margince, booking a meeting included.
+  It also covers changing what a buyer reads in a deal room at once.
 - **Buy contact data**: the one action that gets data from an outside provider.
 
 A passport with only **Read records** can read your approvals but cannot decide

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -14,7 +13,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
-import { formatDayMonth } from "../../format/format";
+/** @vitest-environment happy-dom */
+import { formatDayMonth, MONEY_ABSENT } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
 import { LocaleProvider, translate } from "../../i18n";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
@@ -64,6 +64,7 @@ const view: components["schemas"]["Contact360"] = {
   contact: {
     id: "p-1",
     full_name: "Dana Buyer",
+    attachable: true,
     first_name: "Dana",
     primary_email: "dana@buyer.example",
     source: "manual",
@@ -79,7 +80,7 @@ const [proposed, personal] = bookingProposals;
 function mount(
   proposals: () => Proposal[],
   routes: RouteMap = {},
-  allow: Parameters<typeof meRoute>[0] = { activity: ["create"] },
+  allow: Parameters<typeof meRoute>[0] = { activity: ["read", "create"] },
   shown: components["schemas"]["Contact360"] = view,
 ) {
   installFetchStub({
@@ -438,11 +439,10 @@ it("names the colleague who hosted a held meeting", async () => {
       jsonResponse({ data: [{ id: "u-host", display_name: "Lena Fischer" }] }),
   });
   const held = await screen.findByRole("region", { name: "Held" });
-  expect(await within(held).findByText("Lena Fischer")).toBeTruthy();
-  expect(within(held).getAllByRole("columnheader")).toHaveLength(4);
+  expect(await within(held).findByText(/Hosted by Lena Fischer/)).toBeTruthy();
 });
 
-it("draws no host column for held meetings nobody hosted", async () => {
+it("names no host for a held meeting nobody hosted", async () => {
   mount(() => [], {
     "GET /activities": () =>
       meetingsPage([
@@ -456,7 +456,7 @@ it("draws no host column for held meetings nobody hosted", async () => {
   });
   const held = await screen.findByRole("region", { name: "Held" });
   await within(held).findByText("Site visit");
-  expect(within(held).getAllByRole("columnheader")).toHaveLength(3);
+  expect(within(held).queryByText(/Hosted by /)).toBeNull();
 });
 
 it("reads older meetings when the reader asks for them", async () => {
@@ -515,6 +515,12 @@ it("does not ask for meetings the reader's role may not see", async () => {
   const held = await screen.findByRole("region", { name: "Held" });
   expect(within(held).getByText("Hidden for your role")).toBeTruthy();
   expect(listed).not.toHaveBeenCalled();
+  // The figures claim no count they could not read: no zero, no "None yet".
+  const heldFigure = screen
+    .getByText("Held", { selector: ".stat-card-label-text" })
+    .closest(".stat-card");
+  expect(heldFigure?.textContent).toContain(MONEY_ABSENT);
+  expect(heldFigure?.textContent).not.toContain("0");
 });
 
 it("says how far off each meeting ahead is, on the read's own clock", async () => {
@@ -645,3 +651,24 @@ it("does not call the held list empty, or count what is ahead, while a page is s
   expect(within(held).queryByText("No meetings logged.")).toBeNull();
   expect(within(held).getByRole("button", { name: "Load more" })).toBeTruthy();
 });
+
+it.each([false, undefined])(
+  "keeps proposal reads but refuses new bookings without attach rights: %s",
+  async (attachable) => {
+    mount(
+      () => [proposed],
+      {},
+      { activity: ["read", "create"] },
+      { ...view, contact: { ...view.contact, attachable } },
+    );
+    expect(await screen.findByText("Project discovery")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "You can only read this contact. Ask its owner for write access.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Book a meeting" }),
+    ).toHaveProperty("disabled", true);
+  },
+);

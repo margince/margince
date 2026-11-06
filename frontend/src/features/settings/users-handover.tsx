@@ -29,6 +29,7 @@ const COUNTED = [
   ["company", "users.handover.companies"],
   ["project", "users.handover.projects"],
   ["task", "users.handover.tasks"],
+  ["webhook", "users.handover.webhooks"],
 ] as const;
 
 /** The records in a count as one phrase ("16 deals and 4 leads"); "" for none. */

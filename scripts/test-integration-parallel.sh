@@ -52,6 +52,11 @@
 #                           (discovery/assigned/ran/meta) and per-package binary
 #                           covdata pods for the CI fan-in to reconcile + merge;
 #                           coverage instrumentation is on iff this is set
+#   INTEGRATION_BUILD_OUT   compile every lane package's covered test binary into
+#                           this directory, then stop: no database, no tests. CI
+#                           does this once per run, and its shards read the result
+#   INTEGRATION_BIN_DIR     shard mode only: run each package from the binary
+#                           INTEGRATION_BUILD_OUT left here instead of compiling it
 #   INTEGRATION_TIMEOUT     per-package go-test timeout, as <seconds>s (default
 #                           900s; the budget column parses this). Resolved in
 #                           scripts/lib-testdb.sh, shared with the one-package lane
@@ -72,6 +77,7 @@ cd "$ROOT"
 # shellcheck source=scripts/lib-testdb.sh
 source "$ROOT/scripts/lib-testdb.sh"
 source "$ROOT/scripts/lib-laneorder.sh"
+source "$ROOT/scripts/lib-lanebinaries.sh"
 parse_test_dsn
 
 SHARD_IDX=0 SHARD_TOTAL=0
@@ -103,6 +109,22 @@ if [[ -n "$SHARD_OUT" ]]; then
   mkdir -p "$COVERDIR"
   export COVERDIR
 fi
+
+BUILD_OUT="${INTEGRATION_BUILD_OUT:-}"
+BIN_DIR="${INTEGRATION_BIN_DIR:-}"
+if [[ -n "$BUILD_OUT" ]] && { (( SHARD_TOTAL > 0 )) || [[ -n "$BIN_DIR" ]]; }; then
+  echo "FAIL: INTEGRATION_BUILD_OUT compiles the whole lane and runs nothing — it takes neither INTEGRATION_SHARD nor INTEGRATION_BIN_DIR"
+  exit 1
+fi
+# The binaries carry coverage instrumentation, and only a shard with a manifest
+# directory has somewhere to put the pods they write.
+if [[ -n "$BIN_DIR" && -z "$SHARD_OUT" ]]; then
+  echo "FAIL: INTEGRATION_BIN_DIR runs covered binaries, so it needs INTEGRATION_SHARD_OUT for their pods"
+  exit 1
+fi
+[[ -z "$BUILD_OUT" ]] || case "$BUILD_OUT" in /*) ;; *) BUILD_OUT="$ROOT/$BUILD_OUT";; esac
+[[ -z "$BIN_DIR" ]] || case "$BIN_DIR" in /*) ;; *) BIN_DIR="$ROOT/$BIN_DIR";; esac
+export BIN_DIR
 
 # Per-package go-test timeout and its budget rule — shared with the one-package
 # lane (scripts/lib-testdb.sh resolve_it_timeout), so both cost a package the same.
@@ -161,31 +183,40 @@ export LANE_COVER_FLAGS="-cover -coverpkg=./... -covermode=atomic"
 # dependencies. It runs beside the template build, which mostly waits on
 # Postgres; `wait` reports its status, so a failure cannot hide behind the `&`.
 prebuild_flags=(-tags=integration)
-if [[ -n "${COVERDIR:-}" ]]; then
+if [[ -n "${COVERDIR:-}" || -n "$BUILD_OUT" ]]; then
   read -r -a cover_flags <<< "$LANE_COVER_FLAGS"
   prebuild_flags+=("${cover_flags[@]}")
 fi
-prebuild_log="$(mktemp)"
-( cd "$ROOT/backend" && go build "${prebuild_flags[@]}" ./... ) > "$prebuild_log" 2>&1 &
-prebuild_pid=$!
-# A failed template build exits here under set -e; stop and reap the compiler
-# rather than leave it running. The lane's own EXIT trap below replaces this.
-trap 'kill "$prebuild_pid" 2>/dev/null || true; wait "$prebuild_pid" 2>/dev/null || true; rm -f "$prebuild_log"' EXIT
+# A run from binaries has nothing to compile, and a run that builds them needs
+# no database, so each skips the half that is not its own.
+prebuild_pid=""
+if [[ -z "$BUILD_OUT" && -z "$BIN_DIR" ]]; then
+  prebuild_log="$(mktemp)"
+  ( cd "$ROOT/backend" && go build "${prebuild_flags[@]}" ./... ) > "$prebuild_log" 2>&1 &
+  prebuild_pid=$!
+  # A failed template build exits here under set -e; stop and reap the compiler
+  # rather than leave it running. The lane's own EXIT trap below replaces this.
+  trap 'kill "$prebuild_pid" 2>/dev/null || true; wait "$prebuild_pid" 2>/dev/null || true; rm -f "$prebuild_log"' EXIT
+fi
 
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
-echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
-build_template
-
-prebuild_started=$SECONDS
-if ! wait "$prebuild_pid"; then
-  cat "$prebuild_log"
-  rm -f "$prebuild_log"
-  echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
-  exit 1
+if [[ -z "$BUILD_OUT" ]]; then
+  echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
+  build_template
 fi
-rm -f "$prebuild_log"
-echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_started ))s after the template was ready)"
+
+if [[ -n "$prebuild_pid" ]]; then
+  prebuild_started=$SECONDS
+  if ! wait "$prebuild_pid"; then
+    cat "$prebuild_log"
+    rm -f "$prebuild_log"
+    echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
+    exit 1
+  fi
+  rm -f "$prebuild_log"
+  echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_started ))s after the template was ready)"
+fi
 
 # Every integration test in this repo lives in the backend module.
 GO_DIRS=(backend)
@@ -409,6 +440,46 @@ NUNTAGGED=$(awk -F'|' '
   END { print n + 0 }
 ' "$LANE_PKGS" "$UNTAGGED")
 
+# What the lane's binaries are compiled from. The build records it, and a run
+# from binaries refuses them when its own checkout gives another answer.
+if [[ -n "$BUILD_OUT" || -n "$BIN_DIR" ]]; then
+  lane_packages=()
+  while IFS='|' read -r _ rel; do lane_packages+=("$rel"); done < "$LANE_PKGS"
+  source_stamp="$(lane_source_stamp "$ROOT/backend" integration "${lane_packages[@]+"${lane_packages[@]}"}")" || exit 1
+  [[ -z "$BIN_DIR" ]] || lane_bin_dir_check "$BIN_DIR" "$source_stamp" || exit 1
+fi
+
+# Build mode: one `go test` compiles and links every lane package, and the
+# keeper it runs instead of each binary copies that binary out. Every
+# discovered package must then have one, because a shard fails on a missing
+# binary and the build is the place to name the cause.
+if [[ -n "$BUILD_OUT" ]]; then
+  if (( NPKGS_DISCOVERED == 0 )); then
+    echo "FAIL: no integration packages discovered — nothing to compile"
+    exit 1
+  fi
+  lane_build_dir_prepare "$BUILD_OUT" "$source_stamp" || exit 1
+  build_started=$SECONDS
+  build_packages=("${lane_packages[@]}")
+  # -count=1: a cached result would skip the keeper, and with it the binary.
+  if ! ( cd "$ROOT/backend" \
+      && LANE_MODULE_DIR="$ROOT/backend" LANE_BUILD_OUT="$BUILD_OUT" \
+         go test -count=1 -vet=off -exec="\"$ROOT/scripts/test-integration-keep-binary.sh\"" \
+           "${prebuild_flags[@]}" "${build_packages[@]}" ); then
+    echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
+    exit 1
+  fi
+  missing=0
+  for rel in "${build_packages[@]}"; do
+    [[ -x "$BUILD_OUT/$rel/integration.test" ]] && continue
+    echo "FAIL: go test passed $rel but left no binary at $BUILD_OUT/$rel/integration.test"
+    missing=1
+  done
+  (( missing == 0 )) || exit 1
+  echo "OK: compiled ${#build_packages[@]} integration test binaries into $BUILD_OUT ($(( SECONDS - build_started ))s)"
+  exit 0
+fi
+
 if (( SHARD_TOTAL > 0 )); then
   if (( NTESTS < SHARD_TOTAL )); then
     echo "FAIL: discovered only $NTESTS integration tests for $SHARD_TOTAL shards — the discovery is broken or the shard count is absurd"
@@ -500,6 +571,10 @@ run_one() {
   [[ -n "$runre" ]] && run_args=(-run "$runre")
   # -vet=off: `make lint` vets tagged code with a superset of these analyzers, and
   # gates/lintbuildtagreach_test.go holds that. A slot would only repeat it.
+  local test_cmd=(go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT"
+    "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}"
+    "$rel" "${cover_post[@]+"${cover_post[@]}"}")
+  [[ -z "${BIN_DIR:-}" ]] || test_cmd=(run_binary "$rel" "$COVERDIR/$idx" "${run_args[@]+"${run_args[@]}"}")
   {
     echo "=== integration $d $rel (db=$db bucket=$bucket redis-db=$redis_db${runre:+ sliced}) ==="
     make_clone "$db"
@@ -511,9 +586,7 @@ run_one() {
            MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
            MARGINCE_TEST_BLOBSTORE_BUCKET="$bucket" \
            MARGINCE_TEST_REDIS_DB="$redis_db" \
-        go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" \
-          "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}" \
-          "$rel" "${cover_post[@]+"${cover_post[@]}"}" ) || st=$?
+        "${test_cmd[@]}" ) || st=$?
     if ! drop_clone "$db"; then
       echo "FAIL: clone db $db was not dropped — leaked on the test cluster"
       if [[ "$st" -eq 0 ]]; then st=1; fi
@@ -533,7 +606,25 @@ run_one() {
   local ended=$(( $(date +%s) - LANE_T0 ))
   printf '%s\n' "${rel}|${began}|${ended}" >> "$WALLCLOCK" || :
 }
-export -f run_one owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
+# run_binary REL COVERDIR [-run REGEX] — the `go test -v` of run_one, from the
+# binary the build left in BIN_DIR. It runs in the package directory, as go test
+# runs it, and then prints go test's closing "ok|FAIL <pkg> <secs>s" line, which
+# the cost report reads.
+run_binary() {
+  local rel="$1" coverdir="$2" st=0 t0 t1
+  shift 2
+  local run_flags=()
+  [[ "${1:-}" != "-run" ]] || run_flags=(-test.run="$2")
+  t0="${EPOCHREALTIME:-$(date +%s)}"
+  ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 \
+      -test.timeout="$IT_TIMEOUT" "${run_flags[@]+"${run_flags[@]}"}" -test.gocoverdir="$coverdir" ) || st=$?
+  t1="${EPOCHREALTIME:-$(date +%s)}"
+  local verdict="ok  "
+  (( st == 0 )) || verdict=FAIL
+  printf '%s\t%s\t%ss\n' "$verdict" "$rel" "$(lane_elapsed "$t0" "$t1")"
+  return "$st"
+}
+export -f run_one run_binary lane_elapsed lane_micros owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
 # The workers run in re-exec'd shells, so a variable run_one reads must be
 # exported and not merely set. REDIS_DBS is the only one: unexported it expands
 # to empty, and `% ` is a division by zero rather than a wrong db.
@@ -545,13 +636,28 @@ export REDIS_DBS
 #
 # Same flags as the `go test` in run_one, or that run recompiles. A package that
 # does not compile fails again in its own slot, which reports it per package.
-test_build_started=$SECONDS
-test_packages=()
-while IFS='|' read -r _ rel; do test_packages+=("$rel"); done < "$WORK"
-if ( cd "$ROOT/backend" && go test -vet=off -exec=true "${prebuild_flags[@]}" "${test_packages[@]+"${test_packages[@]}"}" ) > /dev/null 2>&1; then
-  echo "test-integration-parallel: compiled the tests once ($(( SECONDS - test_build_started ))s)"
+#
+# A run from binaries compiles nothing. It checks instead that the build left a
+# binary for every package of its slice, so a gap fails here by name and not as
+# an exec error inside one slot's log.
+if [[ -n "$BIN_DIR" ]]; then
+  missing=0
+  while IFS='|' read -r _ rel; do
+    [[ -x "$BIN_DIR/$rel/integration.test" ]] && continue
+    echo "FAIL: no test binary for $rel at $BIN_DIR/$rel/integration.test — the integration build did not produce it"
+    missing=1
+  done < "$WORK"
+  (( missing == 0 )) || exit 1
+  echo "test-integration-parallel: running $NPKGS packages from the binaries in $BIN_DIR"
 else
-  echo "test-integration-parallel: a test package does not compile; its slot prints the error"
+  test_build_started=$SECONDS
+  test_packages=()
+  while IFS='|' read -r _ rel; do test_packages+=("$rel"); done < "$WORK"
+  if ( cd "$ROOT/backend" && go test -vet=off -exec=true "${prebuild_flags[@]}" "${test_packages[@]+"${test_packages[@]}"}" ) > /dev/null 2>&1; then
+    echo "test-integration-parallel: compiled the tests once ($(( SECONDS - test_build_started ))s)"
+  else
+    echo "test-integration-parallel: a test package does not compile; its slot prints the error"
+  fi
 fi
 
 # When the first package could START, which separates two very different costs

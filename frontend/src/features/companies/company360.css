@@ -1315,10 +1315,6 @@
 .rec-foot-action {
   margin-left: auto;
 }
-/* The staged reading is about the row above it and spans the whole panel. */
-.rec-reading {
-  display: block;
-}
 
 /* The stages of a site read in flight. A ladder rather than a bar: a bar
    claims a fraction nobody measured, and these two stages are the only

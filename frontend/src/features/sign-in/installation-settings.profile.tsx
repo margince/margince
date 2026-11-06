@@ -50,9 +50,7 @@ type ForwardMeasure = NonNullable<
 
 const FORWARD_MEASURES = [
   "likely",
-  "qualified_likely",
   "weighted",
-  "qualified_weighted",
   "manager_call",
 ] as const satisfies readonly ForwardMeasure[];
 

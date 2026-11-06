@@ -12,8 +12,8 @@ import "./composed.css";
 import {
   AutomaticFlag,
   CommitmentReviewFlag,
+  dayRepeats,
   dotClass,
-  entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   noteClass,
@@ -33,10 +33,17 @@ export function TimelineList({
   entries,
   zone,
 }: Readonly<{ entries: TimelineEntry[]; zone: string }>) {
+  const { locale } = useLocale();
+  const repeats = dayRepeats(entries, locale, zone);
   return (
     <ul className="timeline">
-      {entries.map((entry) => (
-        <TimelineRow key={entry.id} entry={entry} zone={zone} />
+      {entries.map((entry, index) => (
+        <TimelineRow
+          key={entry.id}
+          entry={entry}
+          zone={zone}
+          repeatsDay={repeats[index]}
+        />
       ))}
     </ul>
   );
@@ -66,15 +73,22 @@ export function GroupedTimelineList({
   // a caller that cannot complete it: a bulk group has no thread to ask for.
   onOpenThread?: (threadKey: string) => void;
 }>) {
+  const { locale } = useLocale();
+  const repeats = dayRepeats(
+    groups.map((group) => group.entries[0]),
+    locale,
+    zone,
+  );
   return (
     <ul className="timeline">
-      {groups.map((group) =>
+      {groups.map((group, index) =>
         group.kind === "single" ? (
           group.entries[0] && (
             <TimelineRow
               key={group.id}
               entry={group.entries[0]}
               zone={zone}
+              repeatsDay={repeats[index]}
               flag={<MoveFlag entry={group.entries[0]} />}
             />
           )
@@ -83,10 +97,16 @@ export function GroupedTimelineList({
             key={group.id}
             group={group}
             zone={zone}
+            repeatsDay={repeats[index]}
             onOpenThread={onOpenThread}
           />
         ) : (
-          <BulkGroupRow key={group.id} group={group} zone={zone} />
+          <BulkGroupRow
+            key={group.id}
+            group={group}
+            zone={zone}
+            repeatsDay={repeats[index]}
+          />
         ),
       )}
     </ul>
@@ -100,9 +120,11 @@ export function GroupedTimelineList({
 function BulkGroupRow({
   group,
   zone,
+  repeatsDay,
 }: Readonly<{
   group: TimelineGroup;
   zone: string;
+  repeatsDay?: boolean;
 }>) {
   const { locale } = useLocale();
   const t = useT();
@@ -119,7 +141,7 @@ function BulkGroupRow({
           that stepped out of the axis read as a different list wedged into
           this one. Its mark is the kind's own icon: the whole conversation is
           one thing that happened, and a dot would say it was one message. */}
-      <TimelineWhen entry={newest} zone={zone} />
+      <TimelineWhen entry={newest} zone={zone} repeatsDay={repeatsDay} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />
@@ -143,7 +165,6 @@ function BulkGroupRow({
         ) : newest.kind === "email" && newest.emailSummary ? (
           <EmailEntry
             summary={newest.emailSummary}
-            timestamp={entryTimeOfDay(newest, locale, zone)}
             onOpen={newest.onOpenEmail}
             // Absent on the reply composer, whose rows are the thread being
             // answered rather than a place to act from. Every other surface
@@ -236,6 +257,7 @@ export function TimelineRow({
   entry,
   zone,
   flag,
+  repeatsDay,
 }: Readonly<{
   entry: TimelineEntry;
   zone: string;
@@ -244,8 +266,8 @@ export function TimelineRow({
   // same row, drawn as a member of an expanded thread, must not carry a
   // verdict about the conversation it is one reply in.
   flag?: ReactNode;
+  repeatsDay?: boolean;
 }>) {
-  const { locale } = useLocale();
   const t = useT();
   // A note is the rep's own words about the record, not an exchange with it.
   // The row says so: its body sits on a plate of its own instead of running
@@ -265,17 +287,15 @@ export function TimelineRow({
   if (entry.kind === "email" && entry.emailSummary) {
     return (
       <li className={rowClass}>
-        <TimelineWhen entry={entry} zone={zone} />
+        <TimelineWhen entry={entry} zone={zone} repeatsDay={repeatsDay} />
         <span className="tl-rail" aria-hidden="true">
           <span className={dotClass(entry)} />
         </span>
         <div className="tl-body">
-          {/* The TIME, not the date: the gutter beside this already carries
-              the day, and printing it twice on one row spends the space that
-              tells two messages on one subject apart. */}
+          {/* No time here: the gutter beside it prints it, and the whose-move
+              mark is EmailEntry's own, so neither shows twice on one row. */}
           <EmailEntry
             summary={entry.emailSummary}
-            timestamp={entryTimeOfDay(entry, locale, zone)}
             onOpen={entry.onOpenEmail}
             // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"
@@ -285,7 +305,6 @@ export function TimelineRow({
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />
-          {flag}
           {entry.actions && <span className="tl-actions">{entry.actions}</span>}
         </div>
       </li>
@@ -296,7 +315,7 @@ export function TimelineRow({
       {/* The date leads the row, in its own gutter. A chronology is read down
           the dates — a reader looking for "what happened in August" scans one
           column rather than the end of every line. */}
-      <TimelineWhen entry={entry} zone={zone} />
+      <TimelineWhen entry={entry} zone={zone} repeatsDay={repeatsDay} />
       {/* The axis, and this row's place on it. The rail runs THROUGH the row
           rather than a rule sitting under it: a chronology is one thread, and a
           border per entry drew it as a stack of unrelated cards. Filled for
