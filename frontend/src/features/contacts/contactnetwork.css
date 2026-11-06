@@ -387,9 +387,14 @@
   white-space: nowrap;
 }
 
+/* The handoff measures its own column, which is half the tab when wide. */
+.pn-side-column {
+  container: relay / inline-size;
+}
+
 /* Wide enough, the handoff runs across one row: rings on a line that fills
    as steps complete, each step's words under its ring. */
-@container network (min-width: 46rem) {
+@container relay (min-width: 30rem) {
   .pn-relay {
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
