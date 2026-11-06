@@ -197,6 +197,11 @@ type Decision struct {
 	// ExistingCustomer is set when the message is allowed on the
 	// existing-customer route.
 	ExistingCustomer *ExistingCustomerGround
+
+	// SupportedAlternatives are the reasons the record would carry when the
+	// claimed one fails. Only a preview fills them, and none is ever applied:
+	// the sender switches the reason and the engine is asked again.
+	SupportedAlternatives []Category
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

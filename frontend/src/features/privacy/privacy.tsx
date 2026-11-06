@@ -291,7 +291,7 @@ function FulfilErasureModal({
       return unwrap(
         await api.PATCH("/data-subject-requests/{id}", {
           params: { path: { id: fulfilment.request.id } },
-          body: closingBody("fulfilled", fulfilment.closing),
+          body: closingBody("fulfilled", fulfilment.closing, "erasure"),
         }),
       );
     },
@@ -345,6 +345,9 @@ function FulfilErasureModal({
       initialFocusTo={() => phraseInput.current}
     >
       <p>{t("privacy.erasureIrreversible")}</p>
+      {/* A typed draft is not kept: said here, before the press, so nothing
+          the officer wrote goes without a word. */}
+      {closing?.resolution.trim() && <p>{t("privacy.erasureDraftReplaced")}</p>}
       <ConfirmPhraseBox
         prompt={t("privacy.typeErasePrompt")}
         phrase={ERASE_PHRASE}

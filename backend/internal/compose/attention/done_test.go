@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func withActions(verbs ...crmcontracts.AttentionItemActions) func(*crmcontracts.AttentionItem) {
@@ -94,6 +95,22 @@ func TestACaptureConcernComesBackAfterTheConnectionRecovered(t *testing.T) {
 		day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: lane(concern)}
 		if got := hasRow(queueOf(t, day, done), "capture_health", "conn"); got != tc.shown {
 			t.Errorf("last synced %v: shown = %v, want %v", tc.synced, got, tc.shown)
+		}
+	}
+}
+
+// Done sets aside one reason a page is paused. The same reason stays hidden,
+// and the page's move to another reason is a card the reader has not seen.
+func TestABookingPageMarkedDoneComesBackOnANewBlocker(t *testing.T) {
+	t.Parallel()
+	page := ids.NewV7()
+	pressed := bookingItem(BookingConcern{PageID: page, Blocker: "calendar_read_only"})
+	done := map[RowRef]time.Time{{Source: "booking_health", RowID: pressed.Id}: rankInstant.Add(-time.Hour)}
+	for blocker, shown := range map[string]bool{"calendar_read_only": false, "calendar_unavailable": true} {
+		row := bookingItem(BookingConcern{PageID: page, Blocker: blocker})
+		day := crmcontracts.Attention{AsOf: rankInstant, BookingHealth: lane(row)}
+		if got := hasRow(queueOf(t, day, done), "booking_health", row.Id); got != shown {
+			t.Errorf("blocker %s: shown = %v, want %v", blocker, got, shown)
 		}
 	}
 }

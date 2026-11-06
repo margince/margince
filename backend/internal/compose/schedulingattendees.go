@@ -227,6 +227,28 @@ func (c schedulingCalendar) InviteeAddress(ctx context.Context, host ids.UserID,
 // Blocker says why the host's calendar cannot take bookings. It reads the
 // connection's granted scopes and the host's authority, and calls no provider.
 func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
+	blocker, err := c.grantBlocker(ctx, host, provider)
+	if err != nil || blocker != crmcontracts.SchedulingProfileBlockerNone {
+		return blocker, err
+	}
+	return blockerOfCheck(c.Check(ctx, host, provider))
+}
+
+// blockerOfCheck reads a refused check as a page that cannot take bookings.
+// Any other failure says nothing about the page.
+func blockerOfCheck(err error) (crmcontracts.SchedulingProfileBlocker, error) {
+	if errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return crmcontracts.SchedulingProfileBlockerNone, nil
+}
+
+// grantBlocker is the part of Blocker the stored connection answers alone:
+// whether a live connection exists and whether it may write events.
+func (c schedulingCalendar) grantBlocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
 	if c.registry == nil {
 		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
 	}
@@ -239,13 +261,6 @@ func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provid
 	}
 	if !capture.CalendarWriteGranted(provider, scopes) {
 		return crmcontracts.SchedulingProfileBlockerCalendarReadOnly, nil
-	}
-	err = c.Check(ctx, host, provider)
-	if errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
-		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
-	}
-	if err != nil {
-		return "", err
 	}
 	return crmcontracts.SchedulingProfileBlockerNone, nil
 }

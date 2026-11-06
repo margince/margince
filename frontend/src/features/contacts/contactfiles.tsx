@@ -18,6 +18,7 @@ import {
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
+import { ContactChatCapture } from "./contactchatcapture";
 import "./contact360.css";
 
 // The contact's own files: unlike the sibling tabs in contacttabs.tsx, this one
@@ -99,10 +100,13 @@ function filesState(
 
 export function ContactFilesTab({
   contactId,
+  contactName,
   refusedReasonId,
   onOpenEmail,
 }: Readonly<{
   contactId: string;
+  // Named in the warning when a pasted chat shows someone else.
+  contactName: string;
   /** Opens a mail in the page's drawer, from the line naming a file's mail. */
   onOpenEmail?: (activityId: string) => void;
   // The id of the page's sentence about why this contact takes no changes,
@@ -113,6 +117,7 @@ export function ContactFilesTab({
 }>) {
   const t = useT();
   const [adding, setAdding] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [category, setCategory] = useState<Category | "">("");
   const { query, files, hasMore } = useContactFiles(contactId);
   const state = filesState(query, files.length, hasMore);
@@ -121,57 +126,78 @@ export function ContactFilesTab({
     : files;
 
   return (
-    <Panel
-      title={t("tab.documents")}
-      // Offered in every state. An empty library is what the upload exists to
-      // leave. Withholding it on an empty or failed read would hide the
-      // control when it is wanted.
-      titleAction={
-        <Button reasonId={refusedReasonId} onClick={() => setAdding(true)}>
-          {t("docs.add.action")}
-        </Button>
-      }
-      // Passed only where another page exists: the band draws itself whenever
-      // it is given anything.
-      footer={query.hasNextPage ? <LoadMoreButton query={query} /> : undefined}
-    >
-      <AddDocumentDialog
-        anchor={{ record: "contact", id: contactId }}
-        open={adding}
-        onClose={() => setAdding(false)}
-      />
-      {files.length > 0 && (
-        <PanelBody>
-          <FileCuts
-            files={files}
-            complete={!hasMore}
-            value={category}
-            onChange={setCategory}
-          />
-        </PanelBody>
+    <div className="record-stack">
+      {capturing && (
+        <ContactChatCapture
+          contactId={contactId}
+          contactName={contactName}
+          onClose={() => setCapturing(false)}
+        />
       )}
-      {shown.length > 0 && (
-        <FilesGrid files={shown} onOpenEmail={onOpenEmail} />
-      )}
-      {state !== "ready" || shown.length === 0 ? (
-        <PanelBody>
-          <SurfaceState
-            loadingLabel={t("tab.documents")}
-            state={state === "ready" ? "empty" : state}
-            emptyLabel={t(
-              category ? "docs.noneInCategory" : "contact.documents.empty",
-            )}
-            detail={
-              state === "failed"
-                ? { onRetry: () => void query.refetch() }
-                : undefined
-            }
-          >
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      ) : null}
-    </Panel>
+      <Panel
+        title={t("tab.documents")}
+        // Offered in every state. An empty library is what the upload exists to
+        // leave. Withholding it on an empty or failed read would hide the
+        // control when it is wanted.
+        titleAction={
+          <>
+            <Button
+              variant="ai"
+              reasonId={refusedReasonId}
+              disabled={capturing}
+              onClick={() => setCapturing(true)}
+            >
+              {t("chatCapture.action")}
+            </Button>
+            <Button reasonId={refusedReasonId} onClick={() => setAdding(true)}>
+              {t("docs.add.action")}
+            </Button>
+          </>
+        }
+        // Passed only where another page exists: the band draws itself whenever
+        // it is given anything.
+        footer={
+          query.hasNextPage ? <LoadMoreButton query={query} /> : undefined
+        }
+      >
+        <AddDocumentDialog
+          anchor={{ record: "contact", id: contactId }}
+          open={adding}
+          onClose={() => setAdding(false)}
+        />
+        {files.length > 0 && (
+          <PanelBody>
+            <FileCuts
+              files={files}
+              complete={!hasMore}
+              value={category}
+              onChange={setCategory}
+            />
+          </PanelBody>
+        )}
+        {shown.length > 0 && (
+          <FilesGrid files={shown} onOpenEmail={onOpenEmail} />
+        )}
+        {state !== "ready" || shown.length === 0 ? (
+          <PanelBody>
+            <SurfaceState
+              loadingLabel={t("tab.documents")}
+              state={state === "ready" ? "empty" : state}
+              emptyLabel={t(
+                category ? "docs.noneInCategory" : "contact.documents.empty",
+              )}
+              detail={
+                state === "failed"
+                  ? { onRetry: () => void query.refetch() }
+                  : undefined
+              }
+            >
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        ) : null}
+      </Panel>
+    </div>
   );
 }
 

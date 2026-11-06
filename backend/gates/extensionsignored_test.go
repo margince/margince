@@ -74,12 +74,10 @@ func TestEveryEnabledExtensionIsTracked(t *testing.T) {
 			// git runs at the repository root (-C ..), so it is asked about a
 			// root-relative path rather than this package's ../ spelling.
 			repoPath := strings.TrimPrefix(filepath.ToSlash(onDisk), "../")
-			// The one enabled unit that is SUPPOSED to be untracked: the
-			// reference fixture CI copies in (`cp -R fixtures/extensions/
-			// crm-hello extensions/`, ci.yml's extension-reference job) to
-			// prove the tier composes a unit this repository does not ship.
-			// That copy is a build artifact of the job, and un-ignoring it
-			// would invite committing a second copy of a fixture that is
+			// One enabled unit is meant to be untracked: a reference fixture
+			// copied in. It tries the tier on a unit this repository does not
+			// ship, and the copy is a local artifact.
+			// Un-ignoring it would invite committing a second copy of a fixture that is
 			// already tracked one directory over. The exemption costs nothing:
 			// the fixture ITSELF is checked by the second root below, so the
 			// "a fixture git does not have" defect is still caught — at its

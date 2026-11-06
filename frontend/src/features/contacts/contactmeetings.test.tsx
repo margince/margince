@@ -64,6 +64,7 @@ const view: components["schemas"]["Contact360"] = {
   contact: {
     id: "p-1",
     full_name: "Dana Buyer",
+    attachable: true,
     first_name: "Dana",
     primary_email: "dana@buyer.example",
     source: "manual",
@@ -79,7 +80,7 @@ const [proposed, personal] = bookingProposals;
 function mount(
   proposals: () => Proposal[],
   routes: RouteMap = {},
-  allow: Parameters<typeof meRoute>[0] = { activity: ["create"] },
+  allow: Parameters<typeof meRoute>[0] = { activity: ["read", "create"] },
   shown: components["schemas"]["Contact360"] = view,
 ) {
   installFetchStub({
@@ -644,3 +645,24 @@ it("does not call the held list empty, or count what is ahead, while a page is s
   expect(within(held).queryByText("No meetings logged.")).toBeNull();
   expect(within(held).getByRole("button", { name: "Load more" })).toBeTruthy();
 });
+
+it.each([false, undefined])(
+  "keeps proposal reads but refuses new bookings without attach rights: %s",
+  async (attachable) => {
+    mount(
+      () => [proposed],
+      {},
+      { activity: ["read", "create"] },
+      { ...view, contact: { ...view.contact, attachable } },
+    );
+    expect(await screen.findByText("Project discovery")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "You can only read this contact. Ask its owner for write access.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Book a meeting" }),
+    ).toHaveProperty("disabled", true);
+  },
+);

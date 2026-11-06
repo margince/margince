@@ -131,11 +131,9 @@ func extensionTools(dir string) ([]unitTool, error) {
 			continue
 		}
 		// SHIPPED units only, which is what this page is about. A unit that is
-		// merely PRESENT is not necessarily one the product ships: the
-		// extension-reference lane copies fixtures/extensions/crm-hello into
-		// extensions/ before running this suite, and counting it made the
-		// published page depend on which lane generated it — 7 tools locally, 8
-		// there, and a drift gate that could not be green in both.
+		// merely present is not necessarily one the product ships. Counted, a
+		// fixture copied into extensions/ would change the published page.
+		// The drift gate would then fail on the tree that did not generate it.
 		if !shipped[entry.Name()] {
 			continue
 		}

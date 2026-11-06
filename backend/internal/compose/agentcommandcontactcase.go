@@ -8,6 +8,7 @@ import (
 
 	chi "github.com/go-chi/chi/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -37,20 +38,20 @@ func contactCaseCall(deps restCommandDeps, r *http.Request, body []byte, preview
 	if err != nil {
 		return nil, apperrors.ErrNotFound
 	}
-	in, err := commandBody[struct {
-		Revision   string     `json:"revision"`
-		MemberIDs  []ids.UUID `json:"member_ids"`
-		SurvivorID ids.UUID   `json:"survivor_id"`
-		OwnerID    ids.UUID   `json:"owner_id"`
-	}](body)
+	in, err := commandBody[crmcontracts.ContactCaseDecisionRequest](body)
 	if err != nil {
 		return nil, err
 	}
-	if err := httperr.RequireBodyID("survivor_id", in.SurvivorID); err != nil {
+	survivorID := ids.UUID(in.SurvivorId)
+	if err := httperr.RequireBodyID("survivor_id", survivorID); err != nil {
 		return nil, err
 	}
+	memberIDs := make([]ids.UUID, 0, len(in.MemberIds))
+	for _, id := range in.MemberIds {
+		memberIDs = append(memberIDs, ids.UUID(id))
+	}
 	return agents.NewContactCaseCall(deps.records, deps.language, agents.ContactCaseCommand{
-		ContactID: contactID, Revision: in.Revision, MemberIDs: in.MemberIDs,
-		SurvivorID: in.SurvivorID, OwnerID: in.OwnerID, Preview: preview,
+		ContactID: contactID, Revision: in.Revision, MemberIDs: memberIDs,
+		SurvivorID: survivorID, OwnerID: ids.UUID(in.OwnerId), Preview: preview,
 	}), nil
 }
