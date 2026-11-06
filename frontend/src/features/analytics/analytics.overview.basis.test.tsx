@@ -178,8 +178,8 @@ it("keeps current-quarter pipeline separate from explicitly labelled all-open st
   // Said in the stage chart's head, with the deals it counts after it.
   expect(
     await screen.findByText(
-      (text) => text.startsWith(`All open pipeline: ${money(520000000)}`),
-      { selector: ".reporting-meta, .analytics-attention-title" },
+      `All open pipeline: ${money(520000000)} · 61 deals`,
+      { selector: ".reporting-meta" },
     ),
   ).toBeVisible();
 });

@@ -26,8 +26,8 @@ func TestTwoColleaguesWithOneNameEachCarryTheirEmail(t *testing.T) {
 	}}}
 
 	shared := sharedOwnerNames(charts)
-	if len(shared) != 2 {
-		t.Fatalf("shared names = %v, want the two Joschuas", shared)
+	if !sameOwners(shared, first, second) {
+		t.Fatalf("shared names = %v, want exactly %v and %v", shared, first, second)
 	}
 	labelSharedOwners(charts, map[openapi_types.UUID]string{
 		first: "joschua@one.test", second: "joschua@two.test",
@@ -51,4 +51,20 @@ func TestAStageChartWithRepeatedLabelsAsksForNoEmail(t *testing.T) {
 	if shared := sharedOwnerNames(charts); len(shared) != 0 {
 		t.Fatalf("shared = %v, want none for stages", shared)
 	}
+}
+
+func sameOwners(got []openapi_types.UUID, want ...openapi_types.UUID) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	seen := map[openapi_types.UUID]bool{}
+	for _, owner := range got {
+		seen[owner] = true
+	}
+	for _, owner := range want {
+		if !seen[owner] {
+			return false
+		}
+	}
+	return true
 }

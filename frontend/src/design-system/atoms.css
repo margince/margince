@@ -2026,11 +2026,11 @@ span.error-line {
 [data-density="plate"] .stat-card-label {
   flex-wrap: nowrap;
 }
-/* A plate's name breaks only between words: a syllable cut reads as a typo
-   in a label this short. */
+/* A plate's name breaks between words, and inside one only when it cannot
+   fit: a syllable cut reads as a typo in a label this short. */
 [data-density="plate"] .stat-card-label-text {
   hyphens: manual;
-  overflow-wrap: normal;
+  overflow-wrap: break-word;
 }
 /* The plate's figure: body size at the medium weight, so four figures and
    their labels sit in one band at the foot of a card (statstrip.css). */
@@ -2059,6 +2059,15 @@ span.error-line {
 .stat-strip[data-density="plate"] .stat-card-value[data-word] {
   font: var(--fontBodyLarge);
   font-weight: var(--fontWeightMedium);
+}
+/* A neutral word steps back; a toned one keeps the colour of its state. */
+.stat-strip[data-density="plate"]
+.stat-card-value[data-word]:not(
+  .stat-card-success,
+  .stat-card-info,
+  .stat-card-warning,
+  .stat-card-danger
+) {
   color: var(--textSecondary);
 }
 .stat-strip[data-lead] .stat-card-basis::before {

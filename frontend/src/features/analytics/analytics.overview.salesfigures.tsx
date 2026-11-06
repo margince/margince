@@ -98,9 +98,12 @@ function SalesStock({
     from?: ReportingEvaluation,
   ) => void;
 }>) {
-  const headed = charts?.data
-    ? drawnChart(charts.data, "stage_distribution") != null
-    : charts?.isPending === true;
+  const stage = charts?.data
+    ? drawnChart(charts.data, "stage_distribution")
+    : undefined;
+  const headed =
+    charts?.isError !== true &&
+    (charts?.data ? stage != null : charts?.isPending === true);
   return (
     <>
       {!headed && (
@@ -113,7 +116,14 @@ function SalesStock({
             headed ? <OpenPipelineMeta evaluation={answered} /> : undefined
           }
           stageNote={
-            headed ? <OpenPipelineNote evaluation={answered} /> : undefined
+            headed ? (
+              <OpenPipelineNote
+                evaluation={answered}
+                chartReason={
+                  stage?.coverage.withheld ? stage.coverage.reason : undefined
+                }
+              />
+            ) : undefined
           }
           onEvidence={onEvidence}
         />

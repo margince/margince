@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { isAssignedCurrency } from "../../format/assignedcurrencies";
 import {
   formatAnalyticsHours,
   formatAnalyticsMoney,
@@ -21,19 +22,16 @@ export function assessmentText(
 }
 
 // Money takes the page's own format, currency sign first, wherever the
-// server's display spelled it with the ISO code.
+// server's display spelled it with the ISO code. An unknown code keeps the
+// server's spelling, since no table can scale its amount.
 function shownQuantity(
   value: number,
   unit: string,
   cell: Cell,
   locale: Locale,
 ) {
-  if (isCurrency(unit)) return assessmentQuantity(value, unit, locale);
+  if (isAssignedCurrency(unit)) return assessmentQuantity(value, unit, locale);
   return cell.display ?? assessmentQuantity(value, unit, locale);
-}
-
-function isCurrency(unit: string) {
-  return /^[A-Z]{3}$/.test(unit);
 }
 
 /**
@@ -85,7 +83,7 @@ function withCells(
 }
 
 function assessmentQuantity(value: number, unit: string, locale: Locale) {
-  if (isCurrency(unit))
+  if (isAssignedCurrency(unit))
     return formatAnalyticsMoney(
       value * 10 ** minorUnitDigits(unit),
       unit,

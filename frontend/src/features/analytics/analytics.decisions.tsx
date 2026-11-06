@@ -64,7 +64,7 @@ export function DecisionsPanel() {
   const [closing, setClosing] = useState<SalesDecision | null>(null);
   // Before the first decision the panel is one line and its step, so the
   // rail holds a card rather than a loose button.
-  if (!decisions.isError && !decisions.data?.length && !recording)
+  if (decisions.isSuccess && decisions.data.length === 0 && !recording)
     return canRecord ? (
       <Panel
         title={t("analytics.decisions.title")}

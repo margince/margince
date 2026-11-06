@@ -153,24 +153,6 @@
 .barlist-amount {
   text-align: right;
 }
-/* Too narrow for three columns, a name would break mid-word: the name and
-   amount share a line and the bar runs under them. */
-.barlist-rows {
-  container-type: inline-size;
-}
-@container (max-width: 26rem) {
-  .barlist-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: var(--space-1);
-  }
-  .barlist-row > :nth-child(2) {
-    grid-area: 2 / 1 / 3 / -1;
-  }
-  .barlist-row > .barlist-amount {
-    grid-area: 1 / 2;
-  }
-}
-
 /* A fill holding a stricter measure: the part is the solid head, and the rest
    of the fill steps down to a tint of the same hue, so the bar reads as one
    figure inside another rather than as two bars laid over each other. */
@@ -282,6 +264,25 @@
   color: inherit;
   text-decoration: none;
 }
+/* Too narrow for three columns, a name would break mid-word: the name and
+   amount share a line and the bar runs under them. */
+.barlist-rows {
+  container-type: inline-size;
+}
+@container (max-width: 26rem) {
+  .barlist-row,
+  .btn.btn-link.barlist-action {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-1);
+  }
+  .barlist-row > :nth-child(2) {
+    grid-area: 2 / 1 / 3 / -1;
+  }
+  .barlist-row > .barlist-amount {
+    grid-area: 1 / 2;
+  }
+}
+
 .btn.btn-link.segbar-action {
   min-width: 0;
   padding: 0;

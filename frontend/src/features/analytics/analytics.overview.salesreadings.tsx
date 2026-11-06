@@ -96,16 +96,21 @@ export function OpenPipelineMeta({
   );
 }
 
-/** What all open pipeline leaves out, said above the stage chart's bars. */
+/**
+ * What all open pipeline leaves out, said above the stage chart's bars. A
+ * reason the chart already states (`chartReason`) is not said twice.
+ */
 export function OpenPipelineNote({
   evaluation,
-}: Readonly<{ evaluation: ReportingEvaluation }>) {
+  chartReason,
+}: Readonly<{ evaluation: ReportingEvaluation; chartReason?: string }>) {
   const t = useT();
   const open = metricOf(evaluation, "open_pipeline");
   if (!open) return null;
+  const reason = open.coverage.status !== "ok" && open.coverage.reason;
   const caveats = [
     open.coverage.withheld && t("analytics.overview.partlyHidden"),
-    open.coverage.status !== "ok" && open.coverage.reason,
+    reason !== chartReason && reason,
   ].filter(Boolean);
   if (caveats.length === 0) return null;
   return <p className="t-caption">{caveats.join(" · ")}</p>;

@@ -67,9 +67,9 @@ beside its `font`, or the prose keeps the rhythm of the default.
 | `--fontHeadingXSmall` | The same, tighter still: the title of a flag. |
 | `--fontHeadingXXSmall` | Use with care; it goes with Body S, as small print does. |
 
-Five more sizes are for the few lines a reader sees whole when a view opens. The four display
-sizes scale with the window, and `--fontLead` keeps one size. Each row names every place that uses
-its size:
+Seven more sizes are for the few lines a reader sees whole when a view opens. The four display
+sizes scale with the window, `--fontPlateLeadFigure` scales with its cell, and `--fontLead` and
+`--fontPlateFigure` keep one size. Each row names every place that uses its size:
 
 | Token | For |
 |---|---|

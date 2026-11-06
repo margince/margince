@@ -17,7 +17,7 @@ import (
 const ownerGroupPrefix = "owner:"
 
 // distinguishOwnerNames adds the email to an owner's name wherever two
-// colleagues in one chart share that name, so two rows never read as one person.
+// colleagues in one chart share that name, so two rows never read as one owner.
 func distinguishOwnerNames(ctx context.Context, tx pgx.Tx, charts []crmcontracts.ReportingChart) error {
 	shared := sharedOwnerNames(charts)
 	if len(shared) == 0 {
