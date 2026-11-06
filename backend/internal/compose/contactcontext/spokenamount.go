@@ -9,19 +9,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// currencySymbols is the short form a reader recognises without being told
-// which currency it is. It is deliberately SHORT: a symbol nobody reads at a
-// glance is worse than the code, because it says the same thing in a shape the
-// reader has to decode. Anything not listed renders as its ISO code, which is
-// unambiguous everywhere.
-var currencySymbols = map[string]string{
-	"EUR": "€",
-	"USD": "$",
-	"GBP": "£",
-	"VND": "₫",
-	"JPY": "¥",
-}
-
 // SpokenAmount renders a deal's value the way somebody would SAY it in a
 // sentence: "€95k", not "95000.00 EUR". The exact figure belongs on the deal
 // card, where a reader is checking a number; here it is one clause of a
@@ -42,7 +29,7 @@ func SpokenAmount(amountMinor int64, currency string) string {
 	if amountMinor == 0 || currency == "" {
 		return ""
 	}
-	symbol, named := currencySymbols[currency]
+	symbol, named := values.CurrencySymbol(currency)
 	if !named {
 		symbol = currency + " "
 	}

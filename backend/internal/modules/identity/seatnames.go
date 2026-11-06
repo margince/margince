@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // SeatNames names the colleagues in a set, as a human would recognize them.
@@ -40,7 +41,7 @@ func (s *Service) SeatNames(ctx context.Context, seats []ids.UserID) (map[ids.UU
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, display_name FROM app_user WHERE id = ANY($1) AND archived_at IS NULL`, seats)
+			`SELECT id, display_name FROM app_user WHERE id = ANY($1) AND `+workforce.NamedSeatSQL(""), seats)
 		if err != nil {
 			return err
 		}

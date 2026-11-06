@@ -8,9 +8,12 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestCustomerWorkIsUsefulWithoutAnAIFinding(t *testing.T) {
@@ -97,10 +100,37 @@ func TestAWorkItemMarksItsCauseAndDeadlineWithStatusDots(t *testing.T) {
 	}
 	var content emailview.Content
 	content.Item(row)
-	markup := emailview.Render(content.Message("Your priorities", "en", ""))
+	markup := emailview.Render(content.Message("Your priorities", "en", ""), emailview.Letterhead{})
 	for _, want := range []string{`class="bg-warningText"`, "</span>" + cause + "</span>", `class="bg-infoText"`} {
 		if !strings.Contains(markup, want) {
 			t.Errorf("the row lost %q", want)
+		}
+	}
+}
+
+func TestEveryMailedWorkItemLinksIntoMargince(t *testing.T) {
+	const base = "https://crm.example.test"
+	activity := ids.NewV7()
+	deal := ids.NewV7()
+	subject := func(kind crmcontracts.AttentionSubjectType, id ids.UUID) *crmcontracts.AttentionSubject {
+		return &crmcontracts.AttentionSubject{Type: kind, Id: openapi_types.UUID(id)}
+	}
+	for _, test := range []struct {
+		name string
+		item crmcontracts.WorklistItem
+		want string
+	}{
+		{"a meeting outcome opens beside Home", crmcontracts.WorklistItem{Id: activity.String(), Source: crmcontracts.WorklistItemSourceMeetingOutcome, Subject: subject(crmcontracts.AttentionSubjectTypeActivity, activity)}, base + "/#/home?focus=meeting_outcome-" + activity.String()},
+		{"a meeting opens beside Home", crmcontracts.WorklistItem{Id: activity.String(), Source: crmcontracts.WorklistItemSourceMeeting, Subject: subject(crmcontracts.AttentionSubjectTypeDeal, deal)}, base + "/#/home?focus=meeting-" + activity.String()},
+		{"a task opens its own read", crmcontracts.WorklistItem{Id: activity.String(), Source: crmcontracts.WorklistItemSourceTask, Subject: subject(crmcontracts.AttentionSubjectTypeDeal, deal)}, base + "/#/home?task=" + activity.String()},
+		{"a deal row opens the deal", crmcontracts.WorklistItem{Id: "row", Source: crmcontracts.WorklistItemSourceDealAtRisk, Subject: subject(crmcontracts.AttentionSubjectTypeDeal, deal)}, base + "/#/deals/" + deal.String()},
+		{"a row without a record opens beside Home", crmcontracts.WorklistItem{Id: "row", Source: crmcontracts.WorklistItemSourceBounce}, base + "/#/home?focus=bounce-row"},
+	} {
+		var body emailview.Content
+		body.Item(emailview.Item{Title: "Quickfix"})
+		writeMailItemLink(&body, test.item, base, mailcopy.For("en"))
+		if got := body.Blocks[len(body.Blocks)-1]; !got.ItemLink || got.ActionURL != test.want {
+			t.Errorf("%s: link = %q, want %q", test.name, got.ActionURL, test.want)
 		}
 	}
 }

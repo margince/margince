@@ -41,7 +41,7 @@ type ReportKey =
 
 // A card is one report asked one way. Most cards are their report; a card that
 // asks a report a second question names which report it runs.
-type CardKey = ReportKey | "pipeline-by-close-month";
+export type CardKey = ReportKey | "pipeline-by-close-month";
 
 const CARD_REPORT: Record<CardKey, ReportKey> = {
   "pipeline-current": "pipeline-current",
@@ -107,7 +107,7 @@ export const SECTION_REPORTS = {
 const REPORT_GROUP_BY: Record<CardKey, string[]> = {
   "pipeline-current": ["stage_id"],
   "pipeline-by-close-month": ["close_month"],
-  forecast: ["forecast_category"],
+  forecast: ["win_probability_band"],
   "open-deals-per-company": ["company_id", FIELD_CURRENCY],
   // The specs' own defaults: an empty plan takes each report's declared
   // grouping and aggregates, which is what these three need.
@@ -299,6 +299,7 @@ export function ReportCard({
   stages,
   locale,
   scope,
+  section = false,
 }: Readonly<{
   report: CardKey;
   stages: readonly Stage[];
@@ -306,6 +307,8 @@ export function ReportCard({
   // The picker's record scope. Absent, the report measures its own default:
   // the reader's lens for deals, every readable project for delivery.
   scope?: AnalyticsScope;
+  // A section of a larger sheet or rail: its title sits flat over the report.
+  section?: boolean;
 }>) {
   const t = useT();
   const [explain, setExplain] = useState(false);
@@ -326,6 +329,7 @@ export function ReportCard({
         >
           <Panel
             title={title}
+            flatHead={section}
             // The verb that reveals the derivation under this panel, in the
             // head beside the title it explains. It announces its open state
             // and names what it controls, so a reader who cannot see the panel

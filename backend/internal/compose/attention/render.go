@@ -348,6 +348,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 	if task.DueAt != nil {
 		due := *task.DueAt
 		item.DueAt = &due
+		item.DueHasTime = new(task.DueHasTime)
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
 		// Which run of the page it heads. Only dated rows carry one, which is
@@ -455,46 +456,4 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		item.Kind = &label
 	}
 	return item
-}
-
-// subjectOf names the record an item concerns, when the producer named one.
-//
-// The label is deliberately absent here: resolving a display name is a read of
-// that record, and this feed does not hold the grants to make it. A client
-// showing the subject asks the record's own endpoint, which answers under the
-// reader's scope rather than this assembler's.
-func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
-	kind, ok := subjectKinds[entityType]
-	if !ok {
-		return nil
-	}
-	return &crmcontracts.AttentionSubject{Type: kind, Id: openapi_types.UUID(id)}
-}
-
-// subjectKinds maps a staged target's entity type onto the contract's subject
-// enum. A type absent here yields no subject rather than a guess: a card that
-// pointed a reader at the wrong record would be worse than one that pointed
-// nowhere.
-var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
-	subjectCompany: subjectCompany,
-	"contact":      "contact",
-	"deal":         "deal",
-	"lead":         "lead",
-	"activity":     "activity",
-	"project":      "project",
-}
-
-// openableSubject reports whether a subject names a record with a page of its
-// own — the only kind `open` may be offered on. An activity is a timeline
-// entry: naming it on the card is honest, promising navigation to it is not,
-// and the client's router answers exactly this set.
-func openableSubject(subject *crmcontracts.AttentionSubject) bool {
-	if subject == nil {
-		return false
-	}
-	switch subject.Type {
-	case subjectCompany, subjectContact, subjectDeal, "lead", "project":
-		return true
-	}
-	return false
 }

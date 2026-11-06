@@ -8,7 +8,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { ContactFollowState } from "./contactfollowstate";
@@ -93,7 +93,7 @@ describe("the reader's own choice about a quiet contact", () => {
       await screen.findByText(
         en["contact.follow.setAside"].replace(
           "{date}",
-          formatDate(until, "en", viewerZone()),
+          formatDate(until, "en", browserZone()),
         ),
       ),
     ).toBeTruthy();

@@ -3,9 +3,10 @@
 
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
+import type { RecordTabId } from "../../lib/recordtaborder";
 
 // A project is read in ONE body, so the strip names that one and nothing else.
-const PROJECT_TABS = ["overview"] as const;
+const PROJECT_TABS = ["overview"] as const satisfies readonly RecordTabId[];
 
 /** ProjectTabs is the project record's tab row. */
 export function ProjectTabs() {

@@ -29,7 +29,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_deal_receipt
 
-12 columns · primary key `(deal_id)` · referenced by 0 foreign keys
+18 columns · primary key `(deal_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -39,9 +39,15 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `outcome` | `text` | yes | One of `eligible`, `review_required`, `unsupported`, `waiting`, `unknown`. |
 | `policy_version` | `text` | yes |  |
 | `reasons` | `text[]`, default `'{}'::text[]` | yes |  |
-| `run_id` | `uuid` | yes | Points at `assurance_run.id`. |
+| `run_id` | `uuid` |  | Points at `assurance_run.id`. |
 | `silent_days` | `integer` | yes |  |
 | `valid_until` | `timestamp with time zone` | yes |  |
+| `verdict_actions` | `jsonb` |  |  |
+| `verdict_assessed_at` | `timestamp with time zone` |  |  |
+| `verdict_basis_digest` | `text` |  |  |
+| `verdict_input_checksum` | `text` |  |  |
+| `verdict_next_due_at` | `timestamp with time zone` |  |  |
+| `verdict_prompt_version` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

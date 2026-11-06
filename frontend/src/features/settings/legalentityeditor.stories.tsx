@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import type { LegalEntity } from "../../lib/legalentities.queries";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { LegalEntity } from "./legalentities.queries";
 import { ArchiveEntityDialog, EditEntityDialog } from "./legalentityeditor";
 
 // The legal entity editor and the archive confirm, opened from a row's menu

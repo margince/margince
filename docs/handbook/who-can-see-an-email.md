@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -80,6 +80,10 @@ The most likely reasons: the thread is **Held until checked** and nothing has ju
 Only the mailbox owner can open it up, by choosing **Share with the company** on the message. Ask them; an administrator cannot open it for you.
 Also called: email not visible, cannot read email, content for participants only.
 
+### Does showing an email in my language share it with anyone?
+No. **Show in my language** works only on an email you can read, and nobody else sees the version in your language. Margince does not save it. A message that is withheld from you offers no button, because its words are not yours to read.
+Also called: a held email in my language, who sees a translation.
+
 ### Can I read a mail I sent when only a colleague's mailbox captured it?
 Yes, that one mail. You wrote to a customer and copied a colleague, and Margince
 has only your colleague's copy. You can open that copy because you sent it. You
@@ -111,7 +115,7 @@ A held Margince message carries a reason, so you can see why it is held:
 A later verdict clears some of these and not others:
 
 - **Held until checked** clears once Margince has sorted the thread.
-- **Kept private** stays. Only a human's own decision sets it, and nothing
+- **Kept private** stays. Only your decision or your agent's sets it, and nothing
   automatic changes it.
 - **Held: counterparty mail** and **Marked confidential** both win over a later
   verdict. A model that finds a thread to be plain business says nothing about whether you

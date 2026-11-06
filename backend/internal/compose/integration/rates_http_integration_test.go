@@ -14,6 +14,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -230,7 +231,17 @@ func TestFxRateCurrenciesOverHTTP(t *testing.T) {
 	}
 
 	bearer := apptest.PassportBearer(t, e, "currency picker probe", "read")
-	if status := e.Call(t, "GET", "/v1/fx-rates/currencies", nil, bearer, nil); status != http.StatusForbidden {
-		t.Fatalf("agent GET /fx-rates/currencies → %d, want 403 (human-only)", status)
+	var viaAgent struct {
+		BaseCurrency string   `json:"base_currency"`
+		Data         []string `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/fx-rates/currencies", nil, bearer, &viaAgent); status != http.StatusOK {
+		t.Fatalf("an agent's GET /fx-rates/currencies → %d, want the user's own answer", status)
+	}
+	if viaAgent.BaseCurrency != codes.BaseCurrency || !slices.Equal(viaAgent.Data, codes.Data) {
+		t.Errorf("the agent read %+v, the user %+v", viaAgent, codes)
+	}
+	if status := e.Call(t, "GET", "/v1/installation/settings", nil, bearer, nil); status != http.StatusForbidden {
+		t.Errorf("an agent's GET /installation/settings → %d, want 403 on a route that stays closed", status)
 	}
 }

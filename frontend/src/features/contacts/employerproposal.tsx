@@ -15,11 +15,11 @@ import { Stack } from "../../design-system/stack";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useGrantRefused } from "../../lib/capability";
+import { stillHeld } from "../../lib/employmentcurrency";
 import { ProblemError, problemExistingId, unwrap } from "../../lib/problem";
 import { sourcePhrase } from "./contactcorrections";
 import type { Employment } from "./contactemployers";
 import { withheldSections } from "./contactrail";
-import { stillHeld } from "./employmentcurrency";
 import {
   type ProfileFieldVerdict,
   recordProfileFieldVerdict,

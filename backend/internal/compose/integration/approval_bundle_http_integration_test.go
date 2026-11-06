@@ -43,49 +43,6 @@ type approvalListBody struct {
 	} `json:"data"`
 }
 
-// deepReadPayload is what a site read's company proposal carries. It is a real
-// one: this suite decides through the composed application, so every approved
-// member runs its registered accept effect, and a placeholder body would report
-// effect_failed for reasons that have nothing to do with bundling.
-func deepReadPayload(companyID, readID string) string {
-	return `{"company_id":"` + companyID + `","source_url":"https://acme.example",` +
-		`"site_read_id":"` + readID + `","fields":[{"field":"industry","value":"Industrial valves",` +
-		`"evidence_snippet":"Acme makes industrial valves.","source_url":"https://acme.example","confidence":0.9}],"facts":[]}`
-}
-
-// stageBundleRows puts one act's proposals in the inbox through the owner
-// connection. The staging PATH is exercised where it lives; this suite needs
-// only the rows an act leaves behind, and writing them directly keeps the
-// arrange step from depending on a crawler.
-func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, members int) ids.UUID {
-	t.Helper()
-	ctx := context.Background()
-	bundle, readID := ids.NewV7(), ids.NewV7()
-	// THIS SESSION'S seat, read from the app rather than picked out of app_user.
-	// The pick here used to be `is_agent = false ORDER BY created_at LIMIT 1`,
-	// which names the session's seat only while the installation holds exactly
-	// one contact: rows inserted in one transaction share now(), so a second
-	// contact makes it arbitrary. These rows are what the session then decides,
-	// so an arbitrary seat stages an inbox belonging to somebody else and the
-	// suite asserts against a bundle its caller never proposed. Same defect as
-	// demoteToRep's, same fix — #1180, #1074.
-	adminID := sessionUserID(t, e)
-	for i := range members {
-		kind, payload := "deepread", deepReadPayload(companyID, readID.String())
-		if _, err := e.Owner.Exec(ctx, `
-			INSERT INTO approval (kind, proposed_by, on_behalf_of, target_entity_type,
-			                      target_entity_id, summary, proposed_change, diff_hash, expires_at, bundle_id,
-			                      requested_decider_id, requested_decider_source)
-			VALUES ($1, 'agent:site-read', $2, 'company', $3, $4, $5::jsonb, $6,
-			        now() + interval '1 day', $7, $2, 'on_behalf_of')`,
-			kind, adminID, companyID, "Staged by the site read", payload,
-			ids.NewV7().String(), bundle); err != nil {
-			t.Fatalf("staging member %d (%s): %v", i, kind, err)
-		}
-	}
-	return bundle
-}
-
 // One act, one question, and a body that still answers for every proposal in it.
 // The second call is the part worth having: a client that retries — or two
 // contacts clearing the same inbox — must not re-decide anything, and must be told
@@ -102,7 +59,7 @@ func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
-	bundle := stageBundleRows(t, e, company.ID, 3)
+	bundle := apptest.StageBundleRows(t, e, company.ID, 3)
 
 	var listed approvalListBody
 	if status := e.Call(t, "GET", "/v1/approvals?bundle_id="+bundle.String(), nil, nil, &listed); status != http.StatusOK {
@@ -182,7 +139,7 @@ func TestABundleDecisionRefusesAReadOnlyPassport(t *testing.T) {
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
-	bundle := stageBundleRows(t, e, company.ID, 1)
+	bundle := apptest.StageBundleRows(t, e, company.ID, 1)
 	reader := apptest.PassportBearer(t, e, "bundle reader", "read")
 
 	status := e.Call(t, "POST", "/v1/approval-bundles/"+bundle.String()+"/approve", nil, reader, nil)

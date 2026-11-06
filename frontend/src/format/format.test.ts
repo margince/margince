@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatBytes,
   formatDate,
+  formatDateAbbrevRange,
   formatDateTime,
   formatDayMonth,
   formatDayMonthNearYear,
@@ -518,6 +519,27 @@ describe("formatDayRange", () => {
     expect(
       formatDayRange("2026-06-29", "2026-07-05", "en", "Europe/Berlin"),
     ).toMatch(/29 June\s*[–-]\s*5 July/);
+  });
+});
+
+describe("formatDateAbbrevRange", () => {
+  it("names the month and year the two ends share once", () => {
+    expect(
+      formatDateAbbrevRange(
+        "2026-11-01T00:00:00Z",
+        "2026-11-06T12:00:00Z",
+        "en",
+        "Europe/Berlin",
+      ),
+    ).toMatch(/^1\s*[–-]\s*6 Nov 2026$/);
+    expect(
+      formatDateAbbrevRange(
+        "2026-10-01T00:00:00Z",
+        "2026-12-31T12:00:00Z",
+        "en",
+        "Europe/Berlin",
+      ),
+    ).toMatch(/^1 Oct\s*[–-]\s*31 Dec 2026$/);
   });
 });
 

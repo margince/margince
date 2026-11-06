@@ -181,7 +181,7 @@ func NewOnboardingStore(db *database.DB) *OnboardingStore {
 
 func onboardingActor(ctx context.Context, mutate bool) (principal.Principal, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return principal.Principal{}, apperrors.ErrPermissionDenied
 	}
 	if mutate && !actor.SeatType.CanMutate() {
