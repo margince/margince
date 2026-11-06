@@ -41,7 +41,9 @@ type Review struct {
 	GeneratedAt    time.Time
 	AsOf           time.Time
 	Counts         Counts
-	Deals          []DealLine
+	// DailyActivity is the rep's own work per local day, nil on an older review.
+	DailyActivity []crmcontracts.WeeklyDayActivity
+	Deals         []DealLine
 	// MeetingsWithheld marks a week read by a seat that may not read meetings.
 	// Its meeting figures are zero, and the wire says they are withheld.
 	MeetingsWithheld bool

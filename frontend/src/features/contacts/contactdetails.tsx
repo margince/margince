@@ -5,6 +5,7 @@ import { ADDRESS_FIELDS } from "../../components/companyform";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import { rosterOwnerName } from "../../components/entityref";
 import { leadHeldNoticeFor } from "../../components/leadheldnotice";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { RailField } from "../../components/railfield";
 import { RecordCustomFields } from "../../components/recordcustomfields";
 import { RecordFields } from "../../components/recordfields";
@@ -16,7 +17,6 @@ import {
   EmailFace,
 } from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import { RecordCard } from "../../design-system/recordcard";
 import type {
   DetailRow,
@@ -154,13 +154,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           // connector writes this value, so another host gets no link.
           link: Boolean(linkedinHref),
           text: linkedin,
-          reading: linkedinHref ? (
-            <OffsiteLink href={linkedin}>
-              {linkedinHref.pathname.replace(/^\/|\/$/g, "")}
-            </OffsiteLink>
-          ) : (
-            linkedin
-          ),
+          reading: <LinkedInChip href={linkedin} name={contact.full_name} />,
         }),
         field("title", t("create.contactTitle"), Boolean(contact.title), {
           keys: ["title"],

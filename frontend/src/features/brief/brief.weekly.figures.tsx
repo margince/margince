@@ -3,7 +3,6 @@
 
 import { Badge } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { Panel } from "../../design-system/panel";
 import { isoWeekBefore, isoWeekOf } from "../../format/calendarday";
 import {
   formatDayRange,
@@ -182,20 +181,18 @@ export function HeadlineFigures({
   const priorStart = review.prior?.local_week_start;
   return (
     <>
-      <Panel>
-        <div className="brief-report-tiles" data-testid="weekly-strip">
-          {carried(review, t, locale)
-            .filter((figure) => HEADLINE.includes(figure.key))
-            .map((figure) => (
-              <HeadlineTile
-                key={figure.key}
-                figure={figure}
-                review={review}
-                state={figures[figure.figure]}
-              />
-            ))}
-        </div>
-      </Panel>
+      <div className="brief-report-tiles" data-testid="weekly-strip">
+        {carried(review, t, locale)
+          .filter((figure) => HEADLINE.includes(figure.key))
+          .map((figure) => (
+            <HeadlineTile
+              key={figure.key}
+              figure={figure}
+              review={review}
+              state={figures[figure.figure]}
+            />
+          ))}
+      </div>
       {priorStart && (
         <p className="t-caption">
           {t("brief.report.priorWeek", {

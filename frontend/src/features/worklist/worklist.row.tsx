@@ -14,9 +14,12 @@ import {
   briefSubjectLabel,
   dealFactsText,
   itemTitle,
+  partyName,
   phrasedReasons,
+  readerTask,
   reasonText,
   rowHref,
+  sentenceTitled,
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
@@ -36,12 +39,7 @@ import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
 import { isPinned } from "./worklist.pinmark";
 import type { WorklistItem } from "./worklist.queries";
-import {
-  noticeDetail,
-  readerTask,
-  sentenceTitled,
-  sharedResponsibility,
-} from "./worklist.reader";
+import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
 import {
   aboutRecord,
@@ -100,6 +98,7 @@ export function WorklistRow({
   onOpenEmail,
   context,
   framed = false,
+  quiet = false,
   pick,
 }: Readonly<{
   item: WorklistItem;
@@ -109,6 +108,8 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** The card already holds a filled verb, so the row's own is outlined. */
+  quiet?: boolean;
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
@@ -176,7 +177,7 @@ export function WorklistRow({
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
   const reasons = phrasedReasons(item, when !== null)
-    .map((reason) => reasonText(reason, t, locale, zone))
+    .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
   const said = [...new Set(reasons)].filter(
     (reason) => reason !== detail && reason !== item.verdict?.line,
@@ -207,7 +208,7 @@ export function WorklistRow({
   // registers a mutation and reads nothing, so every row may call it. Two
   // writes would carry two settled flags, and one item could be answered twice.
   const brief = useBriefAnswer(item);
-  const answer = withFoldedBrief(rowAnswer(item, brief), item, brief);
+  const answer = withFoldedBrief(rowAnswer(item, brief, quiet), item, brief);
   const readings: RowReadings = shapedReadings(framed, {
     item,
     ...name,
@@ -364,5 +365,7 @@ function RowAsk({
   framed,
 }: Readonly<{ item: WorklistItem; framed: boolean }>) {
   const t = useT();
-  return framed ? <p className="t-body">{t(askKey(item))}</p> : null;
+  return framed ? (
+    <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
+  ) : null;
 }

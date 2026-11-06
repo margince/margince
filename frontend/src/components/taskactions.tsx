@@ -1,12 +1,5 @@
-import {
-  type QueryKey,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
 import { type ReactNode, useId, useRef } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
 import {
   Badge,
   Button,
@@ -30,7 +23,6 @@ import { dueTimeOf, startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
-import { problemCodeOf, unwrap } from "../lib/problem";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
@@ -45,7 +37,7 @@ import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
-import { refetchAfterWrite, refreshMovedTask } from "./taskwritefollowup";
+import type { useTaskUpdate } from "./taskwrite";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -61,58 +53,9 @@ export {
   useMeetingOutcome,
   useNoticeRead,
 } from "./taskactions.rowwrites";
+export { useTaskDone, useTaskUpdate } from "./taskwrite";
 
 type Activity = components["schemas"]["Activity"];
-
-type TaskPatch = {
-  id: string;
-  // The version the press was decided against. Every verb on a task goes
-  // through this one mutation, so pinning it here pins all four at once — and
-  // an unpinned tick is a task two contacts can complete, each told it worked.
-  version: number | undefined;
-  body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
-};
-
-export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: TaskPatch) => {
-      const data = unwrap(
-        await api.PATCH("/activities/{id}", {
-          params: {
-            path: { id: input.id },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: input.body,
-        }),
-        t,
-      );
-      if (input.body.due_at && data) {
-        await refreshMovedTask(queryClient, invalidateKeys, data);
-      }
-      // The version the write PRODUCED, answered so a follow-on press has one.
-      // An undo re-sending the version the row was drawn at would be refused as
-      // skew by the very write it is undoing.
-      return data?.version;
-    },
-    // Returned, so the mutation stays pending until the reads have landed. The
-    // row the press came from stays drawn at the version it was fetched at
-    // until then, and a second press in that window re-sends it and is
-    // refused as skew by the write that has just succeeded.
-    onSuccess: (_data, input) =>
-      input.body.due_at
-        ? undefined
-        : refetchAfterWrite(queryClient, invalidateKeys, input.id),
-    // A stale press is not a failed one: the task moved on under it, so the
-    // reads are refreshed to show where it is now.
-    onError: (error, input) => {
-      if (problemCodeOf(error) === "version_skew") {
-        return refetchAfterWrite(queryClient, invalidateKeys, input.id);
-      }
-    },
-  });
-}
 
 /** Keep the agreed wall time while moving at least as far as tomorrow. */
 export function snoozedDueAt(

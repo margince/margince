@@ -47,8 +47,8 @@ func isManifestHashField(name string) bool {
 
 // manifestTrees are the two roots a unit manifest can live under, and whether
 // one is guaranteed to hold a unit that requests authority. extensions/ may
-// legitimately hold none — presence under it IS enablement, so the vanilla lane
-// composes an empty tree on purpose, and `de` is a jurisdiction pack that
+// legitimately hold none. Presence under it is enablement, so an installation
+// that ships no units composes an empty tree. And `de` is a jurisdiction pack that
 // requests no risk tier at all.
 var manifestTrees = []struct {
 	root           string

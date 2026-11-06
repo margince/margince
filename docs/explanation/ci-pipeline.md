@@ -143,10 +143,10 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 
 | Scope | Paths | Gates |
 |---|---|---|
-| `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
-| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, extension reference, craftsmanship, unit coverage, vuln |
-| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
-| `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
+| `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.mod`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
+| `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
+| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
+| `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
 
@@ -234,7 +234,6 @@ changes ──┬─> deterministic-gates
           │                     integration-build                   │
           │                      └─> integration-shards (×8) ┐      │
           │                     integration-unit-coverage ───┴> fan-in
-          ├─> extension-reference ──────────────────────────────┐   │
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
           ├─> frontend  →  _lane-frontend.yml                  │   │
@@ -244,15 +243,15 @@ changes ──┬─> deterministic-gates
           ├─> uat  (`frontend` scope, beside the lane)          │   │
           ├─> live-boot                                         │   │
           v                                                     v   v
- deterministic-gates + integration + extension-reference + frontend ──> sonarcloud
+ deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
   ci  ── the ONE required context. needs: deterministic-gates,
-         backend-lint, craftsmanship, craft-residue, secret-scan,
-         extension-reference, integration, frontend, uat, license-gate,
-         images   (eleven — vuln and live-boot stay advisory and are NOT
-         in the fan-in)
+         test-budget, backend-lint, craftsmanship, craft-residue,
+         secret-scan, integration, frontend, uat, license-gate, images
+         (eleven — vuln and live-boot stay advisory and are NOT in the
+         fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -365,8 +364,8 @@ loads that first snapshot forever.
 
 - On this repo, that blob is **about 25 MB**, while a warm Go build cache is **about 550 MB**. So the
   module cache was loaded, and the build cache was not.
-- 11 Go jobs per backend run each compiled the module from the start. Those are the shards, the merge
-  gate, the composed build lane, the coverage pass, `live-boot` and `govulncheck`.
+- Every Go job of a backend run compiled the module from the start: the shards, the merge gate, the
+  coverage pass, `live-boot` and `govulncheck`.
 - setup-go still owns the module cache; this action owns the build cache beside it.
 
 Two kinds exist. A build tag and coverage code change the package builds, and only the
@@ -374,7 +373,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `integration unit coverage`, `live-boot`, `vuln` |
 | `integration` | `cache-warm.yml` job `integration` | `integration build`, and every shard for the tools it runs with `go run` |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
@@ -482,8 +481,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
-- **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
-  and the shard profiles cannot reach them.
+- **`deterministic-gates (unit)` stages `crm-hello` last.** After the merge gate it copies the fixture
+  into `extensions/`, then runs the composed build, the tests of `cmd/` and every unit's own tests. Its
+  coverage profile goes to `sonarcloud`, because the shard profiles cannot reach a unit's module.
 - **`INTEGRATION_JOBS=8`**, twice the cores of a runner: the tests wait on Postgres, and 16 ran out of memory.
 - **`integration unit coverage`** exists because the shards run just the packages tagged for
   integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage
@@ -539,10 +539,10 @@ exceptions above. `make check-backend` runs it too, so a laptop `make check` get
 
 ## Coverage → SonarCloud
 
-The `sonarcloud` job runs **last**, and does **not** run any suite again. It fetches the coverage
-artifacts that the `integration` fan-in and `frontend` jobs already made. Those are Go's `coverage.out`
-(merged from each shard and unit binary pod), and the frontend lcov. It then runs only the scanner. So
-there is no second Postgres/Redis/MinIO stack, and no second test run.
+The `sonarcloud` job runs **last** and runs no suite again. It fetches the coverage that `integration`,
+`deterministic-gates (unit)` and `frontend` already made. Those are `coverage.out` (from each shard and
+unit pod), `coverage-extensions.out`, and two lcov reports: the core frontend and the unit screens
+(`frontend/coverage-ext`). It then runs only the scanner, with no second stack and no second test run.
 
 Those pod files are uploaded through
 [`.github/actions/upload-artifact-retried`](../../.github/actions/upload-artifact-retried/action.yml).
