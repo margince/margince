@@ -2926,6 +2926,7 @@ export const en = {
   "record.registration": "Registration",
   "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
   "record.openProfile": "Open profile",
+  "record.linkedinProfile": "{name} on LinkedIn",
   "record.fieldsFailed": "Custom fields could not be loaded.",
   "record.fieldsLoading": "Loading custom fields…",
   "record.fieldsRetry": "Retry",

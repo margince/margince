@@ -3012,6 +3012,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.leadProfileReadOnly":
     "LinkedIn kann bei einem Lead nicht geändert werden.",
   "record.openProfile": "Profil öffnen",
+  "record.linkedinProfile": "{name} auf LinkedIn",
   "record.fieldsFailed": "Die eigenen Felder konnten nicht geladen werden.",
   "record.fieldsLoading": "Eigene Felder werden geladen…",
   "record.fieldsRetry": "Erneut versuchen",

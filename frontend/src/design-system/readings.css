@@ -271,3 +271,8 @@
   height: 100%;
   border-radius: 0;
 }
+
+/* A logo in place of the glyph, at the glyph's size. */
+.chip .provider-mark {
+  --providerMarkSize: 14px;
+}

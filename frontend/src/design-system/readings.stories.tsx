@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Building2, Globe, Hash, Link2, MapPin, Users } from "lucide-react";
 import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
+import { ProviderMark } from "./provider-mark";
 import { BarList, Chip, Meter, SegmentBar, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
@@ -116,6 +117,14 @@ export const Chips: Story = {
       </Chip>
       <Chip icon={Link2} href="https://www.linkedin.com/company/example">
         LinkedIn
+      </Chip>
+      {/* Another company's own logo in place of the glyph. */}
+      <Chip
+        mark={<ProviderMark providerKey="linkedin" />}
+        href="https://www.linkedin.com/in/sebastian-sachsinger"
+        label="Sebastian Sachsinger on LinkedIn"
+      >
+        Sebastian Sachsinger
       </Chip>
       <Chip icon={MapPin}>London, UK</Chip>
       <Chip icon={Building2}>Building products</Chip>

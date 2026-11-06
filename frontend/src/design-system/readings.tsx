@@ -208,28 +208,33 @@ const SPARK_INSET = 3;
 // and it is a link when the fact has somewhere to go.
 export function Chip({
   icon: Icon,
+  mark,
   children,
   href,
+  label,
   dense,
-}: Readonly<{
-  icon: LucideIcon;
-  children: ReactNode;
-  // An external destination. Present → the chip is an anchor and opens in a
-  // new tab with `noreferrer`, since these point off our origin.
-  href?: string;
-  // The chip at a `Badge`'s geometry, for a chip inside a table row: it shares
-  // a cell with badges there, and a fact drawn a rung larger than the status
-  // beside it outweighs the name the row is actually about.
-  //
-  // A size on the primitive rather than a height each caller sets, for the
-  // reason `Meter`'s dense rung is one: a geometry with two authors drifts the
-  // first time either moves.
-  dense?: boolean;
-}>) {
+}: Readonly<
+  ChipFace & {
+    children: ReactNode;
+    // An external destination. Present → the chip is an anchor and opens in a
+    // new tab without an opener or referrer, since these point off our origin.
+    href?: string;
+    // The link's name where the visible text alone does not say where it goes.
+    label?: string;
+    // The chip at a `Badge`'s geometry, for a chip inside a table row: it shares
+    // a cell with badges there, and a fact drawn a rung larger than the status
+    // beside it outweighs the name the row is actually about.
+    //
+    // A size on the primitive rather than a height each caller sets, for the
+    // reason `Meter`'s dense rung is one: a geometry with two authors drifts the
+    // first time either moves.
+    dense?: boolean;
+  }
+>) {
   const shape = dense ? "chip chip-dense" : "chip";
   const body = (
     <>
-      <Icon size={dense ? 12 : 14} aria-hidden="true" />
+      {Icon ? <Icon size={dense ? 12 : 14} aria-hidden="true" /> : mark}
       <span>{children}</span>
     </>
   );
@@ -239,8 +244,9 @@ export function Chip({
       <a
         className={`${shape} chip-link`}
         href={destination}
+        aria-label={label}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
       >
         {body}
       </a>
@@ -250,6 +256,11 @@ export function Chip({
   // link, not the value.
   return <span className={shape}>{body}</span>;
 }
+
+// A glyph names the fact's kind; a mark is another company's own logo.
+type ChipFace =
+  | { icon: LucideIcon; mark?: never }
+  | { mark: ReactNode; icon?: never };
 
 // A ranked set of one-dimensional readings: label, bar, formatted amount, one
 // row each. `Meter` draws one such bar; this is what a caller reaches for when

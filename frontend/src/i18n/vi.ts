@@ -2923,6 +2923,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.registration": "Thông tin đăng ký",
   "record.leadProfileReadOnly": "Không thể thay đổi LinkedIn của lead.",
   "record.openProfile": "Mở hồ sơ",
+  "record.linkedinProfile": "{name} trên LinkedIn",
   "record.fieldsFailed": "Không thể tải trường tùy chỉnh.",
   "record.fieldsLoading": "Đang tải trường tùy chỉnh…",
   "record.fieldsRetry": "Thử lại",
