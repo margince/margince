@@ -55,6 +55,18 @@ func (s *Sink) WithMeetingFolder(fold MeetingFolder) *Sink {
 	return &c
 }
 
+// MeetingHostKeeper names a calendar meeting's organizer as its host when the
+// organizer is a colleague whose own calendar holds it. compose injects it.
+type MeetingHostKeeper func(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) error
+
+// WithMeetingHostKeeper returns a copy that hands a meeting it replays to its
+// organizer. A guest's calendar often syncs a meeting first and becomes its host.
+func (s *Sink) WithMeetingHostKeeper(keep MeetingHostKeeper) *Sink {
+	c := *s
+	c.keepMeetingHost = keep
+	return &c
+}
+
 // admitCalendarVerb holds the door a calendar verb carries no record through:
 // the two rules admitRecord states for a write, about who is calling.
 //
@@ -162,10 +174,11 @@ func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields A
 	return assertedIncumbent(ctx, tx, id)
 }
 
-// settleMeetingReplay is what a proven replay of a meeting still owes the row:
-// its current identity, its guests and its current start. Only this calendar's
-// own row moves. Another door's row reached through the cross-door identity
-// stays, or a second calendar on the old time would move it back.
+// settleMeetingReplay is what a proven replay of a meeting still owes the row.
+// That is its identity, guests, documents, current start and host. Only this
+// calendar's own row moves. Another door's row reached through the cross-door
+// identity stays, or a second calendar on the old time would move it back.
+// Either replay may hand the host to the organizer.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
@@ -178,7 +191,14 @@ func (s *Sink) settleMeetingReplay(
 	if err := s.recordMeetingDocuments(ctx, tx, id, rec, true); err != nil {
 		return err
 	}
-	return s.moveOnReplay(ctx, tx, id, rec, viaIdentity)
+	if err := s.moveOnReplay(ctx, tx, id, rec, viaIdentity); err != nil {
+		return err
+	}
+	fields, isActivity := rec.Fields.(ActivityFields)
+	if s.keepMeetingHost == nil || !isActivity || fields.Kind != meetingKind {
+		return nil
+	}
+	return s.keepMeetingHost(ctx, tx, id)
 }
 
 // foldOwnDuplicate answers the row this capture is about when the identity

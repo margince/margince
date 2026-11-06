@@ -1725,7 +1725,6 @@
         "lead.read",
         "project.read",
         "project.update",
-        "scope:team",
         "user_admin.update",
         "webhook_subscription.update"
       ]
