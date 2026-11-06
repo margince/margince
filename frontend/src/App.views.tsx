@@ -164,13 +164,13 @@ const navigateToAddress = (address: string) => navigate(parseHash(address));
 // says it is holding.
 export const screenOfAddress = (address: string) => {
   const route = parseHash(address);
-  const view = SCREEN_VIEWS[route.screen](route);
-  return route.screen === "analytics" ? (
-    view
-  ) : (
-    <CompleteLocale>{view}</CompleteLocale>
-  );
+  return SCREEN_VIEWS[route.screen](route);
 };
+
+function screenWithLocale(address: string) {
+  const view = screenOfAddress(address);
+  return parseHash(address).screen === "analytics" ? view : <CompleteLocale>{view}</CompleteLocale>;
+}
 
 // What the held address is about, which is what the screen below is keyed on.
 // Parsed from the same string for the same reason as the view above it.
@@ -251,7 +251,7 @@ export function ScreenView({
       <UnsavedGuard address={shownAddress} onKeep={navigateToAddress}>
         {(held) => (
           <Fragment key={identityOfAddress(held)}>
-            {screenOfAddress(held)}
+            {screenWithLocale(held)}
           </Fragment>
         )}
       </UnsavedGuard>

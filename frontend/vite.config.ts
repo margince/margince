@@ -95,7 +95,7 @@ const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
 const startup = entryChunks("startup", entries.startup);
 const analyticsData = entryChunks(
   "analytics-data",
-  [join(frontendRoot, "src/features/analytics/analytics.prefetch.ts")],
+  [join(frontendRoot, "src/app/analytics-prefetch.ts")],
   15,
 );
 const analytics = entryChunks("analytics", entries.analytics);
