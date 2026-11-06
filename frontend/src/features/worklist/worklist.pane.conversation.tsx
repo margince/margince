@@ -11,7 +11,7 @@ import {
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
-import { useOpenSource } from "../../lib/opensource";
+import { useSourceOpener } from "../../lib/opensource";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -26,7 +26,7 @@ export function ConversationPanel({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const viewerUserId = useViewerId();
-  const openSource = useOpenSource();
+  const openerFor = useSourceOpener();
   // A message's content is an authorization result, so it is asked for on
   // every open and never kept, as the email drawer asks.
   const read = useQuery({
@@ -35,12 +35,18 @@ export function ConversationPanel({
     staleTime: 0,
     gcTime: 0,
   });
+  // A withheld message opens nothing: the drawer would only repeat that.
+  const open = openerFor({
+    id: activityId,
+    kind: "email",
+    contentState: read.data?.access.content_state,
+  });
   return (
     <Panel
       title={t("worklist.pane.conversation")}
       titleAction={
-        openSource && (
-          <Button variant="ghost" onClick={() => openSource(activityId)}>
+        open && (
+          <Button variant="ghost" onClick={open}>
             {t("worklist.pane.openEmail")}
           </Button>
         )

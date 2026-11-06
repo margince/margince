@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import { unwrap } from "./problem";
 
 /**
- * useDeal is the read of one deal record, shared by every surface that draws it.
+ * useDeal is the read of one deal record, for the deal page and the Worklist's details.
  *
  * A hook rather than a query inline in the screen, so the four record reads
  * are mounted the same way. That lets one suite prove the live cadence over

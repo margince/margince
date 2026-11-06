@@ -72,7 +72,14 @@ function dealFacts(
   now: Date,
 ): Fact[] {
   const facts: Fact[] = [];
-  if (deal.amount_minor != null && deal.currency) {
+  // A withheld amount says so, so it never reads as a deal with no price.
+  if (deal.masked_fields?.includes("amount_minor")) {
+    facts.push({
+      key: "value",
+      term: t("create.amount"),
+      value: t("record.notShown"),
+    });
+  } else if (deal.amount_minor != null && deal.currency) {
     facts.push({
       key: "value",
       term: t("create.amount"),
