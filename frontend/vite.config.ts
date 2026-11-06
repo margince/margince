@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
+import { entryChunks } from "./scripts/vite-entry-chunks.ts";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
@@ -22,7 +23,13 @@ const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
 // unit lives: extensions/, or a module an installation imports. Only the
 // composed lane imports a screen. A stale link is skipped, so it cannot break
 // the config.
-const unitScreensDir = join(frontendRoot, "..", "build", "composition-frontend", "units");
+const unitScreensDir = join(
+  frontendRoot,
+  "..",
+  "build",
+  "composition-frontend",
+  "units",
+);
 const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
 const unitScreenDirs =
   composedComposition && existsSync(unitScreensDir)
@@ -79,6 +86,15 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
 const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 
+const startup = entryChunks("startup", [
+  join(frontendRoot, "src", "bootstrap.ts"),
+  join(frontendRoot, "src", "main.tsx"),
+]);
+
+const analytics = entryChunks("analytics", [
+  join(frontendRoot, "src", "App.analytics.tsx"),
+]);
+
 export default defineConfig({
   build: {
     rolldownOptions: {
@@ -86,6 +102,8 @@ export default defineConfig({
         strictExecutionOrder: true,
         codeSplitting: {
           groups: [
+            startup.group,
+            analytics.group,
             {
               name: "shared",
               minShareCount: 2,
@@ -105,6 +123,8 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
+    startup.plugin,
+    analytics.plugin,
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.

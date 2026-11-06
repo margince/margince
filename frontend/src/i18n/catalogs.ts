@@ -13,19 +13,18 @@ export const catalogs: Record<Locale, Partial<Record<MessageKey, string>>> = {
 export const loadedCatalogs = new Set<Locale>();
 const catalogFailures = new Map<Locale, unknown>();
 const catalogLoads = new Map<Locale, Promise<void>>();
+const catalogLoaders = {
+  en: () => import("./en").then((module) => module.en),
+  de: () => import("./de").then((module) => module.de),
+  vi: () => import("./vi").then((module) => module.vi),
+};
 
 export function loadLocale(locale: Locale): Promise<void> {
   if (loadedCatalogs.has(locale)) return Promise.resolve();
   const pending = catalogLoads.get(locale);
   if (pending) return pending;
   catalogFailures.delete(locale);
-  const loading = (
-    locale === "en"
-      ? import("./en").then((module) => module.en)
-      : locale === "de"
-        ? import("./de").then((module) => module.de)
-        : import("./vi").then((module) => module.vi)
-  )
+  const loading = catalogLoaders[locale]()
     .then((catalog) => {
       catalogs[locale] = catalog;
       loadedCatalogs.add(locale);

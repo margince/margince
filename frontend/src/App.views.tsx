@@ -25,6 +25,7 @@ import {
   LegalReviewsRoute,
   OAuthConsent,
   OfferScreen,
+  OnboardingScreen,
   PartnersScreen,
   PreferenceCenterScreen,
   ProjectScreen,
@@ -44,7 +45,6 @@ import {
 import { CUSTOM_SCREEN } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
-import { OnboardingScreen } from "./features/onboarding/onboarding";
 import { RESET_ROUTE } from "./features/sign-in/auth";
 import { isContactTab } from "./lib/contacttab";
 import { EXTENSION_SCREEN } from "./lib/extensions";
