@@ -10,6 +10,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isConnectedAtAll } from "../../lib/connector-status";
 import { useConnectors } from "../../lib/connectors";
+import { captureRefusalCopy } from "../../lib/problemcodecopy";
 import {
   readStored,
   removeStored,
@@ -25,11 +26,11 @@ import { ReturnWarn } from "./onboarding-connect-panels.imap";
 
 export { ImapConnectPanel } from "./onboarding-connect-panels.imap";
 
-// The OAuth outcomes that no retry can clear: the provider refused the grant,
-// its API was never enabled for this deployment, or it refused this
+// The OAuth outcomes that no retry can clear. The provider refused the grant,
+// or its API was never enabled for this deployment. It refused this
 // deployment's client credentials. Keyed off the server's outcome segment, and
-// pointing at the same copy Settings renders so the two surfaces cannot drift
-// apart.
+// pointing at the same copy Settings renders so the two surfaces cannot drift.
+// A role or seat refusal is permanent too, and permanentBody names its grant.
 const PERMANENT_FAILURE_BODY: Record<string, MessageKey | undefined> = {
   misconfigured: "connectors.oauthMisconfigured",
   bad_client: "connectors.oauthBadClient",
@@ -88,6 +89,7 @@ export function OAuthReturnPanel({
   onDone: () => void;
 }>) {
   const t = useT();
+  const missing = useConnectors().data?.captureMissing;
   const returning = asOAuthConnectProvider(provider);
   const vendor = vendorOf(returning ?? undefined);
   const mailbox = vendor === null ? null : VENDOR_SERVICES[vendor].mail;
@@ -95,7 +97,7 @@ export function OAuthReturnPanel({
     return outcome === "ok" ? null : (
       <ReturnWarn
         title={t("ob.conv.connect.calendarFailedTitle")}
-        body={t(calendarFailureBody(outcome))}
+        body={t(calendarFailureBody(outcome, missing))}
         tone={outcome === "denied" ? "warning" : "danger"}
       />
     );
@@ -103,6 +105,7 @@ export function OAuthReturnPanel({
   const failure = mailFailure(
     outcome,
     provider !== undefined && returning === null,
+    missing,
   );
   if (failure) {
     return (
@@ -161,6 +164,7 @@ function MailboxConfirm({
 function mailFailure(
   outcome: string | undefined,
   unresolvedProvider: boolean,
+  missing: unknown,
 ): { title: MessageKey; body: MessageKey } | null {
   if (outcome === "denied") {
     return { title: "ob.s4.connectDenied", body: "ob.s4.connectRetry" };
@@ -168,22 +172,29 @@ function mailFailure(
   if (outcome !== "ok" || unresolvedProvider) {
     return {
       title: "ob.s4.connectConfirmFailed",
-      body: permanentBody(outcome) ?? "ob.s4.connectRetry",
+      body: permanentBody(outcome, missing) ?? "ob.s4.connectRetry",
     };
   }
   return null;
 }
 
-function calendarFailureBody(outcome: string | undefined): MessageKey {
+function calendarFailureBody(
+  outcome: string | undefined,
+  missing: unknown,
+): MessageKey {
   if (outcome === "denied") {
     return "ob.conv.connect.calendarDeclined";
   }
-  return permanentBody(outcome) ?? "ob.s4.connectRetry";
+  return permanentBody(outcome, missing) ?? "ob.s4.connectRetry";
 }
 
 // Object.hasOwn, not a bare index: a route segment like "constructor" would
 // otherwise resolve to an inherited member and render an empty banner.
-function permanentBody(outcome: string | undefined): MessageKey | undefined {
+function permanentBody(
+  outcome: string | undefined,
+  missing: unknown,
+): MessageKey | undefined {
+  if (outcome === "role_cannot_capture") return captureRefusalCopy(missing);
   return outcome && Object.hasOwn(PERMANENT_FAILURE_BODY, outcome)
     ? PERMANENT_FAILURE_BODY[outcome]
     : undefined;

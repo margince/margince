@@ -7,8 +7,9 @@ import {
   formatNumber,
   ordinalNumber,
 } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
+import { playOpenViewStep } from "../testing/listview.play";
 import { Badge, Button, OverflowMenu } from "./atoms";
 import { Avatar } from "./avatar";
 import type { ListChip } from "./listsurface";
@@ -97,7 +98,8 @@ const columns = [
     key: "created",
     header: "Created",
     holds: "date" as const,
-    cell: (row: Company) => formatDateAbbrev(row.createdAt, "en", viewerZone()),
+    cell: (row: Company) =>
+      formatDateAbbrev(row.createdAt, "en", browserZone()),
   },
 ];
 
@@ -192,28 +194,13 @@ function Surface({
   );
 }
 
-/**
- * Opens one of the toolbar's menus the way a reader does — by pressing it.
- *
- * A press and not a prop: the menus are the surface's own state by design, so
- * a story that reached in to set one open would document a shape the product
- * does not have.
- *
- * The trigger arrives as a pattern rather than a word because two of them are
- * only findable that way: the sort dial names the order it is holding
- * ("Sort: Company"), and every sortable column header is a button called
- * "Sort by <column>" that a bare prefix would match as well.
- */
-function openMenu(trigger: RegExp) {
+function openStep(step: string) {
   return async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-    const page = within(canvasElement);
-    await userEvent.click(await page.findByRole("button", { name: trigger }));
+    await playOpenViewStep(canvasElement, step);
   };
 }
 
-// Six columns over one page: sortable headers, filter chips behind the Filter
-// button, the Display menu holding the columns and the density, and the range
-// count.
+// Six columns over one page, sortable headers, View and the range count.
 export const Default: Story = {
   render: () => <Surface rows={companies(12)} />,
 };
@@ -224,40 +211,47 @@ export const Paged: Story = {
   render: () => <Surface rows={companies(60)} />,
 };
 
-// The sort dial as a menu, which is the route a column header cannot be: it
-// offers every orderable column including the ones the reader has hidden or a
-// phone has no room for, it says which way the current one runs, and it offers
-// the server's own order — a state a saved view can ask for and a header
-// cannot. Opened here with a sort already applied, so the tick and the
-// direction arrow are both on screen.
+// The Sort step offers hidden columns and the server's own order, which no
+// header can.
 export const SortedByAMenu: Story = {
   render: () => <Surface rows={companies(12)} />,
-  play: openMenu(/^Sort(:|$)/),
+  play: openStep("Sort"),
 };
 
-// The Display menu: how the grid is DRAWN, under one trigger. Density and the
-// optional columns are one question to a reader — both answer "show me more of
-// this at once" — and each group is named a rung under the menu's own head, so
-// the panel reads as one question in two parts rather than as three headings.
-export const DisplayMenuOpen: Story = {
+// The Columns step: each optional column's tick and the grip that moves it.
+export const ColumnsStepOpen: Story = {
+  name: "Columns step open",
   render: () => <Surface rows={companies(12)} />,
-  play: openMenu(/^Display$/),
+  play: openStep("Columns"),
 };
 
-// The filter menu's SECOND step, which is the half a list of attributes cannot
-// show: the attribute's own values, with the head standing as the way back to
-// the list they were chosen from.
+// A column moved by its grip: the second optional column, taken up one place
+// from the keyboard. The grid's headers follow the step's order.
+export const ColumnMoved: Story = {
+  render: () => <Surface rows={companies(12)} />,
+  play: async (context) => {
+    await openStep("Columns")(context);
+    const grips = await within(document.body).findAllByRole("button", {
+      name: /^Move /,
+    });
+    grips[1]?.focus();
+    await userEvent.keyboard("{ArrowUp}");
+  },
+};
+
+// The Filters step's second level: one attribute's values, its head the way
+// back.
 export const FilterAttributeStep: Story = {
   render: () => <Surface rows={companies(12)} />,
   play: async (context) => {
-    await openMenu(/^Filter$/)(context);
-    const page = within(context.canvasElement);
+    await openStep("Filters")(context);
+    const body = within(document.body);
     await userEvent.click(
-      await page.findByRole("button", { name: "Industry" }),
+      await body.findByRole("button", { name: "Industry" }),
     );
-    // The head is the way back once a level has been stepped into, and waiting
-    // on it is what makes the story's own subject the thing it settles for.
-    await page.findByRole("button", { name: /Industry Back to all filters/ });
+    await body.findByRole("button", {
+      name: "Industry, back to all filters",
+    });
   },
 };
 
@@ -588,9 +582,9 @@ export const ShortListEmpty: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("No companies yet.")).toBeVisible();
     await expect(canvas.queryByRole("columnheader")).toBeNull();
-    await expect(
-      canvas.getByRole("checkbox", { name: "Show archived" }),
-    ).toBeVisible();
+    const archived = canvas.getByRole("button", { name: "Show archived" });
+    await expect(archived).toBeVisible();
+    await expect(archived).toHaveAttribute("aria-pressed", "false");
     await expect(canvas.queryByRole("searchbox")).toBeNull();
   },
 };

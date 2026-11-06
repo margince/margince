@@ -81,7 +81,7 @@ func TestThePurposeAndTheRepsLanguageSitBetweenCorrespondenceAndInstallation(t *
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			resolver := draftfloor.NewResolver().
-				WithClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
+				SetClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
 				WithUserLanguage(func(context.Context) string { return tc.user }).
 				WithBaseLanguage(func(context.Context) string { return tc.base })
 			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandNone})
@@ -125,7 +125,7 @@ func TestTheRegisterReadsTheSameTextsAsTheLanguage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			resolver := draftfloor.NewResolver().
-				WithClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
+				SetClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
 				WithUserLanguage(func(context.Context) string { return "de" })
 			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandNone})
 			if got.Language != "de" || got.Register != tc.want {

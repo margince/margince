@@ -114,7 +114,7 @@ func (r *oidcTestRig) mint(t *testing.T, kid, alg string, claims map[string]any)
 }
 
 // newTestVerifier pins the verifier's clock to the rig's fixed base instant;
-// tests that exercise time behavior override it via withClock.
+// tests that exercise time behavior override it via setClock.
 func testMatchIdentity(c oidcClaims) error {
 	if c.Aud != testAud {
 		return fmt.Errorf("%w: aud mismatch", errOIDCRejected)
@@ -131,7 +131,7 @@ func testMatchIdentity(c oidcClaims) error {
 func newTestVerifier(rig *oidcTestRig) *oidcTokenVerifier {
 	return newGoogleOIDCVerifier(rig.jwksURL(), testMatchIdentity).
 		withHTTPClient(rig.srv.Client()).
-		withClock(func() time.Time { return rig.base })
+		setClock(func() time.Time { return rig.base })
 }
 
 func TestOIDCVerifyAcceptsValidToken(t *testing.T) {
@@ -198,9 +198,9 @@ func TestOIDCVerifyRejects(t *testing.T) {
 	}
 }
 
-// TestOIDCVerifyHonorsInjectedClock exercises the withClock test seam: the
-// same token accepted "now" is rejected once the injected clock is moved
-// past exp+skew, and rejected again when moved before iat-skew.
+// TestOIDCVerifyHonorsInjectedClock exercises the setClock test seam. A token
+// accepted "now" is rejected once the clock moves past exp+skew, and again when
+// it moves before iat-skew.
 func TestOIDCVerifyHonorsInjectedClock(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	iat := rig.base
@@ -210,17 +210,17 @@ func TestOIDCVerifyHonorsInjectedClock(t *testing.T) {
 		"exp": exp.Unix(),
 	})
 
-	atIssue := newTestVerifier(rig).withClock(func() time.Time { return iat })
+	atIssue := newTestVerifier(rig).setClock(func() time.Time { return iat })
 	if _, err := atIssue.Verify(context.Background(), tok); err != nil {
 		t.Fatalf("Verify(at issue) = %v, want nil", err)
 	}
 
-	longAfterExpiry := newTestVerifier(rig).withClock(func() time.Time { return exp.Add(time.Hour) })
+	longAfterExpiry := newTestVerifier(rig).setClock(func() time.Time { return exp.Add(time.Hour) })
 	if _, err := longAfterExpiry.Verify(context.Background(), tok); err == nil {
 		t.Fatal("Verify(long after exp) = nil, want an error")
 	}
 
-	longBeforeIssue := newTestVerifier(rig).withClock(func() time.Time { return iat.Add(-time.Hour) })
+	longBeforeIssue := newTestVerifier(rig).setClock(func() time.Time { return iat.Add(-time.Hour) })
 	if _, err := longBeforeIssue.Verify(context.Background(), tok); err == nil {
 		t.Fatal("Verify(long before iat) = nil, want an error")
 	}
@@ -234,7 +234,7 @@ func TestOIDCVerifyHonorsInjectedClock(t *testing.T) {
 func TestOIDCVerifyThrottlesJWKSRefresh(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	now := rig.base
-	v := newTestVerifier(rig).withClock(func() time.Time { return now })
+	v := newTestVerifier(rig).setClock(func() time.Time { return now })
 
 	tok1 := rig.mint(t, "unknown-kid-1", "RS256", nil)
 	tok2 := rig.mint(t, "unknown-kid-2", "RS256", nil)

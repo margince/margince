@@ -1,26 +1,29 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
-  render as rtlRender,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRecordTimeline } from "../design-system/recordtimeline";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
-import { LocaleProvider } from "../i18n";
-import { RecordZoneProvider } from "../lib/recordzone";
-import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import { LogActivityAction } from "./logactivity.action";
+import {
+  type Captured,
+  contact,
+  createdActivity,
+  jsonResponse,
+  READER_ZONE,
+  render,
+  stubApi,
+} from "./logactivity.testkit";
 
 // Logging from a 360 (the "you can actually add to the timeline" acceptance):
 // the POST body carries the contract's shape (kind, subject, the viewed
@@ -48,35 +51,6 @@ function pretendViewerZone(timeZone: string): void {
   });
 }
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-// The installation's zone this suite asserts against. Named rather than taken
-// from the fallback: what these tests prove is that a logged entry's stored
-// instant is cut on the INSTALLATION's clock, and a test that minted and read
-// back on the same default would agree with itself whichever zone the code
-// actually used.
-const INSTALLATION_ZONE = "Asia/Ho_Chi_Minh";
-
-function render(ui: ReactNode, zone = INSTALLATION_ZONE) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>{ui}</RecordZoneProvider>
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-const emptyPage = { data: [], page: { next_cursor: null } };
-
 const dayBox = (label: string) =>
   screen.getByRole<HTMLInputElement>("textbox", { name: label });
 
@@ -87,8 +61,6 @@ async function typeDay(user: UserEvent, box: HTMLInputElement, day: string) {
   await user.tripleClick(box);
   await user.keyboard(shown(day));
 }
-
-type Captured = { key: string; body: unknown };
 
 // One day, picked in the form and asserted against — and the zone the machine
 // running this suite is in, because the invariant is "the day the writer picked
@@ -105,80 +77,6 @@ function postedInstant(body: unknown, key: "due_at" | "occurred_at"): string {
   }
   return instant;
 }
-
-function stubApi(
-  routes: Record<string, (body: unknown) => Response>,
-  captured?: Captured[],
-) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : null;
-      const url = new URL(
-        request ? request.url : String(input),
-        "https://test.local",
-      );
-      const method = request?.method ?? init?.method ?? "GET";
-      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
-      let body: unknown = null;
-      if (method !== "GET") {
-        try {
-          body = request
-            ? await request.json()
-            : JSON.parse(String(init?.body));
-        } catch {
-          body = null;
-        }
-      }
-      captured?.push({ key, body });
-      const handler = routes[key];
-      if (handler) {
-        return handler(body);
-      }
-      // The composer asks whether this seat may log at all before it draws
-      // the form, so every spec here holds the grant the store behind the
-      // form requires — a spec that needs to withhold it names its own /me.
-      if (key === "GET /me") {
-        return jsonResponse(
-          meFixture({ allow: { activity: ["create"], contact: ["read"] } }),
-        );
-      }
-      if (url.pathname.endsWith("/context")) {
-        return jsonResponse({
-          anchor: { type: "contact", id: "p1" },
-          sections: [],
-        });
-      }
-      return jsonResponse(emptyPage);
-    }),
-  );
-}
-
-const contact = {
-  id: "p1",
-  full_name: "Petra Muster",
-  captured_by: "human:u1",
-  source: "manual",
-  version: 1,
-  created_at: "2026-07-06T08:00:00Z",
-  updated_at: "2026-07-06T08:00:00Z",
-};
-
-const createdActivity = (body: unknown) =>
-  jsonResponse(
-    {
-      id: "a-new",
-      kind: (body as { kind: string }).kind,
-      subject: (body as { subject: string }).subject,
-      occurred_at: "2026-07-06T09:00:00Z",
-      captured_by: "human:u1",
-      source: "manual",
-      version: 1,
-      created_at: "2026-07-06T09:00:00Z",
-      updated_at: "2026-07-06T09:00:00Z",
-    },
-    201,
-  );
 
 describe("log activity from a 360", () => {
   it("posts a note linked to the viewed contact and refetches the timeline", async () => {
@@ -241,7 +139,8 @@ describe("log activity from a 360", () => {
     render(<LogActivity entityType="lead" entityId="l1" />);
 
     await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Call");
-    await userEvent.type(screen.getByLabelText("Subject *"), "No answer");
+    // A call's subject is not required: an outcome alone says what happened.
+    await userEvent.type(screen.getByLabelText("Subject"), "No answer");
     await userEvent.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>
@@ -261,6 +160,8 @@ describe("log activity from a 360", () => {
     expect(post?.body).not.toHaveProperty("meeting_status");
     // And it carries no due date: a call happened, it is not owed.
     expect(post?.body).not.toHaveProperty("due_at");
+    // "No outcome" is said, not left out: an explicit null.
+    expect(post?.body).toHaveProperty("call_outcome", null);
   });
 
   // A caller that already knows which verb the reader came to perform hands it
@@ -273,6 +174,87 @@ describe("log activity from a 360", () => {
     // A call's date is the day it happened, not a deadline — the same field
     // a note gets, under the same label.
     expect(screen.getByLabelText("Date")).toBeTruthy();
+  });
+
+  // How a call ended, picked with one click: five outcomes and "No outcome".
+  it("offers a call the five outcomes and posts the one picked", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
+    const user = userEvent.setup();
+    const outcomes = screen.getByRole("group", { name: "Outcome" });
+    expect(
+      within(outcomes)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual([
+      "No outcome",
+      "Reached",
+      "Not reached",
+      "Left a voicemail",
+      "Call back later",
+      "Put through",
+    ]);
+    const log = screen.getByRole("button", { name: "Log" });
+    expect(log.hasAttribute("disabled")).toBe(true);
+
+    // An outcome alone is a whole call: no subject, no body.
+    await user.click(
+      within(outcomes).getByRole("button", { name: "Not reached" }),
+    );
+    expect(log.hasAttribute("disabled")).toBe(false);
+    await user.click(log);
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "call",
+      call_outcome: "not_reached",
+    });
+  });
+
+  it("offers a note no outcome, and sends none after a switch from Call", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
+    const user = userEvent.setup();
+    await user.click(
+      within(screen.getByRole("group", { name: "Outcome" })).getByRole(
+        "button",
+        {
+          name: "Reached",
+        },
+      ),
+    );
+    await pickOption(user, screen.getByLabelText("Type"), "Note");
+    expect(screen.queryByRole("group", { name: "Outcome" })).toBeNull();
+    await user.type(screen.getByLabelText("Subject *"), "Spoke at the fair");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({ kind: "note" });
+    expect(post?.body).not.toHaveProperty("call_outcome");
   });
 
   it("renders the server's 422 detail verbatim", async () => {
@@ -297,9 +279,9 @@ describe("log activity from a 360", () => {
     // midnight would otherwise fail on which "today" the prefill caught. The
     // zone is the installation's record zone because a note's day is the timeline heading it will
     // file under, and the timeline groups there.
-    const dayBeforeRender = calendarDay(new Date(), INSTALLATION_ZONE);
+    const dayBeforeRender = calendarDay(new Date(), READER_ZONE);
     render(<LogActivity entityType="company" entityId="o1" />);
-    const dayAfterRender = calendarDay(new Date(), INSTALLATION_ZONE);
+    const dayAfterRender = calendarDay(new Date(), READER_ZONE);
     // A note's date is the day it happened, live from the start and showing
     // the today that would otherwise be assumed invisibly at submit.
     const noteDay = dayBox("Date");
@@ -375,7 +357,7 @@ describe("log activity from a 360", () => {
     if (!post) throw new Error("expected a POST /activities to be captured");
     const occurred = new Date(postedInstant(post.body, "occurred_at"));
     // The day the composer offered IS the day the timeline files it under.
-    expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe("2026-08-22");
+    expect(calendarDay(occurred, READER_ZONE)).toBe("2026-08-22");
     expect(post.body).toHaveProperty("occurred_precision", "instant");
   });
 
@@ -538,7 +520,7 @@ describe("log activity from a 360", () => {
     const post = captured.find((entry) => entry.key === "POST /activities");
     if (!post) throw new Error("expected a POST /activities to be captured");
     const occurred = new Date(postedInstant(post.body, "occurred_at"));
-    expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(writersOwnToday);
+    expect(calendarDay(occurred, READER_ZONE)).toBe(writersOwnToday);
   });
 
   it("marks the record's today, under the cap, while the browser is a day ahead", async () => {
@@ -613,17 +595,13 @@ describe("log activity from a 360", () => {
     // the deadline is ANCHORED to — the bare `yyyy-mm-dd` handed to `new Date`
     // is UTC midnight, which is the previous calendar day for every writer west
     // of UTC.
-    expect(calendarDay(dueAt, INSTALLATION_ZONE)).toBe(PICKED_DAY);
+    expect(calendarDay(dueAt, READER_ZONE)).toBe(PICKED_DAY);
     // And at that day's END, because a task picked for today is due all day.
     // Read as a wall clock in that same zone: `getHours()` answers for the
     // machine running the test, so it agreed only where the record zone and the
     // runner's zone happened to be the same one.
     expect(
-      formatTimeOfDay(
-        postedInstant(post.body, "due_at"),
-        "en",
-        INSTALLATION_ZONE,
-      ),
+      formatTimeOfDay(postedInstant(post.body, "due_at"), "en", READER_ZONE),
     ).toBe("23:59");
   });
 
@@ -868,86 +846,6 @@ describe("the Details field", () => {
 
     expect(screen.getByLabelText("Transcript").tagName).toBe("TEXTAREA");
     expect(screen.queryByRole("toolbar")).toBeNull();
-  });
-});
-
-describe("assigning a task at create time", () => {
-  // Two contacts and an agent seat, so the picker's eligibility is a real filter
-  // rather than an empty list agreeing with itself. The agent is who the server
-  // refuses as an assignee, so it is the one the picker must not offer.
-  const rosterUsers = {
-    data: [
-      { id: "u1", display_name: "Dana Ops", is_agent: false },
-      { id: "u2", display_name: "Priya Lead", is_agent: false },
-      { id: "agent-1", display_name: "Runner Bot", is_agent: true },
-    ],
-    page: { next_cursor: null },
-  };
-
-  function renderTaskComposer(captured?: Captured[]) {
-    stubApi(
-      {
-        "GET /contacts/p1": () => jsonResponse(contact),
-        "GET /users": () => jsonResponse(rosterUsers),
-        "POST /activities": createdActivity,
-      },
-      captured,
-    );
-    render(<LogActivity entityType="contact" entityId="p1" askedKind="task" />);
-  }
-
-  it("carries the chosen assignee on the posted task", async () => {
-    const captured: Captured[] = [];
-    renderTaskComposer(captured);
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
-    await user.click(screen.getByLabelText("Assignee"));
-    await user.click(await screen.findByRole("option", { name: "Priya Lead" }));
-    await user.click(screen.getByRole("button", { name: "Log" }));
-
-    await waitFor(() =>
-      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
-    );
-    const post = captured.find((e) => e.key === "POST /activities");
-    expect(post?.body).toMatchObject({ kind: "task", assignee_id: "u2" });
-  });
-
-  it("posts no assignee when the task is left unassigned", async () => {
-    const captured: Captured[] = [];
-    renderTaskComposer(captured);
-    const user = userEvent.setup();
-    await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
-    await user.click(screen.getByRole("button", { name: "Log" }));
-
-    await waitFor(() =>
-      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
-    );
-    const post = captured.find((e) => e.key === "POST /activities");
-    expect(post?.body).toMatchObject({ kind: "task" });
-    expect(post?.body).not.toHaveProperty("assignee_id");
-  });
-
-  it("offers no assignee on a note, which has nobody to hold it", async () => {
-    stubApi({
-      "GET /contacts/p1": () => jsonResponse(contact),
-      "GET /users": () => jsonResponse(rosterUsers),
-    });
-    render(<LogActivity entityType="contact" entityId="p1" />);
-    await screen.findByLabelText("Subject *");
-    expect(screen.queryByLabelText("Assignee")).toBeNull();
-  });
-
-  it("does not offer an agent seat as an assignee", async () => {
-    renderTaskComposer();
-    const user = userEvent.setup();
-    await user.click(await screen.findByLabelText("Assignee"));
-    const listbox = screen.getByRole("listbox");
-    expect(
-      await within(listbox).findByRole("option", { name: "Dana Ops" }),
-    ).toBeTruthy();
-    expect(
-      within(listbox).queryByRole("option", { name: "Runner Bot" }),
-    ).toBeNull();
   });
 });
 

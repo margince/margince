@@ -35,7 +35,12 @@ export function dealEditRecord(deal: Deal): Record<
     company_id: deal.company_id ?? "",
     partner_company_id: deal.partner_company_id ?? "",
     partner_attribution: deal.partner_attribution ?? "",
-    forecast_category: deal.forecast_category ?? "",
+    // Empty while the deal follows its stage: the field holds only a
+    // probability somebody set on the deal.
+    win_probability:
+      deal.win_probability_source && deal.win_probability_source !== "stage"
+        ? String(deal.win_probability ?? "")
+        : "",
     expected_close_date: deal.expected_close_date ?? "",
     wait_until: deal.wait_until ?? "",
     project_id: deal.project_id ?? "",
@@ -60,7 +65,7 @@ export function stringValues(
   return out;
 }
 
-// The attribution the form may send, narrowed as the forecast category is. The
+// The attribution the form may send, narrowed to the wire's vocabulary. The
 // wire type is a closed vocabulary, and a free string from a form input is not
 // one until something checks it.
 function partnerAttribution(
@@ -76,19 +81,14 @@ function partnerAttribution(
   }
 }
 
-function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
-  switch (v) {
-    case "commit":
-      return "commit";
-    case "best_case":
-      return "best_case";
-    case "pipeline":
-      return "pipeline";
-    case "omitted":
-      return "omitted";
-    default:
-      return null;
-  }
+// Empty sends null, which puts the deal back on its stage's probability. A
+// value that is not a whole percent is not sent; the field refuses it first.
+function winProbability(v: string): UpdateDealRequest["win_probability"] {
+  if (v === "") return null;
+  const percent = Number(v);
+  return Number.isInteger(percent) && percent >= 0 && percent <= 100
+    ? percent
+    : undefined;
 }
 
 /**
@@ -181,8 +181,8 @@ export function mapDealUpdate(
       partnerAttribution(str(values.partner_attribution)),
     );
   }
-  onMove("forecast_category", "forecast_category", () =>
-    forecastCategory(str(values.forecast_category)),
+  onMove("win_probability", "win_probability", () =>
+    winProbability(str(values.win_probability)),
   );
   onMove(
     "expected_close_date",

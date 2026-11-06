@@ -112,7 +112,7 @@ on, because the figure shown then was the self-correcting one.
 |---|---|
 | `stage_weighting` | won plus the open deals at their typed chances, through `forecasting.ProjectLanding` |
 | `self_correcting_weighting` | won plus the weighted figure the snapshot froze, each deal at its chance in use after the risk effect |
-| `commit_evidence` | won plus the committed open pipeline, through `forecasting.ProjectLanding` |
+| `commit_evidence` | won plus the Likely open pipeline, through `forecasting.ProjectLanding` |
 | `range_central_80` | the frozen range: the central 80% of finishes under the chances in use |
 | `candidate_open_closure` | won plus open money times the share of open money that closed in training |
 

@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -45,7 +46,7 @@ func (p *preflightEnv) scheduledOnTheWire(t *testing.T, id ids.UUID) scheduledOn
 
 func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	var scheduled struct {
 		ID string `json:"id"`
@@ -94,7 +95,7 @@ func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
 // "none", never as a row the list cannot show.
 func TestAScheduledReplyNamesItsAnchorAndNoRecords(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	got := p.scheduledOnTheWire(t, id)

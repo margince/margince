@@ -840,6 +840,43 @@ func (e *forecastEnv) writableScope(
 // an aggregate under a per-recipient FILTER that never loads them. So the two
 // are asserted EQUAL here, which fails whichever of them drifts, rather than
 // pinning constants that would stay green while they parted company.
+func TestASharedSnapshotSplitsByProbabilitySourceAndKeepsItsThreshold(t *testing.T) {
+	const priced = 100_000
+	e := setupForecast(t)
+	e.seedDealClosingWithin(t, "Follows its stage", &e.Rep1, priced)
+	e.seedDealClosingWithin(t, "Set by hand", &e.Rep1, priced)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE deal
+		SET win_probability_override = 30, win_probability_set_by = 'human'
+		WHERE name = 'Set by hand'`); err != nil {
+		t.Fatal(err)
+	}
+
+	id := e.freezeWorkspace(t)
+	shared := e.readShared(snapshotWriterCtx(e.WS), t, id).Readings
+
+	var stored int
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT likely_threshold FROM forecast_snapshot WHERE id = $1`, id).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored == 0 || shared.LikelyThreshold != stored {
+		t.Errorf("the shared snapshot reads threshold %d, want the %d it was frozen under", shared.LikelyThreshold, stored)
+	}
+	human := shared.BySource[forecasting.SourceHuman]
+	if human.OpenMinor != priced {
+		t.Errorf("the hand-set deal sums %d open, want %d", human.OpenMinor, priced)
+	}
+	var open, weighted int64
+	for _, total := range shared.BySource {
+		open += total.OpenMinor
+		weighted += total.WeightedMinor
+	}
+	if open != shared.OpenMinor || weighted != shared.WeightedMinor {
+		t.Errorf("by-source totals sum to %d open and %d weighted, want the snapshot's %d and %d",
+			open, weighted, shared.OpenMinor, shared.WeightedMinor)
+	}
+}
+
 func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
 	const priced = 100_000
 	e := setupForecast(t)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
@@ -23,7 +24,9 @@ import (
 // A verdict that lands or changes after the message counts too, and so does a
 // guest accepting or withdrawing, because each changes the answer. Work the product filed itself is left out, so the review's own task does not
 // make its receipt stale. Archiving an activity drops it from the count, which
-// changes the fingerprint too.
+// changes the fingerprint too. So does a mail connection that delivers the
+// deal's mail for the first time, because the deal's coverage is judged on
+// those connections.
 func viabilityFingerprintSQL(deal string) string {
 	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
 		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
@@ -34,7 +37,8 @@ func viabilityFingerprintSQL(deal string) string {
 		          WHERE fp.activity_id = ANY (array_agg(fa.id)) AND fp.response = 'accepted'))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
 		  WHERE fl.deal_id = ` + deal + `.id AND fa.archived_at IS NULL AND ` + visibleToAllSQL("fa") + ` AND ` +
-		relstrength.OriginIsEngagementSQL("fa") + `)))`
+		relstrength.OriginIsEngagementSQL("fa") + `),
+		array_to_string(` + dealMailboxesSQL(deal) + `, ',')))`
 }
 
 // viabilityQualificationSQL is one deal's treatment in the qualified forecast.
@@ -70,3 +74,35 @@ func viabilityQualificationSQL(deal string, arg func(any) int) string {
 		viability.OutcomeUnknown, assurance.OutcomeValueCorrect,
 		viability.OutcomeUnsupported, viability.QualificationUnsupported)
 }
+
+// viabilityBasisSQL is what a deal's qualification rested on, as four columns.
+// They are the policy enforced, the last assessment, the review standing, and
+// whether the deal was judged on current evidence. It makes the same receipt
+// and review reads as viabilityQualificationSQL, frozen beside its answer.
+func viabilityBasisSQL(deal string, arg func(any) int) string {
+	return fmt.Sprintf(`$%[2]d::text,
+		(SELECT vr.assessed_at FROM assurance_deal_receipt vr WHERE vr.deal_id = %[1]s.id),
+		(CASE
+		  WHEN EXISTS (SELECT 1 FROM assurance_exception vx
+		                WHERE vx.subject_kind = 'deal' AND vx.subject_id = %[1]s.id
+		                  AND vx.type = $%[4]d AND vx.status = 'open') THEN '%[6]s'
+		  WHEN EXISTS (SELECT 1 FROM assurance_exception vx
+		                JOIN assurance_resolution vs ON vs.exception_id = vx.id
+		                WHERE vx.subject_kind = 'deal' AND vx.subject_id = %[1]s.id
+		                  AND vx.type = $%[4]d AND vx.status = 'resolved'
+		                  AND vs.outcome = '%[9]s' AND vs.expires_at > now()) THEN '%[7]s'
+		  WHEN EXISTS (SELECT 1 FROM assurance_deal_receipt vr
+		                WHERE vr.deal_id = %[1]s.id AND vr.outcome = '%[10]s') THEN '%[8]s'
+		  ELSE '%[5]s' END),
+		EXISTS (SELECT 1 FROM assurance_deal_receipt vr
+		         WHERE vr.deal_id = %[1]s.id AND vr.policy_version = $%[2]d
+		           AND vr.outcome <> '%[11]s' AND vr.valid_until > now()
+		           AND vr.input_fingerprint = %[3]s)`,
+		deal, arg(viability.PolicyVersion), viabilityFingerprintSQL(deal), arg(assurance.TypeDealViability),
+		forecasting.DispositionNone, forecasting.DispositionOpenReview, forecasting.DispositionOverride,
+		forecasting.DispositionUnsupported, assurance.OutcomeValueCorrect, viability.OutcomeUnsupported,
+		viability.OutcomeUnknown)
+}
+
+// noViabilityBasisSQL fills the four basis columns while enforcement is off.
+const noViabilityBasisSQL = `NULL::text, NULL::timestamptz, NULL::text, NULL::boolean`

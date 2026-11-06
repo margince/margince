@@ -188,7 +188,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"record_assignment.deal_id":            "gated: the same pair in ensureParentReadable and ensureParentWritable, on deal",
 	"record_assignment.project_id":         "gated: the same pair in ensureParentReadable and ensureParentWritable, on project",
 	"contract.company_id":                  "gated: auth.EnsureLinkTarget in createContractTx (H1) — the counterparty is client-supplied, so naming it is a read of it",
-	"project_health_assessment.project_id": "gated: auth.Require plus auth.HoldWritableLive on the project in RecordHealth and CorrectHealth, and auth.Require plus auth.EnsureVisible in ListHealth — the project comes from the ROUTE and every path probes it before a row is written or served",
+	"project_health_assessment.project_id": "gated: auth.Require plus auth.HoldWritableLive on the project in RecordHealthTx, CorrectHealth, RecordAIHealthTx and UndoAIHealth, and auth.Require plus auth.EnsureVisible in ListHealth — the project comes from the ROUTE and every path probes it before a row is written or served",
 	// The deal and project links carry a SECOND obligation the sibling columns
 	// above do not, and it is the reason this table's gate is not just a copy.
 	// A contract's row visibility is INHERITED from its deal (falling back to
@@ -311,9 +311,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// same transaction that created it. There is no client-supplied reference
 	// to gate: nothing outside the triage resolve ever writes this column, and
 	// no human surface reads the row.
-	"company_domain_disposition.company_id": "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
-	"contact_email.contact_id":              "child row: written through the contact's own gated paths",
-	"contact_phone.contact_id":              "child row: written through the contact's own gated paths",
+	"company_domain_disposition.company_id":           "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
+	"company_domain_disposition.candidate_company_id": "server-derived: set only by withholdForNearDuplicate, to the rival the dedupe chokepoint ranked; the read that offers it keeps only companies inside the reader's company scope",
+	"contact_email.contact_id":                        "child row: written through the contact's own gated paths",
+	"contact_phone.contact_id":                        "child row: written through the contact's own gated paths",
 	// The licensed-data-provider platform (ADR-0101). A run names the subject
 	// it spends credits on, so admitting one IS a read of that contact: QueueRun
 	// takes auth.EnsureVisible inside the queueing transaction, before any

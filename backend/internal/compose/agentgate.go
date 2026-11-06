@@ -52,11 +52,11 @@ func gatedBodyLimit(spec mcp.ToolSpec) int64 {
 	return max(maxGatedBody, spec.MaxArgsBytes)
 }
 
-func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, imports agents.Imports, tags agents.Tags, gate *auth.Gate) func(http.Handler) http.Handler {
+func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, imports agents.Imports, tags agents.Tags, leadReasons agents.DisqualifyReasons, invitations agents.InvitationRoster, gate *auth.Gate) func(http.Handler) http.Handler {
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
 	// They were two structs while the tier had its own table to feed.
-	deps := restCommandDeps{records: records, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, language: reg.BaseLanguage()}
+	deps := restCommandDeps{records: records, invitations: invitations, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, leadReasons: leadReasons, language: reg.BaseLanguage()}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -213,14 +213,26 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 			"agent gate: %s %s: %w", pol.Op, reason, apperrors.ErrPermissionDenied))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
-	limit := gatedBodyLimit(spec)
-	body, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
-	if err != nil || int64(len(body)) > limit {
-		httperr.Write(w, r, httperr.Validation("body", "too_large", "request body unreadable or exceeds the gated limit"))
+	body, err := readGatedBody(w, r, gatedBodyLimit(spec))
+	if err != nil {
+		httperr.Write(w, r, err)
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	return spec, tierInput(ctx, spec, pol, deps, r, body), pol, body, true
+}
+
+// readGatedBody reads the body the gate judges. A body over its limit, whether this
+// one or the route's own ceiling, is told the limit that stopped it.
+func readGatedBody(w http.ResponseWriter, r *http.Request, limit int64) ([]byte, error) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, limit))
+	if tooLarge, over := errors.AsType[*http.MaxBytesError](err); over {
+		return nil, httperr.BodyTooLargeRefusal("the request body exceeds the " + httperr.Megabytes(tooLarge.Limit) + " limit; send a smaller one")
+	}
+	if err != nil {
+		return nil, httperr.Validation("body", "unreadable", "the request body could not be read; send it again")
+	}
+	return body, nil
 }
 
 // admissionOutcome carries the result of the autonomy gate's Admit call

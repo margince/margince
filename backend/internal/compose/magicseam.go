@@ -67,7 +67,7 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 		out = append(out, magic.DecidedReceipt{
 			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
 			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
-			Approval: receipt.Kind != deals.CloseDateCorrectionKind,
+			Approval: !deals.IsCorrectionReceiptKind(receipt.Kind),
 		})
 	}
 	return out, more, nil
@@ -84,7 +84,7 @@ func (m magicPendingDecisions) PendingApprovals(
 	ctx context.Context, limit int,
 ) ([]crmcontracts.Approval, error) {
 	status := stagedAndUndecided
-	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit, RequestedForReader: true})
+	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Actionable: true, Limit: limit, RequestedForReader: true})
 	return rows, err
 }
 
@@ -202,7 +202,7 @@ func (g undoGrants) holds(ctx context.Context, row AuditRow) bool {
 	key := row.EntityType + "/" + string(grant)
 	held, asked := g[key]
 	if !asked {
-		held = auth.Require(ctx, row.EntityType, grant) == nil
+		held = auth.Allows(ctx, row.EntityType, grant)
 		g[key] = held
 	}
 	return held

@@ -28,6 +28,8 @@ human sees. Four more are not stored fields either:
     - deal "Rheinufer Netzmodernisierung" stage=Negotiation   the stage's name
     - company "Dom Digital GmbH" tagged=K5 Conference 2026    or untagged=, by read_tags
     - tag "Strategic Account" records=3   contacts, companies, deals and leads carrying it
+    - team "Fleet Accounts" member=Sofia Meier   the colleague of that name is on the team
+    - company "Aachener Metallwerke GmbH" contract=Wartungsvertrag 2027   a contract of that whole title
 
 It runs after the run and before the lane restores the snapshot, through the
 lane's own passport, and only through tools the server LISTS: a router is called
@@ -95,6 +97,8 @@ _TAGGED, _UNTAGGED = "tagged", "untagged"
 _TAG = "tag"
 _TAGGABLE = ("company", "contact", "deal", "lead")
 _TAG_COUNTS = ("contacts", "companies", "deals", "leads")
+_TEAM, _MEMBER = "team", "member"
+_CONTRACT = "contract"
 
 # commit_import answers while the import is still writing. A four-row file
 # lands in about a second; a run still going after this long is a stuck stack.
@@ -142,6 +146,9 @@ def parse(entry):
     if record_type == _TAG:
         if parent_type is not None or field != _RECORD_COUNT:
             raise ValueError(f"must_end_with entry {entry!r}: a tag is read only as records=<count>")
+    elif record_type == _TEAM:
+        if parent_type is not None or field != _MEMBER:
+            raise ValueError(f"must_end_with entry {entry!r}: a team is read only as member=<colleague's name>")
     elif parent_type is None and record_type not in _NAME_FIELD:
         raise ValueError(f"must_end_with entry {entry!r} names a type this reader cannot find by name")
     _special_wanted(entry, found)
@@ -164,6 +171,8 @@ def _special_wanted(entry, want):
         raise ValueError(f"must_end_with entry {entry!r}: read_tags reads the words on a {', '.join(_TAGGABLE)}")
     if want.field == _STAGE and want.record_type != "deal":
         raise ValueError(f"must_end_with entry {entry!r}: only a deal has a stage")
+    if want.field == _CONTRACT and (want.record_type != "company" or want.parent_type):
+        raise ValueError(f"must_end_with entry {entry!r}: read_details lists the contracts of a company")
     if want.field == _OWNER and want.parent_type is not None:
         raise ValueError(f"must_end_with entry {entry!r}: owner is read on a record found by name")
 
@@ -412,6 +421,39 @@ def _tag_count_problem(session, want):
     return f'ended with tag "{want.name}" on {carrying} records, wanted {want.value}'
 
 
+def _team_problem(session, want):
+    """The problem line for a team "Name" member=Colleague entry, or "" when it holds."""
+    listing = _data(session, "read_view", {"view": "teams", "q": want.name, "limit": _PAGE_LIMIT}).get("data")
+    if not isinstance(listing, list):
+        raise Unreadable("read_view teams answered with no data list")
+    named = [team for team in listing if team.get("name") == want.name]
+    if len(named) != 1:
+        return f'ended with {len(named)} teams named "{want.name}"'
+    roster = _data(session, "read_workspace", {"topic": "colleagues", "q": want.value}).get("colleagues")
+    if not isinstance(roster, list):
+        raise Unreadable("read_workspace answered with no colleagues list")
+    colleague = [c.get("user_id") for c in roster if c.get("display_name") == want.value]
+    if len(colleague) != 1:
+        raise Unreadable(f'the seed holds {len(colleague)} colleagues named "{want.value}"')
+    member = _data(session, "read_workspace", {"topic": "member", "id": colleague[0]})
+    if not isinstance(member.get("team_ids"), list):
+        raise Unreadable(f'read_workspace member carries no team_ids for "{want.value}"')
+    if named[0].get("id") in member["team_ids"]:
+        return ""
+    return f'ended with {want.value} not on team "{want.name}"'
+
+
+def _contract_on_company_problem(session, want, record_id):
+    """The problem line for a company "Name" contract=Title entry, or "" when it holds."""
+    listing = _data(session, "read_details", {"action": "company_contracts", "id": record_id}).get("data")
+    if not isinstance(listing, list):
+        raise Unreadable("read_details company_contracts answered with no data list")
+    found = sum(1 for contract in listing if contract.get("title") == want.value)
+    if found == 1:
+        return ""
+    return f'ended with {found} contracts titled "{want.value}" on {_where(want)}'
+
+
 def _bare(name):
     return str(name).rsplit("__", 1)[-1]
 
@@ -444,6 +486,8 @@ def _problem(session, want):
     """The problem line for one entry, or "" when it holds."""
     if want.record_type == _TAG:
         return _tag_count_problem(session, want)
+    if want.record_type == _TEAM:
+        return _team_problem(session, want)
     if want.field == _RECORD_COUNT:
         found = len(_matching(session, want.record_type, want.name))
         if found == int(want.value):
@@ -456,6 +500,8 @@ def _problem(session, want):
         return _document_problem(session, want, record_id, view)
     if want.field in (_TAGGED, _UNTAGGED):
         return _tags_problem(session, want, record_id)
+    if want.field == _CONTRACT:
+        return _contract_on_company_problem(session, want, record_id)
     return _field_problem(session, want, record_id)
 
 

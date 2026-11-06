@@ -37,8 +37,9 @@ import {
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
 import { classVariants } from "../testing/classnames";
 
-// Whichever test asks first builds the tree's census, inside its own timeout.
-const TREE_BUILD = 60_000;
+// Whichever test asks first builds the census: 28s to 65s on CI runners 2.3x apart.
+// This leaves the slowest runner room for that spread again: 65 × 65 / 28.
+const TREE_BUILD = 152_000;
 const once = <T>(make: () => T) => {
   let made: { value: T } | undefined;
   return () => {

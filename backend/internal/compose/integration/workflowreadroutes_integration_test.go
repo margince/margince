@@ -153,8 +153,8 @@ func TestListRoutesAnswerAsReadLists(t *testing.T) {
 func TestBriefRouteAnswersAsTheTool(t *testing.T) {
 	d := newTwoDoors(t, "brief-read-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
-	createDealClosingThisWeek(t, d.e, stages, "Closing this week")
-	createDealClosingThisWeek(t, d.e, stages, "Also closing this week")
+	apptest.CreateDealClosingThisWeek(t, d.e, stages, "Closing this week")
+	apptest.CreateDealClosingThisWeek(t, d.e, stages, "Also closing this week")
 	if status := d.e.Call(t, "POST", "/v1/brief", nil, nil, nil); status != http.StatusCreated {
 		t.Fatalf("generating the brief → %d", status)
 	}

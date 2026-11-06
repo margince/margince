@@ -17,6 +17,7 @@ import {
   stub,
 } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
+import { tomorrowMorning } from "./worklist.briefverbs";
 
 // A brief item is seller work, and it is answerable where it is ranked.
 //
@@ -557,5 +558,35 @@ describe("a brief item folded into a deal at risk stays answerable", () => {
     await screen.findByText(/Northstar has gone quiet/);
     expect(screen.queryByRole("button", { name: "Snooze" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  });
+});
+
+// Set aside returns the item at 08:00 tomorrow on the reader's clock, and that
+// moment is the one stored, whatever zone the browser runs in. 15:00Z on
+// 10 September is 22:00 in Ho Chi Minh City (already the 10th's evening) and
+// 11:00 in New York, so "tomorrow" is the 11th in New York and 08:00 there is
+// 12:00Z.
+describe("tomorrowMorning", () => {
+  it("is 08:00 on the next day of the reader's zone, not the browser's", () => {
+    const now = Date.parse("2026-09-10T15:00:00Z");
+    expect(tomorrowMorning(now, "America/New_York")).toBe(
+      "2026-09-11T12:00:00.000Z",
+    );
+    expect(tomorrowMorning(now, "Asia/Ho_Chi_Minh")).toBe(
+      "2026-09-11T01:00:00.000Z",
+    );
+  });
+
+  it("does not move with the browser's own zone", () => {
+    const real = Intl.DateTimeFormat().resolvedOptions();
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      ...real,
+      timeZone: "Asia/Ho_Chi_Minh",
+    });
+    const now = Date.parse("2026-09-10T15:00:00Z");
+    expect(tomorrowMorning(now, "America/New_York")).toBe(
+      "2026-09-11T12:00:00.000Z",
+    );
+    vi.restoreAllMocks();
   });
 });

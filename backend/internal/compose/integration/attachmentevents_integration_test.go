@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -66,7 +67,7 @@ func TestEveryAttachmentMutationStatesItselfOnTheBus(t *testing.T) {
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Bus Attach", &e.Rep1)
 
-	body, ctype := multipartAttachment(t, "contact", contact.String(), "redundancy letter Weber.pdf", []byte("PDF-BYTES"))
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "redundancy letter Weber.pdf", []byte("PDF-BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()

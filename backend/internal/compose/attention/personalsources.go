@@ -56,6 +56,7 @@ var sourceAnswersForTheActorOnly = map[crmcontracts.WorklistItemSource]bool{
 	sourceClaim:          false,
 	sourceWaiting:        false,
 	sourceAtRisk:         false,
+	sourceDealReview:     false,
 	sourceDealSuggestion: false,
 	sourceTagSuggestion:  false,
 	sourceDuplicate:      false,
@@ -104,6 +105,14 @@ func (s *Service) forOwner(owner ids.UUID) *Service {
 func (s *Service) forReader() *Service {
 	narrowed := *s
 	narrowed.taskScope = TasksMine
+	return &narrowed
+}
+
+// withReadersSuggestions copies the shared service so its suggestion lane reads
+// only the acting reader's companies, as GET /attention answers for the reader.
+func (s *Service) withReadersSuggestions() *Service {
+	narrowed := *s
+	narrowed.suggestionsOfReader = true
 	return &narrowed
 }
 

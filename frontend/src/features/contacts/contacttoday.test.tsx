@@ -253,7 +253,10 @@ describe("the day's work on a contact", () => {
   it("answers a quiet record inside the bar", () => {
     show(VIEW, QUIET);
 
-    expect(screen.getByText(en["standing.next.none"])).toBeTruthy();
+    // It says what the read can back: no task is recorded. It never claims
+    // that nothing is left to do.
+    expect(screen.getByText(en["standing.next.noTask"])).toBeTruthy();
+    expect(screen.queryByText(en["standing.next.none"])).toBeNull();
     // Nobody suggested that nothing needs doing, and there is nothing to press
     // about it.
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
@@ -633,13 +636,38 @@ it("shows a privacy duty in place of the quiet answer and opens its review actio
   expect(
     screen.queryByRole("button", { name: en["standing.next.snooze"] }),
   ).toBeNull();
-  expect(screen.queryByText(en["standing.next.none"])).toBeNull();
+  expect(screen.queryByText(en["standing.next.noTask"])).toBeNull();
   await user.click(screen.getByRole("button", { name: "Review privacy duty" }));
   expect(action).toHaveBeenCalledWith(privacy.recommended_action);
 });
 
+it("offers a follow-up task on a quiet record to a reader who may log one", async () => {
+  const user = userEvent.setup();
+  const onAddTask = vi.fn();
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ContactToday
+          view={VIEW}
+          moment={QUIET}
+          onAction={() => {}}
+          onAddTask={onAddTask}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["standing.next.addTask"] }),
+  );
+  expect(onAddTask).toHaveBeenCalledTimes(1);
+});
+
 it("keeps a quiet relationship readable when compliance work is outside the reader's role", () => {
   show({ ...VIEW, sections_omitted: ["privacy_notice_duties"] }, QUIET);
-  expect(screen.getByText(en["standing.next.none"])).not.toBeNull();
+  expect(screen.getByText(en["standing.next.noTask"])).not.toBeNull();
   expect(screen.queryByText(/Not included: privacy duties/)).toBeNull();
 });

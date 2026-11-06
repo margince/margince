@@ -31,7 +31,7 @@ func (s *AdminStore) observed(ctx context.Context) (crmcontracts.AiBudgetSnapsho
 		if err != nil {
 			return err
 		}
-		if auth.Require(ctx, routingSettingsObject, principal.ActionRead) == nil {
+		if auth.Allows(ctx, routingSettingsObject, principal.ActionRead) {
 			cfg, err = config.StoredValTx(ctx, tx, s.cfg, Routing)
 		}
 		return err
@@ -61,7 +61,7 @@ func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, err
 	lanes := lanesNeedingAKey(cfg, KeyLookup(ctx, s.cfg, slog.Default()))
 	version := ""
 	features := visibleFeatureRoutes(ctx, cfg, budget.Band)
-	if auth.Require(ctx, routingSettingsObject, principal.ActionRead) == nil {
+	if auth.Allows(ctx, routingSettingsObject, principal.ActionRead) {
 		version = cfg.Revision()
 		overrides, err := config.StoredVal(ctx, s.cfg, TaskOverridesSetting)
 		if err != nil {
@@ -120,14 +120,14 @@ func (s *AdminStore) PreviewBudget(ctx context.Context, change BudgetChange) (cr
 // routing access. Omitted readings remain absent rather than being fetched via
 // the machinery-only settings path.
 func (s *AdminStore) visibleDeferred(ctx context.Context) ([]crmcontracts.AiDeferredWork, error) {
-	if auth.Require(ctx, "ai_diagnostics", principal.ActionRead) == nil {
+	if auth.Allows(ctx, "ai_diagnostics", principal.ActionRead) {
 		return s.deferred(ctx)
 	}
 	return []crmcontracts.AiDeferredWork{}, nil
 }
 
 func visibleFeatureRoutes(ctx context.Context, cfg RoutingConfig, band string) []crmcontracts.AiFeatureRoute {
-	if auth.Require(ctx, routingSettingsObject, principal.ActionRead) != nil {
+	if !auth.Allows(ctx, routingSettingsObject, principal.ActionRead) {
 		return []crmcontracts.AiFeatureRoute{}
 	}
 	return FeatureRoutes(cfg, cfg, band)

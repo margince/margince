@@ -9,13 +9,14 @@ import {
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { MailSendNotices } from "./compose.parts";
 import {
   activity202,
   jsonResponse,
   render,
   stubRoutes,
 } from "./compose.testkit";
-import { reasonTargetOf } from "./composeblockers";
+import { newContactsOf, reasonTargetOf } from "./composeblockers";
 
 afterEach(() => {
   cleanup();
@@ -29,8 +30,16 @@ const NOTHING_ON_RECORD = {
   resolved_category: "requested_followup",
 } as const;
 
+// The rep claimed an active deal and no deal backs it. The engine records the
+// claim and resolves to its own reading, which differs.
+const DEAL_CLAIM_UNBACKED = {
+  ...NOTHING_ON_RECORD,
+  requested_category: "active_deal_followup",
+} as const;
+
 const settled = (preview: ReturnType<typeof refusedPreview>) => ({
   preview,
+  refusal: null,
   asking: false,
   unanswered: false,
 });
@@ -74,6 +83,32 @@ describe("who a reason to write is recorded on", () => {
     ).toBeUndefined();
   });
 
+  // The remedy for an unbacked deal claim is the deal. A vouch in the
+  // category the engine resolved instead would pass on a reason never given.
+  it("is nobody where the rep's claim did not resolve", () => {
+    expect(
+      reasonTargetOf(
+        settled(refusedPreview("anna@example.test", DEAL_CLAIM_UNBACKED)),
+        contactOf,
+      ),
+    ).toBeUndefined();
+    expect(
+      reasonTargetOf(
+        settled(
+          refusedPreview("anna@example.test", {
+            ...NOTHING_ON_RECORD,
+            requested_category: "requested_followup",
+          }),
+        ),
+        contactOf,
+      ),
+    ).toEqual({
+      contactId: "c-1",
+      address: "anna@example.test",
+      category: "requested_followup",
+    });
+  });
+
   // A vouch resting on an answer the engine is replacing would be recorded
   // for the wrong message.
   it("is nobody while the answer is still out or failed", () => {
@@ -89,7 +124,9 @@ describe("who a reason to write is recorded on", () => {
 
 // The backend a vouch is recorded against: the preview door answers from the
 // vouch, as the engine would.
-function vouchBackend() {
+function vouchBackend(
+  refused: Parameters<typeof refusedPreview>[1] = NOTHING_ON_RECORD,
+) {
   let vouched = false;
   const sent = stubRoutes({
     "GET /activities/act-1": () =>
@@ -118,7 +155,7 @@ function vouchBackend() {
       return jsonResponse(
         vouched
           ? allowedPreview(["anna@example.test"])
-          : refusedPreview("anna@example.test", NOTHING_ON_RECORD),
+          : refusedPreview("anna@example.test", refused),
       );
     }
     return stubbed(input, init);
@@ -215,5 +252,159 @@ describe("recording a reason to write where the refusal is read", () => {
         reason: "Follow-up they requested",
       }),
     );
+  });
+
+  // The refusal names the missing deal, so the band offers no vouch: one in
+  // another category would let the next check pass with no deal chosen.
+  it("offers no vouch for an active-deal claim no deal backs", async () => {
+    const user = userEvent.setup();
+    const sent = vouchBackend(DEAL_CLAIM_UNBACKED);
+    render(
+      <ComposeModal
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await user.type(await screen.findByLabelText("To"), "anna@example.test");
+    await user.tab();
+
+    const checks = within(screen.getAllByRole("dialog")[0]);
+    await pickOption(
+      user,
+      await checks.findByRole("combobox", { name: "Reason for contact" }),
+      "Active deal",
+    );
+
+    await checks.findByText("Choose the deal for this follow-up.");
+    expect(
+      checks.queryByRole("button", { name: /^Record this reason/ }),
+    ).toBeNull();
+    expect(
+      checks.queryByRole("combobox", {
+        name: "Why you may write to anna@example.test",
+      }),
+    ).toBeNull();
+    expect(
+      sent.some((call) => call.key === "POST /contacts/c-1/consent/allow"),
+    ).toBe(false);
+  });
+});
+
+// An address no record holds is not a refusal: the send files it as the rep's
+// contact. The composer says so once the engine's answer is in, and names no
+// address while that answer is still out.
+describe("a new address", () => {
+  const preview = allowedPreview(["new@prospect.test", "known@customer.test"]);
+  preview.recipients[0] = { ...preview.recipients[0], new_contact: true };
+
+  it("is named from the settled answer only", () => {
+    expect(newContactsOf(settled(preview))).toEqual(["new@prospect.test"]);
+    expect(newContactsOf({ ...settled(preview), asking: true })).toEqual([]);
+    expect(newContactsOf({ ...settled(preview), unanswered: true })).toEqual(
+      [],
+    );
+  });
+
+  it("says the send adds it as the rep's contact", () => {
+    render(
+      <MailSendNotices
+        to={["new@prospect.test", "known@customer.test"]}
+        cc={[]}
+        context={undefined}
+        newContacts={newContactsOf(settled(preview))}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "new@prospect.test is on no record yet. Sending adds it as your contact.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/known@customer\.test is on no record/),
+    ).toBeNull();
+  });
+});
+
+// The engine answers every preview with the one it is handed.
+function answeringBackend(preview: ReturnType<typeof refusedPreview>) {
+  const answered = { count: 0 };
+  stubRoutes({});
+  const fetcher = vi.mocked(fetch);
+  const stubbed = fetcher.getMockImplementation();
+  if (!stubbed) throw new Error("Missing test transport");
+  fetcher.mockImplementation(async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (isPreviewDoor(new URL(url, "https://test.local").pathname)) {
+      answered.count += 1;
+      return jsonResponse(preview);
+    }
+    return stubbed(input, init);
+  });
+  return answered;
+}
+
+async function newMessageTo(address: string) {
+  const user = userEvent.setup();
+  render(
+    <ComposeModal
+      entityType="contact"
+      entityId="c-1"
+      contactId="c-1"
+      open
+      onClose={vi.fn()}
+    />,
+  );
+  await user.type(await screen.findByLabelText("To"), address);
+  await user.tab();
+  return within(screen.getAllByRole("dialog")[0]);
+}
+
+describe("a message with no reason for contact yet", () => {
+  it("says the reason is missing once, in the strip that picks it", async () => {
+    const answered = answeringBackend(
+      refusedPreview("anna@example.test", {
+        reason_code: "unknown_purpose",
+        decided_by: "machine",
+      }),
+    );
+    const checks = await newMessageTo("anna@example.test");
+
+    expect(await checks.findByText("No contact reason.")).toBeTruthy();
+    await waitFor(() => {
+      expect(answered.count).toBeGreaterThan(0);
+      expect(checks.queryAllByText(/^Checking whether/)).toHaveLength(0);
+    });
+    expect(checks.queryByText("This message needs one more detail")).toBeNull();
+  });
+
+  it("shows a refusal for another cause beside the strip", async () => {
+    answeringBackend(
+      refusedPreview("anna@example.test", {
+        reason_code: "marketing_objection",
+        decided_by: "subject",
+      }),
+    );
+    const checks = await newMessageTo("anna@example.test");
+
+    expect(await checks.findByText("Message cannot be sent")).toBeTruthy();
+    expect(checks.getByText("No contact reason.")).toBeTruthy();
+  });
+
+  it("shows a missing consent beside the strip", async () => {
+    answeringBackend(
+      refusedPreview("anna@example.test", {
+        reason_code: "no_marketing_consent",
+        decided_by: "machine",
+      }),
+    );
+    const checks = await newMessageTo("anna@example.test");
+
+    expect(
+      await checks.findByText("Consent needed for this message"),
+    ).toBeTruthy();
+    expect(checks.getByText("No contact reason.")).toBeTruthy();
   });
 });

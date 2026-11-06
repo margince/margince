@@ -108,7 +108,7 @@ func newestMessage(
 	}
 	// A mail's own History badge says whose move it is, so the strip and the
 	// no-reply advice read the same rule as the message's row.
-	move, err := activities.MailMoveColumnSQL(ctx, arg)
+	move, err := activities.MailMoveColumnSQL(ctx, arg, now)
 	if err != nil {
 		return lastMessage{}, false, err
 	}
