@@ -135,10 +135,10 @@ func namesAToolThatWaits(sentence string, spec mcp.ToolSpec, waits map[string]bo
 	return false
 }
 
-// The loop agent runs with no one at the screen, so the ask-first clause an
-// MCP client reads must never reach the model it reasons with: the run's
-// bounds are its passport, its allowlist and the tier. The run here is the
-// production runner over the production registry, offered every tool that asks.
+// The loop agent runs with no one at the screen. The ask-first clause an MCP
+// client reads must never reach the model it reasons with. The run's bounds
+// are its passport, its allowlist and the tier. The run here is the production
+// runner over the production registry, offered every tool that asks.
 func TestTheLoopAgentIsNeverToldToAskItsUser(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
 	ctx := principal.WithActor(context.Background(), loopAgentGrantedEveryScope(registry))
