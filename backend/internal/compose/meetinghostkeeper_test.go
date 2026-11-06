@@ -70,8 +70,8 @@ func TestOnlyTheSystemRunsTheOrganizerHostTask(t *testing.T) {
 	}
 }
 
-// A task resumes from its cursor, so one it cannot read stops it, and a failed
-// read is reported rather than recorded as a finished batch with nothing to do.
+// A task resumes from its cursor, so one it cannot read stops it. A failed read
+// is reported rather than recorded as a finished batch with nothing to do.
 func TestTheOrganizerHostTaskStopsOnWhatItCannotRead(t *testing.T) {
 	ctx := hostTaskActor(principal.PrincipalSystem)
 	meetings := &activities.Store{}
