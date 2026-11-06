@@ -25,6 +25,9 @@ import {
 import { useCaptureStopWarning } from "./users-rolecell";
 import { MemberTeamsField } from "./users-teams";
 
+// Ids are compared as ids, in code-point order, so the set check does not depend on a locale.
+const byId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
 export function EditMember({
   member,
   onClose,
@@ -90,8 +93,8 @@ export function EditMember({
     },
   });
   const teamsChanged =
-    [...teamIds].sort((a, b) => a.localeCompare(b)).join(";") !==
-    [...(baseline.team_ids ?? [])].sort((a, b) => a.localeCompare(b)).join(";");
+    [...teamIds].sort(byId).join(";") !==
+    [...(baseline.team_ids ?? [])].sort(byId).join(";");
   const initialRole = memberRole(baseline);
   const roleChanged = role !== initialRole;
   const ready =
