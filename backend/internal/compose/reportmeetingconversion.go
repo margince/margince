@@ -115,6 +115,9 @@ var activityOwnRowFields = map[string]map[string]string{
 	"meeting-conversion": {
 		fieldMeetingHost: "the credited seat is read off the meeting's own participant and invitation rows",
 	},
+	"activities-by-kind": {
+		fieldHostUserID: "the credited seat is read off the meeting's own held transition, keyed by activity_id",
+	},
 }
 
 // meetingConversionSpec is the held-meeting-to-accepted-opportunity key.

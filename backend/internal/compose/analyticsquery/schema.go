@@ -28,6 +28,13 @@ type Field struct {
 	// question with no answer, and refusing it at plan time beats a Postgres
 	// error the caller cannot act on.
 	Kind FieldKind
+	// Predicate is the whole clause for a field matched against a SET, with
+	// one %s for the bound value's reference.
+	//
+	// Where it is set the compiler renders it in place of Expr and an
+	// operator. One declaration then serves both engines, so this door cannot
+	// answer equality while the report engine asks the set.
+	Predicate string
 	// Shape is what the column holds, which decides the spellings a filter
 	// against it can carry. Its zero value is text, which is the safe default
 	// in the one direction that matters: a text column given a number refuses

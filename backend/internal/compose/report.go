@@ -208,6 +208,9 @@ type reportSpec struct {
 	// with in one installation, keyed by their SQL expression. Empty on every
 	// prebuilt entry; analyticsCatalog fills it per request.
 	customFields map[string]customDimension
+	// filterPredicates replace a filter's rendering against a SET. One %s for
+	// the bound reference; the expression stays in filters for the switch.
+	filterPredicates map[string]string
 	// thresholds are the filters that compare the row against a NUMBER the
 	// caller sends rather than a column it must equal (reportthreshold.go).
 	// Each has a default, so the report answers with no plan at all, and the

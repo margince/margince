@@ -86,6 +86,9 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
 		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowMoments), analyticsquery.KindFilter)
 		for name, field := range entity.Fields {
+			// The same template the report engine renders, so one declaration
+			// decides the question both doors ask.
+			field.Predicate = spec.filterPredicates[name]
 			field.Domain = filterDomain(spec, field.Expr)
 			field.Currency = granted.perRowCurrency(name)
 			field.Period = periodFieldOf(name, field.Expr)

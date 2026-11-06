@@ -82,7 +82,13 @@ func buildReportWhere(
 		if err != nil {
 			return nil, "", err
 		}
-		where = append(where, fmt.Sprintf("%s = $%d", expr, arg(value)))
+		// arg() appends, so the position is taken once and reused.
+		pos := arg(value)
+		if template, set := spec.filterPredicates[key]; set {
+			where = append(where, fmt.Sprintf(template, fmt.Sprintf("$%d", pos)))
+			continue
+		}
+		where = append(where, fmt.Sprintf("%s = $%d", expr, pos))
 	}
 	scoped, err := specScopeClauses(ctx, spec, arg)
 	if err != nil {
