@@ -242,10 +242,17 @@ echo "ok: the finding is published where the reader already is, and withdraws it
 # The author's own reviews are replies to threads, not coverage. Each one is a
 # submitted review, so without all three a batch of replies starts a run per
 # reply, cancels the report a real review started, or lists the author as a
-# reviewer of their own branch. Only lines that are not comments count: a
-# guard left behind in a comment guards nothing.
+# reviewer of their own branch. Only code counts, with whole-line and trailing
+# comments stripped: a guard left behind in a comment guards nothing. One awk
+# process, because `grep -v | grep -q` can die of SIGPIPE under pipefail and
+# report a guard that is there as missing.
 active_has() {
-	grep -vE '^[[:space:]]*#' "$1" | grep -qF "$2"
+	awk -v needle="$2" '{
+		line = $0
+		sub(/^[[:space:]]*#.*/, "", line)
+		sub(/[[:space:]]+#.*$/, "", line)
+		if (index(line, needle)) found = 1
+	} END { exit !found }' "$1"
 }
 author_guards=(
 	'github.event.review.user.login != github.event.pull_request.user.login'
@@ -265,6 +272,12 @@ sed -E "s/^([[:space:]]*)(.*github\.event\.review\.user\.login != )/\1# \2/" "$w
 if active_has "$commented" "${author_guards[0]}"; then
 	rm -f "$commented"
 	echo "FAIL: a guard that survives only as a comment still passes this check."
+	exit 1
+fi
+printf '    if: true # %s\n' "${author_guards[0]}" > "$commented"
+if active_has "$commented" "${author_guards[0]}"; then
+	rm -f "$commented"
+	echo "FAIL: a guard that survives only as a trailing comment still passes this check."
 	exit 1
 fi
 rm -f "$commented"
