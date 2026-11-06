@@ -231,7 +231,7 @@ func TestHTTPAPIListAfterReportsARejectedPageToken(t *testing.T) {
 		http.Error(w, `{"error":{"code":400,"message":"Invalid pageToken"}}`, http.StatusBadRequest)
 	}))
 	defer srv.Close()
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	if _, _, err := api.ListAfter(context.Background(), "tok", "after:2026/01/01", "stale", 100); err != ErrPageTokenRejected {
 		t.Fatalf("err = %v, want ErrPageTokenRejected for a 400 on a page token", err)
 	}
@@ -255,7 +255,7 @@ func TestHTTPAPIGetHeadersRebuildsTheHeaderBlock(t *testing.T) {
 			{"name":"Bad:Name","value":"x"}]}}`))
 	}))
 	defer srv.Close()
-	api, ok := NewAPI(srv.Client(), srv.URL).(HeaderFetcher)
+	api, ok := newTestAPI(t, srv.Client(), srv.URL).(HeaderFetcher)
 	if !ok {
 		t.Fatal("the HTTP API must serve headers")
 	}

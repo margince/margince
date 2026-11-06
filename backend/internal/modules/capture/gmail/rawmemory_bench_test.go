@@ -35,7 +35,7 @@ func BenchmarkRawImportsShareMemoryBudget(b *testing.B) {
 		}
 	}))
 	defer server.Close()
-	api := NewAPI(server.Client(), server.URL)
+	api := newTestAPI(b, server.Client(), server.URL)
 	runtime.GC()
 	var initial runtime.MemStats
 	runtime.ReadMemStats(&initial)

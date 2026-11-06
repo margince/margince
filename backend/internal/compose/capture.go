@@ -103,6 +103,8 @@ type CaptureConfig struct {
 	MaxBackfillMonths  int
 	HistoryConcurrency int
 	HistoryHold        bool
+	GmailMailboxQuota  int
+	GmailProjectQuota  int
 	// Now is the clock the deal question judges a mail's currentness by. Nil
 	// is the wall clock.
 	Now func() time.Time

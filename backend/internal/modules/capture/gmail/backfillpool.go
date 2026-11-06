@@ -34,7 +34,7 @@ const (
 	// rateWaitInPage is the longest wait a page takes inside itself when Gmail
 	// says slow down. A longer wait ends the page instead, and the engine comes
 	// back after it, holding no worker meanwhile.
-	rateWaitInPage = time.Minute
+	rateWaitInPage = 5 * time.Second
 
 	// rateRetriesInPage bounds how often one call is retried after a rate limit
 	// before the page gives up and the engine's ladder takes over.
@@ -110,6 +110,9 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 		v, err := fn()
 		if err == nil || !errors.Is(err, connector.ErrRateLimited) {
 			return v, err
+		}
+		if _, yield := errors.AsType[*quotaYieldError](err); yield {
+			return zero, err
 		}
 		wait := backoff.Jittered(attempt, rateBackoffBase, rateBackoffCap)
 		var limited *connector.RateLimitedError

@@ -49,7 +49,6 @@ internal/compose/company_integration_test.go 1
 internal/compose/companyautoenrich_test.go 2
 internal/compose/companyconnections_integration_test.go 2
 internal/compose/companyrollup_handlers_test.go 1
-internal/compose/companyscan/words_integration_test.go 1
 internal/compose/confidentialityverdict_integration_test.go 1
 internal/compose/connectors_authority_test.go 1
 internal/compose/connectors_csrf_test.go 1

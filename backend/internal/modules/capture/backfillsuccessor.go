@@ -49,5 +49,5 @@ const clearBackfillAdmission = `, admission_slot = NULL, execution_owner_pid = N
 
 func mailboxScopedBackoff(cause error) bool {
 	var limited *connector.RateLimitedError
-	return errors.As(cause, &limited) && (limited.Reason == connector.RateLimitUser || limited.Reason == connector.RateLimitConcurrent)
+	return errors.As(cause, &limited) && limited.MailboxScoped()
 }

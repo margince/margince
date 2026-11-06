@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go -->
+<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillcheckpoint.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go -->
 # Mail history import: the capped scan back in time and its cost
 
 Connecting a mailbox starts *standing sync*: from then on, new mail comes in. A new connection is also
@@ -126,11 +126,16 @@ The run is a row with a state machine, paged by the worker:
                  └──▶ error       (a non-transient fault, or too many consecutive transient ones)
 ```
 
-The worker calls one step at a time. Each step pulls **one provider page of 100 messages**, and pushes
-every message through the same Sink that standing sync uses. It then commits what the page did together
-with the cursor that lets the run go on from there. The **message** counts and the cursor land in one
-statement. So a page that fails to commit scans nothing the next try will do again. The
-**counterparty** counts are kept outside that statement (see below).
+The worker calls one step at a time. Each step pulls a bounded provider page and pushes
+messages through the same Sink that standing sync uses. Gmail first saves the exact listed ids,
+then saves the ids still to read and message counts together after small groups finish. Header checks
+can finish later ids before an earlier message needs its full message, so a count alone would
+skip mail on retry. The saved list also works after a change to the provider's next listing.
+
+The page's final commit adds only counts not already saved and hands off the next provider token.
+A failure repeats at most work since the last save. Other providers keep their page-end save.
+The [worker](../reference/worker-diagnostics.md#gmail-quotas-and-saved-page-work)
+state the shared Gmail quota and worker change rules.
 
 Two cases make that commit fail by design. Both mean *this page no longer belongs to the run
 being written*:
@@ -138,13 +143,14 @@ being written*:
 - the run reached an end state at the same time (a cancel), or
 - the connection was closed and opened again while the page was out at the provider.
 
-A page fetched under a grant its owner has since revoked is discarded.
+A page cannot write after its grant changes. Messages already stored stay.
 
-**Each failure is handled by its kind.** A rate limit or a provider that cannot be reached is waited out, with a
-wait that is twice as long each time. The wait keeps to the provider's own `Retry-After` when that asks for
-longer, since coming back early only gets refused again. Anything else ends the run at once. The
-ladder of failures that may pass is capped at 10 **in a row**. A committed page sets it back to zero, so
-faults the import already passed never end it.
+**Each failure is handled by its kind.** A rate limit, an internal fault or a provider that cannot be reached is waited out.
+The wait is twice as long each time. The wait keeps to the provider's own `Retry-After` when that asks for
+longer, since coming back early only gets refused again. Anything else ends the run at once.
+
+The ladder is capped at 10 failures **in a row** without saved progress. Saving more mail or completing
+a page sets it back to zero, so faults already passed do not end the import.
 
 A run whose member may no longer capture ends with the class `forbidden`, before the page reads a
 credential. The start is refused the same way (`403 role_cannot_capture`). An admin can give the
@@ -161,25 +167,14 @@ sender matched to an existing contact is not counted, and it starts no enrich ca
 because capture creates no companies at all. A run with 12 new domains did that work whether or not the
 site reads have answered yet. Reporting zero would make that work look like none.
 
-A counterparty is counted **the moment it is created**, in its own write, outside the page's commit.
-Counting each new row in its own write means a count is not dropped or counted twice when a page is cancelled,
-retried or fails. Capture is idempotent, so a replayed message never reaches the resolver again. There is
-nothing to build a missing page total from again.
+Each new row commits with its run's count through the existing ledger. An entry names the run,
+kind and subject. Replaying it changes no count; a failed transaction keeps neither the new row
+nor its count. A cancel or a changed connection does not discard counts already committed.
+The page's checkpoint never adds those counts a second time.
 
-What this promises and what it does not:
-
-- It never **counts twice**. A row is created once, the write runs on that one result, and nothing
-  retries it.
-- It is not **once and only once**. Creating and counting are different transactions, so a failed count
-  write loses the count for that row for good (logged at `ERROR`).
-- The loss is **per failure and has no cap**: a database fault over a whole page loses one count for
-  every row created inside it.
-
-So read the committed columns as a **floor** on what the run created, never as too many. Closing the gap
-needs a ledger keyed on the created row's id. That is a design decision, not a small fix.
-
-The yields count short by design. A sender the tier gate defers is resolved by the verdict engine long
-after the page that carried it. No page claims the contact it may create later.
+A sender queued for a verdict keeps its run id, so a contact made later can count for that run.
+Completion checks the ledger once and keeps any higher old count. The ledger and its writes are
+in the [capture entity model](../reference/entity-model/capture.md).
 
 So a run that reports
 zero contacts created is read as **"ratio not known"** instead of "zero contacts". A window whose senders

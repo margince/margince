@@ -226,3 +226,36 @@ Before returning to an older binary, hold imports and stop their event consumers
 workers. Finish waiting reads and remove jobs whose arguments contain `pending: true` before
 starting older workers. Older workers may treat this flag as a full repair pass. Keep the
 added columns and progress while making the next fix.
+
+### Gmail quotas and saved page work
+
+All Gmail reads, sends and watch calls share mailbox and project budgets through the existing
+rate-limit store. Each method has its own cost. A mailbox key comes from the saved owner
+address, hashed before it reaches Redis. Refreshing a token does not open a new budget.
+
+The project budget covers the installation's OAuth apps; separate apps do not raise its limit.
+Without a shared store, the budget holds within one process. A shared-store fault stops requests
+until counting works again.
+
+Set `capture.gmail_mailbox_quota` and `capture.gmail_project_quota` to the effective limits shown
+by Google, with the same values in each process. Older projects may have different limits. The
+defaults and environment keys are in [configuration](configuration.md). Method costs follow the
+[Google quota table](https://developers.google.com/workspace/gmail/api/reference/quota).
+
+A largest call still fits at a rolling-minute boundary. A provider retry deadline can only make
+the shared wait longer. A mailbox-only limit leaves other mailboxes ready. Longer waits return
+to the job scheduler, releasing page memory and the worker connection.
+
+Before storing a listed page, Gmail saves its exact ids still to read in `capture_backfill.cursor`.
+It saves counts and those ids together after small groups of finished messages. Header checks
+can finish later ids before an earlier message is stored, so a count alone cannot name where
+to start again. A retry reads the saved ids rather than asking a changed mailbox for the same page.
+
+Only work since the last save may repeat. New saves keep the `execution_generation` and connection
+generation checks. The normal page commit adds only counts not already saved. Saving more mail
+also resets the failure ladder, so a run making progress does not stop for old faults.
+
+Older provider tokens still read as before. Before returning to an older binary, stop new import
+requests and let running imports finish with the new worker, then hold imports and stop it. Keep
+saved tokens until the run ends; an older worker cannot read the new format. For the upgrade,
+hold imports, stop old workers, then start the new workers and release the hold.

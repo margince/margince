@@ -35,10 +35,11 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 		t.Fatalf("employing the contact: %v", err)
 	}
 	onAccount := []datasource.EntityRef{{Type: "contact", ID: contact}}
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	held := integration.CalendarMeeting{Event: "evt-scan-held", At: now.AddDate(0, 0, -10), Links: onAccount}
 	called := integration.CalendarMeeting{Event: "evt-scan-called", At: now.AddDate(0, 0, -2), Links: onAccount}
 	heldID, calledID := held.Capture(t, e), called.Capture(t, e)
+	e.RecordHeld(t, heldID)
 
 	read := func() []ids.UUID {
 		var words []MessageIn
@@ -55,8 +56,8 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 		}
 		return out
 	}
-	if got := read(); !slices.Contains(got, calledID) {
-		t.Fatalf("the booked meeting is not read before the cancel (%v) — the case below proves nothing", got)
+	if got := read(); slices.Contains(got, calledID) || !slices.Contains(got, heldID) {
+		t.Fatalf("the scan reads %v before cancellation, want only the reported held meeting %v", got, heldID)
 	}
 	called.Cancel(t, e)
 	got := read()

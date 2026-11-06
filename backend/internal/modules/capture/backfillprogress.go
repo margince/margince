@@ -1,16 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The running page's live tally. A run's counters advance once per COMMITTED
-// page (backfillpager.go), and a page is a hundred messages of provider I/O
-// and capture work — long enough that the activation view sat at zero for the
-// whole first page and read as an import that never started.
-//
-// So the page also reports what it has walked so far into the run's inflight_*
-// columns, and the status read adds the two. Those columns are advisory and
-// transient by construction: every write that ends a page resets them, which
-// is what keeps the committed counters the one authority and a retried page
-// counted once.
+// Live progress mirrors only counts not yet checkpointed. Durable saves and
+// the final page commit remain the authority when a transient flush is lost.
 
 package capture
 
@@ -73,9 +65,10 @@ type pageProgress struct {
 	// ever moves forward (Observed refuses a report behind the one it holds),
 	// so the two together are what keep an on-screen count from going
 	// backwards.
-	mu        sync.Mutex
-	tally     pageTally
-	lastFlush time.Time
+	mu         sync.Mutex
+	tally      pageTally
+	checkpoint connector.BackfillPageResult
+	lastFlush  time.Time
 
 	backfillID ids.UUID
 	// generation fences every write against a connection rebound under the
@@ -124,7 +117,7 @@ func backfillRunOf(ctx context.Context) *ids.UUID {
 func (c *pageProgress) Observed(ctx context.Context, scanned, captured, skipped int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.tally.advance(scanned, captured, skipped) {
+	if c.tally.advance(scanned-c.checkpoint.Scanned, captured-c.checkpoint.Captured, skipped-c.checkpoint.Skipped-c.checkpoint.Failed) {
 		c.persist(ctx, paced)
 	}
 }

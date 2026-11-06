@@ -99,7 +99,7 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 	if !slices.Contains(st.Granted, SendScope) {
 		return connector.SendReceipt{}, ErrSendScopeMissing
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return connector.SendReceipt{}, err
 	}

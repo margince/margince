@@ -548,6 +548,22 @@
             "type": "string"
           }
         },
+        "gmail_mailbox_quota": {
+          "description": "Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 6000
+        },
+        "gmail_project_quota": {
+          "description": "Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1200000
+        },
         "history_concurrency": {
           "description": "Limit on history imports running at once across the installation. Use the same value in every process.",
           "type": [

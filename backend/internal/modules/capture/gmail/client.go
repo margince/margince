@@ -207,6 +207,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 }
 
 type httpAPI struct {
+	quota  quotaPacing
 	client *http.Client
 	base   string
 }
@@ -216,13 +217,20 @@ type httpAPI struct {
 //
 //nolint:ireturn // returns the API seam by design — the connector holds it as an interface so tests substitute a stub
 func NewAPI(client *http.Client, base string) API {
+	return NewAPIWithQuota(client, base, 0, 0)
+}
+
+// NewAPIWithQuota uses the configured effective per-minute provider allowances.
+//
+//nolint:ireturn // the API is the connector's existing transport seam
+func NewAPIWithQuota(client *http.Client, base string, mailbox, project int) API {
 	if client == nil {
 		client = boundedHTTPClient()
 	}
 	if base == "" {
 		base = gmailAPIBase
 	}
-	return &httpAPI{client: client, base: base}
+	return &httpAPI{client: client, base: base, quota: newQuotaPacing(mailbox, project)}
 }
 
 func (a *httpAPI) Profile(ctx context.Context, accessToken string) (string, string, error) {

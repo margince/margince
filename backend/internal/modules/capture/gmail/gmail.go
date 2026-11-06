@@ -167,7 +167,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	}
 	owner := st.Owner // local — never stored on the shared instance
 
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func (c *Connector) Watch(ctx context.Context, auth connector.Auth, topic string
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.WatchResult{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return connector.WatchResult{}, err
 	}
@@ -359,7 +359,7 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return err
 	}
@@ -480,7 +480,7 @@ func (c *Connector) ListContainers(
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, false, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return nil, false, err
 	}

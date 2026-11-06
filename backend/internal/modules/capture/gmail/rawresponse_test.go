@@ -47,7 +47,7 @@ func TestDeclaredRawLengthReleasesRoomForTheNextFetch(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	api := NewAPI(server.Client(), server.URL)
+	api := newTestAPI(t, server.Client(), server.URL)
 	budget := semaphore.NewWeighted(rawFetchReservation + 4096)
 	ids := []string{"first", "second"}
 	err := inOrder(t.Context(), len(ids), func(ctx context.Context, i int) (Message, error) {
@@ -121,7 +121,7 @@ func TestConcurrentWalkersRespectTheProductionRawBudget(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	api := NewAPI(server.Client(), server.URL)
+	api := newTestAPI(t, server.Client(), server.URL)
 	results := make(chan error, 2)
 	for range 2 {
 		go func() {
@@ -185,7 +185,7 @@ func TestRawResponsesEnforceDeclaredLengthAndEncoding(t *testing.T) {
 			client := &http.Client{Transport: rawResponseTransport(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), ContentLength: tc.length, Body: io.NopCloser(strings.NewReader(tc.body))}, nil
 			})}
-			msg, err := NewAPI(client, "https://gmail.example").GetRaw(t.Context(), "test", "mail")
+			msg, err := newTestAPI(t, client, "https://gmail.example").GetRaw(t.Context(), "test", "mail")
 			if tc.invalid {
 				if !errors.Is(err, ErrUnreachable) {
 					t.Fatalf("invalid response error=%v", err)
@@ -209,7 +209,7 @@ func TestGzipRawResponsesUseTheBoundedReader(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	msg, err := NewAPI(server.Client(), server.URL).GetRaw(t.Context(), "test", "mail")
+	msg, err := newTestAPI(t, server.Client(), server.URL).GetRaw(t.Context(), "test", "mail")
 	if err != nil || string(msg.RFC822) != "mail" {
 		t.Fatalf("gzip raw=%q err=%v", msg.RFC822, err)
 	}
@@ -233,7 +233,7 @@ func TestExcessiveMetadataFallsBackToTheFullMessage(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	api := NewAPI(server.Client(), server.URL)
+	api := newTestAPI(t, server.Client(), server.URL)
 	c := New(fakeOAuth{access: "test"}, api)
 	sink := &recordingSink{}
 	result, err := c.BackfillPage(t.Context(), authBytes(t), time.Time{}, "", sink)
