@@ -34648,7 +34648,9 @@ type AttentionItem struct {
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
-	// `source: meeting_outcome`.
+	// `source: meeting_outcome`. It moves to the organizer, whichever calendar
+	// synced first, when the organizer is a colleague with exactly one bound seat
+	// and their own calendar also holds the meeting.
 	//
 	// It names the row's OWNER, which is what lets a manager's view say whose
 	// appointment each one is rather than presenting a team's calendars as one
@@ -67007,7 +67009,9 @@ type WorklistItem struct {
 	// `kind` is always `user`.
 	//
 	// A fact about the meeting, kept apart from `owner`, which says who answers
-	// for the row and stays the calendar's seat. Absent where no calendar claims
+	// for the row: the calendar's seat, or the organizer when they are a colleague
+	// with exactly one bound seat and their own calendar also holds a meeting another
+	// colleague's synced first. Absent where no calendar claims
 	// the meeting and no colleague organized it. `label` follows
 	// `WorklistOwner.label`: absent where this caller may not resolve the name.
 	Host *WorklistOwner `json:"host,omitempty"`

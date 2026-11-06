@@ -23,7 +23,7 @@ import (
 // archive evidence names it, or false for any other archive.
 func MeetingCopySurvivor(evidence []byte) (ids.ActivityID, bool) {
 	var recorded map[string]any
-	if json.Unmarshal(evidence, &recorded) != nil || recorded[archiveReasonKey] != meetingCopyReason {
+	if json.Unmarshal(evidence, &recorded) != nil || recorded[evidenceReasonKey] != meetingCopyReason {
 		return ids.ActivityID{}, false
 	}
 	named, ok := recorded[meetingCopySurvivorKey].(string)

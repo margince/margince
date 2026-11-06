@@ -1641,7 +1641,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Members, teams and roles | `change_access.create_record_role` | `create_record_role` | `custom_field.create` |
 | Members, teams and roles | `change_access.create_team` | `create_team` | `team_admin.create` |
 | Members, teams and roles | `change_access.deactivate_member` | `deactivate_user` | `user_admin.delete` `user_admin.read|create|update|delete` |
-| Members, teams and roles | `change_access.hand_over_work` | `hand_over_user_work` | `activity.read` `activity.update` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `project.update` `scope:team` `user_admin.update` `webhook_subscription.update` |
+| Members, teams and roles | `change_access.hand_over_work` | `hand_over_user_work` | `activity.read` `activity.update` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `project.update` `user_admin.update` `webhook_subscription.update` |
 | Members, teams and roles | `change_access.reactivate_member` | `reactivate_user` | `user_admin.delete` `user_admin.read|create|update|delete` |
 | Members, teams and roles | `change_access.remove_member` | `remove_workspace_member` | `activity.read` `admin` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `signal.delete` `user_admin.delete` `user_admin.read` `user_admin.update` |
 | Members, teams and roles | `change_access.remove_team_member` | `remove_team_member` | `team_admin.update` |

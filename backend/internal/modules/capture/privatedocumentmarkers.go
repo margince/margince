@@ -18,7 +18,8 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-// PDF text can join a CV title to the name beside it.
+// cvTitlesAnywhere name a CV wherever they stand, spaced out or not. A PDF can
+// merge the title into the line of the name beside it.
 var cvTitlesAnywhere = []string{"curriculum vitae", "lebenslauf"}
 
 // cvTitles is a line that names the document a CV. A numbered line is not

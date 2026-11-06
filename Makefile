@@ -616,6 +616,7 @@ ifdef CHECK_WRITERS_RAN
 else
 	cd frontend && pnpm install --frozen-lockfile
 	@./scripts/check-contract-frontend-drift.sh
+	cd frontend && pnpm gen:approval-reading --check
 endif
 	cd frontend && pnpm gen:essential-copy --check
 
