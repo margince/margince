@@ -78,17 +78,15 @@ A list the code holds is linked, never typed again. An explanation or handbook p
 in a `describes:` line. A PR that changes that code says whether the page still holds
 (`make docs-describing`).
 
-**A red `main` is claimed once.** Before you look into a failure that is not yours, run
-`gh pr list --state open --label "claim: main-red"` and read the bodies; each names the tests it
-covers. Old claims, how to release one, and why two half fixes leave `main` red:
-[docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md).
+**A red `main` is the watcher's.** The team runs a watcher that claims and fixes every red
+`main`. Leave it alone: do not look into it or open a fix. Go on with your own work, and look again
+at merge time.
 
-- Covered: someone is on it. Do not look into it, open a second fix or keep checking it. Go on with
-  your own work, and look once more at merge time.
-- Not covered: you are first, even while some other claim is open for some other reason. Before you
-  start, open a draft PR labelled `claim: main-red` that names the tests you take. Two claims can
-  both take one test (listing then opening is not atomic). The PR with the smaller number keeps the
-  claim, and the other session closes its own.
+Claim it yourself only when you must: it blocks your merge, and 30 minutes after it appeared
+`gh pr list --state open --label "claim: main-red"` still shows no claim naming its tests. Then,
+before you start, open a draft PR labelled `claim: main-red` that names the tests you take. If two
+claims take one test, the smaller PR number keeps it. The rest:
+[docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md).
 
 **Claim an issue before you work on it.** An assignee and a label show in the issue list; a comment
 does not. The rest: [docs/how-to/work-on-an-issue.md](docs/how-to/work-on-an-issue.md).
