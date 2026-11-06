@@ -471,7 +471,7 @@ func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (js
 	}
 	if args.Action != "" && len(actions) == 0 {
 		return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
-			"router %s has no route action %s; an action the router runs itself takes the arguments its own inputSchema names",
+			"router %s has no route action %s; a router-run action takes the router's inputSchema, and any other name is no action of %[1]s",
 			args.Router, args.Action)}
 	}
 	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })

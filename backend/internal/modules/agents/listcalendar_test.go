@@ -12,19 +12,19 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // calendarAsked records what list_records asked the calendar seam, and answers
 // with a fixed reader calendar, or with none owed when answer is empty.
 type calendarAsked struct {
-	answer   crmcontracts.ReaderCalendar
-	kind     string
-	windowed bool
-	asked    bool
+	answer crmcontracts.ReaderCalendar
+	scope  datasource.ActivityListScope
+	asked  bool
 }
 
-func (c *calendarAsked) seam(_ context.Context, kind string, windowed bool) (crmcontracts.ReaderCalendar, bool, error) {
-	c.asked, c.kind, c.windowed = true, kind, windowed
+func (c *calendarAsked) seam(_ context.Context, scope datasource.ActivityListScope) (crmcontracts.ReaderCalendar, bool, error) {
+	c.asked, c.scope = true, scope
 	return c.answer, c.answer != "", nil
 }
 
@@ -66,8 +66,8 @@ func TestAMeetingListWithNoCalendarSaysItIsNotTheDiary(t *testing.T) {
 			env, out := listWithCalendar(t, calendar,
 				`{"record_type":"activity","filters":{"kind":"meeting","occurred_after":"2026-11-07T00:00:00Z"}}`)
 
-			if calendar.kind != "meeting" || !calendar.windowed {
-				t.Errorf("the seam was asked kind %q windowed %v, want the call's meeting window", calendar.kind, calendar.windowed)
+			if calendar.scope.Kind != "meeting" || !calendar.scope.Windowed {
+				t.Errorf("the seam was asked kind %q windowed %v, want the call's meeting window", calendar.scope.Kind, calendar.scope.Windowed)
 			}
 			if out.Calendar == nil || *out.Calendar != tc.calendar {
 				t.Errorf("calendar = %v, want %q, the field GET /activities publishes", out.Calendar, tc.calendar)
@@ -101,8 +101,8 @@ func TestAMeetingListFedByTheCalendarOrNotADiaryCarriesNoCaveat(t *testing.T) {
 
 	notADiary := &calendarAsked{}
 	env, out = listWithCalendar(t, notADiary, `{"record_type":"activity","filters":{"kind":"email"}}`)
-	if notADiary.kind != "email" || notADiary.windowed {
-		t.Errorf("the seam was asked kind %q windowed %v, want email with no window", notADiary.kind, notADiary.windowed)
+	if notADiary.scope.Kind != "email" || notADiary.scope.Windowed {
+		t.Errorf("the seam was asked kind %q windowed %v, want email with no window", notADiary.scope.Kind, notADiary.scope.Windowed)
 	}
 	if out.Calendar != nil || calendarCaveated(env) {
 		t.Errorf("an email list carries a calendar answer: %v, warnings %v", out.Calendar, env.Warnings)
@@ -111,5 +111,20 @@ func TestAMeetingListFedByTheCalendarOrNotADiaryCarriesNoCaveat(t *testing.T) {
 	contacts := &calendarAsked{answer: crmcontracts.ReaderCalendarNotConnected}
 	if _, out = listWithCalendar(t, contacts, `{"record_type":"contact"}`); contacts.asked || out.Calendar != nil {
 		t.Errorf("a contact list asked the calendar seam (%v) or carries its answer: %v", contacts.asked, out.Calendar)
+	}
+}
+
+// A meeting list held to a record, project or assignee is not the reader's
+// diary. The tool tells the seam so, whichever filter holds it.
+func TestAMeetingListNarrowedToOneSubjectSaysSoToTheSeam(t *testing.T) {
+	for _, filter := range []string{"entity_id", "assignee_id", "project_id"} {
+		t.Run(filter, func(t *testing.T) {
+			calendar := &calendarAsked{}
+			listWithCalendar(t, calendar,
+				`{"record_type":"activity","filters":{"kind":"meeting","`+filter+`":"0190a8a0-0000-7000-8000-000000000001"}}`)
+			if !calendar.scope.Narrowed {
+				t.Errorf("a meeting list filtered by %s reached the seam as un-narrowed", filter)
+			}
+		})
 	}
 }

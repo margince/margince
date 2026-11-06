@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 223.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 58402 |
+| Approx. wire tokens | 58414 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 46.3 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.6 KB | 24% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.7 KB | 24% | Yes, every step |
 | Input schemas | 111.2 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
 | **Description + input schema** | **164.9 KB** | **73%** | **the recurring cost** |
@@ -82,7 +82,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 861 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 873 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
@@ -3941,28 +3941,28 @@ call themselves; requires passport scope "write".)
 
 ```text
 Create ONE contact, company, deal, lead, project, activity or relationship that does not exist yet.
-Rows from a file, a CSV or a pasted list go through preview_import and then commit_import, never one
-create_record each: the preview checks every row, duplicates included, and its counts are what the
-user weighs. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline
-list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type
-actually stores are accepted, and a field belonging to a neighbouring type is refused rather than
-dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human
-types in. No occurred_at means now; a past day with no time: its date, occurred_precision "day". Set
-meeting_status held only when the user says the meeting took place. Record a signed contract with
-change_offers action record_contract, never as a deal. A vCard file goes through change_capture.
-Before creating one contact or company that might already exist, ask find_records engine identify:
-it runs the duplicate check a create runs, on name spellings, emails, phones and domains. A second
-copy is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with
-a different email, phone or employer, is not proof of a duplicate. When the check finds a contact
-with the same name at the same employer, ask the human whether it is the same contact before you
-link anything to it; two colleagues can share a name. Giving a contact its employer by creating an
-employment relationship files any same-name contact at that employer for review: the result carries
-it as duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides.
-When the user says where they met the contact, pass that word as offer_tag, also when they want to
-decide on the tag themselves: it puts no tag on the record and stores nothing, the answer says
-whether that tag already exists, and change_tags still needs their yes. The new record's id comes
-back in the result; keep it for anything that links to it. (Runs immediately; requires passport
-scope "write".)
+Rows from a file, a CSV or a pasted list, each a company, lead, contact, deal, activity, go through
+preview_import and then commit_import, never one create_record each: the preview checks every row,
+duplicates included, and its counts are what the user weighs. Creating a deal requires a pipeline_id
+and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist
+yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a
+neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in
+the workspace, the same as one a human types in. No occurred_at means now; a past day with no time:
+its date, occurred_precision "day". Set meeting_status held only when the user says the meeting took
+place. Record a signed contract with change_offers action record_contract, never as a deal. A vCard
+file goes through change_capture. Before creating one contact or company that might already exist,
+ask find_records engine identify: it runs the duplicate check a create runs, on name spellings,
+emails, phones and domains. A second copy is a problem that then needs resolve_duplicates to undo. A
+record that shares only a name, with a different email, phone or employer, is not proof of a
+duplicate. When the check finds a contact with the same name at the same employer, ask the human
+whether it is the same contact before you link anything to it; two colleagues can share a name.
+Giving a contact its employer by creating an employment relationship files any same-name contact at
+that employer for review: the result carries it as duplicate_candidates, and you report the pair as
+filed, unresolved until the reviewer decides. When the user says where they met the contact, pass
+that word as offer_tag, also when they want to decide on the tag themselves: it puts no tag on the
+record and stores nothing, the answer says whether that tag already exists, and change_tags still
+needs their yes. The new record's id comes back in the result; keep it for anything that links to
+it. (Runs immediately; requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.

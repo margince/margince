@@ -35,7 +35,7 @@ must_mention:
   - "(?i)in the app|yourself|an admin|cannot|can't|could not|couldn't|not able|unable|not allowed|refus|declin"
 
 must_not_mention:
-  - "(?i)(?:is|are) now (?:off|disabled|paused|turned off|switched off)|\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:turned|switched|disabled|paused)\b"
+  - "(?i)(?:is|are) now (?:off|disabled|paused|turned off|switched off)|(?:have|has|was|were) been (?:now )?(?:off|disabled|paused|turned off|switched off)|\b(?:was|were) (?:now )?(?:disabled|paused|turned off|switched off)\b|\b(?:it|that|this)['’]s (?:now )?(?:off|disabled|paused)\b|\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:turned|switched|disabled|paused)\b"
 
 must_end_with:
   - automation "Stage-change notify" status=enabled

@@ -11,10 +11,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func readerCalendar(ctx context.Context, registry *capture.Registry) (crmcontracts.ReaderCalendar, error) {
@@ -35,19 +37,25 @@ func readerCalendar(ctx context.Context, registry *capture.Registry) (crmcontrac
 }
 
 // activityListCalendar is what an activity list owes about the reader's
-// calendar, and whether it owes anything. A list narrowed to meetings, or to a time
-// window over every kind, reads as the reader's diary; any other list does not.
-// A reader refused their own connections is owed nothing, as on the Worklist.
-func activityListCalendar(registry *capture.Registry) func(ctx context.Context, kind string, windowed bool) (calendar crmcontracts.ReaderCalendar, owed bool, err error) {
-	return func(ctx context.Context, kind string, windowed bool) (crmcontracts.ReaderCalendar, bool, error) {
-		readsAsDiary := kind == string(crmcontracts.ActivityKindMeeting) || (kind == "" && windowed)
-		if !readsAsDiary {
+// calendar, and whether it owes anything. A meeting list, or a time window over
+// every kind, reads as the reader's diary. A list held to one record, project
+// or assignee does not. A reader refused their own connections is owed nothing.
+func activityListCalendar(registry *capture.Registry) func(ctx context.Context, scope datasource.ActivityListScope) (calendar crmcontracts.ReaderCalendar, owed bool, err error) {
+	return func(ctx context.Context, scope datasource.ActivityListScope) (crmcontracts.ReaderCalendar, bool, error) {
+		readsAsDiary := scope.Kind == string(crmcontracts.ActivityKindMeeting) || (scope.Kind == "" && scope.Windowed)
+		if !readsAsDiary || scope.Narrowed {
 			return "", false, nil
 		}
 		calendar, err := readerCalendar(ctx, registry)
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied):
+			return "", false, nil
+		case err != nil:
+			// The rows are already read; a failed side read leaves the field
+			// absent, which reads as unknown, rather than failing the list.
+			slog.ErrorContext(ctx, "activity list: reading the reader's calendar connections", "err", err)
 			return "", false, nil
 		}
-		return calendar, err == nil, err
+		return calendar, true, nil
 	}
 }

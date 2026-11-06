@@ -13,7 +13,7 @@ import (
 // ActivityListCalendar is what an activity list owes about the reader's own
 // calendar, and whether it owes anything. compose injects the function GET
 // /activities reads, so the tool and the page answer alike.
-type ActivityListCalendar func(ctx context.Context, kind string, windowed bool) (calendar crmcontracts.ReaderCalendar, owed bool, err error)
+type ActivityListCalendar func(ctx context.Context, scope datasource.ActivityListScope) (calendar crmcontracts.ReaderCalendar, owed bool, err error)
 
 // WithActivityListCalendar binds it. Unbound, list_records says nothing about
 // the calendar, which reads as unknown.
@@ -27,8 +27,11 @@ func (t listRecords) activityListCalendar(ctx context.Context, recordType string
 	if t.calendar == nil || recordType != string(datasource.EntityActivity) {
 		return "", false, nil
 	}
-	windowed := filters["occurred_after"] != "" || filters["occurred_before"] != ""
-	calendar, owed, err = t.calendar(ctx, filters["kind"], windowed)
+	calendar, owed, err = t.calendar(ctx, datasource.ActivityListScope{
+		Kind:     filters["kind"],
+		Windowed: filters["occurred_after"] != "" || filters["occurred_before"] != "",
+		Narrowed: filters["entity_id"] != "" || filters["assignee_id"] != "" || filters["project_id"] != "",
+	})
 	if err != nil || !owed {
 		return "", false, err
 	}

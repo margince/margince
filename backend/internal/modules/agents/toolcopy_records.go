@@ -3,6 +3,8 @@
 
 package agents
 
+import "strings"
+
 // Written copy for the record surface: the generic CRUD verbs, the deal and
 // lead lifecycle transitions, and the configuration read the deal writes
 // depend on. See toolcopy.go for what each field answers.
@@ -62,7 +64,8 @@ var readRecordCopy = toolCopy{
 
 var createRecordCopy = toolCopy{
 	Purpose: "Create ONE contact, company, deal, lead, project, activity or relationship that " +
-		"does not exist yet. Rows from a file, a CSV or a pasted list go through preview_import " +
+		"does not exist yet. Rows from a file, a CSV or a pasted list, each a " +
+		strings.Join(importObjectEnum, ", ") + ", go through preview_import " +
 		"and then commit_import, never one create_record each: the preview checks every row, " +
 		"duplicates included, and its counts are what the user weighs.",
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +

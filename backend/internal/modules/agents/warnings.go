@@ -97,4 +97,4 @@ const meetingListNoCalendarMessage = "No calendar is connected for the user, so 
 
 const meetingListCalendarUnreadableMessage = "The user's calendar connection is not syncing, so this " +
 	"list may lack meetings from their diary. A meeting missing here may still be in their calendar. " +
-	"Say the calendar needs reconnecting rather than that a meeting is missing or the day is clear."
+	"Say the calendar is not syncing rather than that a meeting is missing or the day is clear."

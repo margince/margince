@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params crmcontracts.ListActivitiesParams) {
@@ -64,7 +65,11 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		if in.Kind != nil {
 			kind = *in.Kind
 		}
-		calendar, owed, err := h.listCalendar(r.Context(), kind, in.OccurredAfter != nil || in.OccurredBefore != nil)
+		calendar, owed, err := h.listCalendar(r.Context(), datasource.ActivityListScope{
+			Kind:     kind,
+			Windowed: in.OccurredAfter != nil || in.OccurredBefore != nil,
+			Narrowed: in.EntityID != nil || in.AssigneeID != nil || in.WithinProjectID != nil,
+		})
 		if err != nil {
 			httperr.Write(w, r, err)
 			return

@@ -182,8 +182,10 @@ func TestAnActionWithNoRouteIsNotDeniedToExist(t *testing.T) {
 	if err == nil {
 		t.Fatal("an action with no route was described")
 	}
-	if !strings.Contains(err.Error(), "no route action relink_many") || !strings.Contains(err.Error(), "own inputSchema") {
-		t.Errorf("refusal = %q, want it to say the action has no route and where its arguments are", err)
+	for _, says := range []string{"no route action relink_many", "router's inputSchema", "no action of change_access"} {
+		if !strings.Contains(err.Error(), says) {
+			t.Errorf("refusal = %q, want it to say %q, so neither a router-run action nor a typo is misread", err, says)
+		}
 	}
 }
 

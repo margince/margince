@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // listCalendarAtBothDoors reads one activity list as Rep1 through GET
@@ -95,7 +96,7 @@ func TestAListOfEveryKindReadsAsTheDiaryOnlyOverAWindow(t *testing.T) {
 		windowed bool
 		owed     bool
 	}{{true, true}, {false, false}} {
-		_, owed, err := calendar(ctx, "", tc.windowed)
+		_, owed, err := calendar(ctx, datasource.ActivityListScope{Windowed: tc.windowed})
 		if err != nil {
 			t.Fatalf("reading the calendar answer: %v", err)
 		}
@@ -103,7 +104,10 @@ func TestAListOfEveryKindReadsAsTheDiaryOnlyOverAWindow(t *testing.T) {
 			t.Errorf("a list of every kind, windowed %v, owed an answer %v, want %v", tc.windowed, owed, tc.owed)
 		}
 	}
-	if _, owed, err := calendar(context.Background(), "meeting", false); err != nil || owed {
+	if _, owed, err := calendar(ctx, datasource.ActivityListScope{Kind: "meeting", Narrowed: true}); err != nil || owed {
+		t.Errorf("a meeting list held to one record or assignee is not the reader's diary, yet owed an answer (%v): %v", owed, err)
+	}
+	if _, owed, err := calendar(context.Background(), datasource.ActivityListScope{Kind: "meeting"}); err != nil || owed {
 		t.Errorf("a caller with no actor is refused its connections, which owes no answer (owed %v), not an error: %v", owed, err)
 	}
 }
