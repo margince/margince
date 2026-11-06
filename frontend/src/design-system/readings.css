@@ -285,3 +285,18 @@
   height: 100%;
   border-radius: 0;
 }
+
+/* A logo in place of the glyph, at the glyph's size and inset; only an
+ * avatar sits flush with the rounded edge. */
+.chip .provider-mark {
+  --providerMarkSize: 14px;
+}
+.chip-lead:has(> .chip-mark > .provider-mark) {
+  padding-inline-start: 12px;
+}
+.chip-dense.chip-lead:has(> .chip-mark > .provider-mark) {
+  padding-inline-start: 8px;
+}
+.chip-dense .provider-mark {
+  --providerMarkSize: 12px;
+}

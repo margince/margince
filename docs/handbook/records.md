@@ -68,7 +68,7 @@ To edit a contact in Margince, open it and press the value to change in the **De
 2. Press the value (an empty one says **Not set**) or its mark, change it in the dialog, and press **Save**. Nothing is stored before that, even a choice from a list. **Cancel** or `Esc` closes the dialog without saving.
 3. **Email**, **Phone** and **Address** open a dialog with several fields. Each email or phone is one row with **Type**, **Primary** and buttons to move or remove it. Pressing the email address or phone number still starts a message or a call. The box around it and its mark open the dialog.
 
-**Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created.
+**Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created. **LinkedIn** shows as a chip with the LinkedIn logo and the record's name: the chip opens the profile, and the mark opens the dialog. A company's **LinkedIn URL** and a lead's LinkedIn show the same chip, but a lead's cannot be changed. An address on another host shows as plain text.
 Also called: update a contact, change a phone number, rename.
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."

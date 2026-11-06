@@ -2913,6 +2913,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.registration": "Thông tin đăng ký",
   "record.leadProfileReadOnly": "Không thể thay đổi LinkedIn của lead.",
   "record.openProfile": "Mở hồ sơ",
+  "record.linkedinProfile": "{name} trên LinkedIn",
   "record.fieldsFailed": "Không thể tải trường tùy chỉnh.",
   "record.fieldsLoading": "Đang tải trường tùy chỉnh…",
   "record.fieldsRetry": "Thử lại",
@@ -6110,6 +6111,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.selected_one": "Đã chọn {count}",
   "bulk.selected_other": "Đã chọn {count}",
   "bulk.selectRow": "Chọn {name}",
+  "bulk.selectPage": "Chọn mọi dòng trên trang này",
+  "bulk.selectAll": "Chọn tất cả",
+  "bulk.clearSelection": "Bỏ chọn",
+  "bulk.selectionLimit_one":
+    "Mỗi lần thay đổi tối đa {count} hồ sơ, nên lựa chọn dừng ở đó.",
+  "bulk.selectionLimit_other":
+    "Mỗi lần thay đổi tối đa {count} hồ sơ, nên lựa chọn dừng ở đó.",
   "bulk.owner": "Người chịu trách nhiệm mới",
   "bulk.ownerPick": "Chọn người chịu trách nhiệm",
   "bulk.assign": "Giao người chịu trách nhiệm",
@@ -17631,18 +17639,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa chọn hồ sơ nào. Thêm từ trang hồ sơ hoặc từ các hồ sơ đang chọn.",
   "lists.members.projects":
     "Danh s\u00e1ch d\u1ef1 \u00e1n hi\u1ec3n th\u1ecb th\u00e0nh vi\u00ean trong danh s\u00e1ch D\u1ef1 \u00e1n.",
-  "lists.members.selectAll_one": "Chọn tất cả {count} thành viên",
-  "lists.members.selectAll_other": "Chọn tất cả {count} thành viên",
-  "lists.members.selectionFullTitle": "Đã chọn tối đa",
-  "lists.members.selectionFull_one":
-    "Mỗi thay đổi chỉ gồm tối đa {count} thành viên. Bỏ chọn một thành viên để chọn thành viên khác.",
-  "lists.members.selectionFull_other":
-    "Mỗi thay đổi chỉ gồm tối đa {count} thành viên. Bỏ chọn một thành viên để chọn thành viên khác.",
-  "lists.members.selectAllCappedTitle": "Chưa chọn hết thành viên",
-  "lists.members.selectAllCapped_one":
-    "Mỗi lần chỉ chọn được {count} thành viên đầu tiên. Xử lý xong số này rồi chọn phần còn lại.",
-  "lists.members.selectAllCapped_other":
-    "Mỗi lần chỉ chọn được {count} thành viên đầu tiên. Xử lý xong số này rồi chọn phần còn lại.",
   "lists.history.title": "Lịch sử thay đổi",
   "lists.history.empty": "Ch\u01b0a c\u00f3 thay \u0111\u1ed5i n\u00e0o.",
   "lists.history.loading": "\u0110ang t\u1ea3i l\u1ecbch s\u1eed",
