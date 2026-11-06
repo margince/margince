@@ -28,12 +28,11 @@ package gates
 // recovering it needs no evaluator. It already IS what the server seeded then.
 //
 // WHY THE CHECK LIVES HERE AND THE READER LIVES THERE. Reading history needs a
-// full checkout, and only the backend unit lane has one: _lane-integration.yml
-// gives integration-unit-coverage `fetch-depth: 0`, while the integration SHARDS
-// check out shallow. So the gate that needs history runs in the lane that has it,
-// and the integration arm reads a plain committed file — which is the same split
-// rbac_seeded_defaults.json already uses, identity rendering it and
-// compose/integration reading it.
+// full checkout. ci.yml gives one to deterministic-gates, which runs this
+// package, while the integration shards check out shallow. So the gate that
+// needs history runs where it has it, and the integration arm reads a plain
+// committed file. rbac_seeded_defaults.json uses the same split: identity
+// renders it and compose/integration reads it.
 
 import (
 	"encoding/json"
@@ -201,7 +200,7 @@ func gitAtBaselineEra(t *testing.T, args ...string) string {
 		}
 		t.Fatalf("git %s: %s\nThis gate derives the composition arm's pre-state from history, so it "+
 			"needs FULL history. If this is CI, the job running the backend unit lane checks out "+
-			"shallow — give it `fetch-depth: 0`, as integration-unit-coverage already has. Deepen "+
+			"shallow — give it `fetch-depth: 0`, as deterministic-gates already has. Deepen "+
 			"the checkout; do not weaken the gate.", strings.Join(args, " "), detail)
 	}
 	return string(out)
