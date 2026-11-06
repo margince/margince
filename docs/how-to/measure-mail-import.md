@@ -30,6 +30,21 @@ The test pool uses no statement cache so tests may change the schema.
 Use the prepared pool to measure cached queries. Record the selected mode with the result.
 
 Set `MARGINCE_IMPORT_BENCH_PLAN_DIR` to save plans for the costly reads and name candidates.
+In prepared mode, this explains the cached statement on the connection that ran it.
+The `query-N.json` files use the mode restored after capture. The `query-N-generic.json` files
+use `force_generic_plan`. Compare these with the mode the caller uses for its query.
+
+The `query-N-custom.json` files use `force_custom_plan` for the saved values.
+
+When the `perfect` name group fills its limit, the report checks how many contact rows the plan reads.
+The row budget allows one extra row for `ExcludeID`.
+A short group uses the complete fallback and does not check that bound.
+
+Use 3,000 messages with different addresses to check name groups that fill the limit.
+Compare the saved `CTE perfect` row count against the measured candidate limit.
+
+Plan files show the test names and addresses. Replay transactions are read-only.
+Plan capture keeps connections open; the statement cache still holds at most 256 statements.
 
 The test ends when capture ends. It does not run background model or relationship jobs.
 Measure those jobs on their own before reporting total time.

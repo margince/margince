@@ -8,6 +8,7 @@ package contacts
 import (
 	"cmp"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -24,6 +26,7 @@ func TestSharedTrigramsKeepTheCandidateLimitAndItsIdOrder(t *testing.T) {
 	ctx := e.as()
 	e.plainContact(ctx, t, "Someone Else", "other@ranked.test")
 	contacts := seedRankedContacts(t, e, "Mara Example", "Example Mara")
+	analyzeAsOwner(t, "contact", "contact_email")
 	candidate := ContactCandidate{FullName: "Mara Example"}
 	check := func(want []ids.UUID) {
 		t.Helper()
@@ -55,6 +58,7 @@ func TestSharedTrigramsKeepTheCandidateLimitAndItsIdOrder(t *testing.T) {
 	excluded := ids.From[ids.ContactKind](contacts[0])
 	candidate.ExcludeID = &excluded
 	check(contacts[1 : dedupeCandidateRows+1])
+	assertRankedNamePlans(t, e, candidate)
 	candidate.ExcludeID = nil
 	for _, id := range contacts[:10] {
 		if _, err := e.store.ArchiveContact(ctx, ids.From[ids.ContactKind](id), nil); err != nil {
@@ -82,20 +86,21 @@ func assertRankedNamePlans(t *testing.T, e *dedupeEnv, candidate ContactCandidat
 			if !generic {
 				return tx.QueryRow(ctx, `EXPLAIN (ANALYZE, FORMAT JSON) `+contactCandidateQuery, args).Scan(&raw)
 			}
-			query, _, err := args.RewriteQuery(ctx, tx.Conn(), contactCandidateQuery, nil)
+			query, values, err := args.RewriteQuery(ctx, tx.Conn(), contactCandidateQuery, nil)
 			if err != nil {
 				return err
 			}
-			// Generic EXPLAIN needs unbound placeholders, which pgx's query sanitizer refuses.
-			results, err := tx.Conn().PgConn().Exec(ctx, `EXPLAIN (GENERIC_PLAN, FORMAT JSON) `+query).ReadAll()
-			if err != nil {
+			if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode=force_generic_plan`); err != nil {
 				return err
 			}
-			if len(results) != 1 || len(results[0].Rows) != 1 || len(results[0].Rows[0]) != 1 {
-				return fmt.Errorf("unexpected generic plan shape in %d result sets", len(results))
+			statement := pgx.Identifier{"ranked_" + ids.NewV7().String()}.Sanitize()
+			if _, err := tx.Exec(ctx, `PREPARE `+statement+` AS `+query); err != nil {
+				return err
 			}
-			raw = results[0].Rows[0][0]
-			return nil
+			planQuery := `EXPLAIN (ANALYZE,FORMAT JSON) EXECUTE ` + statement + `(` + storekit.Placeholders(values) + `)`
+			planErr := tx.QueryRow(ctx, planQuery, append([]any{pgx.QueryExecModeSimpleProtocol}, values...)...).Scan(&raw)
+			_, closeErr := tx.Exec(ctx, `DEALLOCATE `+statement)
+			return errors.Join(planErr, closeErr)
 		})
 		if err != nil {
 			t.Fatalf("planning name candidates (generic=%v): %v", generic, err)
@@ -109,7 +114,13 @@ func assertRankedNamePlans(t *testing.T, e *dedupeEnv, candidate ContactCandidat
 		if !plans[0].Plan.usesIndex("idx_contact_name_trigram_candidates") {
 			t.Fatalf("name seek index missing (generic=%v): %s", generic, raw)
 		}
-		if !generic && !plans[0].Plan.boundsRankedContacts() {
+		if plans[0].Plan.ActualRows != dedupeCandidateRows {
+			t.Fatalf("name candidates returned %d rows (generic=%v), want %d", plans[0].Plan.ActualRows, generic, dedupeCandidateRows)
+		}
+		if !plans[0].Plan.usesIndex("idx_contact_email_contact") {
+			t.Fatalf("candidate addresses did not seek their contact (generic=%v): %s", generic, raw)
+		}
+		if !plans[0].Plan.boundsRankedContacts() {
 			t.Fatalf("name candidates read beyond the bounded prefix: %s", raw)
 		}
 	}
@@ -120,7 +131,7 @@ func (n mailboxPlanNode) boundsRankedContacts() bool {
 		if n.IndexName != "idx_contact_name_trigram_candidates" && n.IndexName != "contact_pkey" {
 			return false
 		}
-		if n.ActualRows*n.ActualLoops > dedupeCandidateRows {
+		if n.ActualRows*n.ActualLoops > dedupeCandidateRows+1 {
 			return false
 		}
 	}
