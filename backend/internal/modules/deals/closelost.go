@@ -109,7 +109,7 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 	moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
 		auditEvidence: map[string]any{
-			"basis": in.Reason, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
+			basisKey: in.Reason, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
 		},
 	}, active)
 	if err != nil {

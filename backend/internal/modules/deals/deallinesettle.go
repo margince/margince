@@ -21,6 +21,14 @@ const (
 	commercialRevisionColumn = "commercial_revision"
 )
 
+// The columns a deal's lines, offers and product split share.
+const (
+	dealIDColumn        = "deal_id"
+	productIDColumn     = "product_id"
+	sourceColumn        = "source"
+	componentKindColumn = "component_kind"
+)
+
 // settleDealLines derives the deal's value from its lines, in the line write's
 // transaction. The deal row goes through the patch seam, so its forecast move
 // is recorded. Then come the product split, the audit row and deal.updated. A
@@ -147,9 +155,9 @@ func projectDealLineProducts(ctx context.Context, tx pgx.Tx, open openedDealLine
 			amount = &sum.known
 		}
 		cols, holders, args := columnValues(
-			columnValue{"deal_id", open.DealID}, columnValue{"product_id", key}, columnValue{"source", "line"},
-			columnValue{"amount_minor", amount}, columnValue{"known_amount_minor", sum.known},
-			columnValue{"currency", sum.currency}, columnValue{"component_kind", sum.kind},
+			columnValue{dealIDColumn, open.DealID}, columnValue{productIDColumn, key}, columnValue{sourceColumn, "line"},
+			columnValue{amountField, amount}, columnValue{"known_amount_minor", sum.known},
+			columnValue{currencyField, sum.currency}, columnValue{componentKindColumn, sum.kind},
 			columnValue{"commercial_revision", revision})
 		if _, err := tx.Exec(ctx, `INSERT INTO deal_product (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
 			return nil, fmt.Errorf("write a line product: %w", err)
@@ -195,10 +203,10 @@ func dealLineImage(line *dealLineRow) map[string]any {
 		return nil
 	}
 	return map[string]any{
-		"product_id": line.ProductID, descriptionColumn: line.Description, "unit": line.Unit,
-		"quantity": line.Quantity, "unit_price_minor": line.UnitPriceMinor, "currency": line.Currency,
-		"discount_pct": line.DiscountPct, "tax_rate": line.TaxRate, taxCategoryField: line.TaxCategory,
-		"billing_model": line.BillingModel, billingIntervalColumn: line.IntervalMonths, intervalCountField: line.IntervalCount,
+		productIDColumn: line.ProductID, descriptionColumn: line.Description, lineUnitColumn: line.Unit,
+		lineQuantityColumn: line.Quantity, lineUnitPriceColumn: line.UnitPriceMinor, currencyField: line.Currency,
+		lineDiscountColumn: line.DiscountPct, lineTaxRateColumn: line.TaxRate, taxCategoryField: line.TaxCategory,
+		lineBillingModelColumn: line.BillingModel, billingIntervalColumn: line.IntervalMonths, intervalCountField: line.IntervalCount,
 	}
 }
 
@@ -211,7 +219,7 @@ type productMove struct{ Before, After []crmcontracts.DealProduct }
 func recordDealLineWrite(ctx context.Context, tx pgx.Tx, open openedDealLines, p *storekit.Patch, products productMove, evidence, event map[string]any) error {
 	before, after := maps.Clone(p.Before()), maps.Clone(p.After())
 	if products.Before != nil || products.After != nil {
-		before["products"], after["products"] = allocationImage(products.Before), allocationImage(products.After)
+		before[productsField], after[productsField] = allocationImage(products.Before), allocationImage(products.After)
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "deal", open.DealID.UUID, before, after, evidence)
 	if err != nil {

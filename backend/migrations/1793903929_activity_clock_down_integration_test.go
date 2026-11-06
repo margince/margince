@@ -22,7 +22,7 @@ func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	through := namespaceThroughVersion(t, core, "1793903929")
+	through := namespaceThroughVersion(t, core, "1793936305")
 	migration := through.Migrations[len(through.Migrations)-1]
 	for _, previous := range []bool{false, true} {
 		t.Run(fmt.Sprintf("earlier_advance=%t", previous), func(t *testing.T) {

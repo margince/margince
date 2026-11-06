@@ -4,8 +4,11 @@
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
+import type { CommunicationContext } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import type { ChosenFile } from "./composeattachments";
 import type { RelinkKind } from "./composerelink";
+import { scheduleFields } from "./composeschedule";
 
 // The saved draft's calls to the server, and the anchor and cache key they
 // share. The hook that decides when to make them is composesaveddraft.tsx.
@@ -27,6 +30,10 @@ export type SavedDraftFields = Readonly<{
   body: string;
   html: string;
   editorState?: components["schemas"]["MailDraftEditorState"];
+  files: readonly ChosenFile[];
+  context: CommunicationContext | "";
+  /** The send-later moment as the composer holds it: wall-clock text. */
+  sendAt: string;
   // Where an agent drafted it, so a restore files the send there rather than
   // wherever the composer was opened.
   //
@@ -114,27 +121,44 @@ export type SaveAsk = Readonly<{
   sends: number;
   /** Kept as the reader writes: no toast, and the window stays open. */
   quiet?: boolean;
+  /** Sent as the page goes away, so the browser finishes it after the page. */
+  keepalive?: boolean;
 }>;
 
+// Browsers refuse a keepalive body past 64 KB; a larger draft leaves the
+// leave-page prompt to keep the words.
+const KEEPALIVE_MOST_BYTES = 60_000;
+
 export async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
+  const body = {
+    anchor_type: ask.anchor.type,
+    anchor_id: ask.anchor.id,
+    to: [...ask.fields.to],
+    cc: [...ask.fields.cc],
+    bcc: [...ask.fields.bcc],
+    subject: ask.fields.subject,
+    body: ask.fields.body,
+    html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
+    attachment_ids: ask.fields.files.map((file) => file.id),
+    communication_context: ask.fields.context || undefined,
+    ...scheduleFields(ask.fields.sendAt),
+    editor_state: ask.fields.editorState,
+  };
+  const keepalive =
+    ask.keepalive === true &&
+    new TextEncoder().encode(JSON.stringify(body)).length <
+      KEEPALIVE_MOST_BYTES;
   const { data, error, response } = await api.PUT("/mail-drafts", {
     // No version is a create: the server refuses it 409 when a draft already
     // exists here, so an unpinned write can never replace one unseen.
     params: { ...(ask.version === undefined ? {} : ifMatch(ask.version)) },
-    body: {
-      anchor_type: ask.anchor.type,
-      anchor_id: ask.anchor.id,
-      to: [...ask.fields.to],
-      cc: [...ask.fields.cc],
-      bcc: [...ask.fields.bcc],
-      subject: ask.fields.subject,
-      body: ask.fields.body,
-      html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
-      editor_state: ask.fields.editorState,
-    },
+    keepalive,
+    body,
   });
   if (!response.ok || !isMailDraft(data)) {
-    throwProblem(error || {});
+    // The status rides along, so a retry can tell the server's fault from a
+    // refusal of the request.
+    throwProblem({ status: response.status, ...error });
   }
   return data;
 }

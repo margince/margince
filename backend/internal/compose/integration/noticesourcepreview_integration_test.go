@@ -35,7 +35,7 @@ type sourceReviewEnv struct {
 
 func TestSourceEvidenceListsOnlyReadableRelevantRecordsAndRechecksAccess(t *testing.T) {
 	f := sourceReviewFixture(t)
-	p := &preflightEnv{AppEnv: f.AppEnv, user: sessionUserID(t, f.AppEnv), ws: apptest.InstallationWorkspaceUUID(context.Background(), t, f.Pool).String()}
+	p := &preflightEnv{AppEnv: f.AppEnv, user: apptest.SessionUserID(t, f.AppEnv), ws: apptest.InstallationWorkspaceUUID(context.Background(), t, f.Pool).String()}
 	colleague := *p
 	colleague.user = inviteReplyReader(t, p)
 	store := activities.NewStore(f.DB())
@@ -89,7 +89,7 @@ func sourceReviewFixture(t *testing.T) *sourceReviewEnv {
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Source Evidence Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 	f := &sourceReviewEnv{AppEnv: e, contactID: contact.ID, agent: doors.mcp}
 	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM privacy_notice_case WHERE contact_id = @contact`, pgx.NamedArgs{"contact": contact.ID}).Scan(&f.caseID); err != nil {
 		t.Fatal(err)
@@ -291,7 +291,7 @@ func TestASourcePreviewCannotConfirmChangedEvidenceOrAChangedAnswer(t *testing.T
 					t.Fatal(status)
 				}
 			case "assignment":
-				if status := f.Call(t, "POST", "/v1/privacy/notice-case-reviews/"+f.caseID+"/assign", AnyMap{"owner_user_id": sessionUserID(t, f.AppEnv)}, nil, nil); status != http.StatusOK {
+				if status := f.Call(t, "POST", "/v1/privacy/notice-case-reviews/"+f.caseID+"/assign", AnyMap{"owner_user_id": apptest.SessionUserID(t, f.AppEnv)}, nil, nil); status != http.StatusOK {
 					t.Fatal(status)
 				}
 			case "archived":

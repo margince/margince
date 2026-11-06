@@ -25,6 +25,9 @@ const (
 	DroppedOfferFixes     = "dropped:accepted_offer"
 	DroppedQuoteNotFound  = "dropped:quote_not_found"
 	DroppedNoRate         = "dropped:no_rate"
+	// DroppedOutOfRange is a converted amount no deal can hold. A new
+	// rate is no reason to read the deal again, unlike DroppedNoRate.
+	DroppedOutOfRange     = "dropped:amount_out_of_range"
 	DroppedSwitchOff      = "dropped:switch_off"
 	DroppedUndoHold       = "dropped:undo_hold"
 	DroppedUnchanged      = "dropped:unchanged"

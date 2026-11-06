@@ -58,6 +58,7 @@ const initiative: SalesInitiative = {
 };
 const readings: components["schemas"]["ForecastReadings"] = {
   period_start: "2026-10-01",
+  qualification_mode: "off",
   period_end: "2026-12-31",
   scope_kind: "workspace",
   won_minor: 42000000,

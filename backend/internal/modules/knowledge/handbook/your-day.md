@@ -5,8 +5,7 @@
 **Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week,
 its review and its plan are in [Your week](your-week.md).
 
-The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page;
-**Hide Worklist** closes it. It has no sidebar row of its own.
+The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
 ## Daily tasks
 
@@ -47,12 +46,12 @@ To pin a Worklist item in Margince, press **More actions** on its row and choose
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Quiet contacts under **Optional reconnections** stay outside work counts, even with an open deal, until you pin them or add a task. Also called: star, flag, keep on top.
 
 ### Why is a task at the top of my worklist?
-A task leads your Worklist and the **First** card on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With notifications allowed, Margince shows the task once across all your browsers, in the first one open. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
+A task leads your Worklist and **Your tasks** on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With notifications allowed, Margince shows the task once across all your browsers, in the first one open. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
 
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The **First** card on **Home** says what the row asks of you; **View details**, or a task opened on the Worklist, shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Held**, **Add notes** and **Mark as canceled** if you may change it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+The open card under **Your tasks** on **Home** says what the row asks of you, and **View details** or the Worklist shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Held**, **Add notes** and **Mark as canceled** if you may change it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -115,7 +114,7 @@ When the start time, the guests or the invite's agenda change, the row asks agai
 ### What can I do from a task?
 A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason. The task's row on a timeline offers **Write email** to the same contact, lead or company.
 
-It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**.
+It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Your tasks** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
@@ -139,16 +138,16 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
-- **First**: the first thing to do on one card, the rest as **Then**; at most 6 in all, in Worklist
-  order. Press a row to bring it onto the card. Its reason stays visible beside the record.
-  Proposals to answer, commitments due today and meetings to prepare in the next 24 hours sit here;
-  tasks due later never do. A quiet day says "No immediate priorities. The full Worklist is available."
+- **Your tasks**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that.
+  A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
+- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its
+  reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
   is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
-- Beside them: **Numbers**, **Upcoming meetings**, **Check applied changes**.
+- **Check applied changes**, the changes Margince made to keep or undo; beside them **Upcoming meetings** and **Numbers**.
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you
 in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
@@ -161,7 +160,7 @@ and in the Worklist.
 - A privacy duty joins the day 7 days before its deadline; the legal deadline does not move.
 - A privacy duty recorded more than a day after its deadline came from imported history. It reads
   "recorded after its deadline, from imported history", ranks as normal work and never sits under
-  **First**.
+  **Your tasks**.
 - A task due today or late is urgent, unless it is prospecting work.
 - A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
   when its expected close is past or within 14 days.
@@ -387,10 +386,11 @@ You can also add a note to a teammate's Worklist with **Add note** ("A short not
 
 ### What is in the morning email?
 
-It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
+It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. Each item opens its record's page when it has one. A task, a meeting or its outcome, or an item without a record opens **Home** with that item open.
 
-Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
-Mail follows your working days and local clock, with a three-hour window that can end on the next day.
+When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
+
+Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest. Mail follows your working days and local clock, with a three-hour window that can end on the next day.
 A missed window leaves the work on Home. If choices cannot be read, the email waits.
 
 A weekly day you do not work moves to the next working day. Results keep the company's reporting week. Older chosen morning hours use the company clock until you choose a personal time or turn combining on.

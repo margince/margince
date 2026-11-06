@@ -42,6 +42,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
 | `capturedmeetingpast_test.go` | H2 | The mail permission check and consent count a captured meeting only once its time has passed and nobody called it off. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
+| `checklanes_test.go` | H3 | `make check` runs every leg its two halves, check-backend and check-fe, run. |
 | `cla_test.go` | H2 | An acceptance of the CLA covers the text it was shown, under the version that text carries. |
 | `coderabbitpathrules_test.go` | H3 | What .coderabbit.yaml tells the reviewer about backend Go, held against what is true. |
 | `companyindustry_test.go` | H3 | The industry list lives in the contract, the vocabulary owner in the contacts module and its wording in the frontend. |
@@ -366,6 +367,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
 | `metricsuffix_test.go` | H2 | A `\_total` suffix means counter, in both directions. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
+| `modelverbenrich_test.go` | H2 | modelVerbsOffEnrich names the agent verbs marked always that spend another scope, and the source that shows why. |
 | `moneysum_test.go` | H2 | Money this product computes has its arithmetic held by the database. |
 | `narrowindextwin_test.go` | H2 | A partial index whose columns already carry an unpredicated one says why it is worth a second B-tree on every write. |
 | `noopsaveinert_test.go` | H2 | A save that changes nothing changes nothing. |
@@ -513,6 +515,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `fieldnames_test.go` | H2 | A field name published to a caller has to BE a field name. |
 | `geocodestaleness_test.go` | H1 | The staleness rule lives in the schema, and this holds it there. |
 | `gitcontent_test.go` | H3 | What belongs to the repository, as against what happens to be in a working tree. |
+| `gitfixtureisolation_test.go` | H1 | Every test that builds a git repository keeps the caller's git config out of it. |
 | `jobfault_test.go` | H2 | Every River worker returns through jobs.Fault. |
 | `jobfleetwide_test.go` | H2 | A FleetWide declaration is a promise: this job enumerates and enqueues, and does no tenant write of its own (jobs.FleetWide). |
 | `jobwirekey_test.go` | H2 | One workspace arg, one spelling, and only where it means something. |
@@ -628,6 +631,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `systemprovenance_test.go` | H2 | A scheduled pass binds its provenance through one helper. |
 | `technicaldomain_test.go` | H2 | The technical lookup reads the domain the record holds, and nothing else. |
 | `textcut_test.go` | H2 | Outside the waived files, no hand-written loop, rune slice or ToValidUTF8 cuts a string to a length; kernel/textcut does it. |
+| `toolminorunits_test.go` | H2 | No agent tool result carries a minor-unit amount a model cannot read in major units. |
 | `trackedbinaries_test.go` | H2 | A compiled binary is never tracked. |
 | `transactionopeners_test.go` | H2 | One function in the database package turns a pool into a transaction, and every seam the package publishes routes through it. |
 | `triggertargetcolumns_test.go` | H2 | A touch trigger may only sit on a table that has every column it writes. |

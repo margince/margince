@@ -47,7 +47,6 @@ type Server struct {
 	reportingHandlers
 	reportingExportHandlers
 	reportingReaderPreviewHandlers
-
 	authHandlers
 	contactsHandlers
 	dealsHandlers
@@ -58,6 +57,7 @@ type Server struct {
 	activitiesHandlers
 	approvalsHandlers
 	bulkHandlers
+	companyContactShareHandlers
 	handoverHandlers
 	searchHandlers
 	consentHandlers

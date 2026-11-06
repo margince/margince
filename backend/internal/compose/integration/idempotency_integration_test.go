@@ -283,7 +283,7 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 // scheduled send would look up an id that is not there and refuse every retry.
 func TestAScheduledSendReplayProbesTheScheduleNotTheActivity(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	route := "/v1/activities/" + p.activityID + "/send-email"
 	keyed := map[string]string{"Idempotency-Key": "schedule-retry-1"}
@@ -322,7 +322,7 @@ func TestAScheduledSendReplayProbesTheScheduleNotTheActivity(t *testing.T) {
 // caller another's key today, and this is the guard for the day something can.
 func TestAScheduledSendReplayRefusesAMessageThatIsNoLongerTheCallersOwn(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	route := "/v1/activities/" + p.activityID + "/send-email"
 	keyed := map[string]string{"Idempotency-Key": "schedule-retry-2"}

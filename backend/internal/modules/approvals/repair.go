@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -84,7 +85,10 @@ func RepairProposalTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, asOf ti
 	if err != nil {
 		return RepairProposal{}, err
 	}
-	if !visible || !candidate.PendingAt(asOf) {
+	if !visible {
+		return RepairProposal{}, auth.HideRow(ctx, "approval")
+	}
+	if !candidate.PendingAt(asOf) {
 		return RepairProposal{}, apperrors.ErrNotFound
 	}
 	return repairProposal(ctx, tx, candidate)

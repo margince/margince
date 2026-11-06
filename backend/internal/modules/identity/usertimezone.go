@@ -33,21 +33,34 @@ const (
 	TimezoneFromBrowser TimezoneSource = "browser"
 	// TimezoneChosen is the user's own pick. It is always stored.
 	TimezoneChosen TimezoneSource = "chosen"
+	// TimezoneFromAgent is an agent doing what its user asked. It is always stored
+	// and holds against a browser's guess. The row names the agent and does not read
+	// as chosen, because the user did not pick it themselves.
+	TimezoneFromAgent TimezoneSource = "agent"
 
 	fieldTimezoneChosen = "timezone_chosen"
+	fieldTimezoneSetBy  = "timezone_set_by"
+	fieldTimezoneSource = "source"
 )
 
 // SaveMyTimezone stores the CALLER's own time zone.
 //
-// Self-scoped from the authenticated principal. An agent acting for a user
-// may not change the zone that user reads in.
+// Self-scoped from the authenticated principal. An agent sets the zone its user
+// asked for as its own source, and never claims the user chose it.
 func (s *Service) SaveMyTimezone(ctx context.Context, zone string, source TimezoneSource) (Seat, error) {
-	human, err := selfScoped(ctx)
+	human, err := ownSettingsSeat(ctx)
 	if err != nil {
 		return Seat{}, err
 	}
-	if source != TimezoneFromBrowser && source != TimezoneChosen {
-		return Seat{}, &WorkingHoursError{Field: "source", Message: "a source is browser or chosen"}
+	if source != TimezoneFromBrowser && source != TimezoneChosen && source != TimezoneFromAgent {
+		return Seat{}, &WorkingHoursError{Field: fieldTimezoneSource, Message: "a source is browser, chosen or agent"}
+	}
+	_, isAgent := callingAgent(ctx)
+	if isAgent && source != TimezoneFromAgent {
+		return Seat{}, agentLimit("an agent does not choose a time zone for its user or pass as the browser; send source agent once they have asked for it")
+	}
+	if !isAgent && source == TimezoneFromAgent {
+		return Seat{}, &WorkingHoursError{Field: fieldTimezoneSource, Message: "only an agent sends the source agent"}
 	}
 	if values.ZoneName(zone) != nil {
 		return Seat{}, &WorkingHoursError{
@@ -74,12 +87,12 @@ func (s *Service) SaveMyTimezone(ctx context.Context, zone string, source Timezo
 // Held by: TestOneWriterSetsAUsersTimezone (backend/gates/usertimezonewriters_test.go)
 func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone string, source TimezoneSource) (Seat, error) {
 	seat := Seat{UserID: user}
-	var locale, before *string
+	var locale, before, setByBefore *string
 	var chosenBefore bool
 	if err := tx.QueryRow(ctx, `
-		SELECT email, display_name, locale, greeting_name, timezone, timezone_chosen
+		SELECT email, display_name, locale, greeting_name, timezone, timezone_chosen, timezone_set_by
 		  FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR UPDATE`,
-		user).Scan(&seat.Email, &seat.DisplayName, &locale, &seat.GreetingName, &before, &chosenBefore); err != nil {
+		user).Scan(&seat.Email, &seat.DisplayName, &locale, &seat.GreetingName, &before, &chosenBefore, &setByBefore); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Seat{}, apperrors.ErrNotFound
 		}
@@ -88,22 +101,24 @@ func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone strin
 	if locale != nil {
 		seat.Locale = *locale
 	}
-	seat.Timezone, seat.TimezoneChosen = optionalValue(before), chosenBefore
+	seat.Timezone, seat.TimezoneChosen, seat.TimezoneSetBy = optionalValue(before), chosenBefore, setByBefore
 	stored := before != nil && *before != ""
 	if source == TimezoneFromBrowser && stored {
 		return seat, nil
 	}
-	chosen := chosenBefore || source == TimezoneChosen
-	if stored && *before == zone && chosen == chosenBefore {
+	chosen := source == TimezoneChosen || (source == TimezoneFromBrowser && chosenBefore)
+	setBy := timezoneSetBy(ctx)
+	if stored && *before == zone && repeatsTheStoredZone(source, chosenBefore, setByBefore, setBy) {
 		return seat, nil
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE app_user SET timezone = $2, timezone_chosen = $3 WHERE id = $1`,
-		user, zone, chosen); err != nil {
+		`UPDATE app_user SET timezone = $2, timezone_chosen = $3, timezone_set_by = $4 WHERE id = $1`,
+		user, zone, chosen, setBy); err != nil {
 		return Seat{}, fmt.Errorf("identity: writing the time zone: %w", err)
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "user", user.UUID,
-		timezoneImage(before, chosenBefore), timezoneImage(&zone, chosen))
+	beforeImage, afterImage := timezoneImage(before, chosenBefore), timezoneImage(&zone, chosen)
+	beforeImage[fieldTimezoneSetBy], afterImage[fieldTimezoneSetBy] = setByBefore, setBy
+	auditID, err := storekit.Audit(ctx, tx, "update", "user", user.UUID, beforeImage, afterImage)
 	if err != nil {
 		return Seat{}, err
 	}
@@ -111,8 +126,30 @@ func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone strin
 		crmcontracts.PublicEventUserTimezoneChanged{Timezone: zone, Chosen: chosen}); err != nil {
 		return Seat{}, err
 	}
-	seat.Timezone, seat.TimezoneChosen = zone, chosen
+	seat.Timezone, seat.TimezoneChosen, seat.TimezoneSetBy = zone, chosen, setBy
 	return seat, nil
+}
+
+// repeatsTheStoredZone reports a save of the zone already stored that says nothing
+// new. An agent repeating a zone the user chose leaves it theirs. An agent repeating
+// a browser's guess becomes its setter, because a guess is nobody's choice.
+func repeatsTheStoredZone(source TimezoneSource, chosenBefore bool, setByBefore, setBy *string) bool {
+	if source == TimezoneFromAgent {
+		return chosenBefore || (setByBefore != nil && setBy != nil && *setBy == *setByBefore)
+	}
+	return chosenBefore && setByBefore == nil
+}
+
+// readSeatZone fills a self-service answer with the zone the seat holds, and who
+// set it, for writers whose own statement is about something else.
+func readSeatZone(ctx context.Context, tx pgx.Tx, seat *Seat) error {
+	var zone *string
+	if err := tx.QueryRow(ctx, `SELECT timezone, timezone_chosen, timezone_set_by FROM app_user WHERE id = $1`,
+		seat.UserID).Scan(&zone, &seat.TimezoneChosen, &seat.TimezoneSetBy); err != nil {
+		return fmt.Errorf("identity: reading the seat's time zone: %w", err)
+	}
+	seat.Timezone = optionalValue(zone)
+	return nil
 }
 
 // timezoneImage renders one side of the audit's before/after pair. A user
@@ -126,4 +163,13 @@ func optionalValue(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// timezoneSetBy names the agent that set a zone, or nobody for a user's choice
+// or a guess a browser made.
+func timezoneSetBy(ctx context.Context) *string {
+	if actor, isAgent := callingAgent(ctx); isAgent {
+		return &actor.ID
+	}
+	return nil
 }

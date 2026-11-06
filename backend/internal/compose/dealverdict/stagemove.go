@@ -95,7 +95,9 @@ func citeFor(action Action, criterionID string) (CriterionCite, bool) {
 // criterionMet is the first look at one citation. The quoted words must be in
 // the cited activity, and the activity of the kind the ledger rule reads. The
 // row lock then applies that rule (deals.Store.activitySettlesCriterion).
-// A kind settled by its own record, or one not known, never passes.
+// A kind settled by its own record, or one not known, never passes. A mail
+// with no direction stays in: only outbound rules the buyer out without a
+// sender (deals.AuthorSideOf).
 func criterionMet(in Input, criterion ExitCriterion, cite CriterionCite) bool {
 	activity, ok := in.activityByID()[cite.ActivityID]
 	if !ok || !quoteFound(in, []string{cite.ActivityID}, cite.QuotedWords) {
@@ -108,7 +110,7 @@ func criterionMet(in Input, criterion ExitCriterion, cite CriterionCite) bool {
 	case kind == deals.CriterionEventHeld:
 		return activity.Kind == "meeting"
 	case kind.BuyerMilestone():
-		return activity.Kind == "email" && activity.Direction == "inbound"
+		return activity.Kind == "email" && activity.Direction != "outbound"
 	}
 	return false
 }

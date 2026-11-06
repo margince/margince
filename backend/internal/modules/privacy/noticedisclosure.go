@@ -143,10 +143,10 @@ func contactCategories(pkg SARPackage) []string {
 	}
 	employed := slices.ContainsFunc(pkg.Relationships, func(row map[string]any) bool { return row["kind"] == "employment" })
 	return held([]heldKind{
-		{"name", present("full_name", "first_name", "last_name")},
+		{heldName, present("full_name", "first_name", "last_name")},
 		{"job_title", present("title")},
 		{"employer", employed},
-		{"email", len(pkg.Emails) > 0},
+		{heldEmail, len(pkg.Emails) > 0},
 		{"phone", len(pkg.Phones) > 0},
 		{"postal_address", present("address_line1", "address_line2", "address_city", "address_region", "address_postal_code", "address_country")},
 		{"social_profile", present("social") || len(pkg.LinkedInConnections) > 0 || len(pkg.ChannelIdentities) > 0},
@@ -156,6 +156,13 @@ func contactCategories(pkg SARPackage) []string {
 		{"preferences", len(pkg.Consent) > 0},
 	})
 }
+
+// heldName and heldEmail are kinds of data both a contact's and a lead's notice
+// name.
+const (
+	heldName  = "name"
+	heldEmail = "email"
+)
 
 type heldKind struct {
 	code    string

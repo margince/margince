@@ -75,7 +75,7 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	if mode == modeLines {
 		// The deal's lines state its value; accepting an offer records the
 		// acceptance and leaves the deal's figures to its lines.
-		return nil, nil
+		return map[string]any{}, nil
 	}
 
 	// What the offer says about recurring value, if anything.

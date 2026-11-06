@@ -269,10 +269,10 @@ func lineEvidence(t *testing.T, e *reviewEnv, dealID ids.DealID) map[string]any 
 	return evidence
 }
 
-// lineEvidenceField is one text field of a line image in the evidence.
-func lineEvidenceField(evidence map[string]any, side, field string) string {
+// lineEvidenceDescription is the description of a line image in the evidence.
+func lineEvidenceDescription(evidence map[string]any, side string) string {
 	image, _ := evidence[side].(map[string]any)
-	text, _ := image[field].(string)
+	text, _ := image["description"].(string)
 	return text
 }
 
@@ -288,7 +288,7 @@ func TestALineWriteAuditsTheLineOnBothSides(t *testing.T) {
 		t.Fatalf("adding the line: %v", err)
 	}
 	added := lineEvidence(t, e, dealID)
-	if added["line_change"] != "added" || added["line_before"] != nil || lineEvidenceField(added, "line_after", "description") != "Ripening" {
+	if added["line_change"] != "added" || added["line_before"] != nil || lineEvidenceDescription(added, "line_after") != "Ripening" {
 		t.Fatalf("the add audited %v", added)
 	}
 	lineID := ids.UUID(state.Lines[0].Id)
@@ -297,14 +297,14 @@ func TestALineWriteAuditsTheLineOnBothSides(t *testing.T) {
 		t.Fatalf("renaming the line: %v", err)
 	}
 	renamed := lineEvidence(t, e, dealID)
-	if lineEvidenceField(renamed, "line_before", "description") != "Ripening" || lineEvidenceField(renamed, "line_after", "description") != "Ripening service" {
+	if lineEvidenceDescription(renamed, "line_before") != "Ripening" || lineEvidenceDescription(renamed, "line_after") != "Ripening service" {
 		t.Fatalf("the rename audited %v", renamed)
 	}
 	if _, err := e.store.RemoveDealLine(e.productCtx(), dealID, lineID, state.CommercialRevision); err != nil {
 		t.Fatalf("removing the line: %v", err)
 	}
 	removed := lineEvidence(t, e, dealID)
-	if removed["line_change"] != "removed" || removed["line_after"] != nil || lineEvidenceField(removed, "line_before", "description") != "Ripening service" {
+	if removed["line_change"] != "removed" || removed["line_after"] != nil || lineEvidenceDescription(removed, "line_before") != "Ripening service" {
 		t.Fatalf("the removal audited %v", removed)
 	}
 }

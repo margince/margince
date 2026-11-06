@@ -39,7 +39,11 @@ export function offerRow(
     }),
     sub: t("deal.offers.rowSub", {
       date: formatDayMonth(offer.created_at, locale, zone),
-      net: formatMoneyOrAbsent(offer.net_minor, offer.currency, locale),
+      net: formatMoneyOrAbsent(
+        offer.money_withheld ? null : offer.net_minor,
+        offer.currency,
+        locale,
+      ),
     }),
     statusLabel: offerStatusLabel(offer.status, t),
   };

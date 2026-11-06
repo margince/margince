@@ -148,30 +148,8 @@ func teamMoves(ctx context.Context, tx pgx.Tx, rates *FXRates, where func(arg fu
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading the value the team's changes moved: %w", err)
 	}
-	var moves []movedAmount[int]
-	keys := map[int]dealMove{}
-	unvalued := map[dealMove]bool{}
-	for deal := 0; rows.Next(); deal++ {
-		key := dealMove{deal: deal}
-		var minors []*int64
-		var currencies []*string
-		if err := rows.Scan(&key.group.owner, &key.group.kind, &minors, &currencies); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		for i, minor := range minors {
-			switch {
-			case minor != nil && *minor == 0:
-			case minor == nil || currencies[i] == nil:
-				unvalued[key] = true
-			default:
-				keys[len(moves)] = key
-				moves = append(moves, movedAmount[int]{key: len(moves), minor: *minor, currency: *currencies[i]})
-			}
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	moves, keys, unvalued, err := scanTeamMoves(rows)
+	if err != nil {
 		return nil, err
 	}
 	priced, err := priceMoves(ctx, tx, rates, moves)
@@ -187,6 +165,36 @@ func teamMoves(ctx context.Context, tx pgx.Tx, rates *FXRates, where func(arg fu
 		net[keys[m.key]] += value
 	}
 	return sumGroups(net, unvalued), nil
+}
+
+// scanTeamMoves reads the rows of teamMoves and closes them. It answers each
+// nonzero move, the deal each move belongs to, and the deals that cannot be
+// valued.
+func scanTeamMoves(rows pgx.Rows) ([]movedAmount[int], map[int]dealMove, map[dealMove]bool, error) {
+	var moves []movedAmount[int]
+	keys := map[int]dealMove{}
+	unvalued := map[dealMove]bool{}
+	for deal := 0; rows.Next(); deal++ {
+		key := dealMove{deal: deal}
+		var minors []*int64
+		var currencies []*string
+		if err := rows.Scan(&key.group.owner, &key.group.kind, &minors, &currencies); err != nil {
+			rows.Close()
+			return nil, nil, nil, err
+		}
+		for i, minor := range minors {
+			switch {
+			case minor != nil && *minor == 0:
+			case minor == nil || currencies[i] == nil:
+				unvalued[key] = true
+			default:
+				keys[len(moves)] = key
+				moves = append(moves, movedAmount[int]{key: len(moves), minor: *minor, currency: *currencies[i]})
+			}
+		}
+	}
+	rows.Close()
+	return moves, keys, unvalued, rows.Err()
 }
 
 // sumGroups adds each valued deal's net move to its group.

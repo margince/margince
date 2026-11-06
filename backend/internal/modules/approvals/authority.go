@@ -89,7 +89,9 @@ const (
 
 // retiredKinds are governed for reading and refused for approving: see
 // kindTranscriptProposal.
-var retiredKinds = map[string]bool{kindTranscriptProposal: true, kindCommunicationReview: true}
+var retiredKinds = map[string]bool{
+	kindTranscriptProposal: true, kindCommunicationReview: true, retiredStageCardKind: true,
+}
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -293,6 +295,9 @@ var decisionGrants = map[string][]grantRequirement{
 	kindCommitmentTask: {{objectActivity, principal.ActionCreate}, {tableContact, principal.ActionUpdate}},
 	// Retired; read only, see kindTranscriptProposal.
 	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
+	// Retired; read only, and a waiting card can still be rejected. Reading one
+	// takes the grant moving the deal took.
+	retiredStageCardKind: {{tableDeal, principal.ActionUpdate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not

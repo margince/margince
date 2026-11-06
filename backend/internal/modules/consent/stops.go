@@ -65,14 +65,16 @@ func (s *Store) stopsOfSubject(ctx context.Context, in RecordInput) ([]crmcontra
 			   WHERE `+where+`)
 			SELECT live.id, live.kind, live.decided_by_level, live.source, live.recorded_at,
 			       live.address, live.pinned, cp.key, live.recorded_through,
-			       CASE WHEN live.recorded_through = $5 AND NOT starts_with(live.origin_source, $6)
+			       CASE WHEN live.recorded_through IN ($5, $7) AND NOT starts_with(live.origin_source, $6)
 			            THEN u.display_name END
 			  FROM live
 			  LEFT JOIN consent_purpose cp ON cp.id = live.purpose_id
-			  LEFT JOIN app_user u ON live.origin = $4 || u.id::text
+			  LEFT JOIN passport p ON live.origin = $8 || p.id::text
+			  LEFT JOIN app_user u ON live.origin = $4 || u.id::text OR u.id = p.on_behalf_of
 			 ORDER BY live.recorded_at DESC, live.id`,
 			append([]any{sub.id}, append(addressArgs,
-				principal.HumanIDPrefix, string(commsauthz.RecordedByColleague), carriedSourceMark)...)...)
+				principal.HumanIDPrefix, string(commsauthz.RecordedByColleague), carriedSourceMark,
+				string(commsauthz.RecordedByAgent), passportAgentPrefix)...)...)
 		if err != nil {
 			return fmt.Errorf("consent: reading the subject's stops: %w", err)
 		}
@@ -117,7 +119,7 @@ func scanStop(row pgx.CollectableRow, caller lifter, admitted bool) (crmcontract
 		Address:             address,
 		Reason:              reasonFromSource(source),
 		RecordedAt:          recordedAt,
-		RecordedByColleague: commsauthz.RecordedThrough(through) == commsauthz.RecordedByColleague,
+		RecordedByColleague: recordedForASeat(commsauthz.RecordedThrough(through)),
 		RecordedByName:      name,
 		MayLift:             verdict.may,
 		Correction:          verdict.correction,

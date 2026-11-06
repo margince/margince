@@ -578,8 +578,10 @@ func TestAcceptAttachmentExtractionRefusesAChatReading(t *testing.T) {
 	}
 	if err := store.FinishExtractionRead(ctx, read.ID, activities.ExtractionReadOutcome{
 		Status: activities.ExtractionReadDone, ClaimedAt: *claim.StartedAt,
-		Fields: []extraction.ExtractedField{{Field: "name", Value: "Injected Deal", SourceQuote: "Injected Deal",
-			PageOrSection: "messages", Confidence: "high"}},
+		Fields: []extraction.ExtractedField{{
+			Field: "name", Value: "Injected Deal", SourceQuote: "Injected Deal",
+			PageOrSection: "messages", Confidence: "high",
+		}},
 	}); err != nil {
 		t.Fatal(err)
 	}

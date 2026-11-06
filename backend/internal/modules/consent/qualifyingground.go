@@ -190,8 +190,9 @@ func stampQualifyingEvent(
 	return err
 }
 
-// recordedQualifyingEvent reads a row a human or an integration wrote. A row
-// dated after asOf does not count yet: older derived stamps carry a booked
+// recordedQualifyingEvent reads a recorded qualifying-event row, whichever writer
+// left it: a human, their passport agent, an integration, the transmit path or a booking.
+// A row dated after asOf does not count yet: older derived stamps carry a booked
 // meeting's future start.
 func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent

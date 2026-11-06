@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/knowledge/handbook"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -87,7 +88,7 @@ func TestTheShippedHandbookAnswersATimeZoneQuestionWithItsSettingsPage(t *testin
 		`{"text":"Pick your time zone in your own settings.","id":"` + passages[quoted].ChunkID.String() +
 		`","quote":` + string(quoteJSON) + `}]}`}
 	answer := compose.AnswerCorpus(ie.ctx, lane, state, question, passages,
-		string(textlang.English), quietAskLog())
+		string(textlang.English), apptest.QuietAskLog())
 	if answer.Claims == nil || len(*answer.Claims) != 1 {
 		t.Fatalf("outcome %s carried claims %v, want the one written claim", answer.Outcome, answer.Claims)
 	}

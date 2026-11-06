@@ -119,7 +119,7 @@ Also called: LinkedIn import, upload my network, Connections.csv, LinkedIn expor
 
 There is no LinkedIn app to approve and nothing calls LinkedIn. You download your own export, and you upload it.
 
-The network you import is **yours alone**. Nobody can upload a network for a colleague, and no colleague, admin included, can open your list. An agent cannot import, read or change it.
+The network you import is **yours alone**. Nobody can upload a network for a colleague, and no colleague, admin included, can open your list. An agent acting for you can import it and read your own reach. No other agent can.
 
 The importer reads LinkedIn's English and German exports. A file it cannot read is refused whole, with nothing imported, and the message says to export the file again.
 

@@ -1228,6 +1228,7 @@ public.app_user.service_extension text gen=- def=-
 public.app_user.status text NOT NULL gen=- def='active'::text
 public.app_user.timezone text gen=- def=-
 public.app_user.timezone_chosen boolean NOT NULL gen=- def=false
+public.app_user.timezone_set_by text gen=- def=-
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.app_user.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.app_user.weekly_delivery text gen=- def=-
@@ -1594,6 +1595,7 @@ public.attachment.trg_attachment_updated CREATE TRIGGER trg_attachment_updated B
 public.attachment.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.attachment.url text gen=- def=-
 public.attachment_account_ix CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)
+public.attachment_activity_ix CREATE INDEX attachment_activity_ix ON public.attachment USING btree (activity_id) WHERE (activity_id IS NOT NULL)
 public.attachment_contract_ix CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))
 public.attachment_external_part_key CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)
 public.attachment_extraction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -1671,8 +1673,9 @@ public.automation.archived_at timestamp with time zone gen=- def=-
 public.automation.automation_origin_check CHECK ((origin = ANY (ARRAY['catalog'::text, 'agent_authored'::text])))
 public.automation.automation_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.automation.automation_owner_id_retirement_guard CREATE TRIGGER automation_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.automation FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
-public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text])))
+public.automation.automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text, 'passport_revoked'::text])))
 public.automation.automation_pkey PRIMARY KEY (id)
+public.automation.automation_setter_passport_id_fkey FOREIGN KEY (setter_passport_id) REFERENCES passport(id) ON DELETE SET NULL
 public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text])))
 public.automation.automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -1684,6 +1687,7 @@ public.automation.origin text NOT NULL gen=- def='catalog'::text
 public.automation.owner_id uuid gen=- def=-
 public.automation.params jsonb NOT NULL gen=- def='{}'::jsonb
 public.automation.paused_reason text gen=- def=-
+public.automation.setter_passport_id uuid gen=- def=-
 public.automation.tier text NOT NULL gen=- def='confirmation_required'::text
 public.automation.trigger jsonb NOT NULL gen=- def=-
 public.automation.updated_at timestamp with time zone gen=- def=-
@@ -6443,10 +6447,12 @@ public.mail_draft acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/ma
 public.mail_draft.agent_drafted boolean NOT NULL gen=- def=false
 public.mail_draft.anchor_id uuid NOT NULL gen=- def=-
 public.mail_draft.anchor_type text NOT NULL gen=- def=-
+public.mail_draft.attachment_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.mail_draft.author_id uuid NOT NULL gen=- def=-
 public.mail_draft.bcc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.body text NOT NULL gen=- def=''::text
 public.mail_draft.cc_addresses text[] NOT NULL gen=- def='{}'::text[]
+public.mail_draft.communication_context text gen=- def=-
 public.mail_draft.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.mail_draft.editor_state jsonb NOT NULL gen=- def='{}'::jsonb
 public.mail_draft.grounding jsonb NOT NULL gen=- def='[]'::jsonb
@@ -6455,9 +6461,13 @@ public.mail_draft.id uuid NOT NULL gen=- def=uuidv7()
 public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.mail_draft.mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.mail_draft.mail_draft_author_id_retirement_guard CREATE TRIGGER mail_draft_author_id_retirement_guard BEFORE INSERT OR UPDATE ON public.mail_draft FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')
+public.mail_draft.mail_draft_communication_context CHECK (((communication_context IS NULL) OR (communication_context = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'marketing'::text]))))
 public.mail_draft.mail_draft_one_per_anchor UNIQUE (author_id, anchor_type, anchor_id)
 public.mail_draft.mail_draft_pkey PRIMARY KEY (id)
+public.mail_draft.mail_draft_schedule_pair CHECK (((scheduled_at IS NULL) = (scheduled_tz IS NULL)))
 public.mail_draft.mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.mail_draft.scheduled_at timestamp with time zone gen=- def=-
+public.mail_draft.scheduled_tz text gen=- def=-
 public.mail_draft.subject text NOT NULL gen=- def=''::text
 public.mail_draft.to_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -9641,6 +9651,7 @@ public.weekly_review.brief_items_acted integer NOT NULL gen=- def=0
 public.weekly_review.brief_items_dismissed integer NOT NULL gen=- def=0
 public.weekly_review.commitments_due integer NOT NULL gen=- def=0
 public.weekly_review.commitments_kept integer NOT NULL gen=- def=0
+public.weekly_review.daily_activity jsonb gen=- def=-
 public.weekly_review.deals_lost integer NOT NULL gen=- def=0
 public.weekly_review.deals_moved integer NOT NULL gen=- def=0
 public.weekly_review.deals_won integer NOT NULL gen=- def=0

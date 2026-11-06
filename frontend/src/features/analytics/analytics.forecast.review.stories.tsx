@@ -27,6 +27,7 @@ type Preview = components["schemas"]["ForecastAssurancePreview"];
 
 const RUN: Assurance = {
   run_id: "33333333-3333-4333-8333-333333333333",
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
   as_of: "2026-07-14T06:00:00Z",
   status: "complete",
   readiness: "needs_review",

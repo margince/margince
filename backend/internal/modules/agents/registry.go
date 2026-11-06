@@ -83,6 +83,8 @@ type Registry struct {
 	// tierFloor carries the contract's per-record-type tier declarations, which
 	// a verb's own tier cannot express (tierfloor.go, #982).
 	tierFloor TierFloor
+	// toolGate decides which callers a Gated tool exists for. Nil offers it to no one.
+	toolGate ToolGate
 	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
@@ -111,6 +113,12 @@ type Registry struct {
 	contactCases ContactCaseMerger
 	// importWait is how long preview_import waits for its test's report.
 	importWait importWait
+	// required is each verb's measured checks (toolchecks.go), which narrow
+	// what an agent is offered and never what it may call.
+	required map[string][]auth.Check
+	// recordCall, set only by the integration build, records the checks one
+	// call asks; settle hands them on once the call returns.
+	recordCall func(ctx context.Context, verb string) (recorded context.Context, settle func())
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -132,6 +140,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		approvals:    approvals,
 		gate:         gate,
 		importWait:   defaultImportWait(),
+		required:     requiredChecks,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -167,7 +176,12 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 	if target != name {
 		served.Router = name
 	}
+	settle := func() {}
+	if r.recordCall != nil {
+		ctx, settle = r.recordCall(ctx, target)
+	}
 	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	settle()
 	return served, err
 }
 
@@ -193,6 +207,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	spec := r.specs[name]
 	r.mu.RUnlock()
 	if !ok {
+		return nil, 0, &UnknownToolError{Name: name}
+	}
+
+	if spec.Gated && !r.offersGated(ctx) {
 		return nil, 0, &UnknownToolError{Name: name}
 	}
 

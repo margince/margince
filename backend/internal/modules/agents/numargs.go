@@ -54,8 +54,8 @@ func declaredNumBounds(inputSchema json.RawMessage) []numBound {
 			Maximum *float64 `json:"maximum"`
 			// Registry.Invoke holds minimum and maximum only, so an exclusive
 			// bound would be advertised and never enforced.
-			ExclusiveMinimum json.RawMessage `json:"exclusiveMinimum"`
-			ExclusiveMaximum json.RawMessage `json:"exclusiveMaximum"`
+			ExclusiveMinimum json.RawMessage `json:"exclusiveMinimum"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
+			ExclusiveMaximum json.RawMessage `json:"exclusiveMaximum"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
 		} `json:"properties"`
 	}
 	// assertObjectSchemas has already confirmed this is valid JSON declaring an
@@ -100,10 +100,8 @@ func (r *Registry) requireDeclaredArgs(name string, args json.RawMessage) error 
 	if err := r.requireDeclaredTypes(name, args); err != nil {
 		return err
 	}
-	if err := joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args)); err != nil {
-		return err
-	}
-	return r.requireDeclaredUniqueness(name, args)
+	bounded := joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args))
+	return joinArgRefusals(bounded, r.requireDeclaredUniqueness(name, args))
 }
 
 // joinArgRefusals answers with both refusals when both fired, and with whichever

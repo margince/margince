@@ -113,17 +113,20 @@ func provisionalText(provisional bool) string {
 	return ""
 }
 
+// sampleStage is the stage the fixed deal sits on.
+const sampleStage = "Proposal"
+
 // sampleInput is the fixed deal the prompt version digests.
 func sampleInput() Input {
 	amount, currency := int64(1_000_000), "EUR"
 	return Input{
-		DealName: "Sample", Stage: "Proposal", AmountMinor: &amount, Currency: &currency,
+		DealName: "Sample", Stage: sampleStage, AmountMinor: &amount, Currency: &currency,
 		Probability: 50, ProbabilitySource: "stage", StageProbability: 50,
 		Offers:     []Offer{{GrossMinor: amount, Currency: currency, Status: "sent"}},
-		StageMoves: []StageMove{{From: "Qualified", To: "Proposal"}},
+		StageMoves: []StageMove{{From: "Qualified", To: sampleStage}},
 		Later:      []StageOption{{ID: "sample-stage", Name: "Negotiation", Position: 2, Probability: 75}},
 		ExitCriteria: []ExitCriterion{{
-			ID: "sample-criterion", StagePosition: 1, Stage: "Proposal", Label: "Buyer asked for the contract",
+			ID: "sample-criterion", StagePosition: 1, Stage: sampleStage, Label: "Buyer asked for the contract",
 			Kind: "buyer_confirmed",
 		}},
 		Prior:      []PriorAction{{Kind: KindSetCloseDate, Outcome: "applied"}},

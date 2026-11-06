@@ -139,7 +139,7 @@ func (a autoApplier) applyAs(ownerCtx context.Context, decision autoApplyDecisio
 
 // ownerNow is how a decided apply acts for its owner in each of its
 // transactions.
-func (a autoApplier) ownerNow(decision autoApplyDecision) approvals.PolicyActor {
+func (a autoApplier) ownerNow(decision autoApplyDecision) ownerPolicy {
 	return ownerPolicy{bind: ownersAgentTx(a.users, decision.owner, autoApplyActorID), decision: decision}
 }
 

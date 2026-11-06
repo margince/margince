@@ -73,7 +73,7 @@ func TestACaseAdmissionAssignsOnlyToTheNamedOwners(t *testing.T) {
 	ctx := caseAdmitted(t, []ids.UUID{ids.NewV7(), ids.NewV7()}, []ids.UUID{owner})
 
 	named := &refusingTx{}
-	if err := EnsureAssignee(ctx, named, owner); err == nil {
+	if err := EnsureRunAsOwner(ctx, named, owner); err == nil {
 		t.Fatal("the refusing database admitted the named owner, so the seat half was not asked")
 	}
 	if strings.Contains(named.asked[0], "u.owner_id") {
@@ -83,7 +83,7 @@ func TestACaseAdmissionAssignsOnlyToTheNamedOwners(t *testing.T) {
 		t.Errorf("a named owner skipped the seat half:\n%s", named.asked[0])
 	}
 	unnamed := &refusingTx{}
-	if err := EnsureAssignee(ctx, unnamed, stranger); err == nil {
+	if err := EnsureRunAsOwner(ctx, unnamed, stranger); err == nil {
 		t.Fatal("an owner outside the admission was admitted")
 	}
 	if !strings.Contains(unnamed.asked[0], "u.owner_id") {

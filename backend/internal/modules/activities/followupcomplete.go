@@ -296,7 +296,9 @@ type systemTask struct {
 }
 
 // selectSystemTasks reads the system-minted tasks the predicate names whose
-// done state is `done`, in id order.
+// done state is `done`, in id order. It locks them, so a caller updating in
+// this transaction applies the version it read and cannot lose the batch to a
+// concurrent edit.
 func selectSystemTasks(
 	ctx context.Context, tx pgx.Tx, where string, arg func(any) int, args *[]any, done bool,
 ) ([]systemTask, error) {
@@ -305,7 +307,7 @@ func selectSystemTasks(
 		WHERE %s AND a.kind = $%d AND a.source = $%d
 		  AND (a.captured_by = $%d OR a.captured_by LIKE $%d)
 		  AND a.is_done = $%d AND a.archived_at IS NULL
-		ORDER BY a.id`,
+		ORDER BY a.id FOR UPDATE OF a`,
 		where,
 		arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),
 		arg(systemCapturedBy), arg(systemCapturedByPattern), arg(done))

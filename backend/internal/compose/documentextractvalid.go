@@ -105,14 +105,14 @@ func validateDocumentField(q documentQuestion, field documentField, src document
 			field.Field, utf8.RuneCountInString(field.Value), q.maxValue(field.Field))
 	case strings.TrimSpace(field.Quote) == "":
 		return fmt.Sprintf("field %q cites no quote, and an uncited value is a guess", field.Field)
-	case len(field.Quote) > maxDocumentQuote:
+	case utf8.RuneCountInString(field.Quote) > maxDocumentQuote:
 		return fmt.Sprintf("field %q cites %d characters, and at most %d may be quoted — a quote locates a value, it does not summarize the page",
-			field.Field, len(field.Quote), maxDocumentQuote)
+			field.Field, utf8.RuneCountInString(field.Quote), maxDocumentQuote)
 	case strings.TrimSpace(field.Where) == "":
 		return fmt.Sprintf("field %q names no page or section, so its quote could not be found again", field.Field)
-	case len(field.Where) > maxDocumentWhere:
+	case utf8.RuneCountInString(field.Where) > maxDocumentWhere:
 		return fmt.Sprintf("field %q names a %d-character location, and at most %d may be reported",
-			field.Field, len(field.Where), maxDocumentWhere)
+			field.Field, utf8.RuneCountInString(field.Where), maxDocumentWhere)
 	case field.Confidence < 0 || field.Confidence > 1:
 		return fmt.Sprintf("field %q reports confidence %v, which is outside [0,1]", field.Field, field.Confidence)
 	}
@@ -121,7 +121,8 @@ func validateDocumentField(q documentQuestion, field documentField, src document
 	}
 	if !valueSupportedByQuote(field) {
 		return fmt.Sprintf(
-			"field %q reports a value its own quote does not contain, so the quote grounds something else", field.Field)
+			"field %q reports a value its own quote does not contain, so the quote grounds something else", field.Field,
+		)
 	}
 	return ""
 }

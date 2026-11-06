@@ -7,6 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import { useRosterHint, useRosterPartial } from "../../components/entityref";
@@ -25,6 +26,7 @@ import {
 import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { SegmentedControl } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { useRowSelection } from "../../design-system/listselection";
 import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { industryOptions } from "../../format/industry";
@@ -38,9 +40,12 @@ import {
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
-import { listQueryParams } from "../../lib/tagfilter";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { LeadBulkBar } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
@@ -56,7 +61,11 @@ import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
-import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
+import {
+  createLead,
+  leadsQueryParams,
+  UNASSIGNED_OWNER,
+} from "./leads.list.queries";
 
 export { mapLeadBody, UNASSIGNED_OWNER } from "./leads.list.queries";
 
@@ -87,12 +96,9 @@ export async function fetchLeadsPage(
     await api.GET("/leads", {
       params: {
         query: {
-          q: query.q || undefined,
-          sort: query.sort || undefined,
-          include_archived: query.includeArchived || undefined,
+          ...leadsQueryParams(query),
           cursor: cursor || undefined,
           limit: listFetchLimit(query.perPage),
-          ...listQueryParams(query.filters),
         },
       },
     }),
@@ -171,9 +177,6 @@ function LeadsWorkbench({
   const readerZone = useViewerZone();
   const leadSettings = useLeadSettings();
   const slaOn = leadSettings.data?.first_response_enabled === true;
-  // Bulk selection, by lead id; cleared after any bulk run, since the rows
-  // and their versions have moved.
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const cf = useObjectCustomFields("lead", "create");
   const withheld = useWithheldLeadDials();
   const listQuery = useListQuery<Lead>({
@@ -201,11 +204,11 @@ function LeadsWorkbench({
   // happened (or like a failure).
   const assignedAway = useOwnToast({ leavesWithCaller: true });
   const showingMine = state.query.filters.owner_id === viewerId;
-  // Only ids the list currently holds count as selected: a row that left the
-  // result set (refetched away, paged out, filtered out) must not linger as
-  // an invisible selection nobody can clear.
-  const selectedRows = state.rows.filter((lead) => selected.has(lead.id));
-  const liveSelection = new Set(selectedRows.map((lead) => lead.id));
+  const chosen = useRowSelection({
+    rows: state.rows,
+    keyOf: (lead) => lead.id,
+    limit: BULK_MAX_ITEMS,
+  });
   // The board/table choice is a dial like the filters beside it, so it lives in
   // the address: a reader can link to the board, and it survives a reload. It
   // is the screen's OWN name rather than a wire one, because which of the two
@@ -257,13 +260,12 @@ function LeadsWorkbench({
             mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
           )
         }
-        // The board renders INSIDE the surface, so the search, the chips and
-        // the saved views stay above it. A board that replaced the surface
-        // took the filter bar with it, leaving the reader looking at a
-        // narrowed answer with no way to see or change what narrowed it.
+        // The board renders inside the surface, so the toolbar stays above it:
+        // a narrowed answer always shows the way to change what narrowed it.
         body={
           view === "board" && refused.length === 0 ? (
             <LeadBoard
+              query={state.query}
               rows={state.rows}
               onMoved={() => state.refetch()}
               hasMore={state.hasMore}
@@ -323,19 +325,11 @@ function LeadsWorkbench({
         columns={leadColumns(t, locale, readerZone, origins.data, partners)}
         rowKey={(lead) => lead.id}
         selection={{
-          selected: liveSelection,
+          selected: chosen.selected,
+          limit: chosen.limit,
           // A closed lead takes no writes (STATE-4a): no checkbox, no verb.
           selectable: (lead) => !lead.archived_at,
-          onToggle: (lead) =>
-            setSelected((prev) => {
-              const next = new Set(prev);
-              if (next.has(lead.id)) {
-                next.delete(lead.id);
-              } else {
-                next.add(lead.id);
-              }
-              return next;
-            }),
+          onChange: chosen.onChange,
           label: (lead) =>
             t("lead.bulkSelectRow", {
               // The id, not the word: this is an accessible NAME, and every
@@ -344,13 +338,13 @@ function LeadsWorkbench({
             }),
           bar: (
             <LeadBulkBar
-              leads={selectedRows}
+              leads={chosen.selectedRows}
               // The rows that went through leave the selection; the ones that
               // refused stay in it, named, so the reader can retry them once
               // the list has refetched their versions.
               onDone={(outcomes, action) => {
-                setSelected(
-                  new Set(outcomes.filter((o) => o.error).map((o) => o.id)),
+                chosen.replace(
+                  outcomes.filter((o) => o.error).map((o) => o.id),
                 );
                 // Each run says its own thing; a sentence about the last one
                 // must not stand beside this one's rows.
@@ -478,10 +472,7 @@ function LeadsWorkbench({
         // was the one record list without them, while the contract has
         // carried `leads` in the saved-view vocabulary all along.
         dataViews={savedViews}
-        tools={
-          // Board or table is how the SAME rows are drawn, so it belongs with
-          // the drawing dials rather than above the surface — the slot the
-          // deals screen's pipeline picker already uses.
+        layout={
           <SegmentedControl
             options={["table", "board"] as const}
             value={view}
@@ -492,7 +483,8 @@ function LeadsWorkbench({
             }}
           />
         }
-        saveView={<SaveViewAction resource="leads" query={state.query} />}
+        saveView={<SaveViewAction resource="leads" state={state} />}
+        notice={<SavedViewsFailure resource="leads" />}
       />
     </>
   );

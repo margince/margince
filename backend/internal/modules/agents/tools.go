@@ -200,9 +200,9 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		Description:   createRecordCopy.render(),
 		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom/openDealRoomThread/replyDealRoomThread",
+		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room","deal_room_thread","deal_room_comment"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},

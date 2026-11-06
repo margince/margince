@@ -95,7 +95,7 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 			return err
 		}
 		birth.auditEvidence = map[string]any{
-			"basis": in.Basis, "basis_owner": in.Owner.String(), CorrectionKindEvidenceKey: DealOpenCorrection,
+			basisKey: in.Basis, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: DealOpenCorrection,
 		}
 		deal, err := s.CreateDealTx(ctx, tx, birth, CustomColumns{})
 		if err != nil {

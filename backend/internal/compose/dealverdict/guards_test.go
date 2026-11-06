@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 var today = time.Date(2026, 11, 4, 0, 0, 0, 0, time.UTC)
@@ -29,8 +30,10 @@ func rate(units int64, exp int32) deals.FXRate {
 
 func guardInput() Input {
 	return Input{Today: today, ReadAt: today.Add(time.Hour), Probability: 40, StageProbability: 60, Activities: []Activity{
-		{ID: "mail", Kind: "email", Direction: "inbound", OccurredAt: today.AddDate(0, 0, -3), ArrivedAt: today.AddDate(0, 0, -3),
-			Subject: "Order", Body: "We can sign for 50,000 USD for the first year, start in March. In pounds 40,000 GBP. The pilot is 1,000 EUR."},
+		{
+			ID: "mail", Kind: "email", Direction: "inbound", OccurredAt: today.AddDate(0, 0, -3), ArrivedAt: today.AddDate(0, 0, -3),
+			Subject: "Order", Body: "We can sign for 50,000 USD for the first year, start in March. In pounds 40,000 GBP. The pilot is 1,000 EUR.",
+		},
 	}}
 }
 
@@ -47,8 +50,10 @@ func dateAction(date string) Action {
 }
 
 func amountAction(amount int64, currency, quote string) Action {
-	return Action{Kind: KindSetAmount, Amount: amount, Currency: currency, QuotedWords: quote,
-		Cited: []string{"mail"}, Confidence: 0.9, Reason: "r"}
+	return Action{
+		Kind: KindSetAmount, Amount: amount, Currency: currency, QuotedWords: quote,
+		Cited: []string{"mail"}, Confidence: 0.9, Reason: "r",
+	}
 }
 
 func probabilityAction(pct int) Action {
@@ -143,6 +148,52 @@ func TestAConversionRoundsToWholeUnits(t *testing.T) {
 	}
 }
 
+// 40,599 EUR at 400 EUR per USD is 101.4975 USD. Rounding through the cents
+// reads 101.50 and would land on 102.
+func TestAConversionRoundsOnceToWholeUnits(t *testing.T) {
+	t.Parallel()
+	got := decideConverted(t, "40,599 EUR", fixedRates{"EUR": rate(1, 0), "USD": rate(400, 0)})
+	if got.Change == nil || got.Change.AmountMinor != 10_100 {
+		t.Fatalf("decision = %+v, want 101.00 USD", got)
+	}
+}
+
+// A rate exists, so the reader is not told one is missing and no new rate
+// reads the deal again. Neither amount stops the rest of the verdict.
+func TestAConvertedAmountNoDealHoldsDropsThatAmountAlone(t *testing.T) {
+	t.Parallel()
+	for name, rates := range map[string]fixedRates{
+		"rounds to nothing":          {"EUR": rate(1, 0), "USD": rate(1, 9)},
+		"past the plausible range":   {"EUR": rate(1, 10), "USD": rate(1, 0)},
+		"past what an int64 can say": {"EUR": rate(1, 30), "USD": rate(1, 0)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if got := decideConverted(t, "1,000 EUR", rates); got.Outcome != DroppedOutOfRange {
+				t.Fatalf("outcome = %q, want %q", got.Outcome, DroppedOutOfRange)
+			}
+		})
+	}
+}
+
+// decideConverted decides one quoted EUR amount for a deal held in USD.
+func decideConverted(t *testing.T, quote string, rates fixedRates) Decision {
+	t.Helper()
+	in, state, usd := guardInput(), guardState(), "USD"
+	in.Activities[0].Body = quote
+	state.Seen.Currency = &usd
+	quotedMinor, _, ok := QuotedPrice(quote)
+	if !ok {
+		t.Fatalf("%q states no price", quote)
+	}
+	amount := quotedMinor / values.MinorUnitScale("EUR")
+	got, err := Decide(in, state, Payload{Actions: []Action{amountAction(amount, "EUR", quote)}}, rates)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got[0]
+}
+
 // An accepted offer lets the amount become that offer's gross amount.
 func TestAnAcceptedOfferSetsItsOwnAmount(t *testing.T) {
 	t.Parallel()
@@ -219,14 +270,14 @@ func TestAQuoteIsReadWithEitherSeparator(t *testing.T) {
 		"50,000 USD": 5_000_000, "50.000 USD": 5_000_000, "50 000 USD": 5_000_000, "USD 49,999.50": 4_999_950,
 		"49.999,50 USD": 4_999_950, "50k USD": 5_000_000, "1.5k USD": 150_000, "$50,000": 5_000_000,
 	} {
-		got, currency, ok := quotedPrice(quote)
+		got, currency, ok := QuotedPrice(quote)
 		if !ok || got != want || currency != "USD" {
-			t.Errorf("quotedPrice(%q) = %d %s %v, want %d USD", quote, got, currency, ok, want)
+			t.Errorf("QuotedPrice(%q) = %d %s %v, want %d USD", quote, got, currency, ok, want)
 		}
 	}
 	for _, quote := range []string{"50,000", "50,000 USD or 60,000 EUR", "about fifty thousand USD"} {
-		if _, _, ok := quotedPrice(quote); ok {
-			t.Errorf("quotedPrice(%q) read a price; want none", quote)
+		if _, _, ok := QuotedPrice(quote); ok {
+			t.Errorf("QuotedPrice(%q) read a price; want none", quote)
 		}
 	}
 }
@@ -246,9 +297,9 @@ func TestAQuoteWithSeveralNumbersNamesThePriceByItsCurrency(t *testing.T) {
 		{"€ 60.000 für 12 Monate", 6_000_000, "EUR"},
 		{"3 years at 60k USD", 6_000_000, "USD"},
 	} {
-		minor, currency, ok := quotedPrice(tc.quote)
+		minor, currency, ok := QuotedPrice(tc.quote)
 		if !ok || minor != tc.minor || currency != tc.currency {
-			t.Errorf("quotedPrice(%q) = %d %s %v, want %d %s", tc.quote, minor, currency, ok, tc.minor, tc.currency)
+			t.Errorf("QuotedPrice(%q) = %d %s %v, want %d %s", tc.quote, minor, currency, ok, tc.minor, tc.currency)
 		}
 	}
 	for _, quote := range []string{
@@ -265,8 +316,8 @@ func TestAQuoteWithSeveralNumbersNamesThePriceByItsCurrency(t *testing.T) {
 		"the old budget was 50k; now 60,000 USD",
 		"60,000 USD now, 45.000 last year",
 	} {
-		if minor, currency, ok := quotedPrice(quote); ok {
-			t.Errorf("quotedPrice(%q) = %d %s; want none", quote, minor, currency)
+		if minor, currency, ok := QuotedPrice(quote); ok {
+			t.Errorf("QuotedPrice(%q) = %d %s; want none", quote, minor, currency)
 		}
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // open builds a contribution that is in the open pipeline at a base amount.
@@ -84,7 +86,8 @@ func TestEachBucketInIsolation(t *testing.T) {
 			name: "a probability set below Likely, on the reading it moves",
 			from: side(v, open("d1", 10_000)),
 			to: side(v, withoutEvidence(
-				withProbabilitySet(open("d1", 10_000), SourceHuman))),
+				withProbabilitySet(open("d1", 10_000), SourceHuman),
+			)),
 			dealID: "d1", wantBucket: BucketPushedOut, reading: ReadingEvidence,
 		},
 		{
@@ -367,4 +370,32 @@ func TestADealThatWasLostBetweenSnapshotsLeavesAsLost(t *testing.T) {
 		t.Errorf("a lost deal landed in %q moving %d, want %q moving -10000", delta.Bucket, delta.AmountMinor, BucketLost)
 	}
 	reconciles(t, m)
+}
+
+// A movement names the base currency its two snapshots converted to, so every
+// amount in it can be read in that currency.
+func TestAMovementNamesItsBaseCurrency(t *testing.T) {
+	t.Parallel()
+	from, to := side(DefinitionVersion, open("d1", 10_000)), side(DefinitionVersion, open("d1", 12_000))
+	from.BaseCurrency, to.BaseCurrency = "EUR", "EUR"
+
+	if got := Classify(ReadingWeighted, from, to).BaseCurrency; got != "EUR" {
+		t.Errorf("the movement's base currency = %q, want EUR", got)
+	}
+}
+
+func TestOnlyADeclaredQualifiedReadingAnswersAsItsBase(t *testing.T) {
+	for sent, want := range map[crmcontracts.GetForecastMovementParamsReading]Reading{
+		"qualified_evidence": ReadingEvidence,
+		"qualified_weighted": ReadingWeighted,
+		"qualified_open":     "qualified_open",
+		"evidence":           ReadingEvidence,
+	} {
+		if got := movementReading(&sent); got != want {
+			t.Errorf("movementReading(%q) = %q, want %q", sent, got, want)
+		}
+	}
+	if got := movementReading(nil); got != ReadingOpen {
+		t.Errorf("no reading answered %q, want open", got)
+	}
 }

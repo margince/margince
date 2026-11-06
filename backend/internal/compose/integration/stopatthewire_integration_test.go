@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/comms"
 )
 
@@ -41,7 +42,7 @@ func (o *objectionDuringPacing) Wait(context.Context, comms.Delivery) time.Durat
 
 func TestAnObjectionCommittedBeforeTheWireStopsTheMessage(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.grantMarketingConsent(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "marketing_email", "Spring pricing", "Here is what changed.")

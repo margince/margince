@@ -78,8 +78,8 @@ const sample: Comparison = {
 it("shows the gap, what is left and the coverage the server compared", () => {
   show(sample);
   expect(screen.getByText("Gap to target")).toBeVisible();
-  expect(screen.getByText("40,000 EUR")).toBeVisible();
-  expect(screen.getByText("Short of the 800,000 EUR target")).toBeVisible();
+  expect(screen.getByText("€40,000")).toBeVisible();
+  expect(screen.getByText("Short of the €800,000 target")).toBeVisible();
   expect(screen.getByText("3.6×")).toBeVisible();
   expect(
     screen.getByText("Coverage, deals closing this quarter"),
@@ -137,7 +137,7 @@ it.each([
 
 it("says a landing exactly on the target is at it, not ahead of it", () => {
   show({ ...sample, gap: 0, landing: 80_000_000 });
-  expect(screen.getByText("At the 800,000 EUR target")).toBeVisible();
+  expect(screen.getByText("At the €800,000 target")).toBeVisible();
 });
 
 it("offers the selection the server can compare and applies it as given", async () => {

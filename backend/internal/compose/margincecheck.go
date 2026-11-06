@@ -45,6 +45,7 @@ var checkWhys = map[string]crmcontracts.DealMarginceCheckOutcomeWhy{
 	dealverdict.DroppedFutureCitation:   crmcontracts.DealMarginceCheckOutcomeWhyNotSure,
 	dealverdict.DroppedDateOutOfRange:   crmcontracts.DealMarginceCheckOutcomeWhyOutsideLimits,
 	dealverdict.DroppedAboveStage:       crmcontracts.DealMarginceCheckOutcomeWhyOutsideLimits,
+	dealverdict.DroppedOutOfRange:       crmcontracts.DealMarginceCheckOutcomeWhyOutsideLimits,
 	deals.VerdictDroppedStale:           crmcontracts.DealMarginceCheckOutcomeWhyChangedWhileChecking,
 	deals.VerdictDroppedMoved:           crmcontracts.DealMarginceCheckOutcomeWhyChangedWhileChecking,
 	deals.VerdictDroppedOwnerCannotEdit: crmcontracts.DealMarginceCheckOutcomeWhyOwnerCannotEdit,

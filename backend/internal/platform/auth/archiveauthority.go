@@ -50,7 +50,7 @@ func activityWrites(ctx context.Context, tx pgx.Tx, _ principal.Principal, rowID
 // correspondence and a colleague's notes keep needing activity.delete.
 var ActivityArchive = ArchiveRule{object: "activity", table: "activity", writable: activityWrites, own: func(alias string, me int, arg func(any) int) string {
 	return fmt.Sprintf(`(%[1]s.kind IN ('note', 'task') AND %[1]s.source = $%[2]d AND %[3]s)`,
-		alias, arg(provenance.RecordSourceManual), activityAuthorSQL(alias, me, arg))
+		alias, arg(provenance.RecordSourceManual), ActivityAuthorSQL(alias, me, arg))
 }}
 
 // ownerArchive admits a record's owner, unless the owner took the record
@@ -105,16 +105,20 @@ func RequireArchiveGrant(ctx context.Context, r ArchiveRule) error {
 // object grant and the row's own arm only. The caller still asks the row write
 // gate, which keeps a colleague's record out of reach.
 func EnsureArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID) error {
-	refusal := Require(ctx, r.object, principal.ActionDelete)
-	if refusal == nil || !Allows(ctx, r.object, principal.ActionUpdate) {
-		return refusal
+	refusal := probe(ctx, r.object, principal.ActionDelete)
+	if refusal == nil {
+		return nil
+	}
+	deleteCheck := Check{Object: r.object, Actions: []principal.Action{principal.ActionDelete}}
+	if !Allows(ctx, r.object, principal.ActionUpdate) {
+		return refusedOn(ctx, deleteCheck, refusal)
 	}
 	owned, err := ownedArchivable(ctx, tx, r, []ids.UUID{id})
 	if err != nil {
 		return err
 	}
 	if !owned[id] {
-		return refusal
+		return refusedOn(ctx, deleteCheck, refusal)
 	}
 	return nil
 }
@@ -146,6 +150,16 @@ func ArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []id
 		return map[ids.UUID]bool{}, nil
 	}
 	return ownedArchivable(ctx, tx, r, candidates)
+}
+
+// OwnedArchivableSubset answers EnsureArchivable's rule for a caller without
+// delete, over a page in one statement. It asks no seat or row write gate, so
+// a caller needs to have asked those already.
+func OwnedArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	if !Allows(ctx, r.object, principal.ActionUpdate) {
+		return map[ids.UUID]bool{}, nil
+	}
+	return ownedArchivable(ctx, tx, r, rowIDs)
 }
 
 func ownedArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {

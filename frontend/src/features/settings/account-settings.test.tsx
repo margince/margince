@@ -56,6 +56,28 @@ it("says so on the save bar and under the field when the account refuses the new
   expect(alerts.some((alert) => named.includes(alert.id))).toBe(true);
 });
 
+it("says an agent set the time zone while the zone is the agent's", async () => {
+  const seat = meFixture({});
+  installFetchStub({
+    "GET /me": () =>
+      jsonResponse({
+        ...seat,
+        user: {
+          ...seat.user,
+          timezone_set_by: "agent:01a0f000-0000-7000-8000-000000000099",
+        },
+      }),
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  expect(await screen.findByText("By your agent")).toBeInTheDocument();
+});
+
 it("saves the picked time zone as the user's own choice", async () => {
   const user = userEvent.setup();
   const writes: unknown[] = [];

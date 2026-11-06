@@ -24,8 +24,8 @@ import (
 )
 
 // writesAnActivity classifies the whole action-kind vocabulary by whether
-// pressing the verb reaches POST /activities, which needs `activity.create` and
-// is where the log form and the task form both post.
+// pressing the verb needs `activity.create`. POST /activities does, where the
+// log form and the task form both post, and so does POST /bookings.
 //
 // EVERY kind carries an answer, including the false ones, because a lookup
 // miss and a "no" are the same value in Go and the miss is the direction that
@@ -40,7 +40,7 @@ var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	// The composer sends through POST /emails, which is a side service rather
 	// than a record write and asks nothing of `activity.create`.
 	crmcontracts.ContactMomentActionKindDraftReply: false,
-	// Booking creates a meeting through the scheduling endpoint.
+	// Booking creates a meeting through POST /bookings.
 	crmcontracts.ContactMomentActionKindScheduleMeeting: true,
 	// Reads. They navigate; they write nothing.
 	crmcontracts.ContactMomentActionKindOpenRecord:       false,
@@ -62,10 +62,9 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 	if moment.MayBeDone != nil {
 		withholdDone(ctx, said, moment)
 	}
-	if auth.Require(ctx, "activity", principal.ActionCreate) == nil {
+	if auth.Allows(ctx, "activity", principal.ActionCreate) {
 		return
 	}
-	reason := said.Say(blockedWords.Log)
 	block := func(action *crmcontracts.ContactMomentAction) {
 		if !writesAnActivity[action.Kind] {
 			return
@@ -84,7 +83,11 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 		if action.State == crmcontracts.ContactMomentActionStateBlocked {
 			return
 		}
-		blockAction(action, reason)
+		reason := blockedWords.Log
+		if action.Kind == crmcontracts.ContactMomentActionKindScheduleMeeting {
+			reason = blockedWords.Book
+		}
+		blockAction(action, said.Say(reason))
 	}
 	block(&moment.RecommendedAction)
 	if moment.SecondaryActions == nil {
@@ -103,7 +106,7 @@ func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontract
 	if moment.MayBeDone.PromiseType == crmcontracts.ContactMomentMayBeDonePromiseTypeClaim {
 		object, reason = "contact", said.Say(blockedWords.Settle)
 	}
-	if auth.Require(ctx, object, principal.ActionUpdate) == nil {
+	if auth.Allows(ctx, object, principal.ActionUpdate) {
 		return
 	}
 	done := &moment.RecommendedAction

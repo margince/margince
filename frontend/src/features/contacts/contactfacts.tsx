@@ -5,15 +5,14 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { rosterOwnerName } from "../../components/entityref";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { ContactLink } from "../../design-system/contactlink";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import { Popover } from "../../design-system/popover";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
 import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
-import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
 import { useViewerId } from "../../lib/session";
@@ -21,22 +20,6 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
-
-// The fixed word claims the destination is LinkedIn, and a crawl or connector
-// can write any host into `social`. So the host is checked before the anchor
-// is drawn; otherwise the word stands alone.
-function ProfileLink({ href }: Readonly<{ href: string }>) {
-  const t = useT();
-  const label = t("contact.page.linkedin");
-  if (!linkedinUrl(href)) {
-    return label;
-  }
-  return (
-    <OffsiteLink href={href} className="pe-meta-link">
-      {label}
-    </OffsiteLink>
-  );
-}
 
 // The buying role is what the relationship edge records, never read off a
 // title. A contact with a title can still have none, and then the cell is gone.
@@ -92,7 +75,10 @@ export function ContactFacts({
       )}
       {typeof contact.social?.linkedin === "string" && (
         <Fact label={t("contact.page.linkedin")}>
-          <ProfileLink href={contact.social.linkedin} />
+          <LinkedInChip
+            href={contact.social.linkedin}
+            name={contact.full_name}
+          />
         </Fact>
       )}
       <Fact label={t("contact.page.owner")}>

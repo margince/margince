@@ -118,24 +118,26 @@ func scoutStatedAmount(ctx context.Context, tx pgx.Tx, evidence []deals.Suggesti
 		if value == nil || currency == nil {
 			continue
 		}
-		return quoteBackedAmount(*value, *currency, quote)
+		amount, stated := quoteBackedAmount(*value, *currency, quote)
+		return amount, stated, nil
 	}
 	return nil, nil, nil
 }
 
 // quoteBackedAmount keeps a read amount only when the quote states that very
-// number in that very currency.
-func quoteBackedAmount(value, currency string, quote *string) (*int64, *string, error) {
+// number in that very currency. The value is a model's reading, so one that is
+// no integer is a reading that states no amount, not a failure of the read.
+func quoteBackedAmount(value, currency string, quote *string) (*int64, *string) {
 	if quote == nil {
-		return nil, nil, nil
+		return nil, nil
 	}
 	minor, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		return nil, nil, nil
+		return nil, nil
 	}
 	stated, statedCurrency, ok := dealverdict.QuotedPrice(*quote)
 	if !ok || stated != minor || statedCurrency != currency {
-		return nil, nil, nil
+		return nil, nil
 	}
-	return &minor, &currency, nil
+	return &minor, &currency
 }

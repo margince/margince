@@ -57,6 +57,12 @@ func isClockTrigger(h workflow.Handler) bool {
 // terminal reason on the `detail` column (rundetail.go) — a run history
 // that only shows successes hides exactly the runs a human needs to see.
 func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev workflow.Event) error {
+	if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
+		if err != nil {
+			return err
+		}
+		return e.passedOverForLapsedSetter(ctx, h, ev)
+	}
 	matched, err := h.Match(ctx, ev)
 	if err != nil {
 		return e.recordFailedBeforeApply(ctx, h, ev, "matching the trigger: "+sanitizedReason(err), err)
@@ -124,6 +130,14 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		return e.recordBlocked(ctx, h, ev, plannedJSON, decision.reason)
 	}
 
+	// Again at the last moment, because Plan may take a while and a revocation can
+	// land during it. A firing already past this point runs to its end.
+	if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
+		if err != nil {
+			return err
+		}
+		return e.passedOverForLapsedSetter(ctx, h, ev)
+	}
 	claimed, err := e.claimRun(ctx, h, ev, plannedJSON, "applied", nil)
 	if err != nil || !claimed {
 		return err
@@ -352,7 +366,7 @@ func (e *WorkflowEngine) recordFailedBeforeApply(ctx context.Context, h workflow
 	if err != nil {
 		return errors.Join(cause, err)
 	}
-	if _, claimErr := e.claimRun(ctx, h, ev, emptyPlan, "failed", payload); claimErr != nil {
+	if _, claimErr := e.claimRun(ctx, h, ev, emptyPlan, runStatusFailed, payload); claimErr != nil {
 		return errors.Join(cause, claimErr)
 	}
 	return cause
@@ -387,7 +401,7 @@ func (e *WorkflowEngine) recordSkipReason(ctx context.Context, h workflow.Handle
 	if err != nil {
 		return err
 	}
-	_, err = e.claimRun(ctx, h, ev, emptyPlan, "skipped", detail)
+	_, err = e.claimRun(ctx, h, ev, emptyPlan, runSkipped, detail)
 	return err
 }
 

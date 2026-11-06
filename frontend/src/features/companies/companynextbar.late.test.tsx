@@ -65,7 +65,8 @@ describe("the Next bar's late promise", () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText("2 days late")).toBeTruthy();
-    expect(screen.getByText("Due 2 days ago and still open.")).toBeTruthy();
+    // The bar's line opens with who holds the task.
+    expect(screen.getByText(/Due 2 days ago and still open\./)).toBeTruthy();
     expect(screen.queryByText("Due one day ago and still open.")).toBeNull();
   });
 

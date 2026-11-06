@@ -96,8 +96,8 @@
 .panel > .surfacestate-failed,
 .panel > .surfacestate-stale-frame > .surfacestate-stale,
 .panel > .surfacestate-partial-foot {
-  padding: var(--space-5);
+  padding: var(--padPanel);
 }
 .panel > .surfacestate-nothing > .surfacestate-empty-detail {
-  padding: 0 var(--space-5) var(--space-5);
+  padding: 0 var(--padPanel) var(--padPanel);
 }

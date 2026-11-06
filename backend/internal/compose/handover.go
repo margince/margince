@@ -205,8 +205,9 @@ func (s handoverSeam) handOverInTx(
 	}
 	moved.Project = projectsMoved
 	// A webhook runs under its owner and stops when they leave; it moves with
-	// the rest of their work so the integration keeps delivering.
-	webhooksMoved, err := webhooks.TransferSubscriptionOwnershipTx(ctx, tx, ids.From[ids.UserKind](member), receiver)
+	// the rest of their work so the integration keeps delivering. A receiver
+	// the caller could not name as owner by an edit leaves it with the member.
+	webhooksMoved, err := webhooks.TransferSubscriptionOwnershipTx(ctx, tx, ids.From[ids.UserKind](member), receiver, identity.AdmitMemberHandover)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return crmcontracts.UserHandoverResult{}, err
 	}

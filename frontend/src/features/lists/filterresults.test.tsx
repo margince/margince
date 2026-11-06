@@ -4,13 +4,20 @@
 
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
+import { openViewStep } from "../../testing/listview.testkit";
 import { FilterResults, previewColumnNames } from "./filterresults";
 
 // The preview answers every non-generated column of the table, so what this
@@ -306,14 +313,14 @@ describe("the columns past the opening six", () => {
     );
   }
 
-  it("are offered unticked in the display menu, and shown once ticked", async () => {
+  it("are offered unticked in the Columns step, and shown once ticked", async () => {
     const user = userEvent.setup();
     render(wide(), { wrapper });
     // "name" plus five more open the table; "f" is the seventh.
     expect(screen.queryByRole("columnheader", { name: "f" })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Display" }));
-    const offered = screen.getByRole("checkbox", { name: "f" });
+    const step = await openViewStep(user, "Columns");
+    const offered = within(step).getByRole("checkbox", { name: "f" });
     expect(offered).not.toBeChecked();
     await user.click(offered);
 

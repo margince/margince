@@ -77,6 +77,10 @@ var MaintenanceWritesEnabled = config.DefineStored(config.Spec[bool]{
 // a deal is the one that lets them say whether the machine may.
 const maintenanceObject = "deal"
 
+// installationSettingsObject is the grant that reads and changes the
+// installation's settings.
+const installationSettingsObject = "installation_settings"
+
 // LegalReviewEnabled is the installation's answer to whether a deal can be
 // sent to legal for review, and whether a legal_reviewed criterion blocks an
 // advance.
@@ -92,7 +96,7 @@ var LegalReviewEnabled = config.DefineStored(config.Spec[bool]{
 	Default: config.Some(true),
 	Doc:     "Let a deal be sent to legal for review, and let a legal_reviewed criterion hold a deal at its stage.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: installationSettingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the advance gate reads it for whoever moves the deal
 })
 

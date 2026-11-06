@@ -79,8 +79,10 @@ func TestAnOfferFromTheDealRefusesItsOwnLines(t *testing.T) {
 	if _, ok := errors.AsType[*OfferLinesFromDealError](err); !ok {
 		t.Fatalf("a typed line on the deal's offer answered %v, want offer_lines_from_deal", err)
 	}
-	_, err = e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual",
-		LineItems: []OfferLineInputRow{{Description: new("Extra"), Quantity: "1", UnitPriceMinor: new(int64(5))}}})
+	_, err = e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []OfferLineInputRow{{Description: new("Extra"), Quantity: "1", UnitPriceMinor: new(int64(5))}},
+	})
 	if _, ok := errors.AsType[*LineOwnedValueError](err); !ok {
 		t.Fatalf("a typed offer on a lines deal answered %v, want deal_has_lines", err)
 	}
@@ -124,8 +126,10 @@ func TestADealWithoutLinesKeepsItsOfferBehaviour(t *testing.T) {
 	if _, ok := errors.AsType[*DealHasNoLinesError](err); !ok {
 		t.Fatalf("copying lines from a deal without any answered %v, want deal_has_no_lines", err)
 	}
-	offer, err := e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual",
-		LineItems: []OfferLineInputRow{{Description: new("Consulting"), Quantity: "2", UnitPriceMinor: new(int64(10_000)), TaxRate: new("19.00")}}})
+	offer, err := e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []OfferLineInputRow{{Description: new("Consulting"), Quantity: "2", UnitPriceMinor: new(int64(10_000)), TaxRate: new("19.00")}},
+	})
 	if err != nil {
 		t.Fatalf("creating a typed offer: %v", err)
 	}

@@ -59,14 +59,16 @@ const companyZoneSites: { file: string; why: string }[] = [
   { file: "features/brief/brief.plan.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.figures.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.activity.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.rail.tsx", why: SERVER_WEEK },
   { file: "features/worklist/brief.teamplan.tsx", why: SERVER_WEEK },
   {
     file: "features/worklist/worklist.row.tsx",
     why: "A row's due day is the server's bucket, counted on the company's clock (decision B1), so the day comparison and the due-day text read that clock; every other time on the row is the reader's.",
   },
   {
-    file: "features/brief/brief.focus.tsx",
-    why: "A focus row's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day text reads that clock; every other time on the row is the reader's.",
+    file: "features/brief/brief.taskcard.tsx",
+    why: "A task card's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day text reads that clock; every other time on the row is the reader's.",
   },
   {
     file: "features/brief/brief.intro.tsx",
@@ -233,7 +235,8 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
         !ZONE_SOURCES_SKIP.test(relative(srcRoot, path).split("\\").join("/")),
     );
     calls = zoneSourceRefs(roots);
-  }, 180_000);
+    // The type checker reads the whole tree: about three minutes on a CI shard.
+  }, 300_000);
   const listed = {
     useCompanyZone: new Set(companyZoneSites.map(({ file }) => file)),
     browserZone: new Set(browserZoneSites.map(({ file }) => file)),

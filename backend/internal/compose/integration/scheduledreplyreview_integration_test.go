@@ -26,7 +26,7 @@ func TestReviewingAReplyReleasesTheMessageButANewerReplyPausesItAgain(t *testing
 	for _, newer := range []bool{false, true} {
 		t.Run(map[bool]string{false: "reviewed", true: "new reply"}[newer], func(t *testing.T) {
 			p := setupPreflight(t)
-			p.connect(t, gmailReadonlyScope, gmailSendScope)
+			p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 			p.stakeADeal(t)
 			id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
 			arrived := p.scheduledCreation(t, id).Add(time.Microsecond)
@@ -64,12 +64,12 @@ func TestReviewingAReplyReleasesTheMessageButANewerReplyPausesItAgain(t *testing
 
 func TestAPrivateReplyToAColleagueDoesNotPauseTheSendersMessage(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
 	colleague := *p
 	colleague.user = inviteReplyReader(t, p)
-	colleague.connect(t, gmailReadonlyScope)
+	colleague.connect(t, apptest.GmailReadonlyScope)
 	arrived := p.scheduledCreation(t, id).Add(time.Microsecond)
 	reply := p.theyWrite(t, inbound{
 		dated: arrived, arrived: arrived, authenticated: true,

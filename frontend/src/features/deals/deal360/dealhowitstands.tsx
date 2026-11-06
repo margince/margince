@@ -23,7 +23,7 @@ import {
 } from "../../../i18n";
 import {
   type LossReason,
-  lostReasonWords,
+  lostReasonParts,
   useLossReasons,
 } from "../../../lib/lossreasons.queries";
 import { dealRoleLabel } from "../../../lib/recordlabels";
@@ -119,7 +119,8 @@ export function DealHowItStands({
 /**
  * Won and lost are final, so a closed deal heads the card with its outcome and
  * the day it came. That holds whatever the last reading of the open deal said.
- * A lost deal says why under it. An open deal has no outcome to head with.
+ * A lost deal names its reason beside the day, and its note goes under both as
+ * the rep wrote it. An open deal has no outcome to head with.
  */
 export function closedVerdict(
   deal: Pick<Deal, "status" | "closed_at" | "lost_reason" | "lost_reason_code">,
@@ -129,17 +130,19 @@ export function closedVerdict(
   if (deal.status === "open") {
     return undefined;
   }
+  const why = deal.status === "lost" ? lostReasonParts(deal, reasons) : {};
   const lines = [
     deal.closed_at
       ? t("deal.standing.closedOn", {
           date: formatDayMonth(deal.closed_at, locale, zone),
         })
       : undefined,
-    deal.status === "lost" ? lostReasonWords(deal, reasons) : undefined,
+    why.label,
   ].filter(Boolean);
   return {
     word: t(deal.status === "won" ? "deals.statusWon" : "deals.statusLost"),
     sentence: lines.length > 0 ? lines.join(" · ") : undefined,
+    ...(why.note ? { note: why.note } : {}),
     tone: deal.status === "won" ? "success" : "neutral",
   };
 }
