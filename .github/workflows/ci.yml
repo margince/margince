@@ -492,9 +492,11 @@ jobs:
       # A test read outside its module that skips the tree digest merges green
       # and breaks cache-warm's save hours later. Here it fails the PR that
       # adds it. Skipped into develop: it guards main's cache-warm, and the
-      # develop into main pull request runs it.
+      # develop into main pull request runs it. Judged only after a passing
+      # pass: a failed test stops make before the rest log their reads, and a
+      # verdict over part of the tree is not one.
       - name: Census the test cache's inputs (make test-input-census-judge)
-        if: ${{ !cancelled() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
+        if: ${{ success() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
       # crm-hello declares capabilities no shipped unit does, so this is the one
