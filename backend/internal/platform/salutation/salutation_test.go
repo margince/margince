@@ -23,7 +23,15 @@ func TestStripLeavesTheMessageBetweenTheGreetingAndTheSignOff(t *testing.T) {
 		{"a full stop after the name", "Hi Bob. How are you?", "How are you?"},
 		{"a comma before a request", "Good morning, could you send the contract?", "could you send the contract?"},
 		{"a title kept before its name", "Hallo Hr. Weber,\nbitte das Angebot.", "bitte das Angebot."},
-		{"a message that is only a sign-off", "Thanks, Send It", "Thanks, Send It"},
+		{"a message that is only a sign-off", "Thanks, Send It", ""},
+		{"a message that is only a greeting", "Good morning Anna,", ""},
+		{"a capitalised ask after a colon", "Hello: Please send the report.", "Please send the report."},
+		{"a capitalised ask after a comma", "Good morning, Please send the invoice.", "Please send the invoice."},
+		{"a comma with no space after it", "Hi Bob,please send the contract", "please send the contract"},
+		{"a name on the line under the greeting", "Hi,\nJohn Smith,\nPlease send the contract.", "Please send the contract."},
+		{"an ask after a mid-message thanks", "Thanks!\nPlease send the contract", "Thanks!\nPlease send the contract"},
+		{"a postscript under a sign-off", "Regards,\nBob\nP.S. Please send the invoice", "Regards,\nBob\nP.S. Please send the invoice"},
+		{"a phone number and a mail address", "Please send it.\nKind regards,\nJane Smith\nHead of Sales\nAcme Corp\n+49 30 12345\njane@acme.example", "Please send it."},
 	} {
 		if got := Strip(c.text); got != c.want {
 			t.Errorf("%s: Strip = %q, want %q", c.name, got, c.want)
@@ -44,9 +52,28 @@ func TestAWordBoundaryReadsWholeCharacters(t *testing.T) {
 		{"aü", 1, false},
 		{"üb", 1, false},
 		{"a b", 1, true},
+		{"a漢", 2, false},
 	} {
 		if got := WordBoundary(c.text, c.at); got != c.want {
 			t.Errorf("WordBoundary(%q, %d) = %v, want %v", c.text, c.at, got, c.want)
+		}
+	}
+}
+
+// A quote that is only a salutation never counts, even where Strip kept it.
+func TestASalutationIsNeverQuotedPast(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name, text, quote string
+		want              bool
+	}{
+		{"a greeting run on into the message", "Hi Marcus I wanted to ask about the price", "Hi Marcus", false},
+		{"a closing above too many signature lines", "Kind regards\nOne Two\nThree Four\nFive Six\nSeven Eight\nNine Ten\nEleven", "Kind regards", false},
+		{"a message that is only a thanks", "Thanks again", "Thanks again", false},
+		{"the ask itself", "Hi Marcus I wanted to ask about the price", "ask about the price", true},
+	} {
+		if got := QuotedPast(c.text, c.quote); got != c.want {
+			t.Errorf("%s: QuotedPast = %v, want %v", c.name, got, c.want)
 		}
 	}
 }

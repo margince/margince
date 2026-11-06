@@ -25,6 +25,17 @@ var closings = foldedSet(
 	"cảm ơn", "xin cảm ơn", "trân trọng", "thân ái", "thân mến",
 )
 
+// closingWordsMax is the longest closing, so a long line is never read whole.
+var closingWordsMax = longestClosing()
+
+func longestClosing() int {
+	longest := 0
+	for closing := range closings {
+		longest = max(longest, len(strings.Fields(closing)))
+	}
+	return longest
+}
+
 // nameWordsMax is the longest name a sign-off line may carry after its closing.
 const nameWordsMax = 2
 
@@ -32,7 +43,7 @@ const nameWordsMax = 2
 // The name is capitalised words, so "Thanks, could you send it" is an ask.
 func isClosing(line string) bool {
 	words := lineWords(line)
-	for n := len(words); n > 0; n-- {
+	for n := min(len(words), closingWordsMax); n > 0; n-- {
 		if closings[FoldName(strings.Join(words[:n], " "))] {
 			return signedBy(words[n:])
 		}
@@ -53,33 +64,49 @@ func signedBy(words []string) bool {
 	return true
 }
 
-// signatureLinesMax bounds the lines a sign-off may carry under its closing:
-// a name, a title or a company. More is a message, not a signature.
-const signatureLinesMax = 3
+// signatureLinesMax bounds the lines a sign-off may carry under its closing: a
+// name, a title, a company, a phone number and an address. More is a message.
+const signatureLinesMax = 5
 
 // signatureWordsMax bounds one signature line.
 const signatureWordsMax = 6
 
-// Strip is text without its opening greeting or the sign-off it ends on. A
-// greeting run on into the message keeps its line. Where it stops is a guess,
-// and a wrong cut would drop the sender's first words. A message that is all
-// greeting and sign-off is kept whole: it asks nothing, and nothing in it is cut.
+// titleWords are the lower-case words a job title or a company name carries.
+var titleWords = foldedSet("of", "and", "for", "the", "für", "und", "von", "der", "des", "và")
+
+// Strip is text without its opening greeting or the sign-off it ends on. It is
+// empty for a message that is nothing else. A greeting run on into the message
+// keeps its line: where it stops is a guess, and a wrong cut drops the sender's
+// first words.
 func Strip(text string) string {
 	trimmed := norm.NFC.String(strings.TrimSpace(text))
 	body := trimmed
 	if greeting, ok := Opening(trimmed); ok && greeting.Closed {
 		body = strings.TrimSpace(trimmed[greeting.End:])
+		if len(greeting.Names) == 0 {
+			body = withoutNameLine(body)
+		}
 	}
-	if kept := withoutSignOff(strings.Split(body, "\n")); kept != "" {
-		return kept
-	}
-	return trimmed
+	return withoutSignOff(strings.Split(body, "\n"))
 }
 
 // QuotedPast reports whether quote appears in text once its greeting and
-// sign-off are gone. Strip composes text to NFC, so quote is composed too.
+// sign-off are gone, and says something besides them. The quote is read on its
+// own too, because Strip keeps any salutation it cannot place. Strip composes
+// text to NFC, so quote is composed as well.
 func QuotedPast(text, quote string) bool {
-	return values.Quoted(Strip(text), norm.NFC.String(quote))
+	return Strip(quote) != "" && values.Quoted(Strip(text), norm.NFC.String(quote))
+}
+
+// withoutNameLine drops the name a greeting closed before reaching, as in
+// "Hi,\nJohn Smith,\nPlease send it."
+func withoutNameLine(body string) string {
+	first, rest, multiline := strings.Cut(body, "\n")
+	line := strings.TrimSpace(first)
+	if multiline && strings.HasSuffix(line, ",") && signedBy(lineWords(line)) {
+		return strings.TrimSpace(rest)
+	}
+	return body
 }
 
 // withoutSignOff drops the closing a message ends on, with the signature lines
@@ -105,12 +132,24 @@ func withoutSignOff(lines []string) string {
 	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
-// signatureLine reports a line that can stand under a closing: a few words,
-// capitalised, that end no sentence.
+// signatureLine reports a line that can stand under a closing: a mail or web
+// address, or a few capitalised words that end no sentence. A line it refuses
+// stops the walk, so an ask after a mid-message "Thanks!" stays in the message.
 func signatureLine(line string) bool {
+	if strings.ContainsAny(line, "?!") || strings.HasSuffix(line, ".") {
+		return false
+	}
+	if len(strings.Fields(line)) == 1 && (strings.Contains(line, "@") || strings.HasPrefix(line, "www.")) {
+		return true
+	}
 	words := lineWords(line)
-	return len(words) > 0 && len(words) <= signatureWordsMax &&
-		!strings.ContainsAny(line, "?!") && !strings.HasSuffix(line, ".") && signedBy(words[:1])
+	if len(words) == 0 || len(words) > signatureWordsMax {
+		return false
+	}
+	return !slices.ContainsFunc(words, func(word string) bool {
+		first, _ := utf8.DecodeRuneInString(word)
+		return !unicode.IsUpper(first) && !unicode.IsDigit(first) && !titleWords[FoldName(word)]
+	})
 }
 
 // lineWords are the letters-and-digits runs of a line.

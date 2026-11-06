@@ -29,7 +29,9 @@ const minRemainderWords = 2
 // history and the signature. Our reply never supplies them, so a question we
 // asked cannot become work we owe.
 func RequestRemainderGrounded(body, remaining string) bool {
-	words := strings.FieldsFunc(remaining, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsNumber(r) })
+	words := strings.FieldsFunc(remaining, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r) && !unicode.IsMark(r)
+	})
 	if len(words) < minRemainderWords {
 		return false
 	}

@@ -36,12 +36,12 @@ func WordBoundary(text string, i int) bool {
 	if i < 0 || i >= len(text) {
 		return true
 	}
-	// The whole character at i, which may start before i when i is the last
-	// byte of the character before a word.
-	r, _ := utf8.DecodeRuneInString(text[i:])
-	if !utf8.RuneStart(text[i]) {
-		r, _ = utf8.DecodeLastRuneInString(text[:i+1])
+	// The whole character holding byte i, which may start before it.
+	start := i
+	for start > 0 && !utf8.RuneStart(text[start]) {
+		start--
 	}
+	r, _ := utf8.DecodeRuneInString(text[start:])
 	return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\''
 }
 
@@ -157,11 +157,15 @@ func addressee(line string, from int) ([]string, int, bool) {
 			width = len(rest) - start
 		}
 		field := rest[start : start+width]
+		// "Bob,please" closes at its comma, though no space follows it.
+		if cut := strings.IndexAny(field, ",;:!"); cut >= 0 && cut < len(field)-1 {
+			width, field, last = cut+1, field[:cut+1], false
+		}
 		word := strings.TrimRightFunc(field, unicode.IsPunct)
 		named := nameWords(word)
 		if stopsGreeting(word, named) {
-			if separated >= 0 && len(names) == 0 {
-				return names, separated, true
+			if separated >= 0 {
+				return nil, separated, true
 			}
 			return names, end, false
 		}

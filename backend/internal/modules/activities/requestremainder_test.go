@@ -42,6 +42,17 @@ func TestARemainingAskIsNotTheirGreetingOrTheirThanks(t *testing.T) {
 	if !RequestRemainderGrounded(body, "send the signed contract") {
 		t.Fatal("their own ask was refused")
 	}
+	if RequestRemainderGrounded("Thanks again", "Thanks again") {
+		t.Error("a message that is only a thanks grounded itself")
+	}
+}
+
+// A decomposed accent is part of its letter, so one word stays one word.
+func TestADecomposedAccentDoesNotSplitAWord(t *testing.T) {
+	t.Parallel()
+	if RequestRemainderGrounded("Please send the re\u0301sume\u0301 today", "re\u0301sume\u0301") {
+		t.Error("one word was counted as two and admitted")
+	}
 }
 
 // A sign-off whose name stands under a blank line grounds nothing either, and
