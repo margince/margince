@@ -21,9 +21,9 @@ report's parts are:
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
   lost.
 - **Pipeline movement**: the deals that changed stage, and the stage each reached.
-- **Activity this week**: what you did on each day, as columns: emails you sent, calls you logged
-  and meetings credited to you, as host or as a guest who took part. Emails you received do not
-  count. A weekend day shows only when you worked on it. Reports written before this chart existed
+- **Activity this week**: what you did on each day, as columns. It counts emails you sent, calls
+  you logged and meetings credited to you, as host or as a guest who took part. Emails you received
+  do not count. The last two days of the week show only when you worked on them. Reports written before this chart existed
   do not have it, and neither does a reader who may not see activities.
 - **Forecast**: one table of the forecast for the week, month and quarter.
 - **Figures**: every figure beside the week before, and the scorecard. The columns name the weeks

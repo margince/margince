@@ -138,10 +138,10 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
-- **Your tasks**: at most 6 cards in Worklist order, each with its kind of work and, when known,
-  who it is with. A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands. Proposals,
-  commitments due today and meetings in the next 24 hours sit here. A task due later shows once its reminder is due. A quiet
-  day says "No immediate priorities. The full Worklist is available."
+- **Your tasks**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that.
+  A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
+- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its
+  reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
   is not due yet. Stage change notices stay in the notification center.
