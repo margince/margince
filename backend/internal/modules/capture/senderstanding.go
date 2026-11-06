@@ -176,7 +176,7 @@ func LockHoldEvidenceTx(ctx context.Context, tx pgx.Tx, emails []string) error {
 
 func heldContactThreads(ctx context.Context, tx pgx.Tx, emails []string) ([]string, error) {
 	rows, err := tx.Query(ctx, `SELECT DISTINCT thread_key FROM activity
- WHERE counterparty_email=ANY(@emails) AND thread_key IS NOT NULL AND thread_key<>'' ORDER BY thread_key`, pgx.NamedArgs{"emails": emails})
+ WHERE counterparty_email=ANY(@emails) AND thread_key IS NOT NULL AND thread_key<>'' ORDER BY thread_key`, pgx.NamedArgs{"emails": emails}) //nolint:goconst // the key spells this statement's own parameter
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the threads of a held contact: %w", err)
 	}

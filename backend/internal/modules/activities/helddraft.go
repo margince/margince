@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+//nolint:goconst // the named-argument keys spell this statement's own parameters
 func discardHeldDraftTx(ctx context.Context, tx pgx.Tx, held claimedSend, origin SendOrigin, in SendEmailInput) error {
 	if held.PendingDraftID != nil {
 		return discardComposedDraftForAuthorTx(ctx, tx, *held.PendingDraftID, origin, held.ScheduledBy)

@@ -68,7 +68,7 @@ func prepareSourceProjectionTx(ctx context.Context, tx pgx.Tx, current NoticeCas
 		if err != nil {
 			return SourceProjection{}, err
 		}
-		if evidence.Kind == sourceEvidenceAcquisition && current.Acquisition.Kind == "unknown_legacy" {
+		if evidence.Kind == sourceEvidenceAcquisition && current.Acquisition.Kind == acquiredUnknownLegacy {
 			return SourceProjection{}, &ValidationError{Field: "selected_evidence", Reason: "the original record does not identify a source; select correspondence or describe the evidence"}
 		}
 		if evidence.Kind == sourceEvidenceAcquisition && current.Acquisition.Kind != in.Kind && in.Note == "" {

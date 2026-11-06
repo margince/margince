@@ -111,32 +111,39 @@ func profileHistoryPool(ctx context.Context, t *testing.T, pool *pgxpool.Pool) *
 			return
 		}
 		if directory := os.Getenv("MARGINCE_IMPORT_BENCH_PLAN_DIR"); directory != "" {
-			if err := os.MkdirAll(directory, 0o700); err != nil {
-				t.Fatal(err)
-			}
-			for i, cost := range costs {
-				query := strings.TrimSpace(cost.query)
-				if i >= 2 && !strings.HasPrefix(query, "WITH perfect AS") {
-					continue
-				}
-				if !strings.HasPrefix(query, "WITH candidate") && !strings.HasPrefix(query, "WITH perfect AS") && !strings.HasPrefix(query, "WITH emails AS") && !strings.HasPrefix(query, "SELECT EXISTS") {
-					continue
-				}
-				var plan []byte
-				err := database.WithWorkspaceTx(ctx, measured, func(tx pgx.Tx) error {
-					return tx.QueryRow(ctx, "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) "+cost.query, cost.args...).Scan(&plan)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(filepath.Join(directory, fmt.Sprintf("query-%d.json", i)), plan, 0o600); err != nil {
-					t.Fatal(err)
-				}
-			}
+			writeHistoryQueryPlans(ctx, t, measured, directory, costs)
 		}
 		for _, cost := range costs[:min(20, len(costs))] {
 			logHistoryQueryCost(t, cost)
 		}
 	})
 	return measured
+}
+
+// writeHistoryQueryPlans saves the plans of the costliest import queries when
+// MARGINCE_IMPORT_BENCH_PLAN_DIR names a directory.
+func writeHistoryQueryPlans(ctx context.Context, t *testing.T, measured *pgxpool.Pool, directory string, costs []historyQueryCost) {
+	t.Helper()
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for i, cost := range costs {
+		query := strings.TrimSpace(cost.query)
+		if i >= 2 && !strings.HasPrefix(query, "WITH perfect AS") {
+			continue
+		}
+		if !strings.HasPrefix(query, "WITH candidate") && !strings.HasPrefix(query, "WITH perfect AS") && !strings.HasPrefix(query, "WITH emails AS") && !strings.HasPrefix(query, "SELECT EXISTS") {
+			continue
+		}
+		var plan []byte
+		err := database.WithWorkspaceTx(ctx, measured, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) "+cost.query, cost.args...).Scan(&plan)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(directory, fmt.Sprintf("query-%d.json", i)), plan, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 }

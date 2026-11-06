@@ -24,7 +24,7 @@ var cvTitlesAnywhere = []string{"curriculum vitae", "lebenslauf"}
 
 // cvTitles is a line that names the document a CV. A numbered line is not
 // one: "1.2 CV" is an entry in a list of folders.
-var cvTitles = []string{"curriculum vitae", "lebenslauf", "cv", "resume", "résumé"}
+var cvTitles = []string{"cv", "resume", "résumé"}
 
 // cvSections are the headings a CV is built from, by the part of a career
 // each names. A heading counts once per group.
@@ -104,8 +104,8 @@ type wordList []string
 
 // startsOne says whether heading starts with one of the list's names as a
 // whole word.
-func (names wordList) startsOne(heading string) bool {
-	for _, name := range names {
+func (list wordList) startsOne(heading string) bool {
+	for _, name := range list {
 		rest, ok := strings.CutPrefix(heading, name)
 		if ok && (rest == "" || !unicode.IsLetter([]rune(rest)[0])) {
 			return true
@@ -148,8 +148,8 @@ func NamedAsPrivate(filename string) bool {
 }
 
 // inside says whether word contains one of the list's stems.
-func (stems wordList) inside(word string) bool {
-	return slices.ContainsFunc(stems, func(stem string) bool { return strings.Contains(word, stem) })
+func (list wordList) inside(word string) bool {
+	return slices.ContainsFunc(list, func(stem string) bool { return strings.Contains(word, stem) })
 }
 
 // filenameWords cuts a file name at every non-letter and at each lower-case
