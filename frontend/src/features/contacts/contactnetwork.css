@@ -194,8 +194,8 @@
   align-items: start;
 }
 
-/* The route as a path: two people, and the tie between them drawn as a line
-   whose weight is the route's band. The tie's words sit on the line. */
+/* The route as a path from the introducer to the contact. The tie is a line
+   whose weight is the route's band, with the tie's words sitting on it. */
 .pn-hero {
   display: grid;
   grid-template-columns: minmax(0, auto) minmax(6rem, 1fr) minmax(0, auto);
