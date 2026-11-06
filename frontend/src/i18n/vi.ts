@@ -15923,7 +15923,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "https://www.example.com/quyen-rieng-tu",
   "webForms.field.product": "Sản phẩm",
   "webForms.field.productHint":
-    "Mọi lead mới từ biểu mẫu này đều hỏi về sản phẩm này, và báo cáo sản phẩm tính lead ở đó. Lead đã có vẫn giữ sản phẩm của mình. Để trống nếu biểu mẫu không thuộc về một sản phẩm.",
+    "Mọi lead mới từ biểu mẫu này đều hỏi về sản phẩm này, và báo cáo sản phẩm tính lead ở đó. Lead đã có vẫn giữ nguyên sản phẩm hiện tại. Để trống nếu biểu mẫu không thuộc về một sản phẩm.",
   "webForms.field.productClear": "Ghi nhận lead không có sản phẩm",
   "webForms.field.productLoading": "Đang đọc sản phẩm…",
   "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
