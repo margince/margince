@@ -9,10 +9,10 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"io"
 	"runtime"
 	"testing"
 	"testing/synctest"
-	"time"
 )
 
 // progressiveJPEGHeader is a valid one-component progressive JPEG up to its
@@ -87,19 +87,34 @@ func TestDecodeRefusesAJPEGWithMoreScansThanAnyEncoderWrites(t *testing.T) {
 		"scans hidden behind fill bytes":         progressiveJPEG(2048, 2000, []byte{0xff, 0xff}),
 		"scans after stray bytes and FF00":       progressiveJPEG(2048, 2000, []byte{0x5a, 0xff, 0x00, 0x5a}),
 	}
+	decodes := countPixelDecodes(t)
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
-			start := time.Now()
-			_, err := Decode(src)
-			elapsed := time.Since(start)
-			if !errors.Is(err, ErrUnsupported) {
+			before := *decodes
+			if _, err := Decode(src); !errors.Is(err, ErrUnsupported) {
 				t.Fatalf("a JPEG over the scan cap must be unsupported, got %v", err)
 			}
-			if elapsed > time.Second {
-				t.Fatalf("refusing %d bytes took %v; the refusal must come before any scan is decoded", len(src), elapsed)
+			if *decodes != before {
+				t.Fatalf("refusing %d bytes ran the pixel decoder; the refusal must come before any scan is decoded", len(src))
 			}
 		})
 	}
+	if _, err := Decode(baselineJPEG(t)); err != nil || *decodes == 0 {
+		t.Fatalf("an admitted JPEG did not reach the counted decoder (%v), so the count above proves nothing", err)
+	}
+}
+
+// countPixelDecodes counts the calls that reach the pixel decoder until the test ends.
+func countPixelDecodes(t *testing.T) *int {
+	t.Helper()
+	calls := 0
+	process := decodePixels
+	decodePixels = func(r io.Reader) (image.Image, string, error) {
+		calls++
+		return process(r)
+	}
+	t.Cleanup(func() { decodePixels = process })
+	return &calls
 }
 
 func TestDecodeRefusesEveryTruncationOfAProgressiveJPEG(t *testing.T) {
@@ -182,16 +197,29 @@ func holdEverySlot(t *testing.T, slots, queue, queued int) {
 	}
 }
 
+// decodeInBubble starts one Decode and reports whether it had returned once every goroutine
+// in the bubble was blocked. Time in a synctest bubble moves only then, so a decode still
+// out has not given up its wait.
+func decodeInBubble(src []byte) (results chan error, returnedAtOnce bool) {
+	results = make(chan error, 1)
+	go func() {
+		_, err := Decode(src)
+		results <- err
+	}()
+	synctest.Wait()
+	return results, len(results) == 1
+}
+
 func TestADecodeThatWaitsPastItsBoundIsRefusedBusy(t *testing.T) {
 	src := baselineJPEG(t)
 	synctest.Test(t, func(t *testing.T) {
 		holdEverySlot(t, 1, 1, 0)
-		start := time.Now()
-		if _, err := Decode(src); !errors.Is(err, ErrDecodeBusy) {
-			t.Fatalf("a decode that never got a slot = %v, want ErrDecodeBusy", err)
+		results, returnedAtOnce := decodeInBubble(src)
+		if returnedAtOnce {
+			t.Fatal("a decode with every slot held returned without waiting for one")
 		}
-		if waited := time.Since(start); waited != decodeSlotWait {
-			t.Fatalf("the decode waited %v, want exactly %v", waited, decodeSlotWait)
+		if err := <-results; !errors.Is(err, ErrDecodeBusy) {
+			t.Fatalf("a decode that never got a slot = %v, want ErrDecodeBusy", err)
 		}
 		if queued := len(decodeQueue); queued != 0 {
 			t.Fatalf("a refused decode left %d places taken in the queue", queued)
@@ -203,12 +231,12 @@ func TestADecodeFindingTheQueueFullIsRefusedAtOnce(t *testing.T) {
 	src := baselineJPEG(t)
 	synctest.Test(t, func(t *testing.T) {
 		holdEverySlot(t, 1, 2, 2)
-		start := time.Now()
-		if _, err := Decode(src); !errors.Is(err, ErrDecodeBusy) || errors.Is(err, ErrUnsupported) {
-			t.Fatalf("a decode behind a full queue = %v, want ErrDecodeBusy and not a refusal of the bytes", err)
+		results, returnedAtOnce := decodeInBubble(src)
+		if !returnedAtOnce {
+			t.Fatal("a decode behind a full queue waited, want it refused at once")
 		}
-		if waited := time.Since(start); waited != 0 {
-			t.Fatalf("a decode behind a full queue waited %v, want no wait", waited)
+		if err := <-results; !errors.Is(err, ErrDecodeBusy) || errors.Is(err, ErrUnsupported) {
+			t.Fatalf("a decode behind a full queue = %v, want ErrDecodeBusy and not a refusal of the bytes", err)
 		}
 	})
 }

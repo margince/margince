@@ -87,6 +87,10 @@ var decodeQueue = make(chan struct{}, 4*cap(decodeSlots))
 // decodeSlotWait bounds one wait for a slot, well inside a request's own deadline.
 const decodeSlotWait = 10 * time.Second
 
+// decodePixels is the pixel decode every bound above stands in front of. A test counts its
+// calls to prove a refusal came before any pixel work.
+var decodePixels = image.Decode
+
 // ErrDecodeBusy reports that no decode slot freed in time. It is a property of the load, not
 // of the input: the same bytes may decode on a retry.
 var ErrDecodeBusy = errors.New("imagenorm: every decode slot stayed busy")
@@ -151,7 +155,7 @@ func decodeWithinCaps(src []byte) (image.Image, error) {
 			return nil, err
 		}
 	}
-	img, _, err := image.Decode(bytes.NewReader(src))
+	img, _, err := decodePixels(bytes.NewReader(src))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnsupported, err)
 	}
