@@ -122,6 +122,11 @@ type SetPickerProps = Readonly<{
    * the name it was ticked under.
    */
   search?: (term: string) => Promise<readonly SetPickerOption[]>;
+  /**
+   * Hears each value ticked. A caller whose picker can unmount keeps these
+   * names and hands them back as `options`, because the ticks live here.
+   */
+  onTick?: (option: SetPickerOption) => void;
   /** Offers the typed name as a new value when no value carries that name. */
   create?: Create;
   disabled?: boolean;
@@ -162,9 +167,12 @@ export function SetPicker(props: SetPickerProps) {
       >
         <SetPickerPanel
           {...props}
-          onTick={(option) =>
-            setTicked((known) => new Map(known).set(option.value, option.label))
-          }
+          onTick={(option) => {
+            setTicked((known) =>
+              new Map(known).set(option.value, option.label),
+            );
+            props.onTick?.(option);
+          }}
           onDone={() => setOpen(false)}
         />
       </SetPickerFrame>
@@ -202,10 +210,12 @@ function SetPickerPanel({
   const name = term.trim();
   const typed = searchWords(name).join(" ");
   // A name that only differs in case or accents is the same team to a reader.
-  const taken = options.some(
+  const taken = [...options, ...(asked ? found.candidates : [])].some(
     (option) => searchWords(option.label).join(" ") === typed,
   );
-  const offerCreate = create !== undefined && name !== "" && !taken;
+  // Until the server answers, the name may be one it already holds.
+  const settled = !asked || found.answered;
+  const offerCreate = create !== undefined && name !== "" && !taken && settled;
   const toggle = (option: SetPickerOption, on: boolean) => {
     if (on) {
       onTick(option);

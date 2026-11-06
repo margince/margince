@@ -44,16 +44,24 @@ async function searchLeads(q: string): Promise<SetPickerOption[]> {
   }));
 }
 
-/** The saved picks, named as the membership read names them. */
+/** A pick and the name it was ticked under, kept above this step's mount. */
+export type PickName = MemberRef & Readonly<{ label: string }>;
+
+/** The picks, named as the membership read or the search named them. */
 function pickedOptions(
   members: Members | undefined,
+  names: readonly PickName[],
   type: "lead" | "deal",
 ): SetPickerOption[] {
-  return (members?.data ?? [])
-    .filter(
-      (member) => member.reason === "picked" && member.record_type === type,
-    )
-    .map((member) => ({ value: member.record_id, label: member.label }));
+  const saved = (members?.data ?? []).filter(
+    (member) => member.reason === "picked" && member.record_type === type,
+  );
+  const ticked = names.filter((name) => name.record_type === type);
+  const named = [...ticked, ...saved].map((pick) => ({
+    value: pick.record_id,
+    label: pick.label,
+  }));
+  return [...new Map(named.map((pick) => [pick.value, pick])).values()];
 }
 
 export function MemberFields({
@@ -63,6 +71,8 @@ export function MemberFields({
   pending,
   picked,
   onPick,
+  pickNames,
+  onPickName,
   excludedSet,
   onToggle,
   includeFuture,
@@ -74,6 +84,8 @@ export function MemberFields({
   pending: boolean;
   picked: MemberRef[];
   onPick: (picked: MemberRef[]) => void;
+  pickNames: readonly PickName[];
+  onPickName: (name: PickName) => void;
   excludedSet: ReadonlySet<string>;
   onToggle: (member: Members["data"][number], included: boolean) => void;
   includeFuture: boolean;
@@ -160,18 +172,32 @@ export function MemberFields({
       />
       <SetPicker
         legend={t("reporting.pickDeals")}
-        options={pickedOptions(members, "deal")}
+        options={pickedOptions(members, pickNames, "deal")}
         search={searchOpenDeals}
         values={pickedOf("deal")}
         onChange={(ids) => setPickedOf("deal", ids)}
+        onTick={(option) =>
+          onPickName({
+            record_type: "deal",
+            record_id: option.value,
+            label: option.label,
+          })
+        }
         {...pickerWords}
       />
       <SetPicker
         legend={t("reporting.pickLeads")}
-        options={pickedOptions(members, "lead")}
+        options={pickedOptions(members, pickNames, "lead")}
         search={searchLeads}
         values={pickedOf("lead")}
         onChange={(ids) => setPickedOf("lead", ids)}
+        onTick={(option) =>
+          onPickName({
+            record_type: "lead",
+            record_id: option.value,
+            label: option.label,
+          })
+        }
         {...pickerWords}
       />
       <p className="t-caption">{t("reporting.pickExplains")}</p>

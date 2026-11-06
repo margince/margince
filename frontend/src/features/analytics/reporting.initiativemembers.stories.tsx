@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -65,6 +66,8 @@ function Step() {
       pending={false}
       picked={picked}
       onPick={setPicked}
+      pickNames={[]}
+      onPickName={() => undefined}
       excludedSet={new Set()}
       onToggle={() => undefined}
       includeFuture
@@ -89,5 +92,17 @@ export const SavedPicks: Story = {
         <Step />
       </StoryProviders>
     );
+  },
+  play: async ({ canvasElement }) => {
+    const deals = within(canvasElement).getByRole("group", {
+      name: "Pick deals",
+    });
+    await userEvent.click(within(deals).getByRole("button", { name: /Add/ }));
+    const body = within(document.body);
+    await userEvent.type(body.getByRole("searchbox"), "harbour");
+    await userEvent.click(
+      await body.findByRole("checkbox", { name: /Harbour retrofit/ }),
+    );
+    await expect(within(deals).getByText("Harbour retrofit")).toBeVisible();
   },
 };

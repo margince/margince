@@ -2,7 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -125,6 +132,38 @@ describe("SetPicker", () => {
     expect(tokens()).toEqual(["DACH Sales", "Iberia Sales"]);
     await user.type(screen.getByRole("searchbox"), "nordics");
     expect(await screen.findByText("No team matches.")).toBeTruthy();
+  });
+
+  it("offers a new name only once the server has answered that it holds none", async () => {
+    const user = userEvent.setup();
+    let release = () => {};
+    const search = vi.fn(
+      (term: string) =>
+        new Promise<SetPickerOption[]>((resolve) => {
+          release = () =>
+            resolve(
+              term === "Iberia Sales"
+                ? [{ value: "t9", label: "Iberia Sales" }]
+                : [],
+            );
+        }),
+    );
+    const createRow = (name: RegExp) => screen.queryByRole("button", { name });
+    render(<Picker options={[]} search={search} onCreate={() => undefined} />);
+    await user.click(screen.getByRole("button", { name: /Add teams/ }));
+    await user.type(screen.getByRole("searchbox"), "Iberia Sales");
+    await waitFor(() => expect(search).toHaveBeenCalled());
+    expect(createRow(/Create team/)).toBeNull();
+
+    await act(async () => release());
+    await screen.findByRole("checkbox", { name: /Iberia Sales/ });
+    expect(createRow(/Create team/)).toBeNull();
+
+    await user.clear(screen.getByRole("searchbox"));
+    await user.type(screen.getByRole("searchbox"), "Nordics");
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith("Nordics"));
+    await act(async () => release());
+    await screen.findByRole("button", { name: /Create team “Nordics”/ });
   });
 
   it("says a search failed rather than that nothing matched", async () => {
