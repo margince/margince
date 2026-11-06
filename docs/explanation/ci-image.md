@@ -29,7 +29,7 @@ each time. The image replaces its own sources, which name the live archive, with
 
 `snapshot.ubuntu.com` answers only over HTTPS, and the base image has no CA bundle until
 `ca-certificates` is in. So `apt` starts on the bundle from the pinned Go image. It checks each index
-against the Ubuntu archive key either way. A fetch tries three times with a 30 second limit, so a
+against the Ubuntu archive key either way. A fetch tries 8 times, waiting up to 30 seconds between tries, so a
 dead mirror fails the build in minutes. `apt-get update --error-on=any` fails on an index that never
 came. Without it, `apt` only warns, and every pin then fails as a package it cannot find.
 

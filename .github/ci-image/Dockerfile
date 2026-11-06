@@ -35,7 +35,10 @@ FROM node:24.22.2-trixie-slim@sha256:0820eaa85e07d0490446dd01d14707e17e6108a3698
 # build, it never installs. A version the live archive has dropped comes from
 # the snapshot, the list's second entry.
 #
-# Three tries with a 30 s timeout: a dead mirror fails the build in minutes.
+# Eight tries, each wait growing to at most 30 s, and a 30 s timeout. Only the
+# index files, about fifteen requests, reach the snapshot, and it answers a
+# runner 503 under load; the wait clears that. A dead mirror still fails the
+# build in a few minutes.
 # `--error-on=any` fails the update on an index that never came; without it apt
 # only warns, and every pin after it reads as not found.
 #
@@ -59,7 +62,8 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources \
       'Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' \
       > /etc/apt/sources.list.d/snapshot.sources \
  && printf '%s\n' \
-      'Acquire::Retries "3";' \
+      'Acquire::Retries "8";' \
+      'Acquire::Retries::Delay::Maximum "30";' \
       'Acquire::http::Timeout "30";' \
       'Acquire::https::Timeout "30";' \
       > /etc/apt/apt.conf.d/80snapshot \
