@@ -240,16 +240,34 @@ fi
 echo "ok: the finding is published where the reader already is, and withdraws itself"
 
 # The author's own reviews are replies to threads, not coverage. Each one is a
-# submitted review, so without both halves a batch of replies starts a run per
-# reply and lists the author as a reviewer of their own branch.
-if ! grep -qF 'github.event.review.user.login != github.event.pull_request.user.login' "$workflow"; then
-	echo "FAIL: the job runs on the author's own review, so every reply to a thread starts a run."
+# submitted review, so without all three a batch of replies starts a run per
+# reply, cancels the report a real review started, or lists the author as a
+# reviewer of their own branch. Only lines that are not comments count: a
+# guard left behind in a comment guards nothing.
+active_has() {
+	grep -vE '^[[:space:]]*#' "$1" | grep -qF "$2"
+}
+author_guards=(
+	'github.event.review.user.login != github.event.pull_request.user.login'
+	"format('-author-review-{0}', github.event.review.id)"
+	'.user.login != env.AUTHOR'
+)
+for guard in "${author_guards[@]}"; do
+	if ! active_has "$workflow" "$guard"; then
+		echo "FAIL: the workflow has no active line with: $guard"
+		echo "      The author's replies to review threads then start, cancel or skew the report."
+		exit 1
+	fi
+done
+# And the check itself must see a guard that is only a comment as missing.
+commented="$(mktemp)"
+sed -E "s/^([[:space:]]*)(.*github\.event\.review\.user\.login != )/\1# \2/" "$workflow" > "$commented"
+if active_has "$commented" "${author_guards[0]}"; then
+	rm -f "$commented"
+	echo "FAIL: a guard that survives only as a comment still passes this check."
 	exit 1
 fi
-if ! grep -qF '.user.login != env.AUTHOR' "$workflow"; then
-	echo "FAIL: the report counts the author's own reviews as coverage of their branch."
-	exit 1
-fi
-echo "ok: the author's replies neither start a run nor count as coverage"
+rm -f "$commented"
+echo "ok: the author's replies neither start a run, nor cancel one, nor count as coverage"
 
 echo "OK: test-review-coverage — every arm of the report, including the quiet ones"
