@@ -841,8 +841,9 @@ jobs:
         with:
           persist-credentials: false
           # Shallow. SBOM_VERSION is the release tag when HEAD sits exactly on
-          # one, else the revision; this workflow never runs on a tag, so it is
-          # always the revision, which a shallow checkout has.
+          # one, else the revision. Only a manual dispatch can start on a tag,
+          # so only that run fetches the tags.
+          fetch-tags: ${{ github.event_name == 'workflow_dispatch' }}
       # A scan that read part of pnpm-lock.yaml writes a valid SBOM that grant
       # passes, and only the census inside `make sbom` tells it apart. Planted
       # lockfiles, read by the real pinned YAML reader, and short SBOMs prove it
