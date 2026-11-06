@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
@@ -234,17 +235,20 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 	return resolutionOf(rankedReviews(scored)), nil
 }
 
-// Score-one candidates fill the row limit in contact-id order. Later sort keys only break
-// one contact's joined rows, so lower-score candidates cannot displace that prefix.
+// Score-one rows sort first by contact ID; employer ties cannot displace that prefix.
+// Fence its key seek before similarity rechecks; hash collisions reopen the complete fallback.
 var contactCandidateQuery = `
 		WITH perfect AS MATERIALIZED ( -- Reuse the bounded prefix before deciding whether broader scans are needed.
-		  SELECT p.id FROM contact p
-		   WHERE p.archived_at IS NULL
-		     AND hash_array_extended(show_trgm(f_fold_apostrophes(lower(p.full_name))), 0)
+		  SELECT p.id FROM (
+		    SELECT id, full_name FROM contact
+		     WHERE archived_at IS NULL
+		     AND hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), 0)
 		         = hash_array_extended(show_trgm(f_fold_apostrophes(lower(@name))), 0)
-		     AND similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower(@name))) = 1
+		     AND (@exclude::uuid IS NULL OR id <> @exclude)
+		     ORDER BY id LIMIT @limit OFFSET 0
+		  ) p
+		   WHERE similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower(@name))) = 1
 		     AND f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower(@name))
-		     AND (@exclude::uuid IS NULL OR p.id <> @exclude)
 		   ORDER BY p.id LIMIT @limit
 		), candidate AS (
 		  SELECT id FROM perfect
@@ -264,15 +268,7 @@ var contactCandidateQuery = `
 		     AND ` + employment.CurrentPrimarySQL("r") + ` AND r.archived_at IS NULL
 		  ) broader WHERE (SELECT count(*) FROM perfect) < @limit)
 		SELECT p.id, p.full_name, r.company_id, od.domain,
-		       -- EVERY live address, not an unordered LIMIT 1: a contact with a
-		       -- work and a personal address has two primaries as far as this
-		       -- query is concerned, and picking either at random would make
-		       -- the employer term depend on the plan Postgres chose. Archived
-		       -- addresses are excluded — an address somebody stopped using is
-		       -- not evidence of where they work now.
-		       (SELECT array_agg(pe.email)
-		          FROM contact_email pe
-		         WHERE pe.contact_id = p.id AND pe.archived_at IS NULL)
+		       ` + storekit.RequestAddressesSQL("p.id") + `
 		  FROM candidate
 		  -- A point read keeps the bounded prefix from becoming a full contact scan.
 		  CROSS JOIN LATERAL (
