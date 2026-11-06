@@ -106,7 +106,12 @@ export function HeldThreads() {
   const held = useHeldThreads({ q, status: status || undefined });
   const pages = held.data?.pages ?? [];
   const first = pages[0];
-  const rows = pages.flatMap((page) => page.data);
+  // A thread that resolves between two pages moves, so one key can arrive twice.
+  const rows = [
+    ...new Map(
+      pages.flatMap((page) => page.data).map((row) => [row.thread_key, row]),
+    ).values(),
+  ];
   return (
     <div className="form-stack">
       {first?.counts && <HeldThreadNotices list={first} />}

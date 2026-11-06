@@ -13801,7 +13801,7 @@ paths:
         - name: contact_id
           in: query
           schema: {type: string, format: uuid}
-          description: Only the threads with this contact. A contact you may not read answers 404.
+          description: Only the threads with this contact. A contact you may not read, or one that is archived, answers 404.
       responses:
         '200':
           description: The caller's held threads, pending first.

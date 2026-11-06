@@ -69051,7 +69051,7 @@ type ListHeldThreadsParams struct {
 	Q      *string                      `form:"q,omitempty" json:"q,omitempty"`
 	Status *ListHeldThreadsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
-	// ContactId Only the threads with this contact. A contact you may not read answers 404.
+	// ContactId Only the threads with this contact. A contact you may not read, or one that is archived, answers 404.
 	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
 }
 

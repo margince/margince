@@ -11031,7 +11031,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "heldThreads.statusAll": "Mọi trạng thái",
   "heldThreads.noMatch": "Không có chuỗi thư nào khớp.",
   "heldThreads.showMore": "Xem thêm",
-  "heldThreads.count.pending": "đang chờ kết quả",
+  "heldThreads.count.pending": "đang chờ phân loại",
   "heldThreads.count.unsure": "chưa rõ",
   "heldThreads.count.held": "đang giữ lại",
   "heldThreads.count.heldByOwner": "do bạn giữ lại",

@@ -12090,7 +12090,8 @@ export interface paths {
          *     A page at a time, pending first and then newest. `q` matches the opening message's subject
          *     and a party's address or name, within what the reader may read. A thread whose message
          *     was erased is found by the addresses its hold kept, less any contact erased since. `counts`
-         *     counts the whole list whatever a page narrows to.
+         *     counts the whole list whatever a page narrows to. The order is fixed, so this list takes
+         *     no `sort`.
          */
         get: operations["listHeldThreads"];
         put?: never;
@@ -78225,7 +78226,7 @@ export interface operations {
                 /** @description Matches the subject, and a party's address or name. */
                 q?: string;
                 status?: "pending" | "unsure" | "held" | "held_by_owner";
-                /** @description Only the threads with this contact. A contact you may not read answers 404. */
+                /** @description Only the threads with this contact. A contact you may not read, or one that is archived, answers 404. */
                 contact_id?: string;
             };
             header?: never;

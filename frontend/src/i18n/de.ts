@@ -11325,7 +11325,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "heldThreads.statusAll": "Jeder Status",
   "heldThreads.noMatch": "Kein zurückgehaltener Thread passt.",
   "heldThreads.showMore": "Mehr anzeigen",
-  "heldThreads.count.pending": "warten auf eine Entscheidung",
+  "heldThreads.count.pending": "zur Einstufung ausstehend",
   "heldThreads.count.unsure": "unklar",
   "heldThreads.count.held": "zurückgehalten",
   "heldThreads.count.heldByOwner": "von dir zurückgehalten",

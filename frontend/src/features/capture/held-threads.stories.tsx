@@ -113,12 +113,33 @@ const MIXED: HeldThread[] = [
   },
 ];
 
-function story(rows: HeldThread[], over: Partial<HeldThreadList> = {}) {
+const FURTHER: HeldThread = {
+  thread_key: "t-5",
+  status: "held",
+  pending: false,
+  attempts: 1,
+  has_message: true,
+  subject: "On a further page",
+  kind: "personal",
+};
+
+function story(
+  rows: HeldThread[],
+  over: Partial<HeldThreadList> = {},
+  further: HeldThread[] = [],
+) {
   return () => {
+    let asked = 0;
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /capture/held-threads": () =>
-        jsonResponse(heldThreadList(rows, over)),
+      "GET /capture/held-threads": () => {
+        asked += 1;
+        return jsonResponse(
+          asked > 1 && further.length > 0
+            ? heldThreadList(further)
+            : heldThreadList(rows, over),
+        );
+      },
       "GET /capture/senders": () => jsonResponse({ data: [] }),
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: [] }),
@@ -173,19 +194,31 @@ export const Mixed: Story = {
 // A mailbox holding more than a page: the counts are the whole list's, and
 // the rest arrives behind "Show more".
 export const ALongList: Story = {
-  render: story(MIXED, {
-    page: { next_cursor: "page-2", has_more: true },
-    counts: {
-      pending: 212,
-      unsure: 18,
-      held: 940,
-      held_by_owner: 3,
-      stalled: 0,
+  render: story(
+    MIXED,
+    {
+      page: { next_cursor: "page-2", has_more: true },
+      counts: {
+        pending: 212,
+        unsure: 18,
+        held: 940,
+        held_by_owner: 3,
+        stalled: 1,
+      },
     },
-  }),
+    [FURTHER],
+  ),
   play: async ({ canvasElement }) => {
     const drawer = await openHeld(canvasElement);
-    await within(drawer).findByRole("button", { name: "Show more" });
+    await userEvent.click(
+      await within(drawer).findByRole("button", { name: "Show more" }),
+    );
+    await within(drawer).findByText("On a further page");
+    await waitFor(async () => {
+      await expect(
+        within(drawer).queryByRole("button", { name: "Show more" }),
+      ).toBeNull();
+    });
   },
 };
 
