@@ -37,13 +37,13 @@ package gates
 // sentence that could be wrong.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -119,7 +119,7 @@ type summarisedOperation struct {
 // forgot would be a place the rule silently stopped applying.
 func summarisedOperations(t *testing.T) map[string]summarisedOperation {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

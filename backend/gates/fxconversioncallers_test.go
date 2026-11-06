@@ -69,7 +69,7 @@ func TestOnlyOnePlaceMultipliesAnAmountByAStoredRate(t *testing.T) {
 	scanned := 0
 
 	for _, root := range []string{"internal", "cmd", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}

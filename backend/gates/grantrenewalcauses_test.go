@@ -28,10 +28,10 @@ package gates
 // tree nobody had regenerated yet.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,7 +50,7 @@ func TestEveryRenewalCauseReachesTheCardThatAsksForIt(t *testing.T) {
 		t.Fatalf("found %d credential field(s) on MyAgentGrant and expects at least 2 — either the schema lost one "+
 			"or this reader has stopped matching, and it cannot tell the difference: %v", len(causes), causes)
 	}
-	source, err := os.ReadFile(grantRenewalCard)
+	source, err := gatekit.ReadFile(grantRenewalCard)
 	if err != nil {
 		t.Fatalf("reading the settings card: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestEveryRenewalCauseReachesTheCardThatAsksForIt(t *testing.T) {
 // no longer reading.
 func credentialFieldsOfMyAgentGrant(t *testing.T) []string {
 	t.Helper()
-	document, err := os.ReadFile(grantRenewalContract)
+	document, err := gatekit.ReadFile(grantRenewalContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

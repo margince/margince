@@ -13,10 +13,10 @@ package gates
 // contract fails here before a single line of handler code exists.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,7 +27,7 @@ import (
 // of map lookups.
 func loadContract(t *testing.T) map[string]any {
 	t.Helper()
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}

@@ -36,12 +36,12 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -147,7 +147,7 @@ func privilegedTriggersOf(wf triggeredWorkflow) []string {
 
 func readTriggeredWorkflow(t *testing.T, path string) triggeredWorkflow {
 	t.Helper()
-	raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
+	raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

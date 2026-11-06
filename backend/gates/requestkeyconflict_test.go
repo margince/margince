@@ -22,7 +22,6 @@ package gates
 // clause's shape can see it, only a check that asks why a keyed insert has none.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -55,7 +54,7 @@ func tablesKeyedByRequest(t *testing.T) map[string]requestKeyedTable {
 		t.Fatalf("listing the migrations: %v", err)
 	}
 	for _, path := range migrations {
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

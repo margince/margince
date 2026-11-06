@@ -14,10 +14,10 @@ package gates
 // directly or through allOf.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -77,7 +77,7 @@ func draftRoutes(doc draftRouteSpec) (all, unsteered []string) {
 
 func readDraftRouteContract(t *testing.T) draftRouteSpec {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

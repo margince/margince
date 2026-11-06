@@ -27,12 +27,12 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -123,7 +123,7 @@ func contractDocuments(t *testing.T) []operationDocument {
 
 	out := make([]operationDocument, 0, len(paths))
 	for _, path := range paths {
-		raw, err := os.ReadFile(path) //nolint:gosec // a path this test derived from the tree it censuses
+		raw, err := gatekit.ReadFile(path) //nolint:gosec // a path this test derived from the tree it censuses
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

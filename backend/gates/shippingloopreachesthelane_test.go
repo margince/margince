@@ -11,12 +11,12 @@ package gates
 // one link from a backend diff to the lane, read from the file that holds it.
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,7 +43,7 @@ type scopedWorkflow struct {
 
 func TestEveryBackendPullRequestRunsTheIntegrationLane(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
+	raw, err := gatekit.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
 	if err != nil {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}

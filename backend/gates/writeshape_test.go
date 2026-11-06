@@ -19,7 +19,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -344,7 +343,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 	emissionPathsByDir := map[string]map[string]bool{}
 	fset := gatekit.SourceFileSet()
 	for _, root := range []string{"internal/modules", "internal/compose", settingsStoreDir} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err
@@ -411,7 +410,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 func emissionBearingFunctions(fset *token.FileSet, dir string) (map[string]bool, error) {
 	emits := map[string]bool{}
 	calls := map[string][]string{}
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,6 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -225,7 +224,7 @@ func TestEveryActivityTimeOnTheWireCarriesItsPrecision(t *testing.T) {
 	root := gatekit.ModuleRoot(t)
 	seen, precise := 0, 0
 	for _, spec := range precisionContracts {
-		raw, err := os.ReadFile(filepath.Join(root, spec)) // #nosec G304 -- a contract of this module
+		raw, err := gatekit.ReadFile(filepath.Join(root, spec)) // #nosec G304 -- a contract of this module
 		if err != nil {
 			t.Fatal(err)
 		}

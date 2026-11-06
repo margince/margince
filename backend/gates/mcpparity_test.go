@@ -26,6 +26,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -229,7 +230,7 @@ var parityContractOperationID = regexp.MustCompile(`(?m)^\s+operationId:`)
 // readParityContract decodes each operation by its method node, as gen-agentpolicy does.
 func readParityContract(t *testing.T) parityContract {
 	t.Helper()
-	raw, err := os.ReadFile(contractDocument)
+	raw, err := gatekit.ReadFile(contractDocument)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractDocument, err)
 	}
@@ -328,7 +329,7 @@ func parityStateOf(op parityContractOp) string {
 // runs the real handler, so a refusal on any action of a verb stands.
 func measuredRep(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile(toolRolesJSON)
+	raw, err := gatekit.ReadFile(toolRolesJSON)
 	if err != nil {
 		t.Fatalf("reading %s: %v", toolRolesJSON, err)
 	}
@@ -679,7 +680,7 @@ func syncMCPParity(t *testing.T, path string, want []byte) {
 		}
 		return
 	}
-	got, err := os.ReadFile(path)
+	got, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v\nRegenerate with: %s", path, err, mcpParityCommand)
 	}

@@ -6,10 +6,10 @@
 package gates
 
 import (
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,7 +27,7 @@ var modelVerbsOffEnrich = map[string]struct{ scope, file, proof string }{
 // A verb that always waits on a model on another scope spends budget nobody lent it.
 func TestAnAgentVerbThatAlwaysCallsAModelSpendsEnrich(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(modelRouteContract)
+	raw, err := gatekit.ReadFile(modelRouteContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestAnAgentVerbThatAlwaysCallsAModelSpendsEnrich(t *testing.T) {
 				t.Errorf("%s spends %v, and its reason here holds only for scope %s", op, tool["scope"], named.scope)
 				continue
 			}
-			source, err := os.ReadFile(named.file)
+			source, err := gatekit.ReadFile(named.file)
 			if err != nil {
 				t.Errorf("%s: reading why it spends no enrich: %v", op, err)
 				continue

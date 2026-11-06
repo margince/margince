@@ -15,17 +15,17 @@ package gates
 // rung, and the reader acts on a promise the product stopped keeping.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"gopkg.in/yaml.v3"
 )
 
 func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join("api", "ai-tasks.yaml"))
+	raw, err := gatekit.ReadFile(filepath.Join("api", "ai-tasks.yaml"))
 	if err != nil {
 		t.Fatalf("reading the task contract: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 	if len(contract.Tasks) == 0 {
 		t.Fatal("the contract declares no tasks — this gate would then pass over nothing")
 	}
-	page, err := os.ReadFile(filepath.Join("..", "docs", "reference", "ai-egress.md"))
+	page, err := gatekit.ReadFile(filepath.Join("..", "docs", "reference", "ai-egress.md"))
 	if err != nil {
 		t.Fatalf("reading the egress page: %v; regenerate it with make gen", err)
 	}

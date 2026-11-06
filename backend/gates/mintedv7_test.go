@@ -26,7 +26,6 @@ package gates
 // value that is never a key. The cast is the distinction the rule turns on.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -105,7 +104,7 @@ func TestEveryMintedUUIDIsAV7(t *testing.T) {
 			"smaller tree than the one this gate is about", len(paths), mintedV7FileFloor)
 	}
 	for _, path := range paths {
-		body, readErr := os.ReadFile(path) // #nosec G304 -- a repo-relative path from the walk above
+		body, readErr := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative path from the walk above
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}

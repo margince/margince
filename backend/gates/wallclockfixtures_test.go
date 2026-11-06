@@ -179,7 +179,7 @@ func countWallClockReads(t *testing.T) map[string]int {
 
 	counted := map[string]int{}
 	// TestMain has left the working directory at the module root.
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}
@@ -223,7 +223,7 @@ func countWallClockReads(t *testing.T) map[string]int {
 // under the integration tag and under no tag at all, so no shipped binary
 // links it.
 func builtOnlyForIntegration(path string) (bool, error) {
-	src, err := os.ReadFile(path)
+	src, err := gatekit.ReadFile(path)
 	if err != nil {
 		return false, err
 	}
@@ -353,7 +353,7 @@ func timePackageNames(file *ast.File) (names map[string]bool, dotted bool) {
 func readLedger(t *testing.T) map[string]int {
 	t.Helper()
 
-	text, err := os.ReadFile(ledgerPath)
+	text, err := gatekit.ReadFile(ledgerPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", ledgerPath, err)
 	}

@@ -24,11 +24,11 @@ package gates
 // cannot agree with a stale copy of the rule it is checking.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 )
 
@@ -50,7 +50,7 @@ var tsIdleComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheDealBoardMeasuresIdleTheWayTheServerDoes(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendIdleBase)
+	source, err := gatekit.ReadFile(frontendIdleBase)
 	if err != nil {
 		t.Fatalf("reading the frontend idle-base helper: %v", err)
 	}

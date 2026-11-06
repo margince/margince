@@ -94,7 +94,7 @@ func (p *minorUnitSources) load(dir string) []*ast.File {
 	if files, seen := p.files[dir]; seen {
 		return files
 	}
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		p.errs = append(p.errs, err)
 	}
@@ -467,7 +467,7 @@ func promptMinorUnitFindings(t *testing.T, moduleRoot string, parse func(string)
 	walk := &promptWalk{packages: packages, findings: map[string]bool{}}
 	rootNames := map[string]bool{}
 	var dirs []string
-	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err == nil && entry.IsDir() {
 			dirs = append(dirs, path)
 		}

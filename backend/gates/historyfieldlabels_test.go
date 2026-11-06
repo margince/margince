@@ -43,7 +43,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -494,7 +493,7 @@ var tsLabelEntry = regexp.MustCompile(`\[\s*["']([a-z0-9_]+)["']\s*,`)
 // historyLabelMaps reads both label maps out of the screen module.
 func historyLabelMaps(t *testing.T) (contract, synthetic map[string]bool) {
 	t.Helper()
-	source, err := os.ReadFile(historyLabelSource)
+	source, err := gatekit.ReadFile(historyLabelSource)
 	if err != nil {
 		t.Fatalf("reading the history label maps: %v", err)
 	}

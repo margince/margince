@@ -66,7 +66,7 @@ func TestEveryMultipartParseRefusesBeforeItReads(t *testing.T) {
 	t.Parallel()
 	parses := 0
 	waived := map[string]bool{}
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

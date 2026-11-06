@@ -27,7 +27,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -85,7 +84,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 	var findings []string
 	judged, owned := 0, 0
 	for _, root := range []string{".", "../extensions", "../fixtures"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -102,7 +101,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 			if filepath.Base(path) == "domainclaimprobe_test.go" {
 				return nil
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
 			if readErr != nil {
 				return readErr
 			}
