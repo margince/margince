@@ -1286,6 +1286,7 @@ export const en = {
   "reporting.objective": "Primary objective",
   "reporting.targetValue": "Target",
   "reporting.targetHint": "Leave empty for tracking only.",
+  "reporting.initiativeOwner": "Owner",
   "reporting.deadline": "Deadline",
   "reporting.setup.suggestReport": "Suggest filters and charts",
   "reporting.setup.suggestInitiative": "Suggest the goal",
@@ -1332,6 +1333,7 @@ export const en = {
   "reporting.addRecord": "Add",
   "reporting.searchRecords": "Search records",
   "reporting.noMatchingRecords": "No matching records",
+  "reporting.typeToFindRecord": "Type a name to find one",
   "reporting.pickExplains":
     "Picking a deal does not enroll every contact at its company. A lead keeps its promotion history.",
   "reporting.memberCounts":
@@ -2659,6 +2661,7 @@ export const en = {
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
+  "history.field.product_id": "Product",
   "history.field.about_deal": "Deal it was about",
   "history.field.qualifying_event": "Qualifying event",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
@@ -5561,6 +5564,12 @@ export const en = {
   "lead.rail.deal.empty": "No deal yet. Qualifying this lead can open one.",
   "lead.rail.project.title": "Project",
   "lead.rail.project.empty": "No project yet.",
+  "lead.product": "Product",
+  "lead.product.attach": "Name the product",
+  "lead.product.change": "Change product",
+  "lead.product.clear": "Clear the product",
+  "lead.product.search": "Search products",
+  "lead.product.loading": "Reading the product…",
   "lead.rail.project.attach": "Attach project",
   "lead.rail.project.change": "Change project",
   "lead.terminalReadOnly": "This lead is closed and cannot be changed.",
@@ -16309,6 +16318,11 @@ export const en = {
     "The https address of your privacy policy. The notice links to it.",
   "webForms.field.privacyNoticeUrlPlaceholder":
     "https://www.example.com/privacy",
+  "webForms.field.product": "Product",
+  "webForms.field.productHint":
+    "Every new lead this form captures asks about this product, and product reports count it there. A lead that already exists keeps its own product. Leave it empty when the form is not about one product.",
+  "webForms.field.productClear": "Capture leads with no product",
+  "webForms.field.productLoading": "Reading the product…",
   "webForms.field.owner": "Owner of new leads",
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",
@@ -17923,7 +17937,6 @@ export const en = {
   "filters.field.classification": "Classification",
   "filters.field.company_country": "Company country",
   "filters.field.company_industry": "Company industry",
-  "filters.field.product_id": "Product",
   "filters.field.company_lifecycle": "Company lifecycle",
   "filters.field.company_size_band": "Employees",
   "filters.field.country": "Country code",

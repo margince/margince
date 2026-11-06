@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { useOwnerPicker } from "../../components/recordowners";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { Field, Textarea, TextInput } from "../../design-system/field";
 import { Select } from "../../design-system/select";
@@ -35,6 +36,9 @@ export type Goal = Readonly<{
   target: string;
   deadline: string;
   includeFuture: boolean;
+  // Who owns the initiative. Empty names nobody, and the server makes the
+  // caller its owner.
+  ownerId: string;
 }>;
 
 export type Rule = Readonly<{
@@ -69,6 +73,7 @@ export function goalOf(initiative?: SalesInitiative): Goal {
       initiative?.target_value == null ? "" : String(initiative.target_value),
     deadline: initiative?.deadline ?? "",
     includeFuture: initiative?.include_future ?? true,
+    ownerId: initiative?.owner_id ?? "",
   };
 }
 
@@ -97,6 +102,7 @@ export function bodyOf(goal: Goal, rule: Rule): Input {
     include_future: goal.includeFuture,
     deal_rule: predicateOf(rule, "deal") ?? {},
     lead_rule: predicateOf(rule, "lead") ?? {},
+    ...(goal.ownerId ? { owner_id: goal.ownerId } : {}),
   };
 }
 
@@ -113,6 +119,7 @@ export function GoalFields({
 }>) {
   const t = useT();
   const catalog = useReportingCatalog();
+  const owner = useOwnerPicker(goal.ownerId || null);
   const metricName = useMetricNames();
   const offered = OBJECTIVES.filter((id) =>
     catalog.data?.metrics.some((metric) => metric.id === id),
@@ -194,6 +201,16 @@ export function GoalFields({
             onChange={(event) =>
               onChange({ ...goal, deadline: event.target.value })
             }
+          />
+        )}
+      </Field>
+      <Field label={t("reporting.initiativeOwner")} hint={owner.hint}>
+        {(field) => (
+          <Select
+            {...field}
+            value={goal.ownerId || owner.me}
+            options={owner.owners}
+            onChange={(ownerId) => onChange({ ...goal, ownerId })}
           />
         )}
       </Field>

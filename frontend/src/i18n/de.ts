@@ -1338,6 +1338,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.objective": "Hauptziel",
   "reporting.targetValue": "Zielwert",
   "reporting.targetHint": "Leer lassen für reine Beobachtung.",
+  "reporting.initiativeOwner": "Verantwortlich",
   "reporting.deadline": "Frist",
   "reporting.setup.suggestReport": "Filter und Diagramme vorschlagen",
   "reporting.setup.suggestInitiative": "Ziel vorschlagen",
@@ -1385,6 +1386,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.addRecord": "Hinzufügen",
   "reporting.searchRecords": "Datensätze suchen",
   "reporting.noMatchingRecords": "Keine passenden Datensätze",
+  "reporting.typeToFindRecord": "Gib einen Namen ein, um ihn zu finden",
   "reporting.pickExplains":
     "Ein gewählter Deal nimmt nicht jeden Kontakt seines Unternehmens auf. Ein Lead behält seine Umwandlungshistorie.",
   "reporting.memberCounts":
@@ -2767,6 +2769,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_attribution": "Partnerzuordnung",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
+  "history.field.product_id": "Produkt",
   "history.field.about_deal": "Betreffender Deal",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
   "history.field.qualifying_event_retracted":
@@ -5613,6 +5616,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch kein Deal. Beim Qualifizieren dieses Leads kann einer entstehen.",
   "lead.rail.project.title": "Projekt",
   "lead.rail.project.empty": "Noch kein Projekt.",
+  "lead.product": "Produkt",
+  "lead.product.attach": "Produkt angeben",
+  "lead.product.change": "Produkt ändern",
+  "lead.product.clear": "Produkt entfernen",
+  "lead.product.search": "Produkte suchen",
+  "lead.product.loading": "Produkt wird geladen…",
   "lead.rail.project.attach": "Projekt verknüpfen",
   "lead.rail.project.change": "Projekt ändern",
   "lead.terminalReadOnly":
@@ -16424,6 +16433,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die https-Adresse deiner Datenschutzerklärung. Der Hinweis verlinkt sie.",
   "webForms.field.privacyNoticeUrlPlaceholder":
     "https://www.example.com/datenschutz",
+  "webForms.field.product": "Produkt",
+  "webForms.field.productHint":
+    "Jeder neue Lead aus diesem Formular fragt nach diesem Produkt, und Produktberichte zählen ihn dort. Ein bestehender Lead behält sein Produkt. Leer lassen, wenn das Formular nicht zu einem Produkt gehört.",
+  "webForms.field.productClear": "Leads ohne Produkt erfassen",
+  "webForms.field.productLoading": "Produkt wird geladen…",
   "webForms.field.owner": "Verantwortlich für neue Leads",
   "webForms.field.ownerHint":
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
@@ -18073,7 +18087,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.classification": "Klassifizierung",
   "filters.field.company_country": "Land des Unternehmens",
   "filters.field.company_industry": "Branche des Unternehmens",
-  "filters.field.product_id": "Produkt",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
   "filters.field.company_size_band": "Mitarbeitende",
   "filters.field.country": "Ländercode",

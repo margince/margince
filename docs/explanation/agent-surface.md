@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/agents/registry.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle backend/internal/platform/workarea backend/internal/compose/workareaseam.go -->
+<!-- describes: backend/internal/modules/agents/registry.go backend/internal/modules/agents/toollist.go backend/internal/modules/agents/inputrequired.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle backend/internal/platform/workarea backend/internal/compose/workareaseam.go -->
 # The agent surface & the model runtime
 
 How AI agents *act* inside Margince, and what *runs the model* behind them. The write path covers how
@@ -97,6 +97,28 @@ When the human rejects it, the run observes "plan again without it." **Grounding
 the run is marked as data to read, never as orders to follow (a guard against prompt injection). The
 runner reaches records only through the registry, so the gate decides read or write; the loop
 itself does not.
+
+## Who asks first
+
+Some acts cannot be taken back from the chat, such as a send, a merge or an archive. The contract marks
+their tool `ask_user_first`. Who acts on that mark depends on the surface.
+
+- **An MCP client (Surface A).** `DescribeForClient` (`internal/modules/agents/toollist.go`) adds a
+  line to the tool's description: get the user's yes before the call, unless they asked for it. The
+  server cannot check that the model asked. A change to many records also asks for its go-ahead in a
+  chat form, when the client can show one ([mcp-protocol.md](../reference/mcp-protocol.md)).
+- **The runner (Surface B).** No one is there to answer, so the run is never told to ask. Its tool list
+  carries each tool's own text, with no line from `DescribeForClient`. It calls `Registry.Invoke`
+  directly, and only the MCP server sets a call up for a form. So no form can reach a run, and a change
+  to many records goes ahead as it does for a client that cannot show one.
+
+Three things bound a run instead. Its passport holds its scopes, the work it may touch, and its user's
+grants and seat. Its catalog entry names its tools, and the tier decides the rest. A run acts on its
+user's passport, so a 🟡 verb runs at once, as it would for that user. A tool marked
+`WaitsEvenForItsUser`, such as `enrich`, still stages and pauses the run.
+
+`TestTheLoopAgentIsNeverToldToAskItsUser` (`internal/compose/agentaskfirst_test.go`) runs the runner
+over the registry with every tool that asks first, and fails if that line reaches the model.
 
 ## The model runtime
 
