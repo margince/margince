@@ -30,10 +30,11 @@ package gates
 // be a second copy of the recipes.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two readers. Go's is the original; the TypeScript one is the deliberate
@@ -74,7 +75,7 @@ func TestBothBenchHarnessesReadOneRecordingSwitch(t *testing.T) {
 	t.Parallel()
 	values := map[string]string{}
 	for _, path := range []string{goRecordReader, tsRecordReader} {
-		b, err := os.ReadFile(path) // #nosec G304 -- path is a compile-time literal
+		b, err := gatekit.ReadFile(path) // #nosec G304 -- path is a compile-time literal
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

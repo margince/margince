@@ -8,7 +8,6 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -36,7 +35,7 @@ var namesATreeReader = regexp.MustCompile(`\b(git|go)\b`)
 // so this gate exempts exactly the packages that never replay.
 func uncachedPackages(t *testing.T) map[string]bool {
 	t.Helper()
-	makefile, err := os.ReadFile(filepath.Join(repoRoot, "backend", "Makefile"))
+	makefile, err := gatekit.ReadFile(filepath.Join(repoRoot, "backend", "Makefile"))
 	if err != nil {
 		t.Fatalf("reading backend/Makefile for UNCACHED_TEST_PKGS: %v", err)
 	}

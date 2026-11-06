@@ -189,3 +189,14 @@
   flex-wrap: wrap;
   gap: var(--space-1);
 }
+
+/* The picture and its verbs keep the control column's right edge when a
+   refusal under them is wider; a phone row starts every control at the left. */
+.settings-picture {
+  align-items: flex-end;
+}
+@media (max-width: 640px) {
+  .settings-picture {
+    align-items: flex-start;
+  }
+}

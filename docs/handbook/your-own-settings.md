@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
@@ -52,17 +52,10 @@ Also called: email notifications, turn off emails, alerts, daily digest, browser
 
 ## Account
 
-The Account page in Settings has three panels. **Profile** holds who you are,
-your display and greeting names, and your email signature. **Security** holds your
-password and two-step sign-in, and **Sign out**. **Language and appearance**
-holds which language the product uses with you (English, Deutsch or Tiếng
-Việt), and how it looks.
-**Appearance** is here as well as in the account menu, where it is called
-**Theme**. Both change the same setting.
+The Account page in Settings has three panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Security** holds your password and two-step sign-in, and **Sign out**. **Language and appearance** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and how it looks.
+**Appearance** is here as well as in the account menu, where it is called **Theme**. Both change the same setting.
 
-Where your browser can add Margince to this device as an app, a fourth panel
-shows: **This device**. It offers **Install**, says how to add the app, or says
-**Installed**.
+Where your browser can add Margince to this device as an app, a fourth panel shows: **This device**. It offers **Install**, says how to add the app, or says **Installed**.
 
 ### How do I change my password?
 <!-- opens: settings/account -->
@@ -125,6 +118,13 @@ To change your display name in Margince, open Settings → **Account**, edit the
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
 It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
+
+### How do I change my profile picture?
+<!-- opens: settings/account -->
+To change your profile picture in Margince, open Settings → **Account** and choose **Upload picture** in the **Profile picture** row. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name.
+Also called: photo, avatar, profile photo.
+
+Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with. It updates at each sign-in, and each time you connect that same account for mail or calendar. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
 
 ### How do I add an email signature?
 <!-- opens: settings/account -->

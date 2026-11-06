@@ -38157,8 +38157,13 @@ type Company360NextStep struct {
 	DueHasTime      *bool               `json:"due_has_time,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
-	Overdue         bool                `json:"overdue"`
-	Subject         string              `json:"subject"`
+
+	// MayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+	// The contact page asks the same question under the same `claim_key`. Not yet is answered by
+	// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
+	Overdue   bool               `json:"overdue"`
+	Subject   string             `json:"subject"`
 
 	// Version The task's version, carried so the tick and the snooze beside this row can write with
 	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
@@ -41660,7 +41665,10 @@ type ContactGraphEdge struct {
 	Outbound90d *int       `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
-	Receipts       *[]ContactGraphReceipt         `json:"receipts,omitempty"`
+	Receipts *[]ContactGraphReceipt `json:"receipts,omitempty"`
+
+	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on.
+	Sent90d        *int                           `json:"sent_90d,omitempty" minimum:"0"`
 	StrengthBucket ContactGraphEdgeStrengthBucket `json:"strength_bucket"`
 
 	// To A node id.
@@ -41783,6 +41791,9 @@ type ContactGraphRouteEvidence struct {
 	Interactions90d int        `json:"interactions_90d"`
 	LastAt          *time.Time `json:"last_at,omitempty"`
 	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+
+	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on.
+	Sent90d *int `json:"sent_90d,omitempty" minimum:"0"`
 
 	// TwoWay Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
 	TwoWay bool `json:"two_way"`
@@ -60036,6 +60047,9 @@ type SeatCaptureReason string
 
 // SeatName A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
 type SeatName struct {
+	// AvatarUrl Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`.
+	AvatarUrl *string `json:"avatar_url,omitempty"`
+
 	// Departed True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out.
 	Departed    bool               `json:"departed"`
 	DisplayName string             `json:"display_name"`
@@ -64198,6 +64212,9 @@ type User struct {
 
 	// Assignable Whether the CALLER may name this member as an owner an automation runs as: an active human seat that can write, inside the caller's own write scope. An automation's owner picker is built on it. A record's owner picker reads `can_own_records` instead. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
 	Assignable *bool `json:"assignable,omitempty"`
+
+	// AvatarUrl Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does.
+	AvatarUrl *string `json:"avatar_url,omitempty"`
 
 	// CanOwnRecords Whether this member's seat may own records: an active human seat that can write. The answer is the same for every caller. A record's owner change asks this of the new owner. It also needs the caller to be allowed to change the record, unless the record has no owner and the caller is a human. Every record owner picker and a website form's owner of new leads read it. A form's new leads may also go to an invited colleague, so its picker offers fewer members than its write accepts. Present on `listUsers`; absent means not computed.
 	CanOwnRecords *bool `json:"can_own_records,omitempty"`
@@ -72700,6 +72717,11 @@ type GetMyAiActivityParams struct {
 	Kinds *[]AiActivityKind `form:"kinds,omitempty" json:"kinds,omitempty"`
 }
 
+// UploadMyAvatarMultipartBody defines parameters for UploadMyAvatar.
+type UploadMyAvatarMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // ImportLinkedInConnectionsMultipartBody defines parameters for ImportLinkedInConnections.
 type ImportLinkedInConnectionsMultipartBody struct {
 	// File LinkedIn `Connections.csv`.
@@ -74875,6 +74897,12 @@ type NameSeatsParams struct {
 	Id []openapi_types.UUID `form:"id" json:"id"`
 }
 
+// GetUserAvatarParams defines parameters for GetUserAvatar.
+type GetUserAvatarParams struct {
+	// V The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *string `form:"v,omitempty" json:"v,omitempty"`
+}
+
 // HandOverUserWorkParams defines parameters for HandOverUserWork.
 type HandOverUserWorkParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -76454,6 +76482,9 @@ type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 
 // UpdateApprovalPreferenceJSONRequestBody defines body for UpdateApprovalPreference for application/json ContentType.
 type UpdateApprovalPreferenceJSONRequestBody = ApprovalPreference
+
+// UploadMyAvatarMultipartRequestBody defines body for UploadMyAvatar for multipart/form-data ContentType.
+type UploadMyAvatarMultipartRequestBody UploadMyAvatarMultipartBody
 
 // SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
 type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
@@ -91610,6 +91641,12 @@ type ServerInterface interface {
 	// Mute or restore one kind in the caller's own queue.
 	// (PATCH /me/approval-preferences)
 	UpdateApprovalPreference(w http.ResponseWriter, r *http.Request)
+	// Take your own profile picture off for good.
+	// (DELETE /me/avatar)
+	DeleteMyAvatar(w http.ResponseWriter, r *http.Request)
+	// Upload your own profile picture.
+	// (POST /me/avatar)
+	UploadMyAvatar(w http.ResponseWriter, r *http.Request)
 	// What the product may send you about your day and your week.
 	// (GET /me/brief-delivery)
 	GetMyBriefDelivery(w http.ResponseWriter, r *http.Request)
@@ -92378,6 +92415,9 @@ type ServerInterface interface {
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
+	// Stream a colleague's profile picture.
+	// (GET /users/{id}/avatar)
+	GetUserAvatar(w http.ResponseWriter, r *http.Request, id Id, params GetUserAvatarParams)
 	// Deactivate a member and revoke their live access. Admin-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
@@ -96806,6 +96846,18 @@ func (_ Unimplemented) UpdateApprovalPreference(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take your own profile picture off for good.
+// (DELETE /me/avatar)
+func (_ Unimplemented) DeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Upload your own profile picture.
+// (POST /me/avatar)
+func (_ Unimplemented) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the product may send you about your day and your week.
 // (GET /me/brief-delivery)
 func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
@@ -98339,6 +98391,12 @@ func (_ Unimplemented) UpdateMember(w http.ResponseWriter, r *http.Request, id I
 // What this member sees and may do today, from their roles and teams.
 // (GET /users/{id}/access)
 func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream a colleague's profile picture.
+// (GET /users/{id}/avatar)
+func (_ Unimplemented) GetUserAvatar(w http.ResponseWriter, r *http.Request, id Id, params GetUserAvatarParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129242,6 +129300,46 @@ func (siw *ServerInterfaceWrapper) UpdateApprovalPreference(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteMyAvatar operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMyAvatar(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadMyAvatar operation middleware
+func (siw *ServerInterfaceWrapper) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadMyAvatar(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyBriefDelivery operation middleware
 func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 
@@ -140437,6 +140535,54 @@ func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetUserAvatar operation middleware
+func (siw *ServerInterfaceWrapper) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetUserAvatarParams
+
+	// ------------- Optional query parameter "v" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserAvatar(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeactivateUser operation middleware
 func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 
@@ -146134,6 +146280,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/me/approval-preferences", wrapper.UpdateApprovalPreference)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/avatar", wrapper.DeleteMyAvatar)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/avatar", wrapper.UploadMyAvatar)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/brief-delivery", wrapper.GetMyBriefDelivery)
 	})
 	r.Group(func(r chi.Router) {
@@ -146900,6 +147052,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}/avatar", wrapper.GetUserAvatar)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/deactivate", wrapper.DeactivateUser)

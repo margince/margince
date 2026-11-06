@@ -11,11 +11,11 @@ package gates
 // is a sentence no run can reach. Both directions fail here.
 
 import (
-	"os"
 	"regexp"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendRunReasons = "../frontend/src/lib/automationrun.ts"
@@ -26,7 +26,7 @@ var tsRunReasonEntry = regexp.MustCompile(`["']?([a-z_]+)["']?:\s*"auto\.runs\.r
 
 func TestTheFrontendRunReasonWordsMatchTheServerCodes(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendRunReasons)
+	source, err := gatekit.ReadFile(frontendRunReasons)
 	if err != nil {
 		t.Fatalf("reading the frontend run reason table: %v", err)
 	}

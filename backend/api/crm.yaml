@@ -17762,6 +17762,11 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
     delete:
       tags: [Companies]
       operationId: deleteAnchorCompanyLogo
@@ -17848,6 +17853,11 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -18066,6 +18076,11 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -26923,6 +26938,65 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /users/{id}/avatar:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: getUserAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Stream a colleague's profile picture.
+      description: |
+        The bytes behind `User.avatar_url` and `SeatName.avatar_url`: always `image/png`,
+        this server's own re-encode, whatever the source was. Any member may read any
+        colleague's picture, as any member may read the roster.
+
+        404 when the seat has no picture, is archived, or does not exist; a client draws
+        initials for all three alike. 501 when the deployment has no object store configured.
+
+        When `v` names the revision served, the answer may be cached for a day without
+        asking again. Any other `v`, or none, is answered with the current picture under
+        `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
+        `ETag` answers 304.
+      parameters:
+        - name: v
+          in: query
+          required: false
+          description: The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
+          schema: { type: string, maxLength: 64 }
+      responses:
+        '200':
+          description: The picture's bytes.
+          headers:
+            ETag:
+              description: The revision served, the same token `avatar_url` carries, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: '`private, max-age=86400, immutable` when `v` names this revision, else `private, no-cache`.'
+              schema: { type: string }
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '304':
+          description: The client already holds this revision.
+          headers:
+            ETag:
+              description: The revision the client holds, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: The freshness a 200 for the same request would carry.
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no picture can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /users/{id}/role:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -33530,6 +33604,88 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /me/avatar:
+    post:
+      tags: [Identity]
+      operationId: uploadMyAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Upload your own profile picture.
+      description: |
+        Always the CALLER's own picture, never anybody else's: there is no id to pass.
+        Colleagues see it beside your name wherever the app draws you.
+
+        Multipart upload with one `file` part of at most 5,000,000 bytes. The request may
+        be 16 KiB larger, for the form's own boundary lines and part headers; a larger
+        request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
+        GIF included, is refused as 415. The image is cropped to a centred square and
+        re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
+        is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
+        many pictures at once; the same file may be sent again.
+
+        Which picture a seat shows: an uploaded one, else the picture of the Google
+        account the member signs in with, else no picture and the client draws initials.
+        An upload replaces either, and is the only way back to a picture after a delete.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: The caller's seat, carrying the `avatar_url` the upload now answers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: The upload is not a PNG, JPEG or WebP image this server can read.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '501':
+          description: The deployment has no object store configured, so no picture can be stored or served.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [Identity]
+      operationId: deleteMyAvatar
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Take your own profile picture off for good.
+      description: |
+        The seat shows initials from now on, whether the picture was uploaded or came from
+        the Google account. A later Google sign-in does not bring the Google picture back;
+        only a new upload does.
+
+        Removing a picture the seat does not have is not an error: the seat still shows
+        initials from then on.
+      responses:
+        '200':
+          description: The caller's seat, with no `avatar_url`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /me/ai-activity:
     get:
@@ -46672,6 +46828,13 @@ components:
             instead of printing an id.
         linked_deal_id: { type: [string, 'null'], format: uuid }
         linked_contact_id: { type: [string, 'null'], format: uuid }
+        may_be_done:
+          $ref: '#/components/schemas/WorklistMayBeDone'
+          description: |
+            Present on a promise task when we wrote to one of its recipients on its thread after the
+            promise. The task then asks whether that mail kept it, as the Worklist does, with the
+            same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
+            agent, which answers no such question.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -48562,6 +48725,7 @@ components:
         interactions_90d: { type: integer }
         inbound_90d: { type: integer }
         outbound_90d: { type: integer }
+        sent_90d: { type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on." }
         last_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.' }
         receipts:
           type: array
@@ -48684,6 +48848,7 @@ components:
         interactions_90d: { type: integer }
         inbound_90d: { type: integer }
         outbound_90d: { type: integer }
+        sent_90d: { type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on." }
         two_way:
           type: boolean
           description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
@@ -61082,6 +61247,12 @@ components:
         id: { type: string, format: uuid }
         email: { type: string, format: email }
         display_name: { type: string }
+        avatar_url:
+          type: string
+          description: >
+            Where the client fetches this seat's profile picture, absent when
+            the seat has none and the client draws initials. The URL changes whenever the
+            picture does.
         greeting_name:
           type: [string, 'null']
           maxLength: 100
@@ -61249,6 +61420,9 @@ components:
       properties:
         id: { type: string, format: uuid }
         display_name: { type: string }
+        avatar_url:
+          type: string
+          description: Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`.
         departed:
           type: boolean
           description: >

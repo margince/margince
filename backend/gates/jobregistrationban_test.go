@@ -32,7 +32,6 @@ import (
 	"errors"
 	"go/ast"
 	"go/parser"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -220,7 +219,7 @@ type golangciConfig struct {
 func readGolangciConfig(t *testing.T, name string) golangciConfig {
 	t.Helper()
 	path := filepath.Join(moduleDir(t, backendModulePath), name)
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

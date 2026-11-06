@@ -13,13 +13,13 @@ package gates
 import (
 	"encoding/json"
 	"maps"
-	"os"
 	"slices"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/platform/workarea"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const workAreaTable = "internal/platform/workarea/workareas.json"
@@ -129,7 +129,7 @@ func passportAreaOf(info parityGroupInfo) string {
 // choosable areas, in the table's order, and nothing else.
 func TestTheContractOffersTheChoosableWorkAreas(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(contractDocument)
+	raw, err := gatekit.ReadFile(contractDocument)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractDocument, err)
 	}

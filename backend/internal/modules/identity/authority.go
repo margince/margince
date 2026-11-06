@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -221,7 +220,7 @@ func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids
 	if err := lockAuthorizationShared(ctx, tx); err != nil {
 		return authz.RBAC{}, "", err
 	}
-	if _, err := storekit.LockRow(ctx, tx, "app_user", humanID, storekit.LiveOnly); err != nil {
+	if err := holdMemberRow(ctx, tx, humanID); err != nil {
 		return authz.RBAC{}, "", err
 	}
 	return EffectiveAuthorityTx(ctx, tx, humanID)

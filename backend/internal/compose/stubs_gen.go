@@ -2807,6 +2807,14 @@ func (stubs) UpdateApprovalPreference(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "UpdateApprovalPreference")
 }
 
+func (stubs) DeleteMyAvatar(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteMyAvatar")
+}
+
+func (stubs) UploadMyAvatar(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UploadMyAvatar")
+}
+
 func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetMyBriefDelivery")
 }
@@ -3829,6 +3837,10 @@ func (stubs) UpdateMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetUserAccess")
+}
+
+func (stubs) GetUserAvatar(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetUserAvatarParams) {
+	httperr.NotImplemented(w, r, "GetUserAvatar")
 }
 
 func (stubs) DeactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

@@ -48,6 +48,7 @@ type Server struct {
 	reportingExportHandlers
 	reportingReaderPreviewHandlers
 	authHandlers
+	avatarHandlers
 	contactsHandlers
 	dealsHandlers
 	projectsHandlers
@@ -297,9 +298,8 @@ type Server struct {
 	// zero — which would refuse every upload.
 	uploadLimits UploadLimits
 
-	// blob is the object store, injected by WithBlobstore. When configured
-	// it feeds a /readyz probe and backs the attachment handlers; nil means
-	// a role that stores no objects.
+	// blob is the object store WithBlobstore injects, behind /readyz and every
+	// stored file. Nil means a role that stores no objects.
 	blob blobstore.Store
 	// threadAudience applies an owner own decision about a thread they imported.
 	threadAudience *ThreadAudienceSetter

@@ -54,7 +54,7 @@ func TestEveryPassportlessAgentPrincipalIsRatified(t *testing.T) {
 	// mint in the package that defines it would be the one place nobody
 	// thought to look.
 	for _, root := range []string{"internal/compose", "internal/modules", "internal/platform", "internal/shared", "cmd"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 				return err

@@ -11,13 +11,13 @@ package gates
 // TypeScript is read with a regexp, the trade frontendminorunits_test.go makes.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/workarea"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const workAreaCatalog = "../frontend/src/i18n/en.ts"
@@ -35,7 +35,7 @@ func enMessage(t *testing.T, catalog, key string) string {
 
 func TestThePassportPageSpeaksOfWorkAreasAsTheServerDoes(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(workAreaCatalog)
+	raw, err := gatekit.ReadFile(workAreaCatalog)
 	if err != nil {
 		t.Fatalf("reading %s: %v", workAreaCatalog, err)
 	}

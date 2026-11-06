@@ -12985,6 +12985,11 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
     delete:
       tags: [Companies]
       operationId: deleteAnchorCompanyLogo
@@ -13059,6 +13064,11 @@ paths:
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -13268,6 +13278,11 @@ paths:
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '503':
+          description: Every picture decode stayed busy; send the same file again after `Retry-After`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -31785,6 +31800,13 @@ components:
             instead of printing an id.
         linked_deal_id: {type: [string, 'null'], format: uuid}
         linked_contact_id: {type: [string, 'null'], format: uuid}
+        may_be_done:
+          $ref: '#/components/schemas/WorklistMayBeDone'
+          description: |-
+            Present on a promise task when we wrote to one of its recipients on its thread after the
+            promise. The task then asks whether that mail kept it, as the Worklist does, with the
+            same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
+            agent, which answers no such question.
         version:
           allOf: [{$ref: '#/components/schemas/RowVersion'}]
           description: |-
@@ -33267,6 +33289,7 @@ components:
         interactions_90d: {type: integer}
         inbound_90d: {type: integer}
         outbound_90d: {type: integer}
+        sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on."}
         last_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.'}
         receipts:
           type: array
@@ -33364,6 +33387,7 @@ components:
         interactions_90d: {type: integer}
         inbound_90d: {type: integer}
         outbound_90d: {type: integer}
+        sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on."}
         two_way:
           type: boolean
           description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
@@ -43698,6 +43722,10 @@ components:
         id: {type: string, format: uuid}
         email: {type: string, format: email}
         display_name: {type: string}
+        avatar_url:
+          type: string
+          description: >-
+            Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does.
         greeting_name:
           type: [string, 'null']
           maxLength: 100
@@ -43791,6 +43819,9 @@ components:
       properties:
         id: {type: string, format: uuid}
         display_name: {type: string}
+        avatar_url:
+          type: string
+          description: Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`.
         departed:
           type: boolean
           description: >-

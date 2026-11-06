@@ -244,6 +244,8 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/identity:ChangePassword":                 "acts on the CALLER's own row and nobody else's: it reads the user id off the bound principal rather than taking one, so there is no other account it could reach and no object for a grant to narrow. What authorizes it is not the session but the CURRENT PASSWORD, verified inside the transaction — a stricter bar than any role, and the reason a stolen session cannot use it. A caller with no user behind it (agent seat, system principal) is refused outright",
 	"internal/modules/identity:MyDelivery":                     "reads the CALLER's own row and nobody else's: the user id comes off the bound principal rather than from a parameter, so there is no other account it could reach and no object for a grant to narrow — the same shape as SaveMyLocale below. It refuses every principal that is not a human seat, agents included, because what lands in a contact's inbox is theirs and an agent acting under their authority must not read it",
 	"internal/modules/identity:SaveMyDisplayName":              "writes the CALLER's own row and nobody else's, on the same terms as SaveMyLocale below: the id comes off the bound principal rather than from a parameter, so there is no other account it could reach and no object for a grant to narrow. It refuses every principal that is not a human seat, agents included, because an agent carrying its grantor's authority must not rename its grantor. The name is trimmed, bounded by the contract's own length, and written only to a LIVE member — a deactivated seat is refused, so a departed colleague cannot go on renaming themselves in the pickers their old records appear in",
+	"internal/modules/identity:SetMyAvatar":                    "writes the CALLER's own row and nobody else's, on the same terms as SaveMyTimezone: selfScoped takes the id off the principal and no parameter names an account, so it can set no other seat's picture. An agent is refused, because the face colleagues recognize a member by is that member's call. It writes only a LIVE member",
+	"internal/modules/identity:RemoveMyAvatar":                 "writes the CALLER's own row and nobody else's, on the same terms as SetMyAvatar above: selfScoped takes the id off the principal and no parameter names an account. Taking one's own picture off is that member's call, an agent is refused, and only a LIVE member is written",
 	"internal/modules/identity:SaveMyGreetingName":             "writes the CALLER's own row and nobody else's, on the same terms as SaveMyDisplayName above: the id comes off the bound principal rather than from a parameter, and every principal that is not a human seat is refused, agents included. The name is flattened to one line, bounded by the contract's own length, and written only to a LIVE member",
 	"internal/modules/identity:MyWorkingHours":                 "reads the CALLER's own row and nobody else's, on the same terms as MyDelivery above: the user id comes off the bound principal rather than from a parameter, so there is no other account it could reach. It answers when this contact is bookable and whether they chose it, which is a fact about their own week",
 	"internal/modules/identity:SaveMyTimezone":                 "writes the CALLER's own row and nobody else's, on the same terms as SaveMyWorkingHours: selfScoped takes the id off the principal and no parameter names an account. An agent acting under someone's authority is refused, because the zone a user reads in is that user's call",
@@ -643,7 +645,7 @@ func packageFunctionIndex(t *testing.T) map[string]gatePkg {
 	t.Helper()
 	pkgs := map[string]gatePkg{}
 	for _, root := range storeEntryPointScope.Roots {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err
@@ -793,7 +795,7 @@ func TestTheAuthDecisionVerbsStillDescribeThePackage(t *testing.T) {
 	t.Parallel()
 
 	decisions := 0
-	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
@@ -905,7 +907,7 @@ func returnsPermissionDenied(fn *ast.FuncDecl) bool {
 func authPackageDeclares(t *testing.T, name string) bool {
 	t.Helper()
 	declared := false
-	err := filepath.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(filepath.Join("internal", "platform", "auth"), func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}

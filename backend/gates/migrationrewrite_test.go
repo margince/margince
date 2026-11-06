@@ -8,7 +8,6 @@ package gates
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -216,7 +215,7 @@ func rewriteWaivers(body string) (map[string]rewriteWaiver, error) {
 
 func TestCoreMigrationsKeepLargeCorrectionsInDataTasks(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("migrationrewrites.txt")
+	raw, err := gatekit.ReadFile("migrationrewrites.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +247,7 @@ func migrationRewriteErrors(files []string, waivers map[string]rewriteWaiver) ([
 		if version <= migrationRewriteBaseline {
 			continue
 		}
-		raw, err := os.ReadFile(file)
+		raw, err := gatekit.ReadFile(file)
 		if err != nil {
 			return nil, err
 		}

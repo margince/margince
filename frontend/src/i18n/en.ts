@@ -2237,6 +2237,7 @@ export const en = {
   "trust.relayForColleague": "Sent by Margince for a colleague",
   "trust.relaySent": "Sent by Margince",
   "trust.relayFrom": "From {address}",
+  "systemJob.provider_picture": "Google profile picture",
   "systemJob.public_record_preview": "Public record preview",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
@@ -5928,8 +5929,8 @@ export const en = {
   "legalEntities.valueProposition": "Value proposition",
   "legalEntities.usp": "What sets it apart",
   "legalEntities.sectionLogo": "Logo",
-  "legalEntities.logoAdd": "Add a logo",
-  "legalEntities.logoReplace": "Replace the logo",
+  "legalEntities.logoAdd": "Upload logo",
+  "legalEntities.logoEdit": "Edit logo",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO or SVG. It is saved as soon as you choose it.",
   "legalEntities.logoEmpty": "Drop an image here or choose one",
@@ -14443,9 +14444,6 @@ export const en = {
     "Confirmed statements only. Website text never becomes instructions.",
   "settings.companyMarkWide": "Wide logo",
   "settings.companyMarkIcon": "Square icon",
-  "settings.companyMarkAdd": "Add",
-  "settings.companyMarkReplace": "Replace",
-  "settings.companyMarkRemove": "Remove",
   "settings.companyMarkUploadFailedWide": "Wide logo not uploaded",
   "settings.companyMarkRemoveFailedWide": "Wide logo not removed",
   "settings.companyMarkUploadFailedIcon": "Square icon not uploaded",
@@ -14457,12 +14455,13 @@ export const en = {
     "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
   "settings.companyMarkSvgText":
     "This SVG holds its words as text, which cannot be drawn. Convert the text to outlines in your design tool, or upload a PNG.",
-  "settings.companyMarkAddWide": "Add wide logo",
-  "settings.companyMarkReplaceWide": "Replace wide logo",
+  "settings.companyMarkUploadWide": "Upload wide logo",
   "settings.companyMarkRemoveWide": "Remove wide logo",
-  "settings.companyMarkAddIcon": "Add square icon",
-  "settings.companyMarkReplaceIcon": "Replace square icon",
+  "settings.companyMarkEditWide": "Edit wide logo",
+  "settings.companyMarkUploadIcon": "Upload square icon",
   "settings.companyMarkRemoveIcon": "Remove square icon",
+  "settings.companyMarkEditIcon": "Edit square icon",
+  "settings.imageEdit": "Edit",
   "settings.companyMarkEmpty": "Drop logo here, or choose a file",
   "settings.companyMarkIconEmpty": "Drop icon here, or choose a file",
   "settings.companyWebsite": "Public company website",
@@ -15408,6 +15407,24 @@ export const en = {
   "setup.reminder.progress": "Setup progress",
   // end polish: setup-popover
   "account.profileCard": "Profile",
+  "account.pictureLabel": "Profile picture",
+  "account.pictureHelp":
+    "PNG, JPEG or WebP up to 5 MB, shown to colleagues beside your name.",
+  "account.pictureEmpty": "Drop picture here, or choose a file",
+  "account.pictureAdd": "Upload picture",
+  "account.pictureRemove": "Remove picture",
+  "account.pictureEdit": "Edit profile picture",
+  "account.pictureSaved": "Picture saved",
+  "account.pictureRemoved": "Picture removed",
+  "account.pictureWrongType":
+    "Picture not uploaded. Use a PNG, JPEG or WebP file.",
+  "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",
+  "account.pictureNoStorage":
+    "This installation has no file storage for pictures. Contact your system administrator.",
+  "account.pictureUploadFailed":
+    "Picture not uploaded. Retry, or reload the page.",
+  "account.pictureRemoveFailed":
+    "Picture not removed. Retry, or reload the page.",
   "account.signInCard": "Sign-in",
   "account.timezoneLabel": "Time zone",
   "account.timezoneHelp":
@@ -19435,7 +19452,7 @@ export const en = {
   "firstRun.google.helpStep1":
     "In the Google Cloud console, open a project and go to “APIs & Services”, then “Credentials”. Select “Create credentials”, then “OAuth client ID”, and choose “Web application”.",
   "firstRun.google.helpStep2":
-    "Enable the Gmail API and add both the gmail.readonly and gmail.send scopes to the consent screen. They share one consent because Google does not add a scope to an issued refresh token; requesting send later means connecting the mailbox again.",
+    "Enable the Gmail API and add the gmail.readonly, gmail.send and userinfo.profile scopes to the consent screen (userinfo.profile supplies the Google account picture). They share one consent because Google does not add a scope to an issued refresh token; requesting one later means connecting the mailbox again.",
   "firstRun.google.helpStep3":
     "Under Authorized redirect URIs, add the URIs listed above. Mailbox is required for mail; Calendar and Sign-in enable those features.",
   "firstRun.google.helpStep4":

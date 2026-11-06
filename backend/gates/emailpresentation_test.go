@@ -151,7 +151,7 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 // answering about a set the contract never declared.
 func entrySchemas(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(emailContractPath)
+	source, err := gatekit.ReadFile(emailContractPath)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -180,7 +180,7 @@ func entrySchemas(t *testing.T) []string {
 // message while naming nothing this gate was looking for.
 func carrierFields(t *testing.T, schemas []string) []string {
 	t.Helper()
-	source, err := os.ReadFile(emailContractPath)
+	source, err := gatekit.ReadFile(emailContractPath)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -248,14 +248,14 @@ func consumersOf(t *testing.T, schema string, fields []string) []string {
 	}
 	access := regexp.MustCompile(`\b(` + strings.Join(alternatives, "|") + `)\b`)
 	var found []string
-	err := filepath.WalkDir(emailFrontendSource, func(path string, entry os.DirEntry, err error) error {
+	err := gatekit.WalkDir(emailFrontendSource, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() || !strings.HasSuffix(path, ".ts") && !strings.HasSuffix(path, ".tsx") {
 			return nil
 		}
-		source, readErr := os.ReadFile(path)
+		source, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
@@ -354,7 +354,7 @@ func TestAnEmailIsDrawnOnlyByTheCanonicalComponents(t *testing.T) {
 // discharge the obligation.
 func rendersCanonically(t *testing.T, consumer string) bool {
 	t.Helper()
-	source, err := os.ReadFile(filepath.Join(emailFrontendSource, consumer))
+	source, err := gatekit.ReadFile(filepath.Join(emailFrontendSource, consumer))
 	if err != nil {
 		t.Fatalf("reading %s: %v", consumer, err)
 	}

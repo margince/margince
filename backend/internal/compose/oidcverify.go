@@ -186,6 +186,9 @@ type oidcClaims struct {
 	Groups []string `json:"groups"`
 	// GivenName is the standard `given_name` claim; absent decodes as "".
 	GivenName string `json:"given_name"`
+	// Picture is the standard `picture` claim. Only the Google adapter hands it
+	// on: Microsoft sends no picture URL, and a URL from anywhere else is not fetched.
+	Picture string `json:"picture"`
 }
 
 // Verify returns the decoded claims only for a well-formed, correctly-signed

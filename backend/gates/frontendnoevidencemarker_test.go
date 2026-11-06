@@ -11,11 +11,11 @@ package gates
 // every language and nothing else fails.
 
 import (
-	"os"
 	"regexp"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendLeadSignals = "../frontend/src/features/leads/leadsignals.tsx"
@@ -24,7 +24,7 @@ var tsNoEvidenceMarker = regexp.MustCompile(`export const MANUAL_SIGNAL_NO_EVIDE
 
 func TestTheFrontendNoEvidenceMarkerMatchesTheServers(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendLeadSignals)
+	source, err := gatekit.ReadFile(frontendLeadSignals)
 	if err != nil {
 		t.Fatalf("reading the lead signals screen: %v", err)
 	}

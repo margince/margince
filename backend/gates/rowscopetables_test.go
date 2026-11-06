@@ -22,11 +22,12 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // anyTable is the scope a spelling applies when it cannot be attributed to one
@@ -143,7 +144,7 @@ func TestEveryRowScopeSpellingSaysWhichTableItBounds(t *testing.T) {
 // `partner_company` and no such table exists.
 func referenceColumns(t *testing.T, tables map[string]bool) map[string]string {
 	t.Helper()
-	catalog, err := os.ReadFile(filepath.Join(repoRoot, headCatalogPath))
+	catalog, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
 	if err != nil {
 		t.Fatalf("reading the schema catalog this census derives its columns from: %v", err)
 	}

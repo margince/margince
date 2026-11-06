@@ -30,7 +30,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"strings"
 	"testing"
 
@@ -170,7 +169,7 @@ func TestTheMergeLockHasOneSpelling(t *testing.T) {
 
 func mustRead(t *testing.T, path string) []byte {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

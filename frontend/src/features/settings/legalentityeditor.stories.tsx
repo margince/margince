@@ -86,6 +86,21 @@ export const FurtherEntityPhone: Story = {
   render: editor(VIENNA),
 };
 
+// A stored logo in its slot, and the Edit menu that replaces or removes it.
+const WORDMARK =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 120'%3E%3Crect width='360' height='120' fill='white'/%3E%3Ctext x='180' y='76' text-anchor='middle' font-family='sans-serif' font-size='48' font-weight='700' fill='%230e7490'%3EACME WIEN%3C/text%3E%3C/svg%3E";
+
+export const FurtherEntityLogoMenu: Story = {
+  render: editor({ ...VIENNA, logo_url: WORDMARK }),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "Edit logo" }),
+    );
+    await page.findByRole("button", { name: "Remove logo" });
+  },
+};
+
 // Colleagues still work for the entity, and the refusal says what to do first.
 export const ArchiveRefused: Story = {
   render: () => {

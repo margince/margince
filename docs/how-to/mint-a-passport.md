@@ -33,7 +33,16 @@ and it can be 2160 (90 days) at most.
 
 ## Limit where it may work
 
-A passport starts with `"mode": "all"`. To limit it, send `areas` with the mint, or change it later:
+A passport starts with `"mode": "all"`. To limit it, send an `areas` object with the mint:
+
+```sh
+curl -X POST http://localhost:8080/v1/passports \
+  --cookie 'crm_session=<your session>' \
+  -H 'Content-Type: application/json' \
+  -d '{"label": "Claude Desktop", "scopes": ["read"], "areas": {"mode": "custom", "areas": ["business"]}}'
+```
+
+Or change it later, with the same object as the body:
 
 ```sh
 curl -X PUT http://localhost:8080/v1/passports/<passport id>/areas \
