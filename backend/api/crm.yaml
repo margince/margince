@@ -9522,7 +9522,7 @@ paths:
       tags: [Links]
       operationId: listLinkTypes
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: The types a link between two records may have.
       description: |
@@ -9542,7 +9542,7 @@ paths:
       tags: [Links]
       operationId: listRecordLinks
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: The links of one deal, company or contact, in both directions.
       description: |
@@ -9567,7 +9567,7 @@ paths:
       tags: [Links]
       operationId: createRecordLink
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: Link one record to another with a type.
       description: |
@@ -9599,7 +9599,7 @@ paths:
       tags: [Links]
       operationId: deleteRecordLink
       x-agent-access: human-only
-      x-human-only-reason: pending   # no agent tool serves typed record links yet
+      x-human-only-reason: security   # a reader decides which records are linked
       security: [{ cookieAuth: [] }]
       summary: Remove a link.
       description: |
