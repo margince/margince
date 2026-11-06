@@ -95,8 +95,12 @@ func profileHistoryPool(ctx context.Context, t *testing.T, pool *pgxpool.Pool) *
 			if err := os.MkdirAll(directory, 0o700); err != nil {
 				t.Fatal(err)
 			}
-			for i, cost := range costs[:min(2, len(costs))] {
-				if !strings.HasPrefix(strings.TrimSpace(cost.query), "WITH candidates") && !strings.HasPrefix(strings.TrimSpace(cost.query), "SELECT EXISTS") {
+			for i, cost := range costs {
+				query := strings.TrimSpace(cost.query)
+				if i >= 2 && !strings.HasPrefix(query, "WITH perfect AS") {
+					continue
+				}
+				if !strings.HasPrefix(query, "WITH candidate") && !strings.HasPrefix(query, "WITH perfect AS") && !strings.HasPrefix(query, "WITH emails AS") && !strings.HasPrefix(query, "SELECT EXISTS") {
 					continue
 				}
 				var plan []byte

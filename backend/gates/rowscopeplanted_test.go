@@ -210,3 +210,22 @@ func listStakeholders(ctx C, tx T) error {
 			"of those ids back, which is the reference this census is about")
 	}
 }
+
+func TestCallerArgumentBoundsAcceptBothPostgresParameterForms(t *testing.T) {
+	for _, tc := range []struct {
+		query string
+		bound bool
+	}{
+		{`SELECT company_id FROM contact WHERE company_id = $1`, true},
+		{`SELECT company_id FROM contact WHERE company_id = @employer::uuid`, true},
+		{`SELECT company_id FROM contact WHERE company_id = ANY(@employers)`, true},
+		{`SELECT company_id FROM contact WHERE contact_id = @contact`, false},
+		{`SELECT company_id FROM contact WHERE company_id = incumbent.company_id`, false},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			if got := boundToCallerArgument(tc.query, "company_id"); got != tc.bound {
+				t.Fatalf("caller bound=%v, want %v", got, tc.bound)
+			}
+		})
+	}
+}

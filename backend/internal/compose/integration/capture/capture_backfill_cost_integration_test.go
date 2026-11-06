@@ -52,14 +52,25 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx, meter := database.WithStatementMeter(principal.WithWorkspaceID(context.Background(), e.WS))
+	segmentSize, captured := max(1, min(1000, count/10)), 0
+	previous := meter.Cost()
+	page.afterMessage = func() {
+		captured++
+		if captured%segmentSize == 0 || captured == count {
+			current := meter.Cost()
+			segment := current.Minus(previous)
+			t.Logf("segment_end=%d statements=%d db_time=%s pool_wait=%s", captured, segment.Statements, segment.DBTime, segment.PoolWait)
+			previous = current
+		}
+	}
 	done, completed, _, err := registry.RunBackfillStep(ctx, run.ID)
 	if err != nil || done || completed {
 		t.Fatalf("import: done=%v completed=%v error=%v", done, completed, err)
 	}
 	contacts, _ := readBackfillYieldColumns(t, e, run.ID)
 	ledger, _ := readCreationLedger(t, e, run.ID)
-	if contacts != count || ledger != count {
-		t.Fatalf("contacts=%d ledger=%d want=%d", contacts, ledger, count)
+	if contacts != count || ledger != count || captured != count {
+		t.Fatalf("contacts=%d ledger=%d captured=%d want=%d", contacts, ledger, captured, count)
 	}
 
 	page.raws, page.nextToken = nil, ""

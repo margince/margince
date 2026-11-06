@@ -128,8 +128,11 @@ func TestTheAddressVariantLaneReadsTheMailboxBaseIndex(t *testing.T) {
 
 // mailboxPlanNode is the part of an EXPLAIN (FORMAT JSON) node this test reads.
 type mailboxPlanNode struct {
-	IndexName string            `json:"Index Name"` //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
-	Plans     []mailboxPlanNode `json:"Plans"`      //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	IndexName    string            `json:"Index Name"`    //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	Plans        []mailboxPlanNode `json:"Plans"`         //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
+	RelationName string            `json:"Relation Name"` //nolint:tagliatelle // Postgres's EXPLAIN key.
+	ActualRows   int               `json:"Actual Rows"`   //nolint:tagliatelle // Postgres's EXPLAIN key.
+	ActualLoops  int               `json:"Actual Loops"`  //nolint:tagliatelle // Postgres's EXPLAIN key.
 }
 
 func (n mailboxPlanNode) usesIndex(name string) bool {

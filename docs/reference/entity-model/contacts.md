@@ -644,6 +644,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_name_keyset`: `btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_keyset_desc`: `btree ("left"(full_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_trgm`: `gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)`
+- `idx_contact_name_trigram_candidates`: `btree (hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL)`
 - `idx_contact_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_contact_search`: `gin (search_tsv)`
 - `idx_contact_updated_keyset`: `btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`

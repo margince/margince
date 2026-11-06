@@ -5397,6 +5397,7 @@ public.idx_contact_merged_into CREATE INDEX idx_contact_merged_into ON public.co
 public.idx_contact_name_keyset CREATE INDEX idx_contact_name_keyset ON public.contact USING btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_name_keyset_desc CREATE INDEX idx_contact_name_keyset_desc ON public.contact USING btree ("left"(full_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_name_trgm CREATE INDEX idx_contact_name_trgm ON public.contact USING gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)
+public.idx_contact_name_trigram_candidates CREATE INDEX idx_contact_name_trigram_candidates ON public.contact USING btree (hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL)
 public.idx_contact_owner CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id)
 public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id)
