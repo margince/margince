@@ -104,16 +104,16 @@ export function InterventionPanel({
       <Panel
         title={t("analytics.attention")}
         flatHead
+        titleAction={
+          findings.length > 0 ? (
+            <AppLink href={forecast()}>
+              {t("analytics.intervention.viewAll")}
+            </AppLink>
+          ) : undefined
+        }
         footer={
-          <>
-            {/* The checks read every pipeline and close date of the scope. */}
-            <p className="t-caption">{t("analytics.intervention.scope")}</p>
-            {findings.length > 0 && (
-              <AppLink href={forecast()}>
-                {t("analytics.intervention.viewAll")}
-              </AppLink>
-            )}
-          </>
+          // The checks read every pipeline and close date of the scope.
+          <p className="t-caption">{t("analytics.intervention.scope")}</p>
         }
       >
         {(findings.length === 0 || state === "failed") && (
@@ -200,7 +200,7 @@ function FindingRows({
           ].join(" · ")}
         </p>
       </div>
-      <AppLink className="btn btn-ghost" href={href(check.id)}>
+      <AppLink href={href(check.id)}>
         {t(
           check.destination?.mode === "read"
             ? "analytics.intervention.open"
@@ -326,7 +326,7 @@ function Groups({
               ].join(" · ")}
             </p>
           </div>
-          <AppLink className="btn btn-ghost" href={href(group.type)}>
+          <AppLink href={href(group.type)}>
             {t("analytics.intervention.show")}
           </AppLink>
         </PanelRow>

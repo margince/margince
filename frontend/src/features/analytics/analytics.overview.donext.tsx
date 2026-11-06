@@ -125,7 +125,6 @@ function WorkRow({ item }: Readonly<{ item: WorklistItem }>) {
         {facts.length > 0 && <p className="t-caption">{facts.join(" · ")}</p>}
       </div>
       <AppLink
-        className="btn btn-ghost"
         href={rowHref(item) ?? routeHash({ screen: "worklist" })}
         aria-label={t("analytics.doNext.openNamed", { title })}
       >

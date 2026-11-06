@@ -16,11 +16,12 @@ package gates
 // A test file outside the naming conventions below is not read.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const gitFixtureLib = "scripts/lib-git-fixture.sh"
@@ -73,7 +74,7 @@ func TestEveryTestThatBuildsAGitRepoIgnoresTheCallersGitConfig(t *testing.T) {
 		if file.symlink || !isTestFile(base) || file.path == "backend/gates/gitfixtureisolation_test.go" {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(repoRoot, file.path)) // #nosec G304 -- a tracked path from the index
+		raw, err := gatekit.ReadFile(filepath.Join(repoRoot, file.path)) // #nosec G304 -- a tracked path from the index
 		if err != nil {
 			t.Fatalf("reading %s: %v", file.path, err)
 		}

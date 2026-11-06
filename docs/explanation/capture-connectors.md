@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
+<!-- describes: backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/connectors_picture.go backend/internal/compose/capture.go backend/internal/modules/capture/gcal/client.go backend/internal/modules/capture/googleconn/userinfo.go backend/internal/compose/avatarprovider.go backend/internal/modules/identity/providerpicture.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an
@@ -258,7 +258,7 @@ for both on one Google screen. The callback seals that one grant into both conne
 
 | | **Gmail** | **IMAP** | **Graph** (Outlook mail) | **Calendar** (gcal) | **Graph calendar** (graphcal) | **Telegram** |
 |---|---|---|---|---|---|---|
-| Auth | OAuth `gmail.readonly` + `gmail.send` | IMAPS app password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` | OAuth `Calendars.Read` | BotFather bot token |
+| Auth | OAuth `gmail.readonly` + `gmail.send` + `userinfo.profile` | IMAPS app password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` + `calendar.events.owned` + `userinfo.profile` | OAuth `Calendars.Read` | BotFather bot token |
 | Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
 | Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `deltaLink` | `getUpdates` offset |
 | Push | Pub/Sub 7 day | none (poll) | subscription, <3 day | none (poll) | none (poll) | none (long poll, one reader per bot) |
@@ -268,11 +268,23 @@ for both on one Google screen. The callback seals that one grant into both conne
 
 ### Gmail: standing OAuth, push-capable, send-capable
 
-OAuth2 to Google with **two scopes on one consent**: `gmail.readonly` for capture, and `gmail.send` for
-the governed outbound path (no `gmail.modify`, no settings, no delete). They share one consent because
+OAuth2 to Google with **three scopes on one consent**. `gmail.readonly` is for capture, and `gmail.send`
+for the governed outbound path (no `gmail.modify`, no settings, no delete). `userinfo.profile` is below. They share one consent because
 Google will not add a scope to an existing refresh token. Asking later would mean a second connection for
 the same mailbox. A mailbox connected before the send scope existed captures as normal, and refuses
 every send by name until it is connected again.
+
+The same consent asks for `userinfo.profile` (`googleconn.ProfileScope`), which reads the account's
+picture. After a connect stores the row, `internal/compose/connectors_picture.go` reads
+`/oauth2/v3/userinfo` with the new access token. It runs outside the callback, and hands the picture
+to the seat (`internal/compose/avatarprovider.go`). It does so only when the address the provider
+names for the account is the seat's own sign-in address. A shared mailbox such as `sales@` gives no
+one its picture.
+
+A failed lookup is logged and costs nothing but the picture. The health check does not compare a
+connection's granted scopes with this list, so a connection granted before the profile scope stays
+healthy. The lookup runs only when the grant holds the profile scope, so such a connection gives no
+picture until it is connected again.
 
 The sync of new mail walks the **history API** from a `historyId` watermark. A stale watermark
 (`ErrHistoryGone`; Gmail ends it about once a week) falls back to a bounded list again, not a full
@@ -389,9 +401,10 @@ connection** footer. The roster manages an existing connection.
 
 ### Google Calendar (gcal): standing OAuth, poll only
 
-OAuth2 to Google with `calendar.readonly` and `calendar.events.owned` (`gcal.ConsentScopes`). It **uses
+OAuth2 to Google with `calendar.readonly` and `calendar.events.owned` (`gcal.ConsentScopes`), plus
+`userinfo.profile` for the account's picture, as for Gmail. It **uses
 the same Google OAuth app as Gmail**. Connected alone, it is its *own* authorization that asks for
-those calendar scopes only. It sets no
+those calendar scopes and the profile scope, and no mail scope. It sets no
 `include_granted_scopes`, so an earlier grant to read mail never leaks into this credential.
 
 Connected together with Gmail, it shares the mail consent instead

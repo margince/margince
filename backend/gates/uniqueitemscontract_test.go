@@ -9,7 +9,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"reflect"
 	"slices"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -30,7 +30,7 @@ import (
 // by an extra one elsewhere.
 func TestEveryUniqueItemsListIsTaggedForTheDecoders(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(contractPath)
+	raw, err := gatekit.ReadFile(contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -368,7 +368,7 @@ func sqlConstants(t *testing.T, dirs ...string) map[string]string {
 	var declared []declaration
 	for _, dir := range dirs {
 		pkg := filepath.Base(dir)
-		entries, err := os.ReadDir(dir)
+		entries, err := gatekit.ReadDir(dir)
 		if err != nil {
 			t.Fatalf("reading %s: %v", dir, err)
 		}

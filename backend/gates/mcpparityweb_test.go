@@ -11,11 +11,12 @@ package gates
 import (
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -72,7 +73,7 @@ func (r contractRoutes) has(method, path string) bool { return slices.Contains(r
 func webFiles() ([]string, error) {
 	var kept []string
 	walk := func(root string, keep func(string) bool) error {
-		return filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		return gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -108,7 +109,7 @@ func scanWebApp(routes contractRoutes) (webScan, []string, error) {
 	}
 	sources := map[string]string{}
 	for _, file := range files {
-		body, readErr := os.ReadFile(file)
+		body, readErr := gatekit.ReadFile(file)
 		if readErr != nil {
 			return webScan{}, nil, readErr
 		}

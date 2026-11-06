@@ -11,7 +11,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -73,14 +72,14 @@ func functionsWritingTheBackfillLedger(t *testing.T) map[string]string {
 	t.Helper()
 	root := filepath.Join(repoRoot, "backend", "internal")
 	found := map[string]string{}
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

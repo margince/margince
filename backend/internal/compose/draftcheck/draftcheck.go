@@ -26,8 +26,8 @@ package draftcheck
 
 import (
 	"strings"
-	"unicode"
 
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -371,13 +371,7 @@ func wordIndex(text, phrase string) int {
 }
 
 // boundary reports whether the byte at i ends a word (or is off either end).
-func boundary(text string, i int) bool {
-	if i < 0 || i >= len(text) {
-		return true
-	}
-	r := rune(text[i])
-	return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\''
-}
+func boundary(text string, i int) bool { return salutation.WordBoundary(text, i) }
 
 // firstMatch reports the first phrase of a list the text carries, as one
 // finding or none.

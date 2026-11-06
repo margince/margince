@@ -20,12 +20,12 @@ package gates
 // not in the browser fails, and so does the reverse.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendRowTags = "../frontend/src/design-system/rowtags.tsx"
@@ -38,7 +38,7 @@ var tsRowTagCap = regexp.MustCompile(`const WIRE_ROW_TAG_CAP\s*=\s*(\d+)\b`)
 func TestFrontendMirrorsRowTagCap(t *testing.T) {
 	t.Parallel()
 
-	source, err := os.ReadFile(frontendRowTags)
+	source, err := gatekit.ReadFile(frontendRowTags)
 	if err != nil {
 		t.Fatalf("read %s: %v", frontendRowTags, err)
 	}

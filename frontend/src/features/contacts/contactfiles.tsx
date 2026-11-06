@@ -2,9 +2,12 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
-import { FileOrigin } from "../../components/fileorigin";
-import { Badge, Button } from "../../design-system/atoms";
-import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import {
+  AttachmentGrid,
+  AttachmentTile,
+  CATEGORY_LABELS,
+} from "../../components/attachmenttile";
+import { Button } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { LoadMoreButton } from "../../design-system/querystates";
@@ -12,12 +15,8 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDateAbbrev } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { attachmentAnchor } from "../../lib/attachmentlink";
+import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useViewerZone } from "../../lib/viewerzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { ContactChatCapture } from "./contactchatcapture";
 import "./contact360.css";
@@ -35,21 +34,10 @@ import "./contact360.css";
 
 type Attachment = components["schemas"]["Attachment"];
 type Category = NonNullable<Attachment["category"]>;
-type DocState = NonNullable<Attachment["doc_state"]>;
 
 // The most a reader is asked to scan at once on a record page: enough to
 // recognise a contact that has been busy, and the rest is one button away.
 const PAGE_LIMIT = 20;
-
-const CATEGORY_LABELS: Record<Category, MessageKey> = {
-  contract: "docs.category.contract",
-  offer: "docs.category.offer",
-  legal: "docs.category.legal",
-  email_attachment: "docs.category.email",
-  message_attachment: "docs.category.message",
-  other: "docs.category.other",
-  link: "docs.category.link",
-};
 
 // The cuts always offered, and the two a contact's files seldom carry, which
 // join the row only when a file does.
@@ -64,13 +52,6 @@ const RARE_CUTS: readonly Category[] = [
   "contract",
   "link",
 ];
-
-const STATE_LABELS: Record<DocState, MessageKey> = {
-  draft: "docs.state.draft",
-  current: "docs.state.current",
-  final: "docs.state.final",
-  superseded: "docs.state.superseded",
-};
 
 /**
  * The contact's files as the walk has read them so far. The tab and the tab
@@ -195,7 +176,7 @@ export function ContactFilesTab({
           </PanelBody>
         )}
         {shown.length > 0 && (
-          <FilesTable files={shown} onOpenEmail={onOpenEmail} />
+          <FilesGrid files={shown} onOpenEmail={onOpenEmail} />
         )}
         {state !== "ready" || shown.length === 0 ? (
           <PanelBody>
@@ -258,68 +239,24 @@ function FileCuts({
   );
 }
 
-// One row per file. The NAME is the download, as it is on the account's own
-// list: the title if somebody gave it one, else the filename. The state shows
-// only where a human or the source asserted one; nothing here infers it.
-function FilesTable({
+// One tile per file. The NAME opens it, as it does on the account's own list:
+// the title if somebody gave it one, else the filename.
+function FilesGrid({
   files,
   onOpenEmail,
 }: Readonly<{
   files: readonly Attachment[];
   onOpenEmail?: (activityId: string) => void;
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
-  const columns: DataTableColumn<Attachment>[] = [
-    {
-      key: "document",
-      header: t("contact.documents.col.document"),
-      grow: true,
-      fold: "title",
-      render: (file) => (
-        <span className="contact-file">
-          <a className="link-button" {...attachmentAnchor(file)}>
-            {file.title || file.filename}
-          </a>
-          <FileOrigin origin={file.origin} onOpenEmail={onOpenEmail} />
-        </span>
-      ),
-    },
-    {
-      key: "category",
-      header: t("contact.documents.col.category"),
-      render: (file) =>
-        file.category ? t(CATEGORY_LABELS[file.category]) : null,
-    },
-    {
-      key: "state",
-      header: t("contact.documents.col.state"),
-      render: (file) =>
-        file.doc_state ? (
-          <Badge tone={file.doc_state === "superseded" ? "warning" : "default"}>
-            {t(STATE_LABELS[file.doc_state])}
-          </Badge>
-        ) : null,
-    },
-    {
-      key: "added",
-      header: t("contact.documents.col.added"),
-      render: (file) => (
-        <span className="t-num">
-          {formatDateAbbrev(file.created_at, locale, readerZone)}
-        </span>
-      ),
-    },
-  ];
   return (
-    <DataTable
-      bleed
-      fold
-      label={t("tab.documents")}
-      columns={columns}
-      rows={[...files]}
-      rowKey={(file) => file.id}
-    />
+    <PanelBody>
+      <AttachmentGrid>
+        {files.map((file) => (
+          <li key={file.id}>
+            <AttachmentTile file={file} onOpenEmail={onOpenEmail} />
+          </li>
+        ))}
+      </AttachmentGrid>
+    </PanelBody>
   );
 }

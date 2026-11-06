@@ -917,7 +917,8 @@
   .arpanel,
   .mw-aistat-pop,
   .ddeck-tray:not(.panel-foot > .ddeck-tray),
-  .notifbell-loose
+  .notifbell-loose,
+  .overflow-menu-labelled
 ) {
   --ground: var(--bgElevated);
   --groundEdge: var(--ladder1Edge);
@@ -952,7 +953,8 @@
     .arpanel,
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
@@ -1070,7 +1072,8 @@
     .arpanel,
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
@@ -1271,7 +1274,8 @@
     .arpanel,
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,

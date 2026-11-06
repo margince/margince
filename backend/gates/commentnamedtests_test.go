@@ -219,7 +219,7 @@ func goCommentCensus(t *testing.T) (declared, testFuncs map[string]bool, comment
 		if f.path == "backend/gates/commentnamedtests_test.go" {
 			continue
 		}
-		src, err := os.ReadFile(filepath.Join(repoRoot, f.path))
+		src, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			// Tracked but absent mid-rebase or after `git rm`; not this gate's
 			// business.

@@ -2335,6 +2335,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trust.relayForColleague": "Von Margince für ein Teammitglied gesendet",
   "trust.relaySent": "Von Margince gesendet",
   "trust.relayFrom": "Absendeadresse: {address}",
+  "systemJob.provider_picture": "Google-Profilbild",
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
@@ -4653,7 +4654,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.deals.title": "Deals",
   "co.deals.empty": "Keine offenen Deals zu diesem Unternehmen.",
   "co.deals.wonLifetime": "Bisher gewonnen",
-  "co.deals.lostCount": "{count} verloren",
+  "co.deals.lost": "Verloren",
   "co.deals.noStage": "Keine Phase",
   "co.deals.col.deal": "Deal",
   "co.deals.col.stage": "Phase",
@@ -6023,8 +6024,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.valueProposition": "Nutzenversprechen",
   "legalEntities.usp": "Was ihn abhebt",
   "legalEntities.sectionLogo": "Logo",
-  "legalEntities.logoAdd": "Logo hinzufügen",
-  "legalEntities.logoReplace": "Logo ersetzen",
+  "legalEntities.logoAdd": "Logo hochladen",
+  "legalEntities.logoEdit": "Logo bearbeiten",
   "legalEntities.logoHint":
     "PNG, JPEG, GIF, WebP, ICO oder SVG. Es wird gespeichert, sobald du es auswählst.",
   "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
@@ -7284,6 +7285,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.category.message": "Nachrichtenanhang",
   "docs.category.other": "Sonstiges",
   "docs.category.link": "Gesendete Links",
+  "docs.view.label": "Dokumentansicht",
+  "docs.view.grid": "Raster",
+  "docs.view.list": "Liste",
   "files.title": "Dateien",
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",
@@ -7298,10 +7302,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
   "files.showHidden": "Ausgeblendete Dateien anzeigen",
   "files.hideHidden": "Ausgeblendete Dateien verbergen",
-  "dealfiles.col.file": "Datei",
-  "dealfiles.col.category": "Kategorie",
-  "dealfiles.col.origin": "Herkunft",
-  "dealfiles.col.added": "Hinzugefügt",
   "dealfiles.origin.from": "Von {who}",
   "dealfiles.origin.upload": "Hier hochgeladen",
   "docs.state.draft": "Entwurf",
@@ -8838,7 +8838,52 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passport.scope.draft": "Nachrichten entwerfen",
   "passport.scope.write": "Datensätze ändern",
   "passport.scope.send": "Nachrichten senden",
-  "passport.scope.enrich": "Kontaktdaten kaufen",
+  "passport.scope.enrich": "KI nutzen und Daten kaufen",
+  "workArea.name.business": "Vertriebsarbeit",
+  "workArea.name.compliance": "Compliance und Datenschutz",
+  "workArea.name.capture": "E-Mail- und Kalendererfassung",
+  "workArea.name.workspace_settings": "Unternehmenseinstellungen",
+  "workArea.name.admin_settings": "Admin-Einstellungen",
+  "workArea.name.own_account": "Mein Nutzerkonto",
+  "workArea.hint.business":
+    "Datensätze, Deals, Aktivitäten, Angebote, Berichte und Listen",
+  "workArea.hint.compliance":
+    "Einwilligungen, Datenschutzanfragen, Aufbewahrung und das Audit-Log",
+  "workArea.hint.capture":
+    "E-Mail- und Kalendererfassung und die Verbindungen, über die sie läuft",
+  "workArea.hint.workspace_settings":
+    "Wie das Unternehmen eingerichtet ist, wo deine Rolle es ändern darf",
+  "workArea.hint.admin_settings":
+    "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
+  "workArea.hint.own_account": "Dein Profil und deine Präferenzen",
+  "workArea.legend": "Wo er arbeiten darf",
+  "workArea.mode.all": "Alle Bereiche",
+  "workArea.mode.allNote":
+    "Alles, was deine Rolle erreicht, auch später hinzugefügte Bereiche",
+  "workArea.mode.custom": "Bereiche auswählen",
+  "workArea.mode.customNote":
+    "Nur die ausgewählten Bereiche. Ein neuer Bereich ist zunächst deaktiviert",
+  "workArea.pickLegend": "Bereiche, in denen er arbeiten darf",
+  "workArea.pickOne": "Wähle mindestens einen Bereich aus.",
+  "passportAreas.open": "Bereiche ändern",
+  "passportAreas.openNamed": "Bereiche für {name} ändern",
+  "passportAreas.for":
+    "Für {name}. Seine Berechtigungen bleiben, wie sie sind.",
+  "passportAreas.gains": "Er arbeitet dann auch in: {areas}.",
+  "passportAreas.loses":
+    "Er arbeitet dann nicht mehr in: {areas}. Sein nächster Aufruf dort wird abgelehnt.",
+  "passportAreas.unchanged": "Ändere zuerst einen Bereich.",
+  "passportAreas.closesLater":
+    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben für ihn deaktiviert.",
+  "passportAreas.refusalTitle":
+    "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
+  "passportAreas.refusal":
+    "Dieser Passport darf im Bereich „{area}“ nicht arbeiten. Lass diesen Bereich für diesen Passport in Einstellungen → KI-Zugang aktivieren.",
+  "passportAreas.cancel": "Abbrechen",
+  "passportAreas.save": "Bereiche speichern",
+  "passportAreas.saving": "Bereiche werden gespeichert…",
+  "passportAreas.failed": "Bereiche nicht geändert",
+  "settings.passportColAreas": "Bereiche",
   "passport.select": "Passport",
   "passport.noneOption": "Kein Passport",
   "settings.passportUseAi": "In einem Skript oder einem anderen KI-Tool",
@@ -11413,6 +11458,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{provider} hat keinen Schlüssel, daher ist die gespeicherte Bindung nicht aktiv und das vorherige Modell antwortet weiterhin. Setze {env}.",
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
+  "heldThreads.search": "Betreff oder Beteiligte suchen",
+  "heldThreads.statusFilter": "Status",
+  "heldThreads.statusAll": "Jeder Status",
+  "heldThreads.noMatch": "Kein zurückgehaltener Thread passt.",
+  "heldThreads.showMore": "Mehr anzeigen",
+  "heldThreads.count.pending": "zur Einstufung ausstehend",
+  "heldThreads.count.unsure": "unklar",
+  "heldThreads.count.held": "zurückgehalten",
+  "heldThreads.count.heldByOwner": "von dir zurückgehalten",
   "heldThreads.title": "Zurückgehaltene Threads",
   "heldThreads.sub":
     "Threads, die dein Postfach zurückhält. Gibst du einen Thread frei, können alle Teammitglieder ihn lesen. Nur du kannst deine Threads freigeben.",
@@ -14548,9 +14602,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur bestätigte Angaben. Website-Text wird nie zu Anweisungen.",
   "settings.companyMarkWide": "Breites Logo",
   "settings.companyMarkIcon": "Quadratisches Symbol",
-  "settings.companyMarkAdd": "Hinzufügen",
-  "settings.companyMarkReplace": "Ersetzen",
-  "settings.companyMarkRemove": "Entfernen",
   "settings.companyMarkUploadFailedWide": "Breites Logo nicht hochgeladen",
   "settings.companyMarkRemoveFailedWide": "Breites Logo nicht entfernt",
   "settings.companyMarkUploadFailedIcon":
@@ -14563,12 +14614,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
   "settings.companyMarkSvgText":
     "Diese SVG-Datei enthält Text, der sich nicht darstellen lässt. Wandle den Text in deinem Grafikprogramm in Pfade um, oder lade eine PNG-Datei hoch.",
-  "settings.companyMarkAddWide": "Breites Logo hinzufügen",
-  "settings.companyMarkReplaceWide": "Breites Logo ersetzen",
+  "settings.companyMarkUploadWide": "Breites Logo hochladen",
   "settings.companyMarkRemoveWide": "Breites Logo entfernen",
-  "settings.companyMarkAddIcon": "Quadratisches Symbol hinzufügen",
-  "settings.companyMarkReplaceIcon": "Quadratisches Symbol ersetzen",
+  "settings.companyMarkEditWide": "Breites Logo bearbeiten",
+  "settings.companyMarkUploadIcon": "Quadratisches Symbol hochladen",
   "settings.companyMarkRemoveIcon": "Quadratisches Symbol entfernen",
+  "settings.companyMarkEditIcon": "Quadratisches Symbol bearbeiten",
+  "settings.imageEdit": "Bearbeiten",
   "settings.companyMarkEmpty": "Logo hier ablegen oder Datei auswählen",
   "settings.companyMarkIconEmpty": "Symbol hier ablegen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
@@ -15545,6 +15597,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.reminder.progress": "Fortschritt der Einrichtung",
   // end polish: setup-popover
   "account.profileCard": "Profil",
+  "account.pictureLabel": "Profilbild",
+  "account.pictureHelp":
+    "PNG, JPEG oder WebP bis 5 MB, für Teammitglieder neben deinem Namen sichtbar.",
+  "account.pictureEmpty": "Bild hier ablegen oder Datei auswählen",
+  "account.pictureAdd": "Bild hochladen",
+  "account.pictureRemove": "Bild entfernen",
+  "account.pictureEdit": "Profilbild bearbeiten",
+  "account.pictureSaved": "Bild gespeichert",
+  "account.pictureRemoved": "Bild entfernt",
+  "account.pictureWrongType":
+    "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
+  "account.pictureTooLarge":
+    "Bild nicht hochgeladen. Nimm eine Datei bis 5 MB.",
+  "account.pictureNoStorage":
+    "Diese Installation hat keinen Dateispeicher für Bilder. Bitte wende dich an die Systemadministration.",
+  "account.pictureUploadFailed":
+    "Bild nicht hochgeladen. Bitte versuche es erneut oder lade die Seite neu.",
+  "account.pictureRemoveFailed":
+    "Bild nicht entfernt. Bitte versuche es erneut oder lade die Seite neu.",
   "account.signInCard": "Anmeldung",
   "account.timezoneLabel": "Zeitzone",
   "account.timezoneHelp":
@@ -17092,8 +17163,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
     "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
-  "consent.scopeNote.enrich":
-    "verbraucht Anreicherungs-Credits, fragt aber vor jedem Kauf weiterhin nach",
+  "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Zugang trennen.",
   "consent.preset.label": "Assistentenrechte",
@@ -17254,6 +17324,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
   "contact.intro.relayTitle": "Status der Vorstellung",
+  "contact.intro.stripLabel": "Netzwerk in Zahlen",
+  "contact.intro.mapTitle": "Wer {name} kennt",
   "contact.intro.stepRoute": "Weg wählen",
   "contact.intro.stepRoutePick": "auswählen, wen du fragst",
   "contact.intro.stepRequest": "Anfrage",
@@ -17500,6 +17572,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.timeline.empty":
     "Noch keine Aktivitäten mit diesem Kontakt erfasst.",
   "contact.deals.empty": "Dieser Kontakt ist an keinem Deal beteiligt.",
+  "contact.deals.figures": "Deal-Kennzahlen",
+  "contact.deals.openCount": "Offene Deals",
+  "contact.deals.ofAll_one": "von {count} insgesamt",
+  "contact.deals.ofAll_other": "von {count} insgesamt",
+  "contact.deals.openValue": "Offener Wert",
+  "contact.deals.noValue": "Mehrere Währungen",
+  "contact.deals.nextClose": "Nächster Abschluss",
+  "contact.deals.noClose": "Kein Datum",
   "contact.deals.untitled": "Deal ohne Titel",
   "contact.deals.noStage": "Noch keine Phase",
   "contact.meetings.upcoming": "Anstehend",
@@ -17507,14 +17587,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.meetings.noneBooked": "Keine anstehenden Termine.",
   "contact.meetings.noneLogged": "Keine Termine erfasst.",
   "contact.meetings.untitled": "Termin ohne Titel",
-  "contact.meetings.col.meeting": "Termin",
-  "contact.meetings.col.date": "Datum",
-  "contact.meetings.col.with": "Mit",
+  "contact.meetings.hostedBy": "Organisiert von {name}",
+  "contact.meetings.figures": "Termine in Zahlen",
+  "contact.meetings.nextLabel": "Nächster Termin",
+  "contact.meetings.bookedLabel": "Geplant",
+  "contact.meetings.heldLabel": "Stattgefunden",
+  "contact.meetings.lastHeld": "Zuletzt getroffen",
+  "contact.meetings.noneYet": "Noch keiner",
   "contact.documents.empty": "Keine Dateien zu diesem Kontakt.",
-  "contact.documents.col.document": "Dokument",
-  "contact.documents.col.category": "Kategorie",
-  "contact.documents.col.state": "Status",
-  "contact.documents.col.added": "Hinzugefügt",
   "contact.research.empty": "Noch keine Recherche zu diesem Kontakt.",
   "contact.research.fields": "Erfasste Angaben",
   "contact.research.fieldsEmpty":
@@ -19673,7 +19753,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.google.helpStep1":
     "Öffne in der Google Cloud Console ein Projekt und gehe zu „APIs und Dienste“, dann „Anmeldedaten“. Wähle „Anmeldedaten erstellen“, dann „OAuth-Client-ID“, und wähle „Webanwendung“.",
   "firstRun.google.helpStep2":
-    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly und gmail.send hinzu. Beide Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird das Senden später angefordert, muss das Postfach erneut verbunden werden.",
+    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly, gmail.send und userinfo.profile hinzu (userinfo.profile liefert das Profilbild des Google-Kontos). Die Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird ein Bereich später angefordert, muss das Postfach erneut verbunden werden.",
   "firstRun.google.helpStep3":
     "Füge unter „Autorisierte Weiterleitungs-URIs“ die oben aufgeführten URIs hinzu. „Postfach“ ist für E-Mails erforderlich. „Kalender“ und „Anmeldung“ aktivieren die jeweilige Funktion.",
   "firstRun.google.helpStep4":

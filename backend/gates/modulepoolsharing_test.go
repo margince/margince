@@ -112,7 +112,7 @@ var ownPools = gatekit.Waive(map[string]string{
 func TestModuleSuitesTakeTheProcessSharedPool(t *testing.T) {
 	t.Parallel()
 	var offenders, sharing, unguarded []string
-	err := filepath.WalkDir(modulesTree, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(modulesTree, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, "_integration_test.go") {
 			return err
 		}

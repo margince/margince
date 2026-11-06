@@ -166,7 +166,7 @@ func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCe
 		byDir[dir] = append(byDir[dir], file)
 		names[file] = filepath.ToSlash(rel)
 	}
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") || isIntegrationTagged(path) {
 			return err
@@ -175,7 +175,7 @@ func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCe
 		if err != nil || strings.HasPrefix(rel, "contracts") {
 			return err
 		}
-		body, err := os.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+		body, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
 		if err != nil {
 			return err
 		}
@@ -227,9 +227,14 @@ func censusPackage(root string, consts packageConsts, files []*ast.File, names m
 			}
 			facts := fnFacts{key: names[file] + ":" + fn.Name.Name}
 			values := taskValues(consts, gatekit.ParsedFile{Path: filepath.Join(root, names[file]), File: file}, fn)
-			visibleConsts := maps.Clone(sqlConsts)
+			visibleConsts, copied := sqlConsts, false
 			for name := range declaredNames(fn) {
-				delete(visibleConsts, name)
+				if _, shadowed := sqlConsts[name]; shadowed && !copied {
+					visibleConsts, copied = maps.Clone(sqlConsts), true
+				}
+				if copied {
+					delete(visibleConsts, name)
+				}
 			}
 			statements := gatekit.SQLStatementsWithConstants(fn.Body, visibleConsts)
 			text := strings.Join(statements, "\n")

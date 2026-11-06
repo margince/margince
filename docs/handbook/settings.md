@@ -25,7 +25,7 @@ You see only the pages your permissions open. The Reset data page appears only w
 
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
-- Change your password, display name, email signature, language or theme (appearance): **Account**.
+- Change your password, display name, profile picture, email signature, language or theme (appearance): **Account**.
 - Turn on two-step sign-in, with a code from your phone: **Account**.
 - Set when customers can book you, and share your booking link: **Meetings**, in **When people can book** and **Booking links**.
 - Set up how your drafts sound: **Writing voice**.
@@ -116,7 +116,7 @@ The Company profile page in Settings (group **Company**) holds your own company'
 
 The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the company time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
 
-The company's logo heads the mail Margince sends as your installation: daily and weekly emails, notifications, invitations and password resets. Under it is a small "Powered by Margince" line. Without a logo, and on privacy notices, the company name stands in its place. Mail you send from your own mailbox carries your signature instead.
+The company's logo heads the mail Margince sends as your installation: daily and weekly emails, notifications, invitations and password resets. Under it is a small "Powered by Margince" line. Without a logo, and on privacy notices, the company name stands in its place. Mail you send from your own mailbox carries your signature instead. The logo is set on the **Brand** card, where **Edit** under the **Wide logo** or the **Square icon** uploads or removes it.
 
 The **Show individual performance** switch there decides whether anyone sees a colleague's figures. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance). The **Forecast** card there holds one switch, **Let the forecast correct itself**. Off, each open deal counts at the probability typed on its stage. On, the forecast learns from deals that closed. See [How the forecast learns](forecast-learning.md).
 
@@ -135,7 +135,7 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 
 To add another, an Admin chooses **New legal entity**, types its name and legal name, and picks where it is based. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
 
-To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed, and a logo is stored as soon as you choose it. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
+To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed. A logo is stored as soon as you choose it with **Edit** and **Upload logo** under the logo. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
 
 **Archive** in the same menu takes one off the list, and the default cannot be archived. Margince also refuses while colleagues still work for it or companies are rated against it. It then says what to change first. Once there are two, the **Members** page shows a **Legal entity** column, where an Admin chooses which one each colleague works for.
 ## Sign-in and apps

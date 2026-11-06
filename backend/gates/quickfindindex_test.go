@@ -21,7 +21,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -86,7 +85,7 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 	t.Helper()
 	sites := map[string][]quickFindSite{}
 	textual := 0
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -98,7 +97,7 @@ func quickFindSites(t *testing.T, root string) (map[string][]quickFindSite, int)
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		src, err := os.ReadFile(path)
+		src, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

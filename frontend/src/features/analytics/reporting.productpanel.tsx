@@ -21,7 +21,7 @@ export function ProductReports() {
   const [params] = useUrlParams();
   const products = useProductOptions();
   return (
-    <Panel title={t("reporting.productReports")}>
+    <Panel title={t("reporting.productReports")} flatHead>
       <PanelBody>
         <p className="t-caption">{t("reporting.productReportsPurpose")}</p>
         <QueryGate
@@ -36,7 +36,6 @@ export function ProductReports() {
               {options.map((product) => (
                 <PanelRow key={product.value}>
                   <AppLink
-                    className="btn btn-ghost"
                     href={analyticsSectionHref(
                       "overview",
                       productDials(params, product.value),

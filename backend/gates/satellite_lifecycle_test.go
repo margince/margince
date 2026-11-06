@@ -61,8 +61,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -199,7 +197,7 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 	columns := map[string]map[string]bool{}
 	var paths []string
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
@@ -214,7 +212,7 @@ func contactSatellites(t *testing.T) map[string]map[string]bool {
 	// lexical sort per namespace IS apply order (ADR-0017).
 	sort.Strings(paths)
 	for _, path := range paths {
-		raw, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
+		raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
 		if err != nil {
 			t.Fatal(err)
 		}

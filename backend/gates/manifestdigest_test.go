@@ -22,11 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const unitManifestFile = "manifest.generated.json"
@@ -84,7 +84,7 @@ func TestEveryGeneratedManifestHashNamesItsAlgorithm(t *testing.T) {
 // file; a text scan matches none of them and skips each one in silence.
 func assertManifestHashes(t *testing.T, path string) int {
 	t.Helper()
-	content, err := os.ReadFile(path) // #nosec G304 -- path comes from walking the trusted source tree
+	content, err := gatekit.ReadFile(path) // #nosec G304 -- path comes from walking the trusted source tree
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -166,7 +166,7 @@ func assertEveryEntryIsHashed(t *testing.T, path string, content []byte) int {
 func committedManifests(t *testing.T, root string) []string {
 	t.Helper()
 	var found []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

@@ -183,7 +183,7 @@ func testFunctions(t *testing.T) map[string][]string {
 	t.Helper()
 	found := map[string][]string{}
 	for _, tree := range claimedTrees {
-		err := filepath.WalkDir(tree.root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(tree.root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -196,7 +196,7 @@ func testFunctions(t *testing.T) map[string][]string {
 			if !strings.HasSuffix(path, "_test.go") {
 				return nil
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *_test.go path from walking the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *_test.go path from walking the trusted source tree
 			if readErr != nil {
 				return readErr
 			}

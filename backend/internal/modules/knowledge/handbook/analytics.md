@@ -40,7 +40,9 @@ A change to one deal also starts a check of that deal alone. When it lands, it c
 
 A deal moved if its amount changed or it entered or left the period. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
 
-The **Reports** section lists saved reports, and **New custom report** opens the report builder. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
+The **Reports** section lists saved reports, and **New custom report** opens the report builder. Below them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. **Product sales** and **Sales initiatives** sit beside them.
+
+A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
@@ -51,8 +53,7 @@ A deal's own amount is in that deal's currency, and amounts in two currencies ca
 The **My outcomes** section shows your own targets, open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
-To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
-The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
+To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**. The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
 
 Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the current permissions of whoever opens it. Also called: send a report, share dashboard, report link.
 
@@ -62,8 +63,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
    It also shows when the link was created and when it expires.
 2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
 
-The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same.
-A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
+The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).
@@ -89,7 +89,7 @@ The modelled range is separate from that forecast. A chart under the readings sh
 
 **Needs your attention** names the three most urgent open forecast checks. Each says which deal to review and why, who owns it (or **Unassigned**), when it was found and how much money it puts in question. **Answer** opens that check on the forecast review, and a seat that may only read it gets **Open**. Below, all open checks are counted by kind, in checks and in deals, and **Show** lists one kind. The checks cover every pipeline and close date of the record scope. A data source the last check could not read shows as **Connection maintenance**, apart from the checks.
 
-**All open pipeline** follows these words and decisions, then the open pipeline by stage and sales won by team member, in name order. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
+The open pipeline by stage follows these words and decisions, with **All open pipeline** and its count of deals in its heading. Sales won by team member follows, in name order. Two colleagues who share a name show their email after it. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
 
 **My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month. The readings below separate leads still waiting for a reply from those that came in during the selected period. They include **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
 

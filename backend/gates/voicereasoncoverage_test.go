@@ -9,7 +9,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -53,7 +52,7 @@ func TestEveryVoiceReviewCodeHasAClientExplanation(t *testing.T) {
 		t.Fatal("voice reason catalog is empty")
 	}
 	assertVoiceReasonWriters(t, names)
-	source, err := os.ReadFile("../frontend/src/features/voice-knowledge/voice-review-reason.ts")
+	source, err := gatekit.ReadFile("../frontend/src/features/voice-knowledge/voice-review-reason.ts")
 	if err != nil {
 		t.Fatal(err)
 	}

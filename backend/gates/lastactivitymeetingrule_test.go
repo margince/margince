@@ -15,10 +15,10 @@ package gates
 // to it, and holds the Go reads of the same question to the same call.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -54,7 +54,7 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 		}
 	}
 	for file, what := range meetingRuleReaders {
-		src, err := os.ReadFile(file)
+		src, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Errorf("%s (%s): %v", file, what, err)
 			continue

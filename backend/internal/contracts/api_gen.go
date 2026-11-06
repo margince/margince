@@ -17860,6 +17860,24 @@ func (e PartnerStageMeaning) Valid() bool {
 	}
 }
 
+// Defines values for PassportAreasMode.
+const (
+	PassportAreasModeAll    PassportAreasMode = "all"
+	PassportAreasModeCustom PassportAreasMode = "custom"
+)
+
+// Valid indicates whether the value is a known member of the PassportAreasMode enum.
+func (e PassportAreasMode) Valid() bool {
+	switch e {
+	case PassportAreasModeAll:
+		return true
+	case PassportAreasModeCustom:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PipelineStageRungStatus.
 const (
 	PipelineStageRungStatusDone          PipelineStageRungStatus = "done"
@@ -25474,6 +25492,36 @@ func (e WeeklyReviewOutlookPeriodKind) Valid() bool {
 	}
 }
 
+// Defines values for WorkArea.
+const (
+	WorkAreaAdminSettings     WorkArea = "admin_settings"
+	WorkAreaBusiness          WorkArea = "business"
+	WorkAreaCapture           WorkArea = "capture"
+	WorkAreaCompliance        WorkArea = "compliance"
+	WorkAreaOwnAccount        WorkArea = "own_account"
+	WorkAreaWorkspaceSettings WorkArea = "workspace_settings"
+)
+
+// Valid indicates whether the value is a known member of the WorkArea enum.
+func (e WorkArea) Valid() bool {
+	switch e {
+	case WorkAreaAdminSettings:
+		return true
+	case WorkAreaBusiness:
+		return true
+	case WorkAreaCapture:
+		return true
+	case WorkAreaCompliance:
+		return true
+	case WorkAreaOwnAccount:
+		return true
+	case WorkAreaWorkspaceSettings:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistCalendar.
 const (
 	WorklistCalendarConnected    WorklistCalendar = "connected"
@@ -27802,6 +27850,30 @@ func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
 	case GetAvailability200JSONResponseBodyCalendarBackingNone:
 		return true
 	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListHeldThreadsParamsStatus.
+const (
+	ListHeldThreadsParamsStatusHeld        ListHeldThreadsParamsStatus = "held"
+	ListHeldThreadsParamsStatusHeldByOwner ListHeldThreadsParamsStatus = "held_by_owner"
+	ListHeldThreadsParamsStatusPending     ListHeldThreadsParamsStatus = "pending"
+	ListHeldThreadsParamsStatusUnsure      ListHeldThreadsParamsStatus = "unsure"
+)
+
+// Valid indicates whether the value is a known member of the ListHeldThreadsParamsStatus enum.
+func (e ListHeldThreadsParamsStatus) Valid() bool {
+	switch e {
+	case ListHeldThreadsParamsStatusHeld:
+		return true
+	case ListHeldThreadsParamsStatusHeldByOwner:
+		return true
+	case ListHeldThreadsParamsStatusPending:
+		return true
+	case ListHeldThreadsParamsStatusUnsure:
 		return true
 	default:
 		return false
@@ -38190,8 +38262,13 @@ type Company360NextStep struct {
 	DueHasTime      *bool               `json:"due_has_time,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
-	Overdue         bool                `json:"overdue"`
-	Subject         string              `json:"subject"`
+
+	// MayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
+	// The contact page asks the same question under the same `claim_key`. Not yet is answered by
+	// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
+	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
+	Overdue   bool               `json:"overdue"`
+	Subject   string             `json:"subject"`
 
 	// Version The task's version, carried so the tick and the snooze beside this row can write with
 	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
@@ -40807,7 +40884,11 @@ type ConsentQualifyingEventSourceEntityType string
 // The consent nonce is NOT here: it reaches the screen in the redirect fragment, because
 // the consent cookie is `Path=/oauth/authorize` and never arrives at this endpoint.
 type ConsentRequest struct {
-	ClientName string `json:"client_name"`
+	// Areas The work areas the human's role reaches, which the screen offers to choose from. The
+	// screen posts the choice back as `areas`: `all`, or the chosen areas separated by spaces.
+	// The screen shows no choice when this holds one area or none, and posts `all`.
+	Areas      []WorkArea `json:"areas"`
+	ClientName string     `json:"client_name"`
 
 	// Offline The client asked to stay connected without asking again (offline_access).
 	Offline bool                   `json:"offline"`
@@ -41689,7 +41770,10 @@ type ContactGraphEdge struct {
 	Outbound90d *int       `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
-	Receipts       *[]ContactGraphReceipt         `json:"receipts,omitempty"`
+	Receipts *[]ContactGraphReceipt `json:"receipts,omitempty"`
+
+	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on.
+	Sent90d        *int                           `json:"sent_90d,omitempty" minimum:"0"`
 	StrengthBucket ContactGraphEdgeStrengthBucket `json:"strength_bucket"`
 
 	// To A node id.
@@ -41812,6 +41896,9 @@ type ContactGraphRouteEvidence struct {
 	Interactions90d int        `json:"interactions_90d"`
 	LastAt          *time.Time `json:"last_at,omitempty"`
 	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+
+	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on.
+	Sent90d *int `json:"sent_90d,omitempty" minimum:"0"`
 
 	// TwoWay Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
 	TwoWay bool `json:"two_way"`
@@ -48132,9 +48219,21 @@ type HeldThread struct {
 	ThreadKey string `json:"thread_key"`
 }
 
+// HeldThreadCounts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow.
+type HeldThreadCounts struct {
+	Held        int `json:"held" minimum:"0"`
+	HeldByOwner int `json:"held_by_owner" minimum:"0"`
+	Pending     int `json:"pending" minimum:"0"`
+	Stalled     int `json:"stalled" minimum:"0"`
+	Unsure      int `json:"unsure" minimum:"0"`
+}
+
 // HeldThreadListResponse defines model for HeldThreadListResponse.
 type HeldThreadListResponse struct {
-	Data []HeldThread `json:"data"`
+	// Counts The caller's whole held list by status, whatever a page narrows to. `stalled` is the pending threads asked about as often as the verdict ever will be: a lane that stopped answering, not one that is slow.
+	Counts HeldThreadCounts `json:"counts"`
+	Data   []HeldThread     `json:"data"`
+	Page   PageInfo         `json:"page"`
 
 	// ThreadVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 	ThreadVerdict *CaptureVerdictClock `json:"thread_verdict,omitempty"`
@@ -50047,6 +50146,9 @@ type InviteUserRequest struct {
 
 // IssuePassportRequest defines model for IssuePassportRequest.
 type IssuePassportRequest struct {
+	// Areas Where the passport may act. Absent means all areas.
+	Areas *PassportAreas `json:"areas,omitempty"`
+
 	// Label Which agent this binds, e.g. "Claude Desktop".
 	Label *string `json:"label,omitempty"`
 
@@ -54884,6 +54986,20 @@ type PartnerStageListResponse struct {
 // active and went quiet. `ended`: the partnership is over or never fit.
 type PartnerStageMeaning string
 
+// PassportAreas defines model for PassportAreas.
+type PassportAreas struct {
+	// Areas The chosen areas, at least one, when `mode` is `custom`. Empty when it is `all`.
+	Areas []WorkArea `json:"areas" unique:"items"`
+
+	// Mode `all` admits every area, those added later included. `custom` admits only `areas`, so an
+	// area added later starts off.
+	Mode PassportAreasMode `json:"mode"`
+}
+
+// PassportAreasMode `all` admits every area, those added later included. `custom` admits only `areas`, so an
+// area added later starts off.
+type PassportAreasMode string
+
 // PassportConnection The connection a grant-bound passport belongs to, so Settings can name it by the client the
 // human actually approved instead of the raw DCR client id its label carries.
 type PassportConnection struct {
@@ -54911,7 +55027,8 @@ type PassportConnection struct {
 // PassportSummary Agent Seat Passport metadata for the Settings list (feedback/13). Never carries the token.
 type PassportSummary struct {
 	// AgentId The agent this passport is bound to, if any.
-	AgentId *string `json:"agent_id,omitempty"`
+	AgentId *string       `json:"agent_id,omitempty"`
+	Areas   PassportAreas `json:"areas"`
 
 	// Connection Present when this passport IS a connection's credential — issued to an MCP client by the
 	// token exchange, not minted by a human. **Omitted entirely** on a human-minted passport —
@@ -60200,6 +60317,9 @@ type SeatCaptureReason string
 
 // SeatName A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
 type SeatName struct {
+	// AvatarUrl Where the client fetches this colleague's profile picture, absent when they have none. As `User.avatar_url`.
+	AvatarUrl *string `json:"avatar_url,omitempty"`
+
 	// Departed True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out.
 	Departed    bool               `json:"departed"`
 	DisplayName string             `json:"display_name"`
@@ -64378,6 +64498,9 @@ type User struct {
 	// Assignable Whether the CALLER may name this member as an owner an automation runs as: an active human seat that can write, inside the caller's own write scope. An automation's owner picker is built on it. A record's owner picker reads `can_own_records` instead. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
 	Assignable *bool `json:"assignable,omitempty"`
 
+	// AvatarUrl Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does.
+	AvatarUrl *string `json:"avatar_url,omitempty"`
+
 	// CanOwnRecords Whether this member's seat may own records: an active human seat that can write. The answer is the same for every caller. A record's owner change asks this of the new owner. It also needs the caller to be allowed to change the record, unless the record has no owner and the caller is a human. Every record owner picker and a website form's owner of new leads read it. A form's new leads may also go to an invited colleague, so its picker offers fewer members than its write accepts. Present on `listUsers`; absent means not computed.
 	CanOwnRecords *bool `json:"can_own_records,omitempty"`
 
@@ -65879,6 +66002,11 @@ type WeeklyScorecardLeadBlock struct {
 	MeetingsPartialHistory int `json:"meetings_partial_history" minimum:"0"`
 	Promoted               int `json:"promoted" minimum:"0"`
 }
+
+// WorkArea One area of work a passport may be limited to. Each operation an agent can call sits in one
+// group, as `docs/reference/mcp-parity.md` places it, and that page names the area each group
+// is held to. The values are the groups a user can choose, held to that placement by a gate.
+type WorkArea string
 
 // WorkEvidenceBasis A recommendation's scoped source and classification. Known request kinds
 // are current_request and request_review; unknown kinds remain neutral.
@@ -69280,6 +69408,32 @@ type PurgeCaptureExclusionParams struct {
 	// Preview Report what would be destroyed and change nothing.
 	Preview *bool `form:"preview,omitempty" json:"preview,omitempty"`
 }
+
+// ListHeldThreadsParams defines parameters for ListHeldThreads.
+type ListHeldThreadsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+
+	// Q Matches the subject, and a party's address or name.
+	Q      *string                      `form:"q,omitempty" json:"q,omitempty"`
+	Status *ListHeldThreadsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// ContactId Only the threads with this contact. A contact you may not read, or one that is archived, answers 404.
+	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+}
+
+// ListHeldThreadsParamsStatus defines parameters for ListHeldThreads.
+type ListHeldThreadsParamsStatus string
 
 // SetCaptureSenderDecisionJSONBody defines parameters for SetCaptureSenderDecision.
 type SetCaptureSenderDecisionJSONBody struct {
@@ -72884,6 +73038,11 @@ type GetMyAiActivityParams struct {
 	Kinds *[]AiActivityKind `form:"kinds,omitempty" json:"kinds,omitempty"`
 }
 
+// UploadMyAvatarMultipartBody defines parameters for UploadMyAvatar.
+type UploadMyAvatarMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // ImportLinkedInConnectionsMultipartBody defines parameters for ImportLinkedInConnections.
 type ImportLinkedInConnectionsMultipartBody struct {
 	// File LinkedIn `Connections.csv`.
@@ -75064,6 +75223,12 @@ type NameSeatsParams struct {
 	Id []openapi_types.UUID `form:"id" json:"id"`
 }
 
+// GetUserAvatarParams defines parameters for GetUserAvatar.
+type GetUserAvatarParams struct {
+	// V The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *string `form:"v,omitempty" json:"v,omitempty"`
+}
+
 // HandOverUserWorkParams defines parameters for HandOverUserWork.
 type HandOverUserWorkParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -76647,6 +76812,9 @@ type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 // UpdateApprovalPreferenceJSONRequestBody defines body for UpdateApprovalPreference for application/json ContentType.
 type UpdateApprovalPreferenceJSONRequestBody = ApprovalPreference
 
+// UploadMyAvatarMultipartRequestBody defines body for UploadMyAvatar for multipart/form-data ContentType.
+type UploadMyAvatarMultipartRequestBody UploadMyAvatarMultipartBody
+
 // SaveMyBriefDeliveryJSONRequestBody defines body for SaveMyBriefDelivery for application/json ContentType.
 type SaveMyBriefDeliveryJSONRequestBody = BriefDelivery
 
@@ -76721,6 +76889,9 @@ type UpdatePartnerStageJSONRequestBody = UpdatePartnerStageRequest
 
 // IssuePassportJSONRequestBody defines body for IssuePassport for application/json ContentType.
 type IssuePassportJSONRequestBody = IssuePassportRequest
+
+// SetPassportAreasJSONRequestBody defines body for SetPassportAreas for application/json ContentType.
+type SetPassportAreasJSONRequestBody = PassportAreas
 
 // CreatePipelineJSONRequestBody defines body for CreatePipeline for application/json ContentType.
 type CreatePipelineJSONRequestBody = CreatePipelineRequest
@@ -90442,7 +90613,7 @@ type ServerInterface interface {
 	PurgeCaptureExclusion(w http.ResponseWriter, r *http.Request, id Id, params PurgeCaptureExclusionParams)
 	// What your mailbox is holding right now.
 	// (GET /capture/held-threads)
-	ListHeldThreads(w http.ResponseWriter, r *http.Request)
+	ListHeldThreads(w http.ResponseWriter, r *http.Request, params ListHeldThreadsParams)
 	// The caller's own other email addresses.
 	// (GET /capture/owner-identities)
 	ListCaptureOwnerIdentities(w http.ResponseWriter, r *http.Request)
@@ -91823,6 +91994,12 @@ type ServerInterface interface {
 	// Mute or restore one kind in the caller's own queue.
 	// (PATCH /me/approval-preferences)
 	UpdateApprovalPreference(w http.ResponseWriter, r *http.Request)
+	// Take your own profile picture off for good.
+	// (DELETE /me/avatar)
+	DeleteMyAvatar(w http.ResponseWriter, r *http.Request)
+	// Upload your own profile picture.
+	// (POST /me/avatar)
+	UploadMyAvatar(w http.ResponseWriter, r *http.Request)
 	// What the product may send you about your day and your week.
 	// (GET /me/brief-delivery)
 	GetMyBriefDelivery(w http.ResponseWriter, r *http.Request)
@@ -92000,6 +92177,9 @@ type ServerInterface interface {
 	// Revoke a Passport (kill switch for one agent binding).
 	// (DELETE /passports/{id})
 	RevokePassport(w http.ResponseWriter, r *http.Request, id Id)
+	// Choose the work areas one of the caller's own passports may act in.
+	// (PUT /passports/{id}/areas)
+	SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id)
 	// List pipelines.
 	// (GET /pipelines)
 	ListPipelines(w http.ResponseWriter, r *http.Request, params ListPipelinesParams)
@@ -92594,6 +92774,9 @@ type ServerInterface interface {
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
+	// Stream a colleague's profile picture.
+	// (GET /users/{id}/avatar)
+	GetUserAvatar(w http.ResponseWriter, r *http.Request, id Id, params GetUserAvatarParams)
 	// Deactivate a member and revoke their live access. Admin-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
@@ -94270,7 +94453,7 @@ func (_ Unimplemented) PurgeCaptureExclusion(w http.ResponseWriter, r *http.Requ
 
 // What your mailbox is holding right now.
 // (GET /capture/held-threads)
-func (_ Unimplemented) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListHeldThreads(w http.ResponseWriter, r *http.Request, params ListHeldThreadsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -97034,6 +97217,18 @@ func (_ Unimplemented) UpdateApprovalPreference(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Take your own profile picture off for good.
+// (DELETE /me/avatar)
+func (_ Unimplemented) DeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Upload your own profile picture.
+// (POST /me/avatar)
+func (_ Unimplemented) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What the product may send you about your day and your week.
 // (GET /me/brief-delivery)
 func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
@@ -97385,6 +97580,12 @@ func (_ Unimplemented) IssuePassport(w http.ResponseWriter, r *http.Request) {
 // Revoke a Passport (kill switch for one agent binding).
 // (DELETE /passports/{id})
 func (_ Unimplemented) RevokePassport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose the work areas one of the caller's own passports may act in.
+// (PUT /passports/{id}/areas)
+func (_ Unimplemented) SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98573,6 +98774,12 @@ func (_ Unimplemented) UpdateMember(w http.ResponseWriter, r *http.Request, id I
 // What this member sees and may do today, from their roles and teams.
 // (GET /users/{id}/access)
 func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stream a colleague's profile picture.
+// (GET /users/{id}/avatar)
+func (_ Unimplemented) GetUserAvatar(w http.ResponseWriter, r *http.Request, id Id, params GetUserAvatarParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109321,6 +109528,9 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 // ListHeldThreads operation middleware
 func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -109329,8 +109539,76 @@ func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *htt
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListHeldThreadsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListHeldThreads(w, r)
+		siw.Handler.ListHeldThreads(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -129569,6 +129847,46 @@ func (siw *ServerInterfaceWrapper) UpdateApprovalPreference(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteMyAvatar operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMyAvatar(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadMyAvatar operation middleware
+func (siw *ServerInterfaceWrapper) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadMyAvatar(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyBriefDelivery operation middleware
 func (siw *ServerInterfaceWrapper) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 
@@ -131837,6 +132155,38 @@ func (siw *ServerInterfaceWrapper) RevokePassport(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RevokePassport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetPassportAreas operation middleware
+func (siw *ServerInterfaceWrapper) SetPassportAreas(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetPassportAreas(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -140816,6 +141166,54 @@ func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetUserAvatar operation middleware
+func (siw *ServerInterfaceWrapper) GetUserAvatar(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetUserAvatarParams
+
+	// ------------- Optional query parameter "v" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserAvatar(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeactivateUser operation middleware
 func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 
@@ -146519,6 +146917,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/me/approval-preferences", wrapper.UpdateApprovalPreference)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/avatar", wrapper.DeleteMyAvatar)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/avatar", wrapper.UploadMyAvatar)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/brief-delivery", wrapper.GetMyBriefDelivery)
 	})
 	r.Group(func(r chi.Router) {
@@ -146694,6 +147098,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/passports/{id}", wrapper.RevokePassport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/passports/{id}/areas", wrapper.SetPassportAreas)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/pipelines", wrapper.ListPipelines)
@@ -147288,6 +147695,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}/avatar", wrapper.GetUserAvatar)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/deactivate", wrapper.DeactivateUser)

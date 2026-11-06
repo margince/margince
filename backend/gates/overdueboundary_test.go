@@ -31,7 +31,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -137,7 +136,7 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 	var inGo, inSQL []string
 	judged := 0
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -155,7 +154,7 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 			if strings.Contains(rel, deadlineOwner) {
 				return nil
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
 			if readErr != nil {
 				return readErr
 			}

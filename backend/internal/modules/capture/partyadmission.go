@@ -133,8 +133,8 @@ func (s *Sink) admitPartiesAs(ctx context.Context, activity ids.ActivityID, sour
 func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, source partySource, party admissionParty) error {
 	var rec connector.NormalizedRecord
 	var decision counterpartyDecision
-	// The live probe shares the activity row while a sibling admission's ensure
-	// asks to lock it, so two admissions of one message can deadlock here.
+	// A cycle Postgres breaks is a lost decision, not a refused party, so the whole
+	// transaction runs again from an empty decision.
 	err := storekit.RetryLockCycles(ctx, func() error {
 		rec, decision = connector.NormalizedRecord{}, counterpartyDecision{}
 		return s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -149,7 +149,7 @@ func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, sourc
 	}
 	cp := decision.subject
 	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{HoldAuthority: func(ctx context.Context, tx pgx.Tx) error {
-		return s.holdPartyAuthorityTx(ctx, tx, source.User)
+		return s.holdEnsureLocksTx(ctx, tx, source.User, activity)
 	}, Admission: s.partyAdmissionGuard(activity, source, party), Email: cp.Email, DisplayName: cp.DisplayName, Domain: cp.Domain, OwnerID: decision.owner, ActivityID: activity.UUID, Source: captureSource(rec), CapturedBy: decision.capturedBy, SuppressCompany: decision.suppressCompany, Replied: decision.replied})
 	if err != nil {
 		return fmt.Errorf("admit a captured participant: %w", err)
@@ -161,6 +161,10 @@ func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, sourc
 // decidePartyTx reads what one party's admission turns on. A party it refuses
 // leaves decision empty, which admits nobody.
 func (s *Sink) decidePartyTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, source partySource, party admissionParty, rec *connector.NormalizedRecord, decision *counterpartyDecision) error {
+	// Authority before the row, the order both ensure paths take.
+	if err := s.holdPartyAuthorityTx(ctx, tx, source.User); err != nil {
+		return err
+	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activity.UUID); err != nil {
 		return err
 	}

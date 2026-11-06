@@ -30,7 +30,6 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -119,7 +118,7 @@ func humanSenseSentences() []string {
 	entry := regexp.MustCompile(`(?m)^\s*"(?:[^"\\]|\\.)+":\s*"((?:[^"\\]|\\.)*)",\s*$`)
 	seen := map[string]bool{}
 	for _, locale := range []string{"en", "de", "vi"} {
-		body, err := os.ReadFile(filepath.Join( // #nosec G304 -- a fixed catalog name
+		body, err := gatekit.ReadFile(filepath.Join( // #nosec G304 -- a fixed catalog name
 			repoRoot, "frontend", "src", "i18n", locale+".ts"))
 		if err != nil {
 			continue
@@ -161,13 +160,13 @@ var frozenCriteria = sync.OnceValue(recordedCriteria)
 
 func recordedCriteria() []string {
 	dir := filepath.Join(repoRoot, "e2e", "llm", "testdata", "judge")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		return nil
 	}
 	seen := map[string]bool{}
 	for _, entry := range entries {
-		body, err := os.ReadFile(filepath.Join(dir, entry.Name())) // #nosec G304 -- a corpus this test owns
+		body, err := gatekit.ReadFile(filepath.Join(dir, entry.Name())) // #nosec G304 -- a corpus this test owns
 		if err != nil {
 			continue
 		}
@@ -259,6 +258,7 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/features/settings/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/features/settings/users-invite-form.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-memberverbs.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/features/settings/users-membercells.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-password-link.stories.tsx": "a page under the seats settings group",
 	"frontend/src/features/settings/users-rolecell.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/components/share.parts.tsx": "the share target kind: a colleague with a seat, or a team " +
@@ -373,7 +373,7 @@ func TestTheRecordIsCalledAContact(t *testing.T) {
 		if pathNamesTheRetiredWord(f.path) {
 			t.Errorf("%s is NAMED for the record's retired name. It is called a contact.", f.path)
 		}
-		body, err := os.ReadFile(filepath.Join(repoRoot, f.path))
+		body, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)
 		}

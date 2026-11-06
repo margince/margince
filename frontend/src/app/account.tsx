@@ -99,6 +99,7 @@ function identityOf(user: SessionUser | undefined) {
     name,
     email,
     label,
+    photo: user?.avatar_url,
     // Both lines in one sentence, for the state that has no room to print them.
     spoken: name && email ? `${name} — ${email}` : label,
   };
@@ -254,7 +255,11 @@ function AccountPanel({
           >
             {/* The one chip, keyed on the seat's user id like every other chip
                 drawn for this colleague. */}
-            <Avatar identity={identity.id} name={identity.label} />
+            <Avatar
+              identity={identity.id}
+              name={identity.label}
+              photo={identity.photo}
+            />
             <IdentityLines identity={identity} />
           </LinkRow>
           <hr />
@@ -373,10 +378,10 @@ export function AccountMenu() {
       <Button
         variant="bare"
         iconOnly
+        className="account-trigger"
         ref={trigger}
-        // WCAG 2.5.3 (Label in Name) binds only printed text, and this glyph
-        // prints none. So it is named by what it does, and the contact is its
-        // description below.
+        // WCAG 2.5.3 (Label in Name) binds only printed text, and the chip's
+        // initials are hidden, so it prints none. It is named by what it does.
         aria-label={t("shell.accountAria")}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -391,7 +396,17 @@ export function AccountMenu() {
         title={identity.spoken || undefined}
         onClick={() => setOpen((current) => !current)}
       >
-        <UserRound aria-hidden />
+        {identity.label ? (
+          <span className="account-face" aria-hidden="true">
+            <Avatar
+              identity={identity.id}
+              name={identity.label}
+              photo={identity.photo}
+            />
+          </span>
+        ) : (
+          <UserRound aria-hidden />
+        )}
         {identity.spoken && (
           <span className="sr-only" id={spokenId}>
             {identity.spoken}

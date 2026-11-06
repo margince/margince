@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { MayBeDone } from "../../components/maybedone";
 import { TaskAssignee } from "../../components/taskassignee";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -11,6 +12,7 @@ import { formatNumber } from "../../format/format";
 import { formatDueCompact } from "../../format/format.dates";
 import { calendarLateness } from "../../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { taskWriteKeys } from "../../lib/activitykeys";
 import "./companytabs.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./company360.css";
@@ -19,6 +21,7 @@ type Company360 = components["schemas"]["Company360"];
 type NextStep = NonNullable<Company360["next_steps"]>["data"][number];
 
 type Cells = {
+  companyId: string;
   t: ReturnType<typeof useT>;
   plural: ReturnType<typeof usePlural>;
   locale: Locale;
@@ -59,6 +62,7 @@ export function CompanyTaskTable({
     steps.length,
   );
   const cells: Cells = {
+    companyId: view.company.id,
     t,
     plural,
     locale,
@@ -140,11 +144,11 @@ function taskColumns(cells: Cells): DataTableColumn<NextStep>[] {
 }
 
 function TaskCell({ step, cells }: Readonly<{ step: NextStep; cells: Cells }>) {
-  const { onOpenTask, renderTick } = cells;
+  const { onOpenTask, renderTick, companyId } = cells;
   return (
-    <span className="co-tasktable-task">
+    <div className="co-tasktable-task">
       {renderTick?.(step)}
-      <span className="co-tasktable-name">
+      <div className="co-tasktable-name">
         {onOpenTask ? (
           <button
             type="button"
@@ -166,8 +170,20 @@ function TaskCell({ step, cells }: Readonly<{ step: NextStep; cells: Cells }>) {
             )}
           </span>
         )}
-      </span>
-    </span>
+        {/* A list that offers the tick asks the Worklist's question too. */}
+        {renderTick && (
+          <MayBeDone
+            question={step.may_be_done}
+            task={{
+              id: step.activity_id,
+              version: step.version,
+              canComplete: true,
+            }}
+            refresh={[...taskWriteKeys("company", companyId), ["worklist"]]}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 

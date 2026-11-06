@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -17,6 +17,8 @@ To connect your Gmail or Outlook mailbox to Margince, open **Settings → Connec
 You land back on Connections with a note such as "Google connected" and "Mail and Calendar are syncing." An agent cannot connect a mailbox for you.
 If the account says "{provider} is not configured on this installation.", an administrator has to set it up first.
 Also called: hook up Google Mail, link my inbox, email sync, Outlook sync, Office 365.
+
+Google also shares your account's picture. If that Google account is the address you sign in with, colleagues see its picture next to your name. A picture you uploaded or removed stays as it is. A shared mailbox, such as sales@, sets no one's picture.
 
 ### How do I connect an IMAP mailbox?
 To connect any other mail host to Margince, open **Settings → Connections**, choose **Add account** and pick **Another mail host**. Then fill in the **Connect IMAP mailbox** form.
