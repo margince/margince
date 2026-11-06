@@ -102,25 +102,56 @@ export function taskLine(
   return briefContextTitle(item) ?? reason ?? (item.detail || null);
 }
 
+/** Done on a row that is not a task: the queue's put-down, handed in. */
+export type RowDone = Readonly<{
+  offered: boolean;
+  pending: boolean;
+  done: () => void;
+}>;
+
 /**
- * The tick that marks a task done. Only a task the reader may complete has
- * one; any other row keeps the column empty, so every name starts on one x.
+ * The tick that marks a card done. A task the reader may complete closes the
+ * task; any other row the reader may mark done is put down in the queue.
+ * A card with neither keeps the column empty, so every name starts on one x.
  */
-export function TaskTick({ item }: Readonly<{ item: WorklistItem }>) {
+export function TaskTick({
+  item,
+  rowDone,
+}: Readonly<{ item: WorklistItem; rowDone?: RowDone }>) {
   const completes =
     item.source === "task" && !item.batch && item.actions.includes("complete");
   return (
     <span className="brief-task-tick">
-      {completes && <DoneVerb item={item} />}
+      {completes ? (
+        <TaskDone item={item} />
+      ) : (
+        rowDone?.offered && (
+          <Tick item={item} pending={rowDone.pending} onDone={rowDone.done} />
+        )
+      )}
     </span>
   );
 }
 
-function DoneVerb({ item }: Readonly<{ item: WorklistItem }>) {
+function TaskDone({ item }: Readonly<{ item: WorklistItem }>) {
+  const done = useTaskDone(item.id, item.version);
+  return (
+    <Tick
+      item={item}
+      pending={done.pending}
+      onDone={() => void done.complete()}
+    />
+  );
+}
+
+function Tick({
+  item,
+  pending,
+  onDone,
+}: Readonly<{ item: WorklistItem; pending: boolean; onDone: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const viewer = useMe(false).data?.user;
-  const done = useTaskDone(item.id, item.version);
   return (
     <IconAction
       label={t("brief.task.done", {
@@ -128,8 +159,8 @@ function DoneVerb({ item }: Readonly<{ item: WorklistItem }>) {
       })}
       icon={<Circle aria-hidden="true" />}
       variant="ghost"
-      pending={done.pending}
-      onClick={() => void done.complete()}
+      pending={pending}
+      onClick={onDone}
     />
   );
 }
@@ -138,7 +169,8 @@ function DoneVerb({ item }: Readonly<{ item: WorklistItem }>) {
 export function TaskCard({
   item,
   onOpen,
-}: Readonly<{ item: WorklistItem; onOpen: () => void }>) {
+  rowDone,
+}: Readonly<{ item: WorklistItem; onOpen: () => void; rowDone?: RowDone }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
@@ -146,7 +178,7 @@ export function TaskCard({
   const line = taskLine(item, t, locale, zone);
   return (
     <Card as="article" className="brief-task">
-      <TaskTick item={item} />
+      <TaskTick item={item} rowDone={rowDone} />
       <button type="button" className="brief-task-open" onClick={onOpen}>
         <span className="brief-task-title">
           {taskName(item, viewer, t, locale)}

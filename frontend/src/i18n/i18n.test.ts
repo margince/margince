@@ -312,6 +312,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.lead",
   // The same loanword, naming the record an approval's evidence came from.
   "decision.evidenceSource.deal",
+  "worklist.pane.deal",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client
