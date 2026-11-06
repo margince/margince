@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -81,7 +80,7 @@ func TestEveryOperationDeclaringSortHasAHandlerThatReadsIt(t *testing.T) {
 // twice.
 func operationsDeclaringSort(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

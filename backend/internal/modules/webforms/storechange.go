@@ -6,11 +6,14 @@ package webforms
 import (
 	"context"
 	"errors"
+	"net/http"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -164,6 +167,9 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return Form{}, err
 	}
+	if err := refuseAgentSecretChange(ctx, in); err != nil {
+		return Form{}, err
+	}
 	newRef, err := s.replacementSecret(ctx, id, in.SenderSecret)
 	if err != nil {
 		return Form{}, err
@@ -183,6 +189,9 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 			return err
 		}
 		next, err := in.merged(current)
+		if err == nil {
+			err = refuseAgentPromiseChange(ctx, current, next)
+		}
 		if err != nil {
 			return err
 		}
@@ -333,4 +342,56 @@ func (s *Store) ArchiveForm(ctx context.Context, id ids.UUID) (Form, error) {
 	}
 	s.dropSecret(ctx, out.SecretRef, "web form archived")
 	return out, nil
+}
+
+const fieldSenderSecret = "sender_secret"
+
+// refuseAgentSecretChange keeps a form's secret with a user. An agent may change
+// the rest of a form, but a secret it chose would let it post leads as that form.
+func refuseAgentSecretChange(ctx context.Context, in UpdateInput) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	if in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret) {
+		return &httperr.DetailedError{
+			Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
+			Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
+		}
+	}
+	return nil
+}
+
+// refuseAgentPromiseChange keeps with a user what a form promises a visitor and
+// where it takes posts from. Each has legal weight, or lets a site post leads.
+func refuseAgentPromiseChange(ctx context.Context, current, next Form) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	same := sameOrigins(current.AllowedOrigins, next.AllowedOrigins) &&
+		current.ConsentRequired == next.ConsentRequired &&
+		sameText(current.ConsentWording, next.ConsentWording) &&
+		sameText(current.ConsentPolicyVersion, next.ConsentPolicyVersion) &&
+		sameText(current.PrivacyNotice, next.PrivacyNotice) &&
+		sameText(current.PrivacyNoticeURL, next.PrivacyNoticeURL)
+	if same {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "agent_sets_no_form_promise",
+		Detail: "an agent does not change a form's origins, consent or privacy notice; ask the user to do it in the app",
+	}
+}
+
+func sameText(a, b *string) bool {
+	return (a == nil) == (b == nil) && (a == nil || *a == *b)
+}
+
+// sameOrigins compares two allowlists as sets, because their order means nothing.
+func sameOrigins(a, b []string) bool {
+	a, b = slices.Clone(a), slices.Clone(b)
+	slices.Sort(a)
+	slices.Sort(b)
+	return slices.Equal(a, b)
 }

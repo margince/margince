@@ -36,7 +36,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -73,7 +72,7 @@ func TestNoUnitDialsAroundTheInstallationsEgressPolicy(t *testing.T) {
 	var offences []string
 	scanned := 0
 	for _, tree := range unitTrees {
-		err := filepath.WalkDir(tree, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(tree, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}

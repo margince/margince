@@ -25,8 +25,8 @@ func TestUnknownAcquisitionIsReviewedBeforeItCanBecomeANoticeDuty(t *testing.T) 
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Source Review Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
-	driveNoticeCase(t, e, contact.ID)
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 	var id, state, rule string
 	var due *time.Time
 	var count int
@@ -44,8 +44,9 @@ func TestUnknownAcquisitionIsReviewedBeforeItCanBecomeANoticeDuty(t *testing.T) 
 		t.Fatalf("legacy duty endpoint exposed source review: %d", status)
 	}
 	bearer := apptest.PassportBearer(t, e, "source-review-probe", "read", "write")
-	if status := e.Call(t, "POST", path, AnyMap{"kind": "subject_initiated", "note": "Agent assessment"}, bearer, nil); status != http.StatusForbidden {
-		t.Fatalf("agent assessment -> %d", status)
+	// An agent reaches the assessment's own rules, and the fixture stays unassessed.
+	if status := e.Call(t, "POST", path, AnyMap{"kind": "not_a_kind", "note": "Agent assessment"}, bearer, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("agent assessment -> %d, want 422", status)
 	}
 
 	obtained := time.Date(2020, 1, 31, 10, 0, 0, 0, time.UTC)
@@ -66,6 +67,41 @@ func TestUnknownAcquisitionIsReviewedBeforeItCanBecomeANoticeDuty(t *testing.T) 
 	}
 }
 
+// An agent assesses a source as its user does, and the audit row names the agent.
+func TestAnAgentAssessesASourceAndTheTrailNamesIt(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var contact struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Agent Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
+		t.Fatal(status)
+	}
+	apptest.DriveNoticeCase(t, e, contact.ID)
+	var id string
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM privacy_notice_case WHERE contact_id = @contact`, pgx.NamedArgs{"contact": contact.ID}).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	bearer := apptest.PassportBearer(t, e, "source-review agent", "read", "write")
+	var assessed struct {
+		State string
+		Note  string `json:"resolution_note"`
+	}
+	if status := e.Call(t, "POST", "/v1/privacy/notice-case-reviews/"+id+"/source", AnyMap{"kind": "subject_initiated", "note": "Their own message confirms direct collection"}, bearer, &assessed); status != http.StatusOK {
+		t.Fatalf("the agent's assessment → %d", status)
+	}
+	if assessed.State != "exempt_with_reason" || assessed.Note == "" {
+		t.Errorf("assessment = %+v", assessed)
+	}
+	var actorType string
+	if err := e.Owner.QueryRow(context.Background(), `SELECT actor_type FROM audit_log WHERE entity_id = @id ORDER BY occurred_at DESC LIMIT 1`, pgx.NamedArgs{"id": id}).Scan(&actorType); err != nil {
+		t.Fatalf("reading the audit row: %v", err)
+	}
+	if actorType != "agent" {
+		t.Errorf("the audit row names a %q, want the agent", actorType)
+	}
+}
+
 func TestDirectSourceAssessmentEndsReviewWithoutInventingADisclosure(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -75,7 +111,7 @@ func TestDirectSourceAssessmentEndsReviewWithoutInventingADisclosure(t *testing.
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Direct Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 	var id string
 	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM privacy_notice_case WHERE contact_id = @contact`, pgx.NamedArgs{"contact": contact.ID}).Scan(&id); err != nil {
 		t.Fatal(err)

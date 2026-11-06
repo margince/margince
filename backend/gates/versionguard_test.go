@@ -33,7 +33,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -179,11 +178,11 @@ func versionBumpingTables(t *testing.T) map[string]bool {
 	// sequence number, and dbmigrate orders versions as strings too, so
 	// ascending version and ascending name agree.
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}
@@ -235,7 +234,7 @@ func applyTriggerStatements(text string, live map[attachedTrigger]triggerBody) {
 // not resolve here.
 func parsePackageDir(t *testing.T, fset *token.FileSet, dir string) []*ast.File {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}

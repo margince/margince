@@ -30,6 +30,9 @@ prompt: |
 
 must_call:
   - progress_deal
+must_not_call_with:
+  - change_offers~.
+
 may_call:
   - read_workspace
   - search_records

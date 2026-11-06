@@ -238,7 +238,7 @@ func TestNoExtensionMailsWithoutTheDeliveryLane(t *testing.T) {
 
 	root := filepath.Join("..", "extensions")
 	var senders []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -277,7 +277,7 @@ func TestNoExtensionMailsWithoutTheDeliveryLane(t *testing.T) {
 func walkedAnyGo(t *testing.T, root string) bool {
 	t.Helper()
 	found := false
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -386,8 +386,12 @@ func relayCall(name string, arity int) bool {
 		return arity == 5
 	case "SendProduct":
 		return arity == 5
+	case "SendBranded":
+		return arity == 4
 	case "SendAlternative":
 		return arity == 6
+	case "SendRelated":
+		return arity == 7
 	default:
 		return false
 	}

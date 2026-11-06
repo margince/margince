@@ -201,7 +201,7 @@ func configuredPrediction(method string) prediction {
 		case MethodSelfCorrecting:
 			readings.WeightedMinor = v.Weighted
 		case MethodCommitEvidence:
-			measure = MeasureCommitEvidence
+			measure = MeasureLikely
 		}
 		landing, err := ProjectLanding(readings, measure, nil)
 		return landing.AmountMinor, err

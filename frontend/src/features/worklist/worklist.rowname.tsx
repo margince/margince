@@ -20,6 +20,7 @@ export function RowName({
   const name = open ? (
     <Button
       variant="link"
+      align="start"
       className="btn-valuelabel"
       aria-haspopup="dialog"
       onClick={open}

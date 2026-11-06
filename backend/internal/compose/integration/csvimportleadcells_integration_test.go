@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
@@ -61,8 +62,8 @@ func TestALeadFileNamesItsBadEmailAndPhoneInThePreviewAndCommitsTheRest(t *testi
 		"Bad Mail,not-an-email,+44 20 7946 0002\n" +
 		"Bad Phone,bad@phone.example,020 7946 0003\n"
 
-	profile, _ := uploadCSV(t, e, "lead", file)
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", file)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{
 		"Name": "full_name", "Email": "email", "Phone": "phone",
 	})
 	if status != http.StatusAccepted {
@@ -90,15 +91,15 @@ func TestReimportingASpacedLeadPhoneChangesNothing(t *testing.T) {
 	file := "Name,Email,Phone\nAda Lovelace,ada@lovelace.example,+84 90 111 0002\n"
 	mapping := map[string]string{"Name": "full_name", "Email": "email", "Phone": "phone"}
 
-	first, _ := uploadCSV(t, e, "lead", file)
-	run, _ := createRunWithMapping(t, e, "lead", first.SourceRef, mapping)
+	first, _ := importjobtest.UploadCSV(t, e, "lead", file)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", first.SourceRef, mapping)
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("first approve → %d, want 202", status)
 	}
 	_, versionBefore := leadByEmail(t, e, "ada@lovelace.example")
 
-	again, _ := uploadCSV(t, e, "lead", file)
-	rerun, _ := createRunWithMapping(t, e, "lead", again.SourceRef, mapping)
+	again, _ := importjobtest.UploadCSV(t, e, "lead", file)
+	rerun, _ := importjobtest.CreateRunWithMapping(t, e, "lead", again.SourceRef, mapping)
 	if report := leadReport(t, e, rerun.ID); report.Disposition.Unchanged != 1 || report.Disposition.Updated != 0 {
 		t.Fatalf("re-import preview = %+v, want the one row unchanged", report.Disposition)
 	}
@@ -117,8 +118,8 @@ func TestALeadFileNamingAnEmailAnotherLeadHoldsIsSkippedInThePreview(t *testing.
 	_, versionBefore := leadByEmail(t, e, "taken@lead.example")
 	file := "Name,Email\nSomeone Else,taken@lead.example\nFresh Lead,fresh@lead.example\n"
 
-	profile, _ := uploadCSV(t, e, "lead", file)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{"Name": "full_name", "Email": "email"})
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", file)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{"Name": "full_name", "Email": "email"})
 	report := leadReport(t, e, run.ID)
 	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
 		t.Fatalf("preview = %+v, want the fresh lead created and the held address skipped", report.Disposition)
@@ -140,10 +141,10 @@ func TestALeadFileNamingAnEmailAnotherLeadHoldsIsSkippedInThePreview(t *testing.
 func TestACorrectedLeadFileMovingAnEmailOntoAnotherLeadSkipsTheRow(t *testing.T) {
 	e := setupImportApp(t)
 	mapping := map[string]string{"Ref": "ref", "Name": "full_name", "Email": "email"}
-	runWith := func(file string) importRunDTO {
-		profile, _ := uploadCSV(t, e, "lead", file)
-		var run importRunDTO
-		status := testCall(t, e, "/v1/imports", AnyMap{
+	runWith := func(file string) importjobtest.Run {
+		profile, _ := importjobtest.UploadCSV(t, e, "lead", file)
+		var run importjobtest.Run
+		status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 			"connector": "csv", "object": "lead", "source_ref": profile.SourceRef,
 			"mapping": mapping, "source_key": "Ref",
 		}, &run)

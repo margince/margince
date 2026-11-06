@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { formatNumber } from "../../format/format";
 import { translate, translatePlural } from "../../i18n";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -88,6 +89,7 @@ export const OriginAndCountInGerman: Story = {
     return (
       <StoryProviders locale="de">
         <LeadBoard
+          query={UNNARROWED_LIST_QUERY}
           rows={rows}
           onMoved={() => undefined}
           hasMore={false}

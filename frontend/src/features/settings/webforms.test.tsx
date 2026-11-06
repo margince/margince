@@ -74,8 +74,8 @@ const budgetField: CustomField = {
   version: 1,
 };
 
-// The colleagues an owner picker offers: a colleague, plus an agent seat the
-// server refuses as an owner.
+// The roster an owner picker reads: a colleague, and one outside the reader's
+// own scope. A read seat and an agent seat are refused as owners.
 const roster = {
   data: [
     {
@@ -83,6 +83,22 @@ const roster = {
       display_name: "Jane Doe",
       email: "jane@acme.test",
       is_agent: false,
+    },
+    {
+      id: "u-77",
+      display_name: "Sam Field",
+      email: "sam@acme.test",
+      is_agent: false,
+      assignable: false,
+      can_own_records: true,
+    },
+    {
+      id: "u-88",
+      display_name: "Rita Reader",
+      email: "rita@acme.test",
+      is_agent: false,
+      assignable: false,
+      can_own_records: false,
     },
     {
       id: "agent-1",
@@ -241,6 +257,8 @@ describe("WebFormsCard", () => {
     await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
     await user.click(screen.getByLabelText(/^Owner of new leads/));
     await screen.findByRole("option", { name: "Jane Doe" });
+    expect(screen.getByRole("option", { name: "Sam Field" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Rita Reader" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
     await user.click(screen.getByRole("option", { name: "Jane Doe" }));
     await user.click(screen.getByTestId("save-web-form"));

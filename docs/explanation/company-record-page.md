@@ -29,7 +29,7 @@ More than one endpoint serves one screen. Which one owns which part:
    NAMED in sections_omitted     per-group grants   assembly (…/brief too,
                                                     deprecated, no UI)
              │
- POST …/view-ack             advance the visit baseline (explicit, human-only)
+ POST …/view-ack             advance the visit baseline (explicit)
  POST …/suggestions/dismiss  per-user, "not this, not now" — a rule's row or a scan's
  POST …/scan                 ensure the reader's account scan is current (human-only)
  GET  …/scan                 the scan as it stands: state, merged advice, the read's foot
@@ -147,9 +147,8 @@ nonce fence. That data is quoted between delimiter strings that are made new eac
 part of the prompt. The site read prompts use the same rule. This text is from outside the workspace, and
 must never be read as an order. The model runtime behind it is in [ai-runtime.md](ai-runtime.md).
 
-Both the brief and Ask are **human only** (`x-agent-access: human-only`, `security: [{ cookieAuth: [] }]`,
-and `auth.RequireHuman` at the service). A brief is a reading help for a human. An agent that reads records
-through a passport has the records themselves.
+An agent acting for its user reaches both, through `read_details` (`company_brief`) and
+`run_research` (`ask_about_company`, which needs the `enrich` scope). They run these same handlers, so an agent and a user get one answer.
 
 ## Ask
 
@@ -388,10 +387,9 @@ done ahead of time look like a visit. The upsert only moves forward (`GREATEST(s
 ack of a slow tab can never move a newer one back. Two tabs on the same account end on the later visit,
 and do not fight to move the baseline back.
 
-It is **human only**, and that gate is required, not a second layer of guard. An agent principal holds
-the granting human's id as its `UserID` (that is how row scope works for passports). So "resolve the
-acting user" would write a baseline that marks an account as *seen* by a human who never opened it. That
-would use up their unread marker for them.
+It opens to a user or the agent on their passport. An agent principal holds its user's id as its
+`UserID`. So this marks the account as *seen* by that user and uses up their unread marker. Reading the
+record never does. So `change_attention` tells the agent to ask first.
 
 **The client waits before it sends.** `useAcknowledgeCompanyView` waits `VIEW_ACK_DWELL_MS` (5 seconds)
 with the account open before firing, and leaving cancels the timer. Opening a record and going right back

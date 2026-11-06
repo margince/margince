@@ -49,7 +49,6 @@ With the time span set to this quarter, **This quarter against its target** sits
 - **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
 - **Left to win** is the target minus sales won so far, and never below zero.
 - **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
-- **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
 
 When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
 
@@ -137,11 +136,15 @@ To read a report, a user needs access to the report and access to the numbers un
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
 
-## What does the panel under the summary say?
+## How do I read the sales review?
 
-**Assessment** sits below the summary and the actions of the sales review. It reads the measured figures and writes a few sentences on what they show. Each is marked as an observation, a reported fact or a guess. It names one next decision on a deal you may open, or says that none is supported.
+**Sales review** opens with sales won, the forecast, its modelled range and pipeline due this quarter. The forecast names its basis. A manager call keeps its date, and the target comparison uses the same scope and period.
 
-**View evidence** lists the figures each sentence rests on and opens their records. **Record decision** turns the next decision into a task with the deal and owner filled in. **Refresh assessment** asks again. Without an AI model, the panel shows the summary written from the figures and says so.
+**Quarter outlook** explains the measured figures in connected paragraphs. **View supporting records** opens the evidence, and **Refresh assessment** asks again. A suggested decision can fill in the deal and owner when you choose **Record decision**.
+
+Amounts in Analytics use grouped whole currency units. The ≈ mark means the value was rounded. An amount below one unit keeps its sign and shows <1. Exports keep the exact amount.
+
+The figures and actions remain available without AI text. Actions for quarter deals without amounts or exchange rates open those deals. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
 
 ## Can I describe a report or an initiative in words?
 

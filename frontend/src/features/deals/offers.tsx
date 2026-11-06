@@ -21,11 +21,11 @@ import {
   RenderOfferPdfAction,
   SendOfferAction,
 } from "./offers.actions";
+import { OfferLinesPanel } from "./offers.fromdeal";
 // The offer 360: header, read-only totals, and a draft-only header edit whose
 // surface is its own because buyer_company_id needs the shared RecordPicker and
 // template_id a server-sourced select — EditAction/CreateField fits neither.
 import { EditOfferHeaderModal } from "./offers.header";
-import { OfferLineEditor } from "./offers.lines";
 
 export type Offer = components["schemas"]["Offer"];
 
@@ -215,7 +215,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
             <AiDisclosureBanner offer={offer} />
             <OfferTotalsPanel offer={offer} />
             <RenderOfferPdfAction offer={offer} />
-            {offer.status === "draft" && <OfferLineEditor offer={offer} />}
+            <OfferLinesPanel offer={offer} />
             {offer.status === "draft" && (
               <EditOfferHeaderModal
                 open={editing}

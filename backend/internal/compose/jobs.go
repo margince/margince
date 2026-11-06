@@ -200,6 +200,10 @@ type JobRunnerConfig struct {
 	// owed until somebody ticks its reminder, because a reply alone has never
 	// settled one.
 	SettlementBrain completer
+	// DealVerdictBrain is the lane the nightly close-date pass reads each open
+	// deal's evidence with. Nil = no AI configured: dates, amounts and
+	// probabilities change only by hand and by the close-date sweep.
+	DealVerdictBrain completer
 	// TagSuggestBrain is the tag_suggest lane, which reads captured items
 	// against the suggestible tags' descriptions. Nil = the tag scout matches
 	// description phrases instead.
@@ -393,7 +397,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addSuppressionJournalJobs(reg, pool, cfg, log)
@@ -426,6 +430,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addDedupeRecheckJobs(reg, pool, cfg),
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
+		addProjectHealthJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
 		addTagScoutJobs(reg, pool, cfg, log),
 		addListEvaluateJobs(reg, pool, cfg, log),

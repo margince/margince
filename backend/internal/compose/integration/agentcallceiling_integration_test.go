@@ -66,7 +66,7 @@ func callsCharged(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, pas
 // through MCP could keep reading the same records over REST.
 func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-rest", 100)
-	bearer, passport := passportWithID(t, e, "reading agent", "read")
+	bearer, passport := apptest.PassportWithID(t, e, "reading agent", "read")
 	seedContacts(t, e, 2)
 
 	// Served under the ceiling first, so the refusal below is the ceiling firing
@@ -97,7 +97,7 @@ func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 // acting inside.
 func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-human", 100)
-	_, passport := passportWithID(t, e, "reading agent", "read")
+	_, passport := apptest.PassportWithID(t, e, "reading agent", "read")
 	seedContacts(t, e, 2)
 
 	spendWindow(t, e, meter, passport, 500)
@@ -112,7 +112,7 @@ func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
 // same, which is what a reader of the usage meter expects.
 func TestARestReadSpendsOneCallWhateverItReturns(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-charge", 100)
-	bearer, passport := passportWithID(t, e, "reading agent", "read")
+	bearer, passport := apptest.PassportWithID(t, e, "reading agent", "read")
 	seedContacts(t, e, 3)
 
 	var created struct {
@@ -154,7 +154,7 @@ func TestARestReadSpendsOneCallWhateverItReturns(t *testing.T) {
 // one, so a second charge on a read-only route is caught.
 func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-census", 1000)
-	bearer, passport := passportWithID(t, e, "counting agent", "read", "write")
+	bearer, passport := apptest.PassportWithID(t, e, "counting agent", "read", "write")
 	seedContacts(t, e, 2)
 	ctx := asPassport(t, e, passport)
 
@@ -216,7 +216,7 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 // /v1 must approach the same ceiling as one calling over /mcp.
 func TestRestCallsAloneCanSpendTheWindow(t *testing.T) {
 	e, _ := boundedApp(t, "call-ceiling-selfspend", 4)
-	bearer, _ := passportWithID(t, e, "reading agent", "read", "write")
+	bearer, _ := apptest.PassportWithID(t, e, "reading agent", "read", "write")
 	seedContacts(t, e, 3)
 
 	for i := range 4 {
@@ -234,25 +234,6 @@ func TestRestCallsAloneCanSpendTheWindow(t *testing.T) {
 	}, bearer, nil); status != http.StatusTooManyRequests {
 		t.Errorf("a write after the reads spent the ceiling → %d, want 429; the ceiling suspends every verb", status)
 	}
-}
-
-// passportWithID mints a passport and returns both the header an agent presents
-// and the id the meter counts against.
-func passportWithID(t *testing.T, e *apptest.AppEnv, label string, scopes ...string) (map[string]string, ids.UUID) {
-	t.Helper()
-	var minted struct {
-		ID    ids.UUID `json:"passport_id"`
-		Token string   `json:"token"`
-	}
-	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": label, "scopes": scopes,
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport %q → %d", label, status)
-	}
-	if minted.Token == "" || minted.ID.IsZero() {
-		t.Fatalf("passport %q minted without a token or an id", label)
-	}
-	return map[string]string{"Authorization": "Bearer " + minted.Token}, minted.ID
 }
 
 // seedContacts gives the list something to return, so the admitted read is a real

@@ -17,6 +17,7 @@ import {
   jsonResponse,
 } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
+import { openFilterValues } from "../../testing/listquery.testkit";
 import { CompaniesScreen } from "./companies";
 import { render } from "./companies.testkit";
 
@@ -53,6 +54,7 @@ describe("CompaniesScreen — search/sort/pagination (P-14)", () => {
   });
 
   it("fetches the next cursor page when the pager steps past the loaded page", async () => {
+    const user = userEvent.setup();
     const { urls } = stubFetch(async (url) => {
       if (url.includes("cursor=c1")) {
         return jsonResponse({
@@ -72,7 +74,7 @@ describe("CompaniesScreen — search/sort/pagination (P-14)", () => {
 
     const next = screen.getByRole("button", { name: "Next" });
     expect((next as HTMLButtonElement).disabled).toBe(false);
-    await userEvent.click(next);
+    await user.click(next);
 
     await waitFor(() =>
       expect(screen.getByText("Nordwind Logistik")).toBeTruthy(),
@@ -286,9 +288,10 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     render(<CompaniesScreen />);
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Employees" }));
-    await user.click(screen.getByRole("radio", { name: "51–200 employees" }));
+    const values = await openFilterValues(user, "Employees");
+    await user.click(
+      within(values).getByRole("radio", { name: "51–200 employees" }),
+    );
 
     // The wire's own parameter name and the band as written. A dial that sent
     // anything else would be ignored by the server, which answers the WHOLE
@@ -400,6 +403,7 @@ describe("CompaniesScreen — archived marking (P-3)", () => {
 
 describe("CompaniesScreen — dedupe view-existing link (P-16)", () => {
   it("renders a link to the collided record on a duplicate_domain 409", async () => {
+    const user = userEvent.setup();
     stubFetch(async (url, method) => {
       if (method === "POST" && url.includes("/companies")) {
         return jsonResponse(
@@ -416,19 +420,16 @@ describe("CompaniesScreen — dedupe view-existing link (P-16)", () => {
       return emptyPage();
     });
     render(<CompaniesScreen />);
-    await userEvent.click(screen.getByTestId("new-record"));
-    await userEvent.type(
-      screen.getByLabelText("Company name *"),
-      "Dup Company",
-    );
-    await userEvent.click(screen.getByText("Add domain"));
-    await userEvent.type(screen.getByLabelText("Domain *"), "dup.example");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(screen.getByTestId("new-record"));
+    await user.type(screen.getByLabelText("Company name *"), "Dup Company");
+    await user.click(screen.getByText("Add domain"));
+    await user.type(screen.getByLabelText("Domain *"), "dup.example");
+    await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
       expect(screen.getByText("View existing record")).toBeTruthy(),
     );
-    await userEvent.click(screen.getByText("View existing record"));
+    await user.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/companies/01X");
   });
 });

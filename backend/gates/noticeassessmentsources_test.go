@@ -7,7 +7,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -89,11 +88,11 @@ func TestSourceAssessmentVocabularyMatchesTheDutyDecision(t *testing.T) {
 	if !reflect.DeepEqual(apiKinds, eligible) {
 		t.Errorf("API assessment kinds %v differ from duty decisions %v", apiKinds, eligible)
 	}
-	source, err := os.ReadFile(filepath.Join(root, "../frontend/src/features/privacy/noticesource.tsx"))
+	source, err := gatekit.ReadFile(filepath.Join(root, "../frontend/src/lib/sourcequestion.ts"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	filter := regexp.MustCompile(`(?s)const SOURCES = ACQUISITION_KINDS.filter\((.*?)\);`).FindSubmatch(source)
+	filter := regexp.MustCompile(`(?s)const SOURCE_KINDS[^=]*= ACQUISITION_KINDS\.filter\((.*?)\);`).FindSubmatch(source)
 	if len(filter) != 2 {
 		t.Fatal("assessment choices no longer derive from acquisition vocabulary")
 	}

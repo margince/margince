@@ -43,11 +43,12 @@ package gates
 // restated here would be one more copy of the number.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -59,7 +60,7 @@ const (
 // tolerating the underscore separators the tree writes large numbers with.
 func goConstValue(t *testing.T, path, name string) int {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
@@ -192,7 +193,7 @@ func TestTheRunnersFloorIsTheLocalAdaptersDeclaredWindow(t *testing.T) {
 	// The restatement above is only true while the expression keeps its shape.
 	// A gate that recomputed a formula the source had since changed would agree
 	// with itself and describe nothing.
-	source, err := os.ReadFile(ollamaSource)
+	source, err := gatekit.ReadFile(ollamaSource)
 	if err != nil {
 		t.Fatalf("read %s: %v", ollamaSource, err)
 	}
@@ -274,7 +275,7 @@ var promptWindowDeclaration = regexp.MustCompile(`(?m)^\s*PromptWindow:\s*([A-Za
 func adapterPromptWindows(t *testing.T) map[string]string {
 	t.Helper()
 	const aiDir = "internal/modules/ai"
-	entries, err := os.ReadDir(aiDir)
+	entries, err := gatekit.ReadDir(aiDir)
 	if err != nil {
 		t.Fatalf("read %s: %v", aiDir, err)
 	}
@@ -284,7 +285,7 @@ func adapterPromptWindows(t *testing.T) map[string]string {
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		source, err := os.ReadFile(aiDir + "/" + name)
+		source, err := gatekit.ReadFile(aiDir + "/" + name)
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
 		}
@@ -311,7 +312,7 @@ func aiSource(file string) string { return "internal/modules/ai/" + file }
 // it would be the census-fails-short shape stated in the header.
 func adapterWindowValue(t *testing.T, path, name string) int {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}

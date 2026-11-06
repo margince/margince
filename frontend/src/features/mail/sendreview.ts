@@ -92,6 +92,7 @@ function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
     const address: unknown = Reflect.get(entry, "address");
     const reasonCode: unknown = Reflect.get(entry, "reason_code");
     const category: unknown = Reflect.get(entry, "category");
+    const requested: unknown = Reflect.get(entry, "requested_category");
     if (typeof address !== "string" || typeof reasonCode !== "string") {
       continue;
     }
@@ -99,6 +100,7 @@ function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
       address,
       reasonCode,
       category: typeof category === "string" ? category : undefined,
+      requestedCategory: typeof requested === "string" ? requested : undefined,
       // Only a stated yes counts. Absent is not permission to guess one.
       canBeOverruled: Reflect.get(entry, "can_be_overruled") === true,
     });

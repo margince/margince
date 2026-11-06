@@ -3,8 +3,9 @@
 
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { Route } from "../../lib/router";
+import { type Route, routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { hashWithParams } from "../../lib/urlstate";
 import type { SettingsHit } from "./settingssearch";
 import { SETTINGS_SECTIONS } from "./settingssections";
 
@@ -48,4 +49,12 @@ export function healthSourceForSection(
   if (section?.startsWith("embedreindex.")) return "search";
   if (section?.startsWith("recoveryHealth.")) return "recovery";
   return Object.entries(healthSections).find(([, key]) => key === section)?.[0];
+}
+
+/** The address of System health's diagnostics, opened on one section. */
+export function settingsHealthHref(section: MessageKey | undefined): string {
+  return hashWithParams(
+    routeHash({ ...settingsHref("system-health"), id2: "diagnostics" }),
+    new Map([["section", section ?? ""]]),
+  );
 }

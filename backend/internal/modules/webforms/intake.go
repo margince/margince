@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // MaxBody bounds what one anonymous post may make this installation read. A
@@ -186,7 +187,7 @@ func browserKey(e Enquiry) string {
 // form and a digest of the sender's key, so any key fits the column's bound.
 func sourceKey(form ids.UUID, key string) string {
 	sum := sha256.Sum256([]byte(key))
-	return form.String() + ":" + hex.EncodeToString(sum[:16])
+	return provenance.WebFormSourceID(form.String(), hex.EncodeToString(sum[:16]))
 }
 
 func checkEnquiry(f Form, e Enquiry) error {

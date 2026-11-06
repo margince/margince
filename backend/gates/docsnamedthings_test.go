@@ -18,6 +18,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -48,7 +50,7 @@ func makeTargets(t *testing.T) map[string]bool {
 	t.Helper()
 	targets := map[string]bool{}
 	for _, mk := range []string{"Makefile", "backend/Makefile"} {
-		raw, err := os.ReadFile(filepath.Join(docsTreeRoot, mk))
+		raw, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, mk))
 		if err != nil {
 			t.Fatalf("read %s: %v", mk, err)
 		}
@@ -73,7 +75,7 @@ func sourceEnvNames(t *testing.T) map[string]bool {
 		if f.symlink || strings.HasSuffix(f.path, ".md") || strings.HasPrefix(f.path, "frontend/node_modules/") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(docsTreeRoot, f.path))
+		raw, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, f.path))
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
@@ -106,7 +108,7 @@ func TestDocsNameOnlyThingsThatExist(t *testing.T) {
 		t.Fatalf("found %d make targets and %d env names; the owners moved, so this gate reads nothing", len(targets), len(envs))
 	}
 	for _, rel := range prosePages(t) {
-		raw, err := os.ReadFile(filepath.Join(docsTreeRoot, rel))
+		raw, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, rel))
 		if err != nil {
 			t.Fatalf("read %s: %v", rel, err)
 		}

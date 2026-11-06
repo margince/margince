@@ -34,13 +34,13 @@ package gates
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // contractDocument is the OpenAPI document these sets mirror.
@@ -62,7 +62,6 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
 	"deal.status":               {"Deal", "status"},
-	"deal.forecast_category":    {"Deal", "forecast_category"},
 	"lead.status":               {"Lead", "status"},
 	"project.phase":             {"Project", "phase"},
 	// A deal filters on its customer's account through a link leaf, so two of the
@@ -239,7 +238,7 @@ func loadContractDocument(t *testing.T) map[string]any {
 // in both is read here twice rather than by two readers.
 func loadOpenAPIDocument(t *testing.T, path string) map[string]any {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

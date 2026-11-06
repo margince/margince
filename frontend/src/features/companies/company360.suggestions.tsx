@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -12,7 +11,7 @@ import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   EvidenceSources,
   FoundMove,
@@ -41,6 +40,8 @@ const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {
   add_task: "co.suggest.act.addTask",
 };
 
+// Only the reply makes the model write: its composer drafts on open. The row
+// is quiet, so these draw outlined and the reply keeps its ✦.
 const SUGGESTION_ACTION_VARIANT: Record<
   SuggestionAction["kind"],
   "ai" | "primary" | "ghost"
@@ -90,17 +91,12 @@ function SuggestionActionButton({
   onPerform: (action: SuggestionAction) => void;
 }>) {
   const t = useT();
-  // Indigo says the press makes the model write, and only the reply does: its
-  // composer drafts on open. Adding the prepared task accepts a rule's
-  // sentence, and opening a deal is navigation.
-  const byMargince = action.kind === "draft_reply";
   return (
     <Button
       variant={SUGGESTION_ACTION_VARIANT[action.kind]}
       pending={pending}
       onClick={() => onPerform(action)}
     >
-      {byMargince && <Sparkles aria-hidden="true" />}
       {t(SUGGESTION_ACTION_LABELS[action.kind])}
     </Button>
   );
@@ -216,7 +212,7 @@ export function useSuggestionsBody({
 } {
   const { locale } = useLocale();
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const client = useQueryClient();
   const notNow = useCompanySetAside(companyId);
   const write = useMutation({
@@ -309,7 +305,7 @@ export function useSuggestionsBody({
               suggestion.due_at,
               suggestion.due_precision ?? "instant",
               locale,
-              recordZone,
+              readerZone,
             )
           : undefined
       }

@@ -6,12 +6,13 @@
 package gates
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestEveryExactSeatMatchFoldsTheDomain holds every SQL comparison of a seat's
@@ -94,7 +95,7 @@ func rawSeatMatches(t *testing.T) []seatMatchSite {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
 		}

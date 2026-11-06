@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -11,7 +12,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
-import { OverflowMenu } from "../../design-system/atoms";
+import { Button, OverflowMenu } from "../../design-system/atoms";
 import { KeyedName } from "../../design-system/keyedname";
 import type { ListColumn } from "../../design-system/listtable";
 import { sortState } from "../../design-system/listtable.query";
@@ -34,6 +35,12 @@ import {
   ProductStatus,
   productStatus,
 } from "./products.display";
+import { ProductTranslationsDialog } from "./products.translations";
+import {
+  TAX_CATEGORIES,
+  TAX_CATEGORY_LABEL,
+  taxCategoryOf,
+} from "./taxcategory";
 import "../lists/listsection.css";
 import {
   currencyOptions,
@@ -118,6 +125,21 @@ function productFields(
     },
     { key: "default_tax_rate", label: "product.taxRate", type: "number" },
     {
+      // Which rate of the country an offer is issued from applies. Unset is
+      // a real answer: nobody has classified it, and a line takes the rate
+      // above.
+      key: "tax_category",
+      label: "product.taxCategory",
+      type: "select",
+      options: [
+        { value: "", label: t("product.taxCategoryUnset") },
+        ...TAX_CATEGORIES.map((category) => ({
+          value: category,
+          label: t(TAX_CATEGORY_LABEL[category]),
+        })),
+      ],
+    },
+    {
       // The empty option is a real answer, and every product written before
       // this field existed carries it: nobody has said whether the price
       // repeats. It comes first, so a form left alone keeps saying that
@@ -170,6 +192,7 @@ function editableProduct(p: Product) {
     unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
     billing_model: p.billing_model ?? "",
     component_kind: p.component_kind ?? "",
+    tax_category: p.tax_category ?? "",
     billing_interval_months:
       p.billing_interval_months == null
         ? ""
@@ -228,6 +251,7 @@ export function ProductsAdmin() {
   });
   const leading = useLeadingCurrencies();
   const fields = productFields(t, leading);
+  const [translating, setTranslating] = useState<Product | null>(null);
 
   const createProduct = async (values: Record<string, string>) => {
     return unwrap(
@@ -248,6 +272,7 @@ export function ProductsAdmin() {
             : null,
           ...billingOf(values),
           component_kind: componentKindOf(values.component_kind) ?? null,
+          tax_category: taxCategoryOf(values.tax_category) ?? null,
           source: "manual",
         },
       }),
@@ -288,6 +313,7 @@ export function ProductsAdmin() {
               : undefined,
             ...billingPatchOf(values),
             component_kind: componentKindOf(values.component_kind) ?? null,
+            tax_category: taxCategoryOf(values.tax_category) ?? null,
           },
         }),
       );
@@ -326,6 +352,11 @@ export function ProductsAdmin() {
               update={updateProduct(p)}
               fields={fields}
             />
+          )}
+          {canUpdate && (
+            <Button onClick={() => setTranslating(p)}>
+              {t("product.translations")}
+            </Button>
           )}
           {canArchive && (
             <ArchiveAction
@@ -433,8 +464,26 @@ export function ProductsAdmin() {
             allLabel: "product.activeFilterAll",
             options: [{ value: "true", label: "product.active" }],
           },
+          {
+            key: "tax_category",
+            label: "product.taxCategoryFilter",
+            allLabel: "product.taxCategoryFilterAll",
+            options: [
+              { value: "unclassified", label: "product.taxCategoryUnset" },
+              ...TAX_CATEGORIES.map((category) => ({
+                value: category,
+                label: TAX_CATEGORY_LABEL[category],
+              })),
+            ],
+          },
         ]}
       />
+      {translating && (
+        <ProductTranslationsDialog
+          product={translating}
+          onClose={() => setTranslating(null)}
+        />
+      )}
     </Panel>
   );
 }

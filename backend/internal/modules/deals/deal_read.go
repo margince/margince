@@ -111,11 +111,6 @@ type ListDealsInput struct {
 	// partner is named at all.
 	PartnerAttribution *string
 	Status             *string
-	// ForecastCategory narrows to one of the forecast's named buckets —
-	// commit, best_case, pipeline, omitted. The column the FORECAST reads, so
-	// a tile's number and the list behind it are one answer rather than two
-	// derivations that can disagree.
-	ForecastCategory *string
 	// The three commercial-context filters. Each also admits the sentinel
 	// "unset", which no enum value can express: a caller asking for deals
 	// nobody has classified is asking about the absence, not about a value.
@@ -380,13 +375,6 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
-	}
-	if in.ForecastCategory != nil {
-		// A deal with no category is in no bucket, which the NULL comparison
-		// gives for free: the five tiles partition the CATEGORISED pipeline,
-		// and an uncategorised deal belongs to none of them rather than
-		// quietly joining whichever one is asked for.
-		where = append(where, storekit.SQLf("forecast_category = $%d", arg(*in.ForecastCategory)))
 	}
 	if in.CloseBefore != nil {
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))

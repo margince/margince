@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // answerArm is one kind of evidence that a message was answered: the rows it
@@ -69,7 +70,9 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	    SELECT lower(btrim(answer_known.email)) FROM contact_email answer_known
 	     WHERE answer_known.contact_id = answer_asker.contact_id AND answer_known.archived_at IS NULL
 	  ) answer_address`
-	touch := `(answer_touch.kind = '` + string(crmcontracts.ActivityKindCall) + `'
+	// A call answers only when it reached somebody (relstrength.CallCountsSQL):
+	// a voicemail or a call nobody took is no answer.
+	touch := `((answer_touch.kind = '` + string(crmcontracts.ActivityKindCall) + `' AND ` + relstrength.CallCountsSQL("answer_touch") + `)
 	      OR (answer_touch.kind = '` + string(crmcontracts.ActivityKindMeeting) + `'
 	        AND answer_touch.meeting_status = '` + string(crmcontracts.ActivityMeetingStatusHeld) + `'))
 	    AND ` + everyoneReads("answer_touch") + `
