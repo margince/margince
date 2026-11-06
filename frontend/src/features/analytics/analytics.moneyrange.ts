@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Locale } from "../i18n";
-import { formatMoneyCompact } from "./format";
-import { INTL_LOCALE } from "./intllocale";
+import { formatMoneyCompact } from "../../format/format";
+import { INTL_LOCALE } from "../../format/intllocale";
+import type { Locale } from "../../i18n";
 
 /**
  * A range as two short amounts that stay apart. Each end gains a digit until

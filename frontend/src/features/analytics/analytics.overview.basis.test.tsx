@@ -7,8 +7,8 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { formatMoneyCompact } from "../../format/format";
-import { formatMoneyCompactRange } from "../../format/moneyrange";
 import { forgetSeat } from "../../lib/storage";
+import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
   isSetup,
   OVERVIEW_SCENARIOS,

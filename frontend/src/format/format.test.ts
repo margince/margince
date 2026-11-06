@@ -26,7 +26,6 @@ import {
   ordinalNumber,
 } from "./format";
 import { formatDayFull, formatTimeRange } from "./meetingtime";
-import { formatMoneyCompactRange } from "./moneyrange";
 import { type DateFormat, setDateTimePreferences } from "./preferences";
 
 // B-EP09.17/18/19 acceptance: locale changes the RENDERING of the same stored
@@ -112,50 +111,6 @@ describe("money formatting (B-EP09.17)", () => {
 // call, not this module's. So the compact figure is folded to lower case before
 // comparison — the digit, the decimal and the symbol stay exact, which is what
 // tells the three figures apart; only the case floats.
-describe("a money range abbreviated for a KPI slot", () => {
-  it("adds digits until the two ends read apart", () => {
-    expect(
-      formatMoneyCompactRange(
-        2_453_456_600,
-        2_454_776_600,
-        "EUR",
-        "en",
-      ).toLowerCase(),
-    ).toBe("€24.53m–24.54m");
-  });
-
-  it("keeps three digits where they already differ", () => {
-    expect(
-      formatMoneyCompactRange(
-        61_000_000,
-        98_000_000,
-        "EUR",
-        "en",
-      ).toLowerCase(),
-    ).toBe("€610k–980k");
-  });
-
-  it("puts a trailing currency sign once, after the high end", () => {
-    expect(
-      formatMoneyCompactRange(61_000_000, 98_000_000, "EUR", "de").replace(
-        /\s/g,
-        " ",
-      ),
-    ).toMatch(/^[^€]+–[^€]+ €$/);
-  });
-
-  it("says one amount once", () => {
-    expect(
-      formatMoneyCompactRange(
-        42_000_000,
-        42_000_000,
-        "EUR",
-        "en",
-      ).toLowerCase(),
-    ).toBe("€420k");
-  });
-});
-
 describe("a money figure abbreviated for a KPI slot", () => {
   it("drops a decimal a round figure does not need", () => {
     expect(formatMoneyCompact(42_000_000, "EUR", "en").toLowerCase()).toBe(

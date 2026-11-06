@@ -259,9 +259,6 @@
   color: var(--textPrimary);
   text-wrap: pretty;
 }
-.analytics-outlook .panel-body > .actions {
-  margin-block-start: var(--space-3);
-}
 .analytics-outlook .panel-foot {
   justify-content: space-between;
 }

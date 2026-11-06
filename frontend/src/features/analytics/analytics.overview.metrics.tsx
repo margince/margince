@@ -10,9 +10,9 @@ import {
   formatDateAbbrev,
   formatMoneyCompact,
 } from "../../format/format";
-import { formatMoneyCompactRange } from "../../format/moneyrange";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { landingBasisLines } from "./analytics.forecast.landing";
+import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
   ForecastCoverage,
   useForecastCoverage,

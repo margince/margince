@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button } from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel } from "../../design-system/panel";
 import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale } from "../../i18n";
 import type {
@@ -36,24 +36,18 @@ export function OverviewActions({
       })
     : candidates;
   if (!actions.length) return null;
-  const doors = (
-    <div className="actions">
-      {actions.map((action) => (
-        <Button
-          key={action.id}
-          variant="ghost"
-          onClick={() => onEvidence(action.evidence)}
-        >
-          {action.label} ({formatAnalyticsNumber(action.count, locale)})
-        </Button>
-      ))}
-    </div>
-  );
+  const doors = actions.map((action) => (
+    <Button
+      key={action.id}
+      variant="ghost"
+      onClick={() => onEvidence(action.evidence)}
+    >
+      {action.label} ({formatAnalyticsNumber(action.count, locale)})
+    </Button>
+  ));
   return framed ? (
-    <Panel>
-      <PanelBody>{doors}</PanelBody>
-    </Panel>
+    <Panel actions={doors}>{null}</Panel>
   ) : (
-    doors
+    <div className="card-actions">{doors}</div>
   );
 }
