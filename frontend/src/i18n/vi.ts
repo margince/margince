@@ -1300,6 +1300,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.objective": "Mục tiêu chính",
   "reporting.targetValue": "Chỉ tiêu",
   "reporting.targetHint": "Để trống nếu chỉ theo dõi.",
+  "reporting.initiativeOwner": "Người chịu trách nhiệm",
   "reporting.deadline": "Hạn",
   "reporting.setup.suggestReport": "Gợi ý bộ lọc và biểu đồ",
   "reporting.setup.suggestInitiative": "Gợi ý mục tiêu",
