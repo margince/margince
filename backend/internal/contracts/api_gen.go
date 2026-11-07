@@ -8319,6 +8319,7 @@ func (e ContactMomentMayBeDonePromiseType) Valid() bool {
 
 // Defines values for ContactMomentRule.
 const (
+	ContactMomentRuleAwaitingReply    ContactMomentRule = "awaiting_reply"
 	ContactMomentRuleGoneQuiet        ContactMomentRule = "gone_quiet"
 	ContactMomentRuleJobChange        ContactMomentRule = "job_change"
 	ContactMomentRuleMeetingPrep      ContactMomentRule = "meeting_prep"
@@ -8335,6 +8336,8 @@ const (
 // Valid indicates whether the value is a known member of the ContactMomentRule enum.
 func (e ContactMomentRule) Valid() bool {
 	switch e {
+	case ContactMomentRuleAwaitingReply:
+		return true
 	case ContactMomentRuleGoneQuiet:
 		return true
 	case ContactMomentRuleJobChange:
