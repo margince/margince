@@ -134,6 +134,8 @@ while their event names a parent record.
 
 The background task uses each earlier proof as its last entry to erase. Its new audit entry records
 payload erasure on that proof, so later allowed edits keep their values and history.
+A task for linked copies names one audit row. Its proof keeps the domain boundary fixed.
+It removes the first request audit entry's private values last, after that entry has guided the other changes.
 
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.

@@ -16,6 +16,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
+const (
+	auditPageLimitParameter = "limit"
+	rightsRequestEntity     = "data_subject_request"
+)
+
 // HistoricalAuditPage counts changes and the inspected keys for cursor progress.
 type HistoricalAuditPage struct {
 	Scanned []ids.UUID
@@ -33,10 +38,10 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 		return HistoricalAuditPage{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT id, entity_type, entity_id,
-	 action IN ('erase','anonymize','expire','release') AND before IS NULL AND after IS NULL
+	 action=ANY(@erasure_actions) AND before IS NULL AND after IS NULL
 	 AND (evidence ? 'cause' OR evidence ? 'retention_action' OR evidence ? 'emails_suppressed')
 	 FROM audit_log WHERE id > @after AND id < @until ORDER BY id LIMIT @limit`,
-		pgx.StrictNamedArgs{"after": after, "until": until, "limit": limit})
+		pgx.StrictNamedArgs{"after": after, "until": until, auditPageLimitParameter: limit, "erasure_actions": storekit.AuditRedactionActions()})
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
@@ -80,11 +85,7 @@ func redactHistoricalRecord(ctx context.Context, tx pgx.Tx, original ids.UUID, k
 	 WHERE certificate.id = @original AND history.entity_type = certificate.entity_type
 	 AND history.entity_id = certificate.entity_id
 	 AND (history.occurred_at, history.id) <= (certificate.occurred_at, certificate.id)
-	 AND (history.before IS DISTINCT FROM audit_redacted_image(history.entity_type, history.before)
- OR history.after IS DISTINCT FROM audit_redacted_image(history.entity_type, history.after)
-	      OR history.evidence IS DISTINCT FROM audit_redacted_evidence(
-          history.action IN ('erase','anonymize','expire','release','pin','restrict')
-          AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)))
+	 AND `+storekit.AuditRedactionNeededSQL+`)
 	 OR EXISTS (SELECT 1 FROM event_outbox retained, audit_log certificate
 	 WHERE certificate.id = @original AND retained.created_at <= certificate.occurred_at
 	 AND retained.envelope->'entity'->>'type' = certificate.entity_type
@@ -113,12 +114,14 @@ func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID,
 		err = tx.QueryRow(ctx, `SELECT legal_hold FROM contact WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "lead":
 		err = tx.QueryRow(ctx, `SELECT legal_hold FROM lead WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
-	case "data_subject_request":
+	case rightsRequestEntity:
 		err = tx.QueryRow(ctx, `SELECT dispute_open FROM data_subject_request WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "privacy_request_proof":
 		err = tx.QueryRow(ctx, `SELECT d.dispute_open FROM data_subject_request d
    JOIN audit_log certificate ON certificate.evidence->>'request_id'=d.id::text
    WHERE certificate.id=@original FOR UPDATE OF d`, pgx.StrictNamedArgs{"original": original}).Scan(&held)
+	case reportingDeal:
+		err = tx.QueryRow(ctx, `SELECT legal_hold FROM deal WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "activity":
 		current, carried := floor.sqlArgs()
 		args := []any{entity, current, carried}
