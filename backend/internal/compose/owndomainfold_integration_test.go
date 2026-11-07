@@ -176,3 +176,32 @@ func TestAReplyIsNeverAddressedToAColleagueAtAnInternationalOwnDomain(t *testing
 		t.Fatalf("ReplyAddress → (%q, %v), want the guest at the lookalike domain", got, err)
 	}
 }
+
+// A domain maps to at most one company, and the anchor's own domain is stored
+// in the unicode its administrator typed. A customer company claiming the
+// punycode spelling is claiming that same domain.
+//
+// The domains endpoint parses ASCII only, so a second company can be created
+// on the punycode spelling. A website reduces to whatever host it carried, so
+// the anchor's row keeps the unicode.
+func TestClaimingThePunycodeOfTheAnchorsDomainIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	website := "https://bücher.example"
+	anchor, err := e.Contacts.SaveCompany(e.Admin(),
+		contacts.SaveCompanyInput{DisplayName: "Bücher GmbH", Website: &website})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
+		DisplayName: "Bücher Twin GmbH", Source: "manual",
+		Domains: []contacts.CompanyDomainInput{{Domain: "xn--bcher-kva.example", IsPrimary: true}},
+	})
+	var dup *contacts.DuplicateDomainError
+	if !errors.As(err, &dup) {
+		t.Fatalf("claiming the punycode of the anchor's domain answered %v, want the typed conflict", err)
+	}
+	if dup.ExistingID != anchor.CompanyID {
+		t.Fatalf("the conflict names %s, want the anchor %s", dup.ExistingID, anchor.CompanyID)
+	}
+}

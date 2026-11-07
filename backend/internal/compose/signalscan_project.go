@@ -16,6 +16,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -102,17 +103,24 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 	if err != nil {
 		return GhostedPass{}, err
 	}
-	said := signalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
+	lang := identity.BaseLanguageForRecord(ctx, tx)
 	pass := GhostedPass{Considered: len(found)}
 	for _, project := range found {
 		days := max(elapsed.Days(project.QuietSince, now, loc), 0)
+		parts := projectQuietParts{Project: project.Name, Days: projects.DefaultProjectQuietDays}
+		summary := parts.worded(lang)
+		params, err := json.Marshal(parts)
+		if err != nil {
+			return pass, fmt.Errorf("encoding a quiet-project summary's parts: %w", err)
+		}
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:        kindProjectGoneQuiet,
-			CompanyID:   project.CompanyID,
-			ProjectID:   project.ProjectID,
-			Summary:     fmt.Sprintf(said.projectQuiet, project.Name, projects.DefaultProjectQuietDays),
-			Severity:    severityWarn,
-			Fingerprint: fingerprintOf(kindProjectGoneQuiet, project.ProjectID.String(), project.QuietSince.UTC().Format(time.RFC3339Nano)),
+			Kind:          kindProjectGoneQuiet,
+			CompanyID:     project.CompanyID,
+			ProjectID:     project.ProjectID,
+			Summary:       summary,
+			SummaryParams: params,
+			Severity:      severityWarn,
+			Fingerprint:   fingerprintOf(kindProjectGoneQuiet, project.ProjectID.String(), project.QuietSince.UTC().Format(time.RFC3339Nano)),
 			Audit: map[string]any{
 				paramKind: kindProjectGoneQuiet, "days_silent": days,
 				auditFieldProject: project.ProjectID.String(), "quiet_since": project.QuietSince.UTC(),

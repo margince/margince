@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // MaxBody bounds what one anonymous post may make this installation read. A
@@ -45,6 +46,7 @@ type Landing struct {
 	SourceKey            string
 	LeadOrigin           *string
 	OwnerID              *ids.UUID
+	ProductID            *ids.UUID
 	Enquiry              Enquiry
 	ConsentWording       *string
 	ConsentPolicyVersion *string
@@ -97,11 +99,15 @@ func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 	if err := checkEnquiry(f, e); err != nil {
 		return receipt, err
 	}
-	return receipt, in.lander.Land(ctx, Landing{
+	err = in.lander.Land(ctx, Landing{
 		FormID: f.ID, FormName: f.Name, SourceKey: sourceKey(f.ID, key),
-		LeadOrigin: f.LeadOrigin, OwnerID: f.OwnerID, Enquiry: e,
+		LeadOrigin: f.LeadOrigin, OwnerID: f.OwnerID, ProductID: f.ProductID, Enquiry: e,
 		ConsentWording: f.ConsentWording, ConsentPolicyVersion: f.ConsentPolicyVersion,
 	})
+	if err == nil {
+		in.store.notePost(ctx, f.ID)
+	}
+	return receipt, err
 }
 
 // admit runs the form's admission rule and reads the fields. An empty key with
@@ -181,7 +187,7 @@ func browserKey(e Enquiry) string {
 // form and a digest of the sender's key, so any key fits the column's bound.
 func sourceKey(form ids.UUID, key string) string {
 	sum := sha256.Sum256([]byte(key))
-	return form.String() + ":" + hex.EncodeToString(sum[:16])
+	return provenance.WebFormSourceID(form.String(), hex.EncodeToString(sum[:16]))
 }
 
 func checkEnquiry(f Form, e Enquiry) error {

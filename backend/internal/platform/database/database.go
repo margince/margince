@@ -50,8 +50,13 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	if !strings.Contains(dsn, "pool_min_conns") {
 		cfg.MinConns = 2
 	}
-	if !strings.Contains(dsn, "pool_max_conn_lifetime") {
-		cfg.MaxConnLifetime = 30 * time.Minute
+	// A backend keeps its plan memory until the connection closes. Jitter
+	// spreads the closes; its name contains the lifetime's, so it is cut first.
+	if !strings.Contains(strings.ReplaceAll(dsn, "pool_max_conn_lifetime_jitter", ""), "pool_max_conn_lifetime") {
+		cfg.MaxConnLifetime = 10 * time.Minute
+	}
+	if !strings.Contains(dsn, "pool_max_conn_lifetime_jitter") {
+		cfg.MaxConnLifetimeJitter = 2 * time.Minute
 	}
 	if !strings.Contains(dsn, "pool_max_conn_idle_time") {
 		cfg.MaxConnIdleTime = 5 * time.Minute
@@ -85,6 +90,17 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// Typed entity ids ride uuid/uuid[] on every connection, and every
 	// timestamptz reads back in UTC.
 	setSessionUTC(cfg)
+	// Inert until a caller binds a StatementMeter to the context. The worklist
+	// binds one to split each stage's time into pgx calls, pool waits and the rest.
+	tracer := statementTracer{now: time.Now}
+	if censusDir != "" {
+		census, err := processCensus(censusDir)
+		if err != nil {
+			return nil, err
+		}
+		tracer.census = census
+	}
+	cfg.ConnConfig.Tracer = tracer
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
 		RegisterUTCTimes(conn)
@@ -141,6 +157,10 @@ func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
+	return openPool(ctx, cfg)
+}
+
+func openPool(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("pg: opening pool: %w", err)
@@ -177,7 +197,7 @@ func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) er
 	// and every store beneath it lands here; joining that snapshot is what
 	// makes the composition cost one transaction instead of forty.
 	if tx, joined := snapshotOf(ctx); joined {
-		return fn(tx)
+		return guardedTransaction(ctx, tx, fn)
 	}
 	return runTx(ctx, pool, fn)
 }
@@ -193,6 +213,13 @@ type snapshotKey struct{}
 func snapshotOf(ctx context.Context) (pgx.Tx, bool) {
 	tx, ok := ctx.Value(snapshotKey{}).(pgx.Tx)
 	return tx, ok
+}
+
+// InWorkspaceTransaction reports whether a caller must leave rollback and retry
+// to the owner of an ambient transaction.
+func InWorkspaceTransaction(ctx context.Context) bool {
+	_, joined := snapshotOf(ctx)
+	return joined
 }
 
 // WithWorkspaceSnapshot runs fn against ONE read-only snapshot, which every
@@ -292,8 +319,9 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	// path the fn/commit error is the one the caller must see.
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
 	defer func() { _ = tx.Rollback(ctx) }()
+	defer openTxMemo(tx)()
 
-	if err := fn(tx); err != nil {
+	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

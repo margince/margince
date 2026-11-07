@@ -3,19 +3,22 @@
 
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { useHealthScope, useHealthVisible } from "./healthscope";
 import { unwrap } from "./problem";
 
 // Which providers are not answering, read once for every surface that shows it.
 // The Providers list and the System health card both call this with the same
 // query key, so they share one fetch and cannot disagree about a provider.
 export function useProviderHealth(canSee: boolean) {
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   return useQuery({
-    queryKey: ["ai-provider-health"],
-    enabled: canSee,
+    queryKey: ["ai-provider-health", scope],
+    enabled: canSee && visible && scope !== undefined,
     // A malformed body fails the read inside the gate, not a reading outside
     // any card. A server older than `configured` omits it: none configured.
-    queryFn: async () => {
-      const health = unwrap(await api.GET("/ai/provider-health"));
+    queryFn: async ({ signal }) => {
+      const health = unwrap(await api.GET("/ai/provider-health", { signal }));
       const configured: unknown = health?.configured ?? [];
       if (!Array.isArray(health?.providers) || !isNames(configured)) {
         throw new Error("malformed provider health response");
@@ -56,5 +59,8 @@ export function answersOnlyFromStandIn(
 // server holds about a provider's health; the badge reads it again now rather
 // than at the next poll.
 export function invalidateProviderHealth(queryClient: QueryClient) {
-  return queryClient.invalidateQueries({ queryKey: ["ai-provider-health"] });
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["ai-provider-health"] }),
+    queryClient.invalidateQueries({ queryKey: ["system-health"] }),
+  ]);
 }

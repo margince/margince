@@ -1,13 +1,9 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go -->
 # Your own settings
 
-Your own settings in Margince are the pages under **You** in Settings:
-**Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**,
-**Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
-Capture activity also carries one card that holds for the whole company: the
-company's rules for what capture keeps out, beside your own. Connections only shows the company's
-email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
+Your own settings in Margince are the pages under **You** in Settings: **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
+Capture activity also carries one card that holds for the whole company: the company's rules for what capture keeps out, beside your own. Connections only shows the company's email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
 
 For everything else, see [Settings](settings.md).
 
@@ -18,10 +14,12 @@ You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "pass
 Also called: my profile, my account, preferences, user settings.
 
 ### How do I finish setting up Margince?
-To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
-It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
-While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link.
+
+While steps are open, **Finish setup** at the top of the screen shows how many are done, and **Hide until next sign-in** puts it away. Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, **Your setup** comes back, and so does **Finish setup** unless you chose **Hide until next sign-in**. On a phone, **Finish setup** is a row in the account menu, right after **Help and feedback**. It opens the page of your next step.
 Also called: setup list, getting started, onboarding steps.
+
+The writing voice step names what is next for your voice: **Add samples**, **Build voice** or **View progress**. After a failed build it shows the reason and **Try again**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. Your first version is never used on its own. The step is done once you choose **Use this version**. After **Discard this version**, add more samples and build again.
 
 ### How do I save a change on a settings page?
 To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
@@ -54,17 +52,10 @@ Also called: email notifications, turn off emails, alerts, daily digest, browser
 
 ## Account
 
-The Account page in Settings has three panels. **Profile** holds who you are,
-your display and greeting names, and your email signature. **Security** holds your
-password and two-step sign-in, and **Sign out**. **Language and appearance**
-holds which language the product uses with you (English, Deutsch or Tiếng
-Việt), and how it looks.
-**Appearance** is here as well as in the account menu, where it is called
-**Theme**. Both change the same setting.
+The Account page in Settings has three panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Security** holds your password and two-step sign-in, and **Sign out**. **Language and appearance** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and how it looks.
+**Appearance** is here as well as in the account menu, where it is called **Theme**. Both change the same setting.
 
-Where your browser can add Margince to this device as an app, a fourth panel
-shows: **This device**. It offers **Install**, says how to add the app, or says
-**Installed**.
+Where your browser can add Margince to this device as an app, a fourth panel shows: **This device**. It offers **Install**, says how to add the app, or says **Installed**.
 
 ### How do I change my password?
 <!-- opens: settings/account -->
@@ -128,15 +119,20 @@ Your display name is what colleagues see on records you edit, in pickers and in 
 It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
 
+### How do I change my profile picture?
+<!-- opens: settings/account -->
+To change your profile picture in Margince, open Settings → **Account** and choose **Upload picture** in the **Profile picture** row. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name.
+Also called: photo, avatar, profile photo.
+
+Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with. It updates at each sign-in, and each time you connect that same account for mail or calendar. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
+
 ### How do I add an email signature?
 <!-- opens: settings/account -->
-To add an email signature in Margince, open Settings → **Account** and choose **Edit signature** in the **Email signature** row.
-1. Type your sign-off in **Sign-off**, in plain text.
-2. Choose **Save**.
+Open **Settings → Account → Edit signature**, choose **Plain text** or **HTML**,
+check the preview and choose **Save**. Your own HTML comes before the company
+template. See [Your email signature](email-signatures.md) for clearing it, the
+sign-off order and what HTML a send keeps.
 
-Margince adds the signature under every email you send yourself, above the unsubscribe footer. Leave it empty and your emails end with a short greeting and your name instead, in the message's language. When the message is too short to tell, that is the installation's language, then English. The row then says **No sign-off set**.
-
-An email an agent sends carries no sign-off. AI drafts never add a sign-off, so this is the one that goes out.
 Also called: email footer, sign-off, signature block.
 
 ### How do I change the language?
@@ -174,7 +170,7 @@ Also called: booking page, scheduling link, book a meeting with me.
 <!-- opens: settings/meetings -->
 To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in **When people can book**.
 1. Pick your **Working days**.
-2. Set **From**, **Until** and your time zone. Guests see the hours in their own zone.
+2. Set **From** and **Until**. They are read in your own time zone, which you set under Settings → **Account**. Guests see the hours in their own zone.
 3. Under **Booking rules**, set **Minimum notice**, **Break between meetings** and **How far ahead**. Pick one of the given times, or **Other**.
 4. Choose **Save availability**, which saves hours and rules together.
 Saving works even while the calendar is being reconnected, because the rules never ask the calendar anything.
@@ -187,16 +183,16 @@ needs permission from an administrator."
 Opening meeting settings from a booking draft opens another tab; coming back loads the saved settings again.
 
 ### How do I change my time zone?
-<!-- opens: settings/meetings -->
-To change your own time zone in Margince, open Settings → **Meetings** and choose a place in the **Timezone** list under **When people can book**. Then choose **Save availability**, or **Save working hours** if you may not book meetings.
-Your time zone is yours alone, and it decides when customers can book time with you.
-The company's reporting time zone is a separate setting; see the next question.
+<!-- opens: settings/account -->
+To change your own time zone in Margince, open Settings → **Account**, pick a place in the **Time zone** list and choose **Save**.
+On your first sign-in, Margince uses your browser's time zone, and a zone you pick stays on every browser.
+Every time Margince shows you is in your zone, and so is your booking and mail timing. The company's time zone is separate; see the next question.
 Also called: change time zone, my time zone, local time.
 
-### How do I change the company's reporting time zone?
+### How do I change the company's time zone?
 <!-- opens: settings/company -->
-To change the time zone reports use in Margince, open Settings → **Company profile** and set **Reporting timezone** in the **Installation** card.
-Report periods use it for the whole team, and only Admin and Ops change it. Your own time zone on **Meetings** stays as it is.
+To change the company's time zone in Margince, open Settings → **Company profile** and set **Company time zone** in the **Installation** card.
+Report periods, scheduled jobs, documents sent out and the "today" lists use it, and only Admin and Ops change it. Times on screen stay in your own zone.
 Also called: company time zone, report time zone, installation time zone.
 
 ### How do I share a booking link?
@@ -231,7 +227,8 @@ The **Calendar** card appears once a calendar is connected. It shows the
 connected calendar as a row: it reads busy times, sends invitations, and shows
 its last sync. Then comes **Add booked meetings to**, the calendar each booking
 lands in. Last is **Also count as busy**, other calendars that hide time from
-guests. Event names stay private.
+guests. Event names stay private. A calendar Margince cannot read is named under
+its row and in the preview, while guests see only that no times are offered.
 
 With both Google and Microsoft calendars
 connected, a **Calendar provider** choice comes first. **Save calendar** appears
@@ -276,22 +273,25 @@ learns only from samples you add.
 ### How do I set up my writing voice?
 <!-- opens: settings/voice -->
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
-1. Under **Writing samples**, choose **Add writing samples** and drop or pick files, several at once.
-2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`.
+1. Under **Add your writing**, drop or pick files, several at once. After that, add more under **Make it sharper**. **Add writing** at the top takes you there.
+2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`. To add text without a file, paste it in **Paste text** and choose **Add text**.
+   To use mail you sent, choose **Learn from sent mail**. Margince then reads up to your 200 most recent sent mails.
 3. Add at least 800 words of your own writing. The bar shows how far you are.
-4. Choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
+4. At the top of the page, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
-After the first build, the button reads **Rebuild Voice DNA**. Notes on how you want to sound go in **Preferences**, then **Save preferences**.
-Also called: tone, writing style, Voice DNA, sound like me.
+When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
+Also called: tone, writing style, Voice DNA, sound like me, learn from my email.
 
 The best samples are emails you sent, then proposals and posts, then the written
 record of calls or meetings. Leave out text others wrote, and AI drafts: Margince
 learns a different voice from them. A read-only seat sees the page and cannot change it.
 
+**Learn from sent mail** reads only mail sent from your own mailbox, never a colleague's mail or a copy of it. It leaves out mail kept private to its participants, and mail whose subject marks it confidential. From each mail it keeps only what you wrote: quoted replies, forwards and signatures are cut. Each mail becomes one sample, named by its subject and date. A sample you remove stays out when you choose the button again.
+
 Margince reads a PDF or Word document to its text in the browser before it
 sends anything. It skips a file with no text in it. It names a file it cannot
-open (one with a password, or one that is broken), so you can copy its text in
-instead.
+open (one with a password, or one that is broken), so you can paste its text
+in instead.
 
 When at least half of a file comes from named speakers, Margince reads it as a
 conversation. The page asks which speaker is you, and keeps only your parts.
@@ -356,7 +356,7 @@ The cards, in order:
 To connect your mailbox and calendar to Margince, open Settings → **Connections** and choose **Connect Google** or **Connect Microsoft 365** in **Mail and calendar**. Once one account is connected, choose **Add account**.
 1. **Add account** asks which account first: **Google**, **Microsoft 365** or **Another mail host**.
 2. Under **What to bring in**, tick **Mail**, **Calendar** or both, and pick how much past email to import, or **None**. Choose **Continue**.
-3. Sign in at Google or Microsoft and allow each permission it lists. With both ticked it asks twice: once for mail, then once for your calendar.
+3. Sign in at Google or Microsoft and allow each permission it lists. With both ticked, Google asks once and Microsoft asks twice.
 You land back on Connections, where a note says, for example, "Google connected" and "Mail and Calendar are syncing."
 Also called: link my email, sync Gmail, sync Outlook, connect my calendar.
 

@@ -29,7 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -40,7 +39,7 @@ import (
 )
 
 const (
-	magicKeyRegistry = "../frontend/src/features/sign-in/magic.keys.ts"
+	magicKeyRegistry = "../frontend/src/lib/magickeys.ts"
 	magicKeyCatalog  = "../frontend/src/i18n/en.ts"
 	// magicKeyFloor guards against a vacuous pass. The lanes mint around thirty
 	// keys today; the floor sits low enough that retiring a vocabulary does not
@@ -152,7 +151,7 @@ func magicKeysWithin(file *ast.File) []string {
 // remove a key that was never real, so it cannot make this side read short.
 func magicKeysIn(t *testing.T, path string) map[string]bool {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

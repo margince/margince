@@ -42,6 +42,7 @@ type SendCompanyEmailArgs struct {
 func (t sendCompanyEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_company_email", Title: "Start an email conversation from a record", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   sendCompanyEmailCopy.render(),
 		Instead:       sendCompanyEmailCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,

@@ -16,7 +16,6 @@ package approvals
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -227,77 +226,11 @@ const (
 // targetVisible is the READ half — what the inbox may show and what a
 // target-filtered list may page over.
 func targetVisible(ctx context.Context, tx pgx.Tx, targetType *string, targetID *ids.UUID) (bool, error) {
-	return targetPermitted(ctx, tx, targetType, targetID, forReading)
-}
-
-// targetDecidable is the WRITE half, and the only caller is decidable(): a
-// human deciding a staged change needs the authority over the target that the
-// effect is about to spend on their behalf. It differs from targetVisible in
-// exactly the arms whose table a manual grant can widen; everything else — the
-// object-read floor, the staged-create shape, workspace config, personal state
-// — is one rule for both, because on those a grant cannot speak at all.
-func targetDecidable(ctx context.Context, tx pgx.Tx, targetType *string, targetID *ids.UUID) (bool, error) {
-	return targetPermitted(ctx, tx, targetType, targetID, forDeciding)
-}
-
-func targetPermitted(ctx context.Context, tx pgx.Tx, targetType *string, targetID *ids.UUID, want targetAuthority) (bool, error) {
-	settled, visible := settledByShape(targetShape{hasType: targetType != nil, hasID: targetID != nil})
-	if targetType == nil {
-		// No type is no object to require a read grant ON, and settledByShape
-		// settles both such shapes: a target-LESS proposal, which is about no
-		// record at all, and an id whose table the staging never named.
-		return visible, nil
-	}
-	// The object-read floor, ONE rule above every arm rather than a line inside
-	// each: it is the half the owning store applies before its own row rule, so
-	// an arm added later inherits it without anyone remembering. A denial reads
-	// as not-visible — the caller turns that into the same existence-hiding
-	// answer the record's own read gives, never a 403 that would confirm the row.
-	readable, err := objectReadable(ctx, readObjectFor(*targetType))
-	if err != nil || !readable {
+	visible, err := targetsPermitted(ctx, tx, []targetRef{{targetType, targetID}}, forReading)
+	if err != nil {
 		return false, err
 	}
-	if settled {
-		// A staged CREATE: no row exists yet whose scope could bound it, so read
-		// on the type its row will land in is the whole rule the floor above just
-		// applied, and the decision grants carry the rest of the authority.
-		return visible, nil
-	}
-	switch probeFor(*targetType) {
-	case probeOwnScope:
-		// The LIVE probe, because the scope clause alone answers two staged rows
-		// it should not. An unbounded actor's clause renders EMPTY, and a probe
-		// that treats an empty clause as "admitted" never queries at all — so an
-		// all-scope human sees, and decides, a staging whose target id names no
-		// row. And Art. 17 erasure anonymizes a contact IN PLACE, stamping
-		// archived_at while leaving owner_id alone, so a scope-only probe answers
-		// "still yours" for a row every live read path now refuses. Existence is
-		// the floor the workspace-shared arms already take; these tables carry it
-		// for the same reason, archive being the delete on all of them.
-		if want == forDeciding {
-			return probeAnswer(auth.EnsureWritableLive(ctx, tx, *targetType, *targetID))
-		}
-		return probeAnswer(auth.EnsureVisibleLive(ctx, tx, *targetType, *targetID))
-	case probeInheritedScope:
-		return targetVisibleThroughParent(ctx, tx, *targetType, *targetID, want)
-	case probeExistence:
-		return targetExists(ctx, tx, *targetType, *targetID)
-	case probeOwnerOnly:
-		return targetOwnedByActor(ctx, tx, *targetType, *targetID)
-	case probeActingWorkspace:
-		// Effective-dated price sheets are workspace-shared admin config
-		// with no row scope. A refresh proposal targets the workspace (a
-		// brand-new currency/model has no row yet), so existence is not the
-		// row half here — the object-read floor above and the decision-grant
-		// check (admin/ops Create) carry the authority. The row half that
-		// remains is that the shown target IS the acting workspace: a proposal
-		// whose target_id is some other workspace is not decidable here (its
-		// effect would write to this context's sheet, not the claimed one).
-		wsID, ok := principal.WorkspaceID(ctx)
-		return ok && *targetID == wsID, nil
-	default:
-		return false, nil // no rule for this target type: fail closed
-	}
+	return visible[0], nil
 }
 
 // objectReadable reports whether the asking human holds the object-level READ
@@ -317,62 +250,6 @@ func objectReadable(ctx context.Context, object string) (bool, error) {
 	default:
 		return false, err
 	}
-}
-
-// targetVisibleThroughParent answers for the target kinds that carry no
-// owner_id of their own and are visible exactly when the record they hang off
-// is — the same anchoring each one's own store applies, so a staged action
-// discloses nothing the record itself would not.
-func targetVisibleThroughParent(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID, want targetAuthority) (bool, error) {
-	if targetType == targetOffer {
-		var dealID ids.UUID
-		// BOTH rows have to be live, and the lookup carries the offer's half:
-		// archive is the delete on this table — every offer write the store gates
-		// takes the row LiveOnly — so the effect staged against an archived offer
-		// could never land, whatever its deal still says. The row it hangs off
-		// takes the same rule below, for the reason the own-scope arm does: an
-		// unbounded actor must not skip the deal's existence, and a staged send
-		// against an erased deal's offer is not a decision anyone still owes.
-		err := tx.QueryRow(ctx,
-			`SELECT deal_id FROM offer WHERE id = $1 AND archived_at IS NULL`, targetID).Scan(&dealID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, nil
-		}
-		if err != nil {
-			return false, err
-		}
-		if want == forDeciding {
-			return probeAnswer(auth.EnsureWritableLive(ctx, tx, tableDeal, dealID))
-		}
-		return probeAnswer(auth.EnsureVisibleLive(ctx, tx, tableDeal, dealID))
-	}
-	var ensure func(context.Context, pgx.Tx, ids.UUID) error
-	switch targetType {
-	case targetSignal:
-		ensure = auth.EnsureSignalVisibleLive
-	case objectActivity:
-		ensure = auth.EnsureActivityContentVisibleLive
-	case targetRelationship:
-		// An edge inherits the CONJUNCTION of its endpoints' scope, which is one
-		// spelling in platform/auth because contacts's own reads and this probe are
-		// two readers of the same rule. It is the one arm with no live variant:
-		// the clause already probes existence for every actor — an unbounded one
-		// included — and the same rule states, for this caller by name, that an
-		// edge archived after the staging stays DECIDABLE so a human can reject
-		// it. Narrowing it here would strand the row and disagree with the store
-		// the probe exists to mirror.
-		ensure = auth.EnsureRelationshipVisible
-	default:
-		// TOTAL on purpose. A signal default read as "whatever is left", so a type
-		// added to probeFor's inherited-scope arm — which looks like the whole act
-		// of enrolling one — would have been probed against the SIGNAL table: a
-		// wrong-scope answer rather than a closed one, from the branch that exists
-		// to be closed. probeFor is the one source only if this cannot silently
-		// disagree with it.
-		return false, fmt.Errorf(
-			"crmapprovals: %q is classified as inherited-scope with no parent probe", targetType)
-	}
-	return probeAnswer(ensure(ctx, tx, targetID))
 }
 
 // probeAnswer turns a row probe's error into the ANSWER the inbox needs: absent
@@ -400,10 +277,10 @@ func probeAnswer(err error) (bool, error) {
 }
 
 // existenceProbes are the target types whose owning store applies NO row scope
-// of its own — workspace-shared config an object grant governs — mapped to the
-// existence query that is their whole visibility floor. The decision-grant check
-// is the authority question; a staging against a record that does not exist is
-// still not decidable.
+// of its own, workspace-shared config an object grant governs. Each maps to the
+// existence query that is its whole visibility floor. Each query answers which
+// ids in $1 still exist. The decision-grant check is the authority question; a
+// staging against a record that does not exist is still not decidable.
 //
 // Each query mirrors what its own store's read path admits, and the archive
 // predicate differs across them for ONE reason, stated here rather than repeated
@@ -412,71 +289,16 @@ func probeAnswer(err error) (bool, error) {
 // live row. custom_field is the single exception — retire is a status flip that
 // keeps the row live, so a staged edit against a retired field stays decidable.
 var existenceProbes = map[string]string{
-	objectUserAdmin:           `SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL AND NOT is_agent)`,
-	targetProduct:             `SELECT EXISTS (SELECT 1 FROM product WHERE id = $1 AND archived_at IS NULL)`,
-	targetTag:                 `SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1 AND archived_at IS NULL)`,
-	targetOfferTemplate:       `SELECT EXISTS (SELECT 1 FROM offer_template WHERE id = $1 AND archived_at IS NULL)`,
-	targetWebhookSubscription: `SELECT EXISTS (SELECT 1 FROM webhook_subscription WHERE id = $1 AND archived_at IS NULL)`,
-	"custom_field":            `SELECT EXISTS (SELECT 1 FROM custom_field WHERE id = $1)`,
+	objectUserAdmin:           `SELECT id FROM app_user WHERE id = ANY($1) AND archived_at IS NULL AND removed_at IS NULL AND NOT is_agent`,
+	targetProduct:             `SELECT id FROM product WHERE id = ANY($1) AND archived_at IS NULL`,
+	targetTag:                 `SELECT id FROM tag WHERE id = ANY($1) AND archived_at IS NULL`,
+	targetOfferTemplate:       `SELECT id FROM offer_template WHERE id = ANY($1) AND archived_at IS NULL`,
+	targetWebhookSubscription: `SELECT id FROM webhook_subscription WHERE id = ANY($1) AND archived_at IS NULL`,
+	"custom_field":            `SELECT id FROM custom_field WHERE id = ANY($1)`,
 	// An import run is workspace-shared work over the estate, with no owner and
 	// no row scope of its own — so the row half is existence alone, and the
 	// authority is the object-read floor plus the decision grants. There is no
 	// archived_at on the table: a run's history is its own status, and a
 	// finished one is still the thing an approval named.
-	targetImportRun: `SELECT EXISTS (SELECT 1 FROM import_run WHERE id = $1)`,
-}
-
-func targetExists(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID) (bool, error) {
-	query, ok := existenceProbes[targetType]
-	if !ok {
-		if ext, registered := extensionTarget(targetType); registered {
-			query, ok = extensionExistenceQuery(ext.TargetTable), true
-		}
-	}
-	if !ok {
-		// Unreachable while probeFor derives its existence arm from this map,
-		// and total so it stays that way: a type answered against some other
-		// type's table is a wrong answer, which is worse than a loud one.
-		return false, fmt.Errorf("crmapprovals: %q is classified as existence-probed with no existence query", targetType)
-	}
-	var exists bool
-	if err := tx.QueryRow(ctx, query, targetID).Scan(&exists); err != nil {
-		return false, err
-	}
-	return exists, nil
-}
-
-// targetOwnedByActor is the floor for a target that is PERSONAL state: its
-// owning store reads the row back for exactly one human, so the probe is that
-// same ownership equality against a live row.
-//
-// It is deliberately NOT auth.VisibleTo. That clause admits own/team/all, so on
-// a table the API serves owner-only it would put a colleague's private row — and
-// the change staged against it — into a manager's or an admin's inbox, and let
-// them decide a write the read path refuses them the row itself for. The probe
-// may never be wider than the store it mirrors.
-func targetOwnedByActor(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID) (bool, error) {
-	if targetType != targetSavedView {
-		// TOTAL on purpose, like the inherited-scope probe: a type enrolled in
-		// probeOwnerOnly with no ownership query here must fail loudly rather
-		// than be answered against somebody else's table.
-		return false, fmt.Errorf("crmapprovals: %q is classified as owner-only with no ownership query", targetType)
-	}
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		return false, errors.New("crmapprovals: no actor bound to context")
-	}
-	if p.UserID == ids.Nil {
-		// A principal with no human identity owns no personal state, and
-		// comparing owner_id against the nil UUID would answer for a row
-		// nobody owns rather than for nothing.
-		return false, nil
-	}
-	var visible bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM saved_view WHERE id = $1 AND owner_id = $2 AND archived_at IS NULL)`,
-		targetID, p.UserID).Scan(&visible); err != nil {
-		return false, err
-	}
-	return visible, nil
+	targetImportRun: `SELECT id FROM import_run WHERE id = ANY($1)`,
 }

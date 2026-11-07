@@ -27,12 +27,14 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CRA | The EU Cyber Resilience Act, which sets duties for software makers. |
 | CRM | Customer relationship management: software for contacts, companies and deals. |
 | CSV | Comma-separated values, a plain text format for tables. |
+| Cursor | An AI code editor, which can connect to Margince. |
 | de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
 | dmy | The date order day, month, year, as a setting value. |
 | Docker | The container tool used to run the local stack and the images. |
 | English | The language the docs and the source catalog are written in. |
+| entity | A legal entity: one of the companies an installation trades as, each with its own name and address. |
 | EU | The European Union, whose laws several pages refer to. |
 | GDPR | The EU General Data Protection Regulation, the law on personal data. |
 | German | The language of the German compliance pack and UI catalog. |
@@ -43,6 +45,8 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Go | The programming language of the server. |
 | Google | The company behind Gmail and the Gemini models. |
 | Gradion | The company that builds Margince and licenses it. |
+| handoff | An SDR passing a prospect to an account executive, who accepts or returns it. |
+| handoffs | SDRs passing prospects to account executives, who accept or return them. |
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | identity | Who sent a privacy request; closing one records how that was checked. |
@@ -56,6 +60,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | locale | The date or time format of the reader's language, as a setting value. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
+| Material | Google's Material Symbols icon set, the source of the web app's filled status marks. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
@@ -68,8 +73,8 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
 | Origins | The list of places a lead can come from, kept in Settings. |
 | origins | The list of places a lead can come from, kept in Settings. |
-| PNG | A common image file format, saved as .png. |
 | PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
+| PNG | A common image file format, saved as .png. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
 | RBAC | Role-based access control: what each role may see and change. |
@@ -82,16 +87,20 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Slack | A team chat tool where an incoming webhook can post messages. |
 | SonarCloud | A code quality service that scans each pull request. |
 | subscription | A webhook's setup: the address it sends to and the events it sends. |
+| systemd | The service manager of most Linux systems, which starts the api and the worker. |
 | Tally | An online form tool that can send each answer to a webhook address. |
 | Telegram | A chat app Margince can send messages through. |
+| terminal | The window where you type commands, such as `claude` or `codex`. |
 | Typeform | An online form tool that can send each answer to a webhook address. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |
+| Visual | Part of the name Visual Studio, Microsoft's code editor, which can connect to Margince. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
 | Webflow | A website builder whose forms can send each entry to a webhook address. |
 | webhook | A message one tool sends to another tool's address when a chosen event happens. |
+| WebP | A modern image file format, saved as .webp. |
 | WhatsApp | A chat app; a link to it opens a chat with a phone number. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |

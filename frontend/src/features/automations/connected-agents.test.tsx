@@ -40,7 +40,7 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-// The zone the viewer's browser reports, as `viewerZone()` asks for it.
+// The zone the viewer's browser reports, as `browserZone()` asks for it.
 // Restored by the afterEach above, so a case pretending to sit elsewhere never
 // decides what the next one renders.
 function pretendViewerZone(timeZone: string): void {
@@ -122,6 +122,7 @@ function backend(opts: {
   connectorEnabled?: boolean;
   onDelete?: (id: string) => void;
   keepRevoked?: boolean;
+  reachable?: string[];
 }) {
   const passports = [...(opts.passports ?? [MINTED, CONNECTED])];
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -159,6 +160,7 @@ function backend(opts: {
     if (url.includes("/passports")) {
       return jsonResponse({
         data: passports,
+        reachable_areas: opts.reachable ?? ["business"],
         page: { next_cursor: null, has_more: false },
       });
     }
@@ -207,10 +209,10 @@ async function openActions(client: string) {
 describe("ConnectedAgentsCard", () => {
   it("names each scope the way the consent screen named it", async () => {
     renderConnectedAgents({ scopes: ["read", "enrich"] });
-    // A human who ticked "Buy contact data" cannot map a raw "enrich" chip
+    // A human who ticked "Use AI and buy data" cannot map a raw "enrich" chip
     // back to the decision they made.
     expect(await screen.findByText("Read records")).toBeTruthy();
-    expect(screen.getByText("Buy contact data")).toBeTruthy();
+    expect(screen.getByText("Use AI and buy data")).toBeTruthy();
     expect(screen.queryByText("enrich")).toBeNull();
   });
 
@@ -224,13 +226,12 @@ describe("ConnectedAgentsCard", () => {
     expect(screen.getByText(/Connected 02\/07\/2026/)).toBeTruthy();
   });
 
-  it("dates the grant on the record's calendar and the deadline on the viewer's", async () => {
-    // One row carries both purposes, so one render proves both halves of the
-    // zone-by-purpose rule — and both instants below fall on a DIFFERENT
-    // calendar day in Berlin than on the US west coast, so picking the wrong
-    // zone for either cannot pass by coincidence:
-    //   connected_at 00:30 UTC  → 2 July in RECORD_ZONE, 1 July in Los Angeles
-    //   expires_at   00:00 UTC  → 31 Dec in RECORD_ZONE, 30 Dec in Los Angeles
+  it("dates the grant and the deadline on the reader's own clock", async () => {
+    // Both instants fall on a DIFFERENT calendar day in Berlin than on the US
+    // west coast, so a zone other than the reader's cannot pass by
+    // coincidence:
+    //   connected_at 00:30 UTC  → 2 July in Berlin, 1 July in Los Angeles
+    //   expires_at   00:00 UTC  → 31 Dec in Berlin, 30 Dec in Los Angeles
     pretendViewerZone("America/Los_Angeles");
     vi.stubGlobal(
       "fetch",
@@ -248,13 +249,9 @@ describe("ConnectedAgentsCard", () => {
       }),
     );
     render(<ConnectedAgentsCard />);
-    // When the grant was made is a record fact — every colleague reading this
-    // installation must be able to quote the same day for it.
-    expect(await screen.findByText(/Connected 02\/07\/2026/)).toBeTruthy();
-    expect(screen.queryByText(/Connected 01\/07\/2026/)).toBeNull();
-    // When the credential runs out is this human's deadline, on this human's
-    // calendar: a fixed zone would promise them a day that, where they are,
-    // has not arrived.
+    // Every time is shown in the reader's own zone (#7894).
+    expect(await screen.findByText(/Connected 01\/07\/2026/)).toBeTruthy();
+    expect(screen.queryByText(/Connected 02\/07\/2026/)).toBeNull();
     expect(screen.getByText(/Expires 30\/12\/2026/)).toBeTruthy();
     expect(screen.queryByText(/Expires 31\/12\/2026/)).toBeNull();
   });
@@ -481,5 +478,58 @@ describe("ConnectedAgentsCard focus after a disconnect", () => {
       document.querySelector('[data-connection="pp-second"]'),
     );
     expect(screen.getByText("Disconnected")).toBeTruthy();
+  });
+});
+
+describe("ConnectedAgentsCard: work areas", () => {
+  const AREAS = ["business", "admin_settings", "own_account"];
+
+  it("lists each connection's areas and offers to change them until it ends", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backend({
+        passports: [
+          { ...RENEWING, areas: { mode: "custom", areas: ["business"] } },
+          { ...LAPSED, areas: { mode: "all", areas: [] } },
+        ],
+        reachable: AREAS,
+      }),
+    );
+    render(<ConnectedAgentsCard />);
+    const [renewing, lapsed] = await screen.findAllByRole("button", {
+      name: "Actions for Claude Code",
+    });
+    if (!(renewing && lapsed)) {
+      throw new Error("each connection has its own menu");
+    }
+    const renewingRow = renewing.closest("tr");
+    const lapsedRow = lapsed.closest("tr");
+    if (!(renewingRow && lapsedRow)) {
+      throw new Error("each menu sits in its connection's row");
+    }
+    expect(within(renewingRow).getByText("Sales work")).toBeTruthy();
+    expect(within(lapsedRow).getByText("All areas")).toBeTruthy();
+
+    await user.click(lapsed);
+    expect(
+      screen.queryByRole("button", { name: "Change areas for Claude Code" }),
+    ).toBeNull();
+    await user.click(renewing);
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Change areas for Claude Code",
+      }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Change areas" }),
+    ).toBeTruthy();
+  });
+
+  it("has no Areas column for a role that reaches one area", async () => {
+    vi.stubGlobal("fetch", backend({ passports: [CONNECTED] }));
+    render(<ConnectedAgentsCard />);
+    await screen.findByText("Claude Code");
+    expect(screen.queryByRole("columnheader", { name: "Areas" })).toBeNull();
   });
 });

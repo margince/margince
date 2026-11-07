@@ -27,8 +27,11 @@ export function fieldRefusals(
   const refused = problemFieldErrorsOf(error);
   const byField = new Map<string, string>();
   for (const problem of refused) {
+    // An offered box sends its pick under `pickedKey`: that refusal is its own.
     const field = fields.find(
-      (candidate) => (candidate.wireField ?? candidate.key) === problem.field,
+      (candidate) =>
+        (candidate.wireField ?? candidate.key) === problem.field ||
+        candidate.offers?.pickedKey === problem.field,
     );
     if (!field) continue;
     const copy = FIELD_CODE_COPY.get(problem.code);

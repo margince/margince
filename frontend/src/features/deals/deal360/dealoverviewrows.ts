@@ -3,7 +3,7 @@
 
 import type { components } from "../../../api/schema";
 import type { OccurredPrecision } from "../../../format/activitywhen";
-import { formatDayMonth, formatMoney } from "../../../format/format";
+import { formatDayMonth, formatMoneyOrAbsent } from "../../../format/format";
 import { offerStatusLabel } from "../../../format/offerstatus";
 import type { Locale, Translator } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
@@ -39,7 +39,11 @@ export function offerRow(
     }),
     sub: t("deal.offers.rowSub", {
       date: formatDayMonth(offer.created_at, locale, zone),
-      net: formatMoney(offer.net_minor, offer.currency, locale),
+      net: formatMoneyOrAbsent(
+        offer.money_withheld ? null : offer.net_minor,
+        offer.currency,
+        locale,
+      ),
     }),
     statusLabel: offerStatusLabel(offer.status, t),
   };

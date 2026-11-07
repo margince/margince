@@ -28,7 +28,7 @@ function aMeetingOwedAnAnswer(over = {}) {
     category: "meetings",
     title: "Weekly sync",
     destination: "today",
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
     subject: { type: "activity", id: "01a05500-0000-7000-8000-0000000000b1" },
     contact: {
       id: CUSTOMER,

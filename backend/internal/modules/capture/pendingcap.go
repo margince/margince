@@ -15,9 +15,10 @@ package capture
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
 // PendingDeferralCap bounds how many open questions one workspace may hold at
@@ -127,7 +128,8 @@ func atDeferralCap(ctx context.Context, tx pgx.Tx) (bool, error) {
 // An address with no domain is not subject to it: there is nothing to count by,
 // and the workspace ceiling still bounds those rows.
 func atDomainDeferralCap(ctx context.Context, tx pgx.Tx, domain string) (bool, error) {
-	domain = strings.ToLower(strings.TrimSpace(domain))
+	// Folded as the ledger stores it, so one domain in two spellings is one flood.
+	domain = owndomain.Fold(domain)
 	if domain == "" {
 		return false, nil
 	}

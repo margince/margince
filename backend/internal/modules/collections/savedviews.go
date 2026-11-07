@@ -123,9 +123,9 @@ func (s *Store) ListSavedViews(ctx context.Context, resource *string, archived s
 		if archived != storekit.IncludeArchived {
 			where = append(where, "archived_at IS NULL")
 		}
-		rows, err := tx.Query(ctx,
-			selectSavedView+strings.Join(where, " AND ")+
-				fmt.Sprintf(" ORDER BY name, id LIMIT $%d", arg(catalogCap+1)), args...)
+		query := selectSavedView + strings.Join(where, " AND ") +
+			fmt.Sprintf(" ORDER BY name, id LIMIT $%d", arg(catalogCap+1))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}
@@ -354,17 +354,24 @@ func (s *Store) ArchiveSavedView(ctx context.Context, id ids.SavedViewID) (saved
 	}
 	var out savedViewRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx,
-			"UPDATE saved_view SET archived_at = now() WHERE id = $1 AND owner_id = $2 AND archived_at IS NULL RETURNING "+savedViewColumns,
-			id, owner)
 		var err error
-		if out, err = scanSavedView(row); errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound // absent, others', or already archived — all read as absent
-		} else if err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", "saved_view", id.UUID, nil, nil)
+		out, err = archiveSavedViewTx(ctx, tx, id, owner)
 		return err
 	})
+	return out, err
+}
+
+func archiveSavedViewTx(ctx context.Context, tx pgx.Tx, id ids.SavedViewID, owner ids.UserID) (savedViewRow, error) {
+	row := tx.QueryRow(ctx,
+		"UPDATE saved_view SET archived_at = now() WHERE id = @id AND owner_id = @owner AND archived_at IS NULL RETURNING "+savedViewColumns,
+		pgx.StrictNamedArgs{"id": id, "owner": owner})
+	out, err := scanSavedView(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return out, err
+	}
+	_, err = storekit.Audit(ctx, tx, "archive", "saved_view", id.UUID, nil, nil)
 	return out, err
 }

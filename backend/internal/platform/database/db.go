@@ -176,7 +176,7 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	// LOCAL, so a per-handle ceiling would silently re-time every later lane in
 	// somebody else's snapshot; the transaction's own opener sets its budget.
 	if tx, joined := snapshotOf(ctx); joined {
-		return fn(tx)
+		return guardedTransaction(ctx, tx, fn)
 	}
 	if d.budget != 0 {
 		bounded := fn

@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { useT } from "../i18n";
+import { AppLink } from "./applink";
 import { type PeekContent, usePeek } from "./peek";
 import { Popover } from "./popover";
 import "./atoms.css";
@@ -69,12 +70,18 @@ const COUNTABLE = 6;
 // of records.
 const SEGMENTS = ["first", "second", "third", "fourth", "fifth", "sixth"];
 
-function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
+// `tone: "ai"` draws a count of what the machine's work earned in indigo.
+function Meter({
+  filled,
+  total,
+  tone,
+}: Readonly<{ filled: number; total: number; tone?: "ai" }>) {
   const held = Math.min(Math.max(filled, 0), total);
+  const toned = tone ? " stat-card-meter-ai" : "";
   if (total <= COUNTABLE) {
     return (
       <span
-        className="stat-card-meter stat-card-meter-segments"
+        className={`stat-card-meter stat-card-meter-segments${toned}`}
         aria-hidden="true"
       >
         {SEGMENTS.slice(0, total).map((segment, index) => (
@@ -91,7 +98,7 @@ function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
     );
   }
   return (
-    <span className="stat-card-meter" aria-hidden="true">
+    <span className={`stat-card-meter${toned}`} aria-hidden="true">
       <span
         className="stat-card-meter-fill"
         style={{ inlineSize: `${Math.round((held / total) * 100)}%` }}
@@ -107,6 +114,12 @@ export const STAT_CARD_TONES = [
   "danger",
 ] as const;
 
+export const STAT_CARD_ACTIONS = {
+  page: "stat.open",
+  records: "stat.records",
+  forecast: "stat.forecast",
+} as const;
+
 export function StatCard({
   label,
   value,
@@ -120,6 +133,7 @@ export function StatCard({
   meter,
   narrow,
   peek,
+  opens = "page",
 }: Readonly<{
   label: string;
   value: string;
@@ -136,6 +150,8 @@ export function StatCard({
   // The card goes to that record's page, which a reader can open in a new tab.
   // A card given both draws the link.
   href?: string;
+  // Shared action names distinguish a forecast drill from a record list or page.
+  opens?: keyof typeof STAT_CARD_ACTIONS;
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
@@ -143,7 +159,7 @@ export function StatCard({
   //
   // Only for a reading that HAS a denominator. A figure with nothing to be out
   // of gets no bar rather than a bar with an invented one.
-  meter?: { filled: number; total: number };
+  meter?: { filled: number; total: number; tone?: "ai" };
   // What the reading rests on, and the words that name it. The copy belongs to
   // the caller, because no copy lives in a primitive.
   basis?: ReactNode;
@@ -160,20 +176,15 @@ export function StatCard({
   // stronger volume, it is a different judgement (the slot itself is bad
   // news, not just its figure).
   alert?: boolean;
-  // What the reading becomes where its strip can no longer hold two tiles
-  // abreast: `row` folds it into one full-width line, label and basis leading,
-  // figure trailing (statstrip.css). Nothing about the tile's air or type at
-  // any wider width — this reading is the reading beside it on a record page,
-  // and a tighter tile here once made the same figure read as a different
-  // card. A closed word, not a boolean: `narrow={true}` is a place for a
-  // second SIZE to arrive unnoticed, and a size here is the removed `hero`.
-  narrow?: "row";
+  // Full-width stacking keeps long monetary ranges from squeezing the label.
+  narrow?: "row" | "stack";
   // Who or which the figure counts, as a card over the tile on hover and on
   // keyboard focus. A tile with a door keeps its press for the door (the tab it
   // opens holds the same rows). A tile without one opens the card on a press.
   peek?: PeekContent;
 }>) {
   const t = useT();
+  const action = href && opens === "records" ? "page" : opens;
   const labelId = useId();
   const doorless = !href && !onOpen;
   const {
@@ -238,7 +249,14 @@ export function StatCard({
           </Popover>
         )}
       </span>
-      <span className={valueClass}>{value}</span>
+      {/* A reading that is a word, not a number, says so to the sheet, so a
+          plate can set it as words rather than as a figure. */}
+      <span
+        className={valueClass}
+        data-word={/\d/.test(value) ? undefined : ""}
+      >
+        {value}
+      </span>
       {detail && <span className="stat-card-detail t-caption">{detail}</span>}
       {/* The proportion under the words that state it. A bar rather than a
           second figure: the reader has the number above it, and what a bar
@@ -252,17 +270,16 @@ export function StatCard({
           competed with the label for the first glance. */}
       {(href || onOpen) && (
         <span className="stat-card-foot">
-          {/* THE DOOR SAYS "Open", ALWAYS. One word for one control: a caller
-              naming its own destination gave the product several spellings of
-              the same door, and the reading a door belongs to is already said
-              beside it. Which reading it opens reaches a screen reader as this
-              door's DESCRIPTION — folded into the NAME it read "Open Open
-              pipeline", so it is `aria-describedby` and never the word. */}
+          {/* The reading remains a description so the destination has its own name. */}
           <Door href={href} onOpen={onOpen} describedBy={labelId}>
-            <span className="stat-card-open-word">{t("stat.open")}</span>
-            <span className="stat-card-arrow" aria-hidden="true">
-              {"\u2192"}
+            <span className="stat-card-open-word">
+              {t(STAT_CARD_ACTIONS[action])}
             </span>
+            {action !== "records" && (
+              <span className="stat-card-arrow" aria-hidden="true">
+                {"\u2192"}
+              </span>
+            )}
           </Door>
         </span>
       )}
@@ -284,9 +301,13 @@ function Door({
 }>) {
   if (href) {
     return (
-      <a className="stat-card-open" href={href} aria-describedby={describedBy}>
+      <AppLink
+        className="stat-card-open"
+        href={href}
+        aria-describedby={describedBy}
+      >
         {children}
-      </a>
+      </AppLink>
     );
   }
   return (

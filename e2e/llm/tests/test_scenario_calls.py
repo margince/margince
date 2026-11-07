@@ -37,6 +37,65 @@ def run(calls, answer):
     return path
 
 
+class AgentParityCasesTest(unittest.TestCase):
+    """The router and action checks of the agent-parity cases, both directions."""
+
+    def problems(self, name, calls, answer):
+        return check.check(scenario(name), run(calls, answer))
+
+    @staticmethod
+    def fleet_team(access="read", team="Fleet Accounts"):
+        return [("change_access", {"action": "create_team", "request_body": {"name": team}}),
+                ("change_access", {"action": "add_team_member", "id": "t", "userId": "u"}),
+                ("change_access", {"action": "share", "request_body": {"access": access}})]
+
+    def test_sharing_with_write_access_fails_a_read_share(self):
+        name = "case114-the-fleet-team.yaml"
+        answer = "Fleet Accounts is set up, and Sofia can read Nordholz now."
+        self.assertEqual(self.problems(name, self.fleet_team(), answer), [])
+        problems = self.problems(name, self.fleet_team(access="write"), answer)
+        self.assertTrue(any("carrying" in p for p in problems), problems)
+        self.assertTrue(any("never called share_record" in p for p in problems), problems)
+
+    def test_clearing_notices_may_only_mark_them_read(self):
+        name = "case70-clear-my-notices.yaml"
+        cleared = ("change_attention", {"action": "mark_all_notices_read"})
+        self.assertEqual(self.problems(name, [cleared], "Your notices are cleared."), [])
+        for extra in (("create_record", {"record_type": "deal"}), ("change_attention", {"action": "dismiss_brief_item"})):
+            with self.subTest(extra=extra):
+                self.assertTrue(self.problems(name, [cleared, extra], "Your notices are cleared."))
+
+    def test_research_during_a_read_of_the_plan_fails(self):
+        name = "case112-my-plan-and-the-dossier.yaml"
+        reads = [("read_details", {"action": "weekly_plan"}), ("read_details", {"action": "dossier", "id": "c"})]
+        answer = "Your plan has three things, and the Nordholz dossier lists 40 plants."
+        self.assertEqual(self.problems(name, reads, answer), [])
+        self.assertTrue(self.problems(name, reads + [("run_research", {"action": "morning_brief"})], answer))
+
+    def test_a_handover_during_a_question_about_access_fails(self):
+        guards = scenario("case75-sofia-is-leaving.yaml")
+        answer = "You could deactivate Sofia or hand over her work. Which do you want?"
+        calls = [("list_colleagues", {})]
+        self.assertEqual(check.check(guards, run(calls, answer)), [])
+        moved = calls + [("change_access", {"action": "hand_over_work"})]
+        self.assertTrue(check.check(guards, run(moved, answer)))
+
+    def test_handling_her_access_is_not_naming_an_option(self):
+        guards = scenario("case75-sofia-is-leaving.yaml")
+        problems = check.check(guards, run([("list_colleagues", {})], "I can't handle Sofia's access. Tell me more?"))
+        self.assertTrue(any("never said" in p for p in problems), problems)
+
+    def test_a_plan_that_changes_nothing_passes_without_a_question(self):
+        guards = scenario("case75-sofia-is-leaving.yaml")
+        answer = "Deactivate Sofia at the end of her last day, after a colleague takes over her work."
+        self.assertEqual(check.check(guards, run([("list_colleagues", {})], answer)), [])
+
+    def test_a_team_named_otherwise_fails(self):
+        name = "case114-the-fleet-team.yaml"
+        problems = self.problems(name, self.fleet_team(team="Fleet"), "Sofia is in the team and can read it.")
+        self.assertTrue(any("create_team" in p for p in problems), problems)
+
+
 class NoWindowGivenTest(unittest.TestCase):
     """Case 44: the user named no window, so the product's sixty days stand."""
 
@@ -140,6 +199,7 @@ class SendOneDraftOneTest(unittest.TestCase):
         problems = check.check(self.case, run([self.reply, self.draft, sent], self.answer))
         self.assertEqual(len(problems), 1, problems)
         self.assertIn("called send_outbound carrying 'omar.haddad'", problems[0])
+
 
 
 if __name__ == "__main__":

@@ -129,6 +129,9 @@ type WaitingReply struct {
 	SenderWasStranger bool
 	BccOnly           bool
 	ForeignLink       bool
+	// SenderIsMachine is the message's sender_is_machine stamp: a sending
+	// system wrote it, by mailidentity.InboundFromSendingSystem.
+	SenderIsMachine bool
 }
 
 // WaitingScanCap bounds the work one read does. Beyond this the answer is
@@ -213,18 +216,13 @@ func liveRecord(predicate, alias string) string {
 // WaitingRepliesBefore, which continues where a page left off; this spelling
 // asks for the newest page and stops.
 //
-// Paged because the scan's own machine-sender rule is a coarse subset of the
-// real one. The full test reads a registrable domain against a transactional
-// baseline — a public-suffix question, not something a LIKE can answer — so it
-// runs in the caller, AFTER this cap. Two hundred newer messages from one
-// transactional relay could therefore fill the scan and push a genuinely
-// waiting customer out of it, and the caller would discard all two hundred and
-// show nothing. Asking for the next page is how the customer comes back.
+// Paged because the caller folds conversations and drops sending systems
+// after this cap. The next page is how a customer comes back.
 //
-// Not by moving the full rule into SQL: that rule is one capability, and a
-// second copy of it here would be the thing that drifts — the domain baseline
-// and the public-suffix walk are both Go, and compose owns the seam that has
-// them.
+// The machine-sender rule stays one Go capability. Capture and the activity
+// writer stamp its verdict on sender_is_machine, and a data task stamps older
+// mail. The card tail (waitingcards.go) drops stamped mail before its fold;
+// the caller asks the rule itself of every row, so unstamped mail is judged too.
 func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingReply, error) {
 	return s.WaitingRepliesBefore(ctx, asOf, WaitingPosition{})
 }
@@ -237,121 +235,72 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 // and it says so by taking no cursor at all, rather than every call site
 // carrying a zero somebody has to recognise as "the beginning".
 func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before WaitingPosition) ([]WaitingReply, error) {
-	return s.scanWaitingReplies(ctx, asOf, before, nil)
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{})
 }
 
 // WaitingRepliesForOwnerBefore narrows mail responsibility before the scan bound.
 func (s *Store) WaitingRepliesForOwnerBefore(ctx context.Context, asOf time.Time, before WaitingPosition, owner ids.UUID) ([]WaitingReply, error) {
-	return s.scanWaitingReplies(ctx, asOf, before, &owner)
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{owner: &owner})
 }
 
-func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before WaitingPosition, owner *ids.UUID) ([]WaitingReply, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	var waiting []WaitingReply
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		args := []any{}
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		instant := arg(asOf)
-		// The CONTENT gate, not the discover one. Everything this read answers
-		// — who wrote last, that nobody replied, how long they have waited — is
-		// derived from thread membership, and inheritedscope.go states the rule
-		// plainly: a reader that shows anything derived from a thread composes
-		// ActivityContentClause. Discover admits the safe markers only, and a
-		// caller that picks it for content is the defect restrictedreaders_test
-		// exists to catch.
-		//
-		// So a message this reader may not read produces no row at all. The
-		// earlier cut kept the row and withheld only its subject, which still
-		// published the wait, the timing and the linked record — and let a
-		// reader watch a row vanish to learn that a reply they may not see had
-		// arrived.
-		content, err := auth.ActivityContentClause(ctx, "a", arg)
-		if err != nil {
-			return err
-		}
-		// The same gate for the reply that may LIFT a snooze. A reply this
-		// reader cannot see must not put the row back on their day: the row
-		// reappearing is itself the disclosure that it arrived.
-		backContent, err := auth.ActivityContentClause(ctx, "back", arg)
-		if err != nil {
-			return err
-		}
-		// The links come back only where the reader may see what they point at.
-		// One visible contact must not expose a colleague's deal, which is the
-		// disclosure the timeline's own link read guards against.
-		//
-		// Aliased `wl`, not `l`: the discover gate composed above renders its
-		// OWN correlated subquery over activity_link using `l`, and a second
-		// `l` in this query's FROM shadows it — the gate's subquery then reads
-		// our joined row instead of the activity's own links, and admits or
-		// refuses on the wrong evidence.
-		linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
-		if err != nil {
-			return err
-		}
-		if linkVisible == "" {
-			linkVisible = scopeUnbounded
-		}
-		subject := readerOrNobody(ctx)
-		if owner != nil {
-			subject = *owner
-		}
-		reader := arg(subject)
-		// One snapshot for this read. Passed as a list rather than tested in Go
-		// so the clause runs before the scan cap — see OwnDomains.
-		ownDomains, err := s.ownDomainList(ctx, tx)
-		if err != nil {
-			return err
-		}
-		// The horizon this installation's own answering implies, read ONCE for
-		// this scan so every row it judges is judged by one cutoff. Stored by
-		// the worker pass; a read never measures it (waitingHorizonFor).
-		horizon, err := s.waitingHorizonFor(ctx, tx)
-		if err != nil {
-			return err
-		}
+// WaitingRepliesAnsweredByBefore is WaitingRepliesBefore kept, before the scan
+// bound, to the mail one of these seats answers for. A message that is not
+// mail answers to nobody and stays, as it does in the unnarrowed read.
+func (s *Store) WaitingRepliesAnsweredByBefore(ctx context.Context, asOf time.Time, before WaitingPosition, seats []ids.UUID) ([]WaitingReply, error) {
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{answeredBy: seats, bySeats: true})
+}
 
-		bookedDiscover, err := bookedDiscoverClause(ctx, arg)
-		if err != nil {
+func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before WaitingPosition, seats mailSeats) ([]WaitingReply, error) {
+	var waiting []WaitingReply
+	err := s.readWaitingQueue(ctx, asOf, seats, waitingShape{drawsRows: true},
+		func(slots waitingSlots, arg func(any) int) string {
+			slots.values[waitingKeysetSlot] = olderThan(before, arg)
+			return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" + fmt.Sprintf(waitingRepliesSQL, slots.values...) +
+				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC"
+		},
+		func(rows pgx.Rows) (err error) {
+			waiting, err = collectWaiting(rows, seats.owner)
 			return err
-		}
-		requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
-		if err != nil {
-			return err
-		}
-		identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
-		if err != nil {
-			return err
-		}
-		responsibility := personalMailResponsibilitySQL(owner, identities, arg)
-		rows, err := tx.Query(ctx,
-			"SELECT waiting.*, "+directMailSeatsSQL(identities)+" FROM ("+fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
-				horizon,
-				liveRecord(openDealPredicate, "d"),
-				liveRecord(workingLeadPredicate, "ld"),
-				liveRecord(openDealPredicate, "openDeal"),
-				reader,
-				responsibility,
-				neverRelaxed, neverRelaxed,
-				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
-				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
-				storekit.MailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", reader)),
-				neverRelaxed,
-				olderThan(before, arg), bookedDiscover,
-				neverRelaxed, neverRelaxed, requestTaskDiscover)+") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC", planEachBind(args)...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		waiting, err = collectWaiting(rows, owner)
-		return err
-	})
+		})
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
 	}
 	return waiting, nil
+}
+
+// readWaitingQueue sends one statement over the waiting queue in its own
+// transaction.
+func (s *Store) readWaitingQueue(
+	ctx context.Context, asOf time.Time, seats mailSeats, shape waitingShape,
+	statement func(waitingSlots, func(any) int) string, read func(pgx.Rows) error,
+) error {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return s.queryWaitingQueue(ctx, tx, asOf, seats, shape, statement, read)
+	})
+}
+
+// queryWaitingQueue sends one statement over the waiting queue: the page or a
+// card tail read. Each gates every row it judges, so the statement stops at
+// its own LIMIT instead of judging the whole horizon first.
+func (s *Store) queryWaitingQueue(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, shape waitingShape,
+	statement func(waitingSlots, func(any) int) string, read func(pgx.Rows) error,
+) error {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	slots, err := s.waitingQueueSlots(ctx, tx, asOf, seats, shape, arg)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(args)...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	return read(rows)
 }
 
 // OwnDomains reports the email domains this installation's own contacts write
@@ -445,7 +394,7 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		&row.ContactID, &row.CompanyID, &row.DealID,
 		&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
 		&row.Engaged, &row.OwnerID, &row.OwnerKnown, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
-		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink)
+		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink, &row.SenderIsMachine)
 	if !row.OwnerKnown {
 		row.OwnerID = ids.Nil
 	}

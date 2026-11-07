@@ -2,6 +2,7 @@ import {
   MutationObserver,
   onlineManager,
   type QueryClient,
+  QueryObserver,
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
@@ -16,8 +17,11 @@ import { ProblemError, throwProblem } from "../lib/problem";
 import {
   createQueryClient,
   liveInterval,
+  liveOnMount,
   liveOnReturn,
+  notePrefetched,
   retryQuery,
+  staleFor,
 } from "./queryclient";
 
 // The data-layer parameters are invisible until they are wrong: a retried 4xx
@@ -104,15 +108,40 @@ describe("the query retry policy", () => {
 describe("the query client defaults", () => {
   it("serves cached data for the pinned staleness window", () => {
     expect(createQueryClient().getDefaultOptions().queries?.staleTime).toBe(
+      staleFor,
+    );
+    expect(staleFor({ queryKey: ["contact360", "p-1"] })).toBe(30_000);
+    expect(staleFor({ queryKey: ["worklist", "handled"] })).toBe(30_000);
+  });
+
+  it("reads Home's day on change and once it is five minutes old", () => {
+    for (const queryKey of [
+      ["worklist", "mine", "all", ""],
+      ["magic"],
+      ["brief"],
+    ]) {
+      expect(liveInterval({ queryKey })).toBe(5 * 60_000);
+      expect(liveOnReturn({ queryKey })).toBe(true);
+      expect(staleFor({ queryKey })).toBe(5 * 60_000);
+      expect(
+        liveOnMount(
+          { queryKey, queryHash: "h", state: { dataUpdatedAt: 0 } },
+          1,
+        ),
+      ).toBe(true);
+    }
+    // Another owner's day or a filtered one is not Home's day.
+    expect(staleFor({ queryKey: ["worklist", "mine", "all", "u-2"] })).toBe(
       30_000,
     );
+    // The reader's own handled list stays live: it is one cheap read.
+    expect(liveInterval({ queryKey: ["worklist", "handled"] })).toBe(60_000);
   });
 
   // FE-PARAM-3 and FE-PARAM-5 are one predicate each rather than a flag, and
-  // both answers of each are load-bearing: a record read repeats and refetches
-  // on the way back to the tab, and nothing else does either. Asked of both
-  // kinds of key, because what a change could get wrong is one kind while the
-  // other stays right.
+  // each is asked for both of its answers. A record read repeats; what comes
+  // back on return is what a stale answer misstates. Both kinds of key are
+  // asked, because a change can get one wrong and the other right.
   //
   // The predicates, not the defaults they are installed as. What they are
   // wired to is proved end to end in features/records/liverecord.test.tsx,
@@ -127,11 +156,99 @@ describe("the query client defaults", () => {
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 
-  it("refetches a record on the way back to the tab, and nothing else", () => {
+  it("reads again on return whatever a stale answer would misstate", () => {
     // "always" and not `true`: `true` refetches only a read already stale, so
     // inside the staleness window above the return would be served the cache.
     expect(liveOnReturn({ queryKey: ["contact360", "p-1"] })).toBe("always");
     expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
+    // A timeline comes back with the reader. Every row it serves says whether
+    // the reader may change it, and a grant expires without a signal.
+    expect(liveOnReturn({ queryKey: ["activities", "contact", "c-1"] })).toBe(
+      "always",
+    );
+    // It does not poll: it pages, so a cadence would refetch every page a
+    // reader has scrolled through.
+    expect(liveInterval({ queryKey: ["activities", "contact", "c-1"] })).toBe(
+      false,
+    );
+    // Not every key whose first word is activities: a one-word prefix is a
+    // write path's invalidation target, not a read.
+    expect(liveOnReturn({ queryKey: ["activities"] })).toBe(false);
+
+    // The installation read carries the policy that decides whether figures
+    // already on screen may stay there, so it comes back with the reader.
+    expect(liveOnReturn({ queryKey: ["installation-settings"] })).toBe(
+      "always",
+    );
+  });
+
+  it("re-reads a live work read on mount unless it is the prefetched answer, under a second old", () => {
+    const day = { queryKey: ["worklist", "handled"], queryHash: "day" };
+    const at = (dataUpdatedAt: number) => ({
+      ...day,
+      state: { dataUpdatedAt },
+    });
+    expect(liveOnMount(at(10_000), 10_100)).toBe("always");
+    notePrefetched("day", 10_000);
+    expect(liveOnMount(at(10_000), 10_999)).toBe(true);
+    expect(liveOnMount(at(10_000), 11_000)).toBe("always");
+    expect(liveOnMount(at(10_500), 10_600)).toBe("always");
+    expect(
+      liveOnMount(
+        {
+          queryKey: ["contact", "p-1"],
+          queryHash: "c",
+          state: { dataUpdatedAt: 0 },
+        },
+        5_000,
+      ),
+    ).toBe(true);
+  });
+
+  it("re-reads a live work read for a second view, unless it is Home's day", () => {
+    const handled = {
+      queryKey: ["worklist", "handled"],
+      queryHash: "handled",
+      state: { dataUpdatedAt: 10_000 },
+    };
+    expect(liveOnMount(handled, 20_000)).toBe("always");
+    expect(
+      liveOnMount(
+        {
+          ...handled,
+          queryKey: ["worklist", "mine", "all", ""],
+          queryHash: "d",
+        },
+        20_000,
+      ),
+    ).toBe(true);
+  });
+
+  it("fetches Home's day once for two views on screen, and serves it to a later mount", async () => {
+    const client = createQueryClient();
+    let fetched = 0;
+    const options = {
+      queryKey: ["worklist", "mine", "all", ""],
+      queryFn: async () => ++fetched,
+    };
+    const home = new QueryObserver(client, options);
+    const stopHome = home.subscribe(() => {});
+    await vi.waitFor(() =>
+      expect(home.getCurrentResult().fetchStatus).toBe("idle"),
+    );
+    expect(fetched).toBe(1);
+    const drawer = new QueryObserver(client, options);
+    const stopDrawer = drawer.subscribe(() => {});
+    expect(drawer.getCurrentResult().fetchStatus).toBe("idle");
+    expect(fetched).toBe(1);
+    stopDrawer();
+    stopHome();
+    const back = new QueryObserver(client, options);
+    const stopBack = back.subscribe(() => {});
+    expect(back.getCurrentResult().fetchStatus).toBe("idle");
+    expect(fetched).toBe(1);
+    stopBack();
+    client.clear();
   });
 
   it("reports a failed query once, through the global sink", async () => {

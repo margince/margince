@@ -1,24 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useCallback, useState } from "react";
-import { isMailbox } from "../../format/connectorprovider";
-import { useConnectors } from "../../lib/connectors";
+import { type ReactNode, Suspense, useCallback, useState } from "react";
+import { lazy } from "../../i18n/lazy";
+import { useMailboxConnected } from "../../lib/connectors";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
-import { ComposeModal } from "../mail/compose";
 
-/**
- * Whether this reader has a mailbox the product can send from: a connected
- * mail connection, not a calendar. Unanswered reads as none, because a drawer
- * offered on a guess would open onto a refusal.
- */
-export function useMailboxConnected(): boolean {
-  const connectors = useConnectors();
-  return (connectors.data?.data ?? []).some(
-    (connection) =>
-      connection.status === "connected" && isMailbox(connection.provider),
-  );
-}
+const ComposeModal = lazy(async () => ({
+  default: (await import("../mail/compose")).ComposeModal,
+}));
 
 /**
  * The shell's composer for an address pressed anywhere under it. It opens the
@@ -43,19 +33,23 @@ export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
       {target !== null && (
         // Keyed by the record and the open: text written for one record must
         // never be filed against another.
-        <ComposeModal
-          key={`${target.entityId}:${target.seq}`}
-          entityType={target.entityType}
-          entityId={target.entityId}
-          // A contact files under itself; other records resolve their contacts.
-          contactId={
-            target.entityType === "contact" ? target.entityId : undefined
-          }
-          recordAddress={target.address}
-          kind="email"
-          open={writing}
-          onClose={() => setWriting(false)}
-        />
+        <Suspense fallback={null}>
+          <ComposeModal
+            key={`${target.entityId}:${target.seq}`}
+            entityType={target.entityType}
+            entityId={target.entityId}
+            // A contact files under itself; other records resolve their contacts.
+            contactId={
+              target.entityType === "contact" ? target.entityId : undefined
+            }
+            recordAddress={target.address}
+            intent={target.draftIntent}
+            draftOnOpen={target.draftIntent !== undefined}
+            kind="email"
+            open={writing}
+            onClose={() => setWriting(false)}
+          />
+        </Suspense>
       )}
     </WriteToProvider>
   );

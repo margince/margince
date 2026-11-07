@@ -20,7 +20,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -28,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -162,7 +162,7 @@ func isProductTypeScript(path string) bool {
 
 func TestTheFrontendImportGrammarMirrorsTheImporter(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(frontendImportGrammar)
+	raw, err := gatekit.ReadFile(frontendImportGrammar)
 	if err != nil {
 		t.Fatalf("read %s: %v", frontendImportGrammar, err)
 	}
@@ -201,14 +201,14 @@ func TestTheImportNamespaceIsTypedOnceInTheFrontend(t *testing.T) {
 	t.Parallel()
 	copies := map[string]int{}
 	walked := 0
-	walkErr := filepath.WalkDir(frontendSrc, func(path string, entry fs.DirEntry, err error) error {
+	walkErr := gatekit.WalkDir(frontendSrc, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() || !isProductTypeScript(path) {
 			return nil
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

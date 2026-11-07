@@ -24,9 +24,11 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
-	calendar        SchedulingCalendar
-	schedulingBrand SchedulingBrand
-	meetingVault    keyvault.Vault
+	dealFilingResolver DealFilingResolver
+	taskRecommendation TaskRecommendation
+	calendar           SchedulingCalendar
+	schedulingBrand    SchedulingBrand
+	meetingVault       keyvault.Vault
 
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
@@ -103,6 +105,9 @@ type Store struct {
 	// (WithRecipientDirectory wires it). A reply never consults it — its
 	// addressees come from the captured conversation it answers.
 	recipients RecipientDirectory
+	// recipientFiler makes a contact for a typed address no record holds.
+	// Nil files nothing, and recipients then refuses the address.
+	recipientFiler RecipientFiler
 	// heldNotifier puts a stopped scheduled message in the rep's approval
 	// inbox; nil holds silently (WithHeldNotifier wires it).
 	heldNotifier HeldNotifier
@@ -124,6 +129,9 @@ type Store struct {
 	catalog FieldCatalog
 	// leadQualifyTasks commits the owner follow-up with a lead's booking.
 	leadQualifyTasks LeadQualifyTasks
+	// invitationAttention tells a host, in the parking transaction, that their
+	// invitations wait for them.
+	invitationAttention InvitationAttention
 }
 
 // LeadQualifyTasks writes the follow-up for a booking filed on a lead.
@@ -208,8 +216,8 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 
 // txRetryingLockCycles is tx for a write that files under shared records and
 // has no effect outside its transaction, so a deadlock victim is run again.
-func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
-	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
+func (s *Store) txRetryingLockCycles(ctx context.Context, isolation pgx.TxIsoLevel, fn func(pgx.Tx) error) error {
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.TxIsolated(ctx, isolation, fn) })
 }
 
 // sprintf keeps SQL assembly lines readable; arguments are always

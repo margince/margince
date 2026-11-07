@@ -25,6 +25,7 @@ import {
   Skeleton,
 } from "../../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../../design-system/panel";
+import { QuietVerbs } from "../../../design-system/verbvolume";
 import { useT } from "../../../i18n";
 import "../../companies/company360.css";
 // The verb column: `.today-actions` and `.today-verb`, drawn here rather than
@@ -93,15 +94,9 @@ export function TodayPanel({
   return (
     <Panel
       tone="ai"
-      // `co-lead` is the company lead's two-column move: the claim on the
-      // left, the verbs opposite it. Without it a contact's verbs fell UNDER
-      // the claim, right-aligned, and the whole width beside them was empty.
+      // `co-lead` sets the claim left and the verbs opposite it.
       className="co-lead"
       title={t("today.title")}
-      // One control, handed in bare: `Button`'s link variant is the text
-      // affordance the head wants, and panel.css already holds everything
-      // after the title at its natural width, so there is nothing left for a
-      // strip around it to lay out.
       titleAction={
         onOpenTasks ? (
           <Button variant="link" onClick={onOpenTasks}>
@@ -244,21 +239,24 @@ export function FoundMove({
         )}
         {(action || defer) && (
           <span className="co-move-do">
-            <div className="today-actions">
-              {action}
-              {defer && (
-                <span className="today-verb">
-                  <Button
-                    variant="ghost"
-                    className="co-move-defer"
-                    onClick={defer.onDefer}
-                    disabled={defer.pending}
-                  >
-                    {t("co.suggest.dismiss")}
-                  </Button>
-                </span>
-              )}
-            </div>
+            {/* One move among several, so its verbs draw outlined. */}
+            <QuietVerbs>
+              <div className="today-actions">
+                {action}
+                {defer && (
+                  <span className="today-verb">
+                    <Button
+                      variant="ghost"
+                      className="co-move-defer"
+                      onClick={defer.onDefer}
+                      disabled={defer.pending}
+                    >
+                      {t("co.suggest.dismiss")}
+                    </Button>
+                  </span>
+                )}
+              </div>
+            </QuietVerbs>
           </span>
         )}
       </div>
@@ -329,14 +327,11 @@ export function TodoRow({
           {action ??
             (verb && (
               <Button
-                // Tinted, not filled: three filled buttons down a column
-                // outshout the one move above them that the pane is actually
-                // recommending, and `aiQuiet` is that volume for an agent's
-                // verb among equals.
+                // Outlined, not filled: three filled buttons down a column
+                // outshout the one move above them that the pane recommends.
                 variant={verb.byMargince ? "aiQuiet" : "ghost"}
                 onClick={verb.onAct}
               >
-                {verb.byMargince && <Sparkles aria-hidden="true" />}
                 {verb.label}
               </Button>
             ))}

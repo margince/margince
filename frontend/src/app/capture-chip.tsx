@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../design-system/applink";
 import { MarginceCoreScene } from "../design-system/margince-core";
 import { formatNumber, formatPercent } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -88,13 +89,13 @@ export function CaptureChip({
     // itself a status would announce every poll's new share as a navigation.
     <div className="capturechip" role="status">
       {linked ? (
-        <a
+        <AppLink
           className="capturechip-link"
           href={CONNECTIONS_HREF}
           aria-label={`${t("shell.capture.importing")}. ${detail}. ${t("shell.capture.open")}`}
         >
           {gauge}
-        </a>
+        </AppLink>
       ) : (
         // The same chip with nowhere to go: still a status, never a control, so
         // it takes no focus, promises no destination, and — floating over a

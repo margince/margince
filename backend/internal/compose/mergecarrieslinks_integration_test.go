@@ -136,7 +136,7 @@ func confirmLaneStore(t *testing.T, e *integration.Env) *consent.Store {
 		t.Fatalf("jobs.NewInserter: %v", err)
 	}
 	return consent.NewStore(InstallationDB(e.Pool)).
-		WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter), &sealingVault{}, "https://crm.example.test")
+		WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter, ""), &sealingVault{}, "https://crm.example.test")
 }
 
 // purpose creates a consent purpose through the real writer, or reads the one
@@ -324,7 +324,7 @@ func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
 	marketing := c.purpose(t, consent.PurposeMarketingEmail, true)
 	retired := c.contactAt(t, "Confirm Retired", "confirm@carry.test")
 	survivor := c.contactAt(t, "Confirm Survivor", "confirm-survivor@carry.test")
-	issued, err := lane.IssueConfirmToken(c.admin, retired)
+	issued, err := lane.IssueConfirmToken(c.admin, retired, "")
 	if err != nil {
 		t.Fatalf("issuing the confirm link: %v", err)
 	}

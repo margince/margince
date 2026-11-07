@@ -138,6 +138,51 @@ describe("ProjectLinks", () => {
     ).toBeTruthy();
   });
 
+  it("opens each dialog without the refusal another one met", async () => {
+    const user = userEvent.setup();
+    const refused = new ProblemError({
+      status: 404,
+      code: "not_found",
+      detail: "not found",
+    });
+    draw({
+      linked: [{ project_id: "p1", name: "ERP rollout" }],
+      search: async () => [{ id: "p9", name: "Warehouse rollout" }],
+      attach: async () => {
+        throw refused;
+      },
+      detach: async () => {
+        throw refused;
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    await user.type(
+      screen.getByRole("searchbox", { name: /Search projects/ }),
+      "ware",
+    );
+    await user.click(await screen.findByText("Warehouse rollout"));
+    expect(await screen.findByText("not found")).toBeTruthy();
+    await user.keyboard("{Escape}");
+
+    await user.click(
+      screen.getByRole("button", { name: "Detach ERP rollout" }),
+    );
+    expect(screen.getByText(/Only its link to this record ends/)).toBeTruthy();
+    expect(screen.queryByText("not found")).toBeNull();
+
+    // And the other way round: a refused detach says nothing to the next
+    // attach.
+    await user.click(screen.getByRole("button", { name: "Detach project" }));
+    expect(await screen.findByText("not found")).toBeTruthy();
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    expect(
+      screen.getByRole("searchbox", { name: /Search projects/ }),
+    ).toBeTruthy();
+    expect(screen.queryByText("not found")).toBeNull();
+  });
+
   it("asks before detaching, and says nothing is deleted", async () => {
     const user = userEvent.setup();
     const detach = vi.fn(async () => undefined);

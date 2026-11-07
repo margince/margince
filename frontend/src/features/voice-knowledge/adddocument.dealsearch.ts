@@ -4,7 +4,7 @@
 import { FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
-import { foldForMatch } from "../../format/collate";
+import { holdsEveryWord } from "../../format/collate";
 
 type DealPage = components["schemas"]["DealListResponse"];
 
@@ -38,8 +38,8 @@ export const DEAL_MATCH_LIMIT = 25;
 export const DEAL_PAGE_FRESH_MS = 60_000;
 
 /**
- * Walk the account's deals, newest first, keeping the ones whose name contains
- * what the reader typed.
+ * Walk the account's deals, newest first, keeping the ones whose name holds every
+ * word the reader typed.
  *
  * `fetchPage` is injected rather than called directly so the walk reads pages
  * through the caller's cache: the second search over one account re-reads what
@@ -47,14 +47,14 @@ export const DEAL_PAGE_FRESH_MS = 60_000;
  */
 export async function walkAccountDeals(
   fetchPage: (cursor: string | null) => Promise<DealPage>,
-  needle: string,
+  words: readonly string[],
 ): Promise<RecordPickerCandidate[]> {
   const matches: RecordPickerCandidate[] = [];
   let cursor = FIRST_PAGE;
   for (let page = 0; page < DEAL_SEARCH_PAGES; page += 1) {
     const answered = await fetchPage(cursor);
     for (const deal of answered.data) {
-      if (foldForMatch(deal.name).includes(needle)) {
+      if (holdsEveryWord(words, [deal.name])) {
         matches.push({ id: deal.id, name: deal.name });
       }
     }

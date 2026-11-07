@@ -46,16 +46,21 @@ func seedQuietExchange(t *testing.T, e *integration.Env, sender, copied, contact
 // seedQuietExchangeAt is seedQuietExchange with the last mail at an instant.
 func seedQuietExchangeAt(t *testing.T, e *integration.Env, owner *pgx.Conn, sender, copied, contact ids.UUID, last time.Time) {
 	t.Helper()
-	ctx := context.Background()
-	var folded []ids.UUID
+	foldQuietExchanges(t, e, insertQuietExchange(t, owner, sender, copied, contact, last))
+}
+
+// insertQuietExchange writes the two mails of seedQuietExchangeAt in one round
+// trip and returns them unfolded.
+func insertQuietExchange(t *testing.T, owner *pgx.Conn, sender, copied, contact ids.UUID, last time.Time) []ids.UUID {
+	t.Helper()
+	batch := &pgx.Batch{}
+	var mails []ids.UUID
 	for _, at := range []time.Time{last.AddDate(0, 0, -1), last} {
 		activity := ids.NewV7()
-		if _, err := owner.Exec(ctx, `
+		batch.Queue(`
 			INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
-			VALUES ($1, 'email', 'checking in', $2, 'outbound', 'manual', 'human:x')`, activity, at); err != nil {
-			t.Fatal(err)
-		}
-		integration.LinkActivity(t, owner, activity, "contact", contact)
+			VALUES ($1, 'email', 'checking in', $2, 'outbound', 'manual', 'human:x')`, activity, at)
+		batch.Queue(`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, activity, contact)
 		for _, party := range []struct {
 			column string
 			id     ids.UUID
@@ -64,14 +69,21 @@ func seedQuietExchangeAt(t *testing.T, e *integration.Env, owner *pgx.Conn, send
 			if party.id.IsZero() {
 				continue
 			}
-			if _, err := owner.Exec(ctx, `INSERT INTO activity_participant (activity_id, `+party.column+`, role) VALUES ($1, $2, $3)`,
-				activity, party.id, party.role); err != nil {
-				t.Fatal(err)
-			}
+			batch.Queue(`INSERT INTO activity_participant (activity_id, `+party.column+`, role) VALUES ($1, $2, $3)`,
+				activity, party.id, party.role)
 		}
-		folded = append(folded, activity)
+		mails = append(mails, activity)
 	}
-	wsCtx := principal.WithWorkspaceID(ctx, e.WS)
+	if err := owner.SendBatch(context.Background(), batch).Close(); err != nil {
+		t.Fatalf("writing the exchange: %v", err)
+	}
+	return mails
+}
+
+// foldQuietExchanges folds mails into the projection through its real writer.
+func foldQuietExchanges(t *testing.T, e *integration.Env, folded []ids.UUID) {
+	t.Helper()
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, folded)
 	}); err != nil {
@@ -152,7 +164,7 @@ func TestAPermanentStopOutlastsNinetyDaysAndResumes(t *testing.T) {
 	contact := e.SeedContact(t, "Over For Good", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
 	rep := e.As(e.Rep1, nil, integration.AdminPerms)
-	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
 	id := ids.From[ids.ContactKind](contact)
 	if err := store.DismissRelationshipNudge(rep, id, 7); err != nil {
 		t.Fatalf("dismissing for a week: %v", err)
@@ -182,7 +194,7 @@ func TestDismissAllSetsEveryListedContactAsideOrNone(t *testing.T) {
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, first, 60)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, second, 70)
 	rep := e.As(e.Rep1, nil, integration.AdminPerms)
-	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
 
 	missing := ids.From[ids.ContactKind](ids.NewV7())
 	if err := store.DismissRelationshipNudges(rep,
@@ -201,35 +213,34 @@ func TestDismissAllSetsEveryListedContactAsideOrNone(t *testing.T) {
 	}
 }
 
-// seedRejectedCandidate gives a contact three old exchanges, which rank it
-// ahead of a two-exchange contact, and a recent linked call nobody took part
-// in. The edges stay old, so the scan offers it; the contact-wide derivation
-// sees the call and rejects the silence.
-func seedRejectedCandidate(t *testing.T, e *integration.Env, owner ids.UUID, name string) {
+// seedRejectedCandidates writes count contacts. Each has old exchanges, which
+// rank it ahead of a contact with fewer, and a recent linked call nobody took
+// part in. The edges stay old, so the scan offers it; the contact-wide
+// derivation sees the call and rejects the silence. One connection and one
+// fold serve every candidate, because each costs more than the rows it writes.
+func seedRejectedCandidates(t *testing.T, e *integration.Env, owner ids.UUID, count int) {
 	t.Helper()
-	contact := e.SeedContact(t, name, &owner)
-	seedQuietExchange(t, e, owner, ids.UUID{}, contact, 60)
-	seedQuietExchange(t, e, owner, ids.UUID{}, contact, 70)
-	call := ids.NewV7()
 	conn := integration.OwnerConn(t)
-	defer func() {
-		if err := conn.Close(context.Background()); err != nil {
-			t.Errorf("closing fixture connection: %v", err)
+	var mails []ids.UUID
+	for i := range count {
+		contact := e.SeedContact(t, fmt.Sprintf("Recently called %03d", i), &owner)
+		for _, daysAgo := range []int{60, 70} {
+			mails = append(mails, insertQuietExchange(t, conn, owner, ids.UUID{}, contact, quietLaneNow.AddDate(0, 0, -daysAgo))...)
 		}
-	}()
-	if _, err := conn.Exec(context.Background(), `
-		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-		VALUES ($1, 'call', 'catch-up', $2, 'manual', 'human:x')`, call, quietLaneNow.AddDate(0, 0, -5)); err != nil {
-		t.Fatal(err)
+		call := ids.NewV7()
+		if _, err := conn.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+			VALUES ($1, 'call', 'catch-up', $2, 'manual', 'human:x')`, call, quietLaneNow.AddDate(0, 0, -5)); err != nil {
+			t.Fatal(err)
+		}
+		integration.LinkActivity(t, conn, call, "contact", contact)
 	}
-	integration.LinkActivity(t, conn, call, "contact", contact)
+	foldQuietExchanges(t, e, mails)
 }
 
 func TestAValidQuietContactBehindAFullPageOfRejectedCandidatesIsReached(t *testing.T) {
 	e := integration.Setup(t)
-	for i := range 40 {
-		seedRejectedCandidate(t, e, e.Rep1, fmt.Sprintf("Recently called %02d", i))
-	}
+	seedRejectedCandidates(t, e, e.Rep1, 40)
 	valid := e.SeedContact(t, "Truly quiet", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, valid, 60)
 
@@ -244,9 +255,7 @@ func TestAValidQuietContactBehindAFullPageOfRejectedCandidatesIsReached(t *testi
 
 func TestAQuietScanThatSpendsItsBudgetSaysSoWithNoSurvivors(t *testing.T) {
 	e := integration.Setup(t)
-	for i := range decayCandidateCap * decayCandidatePages {
-		seedRejectedCandidate(t, e, e.Rep1, fmt.Sprintf("Recently called %03d", i))
-	}
+	seedRejectedCandidates(t, e, e.Rep1, decayCandidateCap*decayCandidatePages)
 	rows, more := quietLaneWithBound(t, e, quietLaneNow, e.Rep1, attention.TasksMine, ids.UUID{})
 	if len(rows) != 0 || !more {
 		t.Fatalf("the lane = %d rows, more = %v; want none and a lane marked as possibly more", len(rows), more)
@@ -258,7 +267,7 @@ func TestAQuietScanThatSpendsItsBudgetSaysSoWithNoSurvivors(t *testing.T) {
 func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 	e := integration.Setup(t)
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Per Reader", &e.Rep1))
-	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
 	reader := e.As(e.Rep1, nil, integration.AdminPerms)
 	colleague := e.As(e.Rep2, nil, integration.AdminPerms)
 	if err := store.DismissRelationshipNudges(reader, []ids.ContactID{contact}, contacts.NudgeSpan{Permanent: true}); err != nil {
@@ -275,6 +284,45 @@ func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 	}
 	if got, err := store.RelationshipNudgeState(reader, contact); err != nil || got.Stopped || got.Until != nil {
 		t.Fatalf("after resume the reader's state = %+v, %v, want following", got, err)
+	}
+}
+
+func TestAStopStaysWithItsReaderWhenTheContactChangesOwner(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Handed Over", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
+	store := contacts.NewStore(e.DB()).SetClock(func() time.Time { return quietLaneNow })
+	id := ids.From[ids.ContactKind](contact)
+	first := e.As(e.Rep1, nil, integration.AdminPerms)
+	second := e.As(e.Rep2, nil, integration.AdminPerms)
+	if err := store.DismissRelationshipNudges(first, []ids.ContactID{id}, contacts.NudgeSpan{Permanent: true}); err != nil {
+		t.Fatalf("stopping for good: %v", err)
+	}
+	reassign := func(to ids.UUID) {
+		t.Helper()
+		owner := ids.From[ids.UserKind](to)
+		if _, err := e.Contacts.UpdateContact(e.Admin(), id, contacts.UpdateContactInput{OwnerID: &owner}); err != nil {
+			t.Fatalf("reassigning the contact to %s: %v", to, err)
+		}
+	}
+
+	reassign(e.Rep2)
+	if got := quietLaneFor(t, e, e.Rep2, attention.TasksMine, ids.UUID{}); len(got) != 1 || got[0].ContactID != contact || got[0].OwnerID != e.Rep2 {
+		t.Fatalf("the new owner's lane = %+v, want the contact: the old owner's stop is not theirs", got)
+	}
+	if got, err := store.RelationshipNudgeState(first, id); err != nil || !got.Stopped {
+		t.Fatalf("the old owner's state = %+v, %v, want still stopped", got, err)
+	}
+	if got, err := store.RelationshipNudgeState(second, id); err != nil || got.Stopped || got.Until != nil {
+		t.Fatalf("the new owner's state = %+v, %v, want following", got, err)
+	}
+
+	reassign(e.Rep1)
+	if got := quietLaneFor(t, e, e.Rep2, attention.TasksOwnedBy, e.Rep1); len(got) != 1 || got[0].ContactID != contact {
+		t.Fatalf("a colleague viewing the owner's day = %+v, want the contact back with its first owner", got)
+	}
+	if got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{}); len(got) != 0 {
+		t.Fatalf("the lane = %+v once the contact is theirs again, want nothing: their stop still holds", got)
 	}
 }
 

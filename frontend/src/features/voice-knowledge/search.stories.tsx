@@ -10,6 +10,17 @@ import {
 } from "../../testing/story-utils";
 import { SearchScreen } from "./search";
 
+const searchSession = meRoute({
+  contact: ["read"],
+  company: ["read"],
+  deal: ["read"],
+  lead: ["read"],
+  project: ["read"],
+  product: ["read"],
+  offer_template: ["read"],
+  activity: ["read"],
+});
+
 const hits = () =>
   jsonResponse({
     data: [
@@ -69,7 +80,7 @@ type Story = StoryObj<typeof SearchScreen>;
 
 export const Populated: Story = {
   render: () => {
-    installFetchStub({ "GET /search": hits });
+    installFetchStub({ "GET /me": searchSession, "GET /search": hits });
     return (
       <StoryProviders>
         <SearchScreen q="acme" />
@@ -80,6 +91,7 @@ export const Populated: Story = {
 export const Empty: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () =>
         jsonResponse({
           data: [],
@@ -102,6 +114,7 @@ export const Empty: Story = {
 export const EveryKind: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () =>
         jsonResponse({
           data: [
@@ -161,6 +174,7 @@ export const EveryKind: Story = {
 export const Loading: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () => new Promise<Response>(() => {}) as never,
     });
     return (
@@ -176,6 +190,7 @@ export const Loading: Story = {
 export const Failed: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () =>
         new Response(
           JSON.stringify({
@@ -204,6 +219,7 @@ export const NarrowedToNothing: Story = {
   render: () => {
     globalThis.location.hash = "#/search/acme?type=product";
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () =>
         jsonResponse({
           data: [],
@@ -223,6 +239,7 @@ export const NarrowedToNothing: Story = {
 export const EveryKindGerman: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () =>
         jsonResponse({
           data: [
@@ -292,6 +309,7 @@ export const CompanyAboveItsMail: Story = {
   render: () => {
     globalThis.location.hash = "#/search/acme";
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () =>
         jsonResponse({
           data: [
@@ -349,6 +367,7 @@ export const NarrowedWithMore: Story = {
   render: () => {
     globalThis.location.hash = "#/search/acme?type=deal";
     installFetchStub({
+      "GET /me": searchSession,
       "GET /search": () =>
         jsonResponse({
           data: [
@@ -429,4 +448,40 @@ export const ActivityPanelOpen: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const IdentifierBestMatch: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": searchSession,
+      "GET /search": () =>
+        jsonResponse({
+          data: [
+            {
+              type: "company",
+              id: "o1",
+              title: "Example customer",
+              score: 4.1,
+            },
+            {
+              type: "lead",
+              id: "l1",
+              title: "Lena Becker",
+              identifier_match: "prefix",
+              score: 8,
+            },
+          ],
+          page: { has_more: false, next_cursor: null },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <SearchScreen q="lena@exam" />
+      </StoryProviders>
+    );
+  },
+};
+export const IdentifierBestMatchDark: Story = {
+  ...IdentifierBestMatch,
+  globals: { theme: "dark" },
 };

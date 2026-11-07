@@ -21,8 +21,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -58,11 +60,12 @@ import (
 // the order: a rule that demoted every reply would have refused a prospect who
 // wrote first and got answered, which is the most ordinary shape there is.
 func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	normalized := normalizeEmail(email)
-	if normalized == "" {
+	if normalizeEmail(email) == "" {
 		return false, nil
 	}
-	return correspondedBeforeTx(ctx, tx, []string{normalized}, time.Time{})
+	// Every spelling a stored counterparty_email may hold: the column keeps the
+	// address as its header spelled it, so one address has two stored forms.
+	return correspondedBeforeTx(ctx, tx, storedSpellings(email), time.Time{})
 }
 
 // correspondedBeforeTx is correspondencePositiveTx over several spellings of
@@ -117,7 +120,7 @@ func outboundToTx(ctx context.Context, tx pgx.Tx, tail string, addresses []strin
 		SELECT occurred_at, COALESCE(subject, ''), COALESCE(body, '')
 		  FROM activity
 		 WHERE counterparty_email = ANY($1::text[]) AND counterparty_outbound_attested
-		   AND `+auth.ActivityAvailableClause("activity")+tail, append([]any{addresses}, args...)...)
+		   AND `+auth.ActivityExternalEvidenceClause("activity")+tail, append([]any{addresses}, args...)...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
@@ -199,7 +202,7 @@ func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email str
 	// never see it — so the two serialize on one key rather than on luck. The
 	// writers take it in capture's sink and in the activities store.
 	if err := storekit.LockWriteIdentity(ctx, tx,
-		correspondence.LockEntity, correspondence.LockIdentity(email)); err != nil {
+		correspondence.LockEntity, mailidentity.CorrespondenceLockKey(email)); err != nil {
 		return false, err
 	}
 	return correspondencePositiveTx(ctx, tx, email)
@@ -270,7 +273,7 @@ func wroteBack() string {
 	return `EXISTS (
 		SELECT 1 FROM activity inbound
 		 WHERE ` + answeredExchange("inbound", "$1") + `
-		   AND ` + auth.ActivityAvailableClause("inbound") + `)`
+		   AND ` + auth.ActivityExternalEvidenceClause("inbound") + `)`
 }
 
 // answeredExchange is an exchange. The message at alias is an inbound, non-bulk
@@ -292,7 +295,7 @@ func answeredExchange(alias, address string) string {
 		            AND ours.counterparty_email = %[2]s
 		            AND ours.kind = %[1]s.kind
 		            AND ours.counterparty_outbound_attested
-		            AND `, alias, address) + auth.ActivityAvailableClause("ours") + `)`
+		            AND `, alias, address) + auth.ActivityExternalEvidenceClause("ours") + `)`
 }
 
 // wroteOnTwoThreadsTx reports whether this workspace has written to the address
@@ -309,23 +312,27 @@ func answeredExchange(alias, address string) string {
 // else does), so a blank key is a record from somewhere else, and guessing it
 // apart from its neighbours would invent a second conversation.
 func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	normalized := normalizeEmail(email)
-	if normalized == "" {
+	if normalizeEmail(email) == "" {
 		return false, nil
 	}
-	var threads int
+	// One thread first, then any other: both reads walk this address's own mail
+	// and stop at the first hit. A DISTINCT under LIMIT let a generic plan walk
+	// the thread index across the whole table for an address with one thread.
+	written := func(alias string) string {
+		return alias + `.counterparty_email = ANY($1::text[]) AND ` + alias + `.counterparty_outbound_attested
+		     AND ` + alias + `.thread_key <> '' AND ` + auth.ActivityExternalEvidenceClause(alias)
+	}
+	var two bool
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FROM (
-		  SELECT DISTINCT thread_key
-		    FROM activity
-		   WHERE counterparty_email = $1
-		     AND counterparty_outbound_attested
-		     AND thread_key <> ''
-		     AND `+auth.ActivityAvailableClause("activity")+`
-		   LIMIT 2) AS distinct_threads`, normalized).Scan(&threads); err != nil {
+		WITH first_thread AS MATERIALIZED (
+		  SELECT one.thread_key FROM activity one WHERE `+written("one")+` LIMIT 1)
+		SELECT EXISTS (
+		  SELECT 1 FROM activity other, first_thread
+		   WHERE `+written("other")+` AND other.thread_key <> first_thread.thread_key)`,
+		storedSpellings(email)).Scan(&two); err != nil {
 		return false, fmt.Errorf("capture: counting the threads this workspace wrote on: %w", err)
 	}
-	return threads >= 2, nil
+	return two, nil
 }
 
 // metInPersonTx reports whether this workspace and that address share a meeting
@@ -356,8 +363,8 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 //
 //   - a CONNECTOR captured it, so a hand-logged "meeting" cannot mint a contact;
 //   - it was not declined or abandoned (no_show, canceled);
-//   - it is not dated past the horizon, so a far-future date cannot stand in for
-//     a relationship.
+//   - it took place by now, so a booking in the diary does not count until its
+//     time has passed. relstrength.MeetingInTouchSQL holds this bound and the one above.
 //
 // An ARCHIVED meeting is excluded too, which is not one of the three: a meeting
 // somebody removed is not evidence of anything, and the activity kind index is
@@ -386,14 +393,14 @@ func metInPersonTx(
 		return false, false, nil
 	}
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) > 0, count(*) FILTER (WHERE a.id <> $3) > 0
+		SELECT count(*) > 0, count(*) FILTER (WHERE a.id <> $2) > 0
 		    FROM activity a
 		    JOIN activity_participant p ON p.activity_id = a.id AND NOT p.past_party_cap
 		   WHERE a.kind = 'meeting'
+ AND `+meetingPartyEligibleSQL("a", "p")+`
 		     AND a.archived_at IS NULL
 		     AND a.captured_by LIKE 'connector:%'
-		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		     AND a.occurred_at <= now() + $2::interval -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
+		     AND `+relstrength.MeetingInTouchSQL("a", "now()")+`
 		     AND (
 		          -- The BARE invitation address, bounded by the address's own
 		          -- tenure. An activity_participant row records what the
@@ -415,15 +422,9 @@ func metInPersonTx(
 		             WHERE pe.contact_id = p.contact_id
 		               AND lower(pe.email) = $1
 		               AND pe.archived_at IS NULL))
-		     AND `+auth.ActivityAvailableClause("a"),
-		normalized, meetingHorizonInterval, capturing).Scan(&met, &elsewhere); err != nil {
+		     AND `+auth.ActivityExternalEvidenceClause("a"),
+		normalized, capturing).Scan(&met, &elsewhere); err != nil {
 		return false, false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
 	}
 	return met, elsewhere, nil
 }
-
-// meetingHorizonInterval bounds how far into the diary a meeting still says a
-// relationship is live. Spelled again here rather than imported because a module
-// never imports a sibling; what must not drift is the WINDOW, and the consent
-// arm holds the same one against the same rows.
-const meetingHorizonInterval = "90 days"

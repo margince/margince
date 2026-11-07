@@ -251,7 +251,7 @@ func (p *preflightEnv) closeDealAsLost(t *testing.T) {
 	}
 	stages := apptest.DiscoverSeededPipeline(t, p.AppEnv)
 	if status := p.Call(t, "POST", "/v1/deals/"+p.dealID+"/advance", AnyMap{
-		"to_stage_id": stages.Lost, "lost_reason": "test: closing the fixture's evidence",
+		"to_stage_id": stages.Lost, "lost_reason": "test: closing the fixture's evidence", "lost_reason_code": "other",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("close the fixture's deal → %d", status)
 	}
@@ -293,13 +293,20 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 
 func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	activitiesBefore := p.countActivities(t, "true")
 	deliveriesBefore := p.countDeliveries(t)
 
+	if status := p.Call(t, "PUT", "/v1/me/email-signature", AnyMap{"body": "Plain fallback", "html": "<p>Old signature</p>"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("save initial signature: %d", status)
+	}
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
+	const currentMarkup = "<p><b>Current personal signature</b></p>"
+	if status := p.Call(t, "PUT", "/v1/me/email-signature", AnyMap{"body": "Plain fallback", "html": currentMarkup}, nil, nil); status != http.StatusOK {
+		t.Fatalf("change signature before firing: %d", status)
+	}
 
 	// The whole point of the design: a message nobody has sent has no presence
 	// on the timeline and nothing queued to carry it.
@@ -318,6 +325,15 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 		t.Fatalf("firing a due message did not send it: %q/%q", status, reason)
 	}
 
+	var plain, markup string
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT c.body,c.html_body FROM comms_outbound c JOIN scheduled_send s ON s.activity_id=c.activity_id WHERE s.id=$1`, id).Scan(&plain, &markup)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(plain, "Current personal signature") || !strings.Contains(markup, currentMarkup) || strings.Contains(markup, "Old signature") || strings.Contains(plain, "Plain fallback") {
+		t.Fatalf("scheduled send did not render the current personal signature: plain=%q html=%q", plain, markup)
+	}
 	if got := p.countActivities(t, "true"); got != activitiesBefore+1 {
 		t.Fatalf("firing produced %d activities, want exactly 1", got-activitiesBefore)
 	}
@@ -338,7 +354,7 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 // arrived while its record still says it was merely handed over.
 func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -368,7 +384,7 @@ func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 // returns rows that read "sent" — each half correct, the pair useless.
 func TestFilteringByStatusFindsTheStateTheListActuallyShows(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -553,7 +569,7 @@ func (p *preflightEnv) listScheduledIDs(t *testing.T, status string) []string {
 
 func TestConsentWithdrawnBeforeFiringHoldsTheMessage(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	deliveriesBefore := p.countDeliveries(t)
@@ -588,7 +604,7 @@ func TestConsentWithdrawnBeforeFiringHoldsTheMessage(t *testing.T) {
 // but never made. So this asserts the ACTION, not the appearance.
 func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.withdrawConsent(t)
@@ -629,7 +645,7 @@ func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
 // decision nobody would make again.
 func TestARepCanAbandonAHeldMessageFromTheirInbox(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.withdrawConsent(t)
@@ -662,7 +678,7 @@ func TestARepCanAbandonAHeldMessageFromTheirInbox(t *testing.T) {
 // with it rather than leaving a decided card over a message in the wrong state.
 func TestARejectionThatCannotCancelLeavesTheCardRetryable(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.withdrawConsent(t)
@@ -700,7 +716,7 @@ func TestARejectionThatCannotCancelLeavesTheCardRetryable(t *testing.T) {
 // choice they had just made.
 func TestAStaleAttemptDoesNotHoldAMessageTheRepJustRescheduled(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	before := p.rowVersion(t, id)
@@ -734,7 +750,7 @@ func TestAStaleAttemptDoesNotHoldAMessageTheRepJustRescheduled(t *testing.T) {
 // between them would let this case take that arm.
 func TestAnAttemptThatNeverReadTheRowDoesNotHoldARescheduledMessage(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.rescheduleTo(t, id, time.Now().Add(48*time.Hour))
@@ -758,7 +774,7 @@ func TestAnAttemptThatNeverReadTheRowDoesNotHoldARescheduledMessage(t *testing.T
 // driving the timer — which is exactly the state a discarded job leaves behind.
 func TestARecoveryPassReArmsAMessageWhoseAlarmIsGone(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	// Well past the recovery grace, so the pass treats it as stranded rather
@@ -790,7 +806,7 @@ func TestARecoveryPassReArmsAMessageWhoseAlarmIsGone(t *testing.T) {
 
 func TestAMessageFiredTooLateIsHeldRatherThanSent(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 
@@ -810,7 +826,7 @@ func TestAMessageFiredTooLateIsHeldRatherThanSent(t *testing.T) {
 
 func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	activitiesBefore := p.countActivities(t, "true")
@@ -836,7 +852,7 @@ func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
 
 func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -866,7 +882,7 @@ func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 // differently from the immediate one written beside it.
 func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	// A record the anchor does not carry — the shape a project attached to the

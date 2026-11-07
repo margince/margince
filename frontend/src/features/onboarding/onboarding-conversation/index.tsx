@@ -13,8 +13,9 @@ import {
 } from "../../../lib/installationcompany";
 import { throwProblem } from "../../../lib/problem";
 import { navigate, navigateReplacing, useRoute } from "../../../lib/router";
-import { EMPTY_DRAFT, loadWizardState, pickBuiltVersion } from "../onboarding";
+import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
+import { loadWizardState } from "../onboarding-progress";
 import { BasisAct } from "./basis-act";
 import { CompanyAct } from "./company-act";
 import { ConnectAct } from "./connect-act";
@@ -155,7 +156,7 @@ function RestoreGate({ lookups }: Readonly<{ lookups: RestoreLookup[] }>) {
   return (
     <div className="ob-page">
       {failed.length > 0 ? (
-        <div className="readfail warning" role="alert">
+        <div className="readfail" role="alert">
           <p>{t("ob.conv.loadFailed")}</p>
           <Button
             onClick={() => {

@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -30,9 +31,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -51,6 +51,8 @@ type controllerMailQueue struct {
 	// The lane is NOT a side door: a confirmation mail is asked the same
 	// question, and answers it on its own evidence rather than skipping it.
 	authority *consent.Gate
+	// from is the relay's sender address, recorded on each delivery it stages.
+	from string
 }
 
 var _ consent.ConfirmationSender = controllerMailQueue{}
@@ -58,7 +60,7 @@ var _ consent.ConfirmationSender = controllerMailQueue{}
 // NewControllerMailQueue builds the lane the installation's own notices ride.
 //
 //nolint:ireturn // returns the consent-side seam by design: the concrete type is unexported and every caller holds the interface
-func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner) consent.ConfirmationSender {
+func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner, from string) consent.ConfirmationSender {
 	store := activities.NewStore(InstallationDB(pool))
 	return controllerMailQueue{
 		activities: store,
@@ -66,6 +68,7 @@ func NewControllerMailQueue(pool *pgxpool.Pool, runner *jobs.Runner) consent.Con
 		runner:     runner,
 		templates:  consent.ControllerTemplateRegistry(),
 		authority:  consentGateFor(pool),
+		from:       from,
 	}
 }
 
@@ -80,22 +83,20 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	if !ok {
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
-	subject, body := in.Rendered.Subject, in.Rendered.Body
-	if in.Rendered.Language != "" || in.Rendered.HTMLBody != "" {
-		brand, err := config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
-		if err != nil {
-			return ids.UUID{}, err
-		}
-		in.Rendered.HTMLBody = consent.RenderControllerPresentation(in.Rendered, brand)
-		if brand != "" {
-			body = brand + "\n\n" + body
-		}
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	if err != nil {
+		return ids.UUID{}, err
 	}
+	in.Rendered = mail.rendered
+	body := mail.body
+	subject := in.Rendered.Subject
+	// Members read the activity; only the delivery keeps the placeholder the dispatcher fills.
+	readable := strings.ReplaceAll(body, comms.LinkPlaceholder, mailcopy.For(in.Rendered.Language).SentLinkMarker)
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
 		Subject:   &subject,
-		Body:      &body,
+		Body:      &readable,
 		Direction: &outbound,
 		Source:    systemActor,
 		// The installation writing to somebody about its own obligations is not
@@ -119,6 +120,8 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		PayloadExpiresAt: controllerExpiry(in.ExpiresAt),
 		DueAt:            in.DueAt,
 		LinkID:           in.LinkID,
+		FromAddress:      q.from,
+		InlineLogoKey:    mail.logoKey,
 	}, q.templates)
 	if err != nil {
 		return ids.UUID{}, err
@@ -130,15 +133,9 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	// while satisfying a census gate that sees the call and cannot see it
 	// skipped.
 	if q.authority == nil {
-		return ids.UUID{}, errors.New("compose: no authorization authority is wired on the controller mail lane")
+		return ids.UUID{}, errNoControllerAuthority
 	}
-	set, err := q.authority.AuthorizeStagingTx(ctx, tx, deliveryID, commsauthz.Request{
-		Recipients: []connector.Recipient{{Email: in.Recipient}},
-		Context:    in.Category,
-		Subject:    subject,
-		Body:       body,
-		HTMLBody:   in.Rendered.HTMLBody,
-	})
+	set, err := q.authority.AuthorizeStagingTx(ctx, tx, deliveryID, stagingRequest(in, body))
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -151,6 +148,75 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		return ids.UUID{}, err
 	}
 	return deliveryID, nil
+}
+
+// PresentConfirmationTx is the mail QueueConfirmationTx would stage, so a
+// preview shows the same From, subject and text, and refuses what staging
+// would refuse.
+func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, in consent.ConfirmationSend) (consent.PresentedMail, error) {
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	if err != nil {
+		return consent.PresentedMail{}, err
+	}
+	in.Rendered = mail.rendered
+	if q.authority == nil {
+		return consent.PresentedMail{}, errNoControllerAuthority
+	}
+	set, err := q.authority.PreviewTx(ctx, tx, stagingRequest(in, mail.body))
+	if err != nil {
+		return consent.PresentedMail{}, err
+	}
+	if err := refuseAtStaging(set); err != nil {
+		return consent.PresentedMail{}, err
+	}
+	return consent.PresentedMail{From: q.from, Subject: mail.rendered.Subject, Text: mail.body}, nil
+}
+
+// stagingRequest is what the engine is asked about one controller mail, at
+// staging and in its preview alike.
+func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request {
+	return commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: in.Recipient}},
+		Context:    in.Category,
+		Subject:    in.Rendered.Subject,
+		Body:       body,
+		HTMLBody:   in.Rendered.HTMLBody,
+	}
+}
+
+var errNoControllerAuthority = errors.New("compose: no authorization authority is wired on the controller mail lane")
+
+// presentedControllerMail is one notice dressed in the installation's brand.
+// The plain text opens with the brand line. logoKey is the stored logo the
+// HTML letterhead shows, "" for none.
+type presentedControllerMail struct {
+	rendered consent.Rendered
+	body     string
+	logoKey  string
+}
+
+// presentControllerMailTx adds the brand the installation's mail is sent
+// under. The HTML alternative is headed by the logo or the name.
+func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (presentedControllerMail, error) {
+	mail := presentedControllerMail{rendered: rendered, body: rendered.Body}
+	if rendered.Language == "" && rendered.HTMLBody == "" {
+		return mail, nil
+	}
+	// The same name and logo product mail is headed by (mailletterhead.go).
+	// The logo is read at send; one gone by then leaves the name.
+	brand, key, err := letterheadNameTx(ctx, tx)
+	if err != nil {
+		return presentedControllerMail{}, err
+	}
+	logoContentID := ""
+	if key != "" {
+		logoContentID, mail.logoKey = connector.LetterheadLogoContentID, key
+	}
+	mail.rendered.HTMLBody = consent.RenderControllerPresentation(rendered, brand, logoContentID)
+	if brand != "" {
+		mail.body = brand + "\n\n" + mail.body
+	}
+	return mail, nil
 }
 
 // controllerMailSubject files the notice under the record it was sent to: the

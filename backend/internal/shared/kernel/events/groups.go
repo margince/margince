@@ -53,6 +53,10 @@ func Groups() []Group {
 		// signals must not be able to stall the edge projection, and vice
 		// versa.
 		{Name: "cg:audience-rescope", Streams: forEntities(activityStreamEntity)},
+		// Empties a voice sample read from sent mail once that mail is
+		// archived, restricted, narrowed or marked confidential. The contact
+		// stream carries retention.restricted.
+		{Name: "cg:voice-copy-recheck", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// The LinkedIn ghost matcher (ADR-0078 §8b). Its own group rather than
 		// a second handler on cg:graph-edge: that consumer lives in the search
 		// module and this call belongs to contacts, and a module never reaches
@@ -67,6 +71,8 @@ func Groups() []Group {
 		// already has, and must keep flowing when an enrichment that calls out
 		// to a model is slow or wedged.
 		{Name: "cg:cohort-promote", Streams: forEntities(contactStreamEntity)},
+		// Attribution resumes independently of cohort repair and enrichment failures.
+		{Name: "cg:deal-refile", Streams: forEntities(dealStreamEntity, leadStreamEntity, contactStreamEntity, activityStreamEntity)},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild or an embedding
 		// backlog must never be able to stall it, and a failure to accrue must
@@ -74,6 +80,9 @@ func Groups() []Group {
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
 		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		// Activating a partner on the first won deal it sourced. Its own group
+		// so an accrual that is wedged never holds an activation back.
+		{Name: "cg:partner-activation", Streams: forEntities(dealStreamEntity)},
 		// Turning records that already settle something into stage evidence: a
 		// contract turning active, a buyer confirming a room version, a held
 		// meeting. Both streams, because contract.* and deal_room.* ride the
@@ -94,8 +103,12 @@ func Groups() []Group {
 		// consumer WRITES the evidence a proposal rests on and this one counts
 		// what happened to the proposal, so a wedged extraction must not stop
 		// the measurement that says whether the feature may stay on.
-		{Name: "cg:stage-progression-outcome", Streams: forEntities(approvalStreamEntity)},
 		{Name: "cg:approval-notice-retract", Streams: forEntities(approvalStreamEntity)},
+		// Holding a contact's queued marketing the moment they stop it. The
+		// CONTACT stream, where consent.suppressed and consent.changed ride.
+		// Its own group: a backlog behind any other contact consumer must not
+		// let a stopped message wait for its due time.
+		{Name: "cg:scheduled-send-stop", Streams: forEntities(contactStreamEntity)},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The APPROVAL stream, where approval.requested
 		// rides.
@@ -134,6 +147,14 @@ func Groups() []Group {
 		// note that says the buyer just asked something. It listens on the deal
 		// stream, where every deal_room event rides.
 		{Name: "cg:deal-room-timeline", Streams: forEntities(dealStreamEntity)},
+		// Marking the input check's last reading out of date when something it
+		// read changes. Deals and stages ride the deal stream, forecast calls
+		// the identity stream, and activities theirs. Buying signals ride the
+		// capture stream and their companies the company stream. Its own group
+		// because it only marks: a backlog anywhere else must not leave a
+		// changed deal reading as current.
+		{Name: "cg:assurance-freshness", Streams: forEntities(
+			dealStreamEntity, identityStreamEntity, activityStreamEntity, captureStreamEntity, companyStreamEntity)},
 		// A commitment and the task it became, settled together: a task marked
 		// done settles its claim, a claim settled done completes its task. The
 		// activity stream carries the task's update and the contact stream the

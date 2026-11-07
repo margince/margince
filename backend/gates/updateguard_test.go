@@ -21,7 +21,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -36,7 +35,7 @@ import (
 // obligation applies to VERSIONED tables (the schema's own declaration
 // that a row is a concurrently-edited entity), derived from the
 // migrations rather than maintained as a list.
-var byIDUpdate = regexp.MustCompile(`(?is)\bUPDATE\s+([a-z_]+)\s.*\bSET\b.*\bWHERE\s+(?:[a-z]\.)?id\s*=\s*\$`)
+var byIDUpdate = regexp.MustCompile(`(?is)\bUPDATE\s+([a-z_]+)\s.*\bSET\b.*\bWHERE\s+(?:[a-z]\.)?id\s*=\s*(?:\$|@)`)
 
 // versionPredicate is a version compared against a PARAMETER, which is a
 // compare-and-set. `version = version + 1` in the SET clause is not one and does
@@ -46,7 +45,7 @@ var byIDUpdate = regexp.MustCompile(`(?is)\bUPDATE\s+([a-z_]+)\s.*\bSET\b.*\bWHE
 // Matched against the WHERE clause only, never the whole statement. `SET …,
 // version = $5` assigns a client-supplied version and guards nothing, so
 // crediting it would wave through the lost update this gate exists to refuse.
-var versionPredicate = regexp.MustCompile(`(?i)\bversion\s*=\s*\$\d+`)
+var versionPredicate = regexp.MustCompile(`(?i)\bversion\s*=\s*(?:\$\d+|@[a-z_][a-z0-9_]*)`)
 
 // whereClause is the tail of a statement from its last WHERE onward, which is
 // the only part where a predicate can constrain which row is written.
@@ -82,11 +81,11 @@ func versionedTables(t *testing.T) map[string]bool {
 	t.Helper()
 	tables := map[string]bool{}
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}
@@ -121,10 +120,21 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/capture:storeDeferredOriginalTx":      "names the original of an activity this same transaction inserted; no other writer can hold the row yet",
+	"internal/modules/consent:assessNoticeSourceTx":         "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the assessment reads or writes it",
+	"internal/modules/consent:ReviewUnverifiedNoticeTx":     "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the source decision is read or changed",
+	"internal/modules/contacts:refreshContactPhoneEvidence": "recheckBatch holds every candidate from lockOpenPairs FOR UPDATE OF d through the evidence refresh in the same transaction",
+	"internal/modules/identity:applyMemberRetirement":       "retireMemberTx locks the source with readRetirementMember and both members through retirementPreviewTx before applying the confirmed preview",
+	"internal/modules/identity:recordMemberSurvivor":        "retirementPreviewTx locks the survivor with readRetirementTarget before retireMemberTx reaches this merge receipt",
+	"internal/modules/identity:recordTeamChange":            "the app_user touch runs only for setTeamMemberTx, under lockAuthorization; it writes only updated_at and no domain before-image",
+	"internal/modules/identity:changeUserRoleTx":            "lockAuthorization serializes the role change and the app_user touch in one transaction",
+	"internal/modules/privacy:clearActivityContent":         "terminal erasure empties the activity regardless of concurrent content changes; preserving a competing value would retain the erased content",
+	"internal/modules/assurance:recordReadThrough": "the pass sets one column on the run row it inserted in the same transaction, " +
+		"under the assurance pass lock, so no other writer can hold that row",
 	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
 	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
 	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
-	"internal/modules/collections:ArchiveSavedView":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
+	"internal/modules/collections:archiveSavedViewTx":      "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
 	"internal/modules/contacts:bindSiteReadLogo":           "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
@@ -141,7 +151,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/agents/runner:FinishJob":             "the job was claimed by this worker under ClaimDueJobs' FOR UPDATE SKIP LOCKED, so no second worker holds it to finish",
 	"internal/modules/agents/runner:MarkFailed":            "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED, and a run nobody else holds cannot be settled twice",
 	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
-	"internal/modules/consent:AssignNoticeCase":            "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
+	"internal/modules/consent:setNoticeCaseOwner":          "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
 	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
 	"internal/modules/consent:closeOwedCasesTx":            "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
@@ -161,7 +171,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/integrations:bumpClaimAttempt":       "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed from the returned value",
 	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
-	"internal/modules/comms:reKey":                         "the re-key writes the provider's own message id and derives the thread key in SQL from the row's current one, so nothing read into Go is written back",
 	"internal/modules/identity:resetLockoutStreak":         "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
 	"internal/modules/identity:countFailure":               "every caller reads the streak it folds under its own app_user FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), one hop past what this witness's AST walk follows",
 	"internal/modules/identity:Authenticate":               "the idle window rolls forward in SQL from now(), never from a value read into Go, so two requests on one session both move it forward",
@@ -235,25 +244,12 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// now carry the version the approval was granted against and are no longer
 	// waived here. The entries that remain are types no approval ever pins.
 
-	// Both geocode writes are LAST-WRITER-WINS on purpose, and a version guard
-	// would make them worse rather than safer.
-	//
-	// RecordGeocode writes the answer for one address, identified by
-	// geocode_input_hash. Two workers racing on the same address write the same
-	// point; two racing on DIFFERENT addresses means the address changed
-	// mid-flight, and the later write is the one that matches the row — which
-	// is what last-writer-wins gives. A version guard would fail one of them and
-	// leave the company holding coordinates for an address it no longer has.
-	//
-	// invalidateGeocodeInTx only ever moves a status TOWARD stale, never away,
-	// and it runs inside the address writer's own transaction — the row is
-	// already locked by the patch that changed the address.
-	"internal/modules/contacts:recordGeocodeAfter": "guarded by a re-read rather than a version: the transaction rebuilds the address hash from the live columns and writes nothing unless it still matches what was resolved (addressHashInTx). That is a stronger check than a version pin here — a version would refuse a write whose address is unchanged but whose row was touched for some unrelated reason, and accept one whose address moved without bumping it",
-	"internal/modules/automation:Archive":          "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
-	"internal/modules/approvals:recordEffectRan":   "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
+	"internal/modules/automation:Archive":        "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
+	"internal/modules/approvals:recordEffectRan": "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
 
 	// Writes that run UNDER a lock taken by their caller (or a lock the
 	// function's own helper mints) — the guard exists, one frame up.
+	"internal/modules/approvals:storeContextDigest": "pins the context the reader sees: the decision holds the row FOR UPDATE, and a preview fills only a pending row's missing digest, where any reader's current context is a correct pin",
 	"internal/modules/approvals:applyEditedPayload": "runs only inside decideInTx, after its FOR UPDATE lock on the approval row",
 	"internal/modules/customfields:Update":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
 	"internal/modules/customfields:Retire":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read); the flip is an absolute idempotent transition besides",
@@ -764,7 +760,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	heldCache := map[string]map[string][]string{}
 	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err

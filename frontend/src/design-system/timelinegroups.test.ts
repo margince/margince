@@ -291,3 +291,51 @@ describe("grouping the account's chronology", () => {
     expect(groups.every((g) => g.kind === "single")).toBe(true);
   });
 });
+
+describe("a run of newsletters", () => {
+  const newsletter = (id: string, subject: string, atIso: string) =>
+    mail(id, subject, atIso, { bulkAttested: true, direction: "inbound" });
+
+  it("folds four received on four days, whatever their subjects, into one row", () => {
+    const groups = groupChronology([
+      newsletter("d", "October issue", "2026-10-28T08:00:00Z"),
+      newsletter("c", "Webinar next week", "2026-10-21T08:00:00Z"),
+      newsletter("b", "September issue", "2026-10-14T08:00:00Z"),
+      newsletter("a", "Product update", "2026-10-07T08:00:00Z"),
+    ]);
+    expect(groups.map((g) => [g.kind, g.entries.map((e) => e.id)])).toEqual([
+      ["newsletters", ["d", "c", "b", "a"]],
+    ]);
+  });
+
+  it("splits the run where a real exchange comes between", () => {
+    const groups = groupChronology([
+      newsletter("d", "October issue", "2026-10-28T08:00:00Z"),
+      newsletter("c", "Webinar next week", "2026-10-21T08:00:00Z"),
+      mail("reply", "Re: our order", "2026-10-18T09:00:00Z", {
+        direction: "inbound",
+      }),
+      newsletter("b", "September issue", "2026-10-14T08:00:00Z"),
+      newsletter("a", "Product update", "2026-10-07T08:00:00Z"),
+    ]);
+    expect(groups.map((g) => [g.kind, g.entries.map((e) => e.id)])).toEqual([
+      ["newsletters", ["d", "c"]],
+      ["single", ["reply"]],
+      ["newsletters", ["b", "a"]],
+    ]);
+  });
+
+  it("never folds the team's own attested mailing into a run", () => {
+    const groups = groupChronology([
+      newsletter("in", "October issue", "2026-10-28T08:00:00Z"),
+      mail("out", "Our autumn offer", "2026-10-27T08:00:00Z", {
+        bulkAttested: true,
+        direction: "outbound",
+      }),
+    ]);
+    expect(groups.map((g) => [g.kind, g.entries.map((e) => e.id)])).toEqual([
+      ["newsletters", ["in"]],
+      ["bulk", ["out"]],
+    ]);
+  });
+});

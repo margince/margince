@@ -1,21 +1,31 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { type ReactNode, useId } from "react";
+import {
+  Activity,
+  ArrowRight,
+  ChartColumn,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  type LucideIcon,
+  Sparkles,
+  Table2,
+  TrendingUp,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card } from "../../design-system/atoms";
-import { Eyebrow } from "../../design-system/eyebrow";
-import { Panel, PanelRow } from "../../design-system/panel";
+import { PanelBody, PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate, formatDayLong, formatMoney } from "../../format/format";
-import { startOfDayInZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { routeHash } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { weeklyNumericStatus } from "./brief.numeric";
@@ -24,8 +34,10 @@ import {
   useWeeklyReviewIndex,
   type WeeklyReview,
 } from "./brief.queries";
+import { ReportCard } from "./brief.reportcard";
 import { OutlookPanel } from "./brief.waterfall";
-import { FiguresTable, HeadlineFigures } from "./brief.weekly.figures";
+import { ActivityTotal, WeekActivity } from "./brief.weekly.activity";
+import { FiguresTable } from "./brief.weekly.figures";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
@@ -43,38 +55,16 @@ import "./brief.weekly.css";
 export function WeeklySection({
   plan,
 }: Readonly<{
-  /** The week ahead's plan, the report's last section. */
+  /** The week ahead's plan, a section of the report. */
   plan?: ReactNode;
 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const [params] = useUrlParams();
-  const asked = params.get("week") ?? undefined;
-  const review = useWeeklyReview(asked);
+  const review = useWeeklyReview(params.get("week") ?? undefined);
   const data = review.data ?? null;
-  // The next report follows the newest week, whichever week is shown. Until the
-  // index loads, only the default view is known to show the newest.
-  const newest =
-    useWeeklyReviewIndex().data?.[0] ??
-    (asked === undefined ? data?.local_week_start : undefined);
   return (
     <article id="brief-weekly" className="brief-report">
       {data && <WeeklyNarrative review={data} />}
       <WeeklyBody review={data} state={readState(review)} plan={plan} />
-      {data && newest && (
-        <footer className="brief-report-closing">
-          <p className="t-caption">
-            {t("brief.report.next", {
-              date: formatDayLong(
-                startOfDayInZone(newest, recordZone, 14),
-                locale,
-                recordZone,
-              ),
-            })}
-          </p>
-        </footer>
-      )}
     </article>
   );
 }
@@ -135,9 +125,7 @@ function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
   }
   return (
     <Card as="div" className="brief-report-narrative">
-      <span className="brief-report-keep">
-        <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-      </span>
+      <Sparkles role="img" aria-label={t("co.assistant.aiTag")} />
       <p>{review.narrative}</p>
     </Card>
   );
@@ -152,27 +140,6 @@ function readState(
     return "failed";
   }
   return query.isPending ? "loading" : "ready";
-}
-
-/** One section of the report: its label, what stands at the label's end, and
- *  its body. */
-function ReportSection({
-  title,
-  aside,
-  children,
-}: Readonly<{ title: string; aside?: ReactNode; children: ReactNode }>) {
-  const id = useId();
-  return (
-    <section className="brief-report-section" aria-labelledby={id}>
-      <div className="brief-report-section-head">
-        <Eyebrow as="h2" id={id} className="brief-section-label">
-          {title}
-        </Eyebrow>
-        {aside}
-      </div>
-      {children}
-    </section>
-  );
 }
 
 function WeeklyBody({
@@ -200,15 +167,21 @@ function WeeklyBody({
   }
   return (
     <>
-      {reportSections(review, plan).map((section) => (
-        <ReportSection
-          key={section.key}
-          title={t(section.title)}
-          aside={section.aside}
-        >
-          {section.body}
-        </ReportSection>
-      ))}
+      {reportSections(review, plan).map((section) =>
+        section.icon ? (
+          <ReportCard
+            key={section.key}
+            icon={section.icon}
+            title={t(section.title)}
+            aside={section.aside}
+            footer={section.footer}
+          >
+            {section.body}
+          </ReportCard>
+        ) : (
+          <section key={section.key}>{section.body}</section>
+        ),
+      )}
     </>
   );
 }
@@ -216,7 +189,10 @@ function WeeklyBody({
 type Section = Readonly<{
   key: string;
   title: MessageKey;
+  // A section that brings its own card, as the plan does, has none.
+  icon?: LucideIcon;
   aside?: ReactNode;
+  footer?: ReactNode;
   body: ReactNode;
 }>;
 
@@ -229,61 +205,118 @@ function reportSections(
   review: WeeklyReview,
   plan: ReactNode | undefined,
 ): readonly Section[] {
-  const numeric = weeklyNumericStatus(review.numeric_summary);
+  const numeric = weeklyNumericStatus(
+    review.numeric_summary,
+    review.leads_withheld,
+  );
   const closed = review.deals.filter((deal) => deal.outcome !== "moved");
   const moved = review.deals.filter((deal) => deal.outcome === "moved");
   const learnings = review.learnings;
+  // Absent on an older review and for a reader who may not read activities.
+  const days = review.daily_activity;
   const optional = (when: unknown, section: Section) => (when ? [section] : []);
   return [
-    {
-      key: "glance",
-      title: "brief.report.chapter.glance",
-      body: <HeadlineFigures review={review} figures={numeric.figures} />,
-    },
     ...optional(closed.length > 0, {
       key: "closed",
+      icon: Check,
       title: "brief.report.chapter.closed",
       aside: <ClosedTotal review={review} />,
       body: <ClosedDeals review={review} deals={closed} />,
     }),
     ...optional(moved.length > 0, {
       key: "movement",
+      icon: TrendingUp,
       title: "brief.report.chapter.movement",
+      // The lines are capped for reading; the frozen count is complete.
+      aside: <MovedCount count={review.counts.deals_moved} />,
       body: <MovedDeals deals={moved} />,
     }),
-    {
-      key: "forecast",
-      title: "brief.report.chapter.forecast",
-      body: <Forecast review={review} />,
-    },
-    {
-      key: "figures",
-      title: "brief.report.chapter.figures",
-      body: (
-        <>
-          <Panel>
-            <FiguresTable review={review} figures={numeric.figures} />
-          </Panel>
-          <WeeklyWorkings counts={review.counts} figures={numeric.figures} />
-          <ScorecardPanel
-            scorecard={review.scorecard}
-            weekStart={review.local_week_start}
-          />
-          <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
-        </>
-      ),
-    },
-    ...optional(learnings, {
-      key: "observations",
-      title: "brief.report.chapter.observations",
-      body: <LearningsPanel learnings={learnings} />,
-    }),
+    ...(days
+      ? [
+          {
+            key: "activity",
+            icon: Activity,
+            title: "brief.weekly.activity.title",
+            aside: <ActivityTotal days={days} />,
+            body: <WeekActivity days={days} />,
+          } satisfies Section,
+        ]
+      : []),
     ...optional(plan, {
       key: "commitments",
       title: "brief.report.chapter.commitments",
       body: plan,
     }),
+    ...optional(learnings, {
+      key: "observations",
+      icon: Sparkles,
+      title: "brief.report.chapter.observations",
+      // Only a lesson the model wrote carries its mark; an empty week is ours.
+      aside: learnings?.items.length ? <AiTag /> : undefined,
+      body: <LearningsPanel learnings={learnings} />,
+    }),
+    ...optional(scorecardRows(review), {
+      key: "scorecard",
+      icon: ChartColumn,
+      title: "brief.weekly.scorecard.title",
+      body: (
+        <ScorecardPanel
+          scorecard={review.scorecard}
+          weekStart={review.local_week_start}
+          meetingsWithheld={review.meetings_withheld}
+        />
+      ),
+    }),
+    {
+      key: "forecast",
+      icon: TrendingUp,
+      title: "brief.report.chapter.forecast",
+      body: (
+        <PanelBody>
+          <Forecast review={review} />
+        </PanelBody>
+      ),
+    },
+    {
+      key: "figures",
+      icon: Table2,
+      title: "brief.report.chapter.figures",
+      footer: (
+        <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
+      ),
+      body: (
+        <>
+          <FiguresTable review={review} figures={numeric.figures} />
+          <WeeklyWorkings counts={review.counts} figures={numeric.figures} />
+        </>
+      ),
+    },
   ];
+}
+
+/** Margince wrote this section, at the end of its label. */
+function AiTag() {
+  const t = useT();
+  return <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>;
+}
+
+/** Whether the week carries a scorecard with a block to show. */
+function scorecardRows(review: WeeklyReview): boolean {
+  const card = review.scorecard;
+  return Boolean(card && (card.lead || card.deal));
+}
+
+/** How many deals moved stage, at the end of the section's label. */
+function MovedCount({ count }: Readonly<{ count: number }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <Badge dot>
+      {plural("brief.report.movedCount", count, {
+        count: formatNumber(count, locale),
+      })}
+    </Badge>
+  );
 }
 
 type Deal = WeeklyReview["deals"][number];
@@ -292,12 +325,12 @@ type Deal = WeeklyReview["deals"][number];
  *  renamed since still reads as it did that week. */
 function DealName({ deal }: Readonly<{ deal: Deal }>) {
   return (
-    <a
+    <AppLink
       className="brief-weekly-deal-name link-button"
       href={routeHash({ screen: "deals", id: deal.deal_id })}
     >
       {deal.label}
-    </a>
+    </AppLink>
   );
 }
 
@@ -308,12 +341,13 @@ function ClosedTotal({ review }: Readonly<{ review: WeeklyReview }>) {
   const pipeline = review.pipeline;
   if (!pipeline) return null;
   return (
-    <p className="brief-report-total t-num">
+    // Green only for a week with no loss; a mixed result reads neutral.
+    <Badge tone={pipeline.lost_minor === 0 ? "success" : undefined} dot>
       {t("brief.report.closedTotal", {
         won: formatMoney(pipeline.won_minor, pipeline.currency, locale),
         lost: formatMoney(pipeline.lost_minor, pipeline.currency, locale),
       })}
-    </p>
+    </Badge>
   );
 }
 
@@ -325,7 +359,7 @@ function ClosedDeals({
 }: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const pipeline = review.pipeline;
   const total = pipeline ? pipeline.won_minor + pipeline.lost_minor : 0;
   return (
@@ -333,50 +367,50 @@ function ClosedDeals({
       {/* The share won against lost, which the total beside the label states
           in words, so a screen reader is not read it twice. */}
       {pipeline && total > 0 && (
-        <div className="brief-report-split" aria-hidden="true">
-          <span
-            className="brief-report-split-won"
-            style={{ flexGrow: pipeline.won_minor }}
-          />
-          <span
-            className="brief-report-split-lost"
-            style={{ flexGrow: pipeline.lost_minor }}
-          />
-        </div>
+        <PanelBody>
+          <div className="brief-report-split" aria-hidden="true">
+            <span
+              className="brief-report-split-won"
+              style={{ flexGrow: pipeline.won_minor }}
+            />
+            <span
+              className="brief-report-split-lost"
+              style={{ flexGrow: pipeline.lost_minor }}
+            />
+          </div>
+        </PanelBody>
       )}
-      <Panel>
-        {deals.map((deal) => (
-          <PanelRow key={`${deal.deal_id}-${deal.occurred_at}`}>
-            <div className="brief-report-deal">
-              <span className="brief-report-deal-what">
-                <DealName deal={deal} />
-                <time className="t-caption" dateTime={deal.occurred_at}>
-                  {formatDate(deal.occurred_at, locale, recordZone)}
-                </time>
-              </span>
-              <span className="brief-report-keep">
-                <Badge tone={deal.outcome === "won" ? "success" : "warning"}>
-                  {deal.outcome === "won"
-                    ? t("brief.weekly.outcome.won")
-                    : t("brief.weekly.outcome.lost")}
-                </Badge>
-              </span>
-              <span
-                className="brief-report-deal-amount t-num"
-                data-outcome={deal.outcome}
-              >
-                {deal.amount_minor_at_close != null && deal.currency_at_close
-                  ? formatMoney(
-                      deal.amount_minor_at_close,
-                      deal.currency_at_close,
-                      locale,
-                    )
-                  : "—"}
-              </span>
-            </div>
-          </PanelRow>
-        ))}
-      </Panel>
+      {deals.map((deal) => (
+        <PanelRow key={`${deal.deal_id}-${deal.occurred_at}`}>
+          <div className="brief-report-deal">
+            <span className="brief-report-deal-what">
+              <DealName deal={deal} />
+              <time className="t-caption" dateTime={deal.occurred_at}>
+                {formatDate(deal.occurred_at, locale, recordZone)}
+              </time>
+            </span>
+            <span className="brief-report-keep">
+              <Badge tone={deal.outcome === "won" ? "success" : "warning"} dot>
+                {deal.outcome === "won"
+                  ? t("brief.weekly.outcome.won")
+                  : t("brief.weekly.outcome.lost")}
+              </Badge>
+            </span>
+            <span
+              className="brief-report-deal-amount t-num"
+              data-outcome={deal.outcome}
+            >
+              {deal.amount_minor_at_close != null && deal.currency_at_close
+                ? formatMoney(
+                    deal.amount_minor_at_close,
+                    deal.currency_at_close,
+                    locale,
+                  )
+                : "—"}
+            </span>
+          </div>
+        </PanelRow>
+      ))}
     </>
   );
 }
@@ -385,9 +419,9 @@ function ClosedDeals({
 function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   return (
-    <Panel>
+    <>
       {deals.map((deal) => (
         <PanelRow key={`${deal.deal_id}-${deal.occurred_at}`}>
           <div className="brief-report-deal">
@@ -407,7 +441,7 @@ function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
           </div>
         </PanelRow>
       ))}
-    </Panel>
+    </>
   );
 }
 

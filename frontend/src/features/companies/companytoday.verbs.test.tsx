@@ -164,3 +164,26 @@ describe("the Next bar's own fallback verb", () => {
     expect(drafted).toHaveBeenCalledWith("p-1");
   });
 });
+
+describe("the Next bar's task words", () => {
+  it("shows the account task's own words as one line under its subject", () => {
+    show({
+      ...BASE,
+      next_steps: {
+        data: [
+          {
+            activity_id: "a-9",
+            subject: "Confirm the booking",
+            body: "Ask Dana which _week_ the crew arrives.\n\nThen book the hall.",
+            overdue: false,
+          },
+        ],
+        page: { has_more: false, next_cursor: null },
+      },
+    });
+
+    const bar = leadingCard("Confirm the booking");
+    expect(bar.getByText("Ask Dana which week the crew arrives.")).toBeTruthy();
+    expect(bar.queryByText(/Then book the hall/)).toBeNull();
+  });
+});

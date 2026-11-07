@@ -19,6 +19,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -36,6 +37,15 @@ type SharedSnapshot struct {
 	// what a reader may not see is itself a statement about how much of it
 	// there is.
 	Withheld bool
+	// Supported is the Likely and weighted money of the open deals a snapshot
+	// froze as still supported by their customer. Only a snapshot frozen under
+	// the retired qualified forecast lands on it.
+	Supported SupportedMoney
+}
+
+// SupportedMoney is the open money the retired qualified forecast counted.
+type SupportedMoney struct {
+	LikelyMinor, WeightedMinor int64
 }
 
 // ReadSharedSnapshot re-sums a snapshot's contributions under the CALLER's
@@ -86,7 +96,6 @@ func ReadSharedSnapshot(
 		SELECT
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_won AND %[1]s), 0),
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_evidence AND %[1]s), 0),
-		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_best_case AND %[1]s), 0),
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_open AND %[1]s), 0),
 		  COALESCE(sum(c.weighted_minor) FILTER (WHERE c.in_open AND %[1]s), 0),
 		  count(*) FILTER (WHERE %[1]s),
@@ -107,21 +116,78 @@ func ReadSharedSnapshot(
 		  -- inferred from a clause existing. A recipient whose row scope happens
 		  -- to cover every deal in the frozen state had nothing withheld, and
 		  -- saying otherwise invites them to distrust a complete number.
-		  count(*) FILTER (WHERE NOT %[1]s) > 0
+		  count(*) FILTER (WHERE NOT %[1]s) > 0,
+		  -- A snapshot frozen before the threshold existed carries none.
+		  COALESCE((SELECT s.likely_threshold FROM forecast_snapshot s WHERE s.id = $1), 0),
+		  -- The retired qualified forecast counted only the deals frozen as
+		  -- eligible; excluded, unsupported and unknown deals stayed out.
+		  COALESCE(sum(c.base_minor) FILTER (
+		    WHERE c.in_open AND c.in_evidence AND c.qualification = 'eligible' AND %[1]s), 0),
+		  COALESCE(sum(c.weighted_minor) FILTER (
+		    WHERE c.in_open AND c.qualification = 'eligible' AND %[1]s), 0),
+		  %[2]s
 		FROM forecast_contribution c
 		JOIN deal d ON d.id = c.deal_id
-		WHERE c.snapshot_id = $1`, visible)
+		WHERE c.snapshot_id = $1`, visible, sharedBySourceSQL(visible))
 
 	var r forecasting.Readings
 	var withheld bool
-	if err := tx.QueryRow(ctx, sql, args...).Scan(
-		&r.WonMinor, &r.EvidenceMinor, &r.BestCaseMinor, &r.OpenMinor, &r.WeightedMinor,
+	var supported SupportedMoney
+	sources := forecasting.ProbabilitySources()
+	totals := make([]forecasting.SourceTotal, len(sources))
+	dest := []any{
+		&r.WonMinor, &r.EvidenceMinor, &r.OpenMinor, &r.WeightedMinor,
 		&r.EligibleCount, &r.PricedCount, &r.ConfirmedDateCount, &r.FxMissingCount,
-		&withheld,
-	); err != nil {
+		&withheld, &r.LikelyThreshold, &supported.LikelyMinor, &supported.WeightedMinor,
+	}
+	for i := range totals {
+		dest = append(dest, &totals[i].OpenMinor, &totals[i].WeightedMinor)
+	}
+	if err := tx.QueryRow(ctx, sql, args...).Scan(dest...); err != nil {
 		return SharedSnapshot{}, fmt.Errorf("compose: re-summing a shared snapshot: %w", err)
 	}
-	return SharedSnapshot{Readings: r, Withheld: withheld}, nil
+	r.BySource = make(map[forecasting.ProbabilitySource]forecasting.SourceTotal, len(sources))
+	for i, source := range sources {
+		r.BySource[source] = totals[i]
+	}
+	return SharedSnapshot{Readings: r, Withheld: withheld, Supported: supported}, nil
+}
+
+// sharedBySourceSQL is the open and weighted sums per probability source, in
+// the order of forecasting.ProbabilitySources. A row frozen before sources were
+// kept carries none, and its probability then came from the stage.
+func sharedBySourceSQL(visible string) string {
+	var cols []string
+	for _, source := range forecasting.ProbabilitySources() {
+		match := fmt.Sprintf("c.in_open AND COALESCE(c.probability_source, '%s') = '%s' AND %s",
+			forecasting.SourceStage, source, visible)
+		cols = append(cols,
+			fmt.Sprintf("COALESCE(sum(c.base_minor) FILTER (WHERE %s), 0)", match),
+			fmt.Sprintf("COALESCE(sum(c.weighted_minor) FILTER (WHERE %s), 0)", match))
+	}
+	return strings.Join(cols, ",\n\t\t  ")
+}
+
+// sharedRange draws the range over the rows a shared headline sums: the rows
+// SharedSnapshotRows reads, before any narrowing to the reader's own deals. The
+// stored range covers rows the recipient may not see, so it is never served.
+func sharedRange(rows []SharedContribution) *forecasting.Range {
+	contributions := make([]forecasting.Contribution, 0, len(rows))
+	for _, row := range rows {
+		contribution := forecasting.Contribution{
+			DealID: row.DealID.String(), StageID: row.StageID, BaseMinor: row.BaseMinor,
+			InWon: row.InWon, InOpen: row.InOpen, EvidenceN: row.EvidenceN, Effect: row.Effect,
+		}
+		if row.ChanceInUse != nil {
+			contribution.StageProbability = *row.ChanceInUse
+		}
+		contributions = append(contributions, contribution)
+	}
+	drawn, ok := forecasting.ForecastRange(contributions)
+	if !ok {
+		return nil
+	}
+	return &drawn
 }
 
 // sharedVisibilityClause is what a share recipient may read of a frozen
@@ -181,17 +247,29 @@ func sharedVisibilityClause(ctx context.Context, tx pgx.Tx, arg func(any) int) (
 
 // SharedContribution is one deal's row as one recipient may read it.
 type SharedContribution struct {
-	DealID          ids.UUID
-	DealName        string
-	Owner           *ids.UUID
-	AmountMinor     *int64
-	Currency        string
-	BaseMinor       *int64
-	EffectiveClose  *time.Time
-	Category        string
-	InWon           bool
-	InOpen          bool
-	ExclusionReason string
+	DealID            ids.UUID
+	DealName          string
+	Owner             *ids.UUID
+	AmountMinor       *int64
+	Currency          string
+	BaseMinor         *int64
+	EffectiveClose    *time.Time
+	ProbabilitySource string
+	InWon             bool
+	InOpen            bool
+	ExclusionReason   string
+	// What the deal's weight was made of when frozen; nil on a row frozen
+	// before it was kept.
+	WeightedMinor    *int64
+	TypedProbability *int
+	ChanceInUse      *int
+	EvidenceN        *int
+	// StageID groups the rows whose chance the range draws once.
+	StageID string
+	Signals []string
+	// SignalFacts is the frozen signals with their facts, as JSON.
+	SignalFacts *string
+	Effect      *float64
 }
 
 // SharedSnapshotRows reads the per-deal rows behind a shared headline, under
@@ -215,8 +293,10 @@ func SharedSnapshotRows(
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.deal_id, d.name, c.owner_id, c.amount_minor, c.currency,
-		       c.base_minor, c.effective_close_date, c.category,
-		       c.in_won, c.in_open, COALESCE(c.exclusion_reason, '')
+		       c.base_minor, c.effective_close_date, c.probability_source,
+		       c.in_won, c.in_open, COALESCE(c.exclusion_reason, ''),
+		       c.weighted_minor, c.typed_probability, c.stage_probability, c.evidence_n,
+		       c.risk_signals, c.risk_signal_facts::text, c.risk_effect, c.stage_id
 		FROM forecast_contribution c
 		JOIN deal d ON d.id = c.deal_id
 		WHERE c.snapshot_id = $1 AND %s
@@ -228,15 +308,20 @@ func SharedSnapshotRows(
 
 	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (SharedContribution, error) {
 		var c SharedContribution
-		var currency, category *string
+		var currency, source *string
+		var stage *ids.UUID
 		err := row.Scan(&c.DealID, &c.DealName, &c.Owner, &c.AmountMinor, &currency,
-			&c.BaseMinor, &c.EffectiveClose, &category,
-			&c.InWon, &c.InOpen, &c.ExclusionReason)
+			&c.BaseMinor, &c.EffectiveClose, &source,
+			&c.InWon, &c.InOpen, &c.ExclusionReason,
+			&c.WeightedMinor, &c.TypedProbability, &c.ChanceInUse, &c.EvidenceN, &c.Signals, &c.SignalFacts, &c.Effect, &stage)
+		if stage != nil {
+			c.StageID = stage.String()
+		}
 		if currency != nil {
 			c.Currency = *currency
 		}
-		if category != nil {
-			c.Category = *category
+		if source != nil {
+			c.ProbabilitySource = *source
 		}
 		return c, err
 	})

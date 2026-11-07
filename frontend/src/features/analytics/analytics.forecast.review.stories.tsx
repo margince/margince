@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,6 +11,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { FirstCheck } from "./analytics.forecast.firstcheck";
 import { ForecastReview } from "./analytics.forecast.review";
 
 // What should be checked before the forecast call: the coverage line first and
@@ -25,6 +27,7 @@ type Preview = components["schemas"]["ForecastAssurancePreview"];
 
 const RUN: Assurance = {
   run_id: "33333333-3333-4333-8333-333333333333",
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
   as_of: "2026-07-14T06:00:00Z",
   status: "complete",
   readiness: "needs_review",
@@ -34,6 +37,12 @@ const RUN: Assurance = {
     { source: "offers", state: "checked" },
     { source: "calendar", state: "not_connected" },
   ],
+  freshness: {
+    state: "current",
+    changed_deals: 0,
+    changed_signals: 0,
+    workspace_changed: false,
+  },
 };
 
 function check(over: Partial<InputCheck>): InputCheck {
@@ -53,6 +62,7 @@ function check(over: Partial<InputCheck>): InputCheck {
     status: "open",
     first_seen_at: "2026-07-12T06:00:00Z",
     last_seen_at: "2026-07-14T06:00:00Z",
+    inputs_changed: false,
     ...over,
   };
 }
@@ -161,15 +171,49 @@ export const NothingToCheck: Story = {
   },
 };
 
-// No run has completed: the endpoint's 404 is its answer, and the panel says
-// the pipeline has not been checked rather than calling it clean.
-export const NotCheckedYet: Story = {
+// A deal changed after the run, and its finding and the verdict say so. The
+// verdict loses its tone until the next run reads the change.
+export const OutOfDate: Story = {
   render: () => {
-    installFetchStub(routes(null, []));
+    installFetchStub(
+      routes(
+        {
+          ...RUN,
+          freshness: {
+            state: "out_of_date",
+            changed_deals: 1,
+            changed_signals: 0,
+            workspace_changed: false,
+            changed_since: "2026-07-14T10:30:00Z",
+          },
+        },
+        FINDINGS.map((finding, i) => ({ ...finding, inputs_changed: i === 0 })),
+      ),
+    );
     return (
       <StoryProviders>
         <ForecastReview />
       </StoryProviders>
     );
   },
+};
+
+export const StartInputChecks: Story = {
+  render: () => {
+    installFetchStub(routes(null, []));
+    return (
+      <StoryProviders>
+        <FirstCheck title={en["review.title"]} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const StartInputChecksOnPhone: Story = {
+  ...StartInputChecks,
+  tags: ["uat-phone"],
+};
+export const StartInputChecksDark: Story = {
+  ...StartInputChecks,
+  globals: { theme: "dark" },
 };

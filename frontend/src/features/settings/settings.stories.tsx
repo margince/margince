@@ -6,13 +6,19 @@ import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
 import type { SettingsPageId } from "../../lib/settingscatalog";
 import { readingsDay } from "../../testing/brief.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import {
+  FIXTURE_TIMEZONE,
+  type GrantSpec,
+  meFixture,
+} from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { healthSessionRoutes } from "../../testing/systemhealth.session-fixtures";
+import { HealthSessionPage } from "../../testing/systemhealth-session";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import {
@@ -21,6 +27,7 @@ import {
   NOTIFICATION_ROUTES,
   UNUSED_INSTALLATION_ROUTES,
 } from "./settingspages.fixtures";
+import { healthReport } from "./systemhealth.fixtures";
 
 // The settings entries and the cards each one carries. Every story installs the
 // fetch stub those cards read through, so the render is deterministic and
@@ -132,7 +139,7 @@ const WORKING_HOURS: RouteMap = {
         start_time: "09:00",
         end_time: "17:00",
         days: [1, 2, 3, 4, 5],
-        timezone: meFixture().user.timezone,
+        timezone: FIXTURE_TIMEZONE,
       },
     }),
 };
@@ -248,13 +255,6 @@ export const AiAccessDevelopersOpen: Story = {
   play: async ({ canvasElement }) => openDevelopers(canvasElement),
 };
 
-export const AiAccessCodingAgents: Story = {
-  name: "AI access — coding agents",
-  render: tab("agents", aiAccessRoutes),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
-};
-
 export const AiAccessAgentRules: Story = {
   name: "AI access — agent rules",
   render: tab("agents", aiAccessRoutes),
@@ -262,16 +262,14 @@ export const AiAccessAgentRules: Story = {
     openDevelopers(canvasElement, "Agent rules"),
 };
 
-// The connector switched off: the picker and the coding-agents card both say so
-// and say what still works. It is the state a default install is in.
+// The connector switched off: the picker says so and what still works. It is
+// the state a default install is in.
 export const AiAccessConnectorOff: Story = {
   name: "AI access — connector off",
   render: tab("agents", {
     ...aiAccessRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
 };
 
 // The row's menu opens the revoke confirm, left open here so the guarded
@@ -606,8 +604,8 @@ export const PipelinesAdminDark: Story = {
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
 };
 
-// Every catalog page whole, for an admin holding every grant, over an unused
-// installation. `settingssections.test.tsx` pins search's sections to these.
+// Every catalog page whole, for an admin holding every grant. System health
+// includes diagnostic fixtures so the search census reaches every check.
 const everyGrantMe = () =>
   jsonResponse({
     ...meFixture({ roles: ["admin"], allow: EVERY_GRANT }),
@@ -617,10 +615,25 @@ const everyGrantMe = () =>
 function catalogPage(page: SettingsPageId): Story {
   return {
     parameters: { settingsPage: page },
-    render: tab(page, {
-      "GET /me": everyGrantMe,
-      ...UNUSED_INSTALLATION_ROUTES,
-    }),
+    render:
+      page === "system-health"
+        ? () => {
+            installFetchStub({
+              ...healthSessionRoutes("configure"),
+              ...UNUSED_INSTALLATION_ROUTES,
+              "GET /me": everyGrantMe,
+              "GET /admin/system-health": () => jsonResponse(healthReport),
+            });
+            return (
+              <StoryProviders>
+                <HealthSessionPage />
+              </StoryProviders>
+            );
+          }
+        : tab(page, {
+            "GET /me": everyGrantMe,
+            ...UNUSED_INSTALLATION_ROUTES,
+          }),
   };
 }
 
@@ -638,9 +651,10 @@ export const TeamsPage: Story = catalogPage("teams");
 export const RolesPage: Story = catalogPage("roles");
 export const SeatsPage: Story = catalogPage("seats");
 export const PipelinesPage: Story = catalogPage("pipelines");
-export const StageautomationPage: Story = catalogPage("stageautomation");
 export const LeadsPage: Story = catalogPage("leads");
 export const AcquisitionPage: Story = catalogPage("acquisition");
+export const LossreasonsPage: Story = catalogPage("lossreasons");
+export const PartnersPage: Story = catalogPage("partners");
 export const ReviewtemplatesPage: Story = catalogPage("reviewtemplates");
 export const RecordrolesPage: Story = catalogPage("recordroles");
 export const FieldsPage: Story = catalogPage("fields");

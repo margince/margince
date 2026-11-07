@@ -115,6 +115,15 @@ describe("deciding a duplicate pair on the row", () => {
     expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
   });
 
+  // A reader who may change only one record may only give it away, so only
+  // the other record offers Keep.
+  it("offers only the record the server says must survive", () => {
+    const row = pairRow();
+    draw({ ...row, pair: row.pair && { ...row.pair, keep_id: RIGHT } });
+    expect(screen.queryByRole("button", { name: "Keep Acme GmbH" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
+  });
+
   // THE case this component exists for. Merging KEEPS one record and archives
   // the other, so the winner must be the one the reader pressed — picking for
   // them would be the product deciding which of a customer's records is real.

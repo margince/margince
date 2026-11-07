@@ -1,10 +1,23 @@
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import type { ListQuery } from "../../components/listquery";
 import type { MessageKey } from "../../i18n/en";
 import { ProblemError, unwrap } from "../../lib/problem";
+import { listQueryParams } from "../../lib/tagfilter";
 import type { Lead } from "./leads.list";
 
 type CreateLeadRequest = components["schemas"]["CreateLeadRequest"];
+
+// The queue's dials as `GET /leads` reads them, for the list and the board's
+// terminal columns alike, so both narrow one address the same way.
+export function leadsQueryParams(query: ListQuery) {
+  return {
+    q: query.q || undefined,
+    sort: query.sort || undefined,
+    include_archived: query.includeArchived || undefined,
+    ...listQueryParams(query.filters),
+  };
+}
 
 // Builds the create-lead request body: scalar fields trim to undefined when
 // blank (never sent rather than sent empty). Lead email is a single string,
@@ -16,6 +29,7 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
     linkedin_url: values.linkedin_url?.trim() || undefined,
     title: values.title?.trim() || undefined,
     company_name: values.company_name?.trim() || undefined,
+    industry: values.industry?.trim() || undefined,
     contact_id: values.contact_id || undefined,
     owner_id:
       values.owner_id === UNASSIGNED_OWNER
@@ -24,6 +38,7 @@ export function mapLeadBody(values: Record<string, string>): CreateLeadRequest {
     status: "new",
     origin: values.origin?.trim() || undefined,
     origin_detail: values.origin_detail?.trim() || undefined,
+    partner_company_id: values.partner_company_id || undefined,
   };
 }
 

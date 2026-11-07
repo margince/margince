@@ -11,3 +11,11 @@ import "regexp"
 var tierRoutingPath = regexp.MustCompile(`^(tiers\.[^.]+|embeddings)\.routing(\.|$)`)
 
 func routingBlockIsOwned(path string) bool { return tierRoutingPath.MatchString(path) }
+
+// taskOverrideTimeoutPath is one task's timeout in a task-override body. The
+// ai module's save check holds both bounds and lists every refused path in one
+// 422, which the settings screen shows field by field. A task key is arbitrary
+// and may hold a dot, so only the suffix is read.
+var taskOverrideTimeoutPath = regexp.MustCompile(`^.+\.(decision|attempt)_timeout_ms$`)
+
+func taskOverrideBoundIsOwned(path string) bool { return taskOverrideTimeoutPath.MatchString(path) }

@@ -70,7 +70,7 @@ describe("a failed automation reaches the page that owns it", () => {
     await screen.findByText(/Notify sales on a new lead/);
     // The ADDRESS, not merely that a link exists: a row pointing at the wrong
     // screen renders exactly like one pointing at the right screen.
-    expect(linksIn(container)).toContain("#/settings/models");
+    expect(linksIn(container)).toContain("/#/settings/models");
   });
 
   it("gives the same address to the AI work a rule set off", async () => {
@@ -89,7 +89,7 @@ describe("a failed automation reaches the page that owns it", () => {
     const { container } = renderWorklist();
 
     await screen.findByText(/A drafting run did not finish/);
-    expect(linksIn(container)).toContain("#/settings/models");
+    expect(linksIn(container)).toContain("/#/settings/models");
   });
 
   // The queue can send a reader somewhere; it cannot fix a rule. A button here
@@ -173,3 +173,29 @@ function renderUnderAToastRegion() {
     </QueryClientProvider>,
   );
 }
+
+describe("a failed automation says why in the reader's language", () => {
+  it("draws the reason from its code, not the engine's English", async () => {
+    stub(
+      day({
+        queue: [
+          aFailedRule({
+            detail: "the target record could not be found",
+            run_reason_code: "target_missing",
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
+      }),
+    );
+    renderWorklist("de");
+
+    expect(
+      await screen.findByText(
+        /der Datensatz, auf den sie wirkt, existiert nicht mehr/,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/the target record could not be found/),
+    ).toBeNull();
+  });
+});

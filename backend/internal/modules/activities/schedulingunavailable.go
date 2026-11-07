@@ -7,9 +7,12 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -39,4 +42,26 @@ func calendarReadFailure(ctx context.Context, host ids.UserID, provider, calenda
 		"host_id", host.UUID, "provider", provider, "calendar", calendar,
 		"reason", unavailable.Reason, "err", err)
 	return unavailable
+}
+
+// calendarNamedToItsHost adds the unreadable calendar's id to the refusal when
+// the signed-in host asks about their own calendars, so their preview can name
+// it. The id is the host's account. An agent acting for the host, any other
+// caller and every public door keep the fixed sentence alone.
+func calendarNamedToItsHost(err error, actor principal.Principal, host ids.UserID) error {
+	unavailable, ok := errors.AsType[*connector.CalendarUnavailableError](err)
+	if !ok || !isTheHostInPerson(actor, host) || unavailable.Calendar == "" {
+		return err
+	}
+	_, message := unavailable.MessageFault()
+	return &httperr.DetailedError{
+		Status: http.StatusBadGateway, Code: connector.CalendarUnavailableCode, Detail: message,
+		Details: map[string]any{"calendar": unavailable.Calendar},
+	}
+}
+
+// isTheHostInPerson says the caller is the host, signed in themselves. An agent
+// passport carries its granting human's id, so the type decides too.
+func isTheHostInPerson(actor principal.Principal, host ids.UserID) bool {
+	return actor.Type == principal.PrincipalHuman && !actor.UserID.IsZero() && actor.UserID == host.UUID
 }

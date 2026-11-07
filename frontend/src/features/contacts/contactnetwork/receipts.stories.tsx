@@ -58,3 +58,32 @@ export const MailAndDayMeeting: Story = {
     );
   },
 };
+
+/** A notice the installation's relay sent for the reader, beside their own mail. */
+export const SentByMarginceForYou: Story = {
+  render: () => (
+    <StoryProviders>
+      <ReceiptList
+        relayMember="self"
+        receipts={[
+          {
+            activity_id: "018f3a1b-0000-7000-8000-0000000000e3",
+            subject: "Information about your personal data",
+            occurred_at: "2026-10-20T09:00:00Z",
+            occurred_precision: "instant",
+            kind: "email",
+            controller_send: { from_address: "privacy@kps.test" },
+          },
+          ...RECEIPTS,
+        ]}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("Sent by Margince for you"),
+    ).toBeVisible();
+    await expect(canvas.getByText("From privacy@kps.test")).toBeVisible();
+  },
+};

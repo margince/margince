@@ -82,3 +82,31 @@ func applyScoreOverride(p *storekit.Patch, current crmcontracts.Lead, in UpdateL
 	}
 	return false, nil
 }
+
+// ScoreOverrideReasonEmptyError rejects an empty-string reason. The contract
+// clears an override with JSON null, so a blank reason is neither a written
+// justification nor a clear.
+type ScoreOverrideReasonEmptyError struct{}
+
+func (e *ScoreOverrideReasonEmptyError) Error() string {
+	return "score_override_reason must not be empty; pass null to clear the override"
+}
+
+// FieldFault refuses a score-override reason that is present but blank.
+func (e *ScoreOverrideReasonEmptyError) FieldFault() (field, code, message string) {
+	return leadScoreOverrideReasonField, "min_length", e.Error()
+}
+
+// ScoreOverrideClearConflictError rejects a null score that arrives with a
+// written reason. Null drops the override and the reason keeps one, so
+// honoring either would discard the other half of the request.
+type ScoreOverrideClearConflictError struct{}
+
+func (e *ScoreOverrideClearConflictError) Error() string {
+	return "a null score clears the override; it cannot be combined with a score_override_reason"
+}
+
+// FieldFault refuses setting and clearing the same override in one request.
+func (e *ScoreOverrideClearConflictError) FieldFault() (field, code, message string) {
+	return leadScoreField, "clear_conflict", e.Error()
+}

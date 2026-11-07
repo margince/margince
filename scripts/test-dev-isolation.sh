@@ -13,6 +13,8 @@
 # rather than reimplemented here: a copy would prove nothing about production.
 set -euo pipefail
 
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$(cd "$(dirname "$0")" && pwd)/lib-git-fixture.sh"
 root="$(git rev-parse --show-toplevel)"
 dev="$root/scripts/dev.sh"
 failures=0
@@ -272,20 +274,30 @@ check "$tmp_root" "$(dev_state_root)" \
 
 # One worktree's stack, recorded the way dev.sh records it.
 mkdir -p "$tmp_root/first"
-printf 'SLUG=first\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=64\n' >"$tmp_root/first/env"
+printf 'SLUG=first\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=%s\n' "$DEV_REDIS_DB_MIN" >"$tmp_root/first/env"
 
 read_registry second
-check "64" "$TAKEN_DBS" "the registry reports the other stack's Redis database"
+check "$DEV_REDIS_DB_MIN" "$TAKEN_DBS" "the registry reports the other stack's Redis database"
 check "8081" "$TAKEN_PORTS" "and its frontend port"
-check "65" "$(pick_free_db)" \
-      "a second stack takes the next free Redis database, never 64 again"
+check "$((DEV_REDIS_DB_MIN + 1))" "$(pick_free_db)" \
+      "a second stack takes the next free Redis database, never the taken one again"
 check "8082" "$(pick_free_port)" \
       "and the next free port"
 
 # The same slug reclaims its own, so a restart keeps its URL and its streams.
 read_registry first
-check "64" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
+check "$DEV_REDIS_DB_MIN" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
 check "8081" "$MINE_PORT" "and its own port"
+
+# A database recorded before the block moved is not reclaimed: it may now be the
+# integration lane's, and a suite that believes it owns the database flushes it.
+mkdir -p "$tmp_root/stale"
+printf 'SLUG=stale\nFE_PORT=8089\nAPI_PORT=18089\nREDIS_DB=%s\n' \
+      "$((DEV_REDIS_DB_MIN - 1))" >"$tmp_root/stale/env"
+read_registry stale
+check "" "$MINE_DB" "a recorded Redis database below the block is not reclaimed"
+check "8089" "$MINE_PORT" "while the port it recorded still is"
+rm -rf "$tmp_root/stale"
 
 # The registry only knows about OUR stacks. A foreign listener must still take a
 # port out of play, or bind fails and wait_ready polls somebody else's server.
@@ -308,7 +320,7 @@ rm -rf "$tmp_root"/*
 export STACK_STARTER_PID=$$
 claimed="$(claim_stack "alpha")"
 read -r alpha_db alpha_port <<<"$claimed"
-check "64" "$alpha_db" "the first stack claims the bottom of the Redis block"
+check "$DEV_REDIS_DB_MIN" "$alpha_db" "the first stack claims the bottom of the Redis block"
 check "8081" "$alpha_port" "and the bottom of the port range"
 check "1" "$([[ -f "$tmp_root/alpha/env" ]] && echo 1 || echo 0)" \
       "the reservation is on disk BEFORE anything binds — a claim visible only once the stack is up is not a claim"
@@ -317,7 +329,7 @@ check "1" "$(grep -c "^STARTER_PID=$$\$" "$tmp_root/alpha/env")" \
 
 claimed="$(claim_stack "beta")"
 read -r beta_db beta_port <<<"$claimed"
-check "65" "$beta_db" "a second slug cannot be handed the first slug's Redis database"
+check "$((DEV_REDIS_DB_MIN + 1))" "$beta_db" "a second slug cannot be handed the first slug's Redis database"
 check "8082" "$beta_port" "nor its port"
 
 claimed="$(claim_stack "alpha")"
@@ -341,6 +353,17 @@ check "1" "$(pick_free_db >/dev/null 2>&1; echo $?)" \
       "and it reports failure rather than returning success with an empty answer"
 check "1" "$(claim_stack newcomer >/dev/null 2>&1; echo $?)" \
       "claim_stack propagates that refusal as a non-zero status, which is what stops the boot"
+
+# A started stack whose database left the block. The reclaim refuses the record,
+# so a free database is picked, but the started-stack path returns without
+# writing it: handing one over here would record it nowhere, and the next
+# overlapping start would pick the same number.
+rm -rf "$tmp_root"/*
+mkdir -p "$tmp_root/upgraded"
+printf 'SLUG=upgraded\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=%s\nBACKEND_PID=1\n' \
+      "$((DEV_REDIS_DB_MIN - 1))" >"$tmp_root/upgraded/env"
+check "1" "$(claim_stack upgraded >/dev/null 2>&1; echo $?)" \
+      "a started stack on a database below the block is refused, not moved silently"
 
 unset MARGINCE_DEV_STATE_DIR
 
@@ -546,6 +569,49 @@ check "1" "$([[ "${#long_one}" -le 63 ]] && echo 1 || echo 0)" \
 check "1" "$([[ "$long_one" != "$long_two" ]] && echo 1 || echo 0)" \
       "two long names sharing a prefix still get different templates, so neither rebuilds the other's schema"
 rm -rf "$probe"
+
+echo "dev.sh: --fresh empties the slug's own Redis database, and no other"
+
+# The auth limiters count in Redis per client IP, and a fresh Postgres left them
+# standing, so a lane that rebooted per scenario ran out of set-password
+# redemptions. docker is a stand-in that records what it was asked: the
+# function under test is production's, lifted.
+lift flush_slug_redis
+lift_const DEV_REDIS_DB_MIN
+lift_const DEV_REDIS_DB_MAX
+REDIS_PORT=16379
+docker_calls="$(mktemp)"
+redis_containers="cid-one"
+docker() {
+    printf '%s\n' "$*" >>"$docker_calls"
+    [[ "$1" == "ps" ]] && printf '%s\n' "$redis_containers"
+    return 0
+}
+
+: >"$docker_calls"
+flush_slug_redis 70 2>/dev/null
+check "exec cid-one redis-cli -n 70 FLUSHDB" "$(grep '^exec' "$docker_calls")" \
+      "a slug's claimed database is flushed, in the container publishing the dev Redis port"
+check "1" "$(grep -c 'label=com.docker.compose.service=redis' "$docker_calls")" \
+      "the container is the compose redis service, not whatever else publishes the port"
+
+for db in 0 "$((DEV_REDIS_DB_MIN - 1))" "$((DEV_REDIS_DB_MAX + 1))"; do
+    : >"$docker_calls"
+    status=0; flush_slug_redis "$db" 2>/dev/null || status=$?
+    check "1 0" "$status $(wc -l <"$docker_calls" | tr -d ' ')" \
+          "database $db is outside the claimed block: refused before docker is asked anything"
+done
+
+redis_containers=$'cid-one\ncid-two'
+: >"$docker_calls"
+status=0; flush_slug_redis 70 2>/dev/null || status=$?
+check "1 0" "$status $(grep -c '^exec' "$docker_calls")" \
+      "two Redis containers on the port: refused rather than flushing a guess"
+unset -f docker
+rm -f "$docker_calls"
+
+check "1" "$(grep -c '\[\[ -z "\$slug" \]\] || flush_slug_redis "\$redis_db"' "$dev")" \
+      "the --fresh rebuild flushes only for a slug; the primary stack's database 0 is left alone"
 
 if [[ "$failures" -gt 0 ]]; then
     printf 'FAIL: %d check(s) failed\n' "$failures" >&2

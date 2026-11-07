@@ -9,7 +9,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -25,27 +24,15 @@ type attentionMeetingHorizon struct {
 	store    *activities.Store
 }
 
-func (h attentionMeetingHorizon) Calendar(ctx context.Context) (crmcontracts.WorklistCalendar, error) {
-	reach, err := h.registry.ReachOn(ctx, calendarProviders)
-	if err != nil {
-		return "", err
-	}
-	switch reach {
-	case capture.ReachLive:
-		return crmcontracts.WorklistCalendarConnected, nil
-	case capture.ReachBroken:
-		return crmcontracts.WorklistCalendarUnreadable, nil
-	case capture.ReachNone:
-		return crmcontracts.WorklistCalendarNotConnected, nil
-	default:
-		return "", fmt.Errorf("compose: calendar reach %q has no Worklist answer", reach)
-	}
+func (h attentionMeetingHorizon) Calendar(ctx context.Context) (crmcontracts.ReaderCalendar, error) {
+	return readerCalendar(ctx, h.registry)
 }
 
-// NextCustomerMeeting is the meetings lane's own read moved past today: the
-// reader's meetings by the lane's "mine" dials, readable, linked to a customer
-// record they may see, and booked. AwaitingOutcome means no result recorded yet,
-// which for a meeting still ahead is booked or unset. Soonest first, one row.
+// NextCustomerMeeting is the meetings lane's own read moved past today. It
+// reads the reader's meetings by the lane's "mine" dials: readable, linked to a
+// customer record they may see, and booked. OpenStatusOnly means no result
+// recorded yet, which for a meeting still ahead is booked or unset. Soonest
+// first, one row.
 func (h attentionMeetingHorizon) NextCustomerMeeting(
 	ctx context.Context, window attention.MeetingWindow,
 ) (crmcontracts.Contact360NextMeeting, bool, error) {
@@ -55,7 +42,7 @@ func (h attentionMeetingHorizon) NextCustomerMeeting(
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window),
 		Sort: &soonestFirst, Limit: &one,
-		AwaitingOutcome: true, CustomerMeetingsOnly: true, ReadableOnly: true,
+		OpenStatusOnly: true, CustomerMeetingsOnly: true, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, attention.TasksMine, ids.UUID{}) {
 		return crmcontracts.Contact360NextMeeting{}, false, nil

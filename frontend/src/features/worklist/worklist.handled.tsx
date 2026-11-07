@@ -21,29 +21,32 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
+import { BundleUndo } from "../../components/marginchanges";
+import { ReceiptDetail } from "../../components/receiptdetail";
+import { ReceiptReview } from "../../components/receiptreview";
+import { ReceiptsMore } from "../../components/receiptsmore";
+import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { usePendingMarginceChanges } from "../../lib/marginchanges";
+import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
+import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
-import { subjectHref } from "./worklist.copy";
+import { subjectHref } from "../../lib/worklistcopy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
-import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
-import { ReceiptReview } from "./worklist.receiptreview";
 
 export function HandledForYouPanel() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  // The READER's own zone. A receipt says when something happened to them, and
-  // an instant rendered in UTC asks them to do the arithmetic.
-  const zone = viewerZone();
+  const readerZone = useViewerZone();
   const handled = useHandledForYou();
+  const pendingChanges = usePendingMarginceChanges().data;
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most
   // days — the contract says so — and a state read from `isPending`/`isError`
@@ -51,6 +54,9 @@ export function HandledForYouPanel() {
   // column names and a silence, where the sentence saying nothing was done on
   // the reader's behalf is the whole answer.
   const state = listReadState(handled, receipts);
+  // A day with nothing done draws no panel: the empty sentence sat beside the
+  // queue's own on every quiet day. A failed read still shows, with its retry.
+  if (state === "empty") return null;
   return (
     <Panel
       className={AFTER_THE_DAY}
@@ -94,59 +100,66 @@ export function HandledForYouPanel() {
               would take the page down with a type error, and calling it a quiet
               day would report a clear receipt over an answer nobody could
               read. */}
-          {receipts && (
-            <>
-              <Disclosure summary={t("worklist.handled.showHistory")}>
-                <DataTable
-                  label={t("worklist.handled.title")}
-                  rows={receipts}
-                  rowKey={(row: Receipt) => row.id}
-                  columns={[
-                    {
-                      key: "summary",
-                      header: t("worklist.handled.what"),
-                      render: (row: Receipt) => (
-                        <>
-                          {receiptSummary(row, t, locale, recordZone)}
-                          {receiptBasis(row, t, locale) && (
-                            <p className="t-caption">
-                              {receiptBasis(row, t, locale)}
-                            </p>
-                          )}
-                        </>
-                      ),
-                    },
-                    {
-                      key: "subject",
-                      header: t("worklist.handled.about"),
-                      render: (row: Receipt) => <ReceiptRecord receipt={row} />,
-                    },
-                    {
-                      key: "when",
-                      header: t("worklist.handled.when"),
-                      render: (row: Receipt) =>
-                        formatDateTime(row.occurred_at, locale, zone),
-                    },
-                    {
-                      // The one verb this panel carries, and only on the rows
-                      // that earned it. A receipt for a decision somebody made
-                      // renders an empty cell: the work was agreed to, so there
-                      // is nothing here to take back.
-                      key: "undo",
-                      header: t("worklist.handled.wayBack"),
-                      render: (row: Receipt) => <ReceiptReview receipt={row} />,
-                    },
-                  ]}
-                />
-              </Disclosure>
-              {/* A bounded read is not the whole of what was done. A reader who
-                took this list for everything would close the page believing
-                they had seen it all, which is the one thing a receipt surface
-                must not cause. */}
-              {handled.data?.truncated && (
-                <p className="t-caption">{t("worklist.handled.truncated")}</p>
+          {pendingChanges?.bundles && pendingChanges.bundles.length > 0 && (
+            <BundleUndo
+              bundles={pendingChanges.bundles}
+              label={plural(
+                "changes.undoDeals",
+                pendingChanges.bundles.length,
+                {
+                  count: formatNumber(pendingChanges.bundles.length, locale),
+                },
               )}
-            </>
+            />
+          )}
+          {receipts && (
+            <Disclosure summary={t("worklist.handled.showHistory")}>
+              <DataTable
+                label={t("worklist.handled.title")}
+                rows={receipts}
+                rowKey={(row: Receipt) => row.id}
+                columns={[
+                  {
+                    key: "summary",
+                    header: t("worklist.handled.what"),
+                    render: (row: Receipt) => (
+                      <>
+                        {receiptSummary(row, t, locale, readerZone)}
+                        {receiptBasis(row, t, locale) && (
+                          <p className="t-caption">
+                            {receiptBasis(row, t, locale)}
+                          </p>
+                        )}
+                        <ReceiptDetail receipt={row} />
+                      </>
+                    ),
+                  },
+                  {
+                    key: "subject",
+                    header: t("worklist.handled.about"),
+                    render: (row: Receipt) => <ReceiptRecord receipt={row} />,
+                  },
+                  {
+                    key: "when",
+                    header: t("worklist.handled.when"),
+                    render: (row: Receipt) =>
+                      formatDateTime(row.occurred_at, locale, readerZone),
+                  },
+                  {
+                    // The one verb this panel carries, and only on the rows
+                    // that earned it. A receipt for a decision somebody made
+                    // renders an empty cell: the work was agreed to, so there
+                    // is nothing here to take back.
+                    key: "undo",
+                    header: t("worklist.handled.wayBack"),
+                    render: (row: Receipt) => <ReceiptReview receipt={row} />,
+                  },
+                ]}
+              />
+              {/* A bounded read is not the whole of what was done, so the
+                  list ends in the way to the rest or in the caveat saying so. */}
+              <ReceiptsMore handled={handled} />
+            </Disclosure>
           )}
         </SurfaceState>
       </PanelBody>
@@ -165,8 +178,8 @@ function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
   const href = subjectHref(receipt);
   if (!href) return <>{subject.label}</>;
   return (
-    <a className="entity-link" href={href}>
+    <AppLink className="entity-link" href={href}>
       {subject.label}
-    </a>
+    </AppLink>
   );
 }

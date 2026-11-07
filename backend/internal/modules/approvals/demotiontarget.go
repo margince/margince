@@ -13,23 +13,58 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func demotionTargetDecidable(ctx context.Context, tx pgx.Tx, targetType *string, targetID *ids.UUID) (bool, error) {
-	if targetType == nil || *targetType != tableLead || targetID == nil {
-		return false, nil
+// demotionTargetsDecidable answers, by position, whether each staged reversal
+// names a lead the caller may change that is still in the promoted state.
+func demotionTargetsDecidable(ctx context.Context, tx pgx.Tx, refs []targetRef) ([]bool, error) {
+	out := make([]bool, len(refs))
+	var leads []ids.UUID
+	for _, ref := range refs {
+		if lead, ok := leadOf(ref); ok {
+			leads = append(leads, lead)
+		}
 	}
+	leads = distinct(leads)
+	if len(leads) == 0 {
+		return out, nil
+	}
+	reversible, err := reversibleLeads(ctx, tx, leads)
+	if err != nil {
+		return nil, err
+	}
+	for i, ref := range refs {
+		lead, ok := leadOf(ref)
+		out[i] = ok && reversible[lead]
+	}
+	return out, nil
+}
+
+// leadOf is the lead a reversal names; any other target is not reversible.
+func leadOf(ref targetRef) (ids.UUID, bool) {
+	if ref.Type == nil || *ref.Type != tableLead || ref.ID == nil {
+		return ids.Nil, false
+	}
+	return *ref.ID, true
+}
+
+// reversibleLeads is the leads the caller may read and change that are still
+// promoted. It takes one statement for write authority and one for the state.
+func reversibleLeads(ctx context.Context, tx pgx.Tx, leads []ids.UUID) (map[ids.UUID]bool, error) {
 	readable, err := probeAnswer(auth.Require(ctx, tableLead, principal.ActionRead))
 	if err != nil || !readable {
-		return false, err
+		return map[ids.UUID]bool{}, err
 	}
-	visible, err := probeAnswer(auth.EnsureWritable(ctx, tx, tableLead, *targetID))
-	if err != nil || !visible {
-		return false, err
+	// Not live: promotion archives the lead, and only that state admits this action.
+	writable, err := auth.PassingSubset(ctx, tx, tableLead, leads, auth.RuleWritable)
+	if err != nil || len(writable) == 0 {
+		return writable, err
 	}
-	// Promotion archives the lead; only that reversible state admits this action.
-	var promoted bool
-	err = tx.QueryRow(ctx, `SELECT EXISTS (
-		SELECT 1 FROM lead WHERE id = @lead AND status = 'promoted'
-		AND archived_at IS NOT NULL AND promoted_contact_id IS NOT NULL)`,
-		pgx.NamedArgs{"lead": *targetID}).Scan(&promoted)
-	return promoted, err
+	promoted, err := idsAmong(ctx, tx, `SELECT id FROM lead WHERE id = ANY($1) AND status = 'promoted'
+		AND archived_at IS NOT NULL AND promoted_contact_id IS NOT NULL`, leads)
+	if err != nil {
+		return nil, err
+	}
+	for id := range writable {
+		writable[id] = promoted[id]
+	}
+	return writable, nil
 }

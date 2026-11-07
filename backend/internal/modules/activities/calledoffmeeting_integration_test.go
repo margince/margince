@@ -134,23 +134,29 @@ func TestACalledOffMeetingAnswersNoQuietReminder(t *testing.T) {
 	}
 }
 
-// Mail from a sending system is not contact, so it ends no silence. The same
-// mail from a human sender does.
+// Mail from a sending system is not contact, so it ends no silence, and
+// neither does an invitation: the meeting it books is the touch. The same mail
+// from a human sender does end it.
 func TestMailFromASendingSystemAnswersNoQuietReminder(t *testing.T) {
 	for _, test := range []struct {
 		name    string
 		machine bool
+		method  *string
 		closed  int
-	}{{"a file-share notice", true, 0}, {"a human reply", false, 1}} {
+	}{
+		{"a file-share notice", true, nil, 0},
+		{"an invitation", false, new("REQUEST"), 0},
+		{"a human reply", false, nil, 1},
+	} {
 		t.Run(test.name, func(t *testing.T) {
 			e := setupRecency(t)
 			deal := e.seedQuietDeal(t, pinnedQuiet)
 			reminder := e.seedQuietReminder(t, deal, pinnedQuiet)
 			mail := ids.NewV7()
 			e.exec(t, `INSERT INTO activity
-				  (id, kind, direction, subject, occurred_at, audience, source, captured_by, origin, sender_is_machine)
-				VALUES ($1, 'email', 'inbound', 'Shared with you', $2, 'workspace', 'gmail', 'connector:gmail', 'human', $3)`,
-				mail, pinnedQuiet.AddDate(0, 0, 89), test.machine)
+				  (id, kind, direction, subject, occurred_at, audience, source, captured_by, origin, sender_is_machine, calendar_method)
+				VALUES ($1, 'email', 'inbound', 'Shared with you', $2, 'workspace', 'gmail', 'connector:gmail', 'human', $3, $4)`,
+				mail, pinnedQuiet.AddDate(0, 0, 89), test.machine, test.method)
 			e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
 				VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), mail, deal)
 

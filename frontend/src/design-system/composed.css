@@ -23,6 +23,7 @@
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
+  position: relative;
   overflow-x: auto;
   padding-bottom: var(--space-2);
 }
@@ -67,11 +68,9 @@
      boards those are is a fact about callers and changes without this file
      hearing about it, so the condition is the surface. */
   overflow-x: clip;
-  /* A RECESS in the surface, not a card on it. --bgInset is a card's ground and
-     read as one — five of them in a row made the board a grid of grey slabs
-     with the deals inside them, and the cards had to fight their own
-     containers to look like the subject. */
-  background: var(--bgWell);
+  /* The edge sits inside the stage width the board lays out. */
+  box-sizing: border-box;
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   /* NO INSET ABOVE THE HEAD: the head carries it (below), so the band it draws
      reaches the column's top edge. An inset here is a strip of the scrollport
@@ -143,7 +142,7 @@
   margin-inline: calc(-1 * var(--space-3));
   /* The column's own ground, or the cards slide visibly behind a transparent
      strip. */
-  background: var(--bgWell);
+  background: var(--ground);
 }
 .board-col-head .stage {
   color: var(--textPrimary);
@@ -170,6 +169,9 @@
   display: flex;
   flex: none;
 }
+.board-col-head .board-col-count[hidden] {
+  display: none;
+}
 /* THE STAGE'S ODDS, and they read at the far edge: a percentage is a property
    of the column rather than of the name, and against the name it read as part
    of it. `auto` rather than a spacer, so the head stays three nodes. */
@@ -178,39 +180,57 @@
   margin-inline-start: auto;
   font-variant-numeric: tabular-nums;
 }
-/* Two lines rather than three figures fighting for one: a stage column is
- * narrow by design, and a money figure broken across lines is unreadable. */
+/* The stage's money: the total and the weighted total on one row, a bar
+ * under them, and one line of notes. */
 .board-col-sub {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: 0 4px 4px;
+  padding: 0 4px var(--space-2);
 }
-/* A MONEY FIGURE IS ONE LINE AND ELLIPSISES; A SENTENCE WRAPS.
-   Both totals are `nowrap`, because an amount broken across lines is
-   unreadable — so each has to be told what to do when it does not fit, or it
-   paints past the stage it belongs to. Cut, a figure is visibly incomplete,
-   where one running on under the next column can be read as whole. */
+/* A MONEY FIGURE IS ONE LINE. The total is short and never gives way; the
+   weighted figure beside it ellipsises when the two do not fit. */
 .board-col-total {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-2);
   white-space: nowrap;
-  overflow: hidden;
+  min-width: 0;
 }
 .board-col-money {
+  flex: none;
+  font: var(--fontHeadingMedium);
+  color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
-  /* A flex item's floor is its own min-content width unless it is told
-     otherwise, and a `nowrap` amount has no shrink in it at all. */
+  border-radius: var(--r-sm);
+}
+.board-col-money:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.board-col-weighted {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.board-col-weighted {
-  white-space: nowrap;
+  color: var(--textSecondary);
   font-variant-numeric: tabular-nums;
+}
+.board-col-weighted-figure {
+  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
+}
+/* Two short notes on one line. The tip on the total spells each out. */
+.board-col-notes {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+.board-col-notes > span + span::before {
+  content: "·";
+  margin-inline: var(--space-1);
 }
 /* The line that stands in for a refused total is PROSE, and the rule above is
    exactly wrong for it: ellipsised in a 240px stage it read "Loaded only —
@@ -231,6 +251,11 @@
      note explaining why there is none. */
   color: var(--textSecondary);
   font: var(--fontBodySmall);
+}
+/* A folded column is as wide as its head, and the reason wraps inside that
+   width rather than widening the fold to one line of prose. */
+.board-col-collapsed .board-col-refusal {
+  contain: inline-size;
 }
 
 /* A phone SWIPES between stages rather than showing them all at once. One stage
@@ -283,16 +308,11 @@
   /* Keeps the layers raised over that link inside the card; loose, they tie
      the stuck column head's z-index and paint over it by coming later. */
   isolation: isolate;
-  /* The pane over the column's ground, not the elevated surface: a card lifts
-     off the stage it sits in by being translucent white over it, which is the
-     same separation every other pane in the product is drawn with.
-     --shadow-rest on top of that is the top side every resting surface here
-     has, and it is one layer under a hairline rather than a second edge. */
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
+  /* --shadow-rest is one layer under a hairline rather than a second edge. */
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-control);
   box-shadow: var(--shadow-rest);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--padCard);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -386,6 +406,13 @@
    company's name elides before the mark does, so the mark stays in the same
    place on every card in the column. The size and ink are `.t-caption`'s, worn
    on the element; the weight is the one text beside a mark takes. */
+.deal-card .deal-standing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-block-start: var(--space-1);
+}
 .deal-card .deal-head {
   display: flex;
   align-items: center;
@@ -456,7 +483,7 @@
   gap: var(--space-3);
   margin-top: var(--space-1);
   padding-top: var(--space-2);
-  border-top: 1px solid var(--paneEdge);
+  border-top: 1px solid var(--groundEdge);
 }
 .deal-card .deal-foot-facts {
   display: flex;
@@ -515,7 +542,7 @@
   box-shadow: none;
 }
 .deal-card .deal-actions .btn:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* The supporting ink goes on the GLYPH, never the button: a `.btn`'s ink is the
    control tier's, measured against every ground a button is drawn on. */
@@ -620,19 +647,12 @@
   margin-bottom: 0;
 }
 
-/* The card the chronology sits on. The same white ground, hairline and radius
-   every other body of the record uses — a list this long loose on the page
-   ground stopped reading as one of the record's sections. */
+/* The block the chronology sits in. It draws no card of its own: every place
+   it stands (a record's History panel, the record view's story card) is
+   already a card, and a second ground and hairline inside it would be a box
+   in a box. */
 .timeline-card {
   margin-top: var(--space-2);
-  /* Air on all four sides. With none at the top the first row's date and badge
-     sat on the card's own border, which reads as content clipped by the edge
-     rather than as the start of a list. The chronology's pane is the same pane
-     every zone of the record stands on. */
-  padding: var(--space-2) var(--space-5);
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
-  border-radius: var(--r-lg);
 }
 
 .timeline {
@@ -649,12 +669,6 @@
   container-name: chronology;
 }
 
-/* An expanded conversation's members are a list INSIDE a row, not a second
-   card: the card is around the chronology, and one nested in it would draw a
-   box around three messages of a thread that is already boxed. */
-.timeline-card .tl-group-members {
-  padding-inline: 0;
-}
 /* Date, axis, and what happened. A grid rather than a flex row: the dates
    line up in a column of their own, which is how a chronology is actually
    read — down the left edge for "what happened in August" rather than along
@@ -729,7 +743,7 @@
 }
 
 .timeline .tl-dot-quiet {
-  background: var(--bgElevated);
+  background: var(--ground);
   border-color: var(--borderStrong);
 }
 /* A change the AGENT made: indigo, because the hue is a fact about who did
@@ -761,8 +775,9 @@
   justify-self: end;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: var(--space-2);
+  gap: var(--gapActions);
 }
 
 /* A conversation's mark on the rail: the kind's icon rather than a dot,
@@ -778,7 +793,7 @@
   height: 24px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--ground);
   border: 1px solid var(--borderStrong);
   display: grid;
   place-items: center;
@@ -916,10 +931,9 @@
 
 /* A note's body on its own plate: the rep's aside about the record, told
    apart from the correspondence around it before a word of either is read.
-   The recessed ground, not a tint — colour on this page means direction or
+   The next level's ground, not a tint — colour on this page means direction or
    provenance, and a note has neither. */
 .tl-note .tl-text {
-  background: var(--bgInset);
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
 }
@@ -983,15 +997,11 @@
   overflow-wrap: anywhere;
 }
 
-/* A thread's members are a card on the body side of the rail: the
-   conversation is one entry on the axis, and its messages sit inside it on the
-   recessed ground, each with its own mark, newest first. */
+/* An opened send's copies sit in its row under one hairline, not on a plate
+   of their own: the history is already a card. */
 .tl-group-members {
   margin-block-start: var(--space-2);
-  padding-inline: var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgInset);
+  border-block-start: 1px solid var(--borderSubtle);
 }
 
 /*
@@ -1037,32 +1047,11 @@
   margin-top: var(--space-1);
 }
 
-/* A conversation on the chronology: one card on the body side of the rail,
-   on the record's own pane with a stronger hairline than the row dividers
-   around it, so a thread reads as one event with its messages inside it
-   rather than as three rows that happen to share a subject. */
-.timeline .tl-thread {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4) var(--space-2);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-lg);
-  background: var(--pane);
-}
-
-/* The thread's verbs sit at the end of its own head line — Reply belongs to
-   the conversation, and inside its card — rather than in the row's actions
-   column outside it. */
-.tl-thread-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
-}
-
+/* A conversation's messages sit straight in its row, parted by hairlines: the
+   history is already a card, and a second one inside it would be a box in a box. */
 .tl-thread-messages {
   list-style: none;
-  margin: var(--space-2) 0 0;
+  margin: var(--space-1) 0 0;
   padding: 0;
 }
 .tl-thread-messages > li {
@@ -1108,7 +1097,7 @@
   height: 28px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--ground);
   border: 1px solid var(--borderStrong);
 }
 .tl-msg-mark svg {
@@ -1132,7 +1121,7 @@
   transition: background var(--dur-state) var(--ease-out);
 }
 .tl-msg-open:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .tl-msg-open:focus-visible {
   outline: var(--focus-ring);

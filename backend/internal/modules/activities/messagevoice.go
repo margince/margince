@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,16 +26,16 @@ import (
 // the colleague capture recorded as an invitation's sender, a meeting's host,
 // or the seat that logged a note, call or task. It holds no ", ", because the
 // projection's column list is checked by splitting on it.
-const writerSeatExpr = `CASE
+var writerSeatExpr = `CASE
 	WHEN a.invitation_sender IS NOT NULL THEN a.invitation_sender
-	WHEN a.kind = 'meeting' THEN a.host_user_id
+	WHEN a.kind = 'meeting' THEN ` + storekit.KnownMeetingHostSQL("a") + `
 	WHEN a.kind IN ('note','call','task') AND a.captured_by ~ '^human:[0-9a-f-]{36}$'
 	  THEN substr(a.captured_by,7)::uuid END`
 
 // The writer seat and its current name and login, aliased so a select list
 // that draws a column of the same name stays unambiguous. No liveness filter:
 // who wrote a row in August is a fact about August.
-const (
+var (
 	writerSeatSQL      = `(` + writerSeatExpr + `) AS writer_seat`
 	writerSeatNameSQL  = `(SELECT u.display_name FROM app_user u WHERE u.id = (` + writerSeatExpr + `)) AS writer_seat_name`
 	writerSeatEmailSQL = `(SELECT u.email FROM app_user u WHERE u.id = (` + writerSeatExpr + `)) AS writer_seat_email`
@@ -225,7 +226,8 @@ type authorCandidate struct {
 // The candidate is the From row's own contact when it names one, else every
 // live contact holding the address. It is decided over all contacts, so a
 // contact out of the reader's sight is never replaced by a visible namesake.
-// The one candidate is named only when the reader may see it.
+// The one candidate is named only when the reader may see it. Candidate ids
+// come from the From row or the address index, so no contact is scanned.
 func resolveAuthorContacts(ctx context.Context, tx pgx.Tx, authors []unresolvedAuthor) error {
 	if len(authors) == 0 || !auth.ReadGranted(ctx, "contact") {
 		return nil
@@ -258,9 +260,10 @@ func resolveAuthorContacts(ctx context.Context, tx pgx.Tx, authors []unresolvedA
 		  SELECT p.id, p.full_name, coalesce(`+scope+`, false) AS visible
 		    FROM contact p
 		   WHERE p.archived_at IS NULL
-		     AND CASE WHEN s.contact_id IS NOT NULL THEN p.id = s.contact_id
-		              ELSE EXISTS (SELECT 1 FROM contact_email e
-		                            WHERE e.contact_id = p.id AND e.archived_at IS NULL AND e.email = w.address) END
+		     AND p.id IN (SELECT s.contact_id WHERE s.contact_id IS NOT NULL
+		                  UNION ALL
+		                  SELECT e.contact_id FROM contact_email e
+		                   WHERE s.contact_id IS NULL AND e.archived_at IS NULL AND e.email = w.address)
 		   LIMIT 2) cand`, args...)
 	if err != nil {
 		return fmt.Errorf("activities: naming the senders of a page: %w", err)

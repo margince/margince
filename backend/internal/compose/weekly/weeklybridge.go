@@ -4,17 +4,14 @@
 package weekly
 
 // The movement bridge: how a week got from its opening landing to its closing
-// one, in the six moves a contact tells the story in.
+// one, in the moves a contact tells the story in.
 //
-// SIX, not the eight the waterfall draws. The opening and closing landings are
-// the bridge's two ANCHORS — they are read off the frozen snapshots either side
-// of the week, not folded from any bucket — so they carry no bar here. A reader
-// counting the drawn columns sees eight; this file names only what MOVED.
+// The opening and closing landings are the bridge's two ANCHORS. They are read
+// off the frozen snapshots either side of the week, not folded from any
+// bucket, so they carry no bar here. This file names only what MOVED.
 //
-// The forecast engine reports twelve buckets, which is the right grain for
-// diagnosing a quarter and too fine for a weekly retrospective — nobody opens a
-// Monday review to learn that 3% of the change was an FX revaluation. So the
-// twelve fold into these six.
+// The forecast engine reports finer buckets: the grain for diagnosing a
+// quarter, and too fine for a weekly look back. So they fold into these bars.
 //
 // Folding is where money goes missing. A bar list that quietly drops a bucket
 // still sums to something and still draws, so the mapping is total by
@@ -92,6 +89,8 @@ var bucketBar = map[string]string{
 	forecasting.BucketFx:         BarOther,
 	forecasting.BucketDefinition: BarOther,
 	forecasting.BucketModel:      BarOther,
+	// A chance moved by recorded outcomes is the forecast learning, not a sale.
+	forecasting.BucketRecordChanged: BarOther,
 }
 
 // bucketsWhoseSignPicksTheBar are the three whose direction is not fixed.

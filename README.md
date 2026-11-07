@@ -47,7 +47,7 @@ setting, read [docs/how-to/change-a-setting.md](docs/how-to/change-a-setting.md)
   and the order to read it in.
 - [docs/README.md](docs/README.md): all the documentation.
 
-`make check` is the test that every pull request must pass. Run it before you push.
+`make check` is the test that every pull request must pass. Run it before a pull request leaves draft.
 
 The core is a Go module in `backend/` and a React app in `frontend/`. The API contract is
 `backend/api/crm.yaml`. The server code and the web app's types are built from it, so the two cannot

@@ -15,7 +15,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { DealFiles } from "./dealfiles";
 
 // The deal's Files area as a rep meets it: a captured file says which message
@@ -205,6 +205,42 @@ it("tells a captured file from an upload and says where it came from", async () 
   expect(screen.getByText("Uploaded here")).toBeInTheDocument();
 });
 
+// A Docs or Drive link a mail mentioned is a row with no bytes. Its name opens
+// the address in a new tab. An address that is not web falls back to the
+// download route, so no scheme such as javascript: becomes an href.
+it("opens a document link in a new tab instead of downloading it", async () => {
+  const link = (id: string, filename: string, url: string): DealDocument => {
+    const doc = captured();
+    doc.attachment = {
+      ...doc.attachment,
+      id,
+      filename,
+      category: "link",
+      url,
+      bytes_withheld: true,
+    };
+    return doc;
+  };
+  stubApi([
+    link("l-1", "Q4 plan", "https://docs.google.com/presentation/d/abc/edit"),
+    link("l-2", "tricky", "javascript:alert(1)"),
+  ]);
+  render(<DealFiles deal={dealOf()} />);
+
+  const plan = await screen.findByRole("link", { name: "Q4 plan" });
+  expect(plan).toHaveAttribute(
+    "href",
+    "https://docs.google.com/presentation/d/abc/edit",
+  );
+  expect(plan).toHaveAttribute("target", "_blank");
+  expect(plan).toHaveAttribute("rel", "noopener noreferrer");
+  expect(plan).not.toHaveAttribute("download");
+  expect(screen.getByRole("link", { name: "tricky" })).toHaveAttribute(
+    "href",
+    "/v1/attachments/l-2",
+  );
+});
+
 it("dates a file from a mail logged by its day on that day, in any record zone", async () => {
   const mail = captured();
   if (mail.attachment.origin) {
@@ -213,13 +249,13 @@ it("dates a file from a mail logged by its day on that day, in any record zone",
   }
   stubApi([mail]);
   render(
-    <RecordZoneProvider zone="Pacific/Kiritimati">
+    <CompanyZoneProvider zone="Pacific/Kiritimati">
       <DealFiles deal={dealOf()} />
-    </RecordZoneProvider>,
+    </CompanyZoneProvider>,
   );
 
-  expect((await screen.findAllByText("21 Aug 2026")).length).toBeGreaterThan(0);
-  expect(screen.queryByText("22 Aug 2026")).toBeNull();
+  expect((await screen.findAllByText(/21 Aug 2026/)).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/22 Aug 2026/)).toBeNull();
 });
 
 it("names the rep, not the buyer, as the sender of a sent mail's file", async () => {

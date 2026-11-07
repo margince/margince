@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import candidates  # noqa: E402
 import check  # noqa: E402  — its path containment, shared rather than spelled twice
+import clean  # noqa: E402
 import mcpclient  # noqa: E402
 import providers  # noqa: E402
 import transcript  # noqa: E402
@@ -109,18 +110,39 @@ def _loop(model, session, out):
 _CODEX_OFF = (
     "shell_tool", "unified_exec", "view_image", "multi_agent", "apps", "browser_use",
     "browser_use_external", "computer_use", "sleep_tool", "tool_suggest", "skill_search",
-    "image_generation", "goals",
+    "image_generation", "goals", "plugins", "hooks", "memories",
 )
 # codex has no turn cap, so a wall clock stands in for one.
 CODEX_TIMEOUT = 900
 
 
-def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT):
+def _server_config(mcp_url, token_env, rest):
+    """The `-c` settings that attach the lane's one server to codex."""
+    server = f"mcp_servers.{transcript.SERVER}"
+    if rest is None:
+        return ["-c", f'{server}.url="{mcp_url}"', "-c", f'{server}.bearer_token_env_var="{token_env}"']
+    skill_dir, base = rest
+    shim = os.path.join(os.path.dirname(os.path.abspath(__file__)), "restshim.py")
+    # The passport is forwarded by the name of a variable the lane sets, so it
+    # reaches the shim and never a command line.
+    return [
+        "-c", f'{server}.command="python3"', "-c", f'{server}.args=["{shim}"]',
+        "-c", f'{server}.env={{MARGINCE_REST_SKILL_DIR="{skill_dir}", MARGINCE_REST_BASE="{base}"}}',
+        "-c", f'{server}.env_vars=["MARGINCE_REST_TOKEN"]',
+    ]
+
+
+def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT, rest=None):
     """Drive one prompt through `codex exec` and write it as a transcript.
 
     Run from an empty directory under a read-only sandbox, so nothing of the
-    repository is within reach of a tool that slips through. The passport
-    reaches codex by the name of its variable, never on the command line.
+    repository is within reach of a tool that slips through, and from a home
+    of its own (clean.codex_home). The passport reaches codex by the name of
+    its variable, never on the command line.
+
+    `rest` is (skill directory, REST base) on the REST door: the server codex
+    attaches is then the stdio shim, which holds the skill to read and one HTTP
+    tool, and nothing of the product's own MCP tools.
     """
     driver = f"{route.candidate}:{route.via}"
     try:
@@ -131,12 +153,11 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
             out.finish(True, f"HARNESS: {fault}", 0)
         print(fault, file=sys.stderr)
         return HARNESS
-    with tempfile.TemporaryDirectory(prefix="e2e-llm-codex.") as empty:
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-codex.") as empty, clean.codex_home() as home:
         argv = [
             "codex", "exec", "--json", "--strict-config", "--ignore-user-config", "--skip-git-repo-check",
             "-C", empty, "--sandbox", "read-only", "-m", route.model,
-            "-c", f'mcp_servers.{transcript.SERVER}.url="{mcp_url}"',
-            "-c", f'mcp_servers.{transcript.SERVER}.bearer_token_env_var="{token_env}"',
+            *_server_config(mcp_url, token_env, rest),
             # In exec mode codex refuses every MCP write it would otherwise ask
             # about; the lane's own server is approved, and only it.
             "-c", f'mcp_servers.{transcript.SERVER}.default_tools_approval_mode="approve"',
@@ -147,7 +168,7 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
         argv.append(prompt)
         try:
             done = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                                  timeout=timeout, check=False)
+                                  timeout=timeout, check=False, env=clean.codex_env(home))
             lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
         except subprocess.TimeoutExpired as expired:
             # The partial stream is converted anyway: it ends without a completed
@@ -158,6 +179,82 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
     code = transcript.from_codex(lines, out_path, route.model, driver, [t["name"] for t in tools])
     # A codex that exits non-zero failed as a program (config, auth, a renamed
     # feature key under --strict-config) whatever its stream says.
+    if exited:
+        code = HARNESS
+    if code:
+        print(stderr.strip()[-2000:], file=sys.stderr)
+    return code
+
+
+# agy has no turn cap either, so the same wall clock stands in for one. agy
+# ends its own turn at --print-timeout; the grace past it is for its shutdown.
+AGY_TIMEOUT = CODEX_TIMEOUT
+AGY_GRACE = 60
+
+# The agent agy runs as: the lane's one server and none of the operator's own
+# servers, rules or skills. agy reads no header from the environment, so the
+# passport is written into this file, inside a directory only this run reads.
+_AGY_AGENT = """---
+name: margince-e2e-llm
+description: The e2e-llm lane's candidate, attached to the lane's MCP server alone.
+mainAgent: true
+inheritMcp: false
+inheritCustomizations: false
+mcpServers:
+  - name: {server}
+    url: {url}
+    headers:
+      Authorization: Bearer {token}
+---
+"""
+# Headless agy refuses every action that needs a permission; the lane's server
+# is allowed, and only it.
+_AGY_SETTINGS = json.dumps({"permissions": {"allow": [f"mcp({transcript.SERVER}/*)"]}})
+
+
+def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
+    """Drive one prompt through `agy -p` and write it as a transcript.
+
+    Run from an empty directory that holds only the agent definition, so no
+    workspace file is within reach of a tool that slips through.
+    """
+    driver = f"{route.candidate}:{route.via}"
+    # agy names the effort in the model id (gemini-3.8-flash-high), so an effort
+    # set apart from it would be filed under a label the run never used.
+    if route.effort != candidates.table()[route.candidate]["effort"]:
+        print(f"the agy route takes its effort from the model id; set E2E_LLM_MODEL to that "
+              f"model's {route.effort.split()[-1]} tier instead of E2E_LLM_EFFORT", file=sys.stderr)
+        return HARNESS
+    token = os.environ.get(token_env, "")
+    try:
+        _instructions, tools = mcpclient.Session(mcp_url, token).open()
+    except mcpclient.McpFault as fault:
+        with transcript.Transcript(out_path) as out:
+            out.init(route.model, driver, "cli-default", "failed", [])
+            out.finish(True, f"HARNESS: {fault}", 0)
+        print(fault, file=sys.stderr)
+        return HARNESS
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-agy.") as workspace:
+        agents = os.path.join(workspace, ".agents", "agents")
+        os.makedirs(agents)
+        with open(os.path.join(agents, "margince-e2e-llm.md"), "w", encoding="utf-8") as handle:
+            handle.write(_AGY_AGENT.format(server=transcript.SERVER, url=mcp_url, token=token))
+        argv = [
+            "agy", "-p", prompt, "--agent", "margince-e2e-llm", "--model", route.model,
+            "--output-format", "stream-json", "--print-timeout", f"{timeout}s",
+            "--disable-slash-commands", "--settings", _AGY_SETTINGS,
+        ]
+        try:
+            done = subprocess.run(argv, cwd=workspace, stdin=subprocess.DEVNULL, capture_output=True,
+                                  text=True, timeout=timeout + AGY_GRACE, check=False)
+            lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
+        except subprocess.TimeoutExpired as expired:
+            partial = expired.stdout or b""
+            lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
+            stderr, exited = f"agy overran its {timeout}s wall clock and was killed", "killed"
+    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools])
+    # A non-zero exit, or a kill at the wall clock, is a program failure
+    # whatever the stream says.
     if exited:
         code = HARNESS
     if code:
@@ -176,6 +273,8 @@ def main():
     parser.add_argument("--token-env", required=True, help="the variable holding the MCP passport")
     parser.add_argument("--prompt-file", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--rest-skill-dir", default="", help="the REST door: the skill the candidate reads")
+    parser.add_argument("--rest-base", default="", help="the REST door: the stack's /v1")
     args = parser.parse_args()
     try:
         route = candidates.resolve(args.candidate, args.via, args.model, args.folder, args.effort)
@@ -189,7 +288,15 @@ def main():
         print(err, file=sys.stderr)
         return HARNESS
     if route.wire == "codex-cli":
-        return run_codex(route, args.mcp_url, args.token_env, prompt, args.out)
+        rest = (args.rest_skill_dir, args.rest_base) if args.rest_skill_dir else None
+        if rest:
+            os.environ["MARGINCE_REST_TOKEN"] = os.environ.get(args.token_env, "")
+        return run_codex(route, args.mcp_url, args.token_env, prompt, args.out, rest=rest)
+    if route.wire == "agy-cli":
+        if args.rest_skill_dir:
+            print("the agy route has no REST door", file=sys.stderr)
+            return HARNESS
+        return run_agy(route, args.mcp_url, args.token_env, prompt, args.out)
     key = os.environ.get(route.key_env, "")
     token = os.environ.get(args.token_env, "")
     if not key or not token:

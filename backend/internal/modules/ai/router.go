@@ -282,8 +282,8 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// economy route. The stale entry stays put — TTL ages it out, and the
 	// band may relax within its lifetime. A cache-off Router (§ cert lane,
 	// scripted repeat-call tests) never consults it: every call must reach
-	// the model.
-	if cached, tier, hit := r.cache.get(key, wsID, b.generation); !r.cacheOff && hit && tierOnLadder(ladder, tier) {
+	// the model. So does a call that asked for a fresh answer (WithFreshAnswer).
+	if cached, tier, hit := r.cache.get(key, wsID, b.generation); !r.cacheOff && !FreshAnswerAsked(ctx) && hit && tierOnLadder(ladder, tier) {
 		resp, info, err = r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
 		info.cacheKey = key
 		return resp, info, err

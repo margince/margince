@@ -65,8 +65,9 @@ func tableRow(s setting) string {
 	return "| " + strings.Join(cells, " | ") + " |\n"
 }
 
-// typeCell names the type, its bounds, whether the value is a secret, and
-// whether an admin may also change it as a stored setting.
+// typeCell names the type, its bounds and whether the value is a secret. It
+// also says whether an admin may change it as a stored setting, and whether a
+// data reset keeps that saved value.
 func typeCell(s setting) string {
 	cell := codeSpan(s.TypeName())
 	switch lo, hi := s.shape.Min, s.shape.Max; {
@@ -82,6 +83,9 @@ func typeCell(s setting) string {
 	}
 	if s.Stored() {
 		cell += ", stored"
+	}
+	if s.KeptByDataReset() {
+		cell += ", kept by a reset"
 	}
 	return cell
 }

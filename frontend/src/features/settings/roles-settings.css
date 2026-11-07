@@ -39,7 +39,7 @@
    starts on the line the labels above it start on. */
 .roles-drawer-body .table-scroll-sticky > table > * > tr > :first-child {
   padding-inline-start: 0;
-  background: var(--bgElevated);
+  background: var(--ground);
 }
 
 /* A phone sheet fits all four verbs beside the names when the cells give up
@@ -70,7 +70,7 @@
     /* Up through the body's top padding, so no row shows above the header. */
     top: calc(var(--space-5) * -1);
     z-index: 2;
-    background: var(--bgElevated);
+    background: var(--ground);
     /* A collapsed border stays with the table, so the rule rides the cell. */
     box-shadow: inset 0 -1px var(--borderStrong);
   }

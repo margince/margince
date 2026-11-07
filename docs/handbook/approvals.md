@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
 # Approvals
 
 An approval in Margince is a change an agent proposed but was not allowed to
@@ -16,6 +16,15 @@ A deal win also names its effects on linked correspondence and eligible delivery
 
 Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
 Request a new proposal with current context, or reject the old one.
+
+Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run
+touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can
+see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
+that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
+
+The approval email and an agent's approval read use the card's detail labels and value words.
+They also carry its conflicts, files and import rows.
+A preview whose plan is hidden carries none of these sections.
 
 ## Reading an import proposal
 
@@ -92,7 +101,9 @@ Margince tells one colleague about each approval: the one it is for. That is the
 
 A promise read from mail or a meeting and **Add contact from mail** are the exception. Only the colleague who made the promise, or whose mailbox the sender wrote to, is told, and only they may answer it. If they cannot be asked, nobody is.
 
-The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, up to eight fields. It also says why you are asked. It leaves out any value you may not see.
+The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and after the change. The other details the card lists follow, up to eight lines in all. Each further change the card lists under **Also changes** follows, in the card's words. It also says why you are asked.
+
+The email leaves out any value you may not see. If the change touches a record you cannot open, the email shows none of the plan. Like the card, it says a colleague who can see it must decide.
 
 The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out. No email goes out for an approval your own connected AI tool raised while you work with it, because the conversation shows it to you. It still waits in your approvals list and your digest.
 Also called: approval email, decision needed, who gets notified, approval notice.
@@ -106,6 +117,28 @@ To keep such a promise yourself, press **I’ll take this** beside it on the con
 
 The email for such a request names the deal or company and the mail or meeting it came from. It also names who made the promise, quotes their words, and says why you are asked.
 Also called: commitment, promise task, promised by, who owns this promise, take over a promise.
+
+### How do I ask a colleague to hand over a contact or company?
+To ask a colleague for a contact or company they own, open the record and press the access chip under its name. Then press **Ask … to hand it over**, which names the owner.
+The request waits as an approval on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
+
+If the owner accepts, the record is yours. A company brings the owner's open deals on it. A contact brings the owner's open deals on which it is the only contact and that name no company. Either brings the owner's open tasks filed under it alone. Everything else stays with the owner, and the notice says how many deals and tasks stayed.
+
+A notice tells you when the owner accepts or declines, when the request runs out, and when the record goes to someone else first. After a decline you can ask again. To take the request back, press **Withdraw request** in the same place.
+
+You can ask only for a record you can see but not change, on a seat that can edit records. A record nobody owns is claimed instead. If the owner has left, ask an administrator to hand it over.
+Also called: request ownership, take over an account, ask for a contact, ownership transfer.
+
+### How do I hand my contact or company to a colleague?
+To give a contact or company you own to a colleague, open the record and press the access chip under its name. Press **Hand over to…**, choose the colleague, add a note if you like, and press **Send offer**.
+The offer waits as an approval on the colleague's **Worklist** for 7 days. Only that colleague can answer it, and their agent can decline it but not accept it.
+
+You can offer it to any active colleague on a seat that can edit records, even one outside your own team. If they accept, the record moves to them, with the same open deals and tasks a request moves. To move it without asking, change the owner on the record instead, which needs edit rights on it.
+
+A notice tells you when the colleague accepts or declines and when the offer runs out. Until then the panel says who it is offered to; press **Withdraw offer** to take it back. A record has one handover open at a time. While a colleague's request or your offer is open, a second one is refused with a line naming the open one.
+
+Only the owner can offer a record. A manager who does not own it changes the owner on the record instead.
+Also called: give away a record, hand over an account, offer a contact, reassign to a colleague.
 
 ### How do I stop Margince making automatic changes?
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
@@ -127,6 +160,13 @@ Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its
 2. For a company name, a lifecycle stage or anything older, choose **Undo** in the record's history.
    That is **History** → **Changes** on a contact, lead or deal, and **More actions** → **Full history** on a company.
 Only a human can undo; an agent cannot.
+
+Margince may open, reopen, move or close a deal, or change its close date, amount or probability. Those changes also show on the deal's **Overview** under **Changes by Margince**. They are listed newest first, with the reason, **Mark reviewed** and **Undo**. The card stays after the change leaves Home, and a change you marked reviewed keeps its **Undo** there. Only the deal's owner reads the reason; a colleague sees what changed. **Undo** answers in words:
+- After a close: "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check."
+- After a reopen: "Closed as lost again, with its earlier reason. Margince reopens it only if newer buying evidence arrives."
+- After any other change: "Undone. Margince will not change the amount again until something new happens on this deal."
+- When a colleague changed a field since: "Undone, except the amount, which was changed since Margince set it."
+
 Also called: revert the AI, roll back an agent edit, reverse an automatic change.
 
 ## What an approval card holds
@@ -188,8 +228,10 @@ raises it.
 Automatic changes are the exception to everything below: some proposals do not
 wait.
 
-Three kinds of change can apply on their own, without an approval being
-decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
+Nine kinds of change can apply on their own, with no approval. They are
+**Close dates**, **Close silent deals as lost**, **Deal amounts**, **Win
+probabilities**, **Stage moves**, **New deals**, **Reopened deals**,
+**Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
@@ -328,8 +370,11 @@ yourself.
 5. Open **History** and find the meeting. Margince queues a reading when you
    log a transcript. If no reading is running or done, click **Read
    transcript** to ask for one.
-6. Wait for **Done**. It reports what it found: "{count} next steps awaiting
-   review", or "Transcript read in full. No next steps found."
+6. Wait for **Done**. It reports what it found, in your language:
+   - A task it wrote names who has it, you or a colleague.
+   - You decide the "{count} next steps awaiting review" yourself.
+   - "Sent to {name} to confirm" waits in that colleague's Worklist, not yours.
+   - A reading that found nothing says "Transcript read in full. No next steps found."
 7. Go to **Home → Worklist** and set **Work type** to **Approvals**.
    A full queue can hide a new proposal, so look for the subject you chose in step 3.
 8. Choose **Decide** and open the evidence. It shows the transcript lines the

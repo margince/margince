@@ -115,13 +115,14 @@ func TestEachSectionPublishesTheFieldsItsOwnWriteDecodes(t *testing.T) {
 	doc := readRecordFields(t)
 	checked := 0
 	for _, table := range []struct {
-		tool    string
-		section recordFieldsWrite
-		decoded map[datasource.EntityType]reflect.Type
-		parents map[string][]string
+		tool     string
+		section  recordFieldsWrite
+		decoded  map[datasource.EntityType]reflect.Type
+		parents  map[string][]string
+		withheld map[string][]string
 	}{
-		{"create_record", doc.Create, createShapes, createParentFields},
-		{"update_record", doc.Update, updateShapes, nil},
+		{"create_record", doc.Create, createShapes, createParentFields, createWithheldFields},
+		{"update_record", doc.Update, updateShapes, nil, nil},
 	} {
 		if len(table.section.Fields) != len(table.decoded) {
 			t.Errorf("%s publishes %d record types and decodes %d",
@@ -134,7 +135,7 @@ func TestEachSectionPublishesTheFieldsItsOwnWriteDecodes(t *testing.T) {
 				continue
 			}
 			checked++
-			got, want := renderedKeys(published), acceptedFieldNames(shape, table.parents[string(recordType)])
+			got, want := renderedKeys(published), acceptedFieldNames(shape, table.parents[string(recordType)], table.withheld[string(recordType)])
 			slices.Sort(got)
 			if !slices.Equal(got, want) {
 				t.Errorf("%s %s publishes keys %v, the decoder accepts %v", table.tool, recordType, got, want)

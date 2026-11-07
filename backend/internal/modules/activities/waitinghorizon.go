@@ -121,20 +121,24 @@ const (
 const waitingHorizonStaleAfter = storekit.WaitingHorizonStaleAfter
 
 // waitingHorizonFor is the horizon the worker pass stored, or the compiled one
-// when none is stored or it is older than waitingHorizonStaleAfter. It never
-// measures: a read that did was as slow as the mailbox is long.
+// when none is stored or it is older than waitingHorizonStaleAfter at asOf. It
+// never measures: a read that did was as slow as the mailbox is long.
+//
+// asOf is the reading's own instant, the one its badges are judged at
+// (moveInputs), so a row the filter admits and its badge read one horizon.
 //
 // Ungated: the horizon decides which rows the queue holds, so two colleagues
 // reading one thread must be judged by one number. It names no record.
-func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
-	return waitingHorizonAt(ctx, tx, s.now())
+func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	return waitingHorizonAt(ctx, tx, asOf)
 }
 
 func waitingHorizonAt(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	var days int
-	err := tx.QueryRow(ctx, "SELECT "+storekit.WaitingHorizonSQL(asOf, arg), args...).Scan(&days)
+	query := "SELECT " + storekit.WaitingHorizonSQL(asOf, arg)
+	err := tx.QueryRow(ctx, query, args...).Scan(&days)
 	if err != nil {
 		return 0, fmt.Errorf("activities: reading the stored waiting horizon: %w", err)
 	}
@@ -188,13 +192,13 @@ func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.
 	}
 	var spread waitingHorizonSpread
 	var slowMinutes int64
-	if err := tx.QueryRow(ctx, fmt.Sprintf(firstResponseSQL,
+	query := fmt.Sprintf(firstResponseSQL,
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", arg(ownDomains)),
-		slowPercentile),
-		args...).Scan(&spread.Answered, &slowMinutes); err != nil {
+		slowPercentile)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&spread.Answered, &slowMinutes); err != nil {
 		return 0, fmt.Errorf("activities: measuring the response spread the horizon follows: %w", err)
 	}
 	spread.Slow = time.Duration(slowMinutes) * time.Minute

@@ -6,50 +6,34 @@ import { UserPlus } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "../../components/entityref";
 import { Button, Field, TextInput } from "../../design-system/atoms";
-import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
+import { nameFromEmail } from "../../lib/namefromemail";
 import { unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
+import {
+  entityOptions,
+  useEntityChoice,
+  useMayAssignEntity,
+} from "./users-entitycell";
+import { MemberTeamsField } from "./users-teams";
 import "./users-admin.css";
 
-// The invite form: an address, a name, a role and the teams the member lands
-// in, committed together. Two surfaces ask it — the roster's dialog in
-// Settings → Contacts and the setup journey's team step — and it is one form so
-// the two cannot come to invite differently. What happens after the write
+// The invite form: an address, a name, a role, the teams the member lands in
+// and the legal entity they work for, committed together. Two surfaces ask it:
+// the roster's dialog in Settings → Contacts and the setup journey's team step.
+// It is one form so the two cannot come to invite differently. What happens after the write
 // (closing a dialog, minting a set-password link, moving the journey on) is
 // the caller's, through `onInvited`.
 
 export type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
 
 export type InvitedMember = Readonly<{ id: string; name: string }>;
-
-/**
- * The name a member is created under when the form asks for none: the part
- * of the address before the @, with the dots and underscores contacts write
- * between their names read as spaces and each word capitalised. It is a
- * starting point the admin can change in Settings → Contacts, and it is what
- * the roster shows until they do — so it has to read as a name, not as an
- * address fragment.
- */
-export function nameFromEmail(email: string): string {
-  const local = email.trim().split("@")[0] ?? "";
-  return local
-    .split(/[._-]+/)
-    .filter((part) => part !== "")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
 
 export function InviteUserForm({
   titleId,
@@ -86,9 +70,11 @@ export function InviteUserForm({
   // Only an admin puts a member on a team (identity/teams.go), so only an
   // admin is asked which teams the new member joins.
   const placesOnTeams = useHoldsAdminRole();
+  // Placing the member is assigning them, which asks the assignment's grants.
+  const { entities, fallback } = useEntityChoice(useMayAssignEntity());
+  const [entityId, setEntityId] = useState<string | null>(null);
+  const placedIn = entityId ?? fallback?.id ?? null;
   const [error, setError] = useState<Error | null>(null);
-  const teams = useRoster("team", placesOnTeams);
-  const teamsPartial = useRosterPartial("team", placesOnTeams);
 
   // The role and the team set ride as the mutation's variable rather than
   // through the closure: react-query re-arms a mutation's options in a passive effect,
@@ -100,7 +86,12 @@ export function InviteUserForm({
   const greetingName = askName ? greeting.trim() : "";
   const invite = useMutation({
     mutationFn: async (
-      choice: Readonly<{ role: Role; teams: string[]; greeting: string }>,
+      choice: Readonly<{
+        role: Role;
+        teams: string[];
+        greeting: string;
+        entity: string | null;
+      }>,
     ): Promise<string> => {
       const data = unwrap(
         await api.POST("/users", {
@@ -112,6 +103,9 @@ export function InviteUserForm({
               : { greeting_name: choice.greeting }),
             role: choice.role,
             team_ids: choice.teams,
+            ...(choice.entity === null
+              ? {}
+              : { legal_entity_id: choice.entity }),
           },
         }),
       );
@@ -124,6 +118,7 @@ export function InviteUserForm({
       setGreeting("");
       setRole("rep");
       setTeamIds([]);
+      setEntityId(null);
       setError(null);
       onInvited({ id: newUserId, name: invitedName });
     },
@@ -155,6 +150,8 @@ export function InviteUserForm({
               role,
               teams: placesOnTeams ? teamIds : [],
               greeting: greetingName,
+              // The default entity is what an invite naming none gets.
+              entity: placedIn === fallback?.id ? null : placedIn,
             });
           }
         }}
@@ -209,29 +206,23 @@ export function InviteUserForm({
             />
           )}
         </Field>
+        {/* The teams the member joins on arrival. A team-scoped role with no
+          team edits only its own records, and the preview below says so before
+          the invite goes out. */}
         {placesOnTeams && (
-          <>
-            {/* The teams the member joins on arrival. A team-scoped role with no
-              team edits only its own records, and the preview below says so
-              before the invite goes out. */}
-            <ChoiceList
-              multiple
-              legend={t("users.teamsLabel")}
-              choices={(teams.data ?? []).flatMap((entry) =>
-                "name" in entry ? { value: entry.id, label: entry.name } : [],
-              )}
-              value={teamIds}
-              onChange={setTeamIds}
-            />
-            {/* "No teams yet" is a claim about the workspace, so only a roster
-              read to its end may make it: a walk that stopped early would have
-              an admin invite contacts into no team at all on the strength of
-              pages nothing read. */}
-            {teams.data?.length === 0 && !teamsPartial && (
-              <p>{t("users.noTeamsYet")}</p>
+          <MemberTeamsField value={teamIds} onChange={setTeamIds} canManage />
+        )}
+        {fallback !== undefined && placedIn !== null && (
+          <Field label={t("users.entityLabel")}>
+            {(control) => (
+              <Select
+                {...control}
+                value={placedIn}
+                onChange={setEntityId}
+                options={entityOptions(t, entities)}
+              />
             )}
-            <RosterPartialNote partial={teamsPartial} />
-          </>
+          </Field>
         )}
         {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
         {/* ABOVE the submit row, where the sibling dialogs in this family put a

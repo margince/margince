@@ -22,6 +22,7 @@
     "lint:compiler": "node scripts/compiler-lint.ts",
     "check": "pnpm lint && pnpm test && pnpm build",
     "check:ci": "pnpm lint && pnpm test:coverage && pnpm build",
+    "gen:approval-reading": "node scripts/gen-approval-reading.mjs",
     "gen:api": "openapi-typescript ../backend/api/crm.yaml -o src/api/schema.d.ts && pnpm gen:events",
     "gen:events": "openapi-typescript ../backend/api/public-events.yaml --enum-values -o src/api/public-events.ts",
     "gen:composed-types": "openapi-typescript ../build/composition/api/crm.yaml -o ../build/composition-frontend/schema.d.ts",
@@ -29,7 +30,8 @@
     "build:composed": "tsc -p tsconfig.composed.json && pnpm build:bundle",
     "e2e": "pnpm build:bundle && playwright test",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build -o storybook-static"
+    "build-storybook": "storybook build -o storybook-static",
+    "gen:essential-copy": "node scripts/gen-essential-copy.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
@@ -42,7 +44,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
-    "@biomejs/biome": "^2.0.0",
+    "@biomejs/biome": "2.5.13",
     "@playwright/test": "^1.61.1",
     "@storybook/addon-a11y": "^10.5.8",
     "@storybook/addon-docs": "^10.5.8",
@@ -67,6 +69,7 @@
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0",
     "vite": "^8.0.0",
+    "vite-plugin-svgr": "^5.2.0",
     "vitest": "^5.0.0"
   }
 }

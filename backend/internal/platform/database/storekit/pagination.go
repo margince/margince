@@ -134,6 +134,28 @@ func DecodeCursor(token string) (Cursor, error) {
 	return c, nil
 }
 
+// DecodeIDCursor reads the cursor of a page Query.SelectPage walks: the last id
+// of the page before. An empty token reads the first page.
+func DecodeIDCursor(token string) (*ids.UUID, error) {
+	if token == "" {
+		return nil, nil //nolint:nilnil // no cursor is the first page, the after SelectPage reads as nil
+	}
+	after, err := ids.Parse(token)
+	if err != nil {
+		return nil, &MalformedCursorError{}
+	}
+	return &after, nil
+}
+
+// IDPage is the Page that continues a Query.SelectPage answer, whose cursor
+// DecodeIDCursor reads back.
+func IDPage(matched []ids.UUID, more bool) Page {
+	if !more || len(matched) == 0 {
+		return Page{}
+	}
+	return Page{HasMore: true, NextCursor: matched[len(matched)-1].String()}
+}
+
 // SQLf keeps store-side SQL assembly lines readable; arguments are
 // always positional parameters or fixed identifiers, never user input.
 func SQLf(format string, a ...any) string { return fmt.Sprintf(format, a...) }
@@ -216,7 +238,7 @@ func DomainTerm(q string) string {
 // ExactSQL is true when a live identifier row of the record equals the query at
 // pos. The ARRAY is built once, so the primary key joins the bitmap union over
 // the name indexes. `IN (SELECT ...)` or EXISTS runs per row and scans the table.
-// Ranking reads this arm, so a fragment hit is not lifted above a name match.
+// Ranking uses this arm for whole identifiers and PrefixSQL for typed address prefixes.
 func (id Identifier) ExactSQL(pos int, idColumn string) string {
 	return id.arraySQL(idColumn, fmt.Sprintf("%s = lower(btrim($%d))", id.Column, pos))
 }
@@ -227,6 +249,11 @@ func (id Identifier) ExactSQL(pos int, idColumn string) string {
 func (id Identifier) ContainsSQL(pos int, idColumn string) string {
 	return id.arraySQL(idColumn, fmt.Sprintf("f_fold_apostrophes(lower(%s)) LIKE '%%' || %s || '%%'",
 		id.Column, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower(btrim($%d)))", pos))))
+}
+
+// PrefixSQL matches a literal identifier prefix using the same folding as discovery.
+func (id Identifier) PrefixSQL(pos int, idColumn string) string {
+	return id.arraySQL(idColumn, fmt.Sprintf("f_fold_apostrophes(lower(%s)) LIKE %s || '%%'", id.Column, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower(btrim($%d)))", pos))))
 }
 
 // MatchSQL finds a record by a whole identifier or by a fragment of one.

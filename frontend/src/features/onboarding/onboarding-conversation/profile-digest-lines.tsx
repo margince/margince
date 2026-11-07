@@ -59,7 +59,7 @@ export function DigestLine({
           {onField === undefined ? (
             <span className="pdigest-value">{row.value}</span>
           ) : (
-            <EditableValue row={row} onField={onField} />
+            <DigestValueEditor row={row} onField={onField} />
           )}
           {n === undefined ? (
             // Typed by a contact, or carried in from a profile that already
@@ -88,7 +88,7 @@ export function DigestLine({
  * multiline field takes a box, as the deck's own card for it does, because a
  * paragraph edited in a one-line field is edited blind.
  */
-function EditableValue({
+function DigestValueEditor({
   row,
   onField,
 }: Readonly<{

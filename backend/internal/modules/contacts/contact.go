@@ -94,6 +94,9 @@ type CreateContactInput struct {
 	// ConvertLeadIDs are the live leads holding this contact's address or
 	// profile, which the user chose to convert into the new contact.
 	ConvertLeadIDs []ids.LeadID
+	// Employer is written with the contact, in its transaction.
+	Employer       EmployerChoice
+	EmployerResult *EmployerAttached
 }
 
 // CreateContact inserts the contact + child rows + audit + event atomically.
@@ -181,12 +184,14 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		return crmcontracts.Contact{}, err
 	}
 
-	id, err := createContact(ctx, tx, match, ContactSpec{
+	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		// Whatever the caller declared. An unset kind records unknown_legacy,
 		// which is the honest answer for a contact somebody typed in without
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
 		Acquisition:           acquisitionForCreate(in),
+		Employer:              in.Employer,
+		EmployerAttached:      in.EmployerResult,
 		CreatedFromActivityID: in.CreatedFromActivityID,
 		// A typed create publishes to the workspace, whoever typed it. An agent
 		// creating a contact on a rep's behalf is doing the rep's filing, and a
@@ -315,11 +320,13 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		var id ids.UUID
 		found := false
 		err := s.tx(ctx, func(tx pgx.Tx) error {
+			// Either spelling of the domain, the typed one first.
 			err := tx.QueryRow(ctx, `
 				SELECT p.id FROM contact p
 				JOIN contact_email e ON e.contact_id = p.id
-				WHERE lower(e.email) = lower($1) AND p.archived_at IS NULL
-				ORDER BY p.created_at LIMIT 1`, email).Scan(&id)
+				WHERE e.email = ANY($1) AND p.archived_at IS NULL
+				ORDER BY e.email = lower(btrim($2)) DESC, p.created_at LIMIT 1`,
+				storekit.EmailLookups(email), email).Scan(&id)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil
 			}

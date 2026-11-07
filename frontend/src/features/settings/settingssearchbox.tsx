@@ -3,13 +3,13 @@
 
 import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
-import { useT } from "../../i18n";
+import { AppLink } from "../../design-system/applink";
+import { type Translator, useT } from "../../i18n";
 import { useCompanyContextShown } from "../../lib/companycontextreach";
 import { isImeCommit } from "../../lib/imecommit";
 import { opensElsewhere } from "../../lib/linkclick";
 import { navigate, routeHash } from "../../lib/router";
 import type { SettingsPage } from "../../lib/settingscatalog";
-import { settingsHref } from "../../lib/settingsrouting";
 import {
   hashWithParams,
   NO_URL_PARAMS,
@@ -25,12 +25,19 @@ import {
   type SettingsHit,
   settingsSearch,
 } from "./settingssearch";
+import {
+  healthSectionKey,
+  settingsSearchRoute,
+} from "./systemhealthnavigation";
 
 // The dials a hit opens its page with: the filter, when a setting's name found it.
-function hitDials(hit: SettingsHit): UrlParams {
-  return hit.filter === undefined
-    ? NO_URL_PARAMS
-    : new Map([[CONFIGURATION_FILTER_PARAM, hit.filter]]);
+function hitDials(hit: SettingsHit, t: Translator): UrlParams {
+  const params = new Map<string, string>();
+  if (hit.filter !== undefined)
+    params.set(CONFIGURATION_FILTER_PARAM, hit.filter);
+  if (hit.page.id === "system-health" && hit.section !== undefined)
+    params.set("section", healthSectionKey(hit.section, t) ?? hit.section);
+  return params.size ? params : NO_URL_PARAMS;
 }
 
 /**
@@ -147,11 +154,11 @@ export function SettingsSearchBox({
     // has just arrived at.
     setTyped("");
     setActive(-1);
-    const dials = hitDials(hit);
+    const dials = hitDials(hit, t);
     if (dials.size === 0) {
-      navigate(settingsHref(hit.page.id));
+      navigate(settingsSearchRoute(hit, t));
     } else {
-      navigate(settingsHref(hit.page.id), dials);
+      navigate(settingsSearchRoute(hit, t), dials);
     }
     onPick?.();
   }
@@ -240,7 +247,7 @@ export function SettingsSearchBox({
                  problem it was solving is solved by `onMouseDown`'s
                  preventDefault below, which keeps focus in the input WITHOUT
                  acting. */
-                <a
+                <AppLink
                   key={hit.page.id}
                   id={optionDomId(index)}
                   role="option"
@@ -253,8 +260,8 @@ export function SettingsSearchBox({
                       : "settingssearch-hit"
                   }
                   href={hashWithParams(
-                    routeHash(settingsHref(hit.page.id)),
-                    hitDials(hit),
+                    routeHash(settingsSearchRoute(hit, t)),
+                    hitDials(hit, t),
                   )}
                   onMouseDown={(event) => {
                     // Focus stays in the box; nothing is opened here.
@@ -275,7 +282,7 @@ export function SettingsSearchBox({
                   <span className="t-caption">
                     {`${hit.section ?? hit.group} · ${t(`settings.scope.${hit.page.scope}`)}`}
                   </span>
-                </a>
+                </AppLink>
               );
             })
           )}

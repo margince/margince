@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // singlePurposeTools are the fourteen verbs whose every contract operation
@@ -65,7 +64,6 @@ var contractBodies = map[string]string{
 	"sendEmail":              `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales"}`,
 	"sendMessage":            `{"body":"hi","consent_purpose":"support"}`,
 	"sendCompanyEmail":       `{"to":["buyer@example.test"],"subject":"Q3","body":"hi","consent_purpose":"sales","links":[{"entity_type":"company","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`,
-	"bookMeeting":            `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000002"}]}`,
 	"promoteLead":            `{"trigger":"inbound_reply"}`,
 	"undoBulkChange":         `{}`,
 	"disposeDedupeCandidate": `{"disposition":"not_a_duplicate"}`,
@@ -87,6 +85,9 @@ var contractBodies = map[string]string{
 	// and nothing out of the body, which is exactly the claim a real plan
 	// travelling through it makes checkable.
 	"runReport": `{"filters":{"period":"last_quarter"},"group_by":["source"]}`,
+	// A case decision names its members, the survivor among them, and the owner.
+	"mergeContactCase":        contactCaseBody,
+	"previewContactCaseMerge": contactCaseBody,
 	// The four decision routes, for the same reason: each declares an optional
 	// body carrying the reason a human wrote, and each decoder reads its
 	// verdict off the OPERATION rather than out of it — a claim worth making
@@ -111,14 +112,15 @@ var contractBodies = map[string]string{
 	"createOffer":               `{"currency":"EUR","source":"manual"}`,
 	"addOfferLineItem":          `{"quantity":2}`,
 	"updateOfferLineItem":       `{"quantity":3}`,
-	"openDealRoomThread":        `{"body":"can we revisit the delivery date?"}`,
-	"replyDealRoomThread":       `{"body":"yes — moving it a week."}`,
 	"createCompanyFact":         `{"category":"company","field":"headcount","value":"240"}`,
 	"updateCompanyFact":         `{"value":"260"}`,
 	"updateCompanyProfileField": `{"value":"Acme GmbH"}`,
 
 	// Optional: the version names the report the approver read.
 	"approveImportRun": `{"version":2}`,
+
+	"saveReportingReportDraft": `{"selection":{"scope":{"kind":"workspace"},"period":"this_month","target_basis":"month",` +
+		`"close_window":"fiscal_quarter","metrics":["bookings_won"],"blocks":["bookings_trend"]}}`,
 }
 
 // What a registration does not say: that the decoder bound to a route can
@@ -132,6 +134,10 @@ var contractBodies = map[string]string{
 // requires a call back. Derived from agentPolicies rather than from a list of
 // operationIds someone remembered, so a route added upstream for any of these
 // verbs is decoded here too.
+const contactCaseBody = `{"revision":"r1","member_ids":["019ff000-0000-7000-8000-000000000051",` +
+	`"019ff000-0000-7000-8000-000000000052"],"survivor_id":"019ff000-0000-7000-8000-000000000051",` +
+	`"owner_id":"019ff000-0000-7000-8000-000000000061"}`
+
 func TestEverySinglePurposeToolRouteDecodesTheBodyItsContractDeclares(t *testing.T) {
 	verbs := make(map[string]bool, len(singlePurposeTools))
 	for _, tool := range singlePurposeTools {
@@ -296,31 +302,6 @@ func TestTheTwoEnrichRoutesStageTheDepthTheirOwnRouteMeans(t *testing.T) {
 	}
 	if !strings.Contains(staged["deepReadCompany"], string(agents.EnrichDepthSite)) {
 		t.Errorf("deepReadCompany staged %q, which does not say it reads the whole site", staged["deepReadCompany"])
-	}
-}
-
-// A booking's route carries no {id}, so the walk could only stage the policy
-// table's declared record type against the ZERO id — an approval floating free
-// of any record, which the approvals surface can scope to nobody in particular.
-// The command binds it to the first record the booking attaches to: the row a
-// meeting is a commitment ON, and whose scope the deciding human must reach.
-func TestABookingStagesTheRecordItAttachesTo(t *testing.T) {
-	deal := ids.NewV7()
-	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "bookMeeting", Access: accessTool, Tool: "book_meeting", RecordType: recordTypeActivity}
-	body := []byte(`{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","subject":"Review",` +
-		`"links":[{"entity_type":"deal","entity_id":"` + deal.String() + `"}]}`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/bookings", bytes.NewReader(body))
-
-	stageRefusal(httptest.NewRecorder(), req, staging, restCommandDeps{records: seamRecord{}}, pol, body)
-
-	if staging.last.TargetID != deal {
-		t.Errorf("staged target %s, want the deal %s the booking attaches to — an approval bound to no row "+
-			"is one the approvals surface cannot scope to anybody", staging.last.TargetID, deal)
-	}
-	if staging.last.TargetType != string(datasource.EntityDeal) {
-		t.Errorf("staged target type %q, want %q — the type comes from the link the booking names, not from "+
-			"the route's own declared record type", staging.last.TargetType, datasource.EntityDeal)
 	}
 }
 

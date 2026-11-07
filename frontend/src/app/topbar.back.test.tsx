@@ -106,7 +106,7 @@ describe("Top bar way back from a record", () => {
       within(trail())
         .getByRole("link", { name: "Contacts" })
         .getAttribute("href"),
-    ).toBe("#/contacts?city=Berlin&sort=name");
+    ).toBe("/#/contacts?city=Berlin&sort=name");
     await moveTo({ ...ANNA, id2: "activity" });
     await moveTo({ ...ANNA, id2: "deals" });
 
@@ -140,6 +140,6 @@ describe("Top bar way back from a record", () => {
       within(trail())
         .getByRole("link", { name: "Contacts" })
         .getAttribute("href"),
-    ).toBe("#/contacts?city=Hamburg");
+    ).toBe("/#/contacts?city=Hamburg");
   });
 });

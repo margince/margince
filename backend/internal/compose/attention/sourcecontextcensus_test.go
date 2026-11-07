@@ -19,16 +19,17 @@ var contextSurfaceBySource = map[crmcontracts.WorklistItemSource]string{
 	"customer_waiting": "record", "lead_response": "record", "brief_item": "record",
 	"deal_at_risk": "record", "relationship_decay": "record", "bounce": "record",
 	"undelivered": "record", "notice_case": "record", "introduction_request": "record",
-	"approval": "inline", "dedupe_candidate": "inline", "deal_suggestion": "inline",
+	"approval": "inline", "dedupe_candidate": "inline", "contact_case": "inline", "deal_suggestion": "inline",
 	"tag_suggestion": "inline", "failed_approval": "inline", "domain_question": "inline",
 	"notice": "inline", "weekly_commitment": "inline",
-	"dsr": "queue", "capture_health": "queue", "ai_work_health": "queue", "automation_run": "queue",
+	"dsr": "queue", "capture_health": "queue", "booking_health": "queue", "ai_work_health": "queue", "automation_run": "queue",
 	"batch": "group",
 }
 
 func TestProducedWorklistSourcesKeepTheirContext(t *testing.T) {
 	day := aDayWithEveryLaneCarryingARow(t)
 	rows := classifyDay(day, day.AsOf, dayMoney{})
+	rows = append(rows, relationshipCandidates(day)...)
 	contact, activity := ids.NewV7(), ids.NewV7()
 	rows = append(rows, classifyWaiting(WaitingCustomer{ActivityID: activity, ContactID: contact, Since: day.AsOf}, day.AsOf))
 	awaited := AwaitedReply{ActivityID: activity, ContactID: contact, SentAt: day.AsOf}

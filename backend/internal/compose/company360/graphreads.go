@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,15 +42,7 @@ func (g *graphAssembly) readEmployment() error {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(g.companyID)
-	// The edge's own gate and bound. It is asked BEFORE the statement, not
-	// applied to its rows: the headcount below rides the same statement, so a
-	// row filtered after the read would leave a headcount describing employees
-	// the caller may not learn about.
-	edgeBound, err := edgeScope(g.ctx, arg)
-	if err != nil {
-		return err
-	}
-	contactScope, err := scopeClause(g.ctx, "contact", "p", arg)
+	roster, err := contacts.CompanyRosterEdgesSQL(g.ctx, fmt.Sprintf("$%d", companyPos), arg)
 	if err != nil {
 		return err
 	}
@@ -59,16 +50,14 @@ func (g *graphAssembly) readEmployment() error {
 		WITH employed AS (
 			SELECT p.id, p.full_name, p.title, r.role,
 			       row_number() OVER (PARTITION BY p.id ORDER BY r.id) AS edge_rank
-			FROM relationship r
-			JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
-			WHERE r.kind = 'employment' AND r.company_id = $%d
-			  AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
-			  AND (%s) AND (%s)
+			FROM (%s) roster
+			JOIN relationship r ON r.id = roster.relationship_id
+			JOIN contact p ON p.id = roster.contact_id
 		)
 		SELECT id, full_name, title, role, count(*) OVER () AS headcount
 		FROM employed WHERE edge_rank = 1
 		ORDER BY id
-		LIMIT %d`, companyPos, edgeBound, contactScope, graphScanCap), args...)
+		LIMIT %d`, roster, graphScanCap), args...)
 	if err != nil {
 		return err
 	}

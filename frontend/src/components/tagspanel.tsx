@@ -5,13 +5,13 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import type { components } from "../api/schema";
+import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
 import { TagPill } from "../design-system/tagpill";
 import { useTooltip } from "../design-system/tooltip";
 import { formatDate, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { RecordTag, TaggableType, TagRestore } from "../lib/tags.queries";
 import {
@@ -24,6 +24,7 @@ import { ContactsTagOffer, EmployerTagOffer } from "./tagfollow";
 import { AddTagPicker } from "./tagpicker";
 import "./tagspanel.css";
 import { useUndoableRemoval } from "../lib/undoableremoval";
+import { useViewerZone } from "../lib/viewerzone";
 
 /**
  * The tags on one record — the same component on a contact, a company and a
@@ -289,7 +290,7 @@ function TagOnRecord({
 function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   // Intl throws on an unparseable date, and a server out of step may send one.
   const stamped = !Number.isNaN(Date.parse(tag.assigned_at));
   const who = tag.assigned_by?.display_name;
@@ -303,7 +304,7 @@ function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
       : "";
   const provenance = useTooltip<HTMLAnchorElement>(added);
   return (
-    <a
+    <AppLink
       ref={provenance.ref}
       className="tagspanel-open"
       href={`#/tags/${tag.tag_id}`}
@@ -311,7 +312,7 @@ function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
     >
       <TagPill name={tag.name} tone={tag.color} archived={tag.archived} />
       {provenance.tip}
-    </a>
+    </AppLink>
   );
 }
 

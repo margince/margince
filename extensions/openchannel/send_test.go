@@ -123,7 +123,7 @@ func TestASentMessageIsNotAValidArrivalAtOurOwnEdge(t *testing.T) {
 		Body:      got.body,
 		Signature: signature,
 	}
-	if verified([]byte(senderSecret), relayed) {
+	if relayed.SignatureHolds([]byte(senderSecret)) {
 		t.Fatal("a message this connector SENT was admitted by the edge that guards what arrives — " +
 			"any party we transmit to can relay it back and be authenticated as the sender")
 	}

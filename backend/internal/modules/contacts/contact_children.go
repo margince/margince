@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -41,6 +42,11 @@ func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 			`INSERT INTO contact_social (contact_id, platform, handle) VALUES ($1, $2, $3)`,
 			contactID, row.Platform, row.Handle); err != nil {
 			return fmt.Errorf("insert contact social row: %w", err)
+		}
+		if row.Platform == SocialLinkedIn {
+			if err := fileLinkedInTwinsAtWrite(ctx, tx, contactID, row.Handle); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -236,10 +242,10 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence)
-			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8)`,
+			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence, email_domain_folded)
+			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8, $9)`,
 			contactID, e.Email, e.EmailType, e.IsPrimary, e.Position, source, by,
-			!e.VouchedNotCorresponded); err != nil {
+			!e.VouchedNotCorresponded, owndomain.StoredOfAddress(e.Email)); err != nil {
 			if name, ok := storekit.UniqueViolation(err); ok {
 				if name == "uq_contact_email_dedupe" {
 					return &DuplicateEmailError{Email: e.Email}
@@ -252,10 +258,9 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 	return nil
 }
 
-// readContact resolves one contact row; active names the custom-field
-// columns to carry alongside the core ones — nil for internal decision
-// reads whose result never reaches the wire.
-func readContact(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
+// readContactRow resolves one contact row. active names the custom-field
+// columns to carry. It is nil for an internal read that never reaches the wire.
+func readContactRow(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
 	// The id binds first, so the gate's own parameters count from there.
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -357,6 +362,14 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 	if _, err := auth.StampWritable(ctx, tx, "contact", contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
 		func(p *crmcontracts.Contact, may bool) { p.Writable = &may }); err != nil {
+		return err
+	}
+	if err := stampArchivable(ctx, tx, auth.ContactArchive, contacts,
+		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Contact, may bool) { p.Archivable = &may }); err != nil {
+		return err
+	}
+	if err := stampContactAttachable(ctx, tx, contacts); err != nil {
 		return err
 	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Contact, len(contacts))

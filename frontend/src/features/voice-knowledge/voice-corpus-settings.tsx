@@ -1,5 +1,6 @@
+import { FileUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Button, Radio } from "../../design-system/atoms";
+import { Button, Field, Radio, Textarea } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
 import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
@@ -8,30 +9,24 @@ import { problemMessageOf } from "../../lib/problem";
 import { useFileDrop } from "../../lib/use-file-drop";
 import { ACCEPTED_CORPUS_ATTR } from "../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
-import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
-import { useVoiceIntake } from "./use-voice-intake";
+import type { IntakeNotice, SpeakerAsk, VoiceIntake } from "./use-voice-intake";
 
 // The Settings intake: hand over files, and answer who is speaking when one
 // turns out to be a conversation. It owns the intake hook so the build control
 // beside it can be disabled while a source is still arriving — a build started
 // mid-ingest describes a corpus that no longer exists by the time it finishes.
 //
-// Files are the only way in. Onboarding also takes pasted text because it is a
-// conversation and a paste is a turn in it; here a reader arrives with their
-// sent mail already exported, and one control for one act is what a settings
-// row can carry. What the card explains beside that control is the part
-// onboarding narrates: what the voice is for, which writing teaches it, and
-// why only the reader's own words count.
+// Files and pasted text both come in here, as in onboarding. A paste is the
+// way past a file the browser cannot open, such as a locked PDF.
 //
-// Everything the intake has to say back — the unanswered speaker questions and
-// the per-source notices — lives in this component's hook and renders on the
-// card under the zone, where a reader who has just handed over six files can
-// see what happened to each.
+// What the intake has to say back renders on the card under the zone: the
+// unanswered speaker questions and the per-source notices. A reader who has
+// just handed over six files sees there what happened to each.
 
 type VoiceCorpusIntakeProps = Readonly<{
-  /** null for an owner who has no profile yet: the first sample mints it. */
-  profileId: string | null;
-  onChanged: () => void;
+  /** The intake this zone feeds. Its caller owns it, so work in flight
+   * outlives the swap from the first-sample card to the full one. */
+  intake: VoiceIntake;
   /** Told when intake is in progress, so the caller can hold the build. */
   onBusyChange?: (busy: boolean) => void;
   /** The first sample is the one that MINTS the profile: the row names itself
@@ -41,14 +36,12 @@ type VoiceCorpusIntakeProps = Readonly<{
 }>;
 
 export function VoiceCorpusIntake({
-  profileId,
-  onChanged,
+  intake,
   onBusyChange,
   first = false,
 }: VoiceCorpusIntakeProps) {
   const t = useT();
   const { locale } = useLocale();
-  const intake = useVoiceIntake({ profileId, onChanged });
   const zoneRef = useRef<HTMLDivElement>(null);
 
   // The zone's own input takes every drop that lands on it. This hook is never
@@ -73,14 +66,31 @@ export function VoiceCorpusIntake({
         description={t("settings.voice.dropHint")}
         layout="stack"
         control={(control) => (
-          <div className="vdna-zone settingrow-measure">
-            <FileDropzoneControl
-              control={control}
-              emptyLabel={t("settings.voice.dropEmpty")}
-              multiple
-              accept={ACCEPTED_CORPUS_ATTR}
-              onPick={(file) => intake.addFiles([file])}
-            />
+          <div className="vdna-zone">
+            {/* Two ways in, side by side where the card is wide enough. */}
+            <div className="vdna-zone-inputs">
+              <div className="vdna-drop">
+                {/* A caption, not a label: the row already names the input. */}
+                <span className="t-label">{t("settings.voice.dropLabel")}</span>
+                <FileDropzoneControl
+                  control={control}
+                  emptyLabel={t("settings.voice.dropEmpty")}
+                  icon={FileUp}
+                  multiple
+                  accept={ACCEPTED_CORPUS_ATTR}
+                  onPick={(file) => intake.addFiles([file])}
+                />
+              </div>
+              <PasteSample
+                onAdd={(text, onSettled) =>
+                  intake.addPaste(
+                    text,
+                    t("settings.voice.pasteSource"),
+                    onSettled,
+                  )
+                }
+              />
+            </div>
             {intake.pendingAsk && (
               // Keyed by the source: when the queue advances to the next file
               // the panel is a NEW panel, so the previous file's chosen
@@ -119,13 +129,56 @@ export function VoiceCorpusIntake({
   );
 }
 
+// The box empties once the text is taken, and keeps it for a retry when the
+// add fails. The notice under the zone says what became of it.
+function PasteSample({
+  onAdd,
+}: Readonly<{
+  onAdd: (text: string, onSettled: (taken: boolean) => void) => void;
+}>) {
+  const t = useT();
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const blank = text.trim() === "";
+  return (
+    <div className="vdna-paste">
+      <Field label={t("settings.voice.pasteLabel")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            rows={4}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+        )}
+      </Field>
+      <div className="vdna-composer-actions">
+        <Button
+          disabled={blank || sending}
+          onClick={() => {
+            setSending(true);
+            onAdd(text, (taken) => {
+              setSending(false);
+              if (taken) {
+                setText("");
+              }
+            });
+          }}
+        >
+          {t("settings.voice.pasteAdd")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Which writing teaches the voice and which teaches it somebody else's. The
 // reader sees this beside the zone every time, not once in onboarding: the
 // question "what should I upload?" is asked at the moment of uploading.
 function WhatTeachesTheVoice() {
   const t = useT();
   return (
-    <div>
+    <div className="vdna-works">
       <p className="vdna-label">{t("settings.voice.worksTitle")}</p>
       <ul className="vdna-works-list">
         <li>{t("settings.voice.worksEmails")}</li>
@@ -174,7 +227,7 @@ function SpeakerPanel({
       </ul>
       <div className="vdna-composer-actions">
         <Button
-          variant="primary"
+          variant="ai"
           disabled={choice === null}
           onClick={() => choice !== null && onAnswer(choice)}
         >

@@ -122,8 +122,6 @@ function form(
         setField={() => {}}
         onPickEntity={() => {}}
         read={site}
-        saved={false}
-        saveError={null}
         missingRequired={[]}
         selectedFactKeys={FACTS.map((fact) => fact.value_key)}
         setSelectedFactKeys={() => {}}

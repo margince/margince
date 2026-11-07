@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -14,7 +14,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { VatMark } from "./companyvatmark";
 import { derivedSource } from "./evidencesource";
 import { profileFieldsKey } from "./evidenceverdict";
@@ -87,13 +87,21 @@ export function SidecarFieldValue({
 }: SidecarFieldProps) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, guardDetails ? "details" : undefined);
   const label = labelText ?? (labelKey ? t(labelKey) : field);
   const current = fields.find((one) => one.field === field);
+  // The row the editor opened on: a refetch while it is open must not move the
+  // precondition, or the save overwrites a concurrent change.
+  const [opened, setOpened] = useState(current);
+  const onEditingChange = useCallback(
+    (editing: boolean) => {
+      if (editing) setOpened(current);
+    },
+    [current],
+  );
   const save = async (next: string) => {
     unwrap(
       await api.PATCH("/companies/{id}/profile-fields/{field}", {
@@ -103,7 +111,7 @@ export function SidecarFieldValue({
           // the write CREATES it, and there is no earlier state to lose. Once
           // one exists the precondition is what stops two contacts correcting the
           // same claim and the second silently replacing the first.
-          ...(current ? ifMatch(requireVersion(current.version)) : {}),
+          ...(opened ? ifMatch(requireVersion(opened.version)) : {}),
         },
         body: { value: next.trim() },
       }),
@@ -115,23 +123,15 @@ export function SidecarFieldValue({
       invalidateCompany(queryClient, { id: companyId, is_anchor: anchor }),
     ]);
   };
-  // A value a machine read keeps its dotted underline and its receipt. The mark
-  // wraps the RESTING value only — while the reader is typing, the claim under
-  // edit is theirs, and an underline saying "a crawl found this" over their own
-  // draft would be false. Absent for a value a human typed: derivedSource
-  // returns nothing for a human row, and a mark with nothing behind it teaches
-  // the reader to stop opening them.
+  // A value a machine read keeps its receipt. Absent for a value a human typed:
+  // a mark with nothing behind it teaches the reader to stop opening them.
   const source = current
-    ? derivedSource(current, locale, recordZone)
+    ? derivedSource(current, locale, readerZone)
     : undefined;
   return (
     <>
-      {/* Editing and provenance are two controls, not one: EvidenceMark makes
-          its value the button that opens the receipt, and InlineText makes it
-          the button that starts an edit. One element cannot be both, so the
-          value stays editable and the receipt sits beside it — the same shape
-          the VAT verdict already uses on this grid. A human-typed value has no
-          receipt and shows no mark. */}
+      {/* The value is the control that opens its edit, so the receipt is a
+          second control beside it, as the VAT verdict is. */}
       <InlineText
         label={label}
         value={current?.value ?? ""}
@@ -139,15 +139,11 @@ export function SidecarFieldValue({
         multiline={multiline}
         canEdit={canEdit && fieldsLoaded}
         readOnlyReason={readOnlyReason}
-        onEditingChange={setEditing}
+        onEditingChange={onEditingChange}
         onDirtyChange={setDirty}
         onSave={save}
       />
-      {/* Only while the stored value is what is on screen. Mid-edit the text
-          belongs to the reader, and a receipt saying "a crawl read this" beside
-          their own draft attributes their words to a machine — indefinitely, if
-          the save then fails and the draft stays. */}
-      {source && current && !editing && (
+      {source && current && (
         <EvidenceMark
           value={t("evidence.mark")}
           subject={current.value}

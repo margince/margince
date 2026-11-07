@@ -49,8 +49,8 @@ func TestCommitmentReadsMatchTheTaskWritersAssigneeRule(t *testing.T) {
 			}
 			var targeted []crmcontracts.Approval
 			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-				var err error
-				targeted, err = e.svc.PendingForTarget(ctx, tx, *got.TargetEntityType, ids.UUID(*got.TargetEntityId), 10)
+				pending, err := e.svc.PendingForTarget(ctx, tx, *got.TargetEntityType, ids.UUID(*got.TargetEntityId))
+				targeted = pending.Approvals
 				return err
 			}); err != nil {
 				t.Fatal(err)

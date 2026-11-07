@@ -10,6 +10,8 @@ import {
   StoryProviders,
 } from "../../../testing/story-utils";
 import { DealActions } from "./dealactions";
+// The bar class the stories wrap the verbs in is styled by the record view.
+import "../../../design-system/recordview.css";
 
 // The verbs a deal's header offers: mail first, then what the reader RECORDS
 // about the deal, and everything rarer behind the overflow. Worth looking at

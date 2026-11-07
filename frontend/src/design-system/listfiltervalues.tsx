@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { foldForMatch } from "../format/collate";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { useT } from "../i18n";
 import { Radio } from "./atoms";
 import { useDebouncedSearch } from "./debouncedsearch";
@@ -32,30 +32,25 @@ function FilterValueList({
   // the enclosing `Menu` fieldset is what names the question they answer.
   const group = useId();
   const [query, setQuery] = useState("");
-  const typed = foldForMatch(query.trim());
+  const words = searchWords(query);
   // The chosen option stays drawn whatever is typed, so the radio that says
   // what the list is narrowed by never disappears from under the reader.
-  const shown = typed
-    ? chip.options.filter(
-        (option) =>
-          option.value === value || foldForMatch(option.label).includes(typed),
-      )
-    : chip.options;
+  const shown =
+    words.length > 0
+      ? chip.options.filter(
+          (option) =>
+            option.value === value || holdsEveryWord(words, [option.label]),
+        )
+      : chip.options;
   return (
     <>
-      <Radio
-        className="lt-mi"
-        name={group}
-        checked={!value}
-        label={chip.allLabel}
-        onChange={() => onPick("", chip.allLabel)}
-      />
       {chip.filterable && (
         <label className="lt-fsearch">
           <span className="sr-only">
             {t("table.filterValueSearch", { filter: chip.label })}
           </span>
           <input
+            type="search"
             className="lt-fsearch-input"
             value={query}
             placeholder={t("table.filterValueSearch", { filter: chip.label })}
@@ -63,6 +58,13 @@ function FilterValueList({
           />
         </label>
       )}
+      <Radio
+        className="lt-mi"
+        name={group}
+        checked={!value}
+        label={chip.allLabel}
+        onChange={() => onPick("", chip.allLabel)}
+      />
       {chip.filterable && shown.length === 0 && (
         <p className="lt-fvalue-status">{t("table.filterNoMatches")}</p>
       )}
@@ -110,6 +112,18 @@ function AsyncFilterValueList({
 
   return (
     <>
+      <label className="lt-fsearch">
+        <span className="sr-only">
+          {t("table.filterValueSearch", { filter: chip.label })}
+        </span>
+        <input
+          type="search"
+          className="lt-fsearch-input"
+          value={query}
+          placeholder={t("table.filterValueSearch", { filter: chip.label })}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
       <Radio
         className="lt-mi"
         name={group}
@@ -117,17 +131,6 @@ function AsyncFilterValueList({
         label={chip.allLabel}
         onChange={() => onPick("", chip.allLabel)}
       />
-      <label className="lt-fsearch">
-        <span className="sr-only">
-          {t("table.filterValueSearch", { filter: chip.label })}
-        </span>
-        <input
-          className="lt-fsearch-input"
-          value={query}
-          placeholder={t("table.filterValueSearch", { filter: chip.label })}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </label>
       {!query && (
         <p className="lt-fvalue-status">{t("table.filterTypeToSearch")}</p>
       )}

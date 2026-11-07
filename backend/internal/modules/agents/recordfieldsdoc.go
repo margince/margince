@@ -227,7 +227,8 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	// not advertise one (the contract has no single-relationship GET), and a
 	// document a caller can disprove in one call costs more than the silence it
 	// replaced.
-	return "A contact's employer is a relationship, not a field on the contact: record_type=relationship " +
+	return "Contact creation accepts company_id or company_name and resolves employment atomically. " +
+		"For later employment changes use record_type=relationship " +
 		"with kind=employment, contact_id and company_id. Each kind REQUIRES its own endpoint pair, " +
 		"and a wrong pair is refused by name — employment: contact + company; deal_stakeholder: " +
 		"deal + contact; project_stakeholder: project + contact; partner_of, referred_by and co_sell_with: " +

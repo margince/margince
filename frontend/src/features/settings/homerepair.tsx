@@ -12,13 +12,13 @@ import { FilterPills } from "../../design-system/filterpills";
 import { Heading } from "../../design-system/heading";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useReviewActions } from "../../lib/reviewactions";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Review = components["schemas"]["HomeRepairReview"];
 type Task = components["schemas"]["HomeRepairTask"];
@@ -28,6 +28,7 @@ const actionLabels: Record<Task["action"], MessageKey> = {
   supersede_suggestion: "homeRepair.supersede",
   withdraw_proposal: "homeRepair.withdraw",
   archive_automatic_reminder: "homeRepair.archive",
+  normalize_automatic_task: "homeRepair.normalize",
   human_review: "homeRepair.keepReview",
   leave_current: "homeRepair.keepCurrent",
   revalidate_settlement: "homeRepair.revalidate",
@@ -48,6 +49,12 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   buyer_no_longer_verified: "homeRepair.reason.buyer",
   human_adoption_not_excluded: "homeRepair.reason.adopted",
   source_rule_not_verified: "homeRepair.reason.unverified",
+  source_or_task_unavailable: "homeRepair.reason.unavailable",
+  task_changed_since_listed: "homeRepair.reason.taskChanged",
+  source_no_longer_current: "homeRepair.reason.noLongerCurrent",
+  legacy_source_reference: "homeRepair.reason.restoreSource",
+  generated_notification_date: "homeRepair.reason.generatedDate",
+  legacy_source_and_generated_date: "homeRepair.reason.restoreSourceAndDate",
   source_unavailable: "homeRepair.reason.unavailable",
   historical_without_current_deadline: "homeRepair.reason.historical",
   historical_proposed: "homeRepair.reason.lateProposed",
@@ -77,6 +84,7 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
 };
 
 function RepairTask({ task }: Readonly<{ task: Task }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const activity = useActivity(task.id);
   const actions = useReviewActions();
@@ -92,7 +100,7 @@ function RepairTask({ task }: Readonly<{ task: Task }>) {
       {open && actions && (
         <actions.OpenActivityDrawer
           activityId={task.id}
-          zone={viewerZone()}
+          zone={readerZone}
           onClose={() => setOpen(false)}
         />
       )}
@@ -224,13 +232,6 @@ export function HomeRepairControls({
   const mayReclassify = useCanWrite("activity", "update");
   const mayArchiveTasks = useCanWrite("activity", "delete");
   const [source, setSource] = useState<RepairSource>("task");
-  const sourcePermission = {
-    task: mayArchiveTasks,
-    approval: true,
-    suggestion: mayRetireSuggestions,
-    verdict: mayReclassify,
-    settlement: mayReclassify,
-  }[source];
   const preview = useMutation({
     mutationFn: async ({
       after,
@@ -249,7 +250,15 @@ export function HomeRepairControls({
     mutationFn: async (review: Review) =>
       unwrap(
         await api.POST("/admin/home-repair/activate", {
-          body: { version, review },
+          body: {
+            version,
+            review,
+            reviewed_actions: review.requires_action_review
+              ? review.tasks
+                  .filter((task) => Object.hasOwn(actionLabels, task.action))
+                  .map((task) => task.action)
+              : undefined,
+          },
         }),
       ),
     onSuccess: async () => {
@@ -259,6 +268,13 @@ export function HomeRepairControls({
   });
   const review =
     preview.variables?.source === source ? preview.data : undefined;
+  const sourcePermission = {
+    task: mayApplyTaskCorrections(review, mayArchiveTasks, mayReclassify),
+    approval: true,
+    suggestion: mayRetireSuggestions,
+    verdict: mayReclassify,
+    settlement: mayReclassify,
+  }[source];
   const changeCount = review
     ? [
         review.counts.archive,
@@ -266,6 +282,7 @@ export function HomeRepairControls({
         review.counts.supersede,
         review.counts.reclassify,
         review.counts.revalidate,
+        review.counts.normalize,
       ].reduce<number>((total, count) => total + (count ?? 0), 0)
     : 0;
   return (
@@ -326,7 +343,14 @@ export function HomeRepairControls({
               keep: formatNumber(review.counts.keep, locale),
             })}
           </p>
-          <RevalidateLine count={review.counts.revalidate} />
+          <RepairCountLine
+            count={review.counts.revalidate}
+            label="homeRepair.revalidateSummary"
+          />
+          <RepairCountLine
+            count={review.counts.normalize}
+            label="homeRepair.normalizeSummary"
+          />
           <SettingList>
             {review.tasks.map((task) =>
               task.source === "suggestion" ? (
@@ -339,7 +363,9 @@ export function HomeRepairControls({
             )}
           </SettingList>
           {canActivate && !sourcePermission && (
-            <p>{t(permissionLabel(source))}</p>
+            <p>
+              {t(permissionLabel(source, (review.counts.normalize ?? 0) > 0))}
+            </p>
           )}
           {canActivate && sourcePermission && changeCount > 0 && (
             <ActionRow>
@@ -362,7 +388,13 @@ export function HomeRepairControls({
 }
 
 // How many older answered requests the run asks to judge again; nothing when none.
-function RevalidateLine({ count }: Readonly<{ count?: number }>) {
+function RepairCountLine({
+  count,
+  label,
+}: Readonly<{
+  count?: number;
+  label: "homeRepair.revalidateSummary" | "homeRepair.normalizeSummary";
+}>) {
   const plural = usePlural();
   const { locale } = useLocale();
   if (!count) {
@@ -370,7 +402,7 @@ function RevalidateLine({ count }: Readonly<{ count?: number }>) {
   }
   return (
     <p>
-      {plural("homeRepair.revalidateSummary", count, {
+      {plural(label, count, {
         count: formatNumber(count, locale),
       })}
     </p>
@@ -383,9 +415,23 @@ function verdictLabel(verdict: string) {
   return "homeRepair.reason.unverified";
 }
 
-function permissionLabel(source: string): MessageKey {
+function permissionLabel(source: string, normalizing = false): MessageKey {
+  if (source === "task" && normalizing)
+    return "homeRepair.taskCorrectionPermission";
   if (source === "verdict" || source === "settlement")
     return "homeRepair.classificationPermission";
   if (source === "task") return "homeRepair.taskPermission";
   return "homeRepair.suggestionPermission";
+}
+
+function mayApplyTaskCorrections(
+  review: Review | undefined,
+  mayArchive: boolean,
+  mayNormalize: boolean,
+): boolean {
+  if (!review) return true;
+  return (
+    (!review.counts.archive || mayArchive) &&
+    (!review.counts.normalize || mayNormalize)
+  );
 }

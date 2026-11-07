@@ -20,15 +20,13 @@ package gates
 //
 // So: every kind a producer emits must be declared, and every kind the contract
 // declares must be renderable. The client drops a kind missing from
-// `KNOWN_REASONS` (worklist.reasoncensus.ts) without a word, so the second
+// `KNOWN_REASONS` (lib/worklistreasoncensus.ts) without a word, so the second
 // direction is read from that census and the English catalog.
 
 import (
 	"go/ast"
 	"go/parser"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -46,7 +44,7 @@ import (
 const whereReasonsAreMinted = "internal/compose/attention"
 
 const (
-	frontendReasonCensus  = "../frontend/src/features/worklist/worklist.reasoncensus.ts"
+	frontendReasonCensus  = "../frontend/src/lib/worklistreasoncensus.ts"
 	frontendReasonCatalog = "../frontend/src/i18n/en.ts"
 )
 
@@ -61,7 +59,7 @@ func TestEveryDeclaredReasonKindIsOneTheClientCanSay(t *testing.T) {
 	t.Parallel()
 	declared := crmYAMLEnum(t, "WorklistReason", "kind")
 	census := clientReasonCensus(t)
-	catalog, err := os.ReadFile(frontendReasonCatalog)
+	catalog, err := gatekit.ReadFile(frontendReasonCatalog)
 	if err != nil {
 		t.Fatalf("reading the English catalog: %v", err)
 	}
@@ -95,7 +93,7 @@ func TestEveryDeclaredReasonKindIsOneTheClientCanSay(t *testing.T) {
 // stripped, so a kind only named in prose does not count as an entry.
 func clientReasonCensus(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(frontendReasonCensus)
+	source, err := gatekit.ReadFile(frontendReasonCensus)
 	if err != nil {
 		t.Fatalf("reading the client's reason census: %v", err)
 	}
@@ -161,7 +159,7 @@ func reasonKindsEmitted(t *testing.T) []string {
 	t.Helper()
 	found := map[string]bool{}
 	root := whereReasonsAreMinted
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -171,7 +169,7 @@ func reasonKindsEmitted(t *testing.T) []string {
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		src, readErr := os.ReadFile(path)
+		src, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

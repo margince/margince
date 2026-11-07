@@ -6,7 +6,7 @@ import { type ReactNode, useState } from "react";
 import {
   ENTITY_NAME_KEY,
   EntityRef,
-  fetchEntityName,
+  entityNameQuery,
   useEntityName,
 } from "../../components/entityref";
 import { usableName } from "../../components/entityref.queries";
@@ -17,8 +17,8 @@ import { PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type MorningBrief,
   type MorningBriefItem,
@@ -40,6 +40,7 @@ export function BriefSuggestions() {
 }
 
 function StoredSuggestions() {
+  const readerZone = useViewerZone();
   const query = useMorningBrief();
   const t = useT();
   const { locale } = useLocale();
@@ -51,7 +52,7 @@ function StoredSuggestions() {
         ) : (
           <>
             <p className="t-caption">
-              {formatDateTime(run.generated_at, locale, viewerZone())}
+              {formatDateTime(run.generated_at, locale, readerZone)}
             </p>
             <RunSuggestions run={run} />
           </>
@@ -97,11 +98,7 @@ function QuietDeals({
 }: Readonly<{ run: MorningBrief; items: readonly MorningBriefItem[] }>) {
   const t = useT();
   const names = useQueries({
-    queries: items.map((item) => ({
-      queryKey: ["deal", ENTITY_NAME_KEY, item.deal_id],
-      queryFn: () => fetchEntityName("deal", item.deal_id),
-      staleTime: 60_000,
-    })),
+    queries: items.map((item) => entityNameQuery("deal", item.deal_id)),
   });
   // A read that answered with no name is a deal this reader may not open; it
   // leaves the list. One still loading or failed stays, for its retry.
@@ -171,6 +168,7 @@ function StoredSuggestion({
   item,
   run,
 }: Readonly<{ item: MorningBriefItem; run: MorningBrief }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -185,7 +183,7 @@ function StoredSuggestion({
           </p>
           {run.annotated_at && (
             <p className="t-caption">
-              {formatDateTime(run.annotated_at, locale, viewerZone())}
+              {formatDateTime(run.annotated_at, locale, readerZone)}
             </p>
           )}
         </PanelRow>

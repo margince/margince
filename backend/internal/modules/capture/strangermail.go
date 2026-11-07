@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -44,7 +45,7 @@ func judgeEnvelopeTx(
 	if err == nil && stranger {
 		// A reply committing beside this capture repairs only rows it can see.
 		// Waiting on its lock and asking again leaves no row unseen.
-		if err = storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity, correspondence.LockIdentity(sender)); err == nil {
+		if err = storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity, mailidentity.CorrespondenceLockKey(sender)); err == nil {
 			stranger, err = senderWasStrangerTx(ctx, tx, sender, receivedAt(rec, fields))
 		}
 	}

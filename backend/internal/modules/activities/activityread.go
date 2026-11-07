@@ -36,7 +36,7 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readActivity(ctx, tx, id, archived)
+		out, err = readActivityAt(ctx, tx, id, archived, s.now())
 		return err
 	})
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	out, err := readActivity(ctx, tx, id, archived)
+	out, err := readActivityAt(ctx, tx, id, archived, s.now())
 	if err != nil {
 		return out, err
 	}
@@ -158,8 +158,8 @@ var errRequestReviewWithCursor = errors.New("activities: a recency cursor cannot
 // ListActivities is the timeline read: newest first, optionally scoped to
 // one entity through activity_link (the indexed 360-view join).
 func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]crmcontracts.Activity, storekit.Page, error) {
-	if in.TaskAsOf == nil {
-		in.TaskAsOf = new(s.now())
+	if in.AsOf == nil {
+		in.AsOf = new(s.now())
 	}
 	asReminderQueue(ctx, &in)
 	var activities []crmcontracts.Activity
@@ -175,14 +175,26 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	return activities, page, err
 }
 
+// ListActivitiesPositioned is ListActivities that also answers, for each row,
+// the cursor that resumes the list after it. A caller merging this list with
+// another stops between any two rows and resumes there.
+func (s *Store) ListActivitiesPositioned(
+	ctx context.Context, in ListActivitiesInput,
+) ([]crmcontracts.Activity, []string, storekit.Page, error) {
+	positions := []string{}
+	in.positions = &positions
+	rows, page, err := s.ListActivities(ctx, in)
+	return rows, positions, page, err
+}
+
 // ListActivitiesIn is ListActivities inside a caller-opened transaction. in.Columns
 // is the caller's to fill, from a catalog it reads on that transaction.
 func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) (activities []crmcontracts.Activity, page storekit.Page, err error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if in.TaskAsOf == nil {
-		in.TaskAsOf = new(s.now())
+	if in.AsOf == nil {
+		in.AsOf = new(s.now())
 	}
 	// The colleague-domain snapshot for this read, taken beside the rows it
 	// judges. ListActivitiesTx is a free function with no store to ask. A
@@ -206,7 +218,7 @@ func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActiviti
 	// Measured only when the waiting filter is asked for. The spread is a
 	// percentile over a year, a scan no other list should pay for.
 	if in.WaitingReplyAsOf != nil {
-		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
+		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
 			return nil, storekit.Page{}, err
 		}
 	}
@@ -230,7 +242,17 @@ func readActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived st
 	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	return readActivityRow(ctx, tx, id, archived)
+	return readActivityRow(ctx, tx, id, archived, time.Now())
+}
+
+// readActivityAt is readActivity judging awaiting_outcome at asOf, the store's
+// clock or the write's recordedAt, for a row a caller is answered with. Neither
+// wraps the other: gates/restrictedreaders_test.go credits a probe one call deep.
+func readActivityAt(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
+	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return readActivityRow(ctx, tx, id, archived, asOf)
 }
 
 // readHeldActivity is readActivity for a caller in lockActivityForWrite's
@@ -245,14 +267,14 @@ func readActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived st
 // that would answer the wrong one. gates/restrictedreaders_test.go's
 // call-graph walk credits it through lockActivityForWrite's own
 // restricted_at check one hop away, rather than through a waiver entry.
-func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
-	return readActivityRow(ctx, tx, id, archived)
+func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
+	return readActivityRow(ctx, tx, id, archived, asOf)
 }
 
 // readActivityRow is the SELECT + scan + link attachment readActivity and
 // readHeldActivity share; it carries no row-scope gate of its own, so every
 // caller composes one first.
-func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
+func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	audience, err := auth.ActivityAudienceArm(ctx, "a", arg)
@@ -268,7 +290,11 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	//
 	// The hold says no principal reads restricted content.
 	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
-	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE a.id = $1`
+	columns, err := activityColumns(ctx, content, arg)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	q := `SELECT ` + columns + ` FROM activity a WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`
 	}
@@ -280,22 +306,11 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
-	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := AttachLinks(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithOffersEmail(ctx, tx, one); err != nil {
+	// No columns: each caller fills the custom values with the catalog it read.
+	if err := FinishActivityRows(ctx, tx, CustomColumns{}, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithCommitmentAdmissions(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := StampActivitiesWritable(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return one[0], nil
@@ -325,7 +340,7 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 	}
 	args := []any{activityIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return err
 	}
@@ -406,8 +421,8 @@ func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
 // of the rows it counts, and a number that moved when a colleague captured a
 // contact the reader may not see would disclose that contact.
 func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (int, error) {
-	if in.TaskAsOf == nil {
-		in.TaskAsOf = new(s.now())
+	if in.AsOf == nil {
+		in.AsOf = new(s.now())
 	}
 	asReminderQueue(ctx, &in)
 	var total int
@@ -431,7 +446,14 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
 			return err
 		}
+		if in.WithOutsideParty {
+			in.outsideParty = outsidePartyClause(ctx, tx)
+		}
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
+		if err != nil {
+			return err
+		}
+		columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
 		if err != nil {
 			return err
 		}
@@ -441,7 +463,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		// refuses outright ("could not determine data type of parameter"). The
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM (SELECT `+activityColumns(content)+
+			`SELECT count(*) FROM (SELECT `+columns+
 				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
 	})
 	return total, err

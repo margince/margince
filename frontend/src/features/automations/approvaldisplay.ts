@@ -120,9 +120,9 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
-    // A colleague asks the owner to share a contact. The summary names who
-    // asked; the payload holds only the ids the accept writes the share with.
+    // A colleague's request: the summary names who asked and what it moves.
     contact_share: [],
+    ownership_transfer: [textRow("note", "approval.field.note")],
     // Two records that look like one contact. The names are the comparison; the
     // position and the title beside them are what "Use as job title" weighs.
     linkedin_match: [
@@ -226,23 +226,6 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         label: "approval.field.prior_rate",
         as: "text",
       },
-    ],
-    // A proposed stage move. `because` leads, because a rep deciding needs
-    // the reason before the checklist: the criteria say WHAT is settled and
-    // the sentence says why that adds up to a move.
-    stage_progression: [
-      {
-        field: "because",
-        label: "approval.field.because",
-        as: "prose",
-        lead: true,
-      },
-      {
-        field: "from_stage_name",
-        label: "approval.field.from_stage",
-        as: "text",
-      },
-      { field: "to_stage_name", label: "approval.field.to_stage", as: "text" },
     ],
     // Retired: nothing stages it, but cards already decided under it read
     // with the layout they were decided in.

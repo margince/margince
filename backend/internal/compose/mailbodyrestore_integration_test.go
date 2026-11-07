@@ -152,10 +152,10 @@ func TestALegacyBodyIsRestoredFromItsOriginal(t *testing.T) {
 	if got := o.stored(t, edited); got.body != headerOnly {
 		t.Errorf("a body a member edited was rewritten to %q", got.body)
 	}
-	if got := o.stored(t, noOriginal); got.body != headerOnly || got.completeness != "unassessed" {
+	if got := o.stored(t, noOriginal); got.body != headerOnly || got.completeness != "unverifiable" {
 		t.Errorf("a mail with no original became %q (%q); nothing may be guessed", got.body, got.completeness)
 	}
-	if got := o.stored(t, planted); got.body != headerOnly || got.completeness != "unassessed" {
+	if got := o.stored(t, planted); got.body != headerOnly || got.completeness != "unverifiable" {
 		t.Errorf("a mail was rewritten from an original it does not link: %q (%q)", got.body, got.completeness)
 	}
 	assertMailBodyReplayChangesNothing(t, o, task)

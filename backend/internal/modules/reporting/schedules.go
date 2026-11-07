@@ -39,7 +39,8 @@ func (s *Service) ListSchedules(ctx context.Context, reportID ids.UUID) (crmcont
 			return err
 		}
 		var b bindings
-		rows, err := tx.Query(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE report_id="+b.add(reportID)+" ORDER BY id", b.values...)
+		query := "SELECT " + scheduleColumns + " FROM report_schedule WHERE report_id=" + b.add(reportID) + " ORDER BY id"
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -119,7 +120,8 @@ func (s *Service) CreateSchedule(ctx context.Context, reportID ids.UUID, in crmc
 		}
 		var count int
 		var b bindings
-		if err := tx.QueryRow(ctx, "SELECT count(*) FROM report_schedule WHERE report_id="+b.add(reportID), b.values...).Scan(&count); err != nil {
+		query := "SELECT count(*) FROM report_schedule WHERE report_id=" + b.add(reportID)
+		if err := tx.QueryRow(ctx, query, b.values...).Scan(&count); err != nil {
 			return err
 		}
 		if count >= 20 {
@@ -159,7 +161,8 @@ func (s *Service) UpdateSchedule(ctx context.Context, id ids.UUID, version int64
 	var out crmcontracts.ReportingSchedule
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var b bindings
-		before, err := scanSchedule(tx.QueryRow(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE id="+b.add(id), b.values...))
+		query := "SELECT " + scheduleColumns + " FROM report_schedule WHERE id=" + b.add(id)
+		before, err := scanSchedule(tx.QueryRow(ctx, query, b.values...))
 		if err != nil {
 			return err
 		}
@@ -168,7 +171,8 @@ func (s *Service) UpdateSchedule(ctx context.Context, id ids.UUID, version int64
 			return err
 		}
 		b = bindings{}
-		before, err = scanSchedule(tx.QueryRow(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE id="+b.add(id)+" FOR UPDATE", b.values...))
+		statement := "SELECT " + scheduleColumns + " FROM report_schedule WHERE id=" + b.add(id) + " FOR UPDATE"
+		before, err = scanSchedule(tx.QueryRow(ctx, statement, b.values...))
 		if err != nil {
 			return err
 		}
@@ -211,7 +215,8 @@ func (s *Service) writeSchedule(ctx context.Context, tx pgx.Tx, schedule crmcont
 
 func (s *Service) pauseReportSchedules(ctx context.Context, tx pgx.Tx, reportID ids.UUID) error {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE report_id="+b.add(reportID)+" AND enabled FOR UPDATE", b.values...)
+	query := "SELECT " + scheduleColumns + " FROM report_schedule WHERE report_id=" + b.add(reportID) + " AND enabled FOR UPDATE"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}

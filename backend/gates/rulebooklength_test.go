@@ -23,10 +23,11 @@ package gates
 // than by writing better — the one outcome this must not buy.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // defaultRulebookCeiling applies to a rulebook this test does not name. It is
@@ -94,7 +95,10 @@ var ceilings = map[string]int{
 	// +5 for the docs prose pointer: the gate holds the mechanics, and a
 	// session that never opens the style page writes the facts and audience it
 	// cannot see. The prose cleanup that added it shrank this file by more.
-	"AGENTS.md": 377,
+	//
+	// +3 for the paid-lane rule. Without it an agent stops to ask before a
+	// paid run. An agent in a loop then waits for an answer that never comes.
+	"AGENTS.md": 380,
 	// Raised from 160 for the AI-hue rule: indigo marks agent-authored content,
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve
@@ -125,7 +129,7 @@ func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {
 		}
 		rel = filepath.ToSlash(rel)
 
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", rel, err)
 		}

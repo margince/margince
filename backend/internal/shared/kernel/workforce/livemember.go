@@ -23,6 +23,16 @@ func LiveMemberSQL(alias string) string {
 	return fmt.Sprintf("%sstatus = 'active' AND %sarchived_at IS NULL", prefix, prefix)
 }
 
+// LiveHumanSQL is LiveMemberSQL for a human seat: an agent seat owns records
+// but is no colleague to tell or to grant access to.
+func LiveHumanSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return fmt.Sprintf("%sis_agent = false AND %sstatus = 'active' AND %sarchived_at IS NULL", prefix, prefix, prefix)
+}
+
 // DepartedMemberSQL is a colleague who left but is not archived. They act on
 // nothing, while the work they still own counts in their team's views until
 // somebody takes it over.
@@ -60,4 +70,14 @@ func AskableMemberSQL(alias string) string {
 		prefix = alias + "."
 	}
 	return prefix + "is_agent = false AND " + ActivatableMemberSQL(alias)
+}
+
+// NamedSeatSQL is a seat a colleague's name may still be shown for. A departed
+// colleague keeps their name on what they did; an archived seat names nobody.
+func NamedSeatSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return prefix + "archived_at IS NULL"
 }

@@ -14,13 +14,16 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Corrupt or obsolete payloads are cache misses; their row metadata stays separately readable.
 type stored struct {
 	ProjectionVersion string                      `json:"projection_version"`
+	Access            *cardAccess                 `json:"access,omitempty"`
 	Fingerprint       string                      `json:"-"`
 	GeneratedAt       time.Time                   `json:"-"`
 	GeneratedBy       crmcontracts.WrittenBy      `json:"-"`
@@ -29,13 +32,19 @@ type stored struct {
 
 // The reader key prevents one seat from receiving another seat’s derived content.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, dealID ids.DealID) (stored, bool, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return stored{}, false, err
+	}
 	var out stored
 	var payload []byte
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT fingerprint, generated_at, generated_by, payload FROM deal_status_card
-			WHERE user_id = $1 AND deal_id = $2`,
-			userID, dealID).Scan(&out.Fingerprint, &out.GeneratedAt, &out.GeneratedBy, &payload)
+		where, args, err := cachedDealScope(ctx, userID, []ids.UUID{dealID.UUID})
+		if err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT c.fingerprint, c.generated_at, c.generated_by, c.payload
+			FROM deal_status_card c JOIN deal d ON d.id = c.deal_id WHERE `+where, args...).
+			Scan(&out.Fingerprint, &out.GeneratedAt, &out.GeneratedBy, &payload)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return stored{}, false, nil
@@ -77,4 +86,15 @@ func decodeStored(payload []byte, into *stored) bool {
 		return false
 	}
 	return into.ProjectionVersion == ProjectionVersion
+}
+
+func cachedDealScope(ctx context.Context, userID ids.UserID, dealIDs []ids.UUID) (string, []any, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := fmt.Sprintf("c.user_id = $%d AND d.id = ANY($%d) AND d.archived_at IS NULL", arg(userID), arg(dealIDs))
+	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if scope != "" {
+		where += " AND " + scope
+	}
+	return where, args, err
 }

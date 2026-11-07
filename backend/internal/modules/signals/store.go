@@ -38,12 +38,20 @@ type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db       *database.DB
 	strength StrengthSource
+	words    SummaryWords
 }
 
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
 func NewStore(db *database.DB, strength StrengthSource) *Store {
 	return &Store{db: db, strength: strength}
+}
+
+// WithSummaryWords rewords, for each reader, the summaries a client read
+// returns. Without it every read returns the stored summary.
+func (s *Store) WithSummaryWords(words SummaryWords) *Store {
+	s.words = words
+	return s
 }
 
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {

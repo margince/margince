@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import {
   bookingConnection,
@@ -16,13 +16,31 @@ import {
   bookingProfile,
   bookingSlots,
 } from "../../testing/book.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { BookingInviteScreen } from "./booking-invite";
 
 vi.mock("../mail/compose", () => ({
   ComposeModal: ({
     initialMessage,
-  }: Readonly<{ initialMessage?: { subject: string; body: string } }>) => (
-    <div role="dialog" aria-label="Compose">
+    initialReason,
+    entityType,
+    entityId,
+    initialDealId,
+  }: Readonly<{
+    initialMessage?: { subject: string; body: string };
+    initialReason?: string;
+    entityType?: string;
+    entityId?: string;
+    initialDealId?: string;
+  }>) => (
+    <div
+      role="dialog"
+      aria-label="Compose"
+      data-reason={initialReason}
+      data-entity-type={entityType}
+      data-entity-id={entityId}
+      data-deal-id={initialDealId}
+    >
       {initialMessage?.body}
     </div>
   ),
@@ -36,7 +54,25 @@ function mount(
   ) => typeof bookingSlots | components["schemas"]["Problem"] = () =>
     bookingSlots,
   hoursAnswer: unknown = bookingHours,
+  // The contact as the server answers for it. Overridden by the case that asks
+  // what an invite does for somebody with no live address.
+  contactBody: Record<string, unknown> = {
+    primary_email: "nina@brandt.example",
+    emails: [{ email: "nina@brandt.example", is_primary: false }],
+  },
+  context: {
+    openDealId?: string;
+    replyActivityId?: string;
+    dealId?: string;
+    dealStatus?: string;
+    stakeholder?: boolean;
+    replyContactId?: string;
+  } = {},
 ) {
+  const params = new URLSearchParams();
+  if (context.replyActivityId) params.set("activity", context.replyActivityId);
+  if (context.dealId) params.set("deal", context.dealId);
+  window.location.hash = `#/book/contact-${bookingContact.id}?${params}`;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-27T06:00:00Z"));
   const proposals: unknown[] = [];
@@ -49,7 +85,9 @@ function mount(
       const path = new URL(request.url).pathname;
       paths.push(path);
       let body: unknown;
-      if (request.method === "POST" && path.endsWith("/invitations")) {
+      if (path === "/v1/me") {
+        body = meFixture({ allow: { activity: ["read", "create"] } });
+      } else if (request.method === "POST" && path.endsWith("/invitations")) {
         invitations.push(await request.json());
         body = { ...bookingInvitation, id: "meeting-1" };
       } else if (request.method === "POST") {
@@ -70,12 +108,49 @@ function mount(
             },
           ],
         };
-      else if (path.includes("/contacts/"))
+      else if (path.startsWith("/v1/deals/"))
+        body = { id: context.dealId, status: context.dealStatus ?? "open" };
+      else if (path.endsWith("/relationships"))
         body = {
-          ...bookingContact,
-          primary_email: null,
-          emails: [{ email: "nina@brandt.example", is_primary: false }],
+          data:
+            context.stakeholder === false
+              ? []
+              : [{ deal_id: context.dealId, contact_id: bookingContact.id }],
+          page: { has_more: false },
         };
+      else if (path === "/v1/search")
+        body = {
+          data: [{ type: "contact", id: "contact-b", title: "Other buyer" }],
+        };
+      else if (path.endsWith("/360"))
+        body = {
+          contact: bookingContact,
+          sections_omitted: [],
+          commercial: {
+            committee: [],
+            ...(context.openDealId
+              ? {
+                  deal: {
+                    deal_id: context.openDealId,
+                    title: "Open negotiation",
+                  },
+                }
+              : {}),
+          },
+        };
+      else if (path.includes("/activities/"))
+        body = {
+          id: context.replyActivityId,
+          kind: "email",
+          direction: "inbound",
+          email_summary: {
+            counterparty_contact_id:
+              context.replyContactId ?? bookingContact.id,
+          },
+          links: [{ entity_type: "contact", entity_id: bookingContact.id }],
+        };
+      else if (path.includes("/contacts/"))
+        body = { ...bookingContact, ...contactBody };
       else if (path.endsWith("/availability")) {
         windows.push(new URL(request.url).searchParams);
         const answer = availability(new URL(request.url).searchParams);
@@ -120,7 +195,7 @@ afterEach(() => {
 });
 
 const slotName = (start: string) =>
-  formatDateTime(start, "en", viewerZone()).replace(/\s+/g, " ");
+  formatDateTime(start, "en", browserZone()).replace(/\s+/g, " ");
 
 it("prefills the contact and saved details, then offers two picked times in one step", async () => {
   const user = userEvent.setup();
@@ -172,7 +247,7 @@ it("removes an offered time from the review list", async () => {
   expect(screen.getByText("1 of 3")).toBeTruthy();
   await user.click(
     screen.getByRole("button", {
-      name: `Remove ${formatDateTime(bookingSlots[0].start, "en", viewerZone())}`,
+      name: `Remove ${formatDateTime(bookingSlots[0].start, "en", browserZone())}`,
     }),
   );
   expect(screen.getByText("0 of 3")).toBeTruthy();
@@ -199,7 +274,7 @@ it("sends an agreed time as an invitation without a video link when switched off
   );
   await user.click(
     screen.getByRole("button", {
-      name: `Send invite · ${formatDateTime(bookingSlots[1].start, "en", viewerZone())}`,
+      name: `Send invite · ${formatDateTime(bookingSlots[1].start, "en", browserZone())}`,
     }),
   );
   await waitFor(() => expect(invitations).toHaveLength(1));
@@ -351,3 +426,105 @@ it("keeps the contact draft usable if the hours response is missing its required
   expect(screen.getByDisplayValue("Keep this draft")).toBeTruthy();
   expect(await screen.findByDisplayValue("nina@brandt.example")).toBeTruthy();
 });
+
+// A contact every address of which is archived has no address the server will
+// name, and an invite must not reach for the retired one. The rule used to live
+// here, and read the only entry in `emails` whatever its state.
+it("offers no address when the server names none", async () => {
+  mount(true, 30, () => bookingSlots, bookingHours, {
+    primary_email: null,
+    emails: [{ email: "retired@brandt.example", is_primary: false }],
+  });
+  expect(
+    await screen.findByRole("heading", {
+      name: "Book a meeting with Nina Weber",
+    }),
+  ).toBeTruthy();
+  expect(screen.queryByDisplayValue("retired@brandt.example")).toBeNull();
+});
+
+it.each([
+  [{ openDealId: "d-1" }, "active_deal_followup", "contact", bookingContact.id],
+  [{ dealId: "d-2" }, "active_deal_followup", "contact", bookingContact.id],
+  [
+    { replyActivityId: "mail-1" },
+    "requested_followup",
+    "contact",
+    bookingContact.id,
+  ],
+  [{ dealId: "d-2", dealStatus: "lost" }, null, "contact", bookingContact.id],
+  [{ dealId: "d-2", stakeholder: false }, null, "contact", bookingContact.id],
+  [
+    { replyActivityId: "mail-1", replyContactId: "other-contact" },
+    null,
+    "contact",
+    bookingContact.id,
+  ],
+  [{}, null, "contact", bookingContact.id],
+])(
+  "presets the booking composer from %j",
+  async (context, reason, entityType, entityId) => {
+    const user = userEvent.setup();
+    mount(true, 30, () => bookingSlots, bookingHours, {}, context);
+    for (const slot of bookingSlots) {
+      await user.click(
+        await screen.findByRole("button", { name: slotName(slot.start) }),
+      );
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Review email · 2 times" }),
+    );
+    const composer = await screen.findByRole("dialog", { name: "Compose" });
+    expect(composer.getAttribute("data-reason")).toBe(reason);
+    expect(composer.getAttribute("data-entity-type")).toBe(entityType);
+    expect(composer.getAttribute("data-entity-id")).toBe(entityId);
+  },
+);
+
+it("drops the starting deal when the booking contact changes", async () => {
+  const user = userEvent.setup();
+  mount(true, 30, () => bookingSlots, bookingHours, {}, { dealId: "d-2" });
+  await user.type(
+    await screen.findByRole("searchbox", { name: "Who are you meeting?" }),
+    "Other",
+  );
+  await user.click(await screen.findByRole("button", { name: "Other buyer" }));
+  for (const slot of bookingSlots) {
+    await user.click(
+      await screen.findByRole("button", { name: slotName(slot.start) }),
+    );
+  }
+  await user.click(
+    screen.getByRole("button", { name: "Review email · 2 times" }),
+  );
+  const composer = await screen.findByRole("dialog", { name: "Compose" });
+  expect(composer.getAttribute("data-reason")).toBeNull();
+  expect(composer.getAttribute("data-deal-id")).toBeNull();
+  expect(composer.getAttribute("data-entity-id")).toBe("contact-b");
+});
+
+it.each([false, undefined])(
+  "refuses a direct booking before proposal creation without attach rights: %s",
+  async (attachable) => {
+    const user = userEvent.setup();
+    const { proposals } = mount(true, 30, () => bookingSlots, bookingHours, {
+      attachable,
+    });
+    expect(
+      await screen.findByText(
+        "You can only read this contact. Ask its owner for write access.",
+      ),
+    ).toBeTruthy();
+    for (const slot of bookingSlots) {
+      await user.click(
+        await screen.findByRole("button", { name: slotName(slot.start) }),
+      );
+    }
+    const review = screen.getByRole("button", {
+      name: "Review email · 2 times",
+    });
+    expect(review).toHaveProperty("disabled", true);
+    await user.click(review);
+    expect(proposals).toHaveLength(0);
+  },
+);

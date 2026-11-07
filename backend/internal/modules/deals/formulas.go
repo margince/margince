@@ -84,16 +84,21 @@ func StalledSQL(alias string) string {
 // this expression is composed into larger statements whose placeholders are
 // numbered by their own callers; an int is not attacker-reachable.
 func QuietSQL(alias string, days int) string {
-	return fmt.Sprintf(`(%[1]sstatus = 'open'
-		AND %[3]s < now() - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[1]swait_until <= now())
-		AND NOT %[4]s)`,
-		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias))
+	return quietAtSQL(alias, days, "now()")
 }
 
-// MeetingAheadSQL is true when the deal has a booked meeting its stored clock
-// has not reached. That is a meeting still to come, or one that started before
-// the refold job moved the clock to it. It reads the clock's own filters. The
+// quietAtSQL is QuietSQL judged at the instant the SQL expression instant names.
+func quietAtSQL(alias string, days int, instant string) string {
+	return fmt.Sprintf(`(%[1]sstatus = 'open'
+		AND %[3]s < %[5]s - interval '%[2]d days'
+		AND (%[1]swait_until IS NULL OR %[1]swait_until <= %[5]s)
+		AND NOT %[4]s)`,
+		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant)
+}
+
+// MeetingAheadSQL is true when the deal has a meeting nobody called off that
+// its stored clock has not reached. That is a meeting still to come, or one
+// that started before the refold job moved the clock to it. The
 // audience is spelled as in last_activity_of_deal, so a meeting only some
 // colleagues may see changes no number everyone reads.
 func MeetingAheadSQL(alias string) string {
@@ -104,7 +109,7 @@ func MeetingAheadSQL(alias string) string {
 	return `EXISTS (SELECT 1 FROM activity_link ahead_link
 		JOIN activity ahead ON ahead.id = ahead_link.activity_id
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
-		  AND ahead.kind = 'meeting' AND ` + relstrength.NotCalledOffSQL("ahead") +
+		  AND ahead.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("ahead") +
 		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
 		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
 		)`

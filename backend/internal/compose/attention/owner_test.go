@@ -30,6 +30,7 @@ import (
 func TestEveryProducerStatesAnOwner(t *testing.T) {
 	t.Parallel()
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	rows = append(rows, relationshipCandidates(dayOfEveryLane())...)
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
 	planService.taskScope = TasksMine
 	planRows, missing := planService.readingPlan(meetingPrepReader(), scopeMine, rankInstant)
@@ -218,10 +219,11 @@ func dayOfEveryLane() crmcontracts.Attention {
 		Undelivered:        lane(item("undelivered", "undelivered")),
 		NeedsYou: []crmcontracts.AttentionItem{
 			item("approval", "approval"), item("pair", "dedupe_candidate"), item("suggestion", "deal_suggestion"),
-			item("tag-suggestion", "tag_suggestion"),
+			item("tag-suggestion", "tag_suggestion"), item("case", "contact_case"),
 		},
 		RelationshipDecay: lane(item("decay", "relationship_decay")),
 		CaptureHealth:     lane(item("capture", "capture_health")),
+		BookingHealth:     lane(item("booking", "booking_health")),
 		DomainQuestions:   lane(item("example.com", "domain_question")),
 		AiWorkHealth:      lane(item("ai", "ai_work_health")),
 		AutomationHealth:  lane(item("automation", "automation_run")),
@@ -251,9 +253,11 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"undelivered":          "the same per-user read as the bounce beside it",
 		"notice":               "a notice is addressed to one contact",
 		"capture_health":       "a mailbox belongs to one contact",
+		"booking_health":       "a booking page belongs to its host",
 		"domain_question":      "OpenDomainQuestionsForOwner asks only the acting human's decider rule: the sole direct recipient of current mail",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	rows = append(rows, relationshipCandidates(dayOfEveryLane())...)
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
 	planService.taskScope = TasksMine
 	planRows, missing := planService.readingPlan(meetingPrepReader(), scopeMine, rankInstant)

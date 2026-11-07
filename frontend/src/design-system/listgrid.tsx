@@ -5,12 +5,15 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import type { ReactNode, RefObject } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
+import { opensRow } from "../lib/linkclick";
+import { AppLink } from "./applink";
 import { Checkbox, type useScrollRegion } from "./atoms";
-import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
+import { useListFocusHandoff } from "./listfocus";
 import { HeaderCell } from "./listheader";
+import { PageSelectBox, type SelectAll } from "./listselection";
 import type { SortControl } from "./listsurface";
 import { CELL_STRIP_CLASS } from "./listtable.floors";
 import {
@@ -42,7 +45,9 @@ function RowSelect<Row>({
       className="lt-select"
       label={<span className="sr-only">{selection.label(row)}</span>}
       checked={selection.selected.has(rowKey(row))}
-      onChange={() => selection.onToggle(row)}
+      onChange={() =>
+        selection.onChange([row], !selection.selected.has(rowKey(row)))
+      }
       onClick={(event) => event.stopPropagation()}
     />
   );
@@ -83,13 +88,13 @@ function IdentityCell<Row>({
         // default click is stopped from reaching the row's own handler.
         // Preventing the anchor instead would navigate the current page while
         // the new tab opens too.
-        <a
+        <AppLink
           className="lt-cellink"
           href={rowHref(row)}
           onClick={(event) => event.stopPropagation()}
         >
           {cell(row)}
-        </a>
+        </AppLink>
       ) : (
         cell(row)
       )}
@@ -131,6 +136,7 @@ export function ListGrid<Row>({
   layout,
   shown,
   sort,
+  all,
   children,
 }: Readonly<{
   scrollerRef: (node: HTMLDivElement | null) => void;
@@ -141,6 +147,8 @@ export function ListGrid<Row>({
   layout: ColumnLayout & ColumnResize;
   shown: readonly ListColumn<Row>[];
   sort?: SortControl;
+  /** The selection's page box, drawn in the identity column's header. */
+  all?: SelectAll;
   children: ReactNode;
 }>) {
   return (
@@ -184,6 +192,9 @@ export function ListGrid<Row>({
                 onResizeStart={layout.onResizeStart}
                 onResize={layout.onResize}
                 onResizeEnd={layout.onResizeEnd}
+                lead={
+                  column.fixed && all ? <PageSelectBox all={all} /> : undefined
+                }
               />
             ))}
             <td className="lt-slack" aria-hidden="true" />
@@ -330,9 +341,7 @@ export function EmptyRow({
       {filtered && (
         <>
           {" "}
-          <button type="button" className="lt-linkish" onClick={onClear}>
-            {t("table.clearFilters")}
-          </button>
+          <ClearFilters onClear={onClear} label={t("table.clearFilters")} />
         </>
       )}
       {/* Under either line, because which emptiness a note explains is the
@@ -340,6 +349,19 @@ export function EmptyRow({
           narrowed list. */}
       {emptyNote && <p className="lt-empty-note">{emptyNote}</p>}
     </>
+  );
+}
+
+function ClearFilters({
+  onClear,
+  label,
+}: Readonly<{ onClear: () => void; label: string }>) {
+  const button = useRef<HTMLButtonElement>(null);
+  useListFocusHandoff(button);
+  return (
+    <button ref={button} type="button" className="lt-linkish" onClick={onClear}>
+      {label}
+    </button>
   );
 }
 

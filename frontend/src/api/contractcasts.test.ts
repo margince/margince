@@ -211,13 +211,28 @@ function bare(expression: ts.Expression): ts.Expression {
     : expression;
 }
 
+// `as`, then whitespace or comments, then `unknown`: the bridge however it is
+// spaced or annotated. A line comment ends at any of TypeScript's four line
+// terminators, not only at LF.
+const AS_UNKNOWN =
+  /\bas(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n\r\u2028\u2029]*(?:[\n\r\u2028\u2029]|$))+unknown\b/;
+const castsToUnknown = (text: string) => AS_UNKNOWN.test(text);
+
 type Finding = { where: string; line: number; says: string };
 
 /** Every `x as unknown as T` in one module, with what it casts to. */
 function castsIn(source: ts.SourceFile, where: string): Finding[] {
   const out: Finding[] = [];
   const aliases = contractAliases(source, join(frontendRoot, where));
-  const lines = source.getFullText().split("\n");
+  // TypeScript's own line starts, so the lines are the ones its line numbers
+  // count, at every terminator it reads.
+  const text = source.getFullText();
+  const starts = source.getLineStarts();
+  const lines = starts.map((start, at) =>
+    text
+      .slice(start, starts[at + 1])
+      .replace(/(?:\r\n|[\n\r\u2028\u2029])$/, ""),
+  );
   const visit = (node: ts.Node) => {
     if (
       ts.isAsExpression(node) &&
@@ -269,15 +284,19 @@ describe("a fixture is the shape the server sends", () => {
   it("finds no contract type cast through unknown", () => {
     const found: string[] = [];
     for (const path of modules) {
+      // A declaration file holds no expression, so no `as` cast, and the
+      // generated contract types are megabytes no run needs to read.
+      if (path.endsWith(".d.ts")) {
+        continue;
+      }
       const text = readFileSync(path, "utf8");
-      // THE ONLY THING THIS SKIPS IS A FILE THAT CANNOT HOLD THE CONSTRUCT.
-      // `x as unknown as T` contains the token `unknown` whatever trivia sits
-      // between its parts, so a file without that word has no such cast to
-      // find — it is a necessary condition and not a heuristic, which is what
-      // separates it from a skip-list. It buys the census the headroom it
-      // needs: 619 of this tree's 2096 modules carry the word, and parsing the
-      // other 1477 is work whose answer is known before it starts.
-      if (!text.includes("unknown")) {
+      // The only thing this skips is a file that cannot hold the construct.
+      // `x as unknown as T` holds the tokens `as` and `unknown` with nothing
+      // but trivia between them, so a file without that pair has no such cast
+      // to find. It is a necessary condition and not a heuristic, which is
+      // what separates it from a skip-list. Most modules say `unknown` and few
+      // cast to it, so the census parses only those few.
+      if (!castsToUnknown(text)) {
         continue;
       }
       const where = relative(frontendRoot, path).replaceAll("\\", "/");
@@ -365,12 +384,39 @@ describe("what counts as a contract type cast", () => {
     );
   });
 
+  // A waiver is read on the lines TypeScript counts, whatever ends them.
+  it("finds a reasoned waiver above a cast at every line terminator", () => {
+    for (const end of ["\r\n", "\r", "\u2028", "\u2029"]) {
+      const code = `${aliasing}// contract:cast \`{}\` is not a page, on purpose.${end}const w = {} as unknown as Worklist;`;
+      expect(found(code), JSON.stringify(end)).toEqual([]);
+    }
+  });
+
   it("takes a reason from anywhere in the comment block above", () => {
     expect(
       found(
         `${aliasing}// contract:cast \`{}\` is not a page, on purpose.\n// The case is about what the reader survives.\nconst w = {} as unknown as Worklist;`,
       ),
     ).toEqual([]);
+  });
+
+  // The census parses only the modules this admits, so every shape of the
+  // bridge the parser reads must pass it.
+  it("parses every module that spells the bridge, trivia and all", () => {
+    for (const bridge of [
+      "{} as unknown as Worklist",
+      "({} as\n  unknown) as Worklist",
+      "{} as /* the wire */ unknown as Worklist",
+      "{} as // the wire\n  unknown as Worklist",
+      "{} as // the wire\r  unknown as Worklist",
+      "{} as // the wire\u2028  unknown as Worklist",
+      "{} as // the wire\u2029  unknown as Worklist",
+    ]) {
+      const code = `${aliasing}const w = ${bridge};`;
+      expect(castsToUnknown(code), bridge).toBe(true);
+      expect(found(code), bridge).toHaveLength(1);
+    }
+    expect(castsToUnknown("const u: unknown = value as Worklist;")).toBe(false);
   });
 
   // A marker with no reason says a check was skipped and not why.

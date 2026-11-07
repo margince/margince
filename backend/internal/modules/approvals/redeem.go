@@ -55,11 +55,13 @@ func (s *Service) Redeem(ctx context.Context, id ids.ApprovalID, tool, diffHash 
 // same transaction. Effects that can expose a half-applied state use this
 // path: a failed domain write leaves the approval unconsumed and retryable.
 func (s *Service) RedeemAndApply(ctx context.Context, id ids.ApprovalID, tool, diffHash string, apply func(pgx.Tx) error) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, _, err := s.RedeemInTx(ctx, tx, id, tool, diffHash); err != nil {
-			return err
-		}
-		return apply(tx)
+	return storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			if _, _, err := s.RedeemInTx(ctx, tx, id, tool, diffHash); err != nil {
+				return err
+			}
+			return apply(tx)
+		})
 	})
 }
 
@@ -79,12 +81,14 @@ func (s *Service) RedeemAndApplyPinned(
 	ctx context.Context, id ids.ApprovalID, tool, diffHash string,
 	apply func(tx pgx.Tx, version int64, pinned bool) error,
 ) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		version, pinned, err := s.RedeemInTx(ctx, tx, id, tool, diffHash)
-		if err != nil {
-			return err
-		}
-		return apply(tx, version, pinned)
+	return storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			version, pinned, err := s.RedeemInTx(ctx, tx, id, tool, diffHash)
+			if err != nil {
+				return err
+			}
+			return apply(tx, version, pinned)
+		})
 	})
 }
 
@@ -108,6 +112,10 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 	if !ok {
 		return row{}, errors.New("crmapprovals: no actor bound to context")
 	}
+	owner, ownerP, underPolicy, err := bindForRedemption(ctx, tx, id)
+	if err != nil {
+		return row{}, err
+	}
 	a, err := get(ctx, tx, id)
 	if err != nil {
 		// An unknown approval id reads as an invalid token, not a 404:
@@ -118,8 +126,13 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 		return row{}, err
 	}
 
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
+	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		return row{}, err
+	}
+	if underPolicy {
+		if err := stillUnderPolicy(owner, tx, ownerP, a); err != nil {
+			return row{}, err
+		}
 	}
 
 	tag, err := tx.Exec(ctx,
@@ -192,7 +205,7 @@ func validateRedemption(a row, p principal.Principal, tool, diffHash string, now
 	}
 }
 
-func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
+func (s *Service) validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 	if err := checkPin(ctx, tx, a.TargetType, a.TargetID, a.TargetVersion, "record"); err != nil {
 		return err
 	}
@@ -200,7 +213,10 @@ func validateRedemptionTarget(ctx context.Context, tx pgx.Tx, a row) error {
 	// words and the human judged both, so both have to still be what they were
 	// — the retired side has always been checked here, and the survivor being
 	// exempt is what let a rename slip between the card and the merge.
-	return checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record")
+	if err := checkPin(ctx, tx, a.CoTargetType, a.CoTargetID, a.CoTargetVersion, "second record"); err != nil {
+		return err
+	}
+	return s.checkContextPin(ctx, tx, a)
 }
 
 // checkPin re-reads one pinned row and refuses if it has moved since the
@@ -318,6 +334,10 @@ var contextTargetKinds = map[string]string{
 // removes. TestEveryUnpinnedKindIsExplained holds each entry to its rationale,
 // and TestNoKindIsBothContextOnlyAndUnpinned holds the two maps apart.
 var unpinnedKinds = map[string]string{
+	approvalsubject.KindOwnershipTransfer: "A transfer is about WHO owns the record, never its fields, " +
+		"and a record waits in the inbox for days while its owner keeps working it, so " +
+		"every edit and every captured message would cancel the request. The accept re-reads " +
+		"the owner under the record's row lock and refuses when the owner it names has moved.",
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +

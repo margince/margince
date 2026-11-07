@@ -13,7 +13,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { ConsentSection } from "./consent";
+import { mailPreview, NO_ADDRESS_PROBLEM } from "./controllermail.fixtures";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -624,6 +626,25 @@ describe("asking a contact to confirm their details", () => {
   // answer differs while the seat does not.
   const NO_SYSTEM_MAIL = { ...MAY_WRITE, confirm_requests_sendable: false };
 
+  const PREVIEW = {
+    "GET /contacts/contact-1/consent/mail-preview": () =>
+      jsonResponse(mailPreview("record_confirmation")),
+  };
+
+  // The ask opens the mail first; only the dialog's own send posts it.
+  async function askAndSend(sent: Sent[] = []) {
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("confirm-details-ask"));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Ihre Kontaktdaten prüfen");
+    expect(sent.filter((one) => one.key.startsWith("POST"))).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: en["controllerMail.confirmSend"],
+      }),
+    );
+  }
+
   // An installation with no outbound relay cannot carry this link anywhere, and
   // the endpoint refuses to mint one. Offering the action anyway spent a click
   // on a refusal and told the reader their own mailbox sends no mail.
@@ -669,6 +690,7 @@ describe("asking a contact to confirm their details", () => {
     stubRoutes(
       {
         "GET /me": () => jsonResponse(MAY_WRITE),
+        ...PREVIEW,
         "POST /contacts/contact-1/consent/confirm-request": () =>
           jsonResponse(
             {
@@ -684,21 +706,21 @@ describe("asking a contact to confirm their details", () => {
     );
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
-    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+    await askAndSend(sent);
 
     expect(await screen.findByTestId("confirm-details-sent")).toHaveTextContent(
       /ada@example\.test/,
     );
-    // The request carries no address and no token: the server derives one and
-    // never hands back the other, which is what lets the answer stand as the
-    // subject's own.
+    // The language and nothing else: the server derives the address and never
+    // hands back the token, so the answer stays the subject's own.
     const ask = sent.find((one) => one.key.includes("confirm-request"));
-    expect(ask?.body).toBeFalsy();
+    expect(ask?.body).toEqual({ language: "de" });
   });
 
   it("says a queued link is on its way rather than claiming it was delivered", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(MAY_WRITE),
+      ...PREVIEW,
       "POST /contacts/contact-1/consent/confirm-request": () =>
         jsonResponse(
           {
@@ -712,7 +734,7 @@ describe("asking a contact to confirm their details", () => {
     });
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
-    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+    await askAndSend();
 
     // The message is staged here and transmitted later by the dispatcher, which
     // retries and can park. "Sent" would tell a rep somebody was asked while the
@@ -725,6 +747,7 @@ describe("asking a contact to confirm their details", () => {
   it("says the link has not gone out rather than naming a cause", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(MAY_WRITE),
+      ...PREVIEW,
       "POST /contacts/contact-1/consent/confirm-request": () =>
         jsonResponse(
           {
@@ -737,7 +760,7 @@ describe("asking a contact to confirm their details", () => {
     });
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);
 
-    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+    await askAndSend();
 
     // A rep who reads "sent" here would believe a contact was asked when they
     // never were, and would stop waiting for an answer that cannot come.
@@ -750,28 +773,51 @@ describe("asking a contact to confirm their details", () => {
     expect(sent).not.toHaveTextContent(/sends no mail/i);
   });
 
-  it("shows a contact with no address as a refusal", async () => {
-    stubRoutes({
-      "GET /me": () => jsonResponse(MAY_WRITE),
-      "POST /contacts/contact-1/consent/confirm-request": () =>
-        jsonResponse(
-          {
-            title: "Unprocessable Entity",
-            detail:
-              "this contact carries no live email address, so there is no mailbox a confirm link could reach",
-            status: 422,
-          },
-          422,
-        ),
-    });
+  it("shows a contact with no address as a refusal and sends nothing", async () => {
+    const sent = stubRoutes(
+      {
+        "GET /me": () => jsonResponse(MAY_WRITE),
+        "GET /contacts/contact-1/consent/mail-preview": () =>
+          jsonResponse(NO_ADDRESS_PROBLEM, 422),
+      },
+      [],
+    );
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);
+    const user = userEvent.setup();
 
-    await userEvent.click(await screen.findByTestId("confirm-details-ask"));
+    await user.click(await screen.findByTestId("confirm-details-ask"));
 
-    expect(await screen.findByText(/no live email address/i)).toBeVisible();
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(/no live email address/i),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", {
+        name: en["controllerMail.confirmSend"],
+      }),
+    ).toBeDisabled();
+    expect(sent.some((one) => one.key.startsWith("POST"))).toBe(false);
     expect(
       screen.queryByTestId("confirm-details-sent"),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens the preview without posting, and Cancel sends nothing", async () => {
+    const sent = stubRoutes({
+      "GET /me": () => jsonResponse(MAY_WRITE),
+      ...PREVIEW,
+    });
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByTestId("confirm-details-ask"));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("Ihre Kontaktdaten prüfen");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(sent.some((one) => one.key.startsWith("POST"))).toBe(false);
+    expect(screen.queryByTestId("confirm-details-sent")).toBeNull();
   });
 
   it("is not offered to a caller who may not write the contact", async () => {

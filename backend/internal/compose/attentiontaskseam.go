@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -51,9 +52,11 @@ type attentionTasks struct {
 // The false answer means "no reader to answer for", which is a page of nothing
 // rather than a refusal.
 func openTasksDueBy(
-	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf, ReadableOnly: true}
+	in := activities.ListActivitiesInput{
+		OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
+	}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -85,28 +88,50 @@ func openTasksDueBy(
 }
 
 func (t attentionTasks) OpenForViewer(
-	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) ([]attention.Task, error) {
 	// The store answers "open and due by then" itself, so the limit bounds the
 	// rows that QUALIFY. This used to read ten times the lane and narrow
 	// afterwards, which put the bound on the wrong set: a pile of completed
 	// tasks filled the scan, the overdue promise underneath never reached the
 	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
 	if !ok {
 		return nil, nil
 	}
 	in.Limit = &limit
-	rows, _, err := t.store.ListActivities(ctx, in)
+	rows, err := t.listOpenTasks(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	open := make([]attention.Task, 0, len(rows))
+	return t.asTasks(ctx, rows, scope, asOf)
+}
+
+// asTasks carries a window's rows across as tasks. Each carries the reminder
+// its scope may show, and a flag where the reader may not change it.
+func (t attentionTasks) asTasks(
+	ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time,
+) ([]attention.Task, error) {
+	tasks := make([]attention.Task, 0, len(rows))
 	reader := reminderReaderFor(ctx, scope)
 	for _, row := range rows {
-		open = append(open, taskFromActivity(row, reader, asOf))
+		tasks = append(tasks, taskFromActivity(row, reader, asOf))
 	}
-	return t.markReadOnly(ctx, open, asOf)
+	return t.markReadOnly(ctx, tasks, asOf)
+}
+
+// listOpenTasks reads one window of open tasks with each statement's generic
+// plan reused (database.ReuseGenericPlans). The window spells its partial-index
+// predicate as literals and caps with a literal LIMIT. The uncapped count beside
+// it does not opt in: its row count follows the assignee it is bound to.
+func (t attentionTasks) listOpenTasks(ctx context.Context, in activities.ListActivitiesInput) ([]crmcontracts.Activity, error) {
+	var rows []crmcontracts.Activity
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, _, err = t.store.ListActivities(ctx, in)
+		return err
+	})
+	return rows, err
 }
 
 // UpcomingForViewer reads the work due after the day's end, to a horizon.
@@ -116,24 +141,99 @@ func (t attentionTasks) OpenForViewer(
 // and the window is closed at both ends in the QUERY, so the limit bounds rows
 // that qualify rather than a wider set narrowed afterwards.
 func (t attentionTasks) UpcomingForViewer(
-	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
 	if !ok {
 		return nil, nil
 	}
 	in.OpenAndDueAfter = &from
 	in.Limit = &limit
-	rows, _, err := t.store.ListActivities(ctx, in)
+	rows, err := t.listOpenTasks(ctx, in)
 	if err != nil {
 		return nil, err
 	}
-	upcoming := make([]attention.Task, 0, len(rows))
-	reader := reminderReaderFor(ctx, scope)
-	for _, row := range rows {
-		upcoming = append(upcoming, taskFromActivity(row, reader, asOf))
+	return t.asTasks(ctx, rows, scope, asOf)
+}
+
+// CountTasks counts a later task window whole, under the lane's own
+// narrowing (openTasksDueBy), without the reader's due reminders.
+func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWindow) (int, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	if !ok {
+		return 0, nil
 	}
-	return t.markReadOnly(ctx, upcoming, asOf)
+	in.OpenAndDueAfter = &window.From
+	in.ExceptRemindersDue = window.Scope == attention.TasksMine
+	return t.store.CountActivities(ctx, in)
+}
+
+// TasksAfter continues one task window past the lane's cap, in the store's
+// due-date order, each task with the position after it. It reads no reminder
+// arm: the lane holds every due one.
+func (t attentionTasks) TasksAfter(
+	ctx context.Context, window attention.TaskWindow, after string, limit int,
+) ([]attention.Positioned[attention.Task], bool, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	if !ok {
+		return nil, false, nil
+	}
+	in.Limit = &limit
+	if !window.From.IsZero() {
+		in.OpenAndDueAfter = &window.From
+	}
+	if after != "" {
+		in.Cursor = &after
+	}
+	var rows []crmcontracts.Activity
+	var positions []string
+	var page storekit.Page
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, positions, page, err = t.store.ListActivitiesPositioned(ctx, in)
+		return err
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	tasks, err := t.asTasks(ctx, rows, window.Scope, window.AsOf)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]attention.Positioned[attention.Task], len(tasks))
+	for i, task := range tasks {
+		out[i] = attention.Positioned[attention.Task]{Row: task, After: positions[i]}
+	}
+	return out, page.HasMore, nil
+}
+
+// TasksOnDeals reads every open task of the window filed under any of these
+// deals, under the lane's own narrowing (openTasksDueBy). The service judges
+// which of them stand in for their deal.
+func (t attentionTasks) TasksOnDeals(
+	ctx context.Context, window attention.TaskWindow, deals []ids.UUID,
+) ([]attention.Task, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	if !ok || len(deals) == 0 {
+		return nil, nil
+	}
+	page := reminderPage
+	in.LinkedToDeals, in.Limit = deals, &page
+	reader := reminderReaderFor(ctx, window.Scope)
+	var tasks []attention.Task
+	for {
+		rows, next, err := t.listTaskPage(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			tasks = append(tasks, taskFromActivity(row, reader, window.AsOf))
+		}
+		if !next.HasMore {
+			return tasks, nil
+		}
+		in.Cursor = &next.NextCursor
+	}
 }
 
 // RemindersForViewer reads every due reminder of the reader's through the
@@ -146,9 +246,9 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	}
 	var due []attention.Task
 	page := reminderPage
-	in := activities.ListActivitiesInput{RemindersDue: true, TaskAsOf: &asOf, Limit: &page, ReadableOnly: true}
+	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
 	for {
-		rows, next, err := t.store.ListActivities(ctx, in)
+		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
@@ -160,6 +260,21 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 		}
 		in.Cursor = &next.NextCursor
 	}
+}
+
+// listTaskPage reads one page of tasks reusing its generic plan, as
+// listOpenTasks does, and answers where the next page starts.
+func (t attentionTasks) listTaskPage(
+	ctx context.Context, in activities.ListActivitiesInput,
+) ([]crmcontracts.Activity, storekit.Page, error) {
+	var rows []crmcontracts.Activity
+	var next storekit.Page
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, next, err = t.store.ListActivities(ctx, in)
+		return err
+	})
+	return rows, next, err
 }
 
 // reminderPage is the store's largest page, so a reader's reminders are
@@ -224,27 +339,22 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 }
 
 // withMayBeDone asks of each promise task whether our later mail on its thread
-// to a recipient kept it. It reads the follow-up rule the contact page reads
-// (activities.PromiseFollowUpsTx), and the newest such mail asks. A Not yet the
-// reader gave to that mail, on either surface, keeps the plain row.
+// to a recipient kept it. The company page asks the same question
+// (momentaction.AskTasksDone).
 func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
-	// Only a human answers the question, so an agent reading the queue sees
-	// the plain row.
-	if human := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHuman(ctx) == nil; t.db == nil || !human {
+	// A user or their agent answers the question, so automatic work reading the
+	// queue sees the plain row.
+	if answers := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHumanOrItsAgent(ctx) == nil; t.db == nil || !answers {
 		return tasks, nil
 	}
-	bases, byBasis, keys := promiseBases(tasks)
-	if len(bases) == 0 {
+	candidates := doneCandidates(tasks)
+	if len(candidates) == 0 {
 		return tasks, nil
 	}
-	var followUps map[ids.UUID]activities.PromiseFollowUp
-	var setAside map[momentaction.DoneSetAside]bool
+	var asked map[ids.UUID]crmcontracts.WorklistMayBeDone
 	err := t.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if followUps, err = activities.PromiseFollowUpsTx(ctx, tx, bases, asOf); err != nil {
-			return err
-		}
-		setAside, err = momentaction.DoneSetAsidesTx(ctx, tx, keys)
+		asked, err = momentaction.AskTasksDone(ctx, tx, candidates, asOf)
 		return err
 	})
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -253,103 +363,29 @@ func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Tas
 	if err != nil {
 		return nil, err
 	}
-	askMayBeDone(ctx, tasks, byBasis, followUps, setAside)
+	for i := range tasks {
+		if question, ok := asked[tasks[i].ID]; ok {
+			tasks[i].MayBeDone = &question
+		}
+	}
 	return tasks, nil
 }
 
-// promiseBasisOwner is the task and recipient one follow-up basis stands for.
-type promiseBasisOwner struct{ task, contact ids.UUID }
-
-// promiseBases builds one follow-up basis per open recipient of each promise
-// task, and the question keys the reader's Not yet answers are read under.
-func promiseBases(tasks []attention.Task) ([]activities.PromiseBasis, map[ids.UUID]promiseBasisOwner, []string) {
-	var bases []activities.PromiseBasis
-	byBasis := map[ids.UUID]promiseBasisOwner{}
-	var keys []string
+// doneCandidates are the promise tasks with a source message, each with its
+// open recipients.
+func doneCandidates(tasks []attention.Task) []momentaction.DoneCandidate {
+	var out []momentaction.DoneCandidate
 	for _, task := range tasks {
 		if !task.Commitment || task.SourceActivityID == nil {
 			continue
 		}
-		keys = append(keys, momentaction.DoneKey(openapi_types.UUID(task.ID)))
+		candidate := momentaction.DoneCandidate{TaskID: task.ID, SourceActivityID: *task.SourceActivityID, Assignee: task.AssigneeID}
 		for _, recipient := range task.Recipients {
-			if recipient.Status != crmcontracts.WorklistPromiseRecipientStatusOpen {
-				continue
+			if momentaction.OpenRecipient(string(recipient.Status)) {
+				candidate.Recipients = append(candidate.Recipients, ids.UUID(recipient.ContactId))
 			}
-			basis := ids.NewV7()
-			byBasis[basis] = promiseBasisOwner{task.ID, ids.UUID(recipient.ContactId)}
-			bases = append(bases, activities.PromiseBasis{PromiseID: basis, SourceActivityID: *task.SourceActivityID, RecipientContactID: ids.UUID(recipient.ContactId)})
 		}
+		out = append(out, candidate)
 	}
-	return bases, byBasis, keys
-}
-
-// doneAsked is one recipient's question about a promise task.
-type doneAsked struct {
-	contact     ids.UUID
-	sent        activities.PromiseFollowUp
-	fingerprint string
-}
-
-// askMayBeDone marks each task with the question its newest unanswered
-// follow-up asks.
-func askMayBeDone(
-	ctx context.Context, tasks []attention.Task, byBasis map[ids.UUID]promiseBasisOwner,
-	followUps map[ids.UUID]activities.PromiseFollowUp, setAside map[momentaction.DoneSetAside]bool,
-) {
-	holders := map[ids.UUID]string{}
-	for _, task := range tasks {
-		holders[task.ID] = momentaction.HeldMarker(ctx, task.AssigneeID)
-	}
-	byTask := map[ids.UUID][]doneAsked{}
-	for basis, sent := range followUps {
-		owner := byBasis[basis]
-		fingerprint := momentaction.DoneFingerprint(openapi_types.UUID(owner.task), sent, holders[owner.task])
-		byTask[owner.task] = append(byTask[owner.task], doneAsked{contact: owner.contact, sent: sent, fingerprint: fingerprint})
-	}
-	for i := range tasks {
-		key := momentaction.DoneKey(openapi_types.UUID(tasks[i].ID))
-		found, ok := newestUnanswered(byTask[tasks[i].ID], func(a doneAsked) bool {
-			return setAside[momentaction.DoneSetAside{Contact: a.contact, Key: key, Fingerprint: a.fingerprint}]
-		}, func(a doneAsked) activities.PromiseFollowUp { return a.sent })
-		if !ok {
-			continue
-		}
-		tasks[i].MayBeDone = &crmcontracts.WorklistMayBeDone{
-			ContactId: openapi_types.UUID(found.contact), EmailActivityId: openapi_types.UUID(found.sent.EmailID),
-			WroteAt: found.sent.At, WrotePrecision: crmcontracts.OccurredPrecision(found.sent.Precision),
-			ClaimKey: key, EvidenceFingerprint: found.fingerprint,
-		}
-	}
-}
-
-// newestUnanswered picks the follow-up a promise task asks about. That is the
-// newest one, unless the reader already answered Not yet to it or a later one.
-// One recipient's Not yet then holds for the task until we write to anybody
-// on the thread again. Equal instants are ordered by the mail's id, as
-// PromiseFollowUpsTx orders them.
-func newestUnanswered[T any](candidates []T, answered func(T) bool, sent func(T) activities.PromiseFollowUp) (T, bool) {
-	later := func(a, b activities.PromiseFollowUp) bool {
-		if !a.At.Equal(b.At) {
-			return a.At.After(b.At)
-		}
-		return a.EmailID.String() > b.EmailID.String()
-	}
-	var newest, newestAnswered T
-	var have, haveAnswered bool
-	for _, c := range candidates {
-		if answered(c) {
-			if !haveAnswered || later(sent(c), sent(newestAnswered)) {
-				newestAnswered, haveAnswered = c, true
-			}
-			continue
-		}
-		if !have || later(sent(c), sent(newest)) {
-			newest, have = c, true
-		}
-	}
-	if !have || (haveAnswered && !later(sent(newest), sent(newestAnswered))) {
-		var zero T
-		return zero, false
-	}
-	return newest, true
+	return out
 }

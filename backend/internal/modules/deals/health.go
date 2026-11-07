@@ -265,13 +265,14 @@ func daysBetween(from, to time.Time) float64 {
 	return d
 }
 
-// healthInteraction is the activity that qualifies as two-way engagement: an
-// interaction kind (§4 inputs; tasks and notes are not contact), and no
-// canceled or no-show meeting. It reads the shared definition rather than
-// restating it: relationship scoring, deal health and contact strength all ask
-// the same question, and a rule that drifts between them makes the network and
-// coverage signals disagree about one activity.
-var healthInteraction = relstrength.InteractionCountsSQL("a")
+// healthInteraction is the activity that qualifies as two-way engagement at
+// now (relstrength.InteractionCountsSQL). Tasks and notes are not contact, and
+// nor is a meeting still to come or called off. Relationship scoring, deal
+// health and contact strength all read that rule, so the network and coverage
+// signals judge one activity the same way.
+func healthInteraction(now string) string {
+	return relstrength.InteractionCountsSQL("a", now)
+}
 
 // DealHealth computes the §10.5 score for one deal. The read is
 // row-scoped exactly like GetDeal — a deal the caller cannot see has no
@@ -322,7 +323,7 @@ func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthI
 		SELECT d.status, d.created_at, d.last_activity_at, d.wait_until, d.stage_id, d.pipeline_id,
 		       (SELECT a.id FROM activity a
 		          JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-		         WHERE a.archived_at IS NULL AND `+relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", nowPos))+`
+		         WHERE a.archived_at IS NULL AND `+relstrength.ExternalActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", nowPos))+`
 		           `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		         ORDER BY a.occurred_at DESC, a.id DESC
 		         LIMIT 1),
@@ -361,26 +362,16 @@ func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthI
 // healthExpectedPace derives the won-deal stage-duration median the
 // stage-velocity factor compares against.
 func healthExpectedPace(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineID, in *dealHealthInputs) error {
-	// Expected pace: for each won deal of this pipeline, the completed
-	// stints in the subject's current stage (entry row → the next stage
-	// change); the median of those durations. A stint still open at the
-	// win has no exit row and contributes nothing. Below the
-	// ten-won-deal history floor the median is statistically noise, so
-	// the fold falls back to STAGE_VELOCITY_FALLBACK_DAYS.
+	// Expected pace: the median of the won deals' stints in the subject's
+	// current stage (wonStintsSQL). Below the ten-won-deal history floor the
+	// median is statistically noise, so the fold falls back to
+	// STAGE_VELOCITY_FALLBACK_DAYS.
 	var wonDealsWithHistory int
 	var medianSeconds *float64
 	if err := tx.QueryRow(ctx, `
-		WITH stints AS (
-			SELECT h.deal_id, h.to_stage_id, h.changed_at AS entered,
-			       lead(h.changed_at) OVER (PARTITION BY h.deal_id ORDER BY h.changed_at, h.id) AS left_at
-			FROM deal_stage_history h
-			JOIN deal d ON d.id = h.deal_id
-			WHERE d.pipeline_id = $1 AND d.status = 'won' AND d.archived_at IS NULL
-		)
-		SELECT count(DISTINCT deal_id),
-		       percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM left_at - entered))
-		FROM stints
-		WHERE to_stage_id = $2 AND left_at IS NOT NULL`,
+		WITH stints AS (`+wonStintsSQL+`)
+		SELECT count(DISTINCT deal_id), percentile_cont(0.5) WITHIN GROUP (ORDER BY secs)
+		FROM stints WHERE stage_id = $2`,
 		pipelineID, in.stageID).Scan(&wonDealsWithHistory, &medianSeconds); err != nil {
 		return err
 	}

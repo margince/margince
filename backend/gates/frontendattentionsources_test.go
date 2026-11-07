@@ -31,18 +31,19 @@ package gates
 // meaning has to leave this corpus identical, and only a parser gives that.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
 	attentionContract    = "api/crm.yaml"
-	frontendAttentionMap = "../frontend/src/features/worklist/worklist.copy.ts"
+	frontendAttentionMap = "../frontend/src/lib/worklistcopy.ts"
 )
 
 // focusSurfaceEntry reads one `source: "surface"` pair out of the map.
@@ -78,7 +79,7 @@ type contract struct {
 // contractSources reads the AttentionItem.source enum out of the OpenAPI schema.
 func contractSources(t *testing.T) []string {
 	t.Helper()
-	document, err := os.ReadFile(attentionContract)
+	document, err := gatekit.ReadFile(attentionContract)
 	if err != nil {
 		t.Fatalf("reading the API contract: %v", err)
 	}
@@ -107,7 +108,7 @@ func contractSources(t *testing.T) []string {
 // page it used to guard.
 func surfacedSources(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(frontendAttentionMap)
+	source, err := gatekit.ReadFile(frontendAttentionMap)
 	if err != nil {
 		t.Fatalf("reading the frontend focus-surface map: %v", err)
 	}

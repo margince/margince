@@ -143,17 +143,17 @@ const (
 
 // Tasks is the open-task read, through the activities module.
 //
-// The scope belongs in the QUERY and not in a filter afterwards: the store
-// bounds what it returns, so narrowing later would cut a colleague's twelve
-// rows out of a page of twelve and leave the reader's own overdue task
-// unreachable behind them.
+// The scope belongs in the QUERY and not in a filter afterwards, because the
+// store bounds what it returns. Narrowing later would fill a page of twelve
+// with a colleague's rows and hide the reader's own overdue task. The team argument is TaskWindow.Team: the seats a
+// team view keeps, plus unassigned work. Nil reads the scope unnarrowed.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
 	// CountOpenForViewer answers how many there ARE under the same narrowing,
 	// which is not the page length: the lane is capped at a dozen, so a badge
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
-	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID) (int, error)
+	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
 	// UpcomingForViewer answers the work due AFTER the day's end, up to a
 	// horizon, under the same narrowing.
 	//
@@ -161,7 +161,7 @@ type Tasks interface {
 	// not compete: a full day's backlog would fill a shared limit before a
 	// single upcoming row was reached, and the reader who most needs next
 	// week's deadline is exactly the one who would never see it.
-	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Task, error)
+	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
 	// RemindersForViewer answers every one of the reader's tasks whose reminder
 	// is due, latest reminder first. Not under the day's cap, which orders by
 	// due date, and not under any cap, because the lane's count counts them all.
@@ -181,6 +181,8 @@ type Task struct {
 	ID                     ids.UUID
 	Subject                string
 	DueAt                  *time.Time
+	// DueHasTime is true when DueAt names an agreed time of day.
+	DueHasTime bool
 	// The record this task was raised for, when it names one. A follow-up task
 	// says "Follow up with the new lead" and nothing else, so without the link
 	// the row is a sentence the reader cannot act on: the lane knows which lead
@@ -212,45 +214,6 @@ type Task struct {
 // Receipts is what the system did on its own, most recent first.
 type Receipts interface {
 	Recent(ctx context.Context, since time.Time, limit int) ([]Receipt, error)
-}
-
-// Receipt is one completed autonomous act, reported rather than asked about.
-type Receipt struct {
-	CloseDateChange *crmcontracts.CloseDateChange
-	Review          *crmcontracts.AppliedDealChangeReview
-	ID              ids.UUID
-	Kind            string
-	Summary         string
-	OccurredAt      time.Time
-	// The record the decision was about, carried from the approval it came
-	// from. A reader told the system sent something on their behalf wants the
-	// account it went to, and the card offers `open` only when this names one.
-	//
-	// Empty TargetType means the decision named no record, which is a real
-	// state: not every approval is about one.
-	TargetType string
-	TargetID   ids.UUID
-	// TargetLabel is the target's name as the decision was staged.
-	TargetLabel *string
-	// Undo names the audit row the record-history restore route puts back, on
-	// a receipt for work that was APPLIED rather than approved.
-	//
-	// Absent means there is nothing to offer: an approval the system decided is
-	// already a decision somebody can revisit through the record, and a
-	// correction somebody has already reversed has no second undo in it.
-	Undo *ReceiptUndo
-}
-
-// ReceiptUndo is what a receipt needs to offer a way back.
-type ReceiptUndo struct {
-	AuditLogID ids.UUID
-	// Version of the record the restore route compares against, so two contacts
-	// undoing the same change do not overwrite each other silently.
-	Version int64
-	// Reversed says somebody already put this back. The row stays and says so
-	// rather than vanishing, which would leave a reader unsure their Undo
-	// landed.
-	Reversed bool
 }
 
 // FailedEffects reads the decisions the acting rep approved whose released
@@ -445,7 +408,7 @@ type DealFacts interface {
 type DealFigures struct {
 	Closed               bool
 	CloseDateProvisional *bool
-	ForecastCategory     *string
+	WinProbability       *int
 	StageID              ids.UUID
 	// StageWinProbability is the probability recorded on the deal's stage: a
 	// fact beside the deal's own money, never a weighting of it. A pointer

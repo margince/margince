@@ -33,16 +33,16 @@ import (
 // meetingGuest is the external party on the meetings below.
 const meetingGuest = "guest@partner.example"
 
-// syncMeeting lands one record as a MEETING through the production registry,
-// with the guest as its external party.
-//
-// syncAsKind rather than a calendar connector: what is under test is the ladder,
-// which reads the activity kind and the addresses the record names, and driving
-// it through the mail lane keeps the fixture to the one fact each test varies.
+// syncMeeting uses the real provider normalizer and production capture registry.
 func syncMeeting(t *testing.T, env captureEnv, msgID string) {
 	t.Helper()
-	env.syncAsKind(t, map[string]string{msgID: "meeting"},
-		email(meetingGuest, "Guest Partner", captureOwner, msgID, ""))
+	syncGcalEventsThrough(t, env.e, env.registry, captureOwner, []map[string]any{{
+		"id": msgID, "status": "confirmed", "visibility": "default", "summary": "Customer meeting",
+		"start":     map[string]string{"dateTime": "2026-06-05T10:00:00Z"},
+		"end":       map[string]string{"dateTime": "2026-06-05T11:00:00Z"},
+		"organizer": map[string]any{"email": captureOwner, "self": true},
+		"attendees": []map[string]any{{"email": captureOwner, "self": true, "responseStatus": "accepted"}, {"email": meetingGuest, "displayName": "Guest Partner", "responseStatus": "accepted"}},
+	}})
 }
 
 // The guest on a captured meeting becomes a contact.

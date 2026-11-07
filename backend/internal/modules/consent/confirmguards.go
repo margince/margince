@@ -37,6 +37,9 @@ type linkRequest struct {
 	// themselves. Without this flag it refused them too, which made a
 	// withdrawal permanent in practice.
 	askedByTheSubject bool
+	// preview asks the same questions without holding the subject: it posts
+	// nothing, so there is no link an erasure could race.
+	preview bool
 }
 
 // admitLinkTx runs every check a mint owes before it writes anything, and
@@ -49,7 +52,11 @@ type linkRequest struct {
 // installation posting a link to somebody it was just told to forget. The
 // address is derived before the last two guards because both judge it.
 func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (string, error) {
-	if err := auth.HoldWritableLive(ctx, tx, "contact", req.contactID.UUID); err != nil {
+	hold := auth.HoldWritableLive
+	if req.preview {
+		hold = auth.EnsureWritableLive
+	}
+	if err := hold(ctx, tx, "contact", req.contactID.UUID); err != nil {
 		return "", err
 	}
 	if err := requireConfirmablePurposeTx(ctx, tx, req.purposeID); err != nil {

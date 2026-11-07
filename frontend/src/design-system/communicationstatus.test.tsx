@@ -166,8 +166,9 @@ it("softens an over-confident ready on a contact surface", () => {
   const trigger = screen.getByRole("button", {
     name: /Communication status for Anna/,
   });
-  expect(trigger.className).toContain("commstatus-context_only");
   expect(trigger.className).not.toContain("commstatus-ready");
+  // The softened mark wears context_only's own cue, not a bare envelope.
+  expect(trigger.querySelector(".commstatus-cue")).not.toBeNull();
 });
 
 // The same reading on a surface that DOES hold a message keeps its answer.

@@ -4,6 +4,7 @@
 package provenance
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strings"
@@ -27,6 +28,9 @@ const ReservedSourceSystemPrefix = "mirror:"
 // Their source identity links task state to the original email obligation.
 const EmailRequestSource = "email_request"
 
+// AcceptedRecommendationSource keys a human-accepted observation for idempotent replay.
+const AcceptedRecommendationSource = "accepted_recommendation"
+
 // NoActivityReminderSource and CheckInCadenceSource name the quiet-account
 // reminders the automation engine mints, and they are reserved for the same
 // reason EmailRequestSource is: the activity store keys its idempotent replay
@@ -48,6 +52,10 @@ const (
 // locator, so a task a rep dismissed is found again instead of being
 // written anew.
 const CommitmentTaskSource = "commitment"
+
+// AnalyticsDecisionSource names a task a manager recorded from a sales review:
+// a decision with an owner, a review date and an expected result.
+const AnalyticsDecisionSource = "analytics_decision"
 
 // The other native writers that create a task with no human behind it. Each
 // stamps one of these, and storekit.TaskSourceFamilies says how its task stays
@@ -79,20 +87,33 @@ const WebsiteLeadSource = "siteread"
 // holds only while no client can spell it.
 const WebFormSource = "web_form"
 
+// WebFormSourceID is a website form submission's source_id: the form, then the
+// submission's own part. WebFormIDSQL reads the form back out of it.
+func WebFormSourceID(form, submission string) string { return form + ":" + submission }
+
+// WebFormIDSQL is the form a row under alias came through, as text, or NULL
+// for a row no website form wrote.
+func WebFormIDSQL(alias string) string {
+	return fmt.Sprintf(`CASE WHEN %[1]s.source_system = '%[2]s' THEN split_part(%[1]s.source_id, ':', 1) END`,
+		alias, WebFormSource)
+}
+
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
 // carries the old spelling.
 var internalSourceSystems = map[string]bool{
-	EmailRequestSource:       true,
-	NoActivityReminderSource: true,
-	CheckInCadenceSource:     true,
-	CommitmentTaskSource:     true,
-	WebsiteLeadSource:        true,
-	WhichDealSource:          true,
-	LeadRepliedSource:        true,
-	LeadForContactSource:     true,
-	WebFormSource:            true,
+	EmailRequestSource:           true,
+	AcceptedRecommendationSource: true,
+	NoActivityReminderSource:     true,
+	CheckInCadenceSource:         true,
+	CommitmentTaskSource:         true,
+	AnalyticsDecisionSource:      true,
+	WebsiteLeadSource:            true,
+	WhichDealSource:              true,
+	LeadRepliedSource:            true,
+	LeadForContactSource:         true,
+	WebFormSource:                true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system

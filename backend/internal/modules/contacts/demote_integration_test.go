@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -129,7 +130,9 @@ func (e *promoteConsentEnv) requirePromoted(t *testing.T, lead ids.LeadID) {
 // that survivor would destroy merged history, so the demotion is refused.
 func TestDemoteOfAMergeSurvivorIsRefused(t *testing.T) {
 	e := setupPromoteConsent(t)
-	lead := e.seedLead(t, "created@example.test")
+	// Owned by the rep who also owns the duplicate, so the merge carries no
+	// former owner's access.
+	lead := e.seedLeadCreatedAt(t, "created@example.test", clocktest.Now(t))
 	created, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil || merged {
 		t.Fatalf("promote: err=%v merged=%t, want a created contact", err, merged)
@@ -164,7 +167,7 @@ func TestDemoteOfAMergeSurvivorIsRefused(t *testing.T) {
 func TestDemoteRefusesWhenTheContactIsOnALiveDeal(t *testing.T) {
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "buyer@example.test")
-	contact, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "meeting_held"})
+	contact, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatalf("promote: %v", err)
 	}
@@ -281,8 +284,10 @@ func (e *promoteConsentEnv) asStranger() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"lead":    {Create: true, Read: true, Update: true, Delete: true},
-				"contact": {Create: true, Read: true, Update: true},
+				"lead":         {Create: true, Read: true, Update: true, Delete: true},
+				"contact":      {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true},
+				"relationship": {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},
@@ -339,8 +344,10 @@ func TestDemoteTellsAStrangerNothingAboutALeadTheyCannotSee(t *testing.T) {
 func TestDemoteNeedsNoArchiveGrantToUndoACreatedContact(t *testing.T) {
 	e := setupPromoteConsent(t)
 	rep := e.withGrants(map[string]principal.ObjectGrant{
-		"lead":    {Create: true, Read: true, Update: true, Delete: true},
-		"contact": {Create: true, Read: true, Update: true},
+		"lead":         {Create: true, Read: true, Update: true, Delete: true},
+		"contact":      {Create: true, Read: true, Update: true},
+		"company":      {Create: true, Read: true},
+		"relationship": {Create: true, Read: true},
 	})
 	lead := e.seedLead(t, "undo@example.test")
 	contact, _, err := e.store.PromoteLead(rep, lead, PromoteLeadInput{Trigger: "human_qualify"})
@@ -370,7 +377,7 @@ func TestDemoteOfAContactAnotherLeadPromotedIntoIsRefused(t *testing.T) {
 		t.Fatalf("first promote: err=%v merged=%t, want a created contact", err, merged)
 	}
 	second := e.seedLead(t, shared)
-	if _, merged, err := e.store.PromoteLead(e.ctx, second, PromoteLeadInput{Trigger: "inbound_reply"}); err != nil || !merged {
+	if _, merged, err := e.store.PromoteLead(e.ctx, second, PromoteLeadInput{Trigger: "human_qualify"}); err != nil || !merged {
 		t.Fatalf("second promote: err=%v merged=%t, want a merge into the first's contact", err, merged)
 	}
 

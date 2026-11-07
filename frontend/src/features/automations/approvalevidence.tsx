@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { SignatureHtml } from "../../components/signaturehtml";
 import type { DecisionApproval } from "../../design-system/decisioncard";
 import { EmailAttachments } from "../../design-system/emailmessage";
@@ -6,8 +5,7 @@ import { EmailText } from "../../design-system/emailtext";
 import { SourceEvidence } from "../../design-system/sourceevidence";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
-import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
+import { useSourceOpener } from "../../lib/opensource";
 
 export function ApprovalEvidence({
   approval,
@@ -59,8 +57,7 @@ function ApprovalSources({
   approval,
 }: Readonly<{ approval: DecisionApproval }>) {
   const t = useT();
-  const zone = useRecordZone();
-  const [opened, setOpened] = useState<string | null>(null);
+  const openerFor = useSourceOpener();
   const legacySource = approval.proposed_change?.source_activity_id;
   const source =
     approval.target_entity_type === "activity" && approval.target_entity_id
@@ -97,13 +94,8 @@ function ApprovalSources({
   return (
     <>
       {sources.map((id) => (
-        <SourceEvidence key={id} activityId={id} onOpenTranscript={setOpened} />
+        <SourceEvidence key={id} activityId={id} openerFor={openerFor} />
       ))}
-      <OpenActivityDrawer
-        activityId={opened}
-        zone={zone}
-        onClose={() => setOpened(null)}
-      />
     </>
   );
 }

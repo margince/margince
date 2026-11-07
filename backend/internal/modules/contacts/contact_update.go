@@ -9,6 +9,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -100,7 +101,7 @@ func (s *Store) updateContactInTx(
 	if err := s.lockConvertStops(ctx, tx, id, in.ConvertLeadIDs); err != nil {
 		return out, err
 	}
-	current, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readContactToEdit(ctx, tx, id, in, active)
 	if err != nil {
 		return out, fmt.Errorf("read contact before update: %w", err)
 	}
@@ -111,7 +112,9 @@ func (s *Store) updateContactInTx(
 	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 		return out, err
 	}
-	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	// Before the patch and the lane locks, so a rename through the parts is
+	// patched, locked and re-checked as a full_name edit is.
+	in = updateAsWritten(current, in, active)
 	setter, err := relationshipMarkSetter(ctx, in)
 	if err != nil {
 		return out, err
@@ -145,7 +148,7 @@ func (s *Store) updateContactInTx(
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	if p.Empty() {
-		return current, nil
+		return withContactCreator(ctx, tx, current)
 	}
 
 	if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
@@ -173,7 +176,7 @@ func (s *Store) updateContactInTx(
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
 		return out, fmt.Errorf("emit contact.updated: %w", err)
 	}
-	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails); err != nil {
+	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails || setsChanged.phones); err != nil {
 		return out, err
 	}
 	if err := s.convertEditedLeads(ctx, tx, id, in.converting); err != nil {
@@ -182,7 +185,7 @@ func (s *Store) updateContactInTx(
 	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 		return out, fmt.Errorf("read updated contact: %w", err)
 	}
-	return out, s.followShareOwnerTx(ctx, tx, id, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
+	return out, s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // Child sets are separate rows, so their audit images supplement the column patch.
@@ -203,6 +206,62 @@ func contactChangeImages(
 		after["phones"] = in.Phones
 	}
 	return before, after
+}
+
+// readContactToEdit reads the row the edit decides on. An edit that moves a name
+// part decides full_name from the stored parts, so it reads them under the row
+// lock. That lock comes first in the lock order (lockorder.go).
+func readContactToEdit(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
+) (crmcontracts.Contact, error) {
+	if movesANamePart(in) {
+		if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
+			return crmcontracts.Contact{}, err
+		}
+	}
+	return readContactRow(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// movesANamePart reports whether the update sets or clears first_name or last_name.
+func movesANamePart(in UpdateContactInput) bool {
+	return in.FirstName != nil || in.LastName != nil ||
+		slices.Contains(in.Clear, columnFirstName) || slices.Contains(in.Clear, columnLastName)
+}
+
+// updateAsWritten completes the input with what the request implies: the core
+// fields cleared to NULL, and the display name that follows the name parts.
+func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column) UpdateContactInput {
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	in.FullName = displayNameAfter(current, in)
+	return in
+}
+
+// displayNameAfter is the full_name an update writes. A display name that was
+// the plain join of the old parts follows the new parts. One typed by hand, or
+// a changed one the update sends, stays as it is. The edit form sends the
+// stored full_name with every name change, so an unchanged one is no choice.
+func displayNameAfter(current crmcontracts.Contact, in UpdateContactInput) *string {
+	if in.FullName != nil && *in.FullName != current.FullName {
+		return in.FullName
+	}
+	first, last := derefString(current.FirstName), derefString(current.LastName)
+	newFirst, newLast := namePartAfter(first, in.FirstName, in.Clear, columnFirstName), namePartAfter(last, in.LastName, in.Clear, columnLastName)
+	joined := JoinNameParts(newFirst, newLast)
+	if joined == "" || joined == current.FullName || current.FullName != JoinNameParts(first, last) {
+		return in.FullName
+	}
+	return &joined
+}
+
+// namePartAfter is one name column as the update leaves it.
+func namePartAfter(stored string, set *string, cleared []string, field string) string {
+	switch {
+	case set != nil:
+		return *set
+	case slices.Contains(cleared, field):
+		return ""
+	}
+	return stored
 }
 
 func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, markSetter string) (*storekit.Patch, error) {

@@ -87,6 +87,24 @@ function draftsInTurn(...drafts: object[]) {
 
 const KEPT_NOTICE = "Your edits were kept. Draft again when ready.";
 
+// Answers each draft call when the test says, so it can type while one is out.
+function draftsOnCue() {
+  const pending: ((response: Response) => void)[] = [];
+  const asked = (call: number) =>
+    waitFor(() => expect(pending[call]).toBeTypeOf("function"));
+  return {
+    route: () =>
+      new Promise<Response>((resolve) => {
+        pending.push(resolve);
+      }),
+    asked,
+    answer: async (call: number, drafted: object) => {
+      await asked(call);
+      pending[call]?.(jsonResponse(drafted));
+    },
+  };
+}
+
 // Once a draft stands, the ask is folded behind its own control on the line.
 async function askAgain() {
   await userEvent.click(screen.getByRole("button", { name: "Change the ask" }));
@@ -192,7 +210,7 @@ describe("ComposeModal draft binding", () => {
     expect(screen.queryByText(KEPT_NOTICE)).toBeNull();
   });
 
-  it("keeps the rep's edit on a reply, sends no rewrite_of and says so", async () => {
+  it("revises the rep's edit on a reply, sending it as rewrite_of", async () => {
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
@@ -209,12 +227,14 @@ describe("ComposeModal draft binding", () => {
     writeMessage("Body", "Draft A body. And my own line.");
     await askAgain();
 
-    expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
-    expect(messageText("Body")).toBe("Draft A body. And my own line.");
+    await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
     const calls = sent.filter(
       (r) => r.key === "POST /activities/act-1/draft-email",
     );
-    expect(calls[1]?.body).not.toHaveProperty("rewrite_of");
+    expect(calls[1]?.body).toMatchObject({
+      rewrite_of: "Draft A body. And my own line.",
+    });
+    expect(screen.queryByText(KEPT_NOTICE)).toBeNull();
   });
 
   it("replaces the body on a reply when the rep presses a rewrite verb", async () => {
@@ -241,15 +261,18 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("keeps the earlier reference when a re-draft leaves the typed body alone", async () => {
-    // The fill rule never clobbers text the rep has touched, so the second
-    // draft's words are discarded. Adopting its reference anyway would submit
-    // draft B's identity with draft A's text plus the rep's edit. That is an
-    // edited_sent whose "edit" is a draft the rep never saw.
+    // A draft no model revised leaves the typed words on screen, so its words
+    // are discarded. Adopting its reference anyway would submit draft B's
+    // identity with draft A's text plus the rep's edit. That is an edited_sent
+    // whose "edit" is a draft the rep never saw.
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
         voiceDraft("vd-a", "Re: Q3", "Draft A body."),
-        voiceDraft("vd-b", "Re: Q3 again", "Draft B body."),
+        {
+          ...voiceDraft("vd-b", "Re: Q3 again", "Draft B body."),
+          ai_generated: false,
+        },
       ),
       "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
     });
@@ -591,44 +614,45 @@ describe("ComposeModal draft binding", () => {
 // credit it to a voice version that never touched it.
 describe("ComposeModal draft provenance", () => {
   it("discloses nothing when a draft's words were discarded for the rep's own", async () => {
+    const drafts = draftsOnCue();
     stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
-      "POST /activities/act-1/draft-email": () =>
-        jsonResponse(voiceDraft("vd-a", "Re: Q3", "Draft A body.")),
+      "POST /activities/act-1/draft-email": drafts.route,
     });
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     writeMessage("Body", "My own words.");
     await userEvent.click(draftButton());
+    await drafts.asked(0);
+    writeMessage("Body", "My own words, and more.");
+    await drafts.answer(0, voiceDraft("vd-a", "Re: Q3", "Draft A body."));
 
-    // Wait for draft completion before checking the discarded body's provenance.
-    expect(await screen.findByDisplayValue("Re: Q3")).toBeTruthy();
-    expect(messageText("Body")).toBe("My own words.");
+    expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
+    expect(messageText("Body")).toBe("My own words, and more.");
     expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull();
   });
 
   it("keeps the applied draft's voice version when a re-draft is discarded", async () => {
-    const sent = stubRoutes({
+    const drafts = draftsOnCue();
+    stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
-      "POST /activities/act-1/draft-email": draftsInTurn(
-        voiceDraft("vd-a", "Re: Q3", "Draft A body.", 3),
-        voiceDraft("vd-b", "Re: Q3 again", "Draft B body.", 4),
-      ),
+      "POST /activities/act-1/draft-email": drafts.route,
     });
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     await userEvent.click(draftButton());
+    await drafts.answer(0, voiceDraft("vd-a", "Re: Q3", "Draft A body.", 3));
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    writeMessage("Body", "Draft A body. And my own line.");
     await askAgain();
-    await waitFor(() =>
-      expect(
-        sent.filter((r) => r.key === "POST /activities/act-1/draft-email")
-          .length,
-      ).toBe(2),
+    await drafts.asked(1);
+    writeMessage("Body", "Draft A body. And my own line.");
+    await drafts.answer(
+      1,
+      voiceDraft("vd-b", "Re: Q3 again", "Draft B body.", 4),
     );
+    expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
 
     // v4's words were never applied, so v4 may not be named over v3's.
     expect(
@@ -709,7 +733,7 @@ describe("ComposeModal send refusals", () => {
       screen
         .getByRole("link", { name: "Reconnect your mailbox" })
         .getAttribute("href"),
-    ).toBe("#/settings/connections");
+    ).toBe("/#/settings/connections");
     // The refusal replaces the generic line rather than joining it.
     expect(screen.queryByText("opaque server wording")).toBeNull();
     expect(onClose).not.toHaveBeenCalled();

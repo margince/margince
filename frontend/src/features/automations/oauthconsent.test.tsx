@@ -108,6 +108,7 @@ type ConsentPayload = {
   client_name: string;
   offline: boolean;
   scopes: string[];
+  areas: string[];
 };
 
 function stubConsent(payload: ConsentPayload) {
@@ -184,6 +185,7 @@ function renderConsent(
     client_name: payload.client_name ?? "Claude Code",
     offline: payload.offline ?? false,
     scopes: payload.scopes,
+    areas: payload.areas ?? ["business"],
   });
   render(<OAuthConsent />);
 }
@@ -250,7 +252,7 @@ describe("OAuthConsent", () => {
       "Draft messages",
       "Change records",
       "Send messages",
-      "Buy contact data",
+      "Use AI and buy data",
     ]) {
       expect(
         await screen.findByRole("checkbox", { name: new RegExp(label) }),
@@ -259,12 +261,43 @@ describe("OAuthConsent", () => {
 
     await user.click(screen.getByRole("checkbox", { name: /Send messages/ }));
     await user.click(
-      screen.getByRole("checkbox", { name: /Buy contact data/ }),
+      screen.getByRole("checkbox", { name: /Use AI and buy data/ }),
     );
 
     expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
       "read draft write",
     );
+  });
+
+  it("narrows the grant to reading and drafting in one press, and back", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+    const full = await screen.findByRole("button", { name: "Full assistant" });
+    expect(full).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Read and draft" }));
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft",
+    );
+    expect(
+      screen.getByRole("checkbox", { name: /Change records/ }),
+    ).not.toBeChecked();
+
+    await user.click(full);
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft write send enrich",
+    );
+  });
+
+  it("calls a grant that matches neither preset its own", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("checkbox", { name: /Use AI and buy data/ }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Pick your own" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("refuses to approve nothing", async () => {
@@ -276,7 +309,7 @@ describe("OAuthConsent", () => {
       /Draft messages/,
       /Change records/,
       /Send messages/,
-      /Buy contact data/,
+      /Use AI and buy data/,
     ]) {
       await user.click(screen.getByRole("checkbox", { name: label }));
     }
@@ -315,6 +348,46 @@ describe("OAuthConsent", () => {
     // that holds its counterpart is Path=/oauth/authorize and reaches
     // nothing else.
     expect(posted.body.get("consent")).toBe(NONCE);
+  });
+
+  it("posts all areas, with no area section, for a role that reaches one area", async () => {
+    const posted = stubAuthorizePost();
+    renderConsent({ scopes: ["read"], areas: ["business"] });
+    const authorize = await screen.findByRole("button", { name: /authorize/i });
+    expect(
+      screen.queryByRole("group", { name: "Where it may work" }),
+    ).toBeNull();
+    await userEvent.click(authorize);
+    expect(posted.body.get("areas")).toBe("all");
+  });
+
+  it("posts the areas the human ticked, separated by single spaces", async () => {
+    const posted = stubAuthorizePost();
+    renderConsent({
+      scopes: ["read"],
+      areas: ["business", "compliance", "admin_settings", "own_account"],
+    });
+    const user = userEvent.setup();
+    expect(
+      await screen.findByRole("radio", { name: /All areas/ }),
+    ).toBeChecked();
+    await user.click(screen.getByRole("radio", { name: /Choose areas/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Compliance/ }));
+    await user.click(screen.getByRole("checkbox", { name: /Admin settings/ }));
+    await user.click(screen.getByRole("button", { name: /authorize/i }));
+    expect(posted.body.get("areas")).toBe("business own_account");
+  });
+
+  it("refuses to approve a choice of no areas", async () => {
+    renderConsent({ scopes: ["read"], areas: ["business", "own_account"] });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("radio", { name: /Choose areas/ }),
+    );
+    await user.click(screen.getByRole("checkbox", { name: /Sales work/ }));
+    await user.click(screen.getByRole("checkbox", { name: /My account/ }));
+    expect(screen.getByRole("button", { name: /authorize/i })).toBeDisabled();
+    expect(screen.getByText("Tick at least one area.")).toBeInTheDocument();
   });
 
   it("posts the deny marker when the human refuses the connection", async () => {
@@ -405,6 +478,7 @@ describe("OAuthConsent — a way of connecting the admin turned off", () => {
       client_name: "Example Assistant",
       offline: false,
       scopes: [],
+      areas: [],
     });
     render(<OAuthConsent />);
     expect(await screen.findByText("Tool: Example Assistant")).toBeTruthy();

@@ -13,7 +13,7 @@ import {
 } from "../../testing/story-utils";
 import { candidateVersion } from "../../testing/voice-candidate";
 import {
-  ActiveVoiceInsights,
+  CandidateBanner,
   VoiceChangeLog,
   VoiceHistory,
 } from "./voice-versions";
@@ -179,8 +179,9 @@ export const TypedCandidateReasons: Story = {
     stub([candidate], []);
     return (
       <StoryProviders>
-        <ActiveVoiceInsights
+        <CandidateBanner
           profileId="vp-1"
+          candidate={candidate}
           canEdit
           onChanged={() => undefined}
         />

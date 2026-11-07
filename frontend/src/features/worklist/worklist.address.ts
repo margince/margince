@@ -3,7 +3,13 @@
 
 import { useState } from "react";
 import { currentParams, useUrlParams } from "../../lib/urlstate";
-import { worklistFilterFrom } from "./worklist.header";
+import {
+  DEFAULT_VIEW,
+  viewFromAddress,
+  viewOfFilter,
+  type WorklistView,
+} from "../../lib/worklistviews";
+import { WORKLIST_VIEW_PARAM, worklistFilterFrom } from "./worklist.header";
 import {
   UNASSIGNED,
   type WorklistFilter,
@@ -22,7 +28,40 @@ import {
 export function drawerScope(
   params: ReadonlyMap<string, string>,
 ): WorklistScope {
-  return requestedScope(params.get("queue_scope"));
+  return drawerQueue(params).scope;
+}
+
+/**
+ * The queue a drawer's dials name: the same read the drawer makes from them,
+ * for a record continuing that queue after the drawer has closed.
+ */
+export function drawerQueue(params: ReadonlyMap<string, string>): Readonly<{
+  scope: WorklistScope;
+  view: WorklistView;
+  filter: WorklistFilter;
+  owner: string;
+}> {
+  const owner = params.get("owner") ?? "";
+  return {
+    scope: requestedScope(params.get("queue_scope")),
+    ...viewAndFilter(params, WORKLIST_VIEW_PARAM),
+    owner,
+  };
+}
+
+/**
+ * The view and the filter inside it. An old `filter=decisions|system` link
+ * opens that view with every row in it. A filter the view does not hold falls
+ * back to all of the view, and only Today has filters of its own.
+ */
+function viewAndFilter(
+  params: ReadonlyMap<string, string>,
+  viewParam: string,
+): Readonly<{ view: WorklistView; filter: WorklistFilter }> {
+  const asked = worklistFilterFrom(params);
+  const view = viewFromAddress(params.get(viewParam), asked);
+  const home = viewOfFilter(asked);
+  return { view, filter: home === "today" && view === "today" ? asked : "all" };
 }
 
 function requestedScope(
@@ -50,9 +89,14 @@ export function useWorklistAddress(
   );
   const [localSelected, setLocalSelected] = useState("");
   const scopeParam = embedded ? "queue_scope" : "scope";
-  const scope = requestedScope(params.get(scopeParam), opensOn);
-  const filter = worklistFilterFrom(params);
-  const owner = embedded ? (params.get("owner") ?? "") : localOwner;
+  const viewParam = embedded ? WORKLIST_VIEW_PARAM : "view";
+  const { scope, view, filter, owner } = embedded
+    ? drawerQueue(params)
+    : {
+        scope: requestedScope(params.get(scopeParam), opensOn),
+        ...viewAndFilter(params, viewParam),
+        owner: localOwner,
+      };
   const selectedId = embedded ? (params.get("selected") ?? "") : localSelected;
   const change = (key: string, value: string) => {
     const next = new Map(currentParams());
@@ -67,6 +111,16 @@ export function useWorklistAddress(
   const setScope = (next: WorklistScope) => change(scopeParam, next);
   const setFilter = (next: WorklistFilter) =>
     change("filter", next === "all" ? "" : next);
+  // A new view starts on all of it: a filter belongs to one view only.
+  const setView = (next: WorklistView) => {
+    const params = new Map(currentParams());
+    params.delete("filter");
+    params.delete("selected");
+    setLocalSelected("");
+    if (next === DEFAULT_VIEW) params.delete(viewParam);
+    else params.set(viewParam, next);
+    setParams(params);
+  };
   const setOwner = (next: string) => {
     if (embedded) change("owner", next);
     else {
@@ -80,10 +134,12 @@ export function useWorklistAddress(
   };
   return {
     scope,
+    view,
     filter,
     owner,
     selectedId,
     setScope,
+    setView,
     setFilter,
     setOwner,
     setSelectedId,

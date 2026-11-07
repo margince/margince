@@ -49,7 +49,8 @@ screen comes after it. The request waits through the sign-in.
 
 The consent screen shows the human who signed in the fixed list of scopes, `read draft write send enrich`.
 All of them are checked by default. Before they approve, the human can clear each one they do not mean to
-grant. **Deny** sends the client `access_denied`, so it stops waiting.
+grant. **Deny** sends the client `access_denied`, so it stops waiting. When the human's role reaches two
+or more groups of work, the screen also asks where the agent may work. They keep all of them, or tick some.
 
 A human with no passport yet can still connect a client from nothing. Nothing needs to exist before
 the consent screen: to approve it creates the connection's own credential.
@@ -84,8 +85,9 @@ Two things do not follow that rule:
 - **`enrich`** still needs a confirm first. The model names the URL the server calls. So if someone gets
   the model to name an address, the server reaches an address that no one with the credential picked.
   The risk is data that leaves the system, and what a passport may do does not limit that.
-- **What an installation sets a floor for.** A workspace can require a confirm for a verb and
-  record type, when it declares that in the contract. The verb then waits for a human.
+- **Automatic work with no passport.** An agent that acts for nobody keeps the declared tier of every verb,
+  and the contract's confirm-first floor for a verb and record type. That verb then waits for a human. A
+  passport that works as you does not meet that floor.
 
 ## Look at the surface
 
@@ -97,8 +99,10 @@ npx @modelcontextprotocol/inspector
 # then, in the UI: Transport = "Streamable HTTP", URL = http://localhost:8080/mcp
 ```
 
-`tools/list` shows only what the granted scopes of the connection can call. So the surface the Inspector
-reports is the surface that client has. The grant is what the human kept checked on the consent screen.
+`tools/list` shows only what the connection can call: its granted scopes, and the seat and role
+grants of the human it acts for. So the surface the Inspector reports is the surface that client has.
+The grant is what the human kept checked on the consent screen. A role change shows at the next
+`tools/list`.
 
 ## Register a client by hand
 

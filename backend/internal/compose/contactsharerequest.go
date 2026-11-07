@@ -37,17 +37,39 @@ const (
 )
 
 // contactShareRequests is the approvals queue behind contacts' share
-// requests.
+// requests, and behind the handover requests an owner change closes.
 func contactShareRequests(pool *pgxpool.Pool) contactShareQueue {
 	return contactShareQueue{pool: pool}
 }
 
 type contactShareQueue struct{ pool *pgxpool.Pool }
 
-// FollowOwnerTx withdraws the contact's requests that name another owner.
-func (q contactShareQueue) FollowOwnerTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, to *ids.UUID) error {
-	_, err := approvals.FollowContactOwnerInTx(ctx, tx, contactID.UUID, to)
-	return err
+// FollowOwnerTx withdraws the record's requests that name another owner. A
+// withdrawn handover request leaves its decider's queue, and the colleague who
+// asked is told the record changed hands.
+func (q contactShareQueue) FollowOwnerTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, to *ids.UUID) error {
+	if recordType == string(recordTypeContact) {
+		if _, err := approvals.FollowContactOwnerInTx(ctx, tx, id, to); err != nil {
+			return err
+		}
+	}
+	withdrawn, err := approvals.FollowTransferOwnerInTx(ctx, tx, recordType, id, to)
+	if err != nil {
+		return err
+	}
+	for _, request := range withdrawn {
+		if err := retractApprovalNotice(ctx, tx, request.ID); err != nil {
+			return err
+		}
+		transfer, err := decodeTransfer(request.ProposedChange)
+		if err != nil {
+			return err
+		}
+		if err := tellRequester(ctx, tx, request.ID, transfer, transferWithdrawn); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // FileTx files one request per contact and requester. A repeat joins the open

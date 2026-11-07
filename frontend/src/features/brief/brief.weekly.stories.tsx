@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import {
@@ -32,7 +32,9 @@ import {
 import { weeklyNumericStatus } from "./brief.numeric";
 import { OutlookPanel } from "./brief.waterfall";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { FiguresTable } from "./brief.weekly.figures";
 import { LearningsPanel } from "./brief.weekly.learnings";
+import { WeeklyRail } from "./brief.weekly.rail";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
 
@@ -80,14 +82,10 @@ function weekly(review: () => Response, weeks: readonly string[]): RouteMap {
   };
 }
 
-function panel(routes: RouteMap) {
+function panel(routes: RouteMap, content: ReactNode = <WeeklySection />) {
   return () => {
     installFetchStub(routes);
-    return (
-      <StoryProviders>
-        <WeeklySection />
-      </StoryProviders>
-    );
+    return <StoryProviders>{content}</StoryProviders>;
   };
 }
 
@@ -190,6 +188,17 @@ export const QuietlyNarrated: Story = {
 // against, and "±0" beside every figure would claim a comparison nobody made.
 export const FirstWeek: Story = {
   render: panel(weekly(() => jsonResponse(firstWeek), [WEEK_START])),
+};
+
+// A review whose activity lane answered with no days. The chart draws its key and
+// no columns, and names no busiest day; it used to fail to render at all.
+export const NoActivityDays: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse({ ...narratedWeek, daily_activity: [] }),
+      [WEEK_START, PRIOR_WEEK_START],
+    ),
+  ),
 };
 
 // A week whose wins cannot be priced. One deal in a currency with no usable
@@ -336,6 +345,29 @@ function bothBlocks() {
   return { lead, deal };
 }
 
+// A seat that may not read activities. The server sends the meeting figures as
+// zeros and says they are withheld, so the panel draws no meeting row.
+export const ScorecardMeetingsWithheld: Story = {
+  render: frozen(
+    <InTheWeeksPanel>
+      <ScorecardPanel
+        scorecard={{
+          ...bothBlocks(),
+          lead: {
+            ...bothBlocks().lead,
+            meetings_booked: 0,
+            meetings_held: 0,
+            meetings_no_show: 0,
+            meetings_partial_history: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+        meetingsWithheld
+      />
+    </InTheWeeksPanel>,
+  ),
+};
+
 // A clean week and an empty one. Every lead that arrived got a recorded first
 // response and none breached; the row says so and claims no target met. No
 // deal was open, so the three coverage cards have no denominator. One arm for
@@ -398,12 +430,10 @@ export const LearningsNotRun: Story = {
 export const Workings: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <PanelBody>
-        <WeeklyWorkings
-          counts={narratedWeek.counts}
-          figures={weeklyNumericStatus(undefined).figures}
-        />
-      </PanelBody>
+      <WeeklyWorkings
+        counts={narratedWeek.counts}
+        figures={weeklyNumericStatus(undefined).figures}
+      />
     </InTheWeeksPanel>,
   ),
 };
@@ -412,20 +442,18 @@ export const Workings: Story = {
 export const WorkingsPartlyRecorded: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <PanelBody>
-        <WeeklyWorkings
-          counts={narratedWeek.counts}
-          figures={
-            weeklyNumericStatus({
-              ...partlyRecordedWeeklyNumbers,
-              figure_coverage: {
-                ...partlyRecordedWeeklyNumbers.figure_coverage,
-                tasks: beforeHistoryWeeklyNumbers.figure_coverage?.tasks,
-              },
-            }).figures
-          }
-        />
-      </PanelBody>
+      <WeeklyWorkings
+        counts={narratedWeek.counts}
+        figures={
+          weeklyNumericStatus({
+            ...partlyRecordedWeeklyNumbers,
+            figure_coverage: {
+              ...partlyRecordedWeeklyNumbers.figure_coverage,
+              tasks: beforeHistoryWeeklyNumbers.figure_coverage?.tasks,
+            },
+          }).figures
+        }
+      />
     </InTheWeeksPanel>,
   ),
 };
@@ -512,4 +540,60 @@ export const PartlyRecordedWeek: Story = {
       [WEEK_START],
     ),
   ),
+};
+
+const leadWithheldWeek: WeeklyReview = {
+  ...wholeWeek,
+  leads_withheld: true,
+  numeric_summary: sharedWeeklyNumbers,
+  narrative: null,
+  narrated_at: null,
+  learnings: undefined,
+  scorecard: { ...weeklyScorecard, lead: undefined },
+  counts: {
+    ...wholeWeek.counts,
+    leads_routed: 0,
+    leads_answered_in_target: 0,
+    leads_breached: 0,
+  },
+};
+
+const leadWithheldRoutes = weekly(
+  () => jsonResponse(leadWithheldWeek),
+  [WEEK_START],
+);
+
+export const LeadFiguresWithheld: Story = {
+  globals: { theme: "light" },
+  render: panel(leadWithheldRoutes),
+};
+
+export const LeadFiguresWithheldDark: Story = {
+  ...LeadFiguresWithheld,
+  globals: { theme: "dark" },
+};
+
+export const LeadFiguresTableWithheld: Story = {
+  globals: { theme: "light" },
+  render: frozen(
+    <FiguresTable
+      review={leadWithheldWeek}
+      figures={weeklyNumericStatus(sharedWeeklyNumbers, true).figures}
+    />,
+  ),
+};
+
+export const LeadFiguresTableWithheldDark: Story = {
+  ...LeadFiguresTableWithheld,
+  globals: { theme: "dark" },
+};
+
+export const LeadFiguresRailWithheld: Story = {
+  globals: { theme: "light" },
+  render: panel(leadWithheldRoutes, <WeeklyRail />),
+};
+
+export const LeadFiguresRailWithheldDark: Story = {
+  ...LeadFiguresRailWithheld,
+  globals: { theme: "dark" },
 };

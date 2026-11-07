@@ -1,0 +1,460 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useState } from "react";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
+import { Badge, StatCard } from "../../design-system/atoms";
+import {
+  Panel,
+  PanelBody,
+  PanelIntro,
+  PanelRow,
+} from "../../design-system/panel";
+import { QueryGate } from "../../design-system/querystates";
+import { StatStrip } from "../../design-system/statstrip";
+import { SurfaceState } from "../../design-system/surfacestate";
+import {
+  formatDateAbbrev,
+  formatDuration,
+  formatNumber,
+} from "../../format/format";
+import { type Locale, useT } from "../../i18n";
+import { useCan } from "../../lib/capability";
+import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
+import { MoreRows, useHandoffPages } from "./analytics.outcomes.handoffpages";
+import { DoNext } from "./analytics.overview.donext";
+import {
+  type ReportingEvaluation,
+  type ReportingSelection,
+  reportingCompactAmount,
+  reportingQuery,
+} from "./reporting.model";
+import { useReportingCatalog } from "./reporting.queries";
+
+type SdrSummary = components["schemas"]["SdrSummary"];
+type WaitingHandoff = components["schemas"]["SdrWaitingHandoff"];
+
+const LEAD_READINGS = [
+  "leads_promoted",
+  "lead_first_response",
+  "leads_awaiting_response",
+] as const;
+
+// An evaluation may run for minutes, and the handoffs that wait on it should not.
+export const EVALUATION_WAIT_MS = 5_000;
+
+/**
+ * An SDR's own work beside their results: their leads, the handoffs that wait
+ * on somebody else, and what waits on them. Every figure is the server's; this
+ * file only lays them out.
+ */
+export function MySdrWork({
+  self,
+  locale,
+}: Readonly<{ self: string; locale: Locale }>) {
+  const t = useT();
+  const readsLeads = useCan("lead", "read");
+  const readsReports = useCan("report_definition", "read");
+  const evaluation = useMyLeadsEvaluation(self, readsReports && readsLeads);
+  // The summary counts at the evaluation's instant, so the two describe one
+  // moment. It waits for that instant only briefly, never on a failure, and
+  // only a successful evaluation pins it, even one arriving after the wait.
+  const awaitsInstant = readsLeads && readsReports && evaluation.isPending;
+  const waitedLongEnough = useWaitedLongEnough(awaitsInstant);
+  const summary = useSdrSummary(
+    self,
+    readsLeads && (!awaitsInstant || waitedLongEnough),
+    readsReports && evaluation.isSuccess
+      ? evaluation.data.context.evaluated_at
+      : undefined,
+  );
+  return (
+    <>
+      {readsLeads && (
+        <MyLeads
+          locale={locale}
+          summary={summary.data}
+          evaluation={readsReports ? evaluation : undefined}
+        />
+      )}
+      {/* Which workflow applies is the summary's answer, so a failed read
+          says so instead of reading as a workspace with no handoffs. */}
+      {summary.isError && (
+        <Panel title={t("analytics.sdrWaiting")}>
+          <PanelBody>
+            <SurfaceState
+              state="failed"
+              emptyLabel={t("common.empty")}
+              loadingLabel={t("analytics.sdrWaiting")}
+              detail={{ onRetry: () => void summary.refetch() }}
+            >
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        </Panel>
+      )}
+      {summary.data?.handoffs && (
+        <WaitingOnOthers
+          self={self}
+          locale={locale}
+          summary={summary.data}
+          totals={summary.data.handoffs}
+        />
+      )}
+      <DoNext />
+    </>
+  );
+}
+
+/**
+ * The seat's own handoff and meeting counts, under the key both views share.
+ * asOf counts them at an evaluation's instant; omitted, they are counted now.
+ */
+export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
+  return useQuery({
+    queryKey: ["sdr-summary", self, asOf ?? null],
+    enabled,
+    placeholderData: keepPreviousData,
+    queryFn: async ({ signal }): Promise<SdrSummary> =>
+      unwrap(
+        await api.GET("/analytics/sdr-summary", {
+          params: {
+            query: { scope_kind: "owner", scope_id: self, as_of: asOf },
+          },
+          signal,
+        }),
+      ),
+  });
+}
+
+/** Turns true once `waiting` has held for the evaluation wait. */
+function useWaitedLongEnough(waiting: boolean) {
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setTimeout(() => setWaited(true), EVALUATION_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [waiting]);
+  return waited;
+}
+
+/** The seat's lead readings for this month, which the summary is read beside. */
+function useMyLeadsEvaluation(self: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...REPORTING_EVALUATION_KEY, "my-leads", self],
+    enabled,
+    queryFn: async ({ signal }): Promise<ReportingEvaluation> => {
+      const selection: ReportingSelection = {
+        scope: { kind: "owner", id: self },
+        period: "this_month",
+        target_basis: "month",
+        close_window: "all_open",
+        metrics: [...LEAD_READINGS],
+        blocks: [],
+      };
+      return unwrap(
+        await api.GET("/analytics/evaluate", {
+          params: { query: reportingQuery(selection) },
+          signal,
+        }),
+      );
+    },
+  });
+}
+
+function MyLeads({
+  locale,
+  summary,
+  evaluation,
+}: Readonly<{
+  locale: Locale;
+  summary?: SdrSummary;
+  evaluation?: ReturnType<typeof useMyLeadsEvaluation>;
+}>) {
+  const t = useT();
+  const catalog = useReportingCatalog(evaluation !== undefined);
+  if (!evaluation) return null;
+  // The catalog's own words for "Leads qualified", so the screen never
+  // restates a definition the server may change.
+  const qualifiedMeans = catalog.data?.metrics.find(
+    (metric) => metric.id === "leads_promoted",
+  )?.definition;
+  const upcoming =
+    summary?.workflow === "qualification"
+      ? summary.upcoming_meetings
+      : undefined;
+  return (
+    <Panel title={t("analytics.sdrLeads")}>
+      <PanelBody>
+        {qualifiedMeans && <PanelIntro>{qualifiedMeans}</PanelIntro>}
+        <QueryGate query={evaluation} pendingLabel={t("analytics.sdrLeads")}>
+          {(result) => (
+            <StatStrip>
+              {LEAD_READINGS.map((id) => (
+                <StatCard
+                  key={id}
+                  narrow="row"
+                  label={t(`analytics.sdrReading.${id}`)}
+                  value={leadReading(result, id, t, locale)}
+                />
+              ))}
+              {upcoming != null && summary?.upcoming_window && (
+                <StatCard
+                  narrow="row"
+                  label={t("analytics.prospect.upcoming")}
+                  value={formatNumber(upcoming, locale)}
+                  detail={upcomingThrough(summary.upcoming_window, t, locale)}
+                />
+              )}
+            </StatStrip>
+          )}
+        </QueryGate>
+      </PanelBody>
+    </Panel>
+  );
+}
+
+/**
+ * The window a booked-meetings count covers, in the words every view that
+ * shows the count uses.
+ */
+export function upcomingThrough(
+  window: NonNullable<SdrSummary["upcoming_window"]>,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  return t("analytics.prospect.upcomingThrough", {
+    date: formatDateAbbrev(
+      new Date(Date.parse(window.end_at) - 1).toISOString(),
+      locale,
+      window.timezone,
+    ),
+  });
+}
+
+function leadReading(
+  result: ReportingEvaluation,
+  id: (typeof LEAD_READINGS)[number],
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  const metric = result.metrics.find((each) => each.id === id);
+  if (!metric) return t("analytics.readingUnavailable");
+  if (metric.value == null)
+    return t(`reporting.status.${metric.coverage.status}`);
+  if (id === "leads_promoted" && metric.denominator != null) {
+    return t("analytics.sdrQualifiedOf", {
+      qualified: formatNumber(metric.value, locale),
+      arrived: formatNumber(metric.denominator, locale),
+    });
+  }
+  return reportingCompactAmount(
+    metric.value,
+    metric.unit,
+    result.context.currency,
+    locale,
+  );
+}
+
+export function WaitingOnOthers({
+  self,
+  locale,
+  summary,
+  totals,
+}: Readonly<{
+  self: string;
+  locale: Locale;
+  summary: SdrSummary;
+  totals: NonNullable<SdrSummary["handoffs"]>;
+}>) {
+  const t = useT();
+  const asOf = Date.parse(summary.as_of);
+  const rows = useHandoffPages(
+    { kind: "owner", id: self },
+    "waiting",
+    totals.waiting > 0,
+    summary.as_of,
+  );
+  const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
+  return (
+    <Panel title={t("analytics.sdrWaiting")} flatHead>
+      <PanelBody>
+        <PanelIntro>{t("analytics.sdrWaitingIntro")}</PanelIntro>
+      </PanelBody>
+      {/* The plate runs edge to edge under the intro, outside the body's inset. */}
+      <StatStrip density="plate">
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrWaitingCount")}
+          value={formatNumber(totals.waiting, locale)}
+          detail={
+            totals.oldest_waiting_since
+              ? t("analytics.sdrLongestWait", {
+                  age: formatDuration(
+                    asOf - Date.parse(totals.oldest_waiting_since),
+                    locale,
+                  ),
+                })
+              : undefined
+          }
+        />
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrBlocked")}
+          value={formatNumber(totals.blocked, locale)}
+          tone={totals.blocked > 0 ? "warning" : undefined}
+          detail={
+            totals.blocked > 0 ? t("analytics.sdrBlockedDetail") : undefined
+          }
+        />
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrQueued")}
+          value={formatNumber(totals.unassigned, locale)}
+        />
+        <StatCard
+          narrow="row"
+          label={t("analytics.sdrReturned")}
+          value={formatNumber(totals.returned, locale)}
+          detail={
+            totals.returned > 0 ? t("analytics.sdrReturnedDetail") : undefined
+          }
+        />
+      </StatStrip>
+      {totals.waiting > 0 && (
+        <QueryGate query={rows} pendingLabel={t("analytics.sdrWaiting")}>
+          {() => (
+            <>
+              {loaded.map((row) => (
+                <WaitingRow
+                  key={row.id}
+                  row={row}
+                  asOf={asOf}
+                  locale={locale}
+                />
+              ))}
+              <MoreRows rows={rows} />
+            </>
+          )}
+        </QueryGate>
+      )}
+      {totals.returned > 0 && (
+        <ReturnedHandoffs self={self} locale={locale} at={summary.as_of} />
+      )}
+    </Panel>
+  );
+}
+
+export function WaitingRow({
+  row,
+  asOf,
+  locale,
+}: Readonly<{ row: WaitingHandoff; asOf: number; locale: Locale }>) {
+  const t = useT();
+  const age = formatDuration(asOf - Date.parse(row.waiting_since), locale);
+  const waitingOn = row.recipient
+    ? row.recipient.active
+      ? row.recipient.label
+      : t("analytics.sdrRecipientInactive", { name: row.recipient.label })
+    : t("analytics.sdrSharedQueue");
+  const facts = [
+    t(
+      row.resubmitted
+        ? "analytics.sdrWaitingSinceResubmit"
+        : "analytics.sdrWaitingFor",
+      {
+        age,
+      },
+    ),
+    waitingOn,
+  ];
+  return (
+    <HandoffRow row={row} facts={facts}>
+      {row.recipient && !row.recipient.active && (
+        <Badge tone="warning">{t("analytics.prospect.blocked")}</Badge>
+      )}
+      {!row.recipient && <Badge>{t("analytics.prospect.unassigned")}</Badge>}
+    </HandoffRow>
+  );
+}
+
+// A handoff sent back: it waits on the submitter, aged from its return, with
+// the reason the recipient gave. The prospect opens to be worked again.
+function ReturnedRow({
+  row,
+  asOf,
+  locale,
+}: Readonly<{ row: WaitingHandoff; asOf: number; locale: Locale }>) {
+  const t = useT();
+  const facts = [
+    t("analytics.prospect.returnedAgo", {
+      age: formatDuration(asOf - Date.parse(row.waiting_since), locale),
+    }),
+    row.reason ?? t("analytics.prospect.noReason"),
+  ];
+  return (
+    <HandoffRow row={row} facts={facts}>
+      <Badge>{t("analytics.prospect.returned")}</Badge>
+    </HandoffRow>
+  );
+}
+
+function HandoffRow({
+  row,
+  facts,
+  children,
+}: Readonly<{ row: WaitingHandoff; facts: string[]; children: ReactNode }>) {
+  const t = useT();
+  return (
+    <PanelRow className="analytics-attention-row">
+      <div className="analytics-attention-text">
+        <p className="analytics-attention-title">
+          {row.subject ? (
+            <EntityRef
+              kind={row.subject.type}
+              id={row.subject.id}
+              name={row.subject.label}
+            />
+          ) : (
+            t("analytics.sdrRestrictedProspect")
+          )}{" "}
+          {children}
+        </p>
+        <p className="t-caption">{facts.join(" · ")}</p>
+      </div>
+    </PanelRow>
+  );
+}
+
+/** The handoffs sent back to the reader, one page at a time. */
+function ReturnedHandoffs({
+  self,
+  locale,
+  at,
+}: Readonly<{ self: string; locale: Locale; at: string }>) {
+  const t = useT();
+  const rows = useHandoffPages(
+    { kind: "owner", id: self },
+    "returned",
+    true,
+    at,
+  );
+  const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
+  const asOf = Date.parse(rows.data?.pages[0]?.as_of ?? "");
+  return (
+    <QueryGate query={rows} pendingLabel={t("analytics.sdrReturned")}>
+      {() => (
+        <>
+          {loaded.map((row) => (
+            <ReturnedRow key={row.id} row={row} asOf={asOf} locale={locale} />
+          ))}
+          <MoreRows rows={rows} />
+        </>
+      )}
+    </QueryGate>
+  );
+}

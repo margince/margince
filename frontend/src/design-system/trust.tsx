@@ -307,6 +307,7 @@ export {
   type Provenance,
   ProvenanceTag,
   provenanceLabel,
+  type RelaySend,
   type SourceAuthor,
 } from "./provenance";
 

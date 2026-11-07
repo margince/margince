@@ -53,9 +53,10 @@ func listTx(ctx context.Context, tx pgx.Tx, in ListInput) (crmcontracts.Commissi
 	}
 
 	limit := storekit.ClampLimit(in.Limit)
-	rows, err := tx.Query(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT %s FROM commission_entry WHERE %s ORDER BY created_at DESC, id DESC LIMIT $%d`,
-		commissionColumns, strings.Join(where, " AND "), arg(limit+1)), args...)
+		commissionColumns, strings.Join(where, " AND "), arg(limit+1))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return crmcontracts.CommissionEntryListResponse{}, fmt.Errorf("list commission entries: %w", err)
 	}

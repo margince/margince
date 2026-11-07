@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   catalogs,
   type Locale,
@@ -20,17 +20,20 @@ type BaseCurrencyLock = components["schemas"]["BaseCurrencyLock"];
 
 const SETTINGS: InstallationSettings = {
   name: "Brandt Automotive GmbH",
-  timezone: viewerZone(),
+  timezone: browserZone(),
   base_currency: "EUR",
   base_language: "en",
   fiscal_year_start_month: 1,
   dead_work_banner_hours: 24,
   oauth_access_token_ttl_minutes: 43_200,
-  forecast_forward_measure: "commit_evidence",
+  forecast_forward_measure: "likely",
   base_currency_locked: false,
   call_whatsapp: true,
   call_telegram: true,
   call_zalo: true,
+  individual_performance: true,
+  forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
   max_upload_bytes: 25_000_000,
   sign_in_providers: [],
   operations: defaultOperations,

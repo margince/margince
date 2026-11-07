@@ -69,7 +69,7 @@ function newClient() {
 }
 
 describe("Creating a contact from a company's Contacts tab", () => {
-  it("offers quick capture alone, filed under the company", async () => {
+  it("files a quick capture under the company", async () => {
     const writes = stubApi();
     render(
       providers(
@@ -79,7 +79,6 @@ describe("Creating a contact from a company's Contacts tab", () => {
     );
     const user = userEvent.setup();
 
-    expect(screen.queryByRole("button", { name: "New contact" })).toBeNull();
     expect(screen.queryByTestId("vcard-import")).toBeNull();
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
@@ -94,10 +93,34 @@ describe("Creating a contact from a company's Contacts tab", () => {
     expect(writes[0]?.body).not.toHaveProperty("company_name");
   });
 
+  it("files a full new contact under the company, by id", async () => {
+    const writes = stubApi();
+    render(
+      providers(
+        <CompanyContactsList companyId="co-acme" mayCreate />,
+        newClient(),
+      ),
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "New contact" }));
+    await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({
+      path: expect.stringMatching(/\/contacts$/),
+      body: { full_name: "Dana Buyer", company_id: "co-acme" },
+    });
+    expect(writes[0]?.body).not.toHaveProperty("company_name");
+  });
+
   it("offers no create to a reader who may not write the company", () => {
     stubApi();
     render(providers(<CompanyContactsList companyId="co-acme" />, newClient()));
     expect(screen.queryByTestId("quick-capture")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New contact" })).toBeNull();
   });
 
   it("closes an open form when the reader moves to another company", async () => {

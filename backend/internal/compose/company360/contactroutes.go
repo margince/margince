@@ -33,6 +33,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -95,7 +96,8 @@ func contactRoutes(
 	}
 
 	rows, err := tx.Query(ctx, `
-		SELECT e.contact_id, u.id, u.display_name, e.last_at,
+		SELECT e.contact_id, u.id, u.display_name, e.last_at, e.last_inbound_at, e.last_met_at,
+		       e.late_count_90d, e.late_out_count_90d,
 		       e.count_90d, e.in_count_90d, e.out_count_90d
 		  FROM graph_interaction_edge e
 		  JOIN app_user u ON u.id = e.user_id AND `+liveMemberWhere+`
@@ -112,20 +114,17 @@ func contactRoutes(
 		var (
 			contactID, userID ids.UUID
 			displayName       string
-			lastAt            time.Time
-			in                relstrength.Inputs
+			stored            search.InteractionEdge
 		)
-		if err := rows.Scan(&contactID, &userID, &displayName, &lastAt,
-			&in.Count90d, &in.Inbound90d, &in.Outbound90d); err != nil {
+		if err := rows.Scan(&contactID, &userID, &displayName, &stored.LastAt, &stored.LastInboundAt,
+			&stored.LastMetAt, &stored.LateCount90d, &stored.LateOutCount90d, &stored.Count90d, &stored.InCount90d, &stored.OutCount90d); err != nil {
 			return nil, fmt.Errorf("company360: scanning an internal route: %w", err)
 		}
-		// Scored in Go, like every other surface that reads these edges: the
-		// decay is a pure function of the stored counts and the read instant,
-		// and a second spelling in SQL would let two screens rank the same
-		// colleague differently.
-		in.LastInteraction = &lastAt
-		strength := relstrength.Compute(in, now)
-		at := lastAt
+		// Scored in Go through the edge's own rule, like every other surface
+		// that reads these edges, so two screens cannot rank the same colleague
+		// differently.
+		strength := stored.StrengthOf(now)
+		at := stored.LastAt
 		byContact[contactID] = append(byContact[contactID], scored{
 			route: crmcontracts.Company360Route{
 				UserId:            openapi_types.UUID(userID),

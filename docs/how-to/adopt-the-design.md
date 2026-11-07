@@ -24,8 +24,8 @@ Read this before you touch a stylesheet. Each gate checks one clear rule.
 
 | Gate | What it holds | What the new style must do |
 |---|---|---|
-| `tokens.test.ts` | Pins about 40 token values (`canonical`), the surface light ladders in both themes, AA contrast of five ink tokens on five ground tokens, chip colours, `--accent` = `#0b7a53`, `--bgRail` = `#13231d` and missing from dark, the dark `@media` block byte-equal to `[data-theme="dark"]`, and `brand.css` as derived values only | Change `tokens.css` and the `canonical` table in one commit. Keep both ladders in order. Check the contrast again on the new ground tokens. Keep the two dark blocks the same. Keep `--bgRail` declared (the rail stops using it, the pin stays) |
-| `check-ds-purity.sh` + `conformance.test.ts` | No colour value outside `tokens.css` (only `provider-mark.tsx` may have one) | Every new colour is a token, the glow and each pane included |
+| `tokens.test.ts` | Pins about 40 token values (`canonical`), the surface light ladders in both themes, AA contrast of five ink tokens on five ground tokens, chip colours, `--accent` = `#045647`, `--bgInkField` = `#13231d` and missing from dark, the dark `@media` block byte-equal to `[data-theme="dark"]`, and `brand.css` as derived values only | Change `tokens.css` and the `canonical` table in one commit. Keep both ladders in order. Check the contrast again on the new ground tokens. Keep the two dark blocks the same. Keep `--bgInkField` declared: it is the field under a tooltip, never the sidebar |
+| `check-ds-purity.sh` + `conformance.test.ts` | No colour value outside `tokens.css` (only `provider-mark.tsx` may have one) | Every new colour is a token, each pane included |
 | `check-font-lock.sh` + `conformance.test.ts` + `mono.test.ts` | Three font families only: Outfit, Geist, Geist Mono. Outfit stays by decision, after the display font of the mock was tried in Step 1. Geist Mono only on `pre`, `code`, `samp` and `.code-block`; `frontend/scripts/check-font-lock.sh` and `frontend/src/design-system/mono.test.ts` refuse it in any other place | Change the family in **four** places in one pull request: the strip list of the script, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), and the Google Fonts link in `index.html` |
 | `check-ds-spacing.sh` | No new `px` value in `padding`, `margin` or `gap` outside `design-system/` | Screen CSS uses `--space-*`; design-system CSS may keep a `px` value that looks right |
 | `check-ds-spacing-roles.sh` | No screen rule changes the spacing of a design-system part that the design system spaces. No screen rule changes the size of one it sizes (`font-size`, `line-height`, `letter-spacing`). The three named places take their role token: the gap of `*-actions` → `--gapActions`, the gap of `*-cards` → `--gapCards`, the padding of `*-card` or `*-panel` → `--padCard` or `--padPanel`. Whole tree | Change a role in `tokens.css`, where every screen moves with it. A screen that needs its own space or size sets it on its own element. Or it changes the part with a role token, or turns the check off in line with a reason |
@@ -36,7 +36,7 @@ Read this before you touch a stylesheet. Each gate checks one clear rule.
 | `catalog.test.ts` | Every part the design system gives, named in the README table, with a story | A new or renamed part ships with its row and story |
 | `native-controls.test.ts` | No `<select>` and no date or time input of the browser's own | Keep `Select`, `DateInput`, `TimeInput` and `MonthInput` |
 | `table-scroll-coverage.test.ts` | Every table inside `TableScroll` | Keep it |
-| `conformance.behaviour.test.ts` motion, focus, pending | `prefers-reduced-motion` answers come after their rule. Every outline is `--focus-ring`. One `ds-pulse` user. Three pinned outline rules that are only for looks | Add any new dashed outline to the allow list. The glow is a background, not a motion |
+| `conformance.behaviour.test.ts` motion, focus, pending | `prefers-reduced-motion` answers come after their rule. Every outline is `--focus-ring`. One `ds-pulse` user. Three pinned outline rules that are only for looks | Add any new dashed outline to the allow list |
 | `e2e` `ac.spec.ts` | WCAG 2.2 AA with axe on every core screen; no scroll to the side at 390px; the 10 rail entries in order | Run it in both themes after the token pull request |
 | `e2e` `company-record.spec.ts` | `"KPI strip above the tab strip"`, `"one Company 360 card"`, `"left rail carries the account's context as one panel of named sections"`, `"lifecycle control is a control, not a tag"`, `"logo not favicon"` | These checks are about the old shape. Write them again **in the company pull request**, in the same commit as the layout, to the new shape. That is readings under the tab strip, the 360 as the first pane, and the details panel on the right |
 | `e2e` `perf-mobile.spec.ts` | The record's `<h1>` draws from the router before any record read returns, `p95` under 300 ms on `Fast 3G` | The head keeps drawing from route state. Nothing in the head may wait on the 360 |
@@ -52,22 +52,22 @@ The shell comes last in this group: it is the part users see most, and the safes
 ### Step 1: Tokens and type (`tokens.css`, `tokens.test.ts`, `base.css`, `app.css`, `index.html`)
 
 1. **The ground tokens.** Move the light ladder to the new ground.
-   `--bgPage` → `#f1f5f2`, a light green, and `--bgElevated` → the full colour behind a pane.
+   `--bgPage` → `#eff6f3`, a light mint, and `--bgElevated` → the full colour behind a pane.
    `--bgInset` and `--bgHover` sit one step apart.
-   Add `--pane`, `--paneEdge`, `--glowA` and `--glowB`.
-   The last two are the glow in each corner, at `.06`/`.10` light and `.10`/`.20` dark.
+   Add `--pane` and `--paneEdge`, and `--bgStrip` for a band on the ground.
 
    Check the light ladder and the contrast again. The test checks the order of the ladder, so pick
    values that keep it, not values that look right alone.
 2. **The ink tokens.** `--textPrimary/--textContent/--textTertiary/--textMuted/--textMeta` take the `--ink…--ink4`
    values from `DESIGN.md` section 3.
    All five must reach 4.5:1 on all five ground tokens in both themes.
-3. **The accent and the agent.** `--accent` stays `#0b7a53` (pinned). The `--ai` family stays.
+3. **The accent and the agent.** `--accent` is `#045647` (pinned). The `--ai` family stays.
    Add `--aiBg` (the row colour) and `--aiLine` if `--aiLight` and `--aiMed` do not match the mock.
    Or map the mock to them, and update the mock.
-4. **Rail tokens.** The design has no dark rail.
-   `--bgRail` and the `--rail*` family stay declared (pinned), and `shell.css` stops using them.
-   Note in `tokens.css` that they are no longer used.
+4. **Ink field tokens.** The design has no dark sidebar.
+   `--bgInkField`, `--textOnInkField` and `--textOnInkFieldQuiet` stay declared for what passes over
+   the page, such as a tooltip. The sidebar never uses them. `inkfield.css` points the page's text
+   colours at them on each part of the app that sits on the field.
 5. **Fonts.** Outfit (display, 600), Geist (body, 400/500/600, numbers included), Geist Mono (code only,
    400/500).
    A number lines up through `font-variant-numeric: tabular-nums` (`.t-num`), not a mono font.
@@ -108,7 +108,7 @@ say any of them looks wrong.
 
 | Part | Change |
 |---|---|
-| `Button` | Flat. `primary`: `--accent` fill, `--textOnAccent`, 36px, 10px radius, `font-weight` 500. `ghost`: `--pane` fill, `--line2` outline. Small: 32px. Icon only: 36×36 (the more button). The agent's fill for Accept on a staged row is the `variant="ai"` that exists. No gradient, no `3D`. |
+| `Button` | Flat. `primary`: `--accent` fill, `--textOnAccentControl`, 36px, 10px radius, `font-weight` 500. `ghost`: `--pane` fill, `--line2` outline. Small: 32px. Icon only: 36×36 (the more button). The agent's fill for Accept on a staged row is the `variant="ai"` that exists. No gradient, no `3D`. |
 | `Badge` | One part, one size (20px: an 18px line inside a 1px edge), no capital letters, no dot by default. `soft` is the default: the colour of the tone with its Text ink and a hairline in the tone, for a status beside text and down a column. `primary` is the full fill with a clear edge, for a count, and for the one status that must not be missed. Six tone values (`default`, `accent`, `success`, `warn`, `danger`, `ai`). `ai` always draws Sparkles. Others may take an icon left of the label, or `live` for a dot that pulses in the same place. |
 | `Card` | Keep it as it is (`onecard.test.ts`); the pane is `Panel`, not `Card`. |
 | `StatCard` | The reading card. The eyebrow is its label, with a 26px number in the display font, tabular (down to 20px where five share a narrow row). Then a 12.5px basis, `--pane` ground, 18px radius and `min-height` 138px. `numeric` for numbers. |
@@ -123,7 +123,7 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 
 | Part | Change |
 |---|---|
-| `Panel` / `PanelPlate` / `PanelBody` / `PanelRow` (`panel.css`) | The **zone pane**: `--pane` with `--paneEdge`, 18px radius, `backdrop-filter: blur(12px)`, padding `--space-5 --space-6`. A 17px title in the display font, with its count (`small`) and verb (`a`) on one line. Rows at `--space-3`, each with a hairline. `PanelPlate` becomes a row on `--bg3`. |
+| `Panel` / `PanelPlate` / `PanelBody` / `PanelRow` (`panel.css`) | The **zone pane**: `--pane` with `--paneEdge`, 18px radius, padding `--space-5 --space-6`. A 17px title in the display font, with its count (`small`) and verb (`a`) on one line. Rows at `--space-3`, each with a hairline. `PanelPlate` becomes a row on `--bg3`. |
 | `StatStrip` | Becomes the readings row: five `StatCard` parts in a grid, 16px gap, no plate. A slot that cannot be read stays absent or says so (the rule the strip has today). |
 | `RecordView` (`recordview.tsx`, `recordview.css`) | Two cards: on the left the head (mark, name in up to three lines, one fact per line, the pills, the verbs as one bar of tiles) over the details; on the right the tab strip over the open tab's feed. `nameBadge` stays on its own line under the name. The `controls` slot is removed, and the `PageAsideToggle` with it: the details always stand open. |
 | `RecordTabs` | Plain: no line under the strip, 13px, a 2px `--accent` line under the open tab, counts at 11px `--ink4`. The strip sits in the right card, beside the details, and carries no Details control, since the details always stand open. |
@@ -134,18 +134,16 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 | `howitstands.tsx` + `standingring.tsx` + `standingdims.tsx` + `citations.list.tsx` | The standing card of the 360. `HowItStands` puts the verdict word over the sentence that says why, then the ring beside `StandingDims`, the timeline, and the numbers at the end. A `peek` on a reading opens a card of what it counts. `Citations` draw inside a sentence as source chips. |
 | `EvidenceMark` | Add a preview on hover and focus: the popover (`--bgElevated`, `--shadow-pop`, 300px). It holds the source text in an indigo block with a line on its left, and the source line. A click still opens the full proof (`EvidenceModal`). |
 | `trust.tsx` (`StagingCard`, `FieldDiff`) | The agent's row: `--aiBg` ground, 14px radius, eyebrow in `--aiText`, a 16px display title, a sentence, `Rests on` chips and verbs. Staged: an `--aiLine` edge of dashes, and Accept in the agent fill. |
-| `DecisionCard`, `BriefItemCard`, `Callout` | Token pass. `Callout` is a row with a tone dot, never a filled box. |
+| `DecisionCard`, `BriefItemCard`, `Callout` | Token pass. `Callout` is a card coloured with a small share of its tone, with the tone's icon before the heading. |
 | `RelationshipMap` (`relationshipmap.css`) | Colours only. Each node box on `--pane`, and the gap node in amber dashes. Edges by band: 2.5px accent for a close link, dashes for one that is new, dots for one with no contact for a long time. The node a user picks lights in ink and the rest drop to 35%, and the panel is a pane. The shape does not change (`relationshipmap.layout.ts` only works out the layout, and is tested). |
 | `ListTable` / `DataTable` | Headers 11.5px `--ink3`, 44px rows, a hairline under each, numbers right and tabular (`.t-num`), the picked row on `--accentBg`. |
 
 ### Step 4: The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
-1. **The ground and glow.** `.app` draws `--bgPage` with a round glow at the top left and the top right, as a
-   background.
-   That is `--glowA` and `--glowB`; they are not an element, and not a motion.
-2. **Rail.** `glass` (`--pane` and `blur`) over the glow, a hairline on the right, no dark ground.
-   Closed, it stays **64px**. The 44px touch targets and the tooltip rule in `shell.css` depend on that width.
-   Breaking them for the 52px of the mock costs too much. Open, it is 224px, not 252.
+1. **The ground.** `.app` draws `--bgPage`, one flat colour.
+2. **Rail.** `glass` (`--pane` and `blur`) over the ground, a hairline on the right, no dark ground.
+   Closed, it is **56px**; open, 256px (`--railW` in `shell.css`). The tooltip rule in `shell.css`
+   depends on the closed width.
 
    Rows are 34px, group labels are `.t-eyebrow` with only the first letter capital, and the orb sits
    last. `rail.test.tsx` and `ac.spec.ts` pin the 10 rows and their order, and those do not change.

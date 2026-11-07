@@ -127,7 +127,7 @@ func TestPromotionDropsALeadLinkTheContactAlreadyHas(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	contact, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "inbound_reply"})
+	contact, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatalf("promote into the existing contact: %v", err)
 	}

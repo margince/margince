@@ -115,12 +115,16 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		if err != nil {
 			return err
 		}
-		policy = resolved
 		if workspaceScoped {
 			subject, err = capture.SelectWorkspacePurgeSubjectTx(ctx, tx, rule.Kind, rule.Value, floor)
+		} else {
+			subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, floor)
+		}
+		if err != nil {
 			return err
 		}
-		subject, err = capture.SelectPurgeSubjectTx(ctx, tx, actor.UserID, rule.Kind, rule.Value, floor)
+		// The receipt names the floor of the entities whose mail it kept.
+		policy, err = resolved.ForMessagesTx(ctx, tx, subject.UnderStatute)
 		return err
 	}); err != nil {
 		return PurgeOutcome{}, err
@@ -315,24 +319,25 @@ func (p *CapturePurger) carryOut(
 // query, so what a pass does not reach this tick it reaches the next.
 const personalSweepBatch = 500
 
+// personalSweepActor binds the actor and correlation id the purge refuses to
+// run without. The fleet job's context carries only a workspace.
+const personalSweepActor = "system:capture-personal-purge"
+
 // SweepPersonalMail destroys the personal correspondence whose undo window has
-// closed, for every seat in the workspace that has any.
+// closed, for every seat in the workspace that has any. It is the only place
+// where a classification leads to irreversible deletion with nobody in the loop.
+// Three guards make that survivable, and removing any one of them breaks it:
 //
-// This is the automatic half of the `personal` verdict, and it is the only place
-// in the product where a classification leads to irreversible deletion with no
-// human in the loop at the moment it happens. Three things make that survivable,
-// and removing any one of them breaks it:
-//
-//   - SelectPersonalPurgeTx measures the window PER MESSAGE and refuses any
+//   - SelectPersonalPurgeTx measures the window per message and refuses any
 //     address carrying a live `business` override, which is how a contact cancels.
 //   - A verdict the classifier reached alone waits four times as long as one a
 //     contact reached, because nobody has looked at it.
-//   - The statutory floor is applied as a shield, so correspondence the law
-//     requires kept is reported rather than destroyed.
+//   - The statutory floor shields what the law requires kept, and reports it.
 //
-// It reuses carryOut, so a message destroyed here goes through exactly the
+// It reuses carryOut, so a message destroyed here goes through the same
 // sequence an owner's own purge uses.
 func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.PersonalPurgeWindows) (int, error) {
+	ctx = principal.SystemActing(ctx, personalSweepActor)
 	var seats []ids.UUID
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
@@ -463,36 +468,5 @@ func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger
 // rows, and a removal that destroyed nothing is logged with what kept it, so
 // "the provider said this was deleted and it is still here" has an answer.
 func (p *CapturePurger) PurgeRemoved(ctx context.Context, seat ids.UUID, sourceSystem, sourceID string) error {
-	var subject capture.PurgeSubject
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		floor, _, err := purgeFloorTx(ctx, tx)
-		if err != nil {
-			return err
-		}
-		subject, err = capture.SelectRemovedPurgeTx(ctx, tx, seat, sourceSystem, sourceID, floor)
-		return err
-	}); err != nil {
-		return fmt.Errorf("capture: selecting what a mailbox-side deletion destroys: %w", err)
-	}
-	if subject.Total() == 0 {
-		// Nothing captured under that key, or not by this seat. The ordinary
-		// case: most deleted mail was never captured, and a removal for a
-		// message this product does not hold is not an error to report.
-		return nil
-	}
-	if len(subject.SoleImports) == 0 {
-		slog.InfoContext(ctx, "capture: a mailbox-side deletion left the message standing",
-			"source_system", sourceSystem,
-			"shared_with_colleagues", len(subject.SharedImports),
-			"withheld", len(subject.Restricted))
-		return nil
-	}
-	// No contacts anonymised. One message is not evidence that the CRM knows a
-	// counterparty for no other reason — the owner's exclusion rule is where
-	// that question belongs, because a rule speaks about a correspondent and a
-	// deletion speaks about a single mail.
-	if _, err := p.carryOut(ctx, subject, nil, nil, seat, privacy.PurgeMailboxDeletion); err != nil {
-		return fmt.Errorf("capture: destroying a message the owner deleted at the provider: %w", err)
-	}
-	return nil
+	return p.PurgeRemovedAdmitted(ctx, nil, seat, sourceSystem, sourceID)
 }

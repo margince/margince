@@ -43,7 +43,7 @@ func TestCaptureObservationFailureLeavesTheWorklistSnapshotUsable(t *testing.T) 
 		return crmcontracts.MailCaptureCoverage{}, err
 	})
 	err := database.WithWorkspaceSnapshot(reader, e.Pool, func(ctx context.Context) error {
-		moves, err := cards.CachedMoves(ctx, []ids.UUID{e.booked})
+		moves, err := cards.CurrentMoves(ctx, []ids.UUID{e.booked})
 		if err != nil {
 			return err
 		}

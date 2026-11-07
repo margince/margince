@@ -1,26 +1,16 @@
-import { useId, useState } from "react";
+import { useDeferredValue, useId, useMemo, useState } from "react";
 import {
-  Avatar,
-  Badge,
   Button,
   EmptyState,
   Field,
   Modal,
   SearchField,
 } from "../../design-system/atoms";
-import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { CellStrip } from "../../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
-import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
-import {
-  formatDateAbbrev,
-  formatDateTime,
-  formatNumber,
-} from "../../format/format";
-import { formatRelativeTime } from "../../format/relativetime";
-import { viewerZone } from "../../format/timezone";
+import { ScrollSentinel } from "../../design-system/scrollsentinel";
+import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMe } from "../../lib/session";
 import "./users-admin.css";
@@ -34,9 +24,15 @@ import {
   useAssignableRoles,
 } from "../../lib/roles.queries";
 import { usePageReadOnly } from "./settingsnav";
+import { useEntityColumn } from "./users-entitycell";
 import { InviteUserForm } from "./users-invite-form";
 import {
-  memberAnchorId,
+  MemberActivity,
+  MemberIdentity,
+  MemberTeams,
+} from "./users-membercells";
+import {
+  matchingMembers,
   type User,
   useMemberRefresh,
   useMembers,
@@ -102,6 +98,16 @@ function MembersCard({
       ? t("users.role.withheld")
       : null;
   const loaded = read.data !== undefined && !probing;
+  // The field repaints on every key; the list follows when React has time. A
+  // roster of hundreds made each letter wait for every row to draw again.
+  const shownSearch = useDeferredValue(search);
+  // The query's own list, not `read.data.list`. `read` is handed on below, so
+  // the React Compiler cannot keep a memo that depends on it.
+  const roster = members.data;
+  const matching = useMemo(
+    () => (roster ? matchingMembers(roster, shownSearch) : []),
+    [roster, shownSearch],
+  );
   return (
     <>
       {loaded && canInvite && (
@@ -121,10 +127,7 @@ function MembersCard({
         caption={
           read.data
             ? t("users.resultCount", {
-                matching: formatNumber(
-                  matchingMembers(read.data.list, search).length,
-                  locale,
-                ),
+                matching: formatNumber(matching.length, locale),
                 total: formatNumber(read.data.list.length, locale),
               })
             : undefined
@@ -172,10 +175,12 @@ function MembersCard({
           </PanelBody>
         ) : (
           <MembersTable
-            list={matchingMembers(read.data.list, search)}
+            list={matching}
+            search={shownSearch}
             allMembers={read.data.list}
             roles={read.data.roles}
             management={management}
+            canChangeRole={canChangeRole}
             refusalOf={(member, list, roles) =>
               roleRefusal(member, {
                 roster: list,
@@ -192,29 +197,24 @@ function MembersCard({
   );
 }
 
-function matchingMembers(members: readonly User[], search: string): User[] {
-  const term = search.trim().normalize("NFKC").toLowerCase();
-  return members.filter((member) =>
-    `${member.display_name} ${member.email}`
-      .normalize("NFKC")
-      .toLowerCase()
-      .includes(term),
-  );
-}
-
 // Server order is join order (created_at, id), which the Added line reads
 // back; re-sorting the first page here would misstate the pages after it.
 function MembersTable({
   list,
+  search,
   allMembers,
   roles,
   management,
+  canChangeRole,
   refusalOf,
 }: Readonly<{
   list: User[];
+  /** The search the list answers. A new one starts again at the first batch. */
+  search: string;
   allMembers: User[];
   roles: readonly AssignableRole[];
   management: boolean;
+  canChangeRole: boolean;
   refusalOf: (
     member: User,
     list: readonly User[],
@@ -223,6 +223,15 @@ function MembersTable({
 }>) {
   const t = useT();
   const teamNames = useTeamNames(management);
+  // Back to the first batch on every change of search, a return to an
+  // earlier one included. Clearing a narrow search must not redraw at once
+  // every row a wider one had loaded.
+  const [drawn, setDrawn] = useState({ search, count: MEMBER_BATCH });
+  if (drawn.search !== search) {
+    setDrawn({ search, count: MEMBER_BATCH });
+  }
+  const count = drawn.search === search ? drawn.count : MEMBER_BATCH;
+  const entity = useEntityColumn(management, canChangeRole);
   const member: DataTableColumn<User> = {
     key: "member",
     header: t("users.col.member"),
@@ -254,6 +263,7 @@ function MembersTable({
           header: t("users.teamsLabel"),
           render: (u) => <MemberTeams ids={u.team_ids} names={teamNames} />,
         },
+        ...(entity ? [entity] : []),
         activity,
         {
           key: "verbs",
@@ -270,17 +280,34 @@ function MembersTable({
         <EmptyState>{t("users.noSearchResults")}</EmptyState>
       </PanelBody>
     );
+  // The sentinel's cursor is where the next batch starts: an index, never shown.
+  const nextBatch = count < list.length ? `row-${count}` : undefined;
+  // Drawn a batch at a time: every row is a handful of cells with verbs. A
+  // roster of a thousand drew tens of thousands of nodes before the first
+  // paint. The caption above still counts every match.
   return (
-    <DataTable
-      fold
-      bleed
-      label={t("users.membersTitle")}
-      columns={columns}
-      rows={list}
-      rowKey={(u) => u.id}
-    />
+    <>
+      <DataTable
+        fold
+        bleed
+        label={t("users.membersTitle")}
+        columns={columns}
+        rows={list.length > count ? list.slice(0, count) : list}
+        rowKey={(u) => u.id}
+      />
+      <ScrollSentinel
+        list={search}
+        cursor={nextBatch}
+        loading={false}
+        failed={false}
+        onLoadMore={() => setDrawn({ search, count: count + MEMBER_BATCH })}
+      />
+    </>
   );
 }
+
+/** How many member rows are drawn at once. */
+export const MEMBER_BATCH = 100;
 
 function useTeamNames(enabled: boolean): ReadonlyMap<string, string> {
   // roster-failure: names a member's teams only; nothing here is picked.
@@ -292,123 +319,6 @@ function useTeamNames(enabled: boolean): ReadonlyMap<string, string> {
     }
   }
   return names;
-}
-
-function MemberIdentity({ member }: Readonly<{ member: User }>) {
-  const t = useT();
-  return (
-    // Focusable by script only: the deactivate confirm hands focus back here.
-    <span id={memberAnchorId(member.id)} className="users-member" tabIndex={-1}>
-      <Avatar name={member.display_name} identity={member.id} />
-      <CellStack>
-        <span className="users-member-name">
-          <span className="t-name">{member.display_name}</span>
-          {/* The agent seat owns records, so it is listed; the badge keeps it
-              from passing for a colleague. */}
-          {member.service_extension ? (
-            <Badge>{t("users.serviceMember")}</Badge>
-          ) : (
-            member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>
-          )}
-          <MemberStatus status={member.status} />
-        </span>
-        <span className="t-caption">
-          {member.service_extension
-            ? t("users.serviceMemberFor", {
-                extension: member.service_extension,
-              })
-            : member.email}
-        </span>
-      </CellStack>
-    </span>
-  );
-}
-
-function MemberTeams({
-  ids,
-  names,
-}: Readonly<{
-  ids: string[] | undefined;
-  names: ReadonlyMap<string, string>;
-}>) {
-  const known = (ids ?? []).flatMap((id) => names.get(id) ?? []);
-  if (known.length === 0) {
-    return null;
-  }
-  return (
-    <span className="users-teams" title={known.join(", ")}>
-      <CellStrip>
-        {known.map((name) => (
-          <Badge key={name}>{name}</Badge>
-        ))}
-      </CellStrip>
-    </span>
-  );
-}
-
-// Active is every seat's ordinary state, so only the exceptions are marked.
-// Invited and deactivated are settled facts; a suspension asks someone to act.
-const STATUS_KIND = {
-  invited: "neutral",
-  suspended: "attention",
-  deactivated: "neutral",
-} as const satisfies Readonly<Record<string, StatusKind>>;
-
-function MemberStatus({ status }: Readonly<{ status: string }>) {
-  const t = useT();
-  if (
-    status !== "invited" &&
-    status !== "suspended" &&
-    status !== "deactivated"
-  ) {
-    return null;
-  }
-  return (
-    <StatusBadge
-      kind={STATUS_KIND[status]}
-      label={t(`users.status.${status}`)}
-    />
-  );
-}
-
-function MemberActivity({
-  member,
-  management,
-}: Readonly<{ member: User; management: boolean }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const added = member.created_at;
-  return (
-    <CellStack>
-      {management && <LastActive at={member.last_active_at} />}
-      {added && (
-        <time className="t-caption users-nowrap" dateTime={added}>
-          {t("users.addedOn", {
-            date: formatDateAbbrev(added, locale, viewerZone()),
-          })}
-        </time>
-      )}
-    </CellStack>
-  );
-}
-
-// Null means never signed in, or withheld from this reader: a delegated admin
-// sees none for a member they do not outrank. The cell claims neither.
-function LastActive({ at }: Readonly<{ at: string | null | undefined }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (!at) {
-    return <span className="sr-only">{t("users.lastActiveUnknown")}</span>;
-  }
-  return (
-    <time
-      className="users-nowrap"
-      dateTime={at}
-      title={formatDateTime(at, locale, viewerZone())}
-    >
-      {formatRelativeTime(at, locale)}
-    </time>
-  );
 }
 
 // Inviting is four decisions committed together, so the header carries the

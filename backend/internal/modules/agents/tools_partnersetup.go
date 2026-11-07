@@ -21,7 +21,7 @@ import (
 // PartnerSetUpFields are the terms a partner program starts with. There is no
 // margin tier: a human sets it on the company's Partner tab.
 type PartnerSetUpFields struct {
-	Role          string
+	Kinds         []string
 	Stage         *string
 	NextStep      *string
 	NextStepDueAt *time.Time
@@ -29,14 +29,15 @@ type PartnerSetUpFields struct {
 
 // PartnerSetUp is the contacts store's partner set-up, as the agent tool needs it.
 type PartnerSetUp interface {
-	// Check answers what SetUp would refuse for the caller and this company now.
-	Check(ctx context.Context, companyID ids.UUID) error
+	// Check answers what SetUp would refuse for the caller, this company and
+	// this stage now.
+	Check(ctx context.Context, companyID ids.UUID, stage *string) error
 	// SetUp returns the written partner as JSON, already masked for the caller.
 	SetUp(ctx context.Context, companyID ids.UUID, fields PartnerSetUpFields) (json.RawMessage, error)
 }
 
 var setUpPartnerCopy = toolCopy{
-	Purpose: "Set up a partner program on a company that has none, with a role, a relationship " +
+	Purpose: "Set up a partner program on a company that has none, with its kinds, a relationship " +
 		"stage and a next step.",
 	Limits: "Waits for a human to approve. The margin tier is not an argument: it decides " +
 		"commission on every later deal, so a human sets it on the company's Partner tab. " +
@@ -48,7 +49,8 @@ var setUpPartnerCopy = toolCopy{
 
 type setUpPartnerArgs struct {
 	CompanyID         ids.UUID `json:"company_id"`
-	PartnerRole       string   `json:"partner_role"`
+	PartnerKinds      []string `json:"partner_kinds"`
+	PartnerRole       *string  `json:"partner_role"`
 	RelationshipStage *string  `json:"relationship_stage"`
 	NextStep          *string  `json:"next_step"`
 	NextStepDueAt     *string  `json:"next_step_due_at"`
@@ -73,10 +75,11 @@ func (t setUpPartner) Spec() mcp.ToolSpec {
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true,
 		Unlisted:  true,
 		OpenAPIOp: "setUpPartner",
-		InputSchema: schema(`{"type":"object","required":["company_id","partner_role"],"properties":{
+		InputSchema: schema(`{"type":"object","required":["company_id"],"properties":{
 			"company_id":{"type":"string","format":"uuid","description":"The company to make a partner"},
-			"partner_role":{"type":"string","enum":["hosting","consulting","strategic"]},
-			"relationship_stage":{"type":"string","enum":["research","identified","contacted","in_conversation","fit_confirmed","agreement_pending","active","active_referring","dormant","no_fit"]},
+			"partner_kinds":{"type":"array","minItems":1,"items":{"type":"string","enum":["hosting","consulting","strategic","referral"]},"description":"Every kind the partner holds. Required unless partner_role is sent"},
+			"partner_role":{"type":"string","enum":["hosting","consulting","strategic"],"description":"Deprecated: send partner_kinds"},
+			"relationship_stage":{"type":"string","description":"An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage"},
 			"next_step":{"type":"string"},
 			"next_step_due_at":{"type":"string","format":"date"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
@@ -100,11 +103,20 @@ func decodeSetUpPartner(in json.RawMessage) (setUpPartnerArgs, error) {
 	}
 	// The closed vocabularies are the contract's, and an unknown word is a
 	// refusal here, not a database CHECK failure after the approval is spent.
-	if !crmcontracts.SetUpPartnerRequestPartnerRole(args.PartnerRole).Valid() {
-		return args, &BadArgsError{Field: "partner_role", Cause: errors.New("partner_role must be hosting, consulting or strategic")}
+	// The stage list is the installation's, so Check asks the store about it.
+	if args.PartnerKinds == nil && args.PartnerRole != nil {
+		if !crmcontracts.SetUpPartnerRequestPartnerRole(*args.PartnerRole).Valid() {
+			return args, &BadArgsError{Field: "partner_role", Cause: errors.New("partner_role must be hosting, consulting or strategic")}
+		}
+		args.PartnerKinds = []string{*args.PartnerRole}
 	}
-	if stage := args.RelationshipStage; stage != nil && !crmcontracts.SetUpPartnerRequestRelationshipStage(*stage).Valid() {
-		return args, &BadArgsError{Field: "relationship_stage", Cause: errors.New("relationship_stage is not a partner relationship stage")}
+	if len(args.PartnerKinds) == 0 {
+		return args, &BadArgsError{Field: "partner_kinds", Cause: errors.New("partner_kinds needs at least one of hosting, consulting, strategic or referral")}
+	}
+	for _, kind := range args.PartnerKinds {
+		if !crmcontracts.PartnerKind(kind).Valid() {
+			return args, &BadArgsError{Field: "partner_kinds", Cause: errors.New("partner_kinds holds only hosting, consulting, strategic or referral")}
+		}
 	}
 	return args, nil
 }
@@ -123,7 +135,7 @@ func (t setUpPartner) StageInfo(ctx context.Context, in json.RawMessage) (StageI
 		return StageInfo{}, err
 	}
 	return StageSubject(ctx, NewSetUpPartnerCall(t.p, t.partners, t.language,
-		SetUpPartnerCommand{CompanyID: args.CompanyID, Role: args.PartnerRole}))
+		SetUpPartnerCommand{CompanyID: args.CompanyID, Kinds: args.PartnerKinds, Stage: args.RelationshipStage}))
 }
 
 func (t setUpPartner) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -131,7 +143,7 @@ func (t setUpPartner) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err != nil {
 		return nil, err
 	}
-	fields := PartnerSetUpFields{Role: args.PartnerRole, Stage: args.RelationshipStage, NextStep: args.NextStep}
+	fields := PartnerSetUpFields{Kinds: args.PartnerKinds, Stage: args.RelationshipStage, NextStep: args.NextStep}
 	if args.NextStepDueAt != nil {
 		due, err := time.Parse(time.DateOnly, *args.NextStepDueAt)
 		if err != nil {

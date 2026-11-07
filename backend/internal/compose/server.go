@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -73,15 +74,17 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
 		WithRequireMFA(authPolicy.MFARequired).
-		WithGroupRoleMap(authPolicy.GroupRoleMap)
+		WithGroupRoleMap(authPolicy.GroupRoleMap).
+		WithMailCapture(mailCaptureSeam{})
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
-	anchor := contacts.NewStore(InstallationDB(pool))
+	anchor := newContactsStore(InstallationDB(pool))
 	authH := identity.NewHandlers(identitySvc).
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
 		WithInstallationDescribed(installationDescribed(anchor)).
-		WithInstallationBrand(installationBrand(anchor))
+		WithInstallationBrand(installationBrand(anchor)).
+		WithEntityMembership(anchor.AssignLegalEntityMemberTx)
 
 	// The transport directory, loaded on the REAL assembly path rather than in
 	// newServer: route-level tests construct that one directly with a pool that
@@ -99,16 +102,21 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
-	// After the lists switch, so /me probes list_id through the resolver the deal list holds.
-	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters)
+	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
+	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
+	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
 	// The tool registry is built HERE, after the options, on the Server that is
 	// actually served — so every engine an option installed is one the tools can
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	srv.authHandlers = srv.WithReachableAreas(reachableAreasOf(srv.toolRegistry))
 	// Bound here for the same reason, and on the same Server: deactivation has
 	// to be able to destroy the provider secrets it withdrew.
 	installCaptureCredentialReaper(&srv, log)
+	// After the options too, because WithBlobstore decides whether a picture
+	// has anywhere to live.
+	installAvatarPictures(&srv, pool, log)
 	// Wired unconditionally, not inside WithKeyvault: a role composed with no
 	// vault still serves /installation/setup (every step reads "not
 	// configured"), and the anonymous capabilities probe must report the same
@@ -131,6 +139,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 
 	api := contractAPI(srv, pool, identitySvc)
 	srv.views.api = api
+	ceiling := bodyCeilingFor(uploadCeilings(srv.uploadLimits), api)
+	srv.views.ceiling = ceiling
 	// ONE identity.Service for the whole process: contractAPI's admission
 	// gate and the connector's authenticate closure share this instance, so
 	// they share its singleton cache and its clock.
@@ -148,7 +158,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// decided rather than on whichever proxy the request happened to arrive by.
 	return httpserver.RecoverPanics(log,
 		httpserver.ResolveClientIP(srv.trustedProxies,
-			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
+			httpserver.LimitBodies(ceiling,
 				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
 }
 
@@ -195,7 +205,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			rankedSearchDB(pool),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
+			collections.CountTagReachBatch, searchEmailSummaries, contacts.LivePartnerCompaniesBatch,
 			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
@@ -220,7 +230,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// answers honestly and nothing can reach the network. WithProvider
 		// is what registers one.
 		integrationsHandlers: newIntegrationsHandlers(pool, nil, nil, nil),
-		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{contacts: contacts.NewStore(InstallationDB(pool))}),
+		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{contacts: newContactsStore(InstallationDB(pool))}, signalSummaryWords),
 		// The reversal seam is wired at construction rather than as an option:
 		// undoability is part of what the history surface MEANS, and a server
 		// that served the history without it would render buttons that answer
@@ -253,7 +263,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
 		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
-			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)),
+			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)).WithVoiceSentMail(voiceSentMail(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
 		// unwired because a tool answers in ids.
@@ -262,7 +272,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool)))),
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
@@ -279,8 +289,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The assurance surface reads what last night's pass found. Its scan
 		// is a job rather than a request, so the handler set is a read.
 		assuranceHandlers: assurance.NewHandlers(
-			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal),
-			AssuranceExceptionsIn,
+			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal), AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
 		),
 		// One assembler, shared with the test that drives this handler: the
@@ -289,9 +298,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// 409 after it.
 		Reads:                  NewContactGraphReads(pool, InstallationDB(pool)),
 		companyRollupHandlers:  companyRollupHandlers{pool: pool, now: time.Now},
-		companyOfferedHandlers: companyOfferedHandlers{store: contacts.NewStore(InstallationDB(pool))},
-		strengthHandlers: strengthHandlers{
-			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
+		companyOfferedHandlers: companyOfferedHandlers{store: newContactsStore(InstallationDB(pool))},
+		receiptHandlers: receiptHandlers{
+			contacts: newContactsStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},
 		access: NewRecordAccessReads(pool),
 		// The schema-change pool is boot-optional; nil
@@ -315,6 +324,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
 		accept: NewExtractionAccept(pool),
+		file:   NewChatCaptureFile(pool),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
 		reviews:    NewOutcomeReviews(pool),
@@ -348,3 +358,5 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 	// builds it after the option loop, where the Server is the one served.
 	return srv
 }
+
+var _ crmcontracts.ServerInterface = Server{}

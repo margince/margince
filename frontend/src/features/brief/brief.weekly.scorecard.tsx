@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { DataTable } from "../../design-system/datatable";
-import { Heading } from "../../design-system/heading";
-import { Panel } from "../../design-system/panel";
 import { isoWeekOf } from "../../format/calendarday";
 import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
@@ -31,7 +29,12 @@ type ScoreRow = Readonly<{
 export function ScorecardPanel({
   scorecard,
   weekStart,
-}: Readonly<{ scorecard: Scorecard | undefined; weekStart: string }>) {
+  meetingsWithheld = false,
+}: Readonly<{
+  scorecard: Scorecard | undefined;
+  weekStart: string;
+  meetingsWithheld?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   // A review written before scorecards existed carries none, and draws none.
@@ -40,46 +43,46 @@ export function ScorecardPanel({
   if (!lead && !deal) return null;
   const n = (value: number) => formatNumber(value, locale);
   const rows = [
-    ...(lead ? leadRows(lead, t, n) : []),
+    // A withheld meeting figure is a zero that says nothing, so its row goes.
+    ...(lead
+      ? leadRows(lead, t, n).filter(
+          (row) => !(meetingsWithheld && MEETING_ROWS.has(row.key)),
+        )
+      : []),
     ...(deal ? dealRows(deal, t, n) : []),
   ];
   return (
-    <>
-      <Heading size="small" as="h3">
-        {t("brief.weekly.scorecard.title")}
-      </Heading>
-      <Panel>
-        <DataTable
-          bleed
-          label={t("brief.weekly.scorecard.title")}
-          rowKey={(row: ScoreRow) => row.key}
-          rows={rows}
-          columns={[
-            {
-              key: "label",
-              header: t("brief.report.col.figure"),
-              render: (row) => row.label,
-            },
-            {
-              key: "value",
-              header: t("brief.report.col.week", {
-                week: n(isoWeekOf(weekStart)),
-              }),
-              align: "end",
-              render: (row) => row.value,
-            },
-            {
-              key: "basis",
-              header: t("brief.weekly.scorecard.basis"),
-              grow: true,
-              render: (row) => <span className="t-caption">{row.basis}</span>,
-            },
-          ]}
-        />
-      </Panel>
-    </>
+    <DataTable
+      bleed
+      label={t("brief.weekly.scorecard.title")}
+      rowKey={(row: ScoreRow) => row.key}
+      rows={rows}
+      columns={[
+        {
+          key: "label",
+          header: t("brief.report.col.figure"),
+          render: (row) => row.label,
+        },
+        {
+          key: "value",
+          header: t("brief.report.col.week", {
+            week: n(isoWeekOf(weekStart)),
+          }),
+          align: "end",
+          render: (row) => row.value,
+        },
+        {
+          key: "basis",
+          header: t("brief.weekly.scorecard.basis"),
+          grow: true,
+          render: (row) => <span className="t-caption">{row.basis}</span>,
+        },
+      ]}
+    />
   );
 }
+
+const MEETING_ROWS = new Set(["meetings", "partial"]);
 
 function leadRows(
   block: LeadBlock,

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // Subject is one deal as a rule sees it, already assembled by the seam.
@@ -25,12 +25,15 @@ type Subject struct {
 	// The close date the deal carries, and whether anybody confirmed it.
 	ExpectedClose    *time.Time
 	CloseProvisional bool
-	Category         string
-	StageName        string
-	// The last time the BUYER said something, as distinct from the last time
-	// anybody touched the record. A rep emailing a silent prospect weekly keeps
-	// last_activity_at fresh while the buyer has said nothing for months.
-	LastInboundAt *time.Time
+	// WinProbability is the deal's effective probability, and Likely whether
+	// it reaches the installation's Likely threshold.
+	WinProbability int
+	Likely         bool
+	StageName      string
+	// StageID is the deal's stage, and StageEnteredAt when it last entered it,
+	// or its creation when it never moved.
+	StageID        string
+	StageEnteredAt time.Time
 	// The total of the most recent sent or accepted offer, when there is one.
 	OfferTotalMinor *int64
 	// The total of the signed contract, when there is one.
@@ -48,6 +51,22 @@ type Subject struct {
 	// evidence says are met. Zero for a stage that declares none, which is
 	// every stage until an installation configures one.
 	UnmetExitCriteria int
+	// Viability is the deals module's assessment of whether the customer still
+	// supports the deal. Nil where nobody assessed it, which raises nothing.
+	Viability *SubjectViability
+}
+
+// SubjectViability is one deal's viability assessment as the scan stores it.
+type SubjectViability struct {
+	Outcome    viability.Outcome
+	Reasons    []viability.Reason
+	SilentDays int
+	// NextChange is when the answer changes by the clock alone; nil when only
+	// new evidence can change it.
+	NextChange *time.Time
+	// Fingerprint is what the assessment read. The freshness check compares it
+	// with the deal's current one to find the deals worth checking again.
+	Fingerprint string
 }
 
 // Finding is what a rule noticed, before it becomes a stored exception.
@@ -78,10 +97,26 @@ const (
 	TypeAmountVsContract = "amount_vs_contract"
 	TypeNoNextStep       = "no_next_step"
 	TypeNoEconomicBuyer  = "no_economic_buyer"
-	TypeBuyerSilent      = "buyer_silent"
 	TypeCommitUnpriced   = "commit_unpriced"
 	TypeStageExitUnmet   = "stage_exit_unmet"
 )
+
+// TypeBuyerSilent is a RETIRED type. Stored findings keep it for their
+// history. A pass that read the mailbox clears the open ones, because no rule
+// raises them any more.
+const TypeBuyerSilent = "buyer_silent"
+
+// TypeDealViability is a RETIRED type: Margince closes a deal the customer
+// stopped answering itself, so nobody is asked to review one. Stored findings
+// keep it for their history.
+const TypeDealViability = "deal_viability"
+
+// retiredRules are types no rule raises, with the sources a pass must have read
+// before it may close their open findings in absence.
+var retiredRules = []Rule{{Type: TypeBuyerSilent, Version: "retired", Needs: []string{sourceMail}}}
+
+// sourceMail names the mailbox among the coverage sources.
+const sourceMail = "mail"
 
 // DealAmountTypes are the types whose claim and observed slots carry money that
 // discloses the deal's amount. That money is the amount itself, or the offer or
@@ -92,16 +127,9 @@ func DealAmountTypes() []string {
 	return []string{TypeAmountVsOffer, TypeAmountVsContract}
 }
 
-// The forecast categories a rule asks about. Named because a category spelled
-// four times can come to be spelled four ways, and a rule comparing against the
-// wrong spelling is quietly never true.
-const (
-	categoryCommit   = "commit"
-	categoryBestCase = "best_case"
-)
-
-// slotCategory is the claim key naming which category a finding is about.
-const slotCategory = "category"
+// slotWinProbability is the claim key naming the probability a finding is
+// about.
+const slotWinProbability = "win_probability"
 
 // Severities, ordered by how much a reader should drop to look.
 const (
@@ -124,21 +152,18 @@ type Rule struct {
 	// or vanishing because a rule moved is not the business moving, and a
 	// reader comparing two nights has to be able to tell.
 	Version string
-	// Needs names the coverage sources this rule's absence claim stands on.
-	// A rule that reads only the deal graph needs none: the subjects read
-	// itself proves the graph was reachable. buyerSilent needs the mailbox —
-	// its finding must NOT be auto-cleared on a night the mailbox was not
-	// read, because "no silence observed" would then mean "nothing observed".
+	// Needs names the coverage sources this rule stands on, both to raise a
+	// finding and to clear one. A rule that reads only the deal graph needs
+	// none: the subjects read itself proves the graph was reachable.
 	Needs []string
 	Ask   func(asOf time.Time, s Subject, cfg Config) *Finding
 }
 
 // Config is what an installation decides rather than the product.
 type Config struct {
-	// SilentDays is how long a buyer may say nothing before it is worth
-	// asking about. There is no segment-aware threshold today, and pretending
-	// otherwise would be a setting nobody set.
-	SilentDays int
+	// ReceiptLifetime is how long a viability receipt stands before the next
+	// scheduled check should have replaced it.
+	ReceiptLifetime time.Duration
 	// MaterialMinor is the amount below which a discrepancy is not worth a
 	// contact's morning.
 	MaterialMinor int64
@@ -149,7 +174,7 @@ type Config struct {
 
 // DefaultConfig is what an installation gets before it decides otherwise.
 func DefaultConfig() Config {
-	return Config{SilentDays: 90, MaterialMinor: 100_000, MaxClosePushes: 2}
+	return Config{MaterialMinor: 100_000, MaxClosePushes: 2}
 }
 
 // Rules are the questions the nightly pass asks, in a fixed order.
@@ -164,7 +189,7 @@ func Rules() []Rule {
 	return []Rule{
 		closePast(), closeUnconfirmed(), closePushed(),
 		amountVsOffer(), amountVsContract(),
-		noNextStep(), noEconomicBuyer(), buyerSilent(), commitUnpriced(),
+		noNextStep(), noEconomicBuyer(), commitUnpriced(),
 		stageExitUnmet(),
 	}
 }
@@ -186,17 +211,17 @@ func closePast() Rule {
 	}}
 }
 
-// A committed deal whose date nobody confirmed. It is in the forecast on a
-// guess, which is exactly what the evidence reading excludes and what a manager
-// asking "are we sure" is asking about.
+// A Likely deal whose date nobody confirmed. It is in the forecast on a
+// guess, which the evidence reading excludes. A manager asking "are we sure"
+// is asking about such a deal.
 func closeUnconfirmed() Rule {
-	return Rule{Type: TypeCloseUnconfirmed, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit || !s.CloseProvisional {
+	return Rule{Type: TypeCloseUnconfirmed, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || !s.CloseProvisional {
 			return nil
 		}
 		return &Finding{
 			Type: TypeCloseUnconfirmed, SubjectID: s.DealID, Severity: SeverityMedium,
-			Claim:         map[string]any{slotCategory: s.Category},
+			Claim:         map[string]any{slotWinProbability: s.WinProbability},
 			Observed:      map[string]any{"close_provisional": true},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
@@ -207,7 +232,7 @@ func closeUnconfirmed() Rule {
 // the finding, and it is invisible to anyone looking at the deal today.
 func closePushed() Rule {
 	return Rule{Type: TypeClosePushed, Version: "v1", Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
-		if s.CloseDatePushes <= cfg.MaxClosePushes {
+		if !closeKeepsMoving(s, cfg) {
 			return nil
 		}
 		return &Finding{
@@ -266,12 +291,12 @@ func amountDisagreement(kind string, s Subject, against *int64, slot string, cfg
 	}
 }
 
-// A deal in the forecast with nobody's next move written down. Not a
+// A Likely deal with nobody's next move written down. Not a
 // bookkeeping complaint: a deal nobody can say the next step for is usually a
 // deal that has stopped moving.
 func noNextStep() Rule {
-	return Rule{Type: TypeNoNextStep, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit && s.Category != categoryBestCase {
+	return Rule{Type: TypeNoNextStep, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely {
 			return nil
 		}
 		if s.HasNextStep {
@@ -279,67 +304,40 @@ func noNextStep() Rule {
 		}
 		return &Finding{
 			Type: TypeNoNextStep, SubjectID: s.DealID, Severity: SeverityLow,
-			Claim:         map[string]any{slotCategory: s.Category},
+			Claim:         map[string]any{slotWinProbability: s.WinProbability},
 			Observed:      map[string]any{"has_next_step": false},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
 }
 
-// A committed deal with nobody identified who can sign. Late-stage deals
+// A Likely deal with nobody identified who can sign. Late-stage deals
 // without an economic buyer are where forecasts go to die.
 func noEconomicBuyer() Rule {
-	return Rule{Type: TypeNoEconomicBuyer, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit || s.HasEconomicBuyer {
+	return Rule{Type: TypeNoEconomicBuyer, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || s.HasEconomicBuyer {
 			return nil
 		}
 		return &Finding{
 			Type: TypeNoEconomicBuyer, SubjectID: s.DealID, Severity: SeverityHigh,
-			Claim:         map[string]any{slotCategory: s.Category},
+			Claim:         map[string]any{slotWinProbability: s.WinProbability},
 			Observed:      map[string]any{"economic_buyer": false},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
 }
 
-// The buyer has said nothing for a long time.
-//
-// INBOUND only. last_activity_at includes outbound mail, so a rep emailing a
-// silent prospect weekly keeps that column fresh while the buyer has not
-// answered in ninety days — and the deal looks alive to every screen reading
-// it. This rule reads the buyer's own side.
-func buyerSilent() Rule {
-	return Rule{Type: TypeBuyerSilent, Version: "v1", Needs: []string{"mail"}, Ask: func(asOf time.Time, s Subject, cfg Config) *Finding {
-		if s.LastInboundAt == nil {
-			// Nobody has ever heard from them. A different finding from
-			// silence after a conversation, and not one this rule claims: a
-			// deal created today has no inbound either.
-			return nil
-		}
-		silentFor := elapsed.Days(*s.LastInboundAt, asOf, asOf.Location())
-		if silentFor < cfg.SilentDays {
-			return nil
-		}
-		return &Finding{
-			Type: TypeBuyerSilent, SubjectID: s.DealID, Severity: SeverityMedium,
-			Claim:         map[string]any{"silent_days_threshold": cfg.SilentDays},
-			Observed:      map[string]any{"silent_days": silentFor},
-			AffectedMinor: s.AmountMinor, Currency: s.Currency,
-		}
-	}}
-}
-
-// A committed deal with no price on it. It is counted as eligible pipeline and
-// contributes nothing to the money, which is honest — and a commit nobody has
-// priced is worth asking about.
+// A Likely deal with no price on it. It is counted as eligible pipeline and
+// contributes nothing to the money, which is correct. A deal rated that
+// high that nobody has priced is worth asking about.
 func commitUnpriced() Rule {
-	return Rule{Type: TypeCommitUnpriced, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if s.Category != categoryCommit || s.AmountMinor != nil {
+	return Rule{Type: TypeCommitUnpriced, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || s.AmountMinor != nil {
 			return nil
 		}
 		return &Finding{
 			Type: TypeCommitUnpriced, SubjectID: s.DealID, Severity: SeverityMedium,
-			Claim:    map[string]any{slotCategory: s.Category},
+			Claim:    map[string]any{slotWinProbability: s.WinProbability},
 			Observed: map[string]any{"amount_minor": nil},
 		}
 	}}
@@ -362,7 +360,7 @@ func day(at time.Time) time.Time {
 
 // A deal in a stage whose own exit criteria are not met.
 //
-// Asked of every category, unlike the forecast rules. The stage is what
+// Asked of every deal, unlike the Likely rules. The stage is what
 // declares the bar: a criterion exists only where an installation wrote one,
 // so a stage nobody configured produces no finding.
 //

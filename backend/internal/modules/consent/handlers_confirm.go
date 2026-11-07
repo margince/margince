@@ -13,7 +13,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // GetConfirmDetails implements (GET /public/confirm/{token}): one contact's own
@@ -46,7 +48,9 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 			writeConsentErr(w, r, err)
 			return
 		}
-		httperr.WriteJSON(w, http.StatusOK, wireSubscriptionCard(card))
+		page := wireSubscriptionCard(card)
+		page.Language = pageLanguage(ref)
+		httperr.WriteJSON(w, http.StatusOK, page)
 		return
 	}
 	// A privacy notice is answered with the disclosure and nothing else: how
@@ -60,7 +64,9 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 			writeConsentErr(w, r, err)
 			return
 		}
-		httperr.WriteJSON(w, http.StatusOK, wirePrivacyInformation(info))
+		page := wirePrivacyInformation(info)
+		page.Language = pageLanguage(ref)
+		httperr.WriteJSON(w, http.StatusOK, page)
 		return
 	}
 	// EVERY OTHER KIND IS REFUSED, rather than falling through to the record.
@@ -79,7 +85,19 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireConfirmCard(card))
+	page := wireConfirmCard(card)
+	page.Language = pageLanguage(ref)
+	httperr.WriteJSON(w, http.StatusOK, page)
+}
+
+// pageLanguage is the language the link's mail was written in, which its page
+// asks in too; nil when the link records none.
+func pageLanguage(ref ConfirmRef) *crmcontracts.MailLanguage {
+	if !mailcopy.Known(ref.QuestionLocale) {
+		return nil
+	}
+	language := crmcontracts.MailLanguage(ref.QuestionLocale)
+	return &language
 }
 
 // SubmitConfirmDetails implements (POST /public/confirm/{token}): the answer
@@ -159,17 +177,66 @@ func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInforma
 		purposes, keys = []string{}, []string{}
 	}
 	out := crmcontracts.PrivacyInformationPage{
-		Kind:        crmcontracts.PrivacyInformationPageKindPrivacyNotice,
-		AcquiredAs:  info.AcquiredAs,
-		Purposes:    &purposes,
-		PurposeKeys: &keys,
-		Rights:      rights,
+		Kind:           crmcontracts.PrivacyInformationPageKindPrivacyNotice,
+		AcquiredAs:     info.AcquiredAs,
+		Purposes:       &purposes,
+		PurposeKeys:    &keys,
+		PurposeBases:   wireCodes[crmcontracts.PrivacyInformationPagePurposeBases](info.PurposeBases),
+		Rights:         rights,
+		Controller:     wireController(info.Controller),
+		DataCategories: wireCodes[crmcontracts.PrivacyInformationPageDataCategories](info.DataCategories),
+		Recipients:     wireCodes[crmcontracts.PrivacyInformationPageRecipients](info.Recipients),
+		Retention:      make([]crmcontracts.PrivacyInformationRetention, 0, len(info.Retention)),
+	}
+	for _, rule := range info.Retention {
+		wire := crmcontracts.PrivacyInformationRetention{
+			Scope:      crmcontracts.RetentionScope(rule.Scope),
+			RetainDays: rule.RetainDays,
+			Action:     crmcontracts.RetentionAction(rule.Action),
+		}
+		if floor := rule.KeptByLaw; floor != nil {
+			wire.KeptByLaw = &crmcontracts.JurisdictionRetentionClass{
+				Name: floor.Name, Keep: floor.Keep, FromYearEnd: floor.FromYearEnd,
+			}
+		}
+		out.Retention = append(out.Retention, wire)
 	}
 	if info.AcquiredAt != nil {
 		at := *info.AcquiredAt
 		out.AcquiredAt = &at
 	}
 	return out
+}
+
+// wireCodes renders a list of codes as the contract's enum, empty rather than
+// null.
+func wireCodes[T ~string](codes []string) []T {
+	out := make([]T, 0, len(codes))
+	for _, code := range codes {
+		out = append(out, T(code))
+	}
+	return out
+}
+
+// wireController names the particulars by the rule a message's disclosure
+// lines use, so the page and the mail agree on what counts as stated.
+func wireController(p ControllerParticulars) *crmcontracts.PrivacyInformationController {
+	stated := func(kind messagingrules.DisclosureKind) *string {
+		text := particularFor(kind, p)
+		if text == "" {
+			return nil
+		}
+		return &text
+	}
+	out := crmcontracts.PrivacyInformationController{
+		Identity:       stated(messagingrules.ControllerIdentity),
+		PrivacyContact: stated(messagingrules.PrivacyContact),
+		ObjectionRoute: stated(messagingrules.ObjectionRoute),
+	}
+	if out.Identity == nil && out.PrivacyContact == nil && out.ObjectionRoute == nil {
+		return nil
+	}
+	return &out
 }
 
 // wireConfirmCard renders the card. marketing_state is spelled 'unknown' rather

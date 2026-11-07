@@ -117,10 +117,12 @@
   color: var(--textOnAccentControl);
   font-family: var(--fontFamilyBody);
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    filter 0.12s ease;
 }
 .ob-gate-submit:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 88%, var(--overlayDark));
+  filter: brightness(1.06);
 }
 .ob-gate-submit:disabled {
   /* In-flight, and the control is coming back. Pale reads as "wait". */
@@ -193,7 +195,7 @@
    a status rather than an alert. */
 .ob-gate-alert.is-resumed {
   border-color: var(--borderStrong);
-  background: var(--bgInset);
+  background: var(--ground);
 }
 
 /* Which model is about to read the site, stated before the address is handed
@@ -261,9 +263,8 @@
   align-items: stretch;
   gap: var(--space-4);
   padding: var(--padPanel);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--bgInset);
 }
 
 /* Fixed height so the crossfade cannot move the picture beneath it. */

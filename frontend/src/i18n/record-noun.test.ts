@@ -80,6 +80,13 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
+    // A duplicate case asks whether two contacts are the same human being.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
     // A booking guest is a human, not the CRM contact record type.
     "scheduling.personalLinksFoot",
     "scheduling.whenTitle",
@@ -88,7 +95,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "confirm.done.body",
@@ -162,6 +168,19 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    "analytics.team.eventCredit",
+    "analytics.team.qualificationBasis",
+    "analytics.team.targetBasis",
+    // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
+    "contactCase.ownerPlaceholder",
+    "contactCase.notAllowed.noAuthority",
+    "contactCase.preview.noShares",
     // The meeting host and a booking guest are humans, not the CRM contact
     // record type.
     "scheduling.personalLinksFoot",
@@ -199,13 +218,13 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "common.permissionDenied",
     "confirm.done.body",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
+    "lead.boardCountsOwnerNotMeasurable",
     "lead.notYoursToChange",
     // The same refusal as the two above, for a colleague's queue.
     "worklist.owner.refused",
@@ -216,6 +235,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "ob.manual.icpHint",
     "contact.intro.answerSuggestHelp",
     "contact.notYoursToChange",
+    "provider.profile.lookupNotYours",
     "project.notYoursToChange",
     "record.notYoursToChange",
     "retention.lawfulBasisHint",
@@ -267,6 +287,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.objected",
     "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
+    "sendPermission.reason.optedOutAfterRequest",
+    "sendPermission.reason.consentRequired",
+    "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
     // A human being on the committee, or who owns or sets something, not the record type.
@@ -275,6 +298,54 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   vi: [
+    // These messages name actual readers and participants, not contact records.
+    "internalMail.historyImportNote",
+    "internalMail.scope",
+    "internalMail.disable",
+    "internalMail.shareNote",
+    "compose.reason.internalOperational",
+    "analytics.team.eventCredit",
+    "analytics.team.qualificationBasis",
+    "analytics.team.arrivalCredit",
+    "analytics.team.qualificationUnattributed_one",
+    "analytics.team.qualificationUnattributed_other",
+    // Operators and mailbox owners are human roles, not contact record types.
+    "health.stoppedNext",
+    "health.readFailedNext",
+    "health.effect.jobs",
+    "health.effect.automatic",
+    "health.effect.unknown",
+    "health.condition.waiting_human",
+    "health.responsible.operator",
+    "health.recovery.intake",
+    "health.operatorHandoff",
+    "health.code.capture_processing",
+    "health.code.capture_exhausted",
+    "health.impact.jobs",
+    "health.impact.capture",
+    "health.impact.intake",
+    "health.impact.recovery",
+    "health.impact.automatic",
+
+    // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
+    "contactCase.refused",
+    "contactCase.pair.refused",
+    "contactCase.noOwner",
+    "contactCase.ownerLabel",
+    "contactCase.ownerHint",
+    "contactCase.ownerPlaceholder",
+    "contactCase.member.owner",
+    "contactCase.notAllowed.ownersOnly",
+    "contactCase.notAllowed.noAuthority",
+    "contactCase.preview.noShares",
+    "worklist.contactCase.owners",
+    "sharedMergeReviews.switch",
     "linkedinReach.sub",
     // A colleague's LinkedIn acquaintances (người quen) are people, counted.
     "companyReach.sub",
@@ -285,6 +356,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
+    "sendPermission.appliesToAndMore_one",
+    "sendPermission.appliesToAndMore_other",
+    "sendPermission.appliesToSome_one",
+    "sendPermission.appliesToSome_other",
+    "sendPermission.ready",
     "approval.read.retained",
     "approval.read.effect",
     "approval.preview.companyPrivateReadings",
@@ -355,6 +431,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "aiAdmin.overrideHint",
     // The human who made a change, not a CRM contact record.
     "home.change.by",
+    "receipt.detail.by",
     // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's
     // details. The privacy notice is addressed to a human being and says so:
     // the sentence is about who handed the data over, not about a record type,
@@ -373,10 +450,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "brief.weekly.sharedDefinitions",
     "company.rejectReasonHint",
     "contact.notYoursToChange",
+    "provider.profile.lookupNotYours",
     "deal.notYoursToChange",
     "history.field.lifted_by",
     "history.field.revoked_by",
-    "installationSettings.timezoneHint",
     "lead.bulkOutcomeConflict",
     "lead.notYoursToChange",
     "lists.members.addedBy",
@@ -448,6 +525,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.objected",
     "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
+    "sendPermission.reason.optedOutAfterRequest",
+    "sendPermission.reason.consentRequired",
+    "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
     "buyer.contact",
@@ -464,7 +544,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceSelectedHint",
     "compose.colleagueMailbox_one",
     "compose.colleagueMailbox_other",
-    "compose.consentBlocked",
     "compose.emptyRecipients",
     "compose.multiRecipientWarning",
     "compose.sharedUnsubscribeToken",
@@ -582,9 +661,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "files.originUnknown",
     "heldThreads.heldByOthers_one",
     "heldThreads.heldByOthers_other",
+    "lead.boardCountsOwnerNotMeasurable",
     "lead.bulkOwnerPick",
     "log.transcriptHint",
-    "noticeDuty.what",
     "ob.manual.buying_centerHint",
     "contact.intro.answerSuggest",
     "consent.askToConfirmWhat",
@@ -608,6 +687,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "privacy.correctionNote",
     "privacy.correctionsSub",
     "project.stakeholders.empty",
+    // "người chịu trách nhiệm" is the deal's owner, a colleague, as deal.ownerKeep says it.
     "role.rep",
     "room.card.lastSeen",
     // "người mua" — the BUYER who walks into the room: a human being from
@@ -630,6 +710,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "dealSuggestion.field.owner",
     "systemJob.assign_owner_release",
     "history.field.owner_id",
+    "reporting.initiativeOwner",
     "share.access.writeNote",
     "worklist.owner.left",
     "list.owner",
@@ -637,6 +718,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.field.owner",
     "lead.bulkOwner",
     "lead.ownerLabel",
+    "webForms.field.owner",
     "recordRoles.intro",
     "bulk.owner",
     "whoCanSee.group.owner",
@@ -677,6 +759,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
     "contact.aside.ownerGone",
     "lead.signal.setBy",
+    "worklist.scope.unassignedHint",
   ],
 };
 

@@ -11,9 +11,8 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-5);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .pdigest-eyebrow {
@@ -137,7 +136,7 @@
    other heading on this page takes — the claim it makes ("this is what
    Margince knows") belongs to the whole page, not to one section of it. */
 .pdigest-hero-eyebrow {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .pdigest-hero-row {

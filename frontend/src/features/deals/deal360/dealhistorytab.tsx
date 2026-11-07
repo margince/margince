@@ -9,7 +9,9 @@
 // beside it would be a second answer without the restore.
 
 import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import type { components } from "../../../api/schema";
+import { type JustIn, JustInScope } from "../../../components/latestinbound";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import {
   useRecordTimeline,
@@ -20,7 +22,7 @@ import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { RecordHistoryTab } from "../../records/history";
 import {
   ChronologyFilter,
@@ -30,7 +32,10 @@ import {
   useChronologyFilter,
   useRecordChronology,
 } from "../../records/recordchronology";
-import { TimelineActions } from "../../records/timelineactions";
+import {
+  RowAnswerActions,
+  TimelineActions,
+} from "../../records/timelineactions";
 import { StartDeliveryPrompt } from "../dealproject";
 import { OutcomeReviewPanel } from "./outcomereview";
 
@@ -49,7 +54,7 @@ export function DealHistoryTab({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [filter, setFilter] = useChronologyFilter(deal.id);
   const [filters, setFilters] = useTimelineFilters(deal.id);
   const timeline = useRecordTimeline("deal", deal.id, { filters });
@@ -63,7 +68,7 @@ export function DealHistoryTab({
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
-    values: { currency: deal.currency ?? null, locale, zone: recordZone },
+    values: { currency: deal.currency ?? null, locale, zone: readerZone },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -134,7 +139,7 @@ export function DealHistoryTab({
                     chronology.entries,
                     timeline.hasNextPage,
                   )}
-                  zone={recordZone}
+                  zone={readerZone}
                 />
               )}
             </div>
@@ -142,5 +147,39 @@ export function DealHistoryTab({
         </PanelBody>
       </Panel>
     </>
+  );
+}
+
+/**
+ * The newest unanswered thing anyone on the deal sent, for the Overview's Next
+ * bar, with the verbs its History row has.
+ */
+export function DealLatestInbound({
+  latest,
+  dealId,
+  onOpenEmail,
+  children,
+}: Readonly<{
+  latest: JustIn | undefined;
+  dealId: string;
+  onOpenEmail?: (activityId: string) => void;
+  children: ReactNode;
+}>) {
+  return (
+    <JustInScope
+      latest={latest}
+      entityType="deal"
+      entityId={dealId}
+      onOpenEmail={onOpenEmail}
+      actions={(activity) => (
+        <RowAnswerActions
+          activity={activity}
+          entityType="deal"
+          entityId={dealId}
+        />
+      )}
+    >
+      {children}
+    </JustInScope>
   );
 }

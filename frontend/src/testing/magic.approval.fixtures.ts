@@ -1,4 +1,4 @@
-import type { MagicLine } from "../features/sign-in/magic.queries";
+import type { MagicLine } from "../lib/magic.queries";
 
 export const wonProposal: MagicLine = {
   id: "00000000-0000-7000-8000-0000000c0101",

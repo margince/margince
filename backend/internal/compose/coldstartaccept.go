@@ -32,21 +32,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// approvalsHandlersWithEffects wires the approvals HTTP surface with
-// every registered follow-on effect — the decision path and the effects
-// share one service so a released effect can redeem what it decides on.
-//
-// volume is the meter an approved step-up widens, and it is installed HERE
-// and nowhere else: this is the service the HTTP decision path runs on. The
-// other services built from approvalsServiceWithEffects are staging-only — a
-// nightly proposer, a rematch sweep — and none of them ever decides, so having
-// no releaser is the shape of what they do rather than a copy-paste omission.
-//
-// log is installed for the same reason and on the same service: a bundle member
-// whose effect fails AFTER its decision committed is reported to the client by
-// outcome alone, so this is the process that has to carry the cause.
-// It also answers the lane a website lead is told through, installed here
-// alone, for rewireConfirmationLane to fill once the mail lane is wired.
+// approvalsHandlersWithEffects adds the HTTP volume releaser, error logger,
+// and website-lead notice lane to the shared decision effects.
 func approvalsHandlersWithEffects(
 	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
 ) (approvals.Handlers, *siteLeadNoticeLane) {
@@ -54,15 +41,13 @@ func approvalsHandlersWithEffects(
 	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
 }
 
-// approvalsServiceWithEffects is the registration list itself, split from the
-// handler wiring so a fitness test can enumerate what is stageable without
-// standing up an HTTP surface. Every kind registered here must carry a
-// decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
-func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
+// NewApprovalsServiceWithEffects wires the decision effects used by automatic
+// approval runs. Website-lead decisions need the HTTP notice lane instead.
+func NewApprovalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	return approvalsServiceTelling(pool, &siteLeadNoticeLane{})
 }
 
-// approvalsServiceTelling is approvalsServiceWithEffects with the lane a website
+// approvalsServiceTelling is NewApprovalsServiceWithEffects with the lane a website
 // lead is told through. An empty lane refuses every site lead, which is right
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
@@ -92,8 +77,13 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store, time.Now))
 	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc,
-		contacts.NewStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
+		newContactsStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
 	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identity.NewServiceFor(InstallationDB(pool))))
+	// Both halves: the colleague who asked is told how their request ended.
+	transfers := newOwnershipTransfers(pool)
+	svc.WithEffect(ownershipTransferKind, ownershipTransferAcceptEffect(svc, transfers))
+	svc.WithPrecheck(ownershipTransferKind, transfers.transferPrecheck())
+	svc.WithDeclinedEffect(ownershipTransferKind, declineTransferEffect())
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
 	// A held message is the one kind with BOTH halves registered, because its
 	// subject is already waiting: Accept re-arms it, Reject abandons it, and a
@@ -112,13 +102,9 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
 	commitmentTasks := activities.NewStore(InstallationDB(pool))
-	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
+	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, newContactsStore(InstallationDB(pool))))
 	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(InstallationDB(pool), commitmentTasks))
 	svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
-	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
-		deals.NewStore(InstallationDB(pool), DealsInstallation()).
-			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))})))
-	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())
 	svc.WithEffect(fxRateProposalKind, fxRateAcceptEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	return svc
 }
@@ -128,15 +114,9 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 // registration because the two services run in different processes — the
 // sweep is a worker job — and a hook registered only on the deciding one
 // would be absent exactly where the expiry happens.
-//
-// No kind registers one today. Project attribution was the only one that did —
-// its expiry released the candidate row it had reserved — and that whole rung
-// is retired. The sweep still runs and still expires overdue stagings of every
-// kind; what no longer exists is a kind with cleanup of its own to do when the
-// window closes. The builder stays because the sweep needs a service and the
-// next kind that owns expiry state registers here.
 func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
-	return NewApprovalsService(InstallationDB(pool))
+	return NewApprovalsService(InstallationDB(pool)).
+		WithExpiredEffect(ownershipTransferKind, expireTransferEffect())
 }
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose

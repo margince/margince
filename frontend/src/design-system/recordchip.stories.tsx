@@ -51,7 +51,7 @@ export const InASentence: Story = { render: () => <Sentence initial={null} /> };
  * the sentence is the one it was read from. */
 export const Pressed: Story = { render: () => <Sentence initial="c1" /> };
 
-/** Large, in the `--fontLead` sentence under the morning greeting. */
+/** Large, in a `--fontLead` sentence. */
 export const Large: Story = {
   render: () => <Sentence initial={null} size="large" />,
 };

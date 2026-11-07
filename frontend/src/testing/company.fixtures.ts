@@ -57,6 +57,8 @@ export const company: Company = {
   // contract fails closed), so a fixture without it models a record nobody may
   // edit — a different record from the ordinary one these suites describe.
   writable: true,
+  // The server's per-row archive answer, stated for the same reason.
+  archivable: true,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
 };
@@ -107,6 +109,26 @@ export const emptyRollup = {
   aggregated_account_count: 1,
   restricted_excluded: [],
   computed_at: "2026-06-01T09:00:00Z",
+  pipeline_state_at: "2026-06-01T09:00:00Z",
+  closed_won_period: {
+    grain: "quarter",
+    label: "2026-Q2",
+    start_at: "2026-04-01T00:00:00Z",
+    end_at: "2026-07-01T00:00:00Z",
+    anchor: "closed_at",
+    chosen: false,
+    previous: "2026-Q1",
+    next: null,
+  },
+  activity_window: {
+    start_at: "2026-06-01T09:00:00Z",
+    end_at: "2026-06-01T09:00:00Z",
+  },
+  current_periods: {
+    period_year: "2026",
+    period_quarter: "2026-Q2",
+    period_month: "2026-06",
+  },
 };
 
 /** A deterministic brief with nothing to say, in its quietest real state. */
@@ -207,6 +229,13 @@ export function backstopAnswer(
   }
   if (pathname.endsWith("/connectors")) {
     return jsonResponse(options?.connectors ?? { data: [] });
+  }
+  if (pathname.endsWith("/activities/latest-inbound")) {
+    return jsonResponse({ data: [] });
+  }
+  // The partner ladder the company list's partner dials name.
+  if (pathname.endsWith("/partner-stages")) {
+    return jsonResponse({ data: [] });
   }
   // The account scan the page asks for on open: `never`, echoing the 360's
   // rows, unless a suite hands in one, so a page test is not also a scan test.

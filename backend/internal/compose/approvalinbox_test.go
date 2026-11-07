@@ -50,9 +50,40 @@ func TestTheListingCarriesTheSummaryAndNotTheStagedDocument(t *testing.T) {
 	}
 }
 
-// A member with nothing to say is ABSENT. `omitempty` cannot drop a struct, so
-// carrying these as values would publish 00000000-0000-… on every proposal that
-// has none — and a caller reading decided_by would be told a nobody answered it.
+// read_approval keeps a withheld plan back on its own, even from a wire that
+// still carries it: the staged document, its evidence and the summary. A ready
+// preview, and an approval with no preview, show all three.
+func TestReadApprovalWithholdsTheStagedDocumentWhenThePreviewDoes(t *testing.T) {
+	for _, tc := range []struct {
+		state    string
+		version  int
+		withheld bool
+	}{
+		{previewReadyState, 2, false},
+		{approvals.PreviewNeedsWiderSight, 2, true},
+		{previewUnavailableState, 1, true},
+		{previewIncompleteState, 1, true},
+		{previewReadyState, 9, true},
+	} {
+		staged := stagedFixture()
+		staged.Preview = &crmcontracts.ApprovalPreview{Version: tc.version, State: tc.state, Changes: []crmcontracts.ApprovalPreviewChange{}}
+		read := stagedActionFrom(staged, true)
+		if shown := read.ProposedChange != nil || read.Evidence != nil || read.Summary != ""; shown == tc.withheld {
+			t.Errorf("%s v%d: proposed_change %s, evidence %v, summary %q, want withheld=%v", tc.state, tc.version, read.ProposedChange, read.Evidence, read.Summary, tc.withheld)
+		}
+		if read.Preview == nil {
+			t.Errorf("%s v%d: the answer lost its preview", tc.state, tc.version)
+		}
+	}
+	undecided := stagedActionFrom(stagedFixture(), true)
+	if undecided.ProposedChange == nil || undecided.Evidence == nil || undecided.Summary == "" {
+		t.Error("an approval with no preview lost its staged document")
+	}
+}
+
+// A member with nothing to say is ABSENT. `omitempty` cannot drop a struct.
+// As values these would publish a zero UUID on every proposal that has none.
+// A caller reading decided_by would then be told a nobody answered it.
 func TestAnAbsentIdIsAbsentAndNotAZeroUUID(t *testing.T) {
 	encoded, err := json.Marshal(stagedActionFrom(stagedFixture(), true))
 	if err != nil {
@@ -104,7 +135,7 @@ func TestTheToolSurfaceDecidesThroughAnEngineThatCanReleaseEveryKind(t *testing.
 			t.Fatal("an engine that cannot release a held draft was accepted as the tool surface's queue")
 		}
 	}()
-	approvalQueue(approvalsServiceWithEffects(nil))
+	approvalQueue(NewApprovalsServiceWithEffects(nil))
 }
 
 // Every kind this installation can RELEASE says whether releasing it sends.
@@ -128,16 +159,15 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		"vcard_create":     true,
 		"lifecycle_change": true, "assign_owner": true, "close_date_correction": true,
 		"deal_follow_up": true, "commitment_task": true,
-		// A proposed stage move: approving it advances the deal and writes the
-		// history row. Nothing leaves the installation.
-		"stage_progression": true,
-		"fx_rate_proposal":  true,
+		"fx_rate_proposal": true,
 		// A captured record that collided with a lead already here: accepting
 		// folds the message's fields onto that lead. It writes one record and
 		// puts nothing on the wire.
 		"merge_records": true,
 		// Accepting a share request writes one record grant.
 		"contact_share": true,
+		// Moves a record and its open work to a colleague.
+		"ownership_transfer": true,
 	}
 	kinds := decidingApprovalsService(nil, SendPath{}, nil).EffectKinds()
 	if len(kinds) == 0 {

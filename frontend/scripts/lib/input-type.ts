@@ -6,7 +6,7 @@ import { declarationOf } from "../../src/testing/classnames";
 import {
   declarations,
   definedName,
-  definition,
+  definitionOf,
   descendants,
   elementsIn,
   fnOf,
@@ -237,9 +237,7 @@ export function namesHost(
     return name === "input" && ts.isIdentifier(node);
   }
   if (hosts.names.has(name)) return true;
-  const def = ts.isIdentifier(node)
-    ? definition(node.getSourceFile(), name)
-    : undefined;
+  const def = ts.isIdentifier(node) ? definitionOf(node) : undefined;
   return def !== undefined && hosts.keys.has(keyOf(def));
 }
 

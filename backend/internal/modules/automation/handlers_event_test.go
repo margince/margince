@@ -60,7 +60,7 @@ func (p *fakeReadProvider) Update(context.Context, datasource.UpdateInput) (data
 	panic("fakeReadProvider: Update not stubbed for this test")
 }
 
-func (p *fakeReadProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *fakeReadProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	panic("fakeReadProvider: AdvanceDeal not stubbed for this test")
 }
 
@@ -72,7 +72,7 @@ func (p *fakeReadProvider) Merge(context.Context, datasource.MergeInput) (dataso
 	panic("fakeReadProvider: Merge not stubbed for this test")
 }
 
-func (p *fakeReadProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
+func (p *fakeReadProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64, datasource.PromotionDealChoice) (datasource.EntityRef, bool, error) {
 	panic("fakeReadProvider: PromoteLead not stubbed for this test")
 }
 

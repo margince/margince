@@ -45,8 +45,12 @@ func reachOf(views []ConnectionView, providers []string) Reach {
 		if !slices.Contains(providers, view.Provider) {
 			continue
 		}
-		switch connectionConcern(view) {
-		case ConcernReauthRequired, ConcernConnectionError, ConcernSyncFailing:
+		// A failed history import can outrank the stall without making the sync live.
+		if view.SyncStalled {
+			return ReachBroken
+		}
+		switch view.Concern {
+		case ConcernReauthRequired, ConcernConnectionError, ConcernSyncFailing, ConcernSyncStalled:
 			return ReachBroken
 		}
 		if view.Status == statusConnected {

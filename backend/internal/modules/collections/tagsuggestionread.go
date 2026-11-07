@@ -99,7 +99,7 @@ func visibleTagSuggestionsQuery(ctx context.Context, arg func(any) int, read tag
 	   AND (SELECT count(*) FROM tag_suggestion_evidence vn WHERE vn.suggestion_id = s.id) = s.evidence_count
 	   AND NOT EXISTS (SELECT 1 FROM tag_suggestion_evidence ve JOIN activity va ON va.id = ve.activity_id
 	         WHERE ve.suggestion_id = s.id
-	           AND NOT (va.archived_at IS NULL AND ` + auth.ActivityAvailableClause("va") + ` AND ` + content + `))`
+	           AND NOT (va.archived_at IS NULL AND ` + auth.ActivityExternalEvidenceClause("va") + ` AND ` + content + `))`
 	if read.openOnly {
 		query += ` AND s.state = 'open' AND ` + tagSuggestionStandsClause("s")
 	}
@@ -153,9 +153,10 @@ func (s *Store) OpenTagSuggestions(ctx context.Context, limit int) ([]TagSuggest
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, visible+`
+		query := visible + `
 			 ORDER BY s.created_at DESC, s.id DESC
-			 LIMIT $`+fmt.Sprint(arg(limit)), args...)
+			 LIMIT $` + fmt.Sprint(arg(limit))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("collections: reading open tag suggestions: %w", err)
 		}

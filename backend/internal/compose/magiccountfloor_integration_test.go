@@ -49,7 +49,7 @@ func TestALineFromAReadThatFilledItsCapSaysTheCountIsAFloor(t *testing.T) {
 		t.Fatalf("seeding a job bigger than one read: %v", err)
 	}
 
-	receipt, err := newMagicService(e.Pool, approvalsServiceWithEffects(e.Pool), time.Now).
+	receipt, err := newMagicService(e.Pool, NewApprovalsServiceWithEffects(e.Pool), time.Now).
 		Read(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms), &since, 20)
 	if err != nil {
 		t.Fatalf("reading the receipt: %v", err)

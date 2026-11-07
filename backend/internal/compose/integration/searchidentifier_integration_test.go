@@ -69,7 +69,7 @@ func TestAClassificationMatchesAContactByItsAddress(t *testing.T) {
 // identifier lift, so a prefix match stays below the whole word.
 func TestANameSearchKeepsItsRanking(t *testing.T) {
 	e := Setup(t)
-	philip := seedContactWithEmail(e.Admin(), t, e, "Philip Dorn", "philip@dorn.example", nil)
+	philip := seedContactWithEmail(e.Admin(), t, e, "Philip Dorn", "pd@dorn.example", nil)
 	philipp := seedContactWithEmail(e.Admin(), t, e, "Philipp Adler", "philipp@adler.example", nil)
 
 	page, err := search.NewStore(e.DB()).Search(e.Admin(), search.Input{Query: "philip", Types: []string{"contact"}})
@@ -115,7 +115,7 @@ func TestSearchFindsACompanyByItsDomain(t *testing.T) {
 func TestAnAddressFindsNoContactOutsideTheReadersScope(t *testing.T) {
 	e := Setup(t)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
-	private := seedContactWithEmail(owner, t, e, "Hanna Hidden", "hanna@hidden.example", &e.Rep3)
+	private := seedContactWithEmail(e.Admin(), t, e, "Hanna Hidden", "hanna@hidden.example", &e.Rep3)
 	visibility := "owner"
 	if _, err := e.Contacts.UpdateContact(owner, ids.From[ids.ContactKind](private),
 		contacts.UpdateContactInput{Visibility: &visibility}); err != nil {

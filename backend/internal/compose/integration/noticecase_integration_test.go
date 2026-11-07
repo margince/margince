@@ -15,40 +15,31 @@ package integration
 
 import (
 	"context"
-	"log/slog"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
-
-// driveNoticeCase runs the consumer for one contact, as the worker would.
-func driveNoticeCase(t *testing.T, e *apptest.AppEnv, contactID string) {
-	t.Helper()
-	id, err := ids.Parse(contactID)
-	if err != nil {
-		t.Fatalf("parsing the contact id: %v", err)
-	}
-	consumer := compose.NewNoticeCaseOpen(e.Pool, time.Now, slog.New(slog.DiscardHandler))
-	if err := consumer.HandleEvent(context.Background(), events.Envelope{
-		Type:   "contact.created",
-		Entity: events.EntityRef{Type: "contact", ID: id},
-	}); err != nil {
-		t.Fatalf("recording the duty: %v", err)
-	}
-}
 
 func noticeCaseFor(t *testing.T, e *apptest.AppEnv, contactID string) (rule, state string, due time.Time, found bool) {
 	t.Helper()
 	row := e.Owner.QueryRow(context.Background(), `
 		SELECT rule, state, due_at FROM privacy_notice_case WHERE contact_id = $1`, contactID)
-	if err := row.Scan(&rule, &state, &due); err != nil {
-		return "", "", time.Time{}, false
+	var deadline *time.Time
+	if err := row.Scan(&rule, &state, &deadline); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", time.Time{}, false
+		}
+		t.Fatal(err)
+	}
+	if deadline != nil {
+		due = *deadline
 	}
 	return rule, state, due, true
 }
@@ -63,7 +54,7 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Bought Contact", "purchased_or_imported")
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	rule, state, due, found := noticeCaseFor(t, e, contact)
 	if !found {
@@ -79,7 +70,7 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 	}
 	// A calendar month by the rule's own arithmetic, not 31 days: from 1 October
 	// it runs 31 days and can gain the hour a clock change hands back.
-	now := time.Now()
+	now := clocktest.Now(t)
 	if !due.After(now) || due.After(consent.AddMonths(now, 1).Add(time.Hour)) {
 		t.Errorf("the notice falls due %v, want inside a calendar month of the acquisition (%v)", due, now)
 	}
@@ -95,7 +86,7 @@ func TestAContactWhoWroteToUsOwesNothing(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Wrote To Us", "subject_initiated")
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	if _, _, _, found := noticeCaseFor(t, e, contact); found {
 		t.Error("a contact who wrote to us first was recorded as owed a notice: they handed us " +
@@ -127,7 +118,7 @@ func TestAContactCarriedOverFromAnotherCRMOwesNothing(t *testing.T) {
 		t.Fatalf("acquisition kind %q, want crm_migration for a create in the import namespace", kind)
 	}
 
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 
 	if _, _, _, found := noticeCaseFor(t, e, contact.ID); found {
 		t.Error("a contact carried over from the previous CRM was recorded as owed a notice")
@@ -143,8 +134,8 @@ func TestARedeliveredCreationRecordsOneDuty(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Twice Delivered", "referral")
 
-	driveNoticeCase(t, e, contact)
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	var cases int
 	if err := e.Owner.QueryRow(context.Background(),
@@ -182,8 +173,8 @@ func contactAcquiredAs(t *testing.T, e *apptest.AppEnv, name, kind string) strin
 		t.Fatalf("create contact → %d", status)
 	}
 	tag, err := e.Owner.Exec(context.Background(), `
-		UPDATE contact_acquisition_evidence SET kind = $2 WHERE contact_id = $1`,
-		contact.ID, kind)
+		UPDATE contact_acquisition_evidence SET kind = @kind, occurred_at = @at WHERE contact_id = @contact`,
+		pgx.NamedArgs{"contact": contact.ID, "kind": kind, "at": clocktest.Now(t)})
 	if err != nil {
 		t.Fatalf("stating how the contact was obtained: %v", err)
 	}
@@ -212,7 +203,7 @@ func TestAMergeCarriesTheDutyToTheSurvivor(t *testing.T) {
 	survivor := contactAcquiredAs(t, e, "Survivor", "subject_initiated")
 	retired := contactAcquiredAs(t, e, "Retired Duplicate", "purchased_or_imported")
 
-	driveNoticeCase(t, e, retired)
+	apptest.DriveNoticeCase(t, e, retired)
 	if _, _, _, found := noticeCaseFor(t, e, retired); !found {
 		t.Fatal("the bought contact was owed a notice and none was recorded")
 	}
@@ -256,7 +247,7 @@ func TestEveryUncasedAcquisitionGetsItsDuty(t *testing.T) {
 		t.Fatalf("seeding the carried acquisition: %v", err)
 	}
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	var cases int
 	if err := e.Owner.QueryRow(context.Background(),
@@ -287,7 +278,7 @@ func TestADutyAcquiredLastYearIsAlreadyLate(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Long Ago Contact", "purchased_or_imported")
 
-	acquired := time.Now().Add(-300 * 24 * time.Hour).UTC()
+	acquired := clocktest.Now(t).Add(-300 * 24 * time.Hour).UTC()
 	tag, err := e.Owner.Exec(context.Background(), `
 		UPDATE contact_acquisition_evidence SET occurred_at = $2 WHERE contact_id = $1`,
 		contact, acquired)
@@ -298,13 +289,13 @@ func TestADutyAcquiredLastYearIsAlreadyLate(t *testing.T) {
 		t.Fatalf("dated %d acquisition rows, want 1", tag.RowsAffected())
 	}
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	_, _, due, found := noticeCaseFor(t, e, contact)
 	if !found {
 		t.Fatal("no duty was recorded for a bought contact")
 	}
-	if due.After(time.Now()) {
+	if due.After(clocktest.Now(t)) {
 		t.Errorf("a contact acquired on %v is owed a disclosure due %v, which is still in "+
 			"the future: the deadline runs one month from the ACQUISITION, so a duty this old "+
 			"has been overdue for months and a case showing time left is the one wrong answer "+

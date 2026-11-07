@@ -90,11 +90,10 @@ func (s *Store) DescribeForMerge(
 
 // DecidableForMerge answers which of these records the caller could CHANGE.
 //
-// The merge card asks it because settling a pair is not a read: the loser is
-// archived and the survivor is relinked and filled, so the verb needs write
-// authority over BOTH sides. Offering it on visibility alone is what produced a
-// button that refused every press — a rep sees every colleague's records here
-// and can change almost none of them.
+// The merge card asks it because settling a pair is not a read. Dismissing
+// needs write authority over both sides. Merging needs what MayMergePair asks
+// of the two answers. Offered on visibility alone, the button refused every
+// press, since a rep sees every colleague's records and changes almost none.
 //
 // It answers with auth.WritableSubset, the same pair of questions
 // EnsureWritable asks at the write itself, so the card and the endpoint cannot

@@ -1,3 +1,0 @@
-{"type": "system", "subtype": "init", "tools": ["mcp__margince__run_report"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__run_report", "input": {"report": "activities-by-kind"}}]}}
-{"type": "result", "subtype": "success", "is_error": false, "result": "3 meetings have taken place and 4 are only booked so far.\n\nThat comes from the activities-by-kind report grouped by meeting_status."}

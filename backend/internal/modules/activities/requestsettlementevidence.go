@@ -26,10 +26,13 @@ const RequestSettlementActor = "system:request_settlement"
 // judged over, as sorted id:version pairs. It reads alias a with $1 as the
 // bound. Every UPDATE on activity bumps version, so a body edit, an audience
 // change or a narrowing changes the value. A narrowed answer leaves the set.
+// The request sits inside the `IN` list: an `OR` beside it scans every row.
+//
+// Held by: TestSettlementEvidenceReadsEachActivityByItsID (backend/internal/modules/activities/requestsettlementevidenceplan_integration_test.go)
 func settlementEvidenceSQL() string {
 	return `SELECT string_agg(seen.id::text || ':' || seen.version, ',' ORDER BY seen.id)
    FROM activity seen
-  WHERE seen.id = a.id OR seen.id IN (SELECT answered.id FROM (` + settlementAnswersSQL() + `) answered)`
+  WHERE seen.id IN (SELECT a.id UNION ALL SELECT answered.id FROM (` + settlementAnswersSQL() + `) answered)`
 }
 
 // reArmedSettlementSQL is a settled request whose verdict recorded the

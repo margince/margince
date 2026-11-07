@@ -5,24 +5,18 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { Button, Disclosure, TableScroll } from "./atoms";
 import "./report-charts.css";
 
-import type { ChartProps, ChartReading } from "./report-charts.model";
+import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
+import {
+  areaUnder,
+  chartX,
+  lineSegments,
+  niceTop,
+  readingScale,
+} from "./report-charts.model";
 
 export type { ChartReading } from "./report-charts.model";
 
-function readingScale(readings: readonly ChartReading[], reference = 0) {
-  return Math.max(
-    1,
-    reference,
-    ...readings.flatMap((reading) => [
-      reading.value ?? 0,
-      reading.comparison ?? 0,
-      reading.target ?? 0,
-      reading.upper ?? 0,
-    ]),
-  );
-}
-
-function ReadingTable({
+export function ReadingTable({
   readings,
   label,
   dataLabel,
@@ -75,33 +69,11 @@ function ReadingTable({
   );
 }
 
-function lineSegments(
-  readings: readonly ChartReading[],
-  field: "value" | "comparison",
-  scale: number,
-  width: number,
-) {
-  const lines: string[] = [];
-  let points: string[] = [];
-  readings.forEach((reading, index) => {
-    const value = reading[field];
-    if (value == null) {
-      if (points.length) lines.push(points.join(" "));
-      points = [];
-    } else
-      points.push(
-        `${chartX(index, readings.length, width)},${chartY(value, scale)}`,
-      );
-  });
-  if (points.length) lines.push(points.join(" "));
-  return lines;
-}
+// The plot's height in viewBox units, mirrored by `.report-chart-line`.
+const LINE_HEIGHT = { default: 238, compact: 130 } as const;
 
-function chartX(index: number, count: number, width: number) {
-  return 56 + (index / Math.max(1, count - 1)) * (width - 76);
-}
-function chartY(value: number, scale: number) {
-  return 198 - (value / scale) * 174;
+function chartY(value: number, scale: number, height: number) {
+  return height - 40 - (value / scale) * (height - 64);
 }
 
 export function CumulativeChart({
@@ -113,13 +85,18 @@ export function CumulativeChart({
   reference,
   axisLabel,
   onSelect,
+  size = "default",
 }: ChartProps &
   Readonly<{
     comparisonLabel?: string;
     reference?: Readonly<{ value: number; label: string; amount: string }>;
     axisLabel: (value: number) => string;
+    /** `compact` is a shorter plot, for a chart beside a lead figure. */
+    size?: keyof typeof LINE_HEIGHT;
   }>) {
+  const height = LINE_HEIGHT[size];
   const title = useId();
+  const area = useId();
   const plot = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(680);
   useEffect(() => {
@@ -132,7 +109,9 @@ export function CumulativeChart({
     return () => observer.disconnect();
   }, []);
   const [active, setActive] = useState<string | null>(null);
-  const scale = readingScale(readings, reference?.value) * 1.08;
+  // A round top, so the two grid lines above zero read as round amounts.
+  const scale = niceTop(readingScale(readings, reference?.value));
+  const y = (value: number) => chartY(value, scale, height);
   const selected = readings.find((reading) => reading.key === active);
   const ticks = [0, scale / 2, scale];
   const labels = new Set([
@@ -141,26 +120,29 @@ export function CumulativeChart({
     readings.length - 1,
   ]);
   return (
-    <figure className="report-chart" aria-labelledby={title}>
+    <figure className="report-chart" data-size={size} aria-labelledby={title}>
       <figcaption id={title} className="sr-only">
         {label}
       </figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {comparisonLabel && (
-          <span className="report-chart-key report-chart-key-comparison">
-            {comparisonLabel}
-          </span>
-        )}
-        {reference && (
-          <span className="report-chart-key report-chart-key-target">
-            {reference.label} · {reference.amount}
-          </span>
-        )}
-      </div>
-      <div className="report-chart-line" ref={plot}>
+      {/* One line alone needs no key: the legend names it beside another. */}
+      {(comparisonLabel || reference) && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key">{valueLabel}</span>
+          {comparisonLabel && (
+            <span className="report-chart-key report-chart-key-comparison">
+              {comparisonLabel}
+            </span>
+          )}
+          {reference && (
+            <span className="report-chart-key report-chart-key-target">
+              {reference.label} · {reference.amount}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="report-chart-line" data-size={size} ref={plot}>
         <svg
-          viewBox={`0 0 ${width} 238`}
+          viewBox={`0 0 ${width} ${height}`}
           aria-hidden="true"
           preserveAspectRatio="none"
         >
@@ -170,13 +152,13 @@ export function CumulativeChart({
                 className="report-chart-grid"
                 x1="56"
                 x2={width - 20}
-                y1={chartY(tick, scale)}
-                y2={chartY(tick, scale)}
+                y1={y(tick)}
+                y2={y(tick)}
               />
               <text
                 className="report-chart-axis"
                 x="48"
-                y={chartY(tick, scale) + 4}
+                y={y(tick) + 4}
                 textAnchor="end"
               >
                 {axisLabel(tick)}
@@ -188,23 +170,32 @@ export function CumulativeChart({
               className="report-chart-reference"
               x1="56"
               x2={width - 20}
-              y1={chartY(reference.value, scale)}
-              y2={chartY(reference.value, scale)}
+              y1={y(reference.value)}
+              y2={y(reference.value)}
             />
           )}
-          {lineSegments(readings, "comparison", scale, width).map((points) => (
+          {lineSegments(readings, "comparison", width, y).map((points) => (
             <polyline
               key={points}
               className="report-chart-comparison"
               points={points}
             />
           ))}
-          {lineSegments(readings, "value", scale, width).map((points) => (
-            <polyline
-              key={points}
-              className="report-chart-actual"
-              points={points}
-            />
+          <defs>
+            <linearGradient id={area} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" className="report-chart-area-top" />
+              <stop offset="1" className="report-chart-area-foot" />
+            </linearGradient>
+          </defs>
+          {lineSegments(readings, "value", width, y).map((points) => (
+            <g key={points}>
+              <polygon
+                className="report-chart-area"
+                fill={`url(#${area})`}
+                points={areaUnder(points, y(0))}
+              />
+              <polyline className="report-chart-actual" points={points} />
+            </g>
           ))}
           {readings.map(
             (reading, index) =>
@@ -213,7 +204,7 @@ export function CumulativeChart({
                   key={reading.key}
                   className="report-chart-axis"
                   x={chartX(index, readings.length, width)}
-                  y="225"
+                  y={height - 13}
                   textAnchor="middle"
                 >
                   {reading.label}
@@ -230,7 +221,7 @@ export function CumulativeChart({
                 className="report-chart-point"
                 style={{
                   left: `${(chartX(index, readings.length, width) / width) * 100}%`,
-                  top: `${(chartY(reading.value, scale) / 238) * 100}%`,
+                  top: `${(y(reading.value) / height) * 100}%`,
                 }}
                 aria-label={`${reading.label}: ${reading.amount}`}
                 onFocus={() => setActive(reading.key)}
@@ -272,20 +263,23 @@ export function BulletChart({
   return (
     <figure className="report-chart">
       <figcaption className="sr-only">{label}</figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {hasTargets && (
+      {/* One key alone names nothing the bars do not: the legend is drawn
+          only to tell the actual from its target. */}
+      {hasTargets && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key">{valueLabel}</span>
           <span className="report-chart-key report-chart-key-target">
             {targetLabel}
           </span>
-        )}
-      </div>
+        </div>
+      )}
       <ul className="report-chart-rows">
         {readings.map((reading) => (
           <li key={reading.key}>
             <Button
               variant="link"
               className="report-chart-row"
+              data-tone={reading.tone}
               onClick={() => onSelect?.(reading.key)}
               disabled={!onSelect}
               style={markGeometry(
@@ -412,19 +406,23 @@ export function GroupedBars({
   valueLabel,
   comparisonLabel,
   onSelect,
-}: ChartProps & Readonly<{ comparisonLabel?: string }>) {
+  size = "default",
+}: GroupedBarsProps) {
   const scale = readingScale(readings) * 1.15;
   return (
-    <figure className="report-chart">
+    <figure className="report-chart" data-size={size}>
       <figcaption className="sr-only">{label}</figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {comparisonLabel && (
-          <span className="report-chart-key report-chart-key-comparison">
+      {/* Swatches, not lines: the keys name bars. One series needs no key. */}
+      {comparisonLabel && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key report-chart-key-bar">
+            {valueLabel}
+          </span>
+          <span className="report-chart-key report-chart-key-bar report-chart-column-secondary">
             {comparisonLabel}
           </span>
-        )}
-      </div>
+        </div>
+      )}
       <div className="report-chart-columns">
         {readings.map((reading) => (
           <div key={reading.key} className="report-chart-column-group">

@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -137,6 +138,7 @@ func TestTheDailyPassFreezesTheWorkspacesForecast(t *testing.T) {
 	store := newForecastStoreFor(e.Pool)
 	var side struct {
 		contributions int
+		row           forecasting.Contribution
 	}
 	if err := store.InTx(e.As(e.AdminUser, nil, integration.AdminPerms),
 		func(ctx context.Context, tx pgx.Tx) error {
@@ -145,6 +147,9 @@ func TestTheDailyPassFreezesTheWorkspacesForecast(t *testing.T) {
 				return err
 			}
 			side.contributions = len(read.Contributions)
+			if len(read.Contributions) > 0 {
+				side.row = read.Contributions[0]
+			}
 			return nil
 		}); err != nil {
 		t.Fatalf("reading the snapshot back: %v", err)
@@ -152,6 +157,23 @@ func TestTheDailyPassFreezesTheWorkspacesForecast(t *testing.T) {
 	if side.contributions != 1 {
 		t.Errorf("the snapshot carries %d contributions over a one-deal period — a frozen total "+
 			"with no rows behind it can only say that a number changed", side.contributions)
+	}
+	// The row keeps what its weight was made of, and the snapshot the basis.
+	if row := side.row; row.TypedProbability == nil || row.EvidenceN == nil || row.Signals == nil ||
+		*row.TypedProbability != row.StageProbability {
+		t.Errorf("the frozen row lost how its chance was made: typed %v, evidence %v, signals %v, in use %d",
+			row.TypedProbability, row.EvidenceN, row.Signals, row.StageProbability)
+	}
+	var selfCorrecting *bool
+	var version *string
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT self_correcting, risk_signals_version FROM forecast_snapshot WHERE id = $1`, id).
+		Scan(&selfCorrecting, &version); err != nil {
+		t.Fatal(err)
+	}
+	if selfCorrecting == nil || !*selfCorrecting || version == nil || *version != assurance.RiskSignalsVersion {
+		t.Errorf("the snapshot froze self_correcting %v and signal rules %v, want true and %s",
+			selfCorrecting, version, assurance.RiskSignalsVersion)
 	}
 }
 

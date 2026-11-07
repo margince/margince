@@ -726,8 +726,17 @@ describe("the mandatory company minimum", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /Confirm and save company/ }),
     );
-    expect(await screen.findByText("Company not saved")).toBeTruthy();
-    expect(screen.getByText("database unavailable")).toBeTruthy();
+    // Announced, and in the sticky bar the reader pressed Confirm in, not at
+    // the top of a form they may have scrolled past.
+    const refusal = await screen.findByRole("alert");
+    expect(refusal.textContent).toContain("database unavailable");
+    expect(
+      refusal
+        .closest(".mw-confirm-company")
+        ?.contains(
+          screen.getByRole("button", { name: /Confirm and save company/ }),
+        ),
+    ).toBe(true);
     expect(
       (screen.getByLabelText(/Products and services/) as HTMLTextAreaElement)
         .value,

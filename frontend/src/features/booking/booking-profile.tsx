@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button, TextInput } from "../../design-system/atoms";
-import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -12,6 +12,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
+import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
 import { navigate } from "../../lib/router";
 import {
   putSchedulingChanges,
@@ -53,7 +54,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
   const client = useQueryClient();
   const calendar = useBookingCalendar(profile.provider, false);
   const [replace, setReplace] = useState(false);
-  const copy = useClipboardCopy(profile.public_url ?? "", {
+  const copy = useCopyBookingLink(profile.public_url ?? "", {
     copy: t("scheduling.copyLink"),
     copied: t("scheduling.copied"),
     remedy: t("scheduling.copyFallback"),
@@ -159,7 +160,9 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
           <ErrorLine error={save.error} />
         </ConfirmModal>
       </Panel>
-      <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
+      <AppLink href="#/settings/meetings">
+        {t("scheduling.openSettings")}
+      </AppLink>
     </div>
   );
 }

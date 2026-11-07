@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -143,8 +144,6 @@ func (s *Service) readingPins(ctx context.Context) (*Service, error) {
 // ran, so a pin on a group matched nothing while the contract promises those
 // rows are pinnable. Both passes are needed and neither replaces the other —
 // the first is what lets a pinned MEMBER escape being folded at all.
-func (s *Service) foldAndRepin(rows []ranked, bounded bool) []ranked {
-	// The decision read stops at its own scan bound, so a group that filled it
-	// reports a floor rather than a total.
-	return applyPins(foldRoutineDecisionsBounded(rows, bounded), s.pinned)
+func (s *Service) foldAndRepin(rows []ranked, bounds map[crmcontracts.WorklistItemSource]bool) []ranked {
+	return applyPins(foldRoutineDecisionsBounded(rows, bounds), s.pinned)
 }

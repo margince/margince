@@ -24,8 +24,9 @@ func TestTheMeasurementMirrorsTheRecordersJSONFields(t *testing.T) {
 }
 
 func TestTheRecordAndItsCorpusMirrorTheRecorders(t *testing.T) {
-	assertMirrors(t, "PerfRecord", reflect.TypeFor[record](), 6)
-	assertMirrors(t, "CorpusFacts", reflect.TypeFor[corpus](), 9)
+	assertMirrors(t, "PerfRecord", reflect.TypeFor[record](), 7)
+	assertMirrors(t, "CorpusFacts", reflect.TypeFor[corpus](), 13)
+	assertMirrors(t, "StrictVerdict", reflect.TypeFor[strictVerdict](), 8)
 }
 
 // assertMirrors holds one recorder struct and its renderer twin to the same

@@ -12,14 +12,12 @@ package gates
 // each other in code — which is exactly the shape gates/ exists for.
 //
 // Without this, a tenth acquisition kind added in contacts reaches DutyFor's
-// default arm and is silently treated as Art. 14. That default is deliberate
-// and correct as a fail-safe, but it must not become the way new kinds get
+// default arm and asks for source review. That default must not become the way new kinds get
 // decided: an unconsidered kind should stop somebody and ask, not be absorbed.
 
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -60,7 +58,7 @@ func TestEveryAcquisitionKindReachesADecidedDuty(t *testing.T) {
 		if !decided[kind] {
 			t.Errorf("acquisition kind %q reaches no arm of DutyFor in "+
 				"internal/modules/consent/noticerule.go, so it falls to the default and is "+
-				"treated as an Art. 14 duty by accident. Decide it: data the SUBJECT handed us "+
+				"left unassessed by accident. Decide it: data the SUBJECT handed us "+
 				"owes no case (Art. 13 was discharged at collection); data from anywhere else "+
 				"owes an Art. 14 notice within a month", kind)
 		}
@@ -94,10 +92,10 @@ func acquisitionKinds(t *testing.T) []string {
 	return out
 }
 
-// decidedKinds reads every string literal appearing in a case clause of
-// noticerule.go — the arms of the switch that decides a duty.
+// Named constants and literals both decide an acquisition kind.
 func decidedKinds(t *testing.T) map[string]bool {
 	t.Helper()
+	constants := gatekit.PackageStringConstants(t, filepath.Join(gatekit.ModuleRoot(t), "internal/modules/consent"))
 	file := parseModuleFile(t, filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "consent", "noticerule.go"))
 	out := map[string]bool{}
 	// DutyFor's own body, not the whole file: a second switch added here for an
@@ -114,9 +112,11 @@ func decidedKinds(t *testing.T) map[string]bool {
 				return true
 			}
 			for _, expr := range clause.List {
-				if text, isText := literalString(expr); isText {
-					out[text] = true
+				text, isText := gatekit.StringExpr(expr, constants, gatekit.FoldStrict)
+				if !isText {
+					t.Fatal("acquisition switch kind cannot be resolved")
 				}
+				out[text] = true
 			}
 			return true
 		})
@@ -129,7 +129,7 @@ func decidedKinds(t *testing.T) map[string]bool {
 // a second way, so both censuses see a file identically.
 func parseModuleFile(t *testing.T, path string) *ast.File {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

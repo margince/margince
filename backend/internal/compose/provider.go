@@ -13,25 +13,16 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/commissions"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/introductions"
-	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,28 +54,15 @@ func NewProviderFor(db *database.DB) *Provider {
 	return &Provider{
 		// The fieldcatalog seam mirrors the HTTP wiring (server.go): the
 		// MCP surface's record verbs carry cf_* values too.
-		// The merge carriers mirror the HTTP wiring (serverassembly.go): the
-		// MCP surface merges and promotes records too, and an unwired carrier
-		// refuses every merge of a subject holding what it carries.
-		contacts: contacts.NewProvider(db).
+		contacts: withContactMergeCarriers(db, contacts.NewProvider(db)).
+			WithDealOpener(leadDealOpener{deals: deals.NewStore(db, DealsInstallation())}).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
-			WithStopCarrier(consent.NewStore(db)).
-			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
-			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
-			WithProviderRunReader(integrations.ReadRunForContactTx).
-			WithMergeSignalReader(signals.PreviewSignalCarryTx).
-			WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
-			WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
-			WithMergeContentReader(activities.NewStore(db)).
-			WithProfileVerdictReader(profileverdicts.MergeReader(db)).
-			WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
-			WithGrantCarrier(identity.NewServiceFor(db)).
 			WithShareRequests(contactShareRequests(pool)).
 			WithLeadArrivals(newLeadWorkTasks(db, slog.Default())).
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
-		activities:  activities.NewProvider(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
+		activities:  activities.NewProvider(InstallationDB(pool)).WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
 		commissions: commissions.NewProvider(db),
 		dealRooms:   dealrooms.NewProvider(db),
 		reports:     newReportEngine(pool),
@@ -234,7 +212,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return p.contacts.Create(ctx, in)
 	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Create(ctx, in)
-	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment:
+	case datasource.EntityDealRoom:
 		return p.dealRooms.Create(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Create(ctx, in)

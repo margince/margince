@@ -50,7 +50,7 @@ func TestAnAllDayCalendarEventIsADayMeeting(t *testing.T) {
 		From: laneDay, Until: laneDay.Truncate(24 * time.Hour).Add(24 * time.Hour),
 		DaysFrom: occurredday.Anchor(laneDay), DaysUntil: occurredday.Anchor(laneDay).AddDate(0, 0, 1),
 	}
-	rows, err := lane.Today(e.As(e.Rep1, nil, integration.AdminPerms), window, 12, attention.TasksMine, ids.UUID{})
+	rows, _, err := lane.Today(e.As(e.Rep1, nil, integration.AdminPerms), window, 12, attention.TasksMine, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}

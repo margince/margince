@@ -1,39 +1,34 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { summaryFieldsLine } from "../../design-system/approvalsummary";
 import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import {
   actorAttribution,
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
 } from "../../lib/auditactor";
-import { domainReasonLabels } from "./worklist.domainreason";
+import { runReasonWords } from "../../lib/automationrun";
+import type { Viewer } from "../../lib/worklistcopy";
+import {
+  domainQuestionHeading,
+  domainQuestionReason,
+} from "./worklist.domaincopy";
 import type { WorklistItem } from "./worklist.queries";
 
-type Viewer = Readonly<{ id: string; display_name: string }>;
-
-/** Responsibility comes from the assigned user ID; the stored promise stays verbatim. */
-export function readerTask(
+/**
+ * A row's supporting line where the server sent a code for it: a failed
+ * automation's reason in the reader's language, since `detail` is English.
+ */
+export function codedDetail(
   item: WorklistItem,
-  viewer: Viewer | undefined,
   t: Translator,
-): WorklistItem {
-  if (
-    item.source !== "task" ||
-    !viewer ||
-    item.owner?.kind !== "user" ||
-    item.owner.id !== viewer.id ||
-    !item.title
-  )
-    return item;
-  const prefix = `${viewer.display_name.trim()} will `;
-  if (!viewer.display_name.trim() || !item.title.startsWith(prefix))
-    return item;
-  return {
-    ...item,
-    title: t("home.task.yours", { action: item.title.slice(prefix.length) }),
-  };
+): string | undefined {
+  return item.source === "automation_run" && item.run_reason_code
+    ? runReasonWords(item.run_reason_code, t)
+    : item.detail;
 }
 
 export function noticeDetail(
@@ -41,11 +36,28 @@ export function noticeDetail(
   viewer: Viewer | undefined,
   t: Translator,
 ): string | undefined {
+  if (item.source === "automation_run") return codedDetail(item, t);
+  if (item.summary_parts) {
+    return (
+      summaryFieldsLine(item.summary_parts, summaryWords(t)) ?? item.detail
+    );
+  }
   if (item.source === "domain_question" && item.domain_reason_code) {
-    const label = domainReasonLabels[item.domain_reason_code];
-    if (!label) return item.detail;
-    // A vendor question also carries the site triage's own sentence.
-    return [t(label), item.domain_note].filter(Boolean).join(" ");
+    const reason = domainQuestionReason(
+      t,
+      item.domain_reason_code,
+      item.domain_context,
+    );
+    if (!reason) return item.detail;
+    // The question names the contact; a vendor question also carries the
+    // site triage's own sentence.
+    return [
+      domainQuestionHeading(t, item.id, item.domain_context),
+      reason,
+      item.domain_note,
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
   if (item.source !== "notice") return item.detail;
   const origin = item.notice_origin;

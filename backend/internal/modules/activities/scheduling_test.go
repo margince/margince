@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -113,6 +114,7 @@ func TestSchedulingRefusalsNameARealArgumentAndAnHonestCode(t *testing.T) {
 		{"duration out of range", errAvailabilityDurationOutOfRange, "duration_minutes", "out_of_range"},
 		{"booking end before start", errBookingEndNotAfterStart, "end", "invalid_date_range"},
 		{"booking attached to nothing", errBookingLinksEmpty, "links", "required"},
+		{"proposed times overlap", errProposalTimesOverlap, "options", "times_overlap"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fault, ok := httperr.Classify(tc.err)
@@ -205,4 +207,25 @@ func bookingActorCtx(userID ids.UUID) context.Context {
 			RowScope: principal.RowScopeOwn,
 		},
 	})
+}
+
+// Two proposed times that share minutes are one time offered twice. The
+// refusal comes before any availability read, so no store is needed to reach it.
+func TestProposedTimesThatShareMinutesAreRefused(t *testing.T) {
+	at := func(hour, minute int) time.Time { return time.Date(2026, 11, 9, hour, minute, 0, 0, time.UTC) }
+	var in crmcontracts.MeetingProposalRequest
+	in.DurationMinutes = 30
+	in.Options = make([]struct {
+		End   time.Time `json:"end"`
+		Start time.Time `json:"start"`
+	}, 2)
+	in.Options[0].Start, in.Options[0].End = at(8, 30), at(9, 0)
+	in.Options[1].Start, in.Options[1].End = at(8, 45), at(9, 15)
+	if _, err := (&Store{}).validateProposalOptions(t.Context(), ids.UserID{}, in); !errors.Is(err, errProposalTimesOverlap) {
+		t.Errorf("08:30 and 08:45 at 30 minutes: err = %v, want the overlap refusal", err)
+	}
+	// One ends where the next starts: two times, not one offered twice.
+	if overlapsAny(slot{Start: at(9, 0), End: at(9, 30)}, []slot{{Start: at(8, 30), End: at(9, 0)}}) {
+		t.Error("touching times read as overlapping")
+	}
 }

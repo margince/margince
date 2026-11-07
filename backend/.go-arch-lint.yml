@@ -27,6 +27,8 @@ vendors:
   redis:  { in: github.com/redis/** }
   xcrypto: { in: golang.org/x/crypto/** }
   xterm:   { in: golang.org/x/term }
+  xmod:    { in: golang.org/x/mod/** }
+  xsemaphore: { in: golang.org/x/sync/semaphore }
   yaml:   { in: gopkg.in/** }
   emersion: { in: github.com/emersion/** }
   # the OpenAPI 3.1 loader that already drives gen-payloads; the webhooks
@@ -86,6 +88,7 @@ components:
   capture:     { in: [internal/modules/capture, internal/modules/capture/**] }
   consent:     { in: internal/modules/consent }
   collections: { in: internal/modules/collections }
+  initiatives: { in: internal/modules/initiatives }
   signals:     { in: internal/modules/signals }
   contacts:      { in: internal/modules/contacts }
   privacy:     { in: internal/modules/privacy }
@@ -141,9 +144,10 @@ deps:
     # module, and the compression it is published in.
     # pdfium + gopool: pdftext reads a PDF's text layer through a sandboxed
     # pdfium; fpdf is its TESTS building the fixtures they then read.
+    # xmod: the API policy uses the standard semantic-version parser.
     # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
     # characters the word is made of — a Unicode normal form the stdlib lacks.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext]
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
@@ -161,11 +165,16 @@ deps:
   capture:
     mayDependOn: [capture, contracts, platform]
     # xnet: publicsuffix eTLD+1 fencing for the transactional/ESP gate (ADR-0072).
-    canUse: [pgx, oapi, emersion, xnet]
+    # xtext: the document rules compose a file name to NFC, so a decomposed
+    # accent cannot split the word that marks a CV.
+    canUse: [pgx, oapi, emersion, xnet, xsemaphore, xtext]
   consent:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   collections:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
+  initiatives:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   signals:
@@ -276,7 +285,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -371,9 +380,13 @@ deps:
     # the same shape as aitaskparity_test.go above, and failing in both
     # directions because fewer lets the prose return and more rewrites a
     # completed outcome into "cancelled".
+    # reviewoutcomes_test.go reads assurance.ReviewOutcomes so the answer sheet
+    # offers the outcomes the server accepts without copying its catalog.
+    # frontendrunreasons_test.go reads automation.RunReasonCodes and holds them
+    # to the browser's words, as frontendapprovalkinds_test.go does for approvals.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy]
+    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance, automation]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

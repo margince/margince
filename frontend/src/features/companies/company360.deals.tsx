@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { openValueWords } from "../../components/openvaluewords";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { StatCard } from "../../design-system/statcard";
+import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import {
   formatDayMonth,
@@ -12,8 +15,9 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
-import { useRecordZone } from "../../lib/recordzone";
+import { openValue } from "../../lib/openvalue";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Company360 } from "./company360";
 import "./company360.css";
 
@@ -41,9 +45,8 @@ export function DealsCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const deals = view?.deals;
-  const won = deals?.won_lifetime;
   const state = sectionState(
     view,
     "deals",
@@ -56,31 +59,17 @@ export function DealsCard({
     <Panel
       title={t("co.deals.title")}
       titleAction={present ? actions : undefined}
-      footer={
-        deals && (
-          <p className="co-row-meta t-caption">
-            <span>
-              {t("co.deals.wonLifetime")}{" "}
-              {formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
-            </span>
-            {/* The lost count names a set of this company's deals, so it is
-                the way into them, and it opens that set. It narrows by `status`
-                and not by a lost stage: no single closed-lost stage id exists
-                across pipelines, while the deals endpoint reads `status`. */}
-            <a
-              className="link-button"
-              href={dealsFilteredBy("company_id", view.company.id, {
-                status: "lost",
-              })}
-            >
-              {t("co.deals.lostCount", {
-                count: formatNumber(deals.lost_count, locale),
-              })}
-            </a>
-          </p>
-        )
-      }
     >
+      {deals && present && (
+        <PanelBody>
+          <DealFigures
+            deals={deals}
+            lostHref={dealsFilteredBy("company_id", view.company.id, {
+              status: "lost",
+            })}
+          />
+        </PanelBody>
+      )}
       {state === "ready" && (
         <DataTable
           bleed
@@ -109,6 +98,49 @@ export function DealsCard({
         </PanelBody>
       )}
     </Panel>
+  );
+}
+
+// The account's deals in four figures: what is open, what it is worth, what
+// was won to date and how many were lost. The lost figure opens those deals. A
+// sum is stated only in one currency rather than adding unlike money.
+function DealFigures({
+  deals,
+  lostHref,
+}: Readonly<{
+  deals: NonNullable<Company360["deals"]>;
+  lostHref: string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const won = deals.won_lifetime;
+  // A capped page is not the account's whole pipeline: its count is a floor
+  // and its sum is not said.
+  const complete = !deals.page.has_more;
+  const value = openValue(
+    deals.data.map((deal) => deal.amount ?? {}),
+    complete,
+  );
+  return (
+    <StatStrip density="plate" label={t("contact.deals.figures")}>
+      <StatCard
+        label={t("contact.deals.openCount")}
+        value={`${formatNumber(deals.data.length, locale)}${complete ? "" : "+"}`}
+      />
+      <StatCard
+        label={t("contact.deals.openValue")}
+        value={openValueWords(value, t, locale)}
+      />
+      <StatCard
+        label={t("co.deals.wonLifetime")}
+        value={formatMoneyOrAbsent(won?.amount_minor, won?.currency, locale)}
+      />
+      <StatCard
+        label={t("co.deals.lost")}
+        value={formatNumber(deals.lost_count, locale)}
+        href={lostHref}
+      />
+    </StatStrip>
   );
 }
 

@@ -20,8 +20,9 @@ func (changeState) Spec() mcp.ToolSpec {
 			"trigger":{"description":"promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes"},
 			"evidence_note":{"description":"promote only"},
 			"company_id":{"description":"set_up_partner: the company"},
-			"partner_role":{"description":"set_up_partner, required: hosting, consulting or strategic"},
-			"reason":{"description":"demote, required: why the promotion is reversed. move_project: required when to_phase is closed. Recorded in the audit trail"}}}`),
+			"partner_kinds":{"description":"set_up_partner, required: one or more of hosting, consulting, strategic or referral"},
+			"partner_role":{"description":"set_up_partner, deprecated: send partner_kinds"},
+			"reason":{"description":"demote, required: why the promotion is reversed, recorded in the audit trail. move_project: required when to_phase is closed; read_project overview lists each phase move with its reason"}}}`),
 	}
 }
 

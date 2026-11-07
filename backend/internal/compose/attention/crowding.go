@@ -51,6 +51,9 @@ func markCrowding(rows []ranked) []ranked {
 	sort.SliceStable(order, func(a, b int) bool { return less(rows[order[a]], rows[order[b]]) })
 	led := make(map[crmcontracts.WorklistItemSource]int, len(rows))
 	for _, i := range order {
+		if rows[i].uncrowdable {
+			continue
+		}
 		source := rows[i].item.Source
 		led[source]++
 		if led[source] > crowdLead {

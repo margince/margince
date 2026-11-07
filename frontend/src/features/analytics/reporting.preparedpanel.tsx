@@ -5,26 +5,28 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { Panel, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { navigate } from "../../lib/router";
+import { useUrlParams } from "../../lib/urlstate";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
-import { type ReportingEvidenceRef, reportingQuery } from "./reporting.model";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
+import { reportingQuery } from "./reporting.model";
 import {
   PREPARED_REPORTS,
   type PreparedReport,
   preparedSelection,
 } from "./reporting.prepared";
-import {
-  useReportingCatalog,
-  useReportingPipelines,
-} from "./reporting.queries";
+import { useReportingCatalog } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 
 type ReportingSelection = components["schemas"]["ReportingSelection"];
@@ -37,57 +39,54 @@ export function PreparedReports({
 }: Readonly<{ scope: ReportingSelection["scope"]; ownLens: boolean }>) {
   const t = useT();
   const catalog = useReportingCatalog();
-  const pipelines = useReportingPipelines();
+  const pipelines = usePipelines();
   const [open, setOpen] = useState<string | null>(null);
 
   return (
-    <Panel title={t("reporting.prepared.title")}>
-      <PanelBody>
-        <QueryGate query={catalog} pendingLabel={t("reporting.prepared.title")}>
-          {(metrics) => (
-            // The default pipeline is part of a saved copy's question, so
-            // nothing is offered before it is known.
-            <QueryGate
-              query={pipelines}
-              pendingLabel={t("reporting.prepared.title")}
-            >
-              {(loaded) => (
-                <>
-                  {PREPARED_REPORTS.filter(
-                    (report) =>
-                      report.kind === "question" ||
-                      !report.ownLensOnly ||
-                      ownLens,
-                  ).map((report) => (
-                    <PreparedRow
-                      key={report.id}
-                      report={report}
-                      selection={
-                        report.kind === "question"
-                          ? preparedSelection(
-                              report,
-                              metrics,
-                              scope,
-                              loaded.data.find(
-                                (pipeline) => pipeline.is_default,
-                              )?.id,
-                            )
-                          : null
-                      }
-                      previewing={open === report.id}
-                      onPreview={() =>
-                        setOpen((current) =>
-                          current === report.id ? null : report.id,
-                        )
-                      }
-                    />
-                  ))}
-                </>
-              )}
-            </QueryGate>
-          )}
-        </QueryGate>
-      </PanelBody>
+    <Panel title={t("reporting.prepared.title")} flatHead>
+      {/* Rows sit on the panel itself, so they keep its inset, not twice it. */}
+      <QueryGate query={catalog} pendingLabel={t("reporting.prepared.title")}>
+        {(metrics) => (
+          // The default pipeline is part of a saved copy's question, so
+          // nothing is offered before it is known.
+          <QueryGate
+            query={pipelines}
+            pendingLabel={t("reporting.prepared.title")}
+          >
+            {(loaded) => (
+              <>
+                {PREPARED_REPORTS.filter(
+                  (report) =>
+                    report.kind === "question" ||
+                    !report.ownLensOnly ||
+                    ownLens,
+                ).map((report) => (
+                  <PreparedRow
+                    key={report.id}
+                    report={report}
+                    selection={
+                      report.kind === "question"
+                        ? preparedSelection(
+                            report,
+                            metrics,
+                            scope,
+                            loaded.find((pipeline) => pipeline.is_default)?.id,
+                          )
+                        : null
+                    }
+                    previewing={open === report.id}
+                    onPreview={() =>
+                      setOpen((current) =>
+                        current === report.id ? null : report.id,
+                      )
+                    }
+                  />
+                ))}
+              </>
+            )}
+          </QueryGate>
+        )}
+      </QueryGate>
     </Panel>
   );
 }
@@ -104,6 +103,7 @@ function PreparedRow({
   onPreview: () => void;
 }>) {
   const t = useT();
+  const [params] = useUrlParams();
   const canCreate = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
   // A question none of whose metrics this reader may read has nothing to show.
@@ -117,22 +117,32 @@ function PreparedRow({
           <p className="analytics-attention-title">{t(report.title)}</p>
           <p className="t-caption">{t(report.purpose)}</p>
         </div>
-        {report.kind === "section" ? (
-          <Button onClick={() => openAnalyticsSection(report.section)}>
-            {t("reporting.prepared.open")}
-          </Button>
-        ) : (
-          <>
-            <Button onClick={onPreview} aria-expanded={previewing}>
-              {t("reporting.prepared.preview")}
-            </Button>
-            {canCreate && (
-              <Button onClick={() => setSaving(true)}>
-                {t("reporting.prepared.saveCopy")}
+        {/* One cell, so the row's grid keeps every verb on the title's line. */}
+        <span className="reporting-prepared-verbs">
+          {report.kind === "section" ? (
+            <AppLink
+              className="btn btn-link"
+              href={analyticsSectionHref(report.section, params)}
+            >
+              {t("reporting.prepared.open")}
+            </AppLink>
+          ) : (
+            <>
+              <Button
+                variant="link"
+                onClick={onPreview}
+                aria-expanded={previewing}
+              >
+                {t("reporting.prepared.preview")}
               </Button>
-            )}
-          </>
-        )}
+              {canCreate && (
+                <Button variant="link" onClick={() => setSaving(true)}>
+                  {t("reporting.prepared.saveCopy")}
+                </Button>
+              )}
+            </>
+          )}
+        </span>
       </PanelRow>
       {previewing && selection && <PreparedPreview selection={selection} />}
       {saving && selection && (
@@ -153,9 +163,11 @@ function PreparedPreview({
   selection,
 }: Readonly<{ selection: ReportingSelection }>) {
   const t = useT();
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(selection),
+  );
   const evaluation = useQuery({
-    queryKey: ["reporting-evaluation", selection],
+    queryKey: [...REPORTING_EVALUATION_KEY, selection],
     queryFn: async () =>
       unwrap(
         await api.GET("/analytics/evaluate", {
@@ -170,12 +182,12 @@ function PreparedPreview({
     >
       {(result) => (
         <>
-          <ReportingCharts evaluation={result} onEvidence={setEvidence} />
+          <ReportingCharts evaluation={result} onEvidence={openEvidence} />
           {evidence && (
             <ReportingEvidenceDrawer
               evaluation={result}
               reference={evidence}
-              onClose={() => setEvidence(null)}
+              onClose={closeEvidence}
             />
           )}
         </>

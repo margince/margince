@@ -1,0 +1,286 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { Plus } from "lucide-react";
+import { type ReactNode, useId, useMemo, useState } from "react";
+import { holdsEveryWord, searchWords } from "../format/collate";
+import { useT } from "../i18n";
+import { Button, Checkbox, SearchField } from "./atoms";
+import { ErrorLine } from "./errorline";
+import { Popover } from "./popover";
+import { useCandidateSearch } from "./recordpicker";
+import { type Token, TokenList } from "./tokeninput";
+import "./setpicker.css";
+
+export type SetPickerOption = Readonly<{
+  value: string;
+  label: string;
+  /** A caption under the name in the list: what tells two teams apart. */
+  detail?: string;
+  disabled?: boolean;
+}>;
+
+type FrameProps = Readonly<{
+  /** The chosen values, in the order they are drawn. */
+  chosen: readonly Token[];
+  removeLabel: (item: Token) => string;
+  onRemove: (id: string) => void;
+  /** What the frame says while nothing is chosen. */
+  none: ReactNode;
+  addLabel: ReactNode;
+  disabled?: boolean;
+  invalid?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** For a panel whose rows read three lines, such as a webhook event. */
+  wide?: boolean;
+  /** The panel behind the add trigger. */
+  children: ReactNode;
+}>;
+
+/**
+ * The chosen set as removable tokens, and the whole list behind one add
+ * trigger. A list of forty never stretches the form it sits in.
+ */
+export function SetPickerFrame({
+  chosen,
+  removeLabel,
+  onRemove,
+  none,
+  addLabel,
+  disabled,
+  invalid,
+  open,
+  onOpenChange,
+  wide,
+  children,
+}: FrameProps) {
+  return (
+    <div
+      className={`set-picker-frame${invalid ? " set-picker-invalid" : ""}`}
+      data-disabled={disabled || undefined}
+    >
+      {chosen.length === 0 ? (
+        <span className="t-caption">{none}</span>
+      ) : (
+        <TokenList
+          items={chosen}
+          removeLabel={removeLabel}
+          onRemove={disabled ? undefined : onRemove}
+        />
+      )}
+      {!disabled && (
+        <Popover
+          dialog
+          variant="ghost"
+          align="end"
+          className="set-picker-add"
+          panelClassName={
+            wide ? "set-picker-panel set-picker-panel-wide" : "set-picker-panel"
+          }
+          open={open}
+          onOpenChange={onOpenChange}
+          label={
+            <>
+              <Plus aria-hidden /> {addLabel}
+            </>
+          }
+        >
+          {children}
+        </Popover>
+      )}
+    </div>
+  );
+}
+
+type Create = Readonly<{
+  /** The row's words for a typed name, such as `Create team “DACH”`. */
+  label: (name: string) => string;
+  /** Writes the new value; the caller adds it to the set once it lands. */
+  onCreate: (name: string) => void;
+  pending?: boolean;
+  /** The refused write, drawn under the row. */
+  error?: unknown;
+}>;
+
+type SetPickerProps = Readonly<{
+  legend: string;
+  options: readonly SetPickerOption[];
+  values: readonly string[];
+  onChange: (next: string[]) => void;
+  removeLabel: (item: Token) => string;
+  none: ReactNode;
+  addLabel: string;
+  searchLabel: string;
+  noMatch: string;
+  doneLabel: string;
+  /** What the panel says when there is nothing to choose at all. */
+  empty?: ReactNode;
+  /**
+   * Asks the server once per settled term, for a set too large to hold. The
+   * panel lists `options` until something is typed, and a chosen value keeps
+   * the name it was ticked under.
+   */
+  search?: (term: string) => Promise<readonly SetPickerOption[]>;
+  /**
+   * Hears each value ticked. A caller whose picker can unmount keeps these
+   * names and hands them back as `options`, because the ticks live here.
+   */
+  onTick?: (option: SetPickerOption) => void;
+  /** Offers the typed name as a new value when no value carries that name. */
+  create?: Create;
+  disabled?: boolean;
+}>;
+
+/**
+ * Many of a listed set that is too long to show at rest. The chosen values
+ * show as tokens, with a searchable list of ticks behind "Add".
+ */
+export function SetPicker(props: SetPickerProps) {
+  const { legend, options, values, onChange, disabled } = props;
+  const [open, setOpen] = useState(false);
+  const [ticked, setTicked] = useState<ReadonlyMap<string, string>>(
+    () => new Map(),
+  );
+  const chosen = useMemo(() => {
+    const labels = new Map(ticked);
+    for (const option of options) {
+      labels.set(option.value, option.label);
+    }
+    return values.flatMap((value) => {
+      const label = labels.get(value);
+      return label === undefined ? [] : [{ id: value, label }];
+    });
+  }, [options, ticked, values]);
+  return (
+    <fieldset className="set-picker" disabled={disabled}>
+      <legend className="set-picker-legend">{legend}</legend>
+      <SetPickerFrame
+        chosen={chosen}
+        removeLabel={props.removeLabel}
+        onRemove={(id) => onChange(values.filter((value) => value !== id))}
+        none={props.none}
+        addLabel={props.addLabel}
+        disabled={disabled}
+        open={open}
+        onOpenChange={setOpen}
+      >
+        <SetPickerPanel
+          {...props}
+          onTick={(option) => {
+            setTicked((known) =>
+              new Map(known).set(option.value, option.label),
+            );
+            props.onTick?.(option);
+          }}
+          onDone={() => setOpen(false)}
+        />
+      </SetPickerFrame>
+    </fieldset>
+  );
+}
+
+function SetPickerPanel({
+  options,
+  values,
+  onChange,
+  searchLabel,
+  noMatch,
+  doneLabel,
+  empty,
+  create,
+  search,
+  onTick,
+  onDone,
+}: SetPickerProps &
+  Readonly<{ onTick: (option: SetPickerOption) => void; onDone: () => void }>) {
+  const t = useT();
+  const [term, setTerm] = useState("");
+  const listId = useId();
+  const chosen = new Set(values);
+  const found = useCandidateSearch(search, term);
+  const asked = search !== undefined && term.trim() !== "";
+  const local = useMemo(() => {
+    const words = search ? [] : searchWords(term);
+    return options.filter((option) =>
+      holdsEveryWord(words, [option.label, option.detail ?? ""]),
+    );
+  }, [options, search, term]);
+  const shown = asked ? found.candidates : local;
+  const name = term.trim();
+  const typed = searchWords(name).join(" ");
+  // A name that only differs in case or accents is the same team to a reader.
+  const taken = [...options, ...(asked ? found.candidates : [])].some(
+    (option) => searchWords(option.label).join(" ") === typed,
+  );
+  // Until the server answers, the name may be one it already holds.
+  const settled = !asked || found.answered;
+  const offerCreate = create !== undefined && name !== "" && !taken && settled;
+  const toggle = (option: SetPickerOption, on: boolean) => {
+    if (on) {
+      onTick(option);
+    }
+    onChange(
+      on
+        ? [...values, option.value]
+        : values.filter((other) => other !== option.value),
+    );
+  };
+  return (
+    <div className="set-picker-body">
+      <SearchField
+        aria-label={searchLabel}
+        aria-controls={listId}
+        placeholder={searchLabel}
+        value={term}
+        onChange={(event) => setTerm(event.target.value)}
+      />
+      <ul id={listId} className="set-picker-list">
+        {shown.map((option) => (
+          <li key={option.value}>
+            <Checkbox
+              className="set-picker-row"
+              checked={chosen.has(option.value)}
+              disabled={option.disabled}
+              onChange={(event) => toggle(option, event.target.checked)}
+              label={
+                <span className="set-picker-label">
+                  <span>{option.label}</span>
+                  {option.detail && (
+                    <span className="t-caption">{option.detail}</span>
+                  )}
+                </span>
+              }
+            />
+          </li>
+        ))}
+      </ul>
+      {!asked && options.length === 0 && empty && !offerCreate && (
+        <p className="t-caption">{empty}</p>
+      )}
+      {asked && found.pending && (
+        <p className="t-caption">{t("search.pending")}</p>
+      )}
+      <ErrorLine error={found.failure?.cause} />
+      {(asked ? found.answered : options.length > 0) && shown.length === 0 && (
+        <p className="t-caption">{noMatch}</p>
+      )}
+      {offerCreate && (
+        <Button
+          variant="ghost"
+          className="set-picker-create"
+          pending={create.pending}
+          onClick={() => create.onCreate(name)}
+        >
+          <Plus aria-hidden /> {create.label(name)}
+        </Button>
+      )}
+      <ErrorLine error={create?.error} />
+      <div className="set-picker-foot">
+        <Button variant="primary" onClick={onDone}>
+          {doneLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -23,6 +23,7 @@ type Any interface {
 	Doc() string
 	Secret() bool
 	Stored() bool
+	KeptByDataReset() bool
 	Roles() []Role
 	DefaultText() (string, bool)
 	Shape() (Shape, error)

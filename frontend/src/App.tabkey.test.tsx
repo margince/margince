@@ -9,9 +9,12 @@ import {
   sessionOnlyFetch,
   teardownApp,
 } from "./testing/appharness";
+// The screens these cases open, loaded while the file is collected. A screen's
+// first import costs seconds; inside a case it races the case's own waiters.
+import "./features/contacts/contactpage";
 
 // A tab inside a record is a view of that record. The app keys its routed
-// subtree on what the address is about (lib/router.tsx's routeIdentity), so
+// subtree on what the address is about (lib/routeidentity.ts's routeIdentity), so
 // moving between views is a re-render rather than a remount. What that buys is
 // visible: the record's header, its readings and the tab strip the reader just
 // clicked keep their DOM nodes, so design-system/enter.css plays the arrival

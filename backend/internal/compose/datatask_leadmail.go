@@ -27,7 +27,7 @@ func leadMailDataTask(pool *pgxpool.Pool) datatask.Task {
 	repair := capture.LeadFilingRepair{Authority: identity.NewService(pool), Filer: ActivityLeadFiler{Tasks: &tasks}}
 	return datatask.Task{
 		ID: "core/1792859022_captured_mail_filed_under_leads", Version: 1,
-		Title: "Filing captured mail and meetings under their leads", Requires: []string{"core/1792842046"},
+		Title: "Filing captured mail and meetings under their leads", Requires: []string{introductionValidationMigration},
 		Steps: []datatask.Step{{
 			Name: "file_captured_activity_under_lead", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
 import { Disclosure } from "../../design-system/atoms";
 import { NumberSettingRow } from "../../design-system/numbersetting";
@@ -15,7 +16,9 @@ import { formatInterval } from "../../format/interval";
 import { lockReasonOr } from "../../format/settinglocks";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useHealthVisible } from "../../lib/healthscope";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useUrlParams } from "../../lib/urlstate";
 import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];
@@ -181,7 +184,27 @@ function OperationsCard({
   const words = { t, plural, locale };
   const canRead = useCan("installation_settings", "read");
   const canManage = useCanWrite("installation_settings", "update");
-  const query = useInstallationSettings(canRead);
+  const visible = useHealthVisible();
+  const query = useInstallationSettings(canRead && visible);
+  const [params] = useUrlParams();
+  const section = params.get("section");
+  const requested = rows.find(
+    (row) => `operations.${row.copy}.label` === section,
+  );
+  const focused = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!requested) focused.current = undefined;
+    if (!visible || !query.data || !requested || focused.current === section)
+      return;
+    const control = document.querySelector<HTMLInputElement>(
+      `input[data-testid="operation-${requested.property}"]`,
+    );
+    if (control) {
+      control.focus();
+      control.scrollIntoView?.({ block: "center" });
+      focused.current = section;
+    }
+  }, [query.data, requested, section, visible]);
   const update = useUpdateInstallationSettings(() => undefined);
   // In a page the bar shows a refused save, so the card would say it twice.
   const inPage = useSavePage() !== null;
@@ -222,7 +245,9 @@ function OperationsCard({
     <QueryGate query={query} pendingLabel={title}>
       {(settings) =>
         fold ? (
-          <Disclosure summary={fold}>{listOf(settings)}</Disclosure>
+          <Disclosure summary={fold} open={requested ? true : undefined}>
+            {listOf(settings)}
+          </Disclosure>
         ) : (
           listOf(settings)
         )

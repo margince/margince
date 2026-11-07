@@ -121,7 +121,7 @@ describe("DealPipelineBoard", () => {
       within(drawer)
         .getByRole("link", { name: "Open deal" })
         .getAttribute("href"),
-    ).toBe("#/deals/d1");
+    ).toBe("/#/deals/d1");
   });
 
   it("writes to the deal through the shell's one composer", async () => {

@@ -39,9 +39,16 @@ from them or from us. With no eligible evidence or no model, the request stays o
 completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
-So it carries the audit row and the event that a human who completes it by hand would carry. `still_owed` may
-change the title of a reminder with no date that the machine filed. The new title names what is still
-open ("Send the offer" in place of the mail's subject line). It never touches a reminder a human accepted, dated or opened again.
+So it carries the audit row and the event that a human who completes it by hand would carry.
+
+`still_owed` may change the title of a reminder with no date that the machine filed. The new title
+quotes the part of the customer's request that is still open ("send the revised offer" in place of the
+mail's subject line). The quote must be at least two words of their request, outside the quoted history
+and the signature. A text that is not such a quote is dropped, so a question we asked them never
+becomes our work. It never touches a reminder a human accepted, dated or opened again.
+
+Each verdict records the rule it was reached under. A `still_owed` verdict from an older rule is judged
+again, and the title it gave a reminder may change once more.
 
 An open reminder always wins over the machine's verdict. Someone who takes the work back up is the
 answer, and the request counts as open again while their task stands. `unsure` records that the pass
@@ -87,7 +94,7 @@ sections above say. A message that is not yet classified but is labelled as sche
 Two decisions end what is owed: a human marking the conversation not sales, and the `informs_us`
 verdict of the classifier. `/worklist/hidden` counts and lists what each one takes out of the queue. The
 verdict never takes out a request a human accepted. Mail from an obvious machine address is owed only
-as a confirmed request.
+as a confirmed request. Mail that carried a List-Unsubscribe header is owed only once a human accepted it.
 
 The waiting lane is the owed set, made smaller by queue rules. The rules are the horizon, the sales
 link, mail from colleagues' own company, and the snooze, `not_mine` and `handled` choices of that reader. Each of

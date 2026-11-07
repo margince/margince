@@ -187,7 +187,7 @@ func TestDealHealthHoldsAcrossTheMeetingsStart(t *testing.T) {
 
 func TestABookedMeetingAheadKeepsTheCloseDateSweepFromDowngrading(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Quiet but booked", e.late, new("commit"), new(30), 90)
+	id := e.seedSweepDeal(t, "Quiet but booked", e.late, new(95), new(30), 90)
 	subject, booked, at := "Next step", "booked", clocktest.Now(t).UTC().AddDate(0, 0, 5)
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, MeetingStatus: &booked, OccurredAt: &at, Source: "manual",
@@ -198,8 +198,8 @@ func TestABookedMeetingAheadKeepsTheCloseDateSweepFromDowngrading(t *testing.T) 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.readSwept(t, id).forecastCat; got == nil || *got != "commit" {
-		t.Errorf("forecast_category = %v, want commit: a booked meeting ahead is not a deal gone quiet", got)
+	if got := e.readSwept(t, id).probability; got == nil || *got != 95 {
+		t.Errorf("probability = %v, want 95: a booked meeting ahead is not a deal gone quiet", got)
 	}
 }
 
@@ -245,11 +245,6 @@ func TestTheLastTouchReadersIgnoreAFutureDatedEmail(t *testing.T) {
 			Links: []activities.ActivityLinkInput{onRecord("deal", deal)},
 		}); err != nil {
 			t.Fatal(err)
-		}
-	}
-	for _, s := range subjectsFor(t, f.e) {
-		if s.DealID == deal.String() && (s.LastInboundAt == nil || !s.LastInboundAt.Equal(past)) {
-			t.Errorf("the assurance check's last inbound = %v, want the past email at %v", s.LastInboundAt, past)
 		}
 	}
 

@@ -95,3 +95,11 @@ func (s *Store) holdsOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain strin
 	}
 	return holds, nil
 }
+
+// Ownerless contacts leave the question unassigned instead of referencing a zero seat.
+func domainQuestionOwner(id ids.UUID) *ids.UUID {
+	if id.IsZero() {
+		return nil
+	}
+	return &id
+}

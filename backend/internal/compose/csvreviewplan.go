@@ -26,6 +26,9 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 		creates := outcome == predictCreate || outcome == predictCollides
 		w.links.markNamesPending(creates, fields[fieldDisplayName], fields[fieldLegalName])
 	}
+	if w.object == migration.ObjectContact {
+		w.links.markEmployerPending(w.predictedEmployers[row.ExternalID])
+	}
 }
 
 func reviewDisposition(outcome predictedOutcome) (string, error) {

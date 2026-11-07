@@ -121,12 +121,18 @@ const nativeControls = new Set(["select", "option", "optgroup"]);
 // with a backslash — so a file with neither a name nor a backslash cannot spell
 // one. Deriving it from the set would be wrong, which is why it is stated once
 // with its reason instead.
-const prefilter = new RegExp(`${[...nativeControls].join("|")}|\\\\`);
+//
+// A name counts only where no word character follows it. Each detector below
+// ends the name there: a JSX tag, a literal that equals the name, and the string
+// scan's boundary. So `options` and `selected` cannot be a hit.
+const prefilter = new RegExp(
+  `(?:${[...nativeControls].join("|")})(?![A-Za-z0-9_])|\\\\`,
+);
 
 // The tags whose `type` reaches a native input as written, derived from the
 // design system and every module the extension surface publishes from.
 const designSystemDir = join(srcDir, "design-system");
-// A date takes InlineTextControl's InlineDate branch, which renders DateInput.
+// InlineTextControl sends a date to DateInput, so no date reaches its TextInput.
 const notHosts = new Set(["InlineTextControl"]);
 // Each spreads FieldControl or SettingControlProps: an id and aria wiring, no type.
 const clearedSpreads = ["NameDialog", "NumberSetting", "ResolveSheet"];
@@ -148,11 +154,22 @@ const clockTypeOf = (values: string[]) =>
 const clockAlternation = clockTypes.join("|");
 const elementFactories = new Set(["createElement", "jsx", "jsxs", "jsxDEV"]);
 
-// Sound for the same reason as `prefilter`: a hit spells `type`, and its value
-// opens with a quote, backtick, `=` or space, or goes through a backslash escape.
-const dateValueStart = new RegExp(`[\\s"'\`=](?:${clockAlternation})`, "i");
+// Sound for the same reason as `prefilter`. A hit spells `type`, and its value
+// is a literal equal to a clock type, between quotes or backticks.
+// Only the string scan reads one unquoted, after `=` and before a non-word
+// character. Any other spelling goes through a backslash escape.
+const dateValueStart = new RegExp(
+  `["'\`](?:${clockAlternation})["'\`]|=\\s*(?:${clockAlternation})(?![\\w-])`,
+  "i",
+);
 const worthParsing = (text: string) =>
   prefilter.test(text) || (text.includes("type") && dateValueStart.test(text));
+
+// Each native element as a string scan reads it, built once rather than per
+// string node.
+const tagInString = [...nativeControls].map(
+  (tag) => [tag, new RegExp(`<${tag}([^a-zA-Z0-9._:-]|$)`, "g")] as const,
+);
 
 // `<input … type="date">`, or any other clock type, built in a string.
 const dateMarkup = new RegExp(
@@ -181,9 +198,7 @@ const probeFile = join(srcDir, "design-system", "native-controls.test.ts");
 // hand-written lexer was verified only by the tree happening to be clean.
 function findNativeControls(path: string, text: string): string[] {
   // A file that can produce none of the three names is not parsed at all. The
-  // census reads ~930 files and reparses every non-TSX one as TSX, which took
-  // 21s on a CI runner against 1.3s locally and timed the test out; roughly
-  // half the tree is skipped here.
+  // parse is the census's cost, and most of the tree is skipped here.
   //
   // The filter has to be SOUND, not merely quick, and two escape routes decide
   // its shape. The names carry no angle bracket, because `\u003cselect>` spells
@@ -295,28 +310,30 @@ function findNativeControls(path: string, text: string): string[] {
       // newlines in its cooked form that do not exist in the file, and counting
       // those would report a line the reader cannot find.
       const cooked = node.text;
-      const spansLines = /\n/.test(node.getText(source));
-      const start = source.getLineAndCharacterOfPosition(
-        node.getStart(source),
-      ).line;
-      const lineAt = (index: number) =>
-        start +
-        1 +
-        (spansLines ? (cooked.slice(0, index).match(/\n/g) ?? []).length : 0);
-      for (const tag of nativeControls) {
-        // EVERY occurrence, not the first: a template rendering the same tag
-        // twice on different lines used to report one line and drop the rest.
-        for (const m of cooked.matchAll(
-          new RegExp(`<${tag}([^a-zA-Z0-9._:-]|$)`, "g"),
-        )) {
-          found.push(`${lineAt(m.index)}: <${tag}> inside a string`);
+      // Both scans below open on a `<`, so a string without one holds no hit.
+      // Most strings are copy or contract text, and skip the line arithmetic.
+      if (cooked.includes("<")) {
+        const spansLines = /\n/.test(node.getText(source));
+        const start = source.getLineAndCharacterOfPosition(
+          node.getStart(source),
+        ).line;
+        const lineAt = (index: number) =>
+          start +
+          1 +
+          (spansLines ? (cooked.slice(0, index).match(/\n/g) ?? []).length : 0);
+        for (const [tag, inString] of tagInString) {
+          // Every occurrence, not the first: a tag a template renders twice
+          // reports both of its lines.
+          for (const m of cooked.matchAll(inString)) {
+            found.push(`${lineAt(m.index)}: <${tag}> inside a string`);
+          }
         }
-      }
-      for (const m of cooked.matchAll(dateMarkup)) {
-        const clock = (m[1] ?? m[2] ?? m[3] ?? "").toLowerCase();
-        found.push(
-          `${lineAt(m.index)}: <input type="${clock}"> inside a string`,
-        );
+        for (const m of cooked.matchAll(dateMarkup)) {
+          const clock = (m[1] ?? m[2] ?? m[3] ?? "").toLowerCase();
+          found.push(
+            `${lineAt(m.index)}: <input type="${clock}"> inside a string`,
+          );
+        }
       }
     }
     ts.forEachChild(node, visit);
@@ -330,45 +347,55 @@ function findNativeControls(path: string, text: string): string[] {
 }
 
 describe("no product surface renders a browser-drawn dropdown, date or time field", () => {
-  // A generous timeout, stated rather than defaulted: this walks and parses the
-  // whole tree, which is not a unit test's shape of work. The pre-filter above
-  // is what keeps it near a second, and the timeout is the floor under a slower
-  // runner — CI took 21s before the filter and timed out at 13s.
-  it("finds no native select, option, optgroup, date or time field", {
-    timeout: 60_000,
-  }, () => {
-    const files = [
-      ...filesUnder(srcDir),
-      ...extensionFrontendFiles(extensionsDir),
-    ].filter((f) => f !== probeFile);
+  // The census reads and parses the whole tree, so its cost grows with the
+  // tree. A declaration file emits no code, so it cannot render a control and
+  // is not read. The generated contract types are a tenth of the scan's nodes.
+  const census = [
+    ...filesUnder(srcDir),
+    ...extensionFrontendFiles(extensionsDir),
+  ].filter((f) => f !== probeFile && !f.endsWith(".d.ts"));
 
+  it("reads the whole tree, the extension layers included", () => {
     // An empty scan means the gate is pointed at the wrong tree. A census that
     // judged nothing certifies nothing, and this one is fail-closed by design.
-    expect(files.length).toBeGreaterThan(100);
+    expect(census.length).toBeGreaterThan(100);
     // And the extension half specifically. The count floor cannot notice its
     // loss — the layers contribute a handful of files against a floor of 100 —
     // so removing them from the census was a mutant that SURVIVED. A census
     // whose floor only the large half can satisfy cannot see the small half
     // disappear.
     expect(
-      files.some((f) => f.startsWith(`${extensionsDir}/`)),
+      census.some((f) => f.startsWith(`${extensionsDir}/`)),
       "the census covered frontend/src but no extension frontend layer",
     ).toBe(true);
-
-    const violations = files.flatMap((file) =>
-      findNativeControls(file, readFileSync(file, "utf8")).map(
-        (hit) => `${relative(frontendRoot, file)}:${hit}`,
-      ),
-    );
-
-    expect(
-      violations,
-      "Use Select from src/design-system/select.tsx; see src/design-system/README.md. " +
-        "In tests, drive it with pickOption from src/design-system/select-testing.ts. " +
-        "A date field is DateInput from src/design-system/dateinput.tsx, which a unit imports from @margince/frontend/design-system. " +
-        "A time field is TimeInput (timeinput.tsx) and a month field MonthInput (monthinput.tsx).",
-    ).toEqual([]);
   });
+
+  // The scan is split into slices, each a test with its own time limit. One
+  // test over the whole tree ran out its 60s on a CI runner, and the tree only
+  // grows. A file keeps its slice from run to run, so a finding names a stable
+  // test. Together the slices read every file in the census.
+  const slices = 4;
+  it.each(Array.from({ length: slices }, (_, slice) => slice))(
+    "finds no native select, option, optgroup, date or time field (slice %i)",
+    { timeout: 60_000 },
+    (slice) => {
+      const violations = census
+        .filter((_, index) => index % slices === slice)
+        .flatMap((file) =>
+          findNativeControls(file, readFileSync(file, "utf8")).map(
+            (hit) => `${relative(frontendRoot, file)}:${hit}`,
+          ),
+        );
+
+      expect(
+        violations,
+        "Use Select from src/design-system/select.tsx; see src/design-system/README.md. " +
+          "In tests, drive it with pickOption from src/design-system/select-testing.ts. " +
+          "A date field is DateInput from src/design-system/dateinput.tsx, which a unit imports from @margince/frontend/design-system. " +
+          "A time field is TimeInput (timeinput.tsx) and a month field MonthInput (monthinput.tsx).",
+      ).toEqual([]);
+    },
+  );
 
   it("walks every extension frontend layer, at any depth", () => {
     // The walk had NO test, and three separate mutants to it survived: dropping
@@ -963,5 +990,9 @@ describe("the native-control detector sees what it claims to", () => {
     expect(
       worthParsing('const a = <input type="text" onBlur={update} />;'),
     ).toBe(false);
+    expect(worthParsing("const options = selected; // type a date")).toBe(
+      false,
+    );
+    expect(worthParsing("const html = `<input type=\n date>`;")).toBe(true);
   });
 });

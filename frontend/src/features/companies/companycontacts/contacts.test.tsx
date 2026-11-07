@@ -83,13 +83,13 @@ test("says which side the conversation is owed, not just when it moved", async (
 });
 
 // Two day entries on one date share one stored noon. The server's engagement
-// reads that tie as their message waiting, and the last touch must agree.
-test("a day each way on one date reads as theirs to answer", async () => {
-  const [, waiting] = contactsFixture();
+// reads that tie as answered, and the last touch must agree.
+test("a day each way on one date reads as answered", async () => {
+  const [answered] = contactsFixture();
   const day = "2026-08-30T12:00:00Z";
   stubContacts([
     {
-      ...waiting,
+      ...answered,
       last_inbound_at: day,
       last_inbound_precision: "day",
       last_outbound_at: day,
@@ -98,10 +98,13 @@ test("a day each way on one date reads as theirs to answer", async () => {
   ]);
   render(<CompanyContactsList companyId="o-1" />);
 
-  const row = (await screen.findByText("Sabine Vogel")).closest("tr");
+  const row = (await screen.findByText("Dietmar Rietsch")).closest("tr");
   expect(row).not.toBeNull();
-  expect(within(row as HTMLElement).getByText("Needs reply")).not.toBeNull();
-  expect(within(row as HTMLElement).getByText(/They wrote/)).not.toBeNull();
+  expect(within(row as HTMLElement).getByText("Answered")).not.toBeNull();
+  expect(
+    within(row as HTMLElement).getByText(/Your team wrote/),
+  ).not.toBeNull();
+  expect(within(row as HTMLElement).queryByText(/They wrote/)).toBeNull();
 });
 
 test("asks the server for the account's own contacts and lets it choose the order", async () => {

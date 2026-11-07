@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
-import { type ReactNode, type RefObject, useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import {
@@ -13,13 +13,14 @@ import {
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
+import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
+import { DealOwner } from "./dealowner";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
 import { Popover } from "./popover";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
-import { useTooltip } from "./tooltip";
 
 // One deal, as a card on the pipeline board (pipelineboard.tsx draws the board).
 // The card's vocabulary — `BoardDeal` — stays with the board, because a column
@@ -108,7 +109,7 @@ function DealCardCompany({
         // stopPropagation keeps the click off the card's stretched anchor.
         // preventDefault would be wrong: it would leave the card's own
         // navigation to fire while this link did nothing.
-        <a
+        <AppLink
           className="deal-company-name deal-company-link"
           href={deal.companyHref}
           onClick={(event) => {
@@ -117,64 +118,10 @@ function DealCardCompany({
           }}
         >
           {deal.company}
-        </a>
+        </AppLink>
       ) : (
         <span className="deal-company-name">{deal.company}</span>
       )}
-    </span>
-  );
-}
-
-/**
- * Who carries the deal, as a mark at the edge of the company line.
- *
- * A monogram is not an answer on its own — a teammate has to decode it — so the
- * mark carries the full name as its label, which a screen reader gets as part
- * of the card's own name and a pointer gets as a tip. The tip grants no tab
- * stop of its own: the card is a link and already has one, and a second stop
- * inside it would be a control that does nothing.
- */
-function DealOwner({
-  owner: { id, name },
-  dealLink,
-}: Readonly<{
-  owner: Readonly<{ id: string; name: string }>;
-  dealLink: RefObject<HTMLAnchorElement | null>;
-}>) {
-  const tip = useTooltip<HTMLSpanElement>(name);
-  // The mark sits above the deal's stretched link so its tip can open, so it
-  // hands a press on, button and modifier keys included, to keep the card one door.
-  const handOn = (event: React.MouseEvent) =>
-    dealLink.current?.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        button: event.button,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        shiftKey: event.shiftKey,
-        altKey: event.altKey,
-      }),
-    );
-  return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path to the deal is the card's own link, which holds the card's one tab stop
-    <span // NOSONAR: forwards a pointer press to the deal's link; the mark itself is not a control
-      className="deal-owner"
-      role="img"
-      aria-label={name}
-      ref={tip.ref}
-      {...tip.trigger}
-      onClick={handOn}
-      // The middle button opens the deal in a new tab from this real press: a
-      // dispatched button-1 click can leave that tab blank under load.
-      onAuxClick={(event) => {
-        if (event.button === 1 && dealLink.current) {
-          window.open(dealLink.current.href, "_blank", "noopener");
-        }
-      }}
-    >
-      <Avatar name={name} identity={id} />
-      {tip.tip}
     </span>
   );
 }
@@ -376,6 +323,8 @@ export function DealCard({
   mailAside,
   actions,
   dragHandlers,
+  standing,
+  closed,
 }: Readonly<{
   deal: BoardDeal;
   /** The record calendar for close dates and ages, shared with the timeline. */
@@ -401,6 +350,10 @@ export function DealCard({
     draggable: true;
     onDragStart: (event: React.DragEvent) => void;
   };
+  /** Stage and seat, for a card off the board; a board column says the stage. */
+  standing?: ReactNode;
+  /** A closed deal's day, worded; null when no day was recorded. */
+  closed?: string | null;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -443,7 +396,7 @@ export function DealCard({
           NAME rather than sitting empty, so the accessible name of the link is
           the deal a reader is opening — an empty stretched anchor reads to a
           screen reader as a link with no text. */}
-      <a
+      <AppLink
         ref={dealLink}
         className="deal-name deal-open"
         href={href}
@@ -453,7 +406,7 @@ export function DealCard({
         onClick={(event) => onOpen?.(deal, event)}
       >
         {deal.name}
-      </a>
+      </AppLink>
       <span className="deal-figure">
         {/* Compact, because a card is compared at a glance: the column head
             sums the stage exactly and the deal states its own figure whole. */}
@@ -466,7 +419,9 @@ export function DealCard({
             formatMoneyCompact,
           )}
         </span>
-        {deal.closeDate ? (
+        {closed !== undefined ? (
+          <span className="deal-closes">{closed ?? t("deal.undated")}</span>
+        ) : deal.closeDate ? (
           <DealCloses
             day={deal.closeDate}
             provisional={deal.closeDateProvisional ?? false}
@@ -476,6 +431,7 @@ export function DealCard({
           <span className="deal-closes">{t("deal.undated")}</span>
         )}
       </span>
+      {standing != null && <span className="deal-standing">{standing}</span>}
       <DealCardFoot
         zone={zone}
         deal={deal}

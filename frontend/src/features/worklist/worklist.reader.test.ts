@@ -1,12 +1,8 @@
 import { expect, it } from "vitest";
 import { translate } from "../../i18n";
+import { readerTask, sentenceTitled, whenText } from "../../lib/worklistcopy";
 import { taskRow } from "../../testing/brief.fixtures";
-import { whenText } from "./worklist.copy";
-import {
-  noticeDetail,
-  readerTask,
-  sharedResponsibility,
-} from "./worklist.reader";
+import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 
 const t = (
   key: Parameters<typeof translate>[1],
@@ -123,7 +119,7 @@ it("dates the original change, not its later delivery", () => {
   ).toBe("07/09/2026, 12:00");
 });
 
-it("renders domain maintenance reasons in the reader's language", () => {
+it("asks a domain question about its company in the reader's language", () => {
   const question = {
     ...task,
     source: "domain_question" as const,
@@ -135,7 +131,9 @@ it("renders domain maintenance reasons in the reader's language", () => {
       noticeDetail(question, viewer, (key, values) =>
         translate(language, key, values),
       ),
-    ).toBe(translate(language, "blockedDomains.source.forwardedIdentity"));
+    ).toBe(
+      `${translate(language, "worklist.domainQuestion.headingDomain", { domain: question.id })} ${translate(language, "worklist.domainQuestion.reason.forwarded")}`,
+    );
   }
 });
 
@@ -148,7 +146,7 @@ it("shows the site triage's own sentence under a vendor question's reason", () =
     domain_note: sentence,
     detail: "Stored fallback prose",
   };
-  const label = translate("en", "blockedDomains.source.vendorVerdict");
+  const label = `${translate("en", "worklist.domainQuestion.headingDomain", { domain: vendor.id })} ${translate("en", "worklist.domainQuestion.reason.vendor")}`;
   expect(
     noticeDetail(vendor, viewer, (key, values) => translate("en", key, values)),
   ).toBe(`${label} ${sentence}`);
@@ -190,4 +188,71 @@ it("names shared recipients without claiming nobody owns their reply", () => {
     sharedResponsibility({ ...shared, owner: { kind: "shared" } }, "en", t),
   ).toBeNull();
   expect(sharedResponsibility(task, "en", t)).toBeNull();
+});
+
+it("gives an approval row its proposed values as the supporting line", () => {
+  const approval = {
+    ...taskRow("approval", "Update record deal: name=Acme, Inc."),
+    source: "approval" as const,
+    detail: undefined,
+    summary_parts: {
+      sentence: "Update record deal",
+      fields: [{ field: "name", value: "Acme, Inc." }],
+      more_fields: 1,
+    },
+  };
+  expect(noticeDetail(approval, viewer, t)).toBe(
+    "Name: Acme, Inc. · 1 more not shown",
+  );
+  expect(
+    noticeDetail({ ...approval, summary_parts: undefined }, viewer, t),
+  ).toBe(undefined);
+});
+
+it("titles an approval row by its sentence, falling back to the whole title", () => {
+  const approval = {
+    ...taskRow("approval", "Update record deal: name=Acme, Inc."),
+    source: "approval" as const,
+    summary_parts: {
+      sentence: "Update record deal",
+      fields: [],
+      more_fields: 0,
+    },
+  };
+  expect(sentenceTitled(approval).title).toBe("Update record deal");
+  const blank = {
+    ...approval,
+    summary_parts: { ...approval.summary_parts, sentence: "" },
+  };
+  expect(sentenceTitled(blank).title).toBe(
+    "Update record deal: name=Acme, Inc.",
+  );
+  expect(sentenceTitled(task)).toBe(task);
+});
+
+// A task's row says its agreed time when it has one, and leaves the end of a
+// day with no time to the "due today" reason. The server's flag decides, never
+// what the clock reads.
+it("reads a task's due moment by its time-of-day flag", () => {
+  const now = new Date("2026-09-14T08:00:00Z");
+  const when = (dueAt: string, due_has_time: boolean) =>
+    whenText(
+      { ...task, due_at: dueAt, due_has_time },
+      t,
+      "en",
+      "UTC",
+      "UTC",
+      now,
+    );
+  expect(when("2026-09-14T23:59:59Z", false)).toBeNull();
+  expect(when("2026-09-14T15:00:00Z", false)).toBeNull();
+  expect(when("2026-09-16T15:00:00Z", false)).toBe(
+    t("worklist.when.due", { when: "16/09/2026" }),
+  );
+  expect(when("2026-09-14T15:00:00Z", true)).toBe(
+    t("worklist.when.due", { when: "15:00" }),
+  );
+  expect(when("2026-09-16T15:00:00Z", true)).toBe(
+    t("worklist.when.due", { when: "16/09/2026, 15:00" }),
+  );
 });

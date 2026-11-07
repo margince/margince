@@ -39,6 +39,7 @@ const finding = (
   status: "open",
   first_seen_at: "2026-09-01T02:00:00Z",
   last_seen_at: "2026-09-14T02:00:00Z",
+  inputs_changed: false,
 });
 
 const readings = (priced: number, eligible: number) => ({
@@ -47,7 +48,12 @@ const readings = (priced: number, eligible: number) => ({
   scope_kind: "workspace",
   won_minor: 40000,
   evidence_minor: 120000,
-  best_case_minor: 180000,
+  likely_threshold: 90,
+  by_source: {
+    stage: { open_minor: 250000, weighted_minor: 130000 },
+    human: { open_minor: 0, weighted_minor: 0 },
+    margince: { open_minor: 0, weighted_minor: 0 },
+  },
   open_minor: 250000,
   weighted_minor: 130000,
   eligible_count: eligible,
@@ -120,9 +126,7 @@ it("opens the section where each item is answered", async () => {
   installFetchStub(routes());
   render(<AnalyticsScreen />);
 
-  await user.click(
-    (await screen.findAllByRole("button", { name: "Review" }))[0],
-  );
+  await user.click((await screen.findAllByRole("link", { name: "Review" }))[0]);
   await waitFor(() =>
     expect(
       screen
@@ -266,4 +270,24 @@ it("asks nothing of the forecast for a reader without the forecast grant", async
   await screen.findByRole("heading", { name: "Sales won over time" });
   expect(forecast).not.toHaveBeenCalled();
   expect(exceptions).not.toHaveBeenCalled();
+});
+
+it("says when a named finding is out of date", async () => {
+  window.location.hash = "#/analytics/performance";
+  installFetchStub(
+    routes({
+      "GET /forecast/assurance/exceptions": () =>
+        jsonResponse({
+          data: [{ ...finding("a"), inputs_changed: true }, finding("b")],
+        }),
+    }),
+  );
+  render(<AnalyticsScreen />);
+
+  expect(
+    await screen.findByText(
+      /^Riley Rep · .+ at stake · out of date, changed since the check$/,
+    ),
+  ).toBeTruthy();
+  expect(screen.getAllByText(/out of date/)).toHaveLength(1);
 });

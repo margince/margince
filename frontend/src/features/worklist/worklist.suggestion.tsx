@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { DealSuggestionCard } from "../../components/dealsuggestion";
 import { useDealSuggestions } from "../../components/dealsuggestions.queries";
 import { useT } from "../../i18n";
+import { ContactCaseDecision } from "./worklist.contactcase";
 import { PairDecision } from "./worklist.pair";
 import type { WorklistItem } from "./worklist.queries";
 import { TagSuggestionDecision } from "./worklist.tagsuggestion";
@@ -51,6 +52,10 @@ export function answerBelow(
     // lifted out into a row of verbs, "Keep Acme GmbH" and "Keep Acme GmbH"
     // would be two identical buttons over an irreversible merge.
     return { below: <PairDecision item={item} /> };
+  }
+  // A group of possible duplicate contacts, reviewed in the shared review.
+  if (item.source === "contact_case" && item.contact_case) {
+    return { below: <ContactCaseDecision item={item} /> };
   }
   // A suggestion's evidence is what a rep reads before opening a deal, and it
   // does not fit on one line either. Never on a batch, which names no single

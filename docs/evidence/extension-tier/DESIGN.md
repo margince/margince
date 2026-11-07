@@ -159,8 +159,8 @@ Each is a property some gate would fail on:
   registry is built. RBAC vocabulary registration happens only after every verb validates.
 - The empty tree reproduces the vanilla build byte-for-byte. With `extensions/` emptied,
   `extensions_gen.go`, `extensions.gen.ts` and all four merged contracts are byte-identical to their
-  committed vanilla copies, and `check-composition` is green. CI's `extension-reference` job proves it on
-  every backend PR by moving the tracked units aside and `cmp`-ing. The two-lane tsconfig setup keeps the
+  committed vanilla copies, and `check-composition` is green. `stubMatchesVanilla` holds every committed
+  stub to what an empty set generates, in `check-composition` and in the `gen-composition` tests. The two-lane tsconfig setup keeps the
   committed vanilla `schema.d.ts` and its drift gate intact. The hand-written core-screen registry sits
   outside the generated tree so it cannot perturb the gate. The property survived every slice of
   accretion and three new generated artifacts.
@@ -233,7 +233,7 @@ fenced warning.
 ### 4.0 Contract-first, but extensions register rather than join
 
 Core has three closed, compile-time sets: `ServerInterface` (one interface for every endpoint,
-`internal/contracts/api_gen.go`), `declaredJobArgs` (a type union in `package compose`), and the
+`internal/contracts/api_gen.go`), `declaredJobArgs` (a generated registration constraint in `package compose`), and the
 agent-policy/RBAC generated tables. None can reference an extension module. The composed workspace uses
 the same backend tree (`emit.go:composedWork` adds `../../backend`), so only the composition module can.
 
@@ -587,7 +587,7 @@ is a reviewed decision rather than a fix-round line. Filed as #658 instead of bu
 ### 4.4 Jobs
 
 Extension jobs ride the existing River runner through a registration seam, not the closed
-`declaredJobArgs` union (§4.0).
+`declaredJobArgs` constraint (§4.0).
 
 **A scheduled extension job is two kinds.** `gen-jobs`' `validateCadence` forbids a cadence on a
 workspace-role kind, so it is a dispatcher (`ext_<name>_<job>`, cadenced) plus a workspace child

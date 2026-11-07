@@ -280,7 +280,7 @@ export function useSetProviderSettings() {
       queryClient.invalidateQueries({
         queryKey: ["ai-available-models", vars.provider],
       });
-      invalidateProviderHealth(queryClient);
+      return invalidateProviderHealth(queryClient);
     },
   });
 }

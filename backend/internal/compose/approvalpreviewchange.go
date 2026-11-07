@@ -8,14 +8,13 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessage, bool, error) {
 	switch approval.Kind {
-	case deals.StageProgressionKind, operationMergeTags, operationSetUpPartner, toolArchiveRecord, operationEmitFlowEvent, toolCreateRecord, singleRelinkTool, operationRelinkActivities, operationRelinkThread, operationPromoteLead, operationDemoteLead, operationSendMessage, operationInviteMeeting, operationBookMeeting, enrichProposalKind, operationDisqualifyLead, previewSendEmail, previewSendCompanyEmail, previewAdvanceDeal, previewProgressDeal, operationAdvanceProjectPhase, toolUpdateRecord, "assign_owner", lifecycleProposalKind:
+	case operationMergeTags, operationSetUpPartner, toolArchiveRecord, operationEmitFlowEvent, toolCreateRecord, singleRelinkTool, operationRelinkActivities, operationRelinkThread, operationPromoteLead, operationDemoteLead, operationSendMessage, operationInviteMeeting, operationBookMeeting, enrichProposalKind, operationDisqualifyLead, previewSendEmail, previewSendCompanyEmail, previewAdvanceDeal, previewProgressDeal, operationAdvanceProjectPhase, toolUpdateRecord, "assign_owner", lifecycleProposalKind:
 	default:
 		return nil, false, nil
 	}
@@ -31,12 +30,9 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 		return map[string]json.RawMessage{previewFieldStatus: json.RawMessage(`"disqualified"`)}, true, nil
 	case operationMergeTags, operationSetUpPartner, toolArchiveRecord, operationEmitFlowEvent, toolCreateRecord, singleRelinkTool, operationRelinkActivities, operationRelinkThread, operationPromoteLead, operationDemoteLead, operationSendMessage, operationInviteMeeting, operationBookMeeting, enrichProposalKind, previewSendEmail, previewSendCompanyEmail:
 		return map[string]json.RawMessage{}, true, nil
-	case previewAdvanceDeal, previewProgressDeal, deals.StageProgressionKind:
+	case previewAdvanceDeal, previewProgressDeal:
 		changes := map[string]json.RawMessage{fieldStageID: args["to_stage_id"]}
-		keys := []string{"won_without_contract_reason", "won_without_contract_detail"}
-		if approval.Kind != deals.StageProgressionKind {
-			keys = append(keys, "lost_reason", bulkParamNote)
-		}
+		keys := []string{"won_without_contract_reason", "won_without_contract_detail", previewFieldLostReason, "lost_reason_code", bulkParamNote}
 		for _, key := range keys {
 			if value, ok := args[key]; ok {
 				changes[key] = value

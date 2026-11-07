@@ -41,6 +41,7 @@ function check(id: string, label: string): InputCheck {
     status: "open",
     first_seen_at: "2026-09-01T09:00:00Z",
     last_seen_at: "2026-09-07T09:00:00Z",
+    inputs_changed: false,
   };
 }
 
@@ -106,6 +107,22 @@ function show({
             },
           }),
         );
+      if (url.endsWith("/loss-reasons"))
+        return jsonResponse({
+          data: [
+            {
+              id: "r-1",
+              key: "competitor",
+              label: "Chose a competitor",
+              active: true,
+              sort_order: 10,
+              system: true,
+              version: 1,
+              created_at: "2026-10-01T08:00:00Z",
+              updated_at: "2026-10-01T08:00:00Z",
+            },
+          ],
+        });
       if (url.includes("/deal-suggestions"))
         return jsonResponse({ data: covered ? [suggestion] : [] });
       if (url.includes("/signals/"))

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { SignatureHtml } from "../../components/signaturehtml";
+import { AppLink } from "../../design-system/applink";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -68,9 +69,9 @@ export function SignOffPreview({
           })}{" "}
           {t("compose.signOffClosing")}
         </p>
-        <a href={routeHash(settingsHref("account"))}>
+        <AppLink href={routeHash(settingsHref("account"))}>
           {t("compose.signOffSet")}
-        </a>
+        </AppLink>
       </section>
     );
   }
@@ -115,9 +116,10 @@ export function useSignOff(
       settled.subject,
       settled.draftKey,
     ],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.POST("/emails:sign-off", {
+          signal,
           body: {
             body: settled.body,
             subject: settled.subject,
@@ -140,7 +142,10 @@ export function useSignOff(
     settled.subject !== subject ||
     settled.draftKey !== draftKey;
   return {
-    signOff: query.data,
+    signOff:
+      draft !== undefined && (pending || query.isPlaceholderData)
+        ? undefined
+        : query.data,
     stale: pending || query.isPlaceholderData,
     failed: query.isError,
   };

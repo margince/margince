@@ -49,7 +49,8 @@ var contactUnarchive = storekit.UnarchiveShape{
 	TakenFrom: tableContactEmail, TakenField: takenEmail,
 	Children: []storekit.ChildRestore{
 		{Table: tableContactEmail, Statement: `UPDATE contact_email SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
-		{Table: tableContactPhone, Statement: `UPDATE contact_phone SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
+		{Table: tableContactPhone, Statement: `UPDATE contact_phone p SET archived_at = NULL
+			WHERE p.id = $1 AND p.archived_at = $2 AND ` + supportedSignaturePhone},
 		{Table: "contact_channel_identity", Statement: `UPDATE contact_channel_identity SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
 		{Table: tableRelationship, Statement: restoreRelationship},
 	},

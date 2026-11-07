@@ -6,7 +6,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { CompanyProfileDetails } from "./companyprofiledetails";
-import { company, jsonResponse, render, stub } from "./companyrail.testkit";
+import {
+  company,
+  emptyPage,
+  jsonResponse,
+  render,
+  stub,
+} from "./companyrail.testkit";
 
 // The fields the details column does not draw live here, all visible and all
 // editable. Nothing on the record is reachable only by being folded.
@@ -29,11 +35,17 @@ const writableSeat = () =>
   });
 
 describe("CompanyProfileDetails", () => {
-  it("draws the six fields the details column leaves out, set or not", async () => {
+  it("draws the eight fields the details column leaves out, set or not", async () => {
     stub();
     render(
       <CompanyProfileDetails
-        company={{ ...company, linkedin_url: null, legal_name: null }}
+        company={{
+          ...company,
+          linkedin_url: null,
+          legal_name: null,
+          phone: null,
+          email: null,
+        }}
         edit={EDITABLE}
         {...NO_FIELDS}
       />,
@@ -48,6 +60,8 @@ describe("CompanyProfileDetails", () => {
       en["company.relationshipTypes"],
       en["history.field.parent_company_id"],
       en["create.linkedinUrl"],
+      en["create.phone"],
+      en["create.email"],
       en["co.profileField.registered_address"],
       en["tags.panelTitle"],
     ]) {
@@ -55,7 +69,7 @@ describe("CompanyProfileDetails", () => {
     }
   });
 
-  it("opens and saves the LinkedIn URL inline even when one is already set", async () => {
+  it("keeps the LinkedIn URL a link, and edits it from the bubble beside it", async () => {
     let patchBody: unknown;
     stub({
       "/me": writableSeat,
@@ -75,10 +89,15 @@ describe("CompanyProfileDetails", () => {
       />,
     );
 
+    expect(
+      screen.getByRole("link", {
+        name: "Brandt Automotive GmbH on LinkedIn",
+      }),
+    ).toHaveAttribute("href", "https://linkedin.com/company/brandt");
     await userEvent.click(
       await screen.findByRole("button", { name: "Change LinkedIn URL" }),
     );
-    const input = screen.getByLabelText("LinkedIn URL");
+    const input = screen.getByRole("textbox", { name: "LinkedIn URL" });
     await userEvent.clear(input);
     await userEvent.type(
       input,
@@ -88,6 +107,71 @@ describe("CompanyProfileDetails", () => {
       expect(patchBody).toMatchObject({
         linkedin_url: "https://linkedin.com/company/brandt-gmbh",
       }),
+    );
+  });
+
+  it("keeps the parent company a link to its record, and edits it from the bubble", async () => {
+    const user = userEvent.setup();
+    stub({
+      "/me": writableSeat,
+      "/companies": () =>
+        jsonResponse({
+          data: [{ ...company, id: "o-9", display_name: "Brandt Holding" }],
+          page: emptyPage,
+        }),
+    });
+    render(
+      <CompanyProfileDetails
+        company={{ ...company, parent_company_id: "o-9" }}
+        edit={EDITABLE}
+        {...NO_FIELDS}
+      />,
+    );
+
+    const parent = await screen.findByRole("link", { name: "Brandt Holding" });
+    const bubble = screen.getByRole("button", {
+      name: `Change ${en["history.field.parent_company_id"]}`,
+    });
+    expect(bubble.closest(".editable-value")).toContainElement(parent);
+    await user.click(bubble);
+    expect(
+      await screen.findByRole("dialog", {
+        name: en["history.field.parent_company_id"],
+      }),
+    ).toBeVisible();
+  });
+
+  it("saves the company's general address as its email", async () => {
+    let patchBody: unknown;
+    stub({
+      "/me": writableSeat,
+      "/companies/o-1": async (request) => {
+        if (request.method === "PATCH") {
+          patchBody = await request.json();
+          return jsonResponse({ ...company, version: 2 });
+        }
+        return jsonResponse(company);
+      },
+    });
+    render(
+      <CompanyProfileDetails
+        company={{ ...company, email: null }}
+        edit={EDITABLE}
+        {...NO_FIELDS}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: new RegExp(`^Change ${en["create.email"]}`),
+      }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: en["create.email"] }),
+      "info@brandt.example{Enter}",
+    );
+    await waitFor(() =>
+      expect(patchBody).toMatchObject({ email: "info@brandt.example" }),
     );
   });
 

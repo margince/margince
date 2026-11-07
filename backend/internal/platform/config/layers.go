@@ -74,12 +74,12 @@ func readLayers(reg *Registry, src Sources, names known, flags flagValues, env m
 		add(envFileLayer(reg, src.ReadFile, files.EnvFile))
 	}
 	if files.ConfigFile != "" {
-		add(yamlFileLayer(SourceConfigFile, files.ConfigFile, names))
+		add(yamlFileLayer(src.ReadFile, SourceConfigFile, files.ConfigFile, names))
 	}
 	if files.Base == "" {
 		return layers, faults, trace
 	}
-	add(yamlFileLayer(SourceBaseFile, files.Base, names))
+	add(yamlFileLayer(src.ReadFile, SourceBaseFile, files.Base, names))
 	for _, path := range overlayBeside(files.Base) {
 		if !sameFile(path, files.ConfigFile) {
 			faults = append(faults, fmt.Errorf("%s: overlay files are no longer read; pass it with --config-file", path))
@@ -143,12 +143,14 @@ func envFileLayer(reg *Registry, readFile func(string) ([]byte, error), path str
 
 // yamlFileLayer refuses a missing --config-file, since an operator named it.
 // A missing base file is no fault: a system may run on flags and variables.
-func yamlFileLayer(source Source, path string, names known) (layer, []error) {
+func yamlFileLayer(readFile func(string) ([]byte, error), source Source, path string, names known) (layer, []error) {
 	empty := layer{source: source, file: path}
-	if _, err := os.Stat(path); source == SourceConfigFile && errors.Is(err, fs.ErrNotExist) {
-		return empty, []error{fmt.Errorf("%s (%s): no such file", path, source)}
+	if source == SourceConfigFile {
+		if _, err := readFile(path); errors.Is(err, fs.ErrNotExist) {
+			return empty, []error{fmt.Errorf("%s (%s): no such file", path, source)}
+		}
 	}
-	parsed, unknown, err := readYAML(path, names)
+	parsed, unknown, err := readYAML(readFile, path, names)
 	if err != nil {
 		return empty, []error{err}
 	}

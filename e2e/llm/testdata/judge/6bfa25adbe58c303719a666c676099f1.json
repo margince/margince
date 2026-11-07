@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer attributes the description to Strategic Accts as the surviving word, but the criterion specifies Strategic Account is the surviving word that should carry this meaning.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes.",
+  "answer": "Strategic Account is on 41 accounts and Strategic Accts on 3.\n\nI have folded it the way you asked: Strategic Account goes into Strategic Accts, so Strategic Accts is the word that survives. The records already carry it.\n\nStrategic Accts now reads: an account with a named exec sponsor."
+}

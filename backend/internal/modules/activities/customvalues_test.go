@@ -16,7 +16,7 @@ import (
 )
 
 // customValueFillers are the calls that put custom-field values on an answer.
-var customValueFillers = []string{"attachCustomValues", "withCustomValuesOf", "ListActivitiesTx", "ListActivitiesIn"}
+var customValueFillers = []string{"attachCustomValues", "withCustomValuesOf", "ListActivitiesTx", "ListActivitiesIn", "ListActivities"}
 
 // answersWithoutCustomValues are the exported methods that answer an activity
 // they just created, on a path that writes no custom-field values.

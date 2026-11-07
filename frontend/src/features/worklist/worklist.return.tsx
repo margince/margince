@@ -19,7 +19,7 @@ import {
   type UrlParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import { WORKLIST_FILTER_PARAM } from "./worklist.header";
+import { WORKLIST_FILTER_PARAM, WORKLIST_VIEW_PARAM } from "./worklist.header";
 
 // The way back from a record to the Worklist drawer it was opened from.
 //
@@ -29,7 +29,12 @@ import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 
 const FROM_PARAM = "from";
 const FROM_WORKLIST = "worklist";
-const DRAWER_DIALS = [WORKLIST_FILTER_PARAM, "queue_scope", "owner"] as const;
+const DRAWER_DIALS = [
+  WORKLIST_VIEW_PARAM,
+  WORKLIST_FILTER_PARAM,
+  "queue_scope",
+  "owner",
+] as const;
 
 // The records whose head draws the way back. Any other destination a row
 // links to (a settings queue, a privacy case) gets an untouched address, so
@@ -75,16 +80,18 @@ export function openContactTab(id: string, tab: ContactTab): void {
   navigateKeepingReturn(contactTabRoute(id, tab));
 }
 
+/** The record `href` opens, when it is one whose head draws the way back. */
+export function returningRecord(href: string): Route | undefined {
+  const route = parseHash(href);
+  return route.id && RETURNING_SCREENS.has(route.screen) ? route : undefined;
+}
+
 /** `href` with the drawer's dials added, when it addresses a returning record. */
 export function withWorklistReturn(
   href: string,
   drawer: UrlParams | null,
 ): string {
-  if (!drawer) {
-    return href;
-  }
-  const route = parseHash(href);
-  if (!route.id || !RETURNING_SCREENS.has(route.screen)) {
+  if (!drawer || !returningRecord(href)) {
     return href;
   }
   const merged = new Map(parseParams(href));
@@ -106,12 +113,20 @@ export function worklistReturnHref(carried: UrlParams): string {
 
 const DrawerDials = createContext<UrlParams | null>(null);
 
-/** Marks its rows as opened from the drawer, whose dials are the address's. */
+/**
+ * Marks its rows as opened from the Worklist. The drawer's dials are the
+ * address's; a list drawn elsewhere names its own.
+ */
 export function WorklistReturnScope({
+  dials,
   children,
-}: Readonly<{ children: ReactNode }>) {
+}: Readonly<{ dials?: UrlParams; children: ReactNode }>) {
   const [params] = useUrlParams();
-  return <DrawerDials.Provider value={params}>{children}</DrawerDials.Provider>;
+  return (
+    <DrawerDials.Provider value={dials ?? params}>
+      {children}
+    </DrawerDials.Provider>
+  );
 }
 
 /** The drawer's dials when the caller is drawn inside it, null anywhere else. */

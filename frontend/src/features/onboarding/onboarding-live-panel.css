@@ -43,7 +43,7 @@
 }
 
 .ob-live-card-head:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .ob-live-card-glyph {

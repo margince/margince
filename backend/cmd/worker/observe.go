@@ -94,7 +94,7 @@ func (g *bootGate) check(context.Context) error {
 	if g.ready.Load() {
 		return nil
 	}
-	return errors.New("the worker is not in service: it is still starting its event lanes and job runner, or already draining them")
+	return errors.New("the worker is not in service: it is waiting for its schema, still starting its event lanes and job runner, or already draining them")
 }
 
 // observeListener is a started operator surface: how to stop it, and the
@@ -212,6 +212,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 func writeProcessSections(w io.Writer) {
 	ai.WriteProcessMetrics(w)
 	compose.WriteCaptureProcessMetrics(w)
+	compose.WriteJobProcessMetrics(w)
 }
 
 // mountPprof puts Go's runtime profiles on the observe mux, and ONLY there.

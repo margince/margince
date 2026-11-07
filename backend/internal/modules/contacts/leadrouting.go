@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -41,7 +42,7 @@ const candidateCompanyKey = "candidate_company_key"
 // RoutingRule assigns leads whose field matches a literal value to one
 // named owner — territory/segment/source routing in its V1 shape.
 type RoutingRule struct {
-	Field   string     `json:"field"` // one of RoutableLeadFields; an unknown name never matches
+	Field   string     `json:"field"` // one of RoutableLeadFields; an unknown name stops routing
 	Equals  string     `json:"equals"`
 	OwnerID ids.UserID `json:"owner_id"`
 }
@@ -67,6 +68,18 @@ type RoutingConfig struct {
 // in compose — the only place both modules are visible.
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/contacts/leadroutingvocab_test.go)
 var RoutableLeadFields = []string{leadOriginColumn, leadCompanyColumn, candidateCompanyKey}
+
+// Stale fields stop the whole configuration so a saved rule cannot silently
+// give its leads to the round-robin pool.
+func (c RoutingConfig) staleRuleFields() []string {
+	var stale []string
+	for _, rule := range c.Rules {
+		if !slices.Contains(RoutableLeadFields, rule.Field) && !slices.Contains(stale, rule.Field) {
+			stale = append(stale, rule.Field)
+		}
+	}
+	return stale
+}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.
 // Params were validated against the catalog schema at write time; this
@@ -122,11 +135,14 @@ func (f leadRoutingFacts) field(name string) string {
 // disqualified lead frees capacity, and the distribution stays within
 // ±1 across eligible owners.
 func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.UserID]int, active map[ids.UserID]bool) (ids.UserID, string, bool) {
+	if len(cfg.staleRuleFields()) > 0 {
+		return ids.UserID{}, "stale_rules", false
+	}
 	underCap := func(id ids.UserID) bool {
 		return cfg.CapPerOwner <= 0 || openLoad[id] < cfg.CapPerOwner
 	}
 	for i, rule := range cfg.Rules {
-		if !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
+		if !slices.Contains(RoutableLeadFields, rule.Field) || !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
 			continue
 		}
 		// The cap outranks the rule (AC-S5: caps are never exceeded): a
@@ -146,7 +162,7 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 		}
 	}
 	if chosen.IsZero() {
-		return ids.UserID{}, "", false
+		return ids.UserID{}, "no_capacity", false
 	}
 	return chosen, "round_robin", true
 }
@@ -213,7 +229,7 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 
 		chosen, reason, ok := chooseOwner(cfg, facts, openLoad, active)
 		if !ok {
-			decision = RoutingDecision{Reason: "no_capacity"}
+			decision = RoutingDecision{Reason: reason}
 			_, err := storekit.Audit(ctx, tx, "assign", "lead", leadID.UUID,
 				map[string]any{"owner_id": nil},
 				map[string]any{"owner_id": nil, "routed": false, "reason": decision.Reason})
@@ -223,7 +239,7 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 		p := storekit.NewPatch()
 		p.Set("owner_id", nil, chosen)
 		// Routing starts the §18 first-response clock.
-		p.Set("routed_at", nil, time.Now().UTC())
+		stampArrival(p, chosen, time.Now().UTC())
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
@@ -423,6 +439,8 @@ func (leadRouting) IdempotencyKey(ev workflow.Event) string {
 // added later cannot leak an internal spelling by being forgotten here.
 func routingDeclineReason(reason string) string {
 	switch reason {
+	case "stale_rules":
+		return "routing stopped: a saved rule uses an unsupported field. Replace source with origin where needed; assign this lead by hand, then new leads can route."
 	case "no_capacity":
 		return "no eligible owner had capacity for this lead"
 	case "already_owned":

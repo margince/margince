@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
+import { quarterSales } from "../src/features/analytics/analytics.overview.scenariodata";
+import { de } from "../src/i18n/de";
 import { brandt } from "./mockapi/fixtures";
 import { page as companyPage } from "./mockapi/server";
 import { mockApi } from "./seed";
@@ -155,6 +157,50 @@ test("an account's tab is an address, and Back steps between tabs", async ({
   await expect(page).toHaveURL(/#\/companies\/o-brandt\/tasks$/);
 });
 
+// A record id the address mirrors under `/r/<type>/<id>`. The seed's ids are
+// not UUIDs, so without one no entry here ever leaves the `/` path.
+const mirroredCompanyId = "0195c3a0-0000-7000-8000-00000000c0de";
+
+test("Back and Forward across a record's own path draw the screen the address names", async ({
+  page,
+}) => {
+  // Moving between entries whose paths differ fires `popstate` and no
+  // `hashchange`. A store that heard only the second left the screen one step
+  // behind the address for the rest of the walk.
+  await page.route(`**/v1/companies/${mirroredCompanyId}`, (route) =>
+    route.fulfill({ json: { ...brandt, id: mirroredCompanyId } }),
+  );
+  const health = page
+    .getByRole("main")
+    .getByRole("heading", { name: de["settings.tab.system-health"] })
+    .first();
+  const record = page
+    .getByRole("main")
+    .getByRole("heading", { name: brandt.display_name, level: 1 });
+  const onRecord = new RegExp(`/r/companies/${mirroredCompanyId}#`);
+
+  await page.goto("/#/settings/system-health");
+  await expect(health).toBeVisible();
+  await page.goto(`/#/companies/${mirroredCompanyId}`);
+  await expect(page).toHaveURL(onRecord);
+  await page.getByRole("button", { name: "Verlauf", exact: true }).click();
+  await expect(page).toHaveURL(/\/timeline$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`${mirroredCompanyId}$`));
+  await expect(record).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/#\/settings\/system-health$/);
+  await expect(health).toBeVisible();
+  await expect(record).toBeHidden();
+
+  await page.goForward();
+  await expect(page).toHaveURL(onRecord);
+  await expect(record).toBeVisible();
+  await expect(health).toBeHidden();
+});
+
 test("a linked tab opens on that tab, not on the overview", async ({
   page,
 }) => {
@@ -169,11 +215,65 @@ test("a section is an address, and Back steps between sections", async ({
   page,
 }) => {
   await page.goto("/#/analytics");
-  await page.getByRole("button", { name: "Pipeline", exact: true }).click();
-  await expect(page).toHaveURL(/#\/analytics\/pipeline$/);
+  // The overview hands its question to the next section once it has one,
+  // and its filter bar is drawn with that question. A tab pressed before
+  // then opens the section on its own defaults, with nothing in the address.
+  await expect(
+    page.getByRole("group", { name: de["analytics.filters"] }),
+  ).toBeVisible();
+  await page
+    .getByRole("group", { name: "Analytics-Bereiche" })
+    .getByRole("button", { name: "Pipeline", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/analytics\/pipeline\?/);
+  const question = new URLSearchParams(page.url().split("?")[1]);
+  expect(question.get("period")).toBe("this_quarter");
+  expect(question.get("scope")).toBe("workspace");
+  expect(question.get("pipeline")).toBe("pl");
 
   await page.goBack();
   await expect(page).toHaveURL(/#\/analytics$/);
+});
+
+// The nearest box that scrolls the element, which is the content column: the
+// document itself is one viewport tall and never moves.
+function scrolledBy(element: Locator): Promise<number> {
+  return element.evaluate((node) => {
+    let box = node.parentElement;
+    while (box && box.scrollHeight <= box.clientHeight) box = box.parentElement;
+    return box?.scrollTop ?? 0;
+  });
+}
+
+test("Back from Forecast returns to Sales review's question, place and focused card", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 360 });
+  await page.route(/\/v1\/analytics\/evaluate/, (route) =>
+    route.fulfill({
+      json: quarterSales(),
+    }),
+  );
+  await page.goto("/#/analytics/overview?overview=sales", {
+    waitUntil: "networkidle",
+  });
+  const door = page
+    .getByRole("link", { name: de["stat.forecast"], exact: true })
+    .first();
+  await door.scrollIntoViewIfNeeded();
+  const before = await scrolledBy(door);
+  const overview = page.url();
+
+  await door.click();
+  await expect(page).toHaveURL(/#\/analytics\/forecast\?/);
+  await page.goBack();
+
+  await expect(page).toHaveURL(overview);
+  await expect(door).toBeFocused();
+  expect(Math.abs((await scrolledBy(door)) - before)).toBeLessThanOrEqual(50);
+
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/analytics\/forecast\?.*pipeline=/);
 });
 
 test("the deals board remembers its pipeline and its view in the address", async ({

@@ -202,7 +202,7 @@ func (e *financeEnv) summaryAtEpoch(
 ) crmcontracts.CompanyFinanceSummary {
 	t.Helper()
 	at := NewStore(e.store.db, e.store.rates).
-		WithClock(func() time.Time { return ledgerEpoch })
+		SetClock(func() time.Time { return ledgerEpoch })
 	out, err := at.SummaryFor(e.ctx, companyID)
 	if err != nil {
 		t.Fatal(err)
@@ -450,13 +450,13 @@ func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
 	e := setupFinance(t)
 	ctx, provider := e.ctx, e.provider()
 
-	atEpoch := NewStore(e.store.db, e.store.rates).WithClock(func() time.Time { return ledgerEpoch })
+	atEpoch := NewStore(e.store.db, e.store.rates).SetClock(func() time.Time { return ledgerEpoch })
 	if _, err := atEpoch.SyncConnection(ctx, provider); err != nil {
 		t.Fatal(err)
 	}
 	// A year later, with the SAME source. Every open invoice is now long past
 	// due, so a status-in-the-hash implementation would rewrite them all.
-	later := NewStore(e.store.db, e.store.rates).WithClock(func() time.Time { return ledgerEpoch.AddDate(1, 0, 0) })
+	later := NewStore(e.store.db, e.store.rates).SetClock(func() time.Time { return ledgerEpoch.AddDate(1, 0, 0) })
 	second, err := later.SyncConnection(ctx, provider)
 	if err != nil {
 		t.Fatal(err)

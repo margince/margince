@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// WHO CAN BE THE OTHER SIDE OF AN EDGE, found by typing.
+// The other side of a relationship, found through its record list.
 //
 // One file because it is one question asked three ways: a company, a contact or
 // a deal, each reached through its own list endpoint and each narrowed the way
@@ -12,7 +12,12 @@ import { api } from "../api/client";
 import type { EntityKind } from "./entity";
 import { unwrap } from "./problem";
 
-export type Candidate = { id: string; name: string };
+export type Candidate = {
+  id: string;
+  name: string;
+  companyId?: string;
+  detail?: string;
+};
 
 // include_anchor: recording that a contact works at the company running the CRM
 // is an ordinary, frequent fact. The list hides the own company by default
@@ -42,23 +47,42 @@ async function searchContactCandidates(q: string): Promise<Candidate[]> {
   }));
 }
 
-// /deals has no free-text `q` in the contract (only structured filters), so
-// the stakeholder picker fetches a recent page and matches the typed term
-// against the deal name client-side. Deals past that page aren't reached — an
-// accepted PoC limit, scoped to the manual deal_stakeholder edge.
-const DEAL_PICKER_PAGE = 50;
-
-async function searchDealCandidates(q: string): Promise<Candidate[]> {
-  const data = unwrap(
-    await api.GET("/deals", {
-      params: { query: { limit: DEAL_PICKER_PAGE } },
-    }),
+async function searchDealCandidates(
+  q: string,
+  companyIds: readonly string[],
+): Promise<Candidate[]> {
+  const query = q.trim();
+  const scopes: (string | undefined)[] = [...new Set(companyIds)];
+  if (query || scopes.length === 0) scopes.push(undefined);
+  const pages = await Promise.all(
+    scopes.map(async (companyId) =>
+      unwrap(
+        await api.GET("/deals", {
+          params: {
+            query: {
+              q: query || undefined,
+              company_id: companyId,
+              status: "open",
+              limit: 20,
+            },
+          },
+        }),
+      ),
+    ),
   );
-  const needle = q.toLowerCase();
-  return data.data
-    .filter((deal) => deal.name.toLowerCase().includes(needle))
-    .slice(0, 10)
-    .map((deal) => ({ id: deal.id, name: deal.name }));
+  const seen = new Set<string>();
+  return pages
+    .flatMap((page) => page.data)
+    .filter((deal) => {
+      if (seen.has(deal.id)) return false;
+      seen.add(deal.id);
+      return true;
+    })
+    .map((deal) => ({
+      id: deal.id,
+      name: deal.name,
+      companyId: deal.company_id ?? undefined,
+    }));
 }
 
 // The entity kinds this tab can ever pick as a relationship's other side —
@@ -72,6 +96,7 @@ export type RelationshipEntity = Exclude<EntityKind, "lead" | "project">;
 export function searchByEntity(
   entity: RelationshipEntity,
   query: string,
+  companyIds: readonly string[] = [],
 ): Promise<Candidate[]> {
   switch (entity) {
     case "company":
@@ -79,7 +104,7 @@ export function searchByEntity(
     case "contact":
       return searchContactCandidates(query);
     case "deal":
-      return searchDealCandidates(query);
+      return searchDealCandidates(query, companyIds);
     default:
       // Relationship edges only ever anchor contact/company/deal (see
       // edgeOptions below) — `lead`/`user`/`team` are EntityRefKind additions

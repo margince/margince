@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // Preview answers what the engine would decide for this message, and records
@@ -38,39 +39,14 @@ import (
 // and a future arm that writes something else would be undone by the same
 // rollback rather than discovered by a reader.
 func (g *Gate) Preview(ctx context.Context, req commsauthz.Request) (commsauthz.DecisionSet, error) {
-	for _, r := range req.Recipients {
-		if err := r.Validate(); err != nil {
-			return commsauthz.DecisionSet{}, fmt.Errorf(
-				"consent: this recipient cannot be put to the engine: %w", err)
-		}
+	if err := previewable(req); err != nil {
+		return commsauthz.DecisionSet{}, err
 	}
-	if len(req.Recipients) == 0 {
-		return commsauthz.DecisionSet{}, fmt.Errorf(
-			"consent: a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
-	}
-
 	var set commsauthz.DecisionSet
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		modes, err := authorizationModesTx(ctx, tx)
-		if err != nil {
+		var err error
+		if set, err = g.decidePreviewTx(ctx, tx, req); err != nil {
 			return err
-		}
-		for _, r := range req.Recipients {
-			d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
-			if err != nil {
-				return err
-			}
-			// PhaseStaging is passed to decideOne and then cleared, and the two
-			// are not in tension. The phase steers what the DECISION does —
-			// staging is the phase that records a basis — so asking as staging
-			// is what makes the preview answer the same question the staging
-			// decision will. Leaving it on the returned decision would be the
-			// lie: nothing here is a staging decision, because nothing here is
-			// recorded.
-			d.Phase = ""
-			d.Mode = ModeFor(modes, d.Resolved)
-			d.Requested = req.Context
-			set.Decisions = append(set.Decisions, d)
 		}
 		// The rollback IS the contract. Returning an error is how pgx.Tx is
 		// told to roll back, and errPreviewComplete is not a failure — the
@@ -81,6 +57,101 @@ func (g *Gate) Preview(ctx context.Context, req commsauthz.Request) (commsauthz.
 		return commsauthz.DecisionSet{}, err
 	}
 	return set, nil
+}
+
+// PreviewTx is Preview on the caller's transaction, inside a savepoint it
+// rolls back, so it sees what the caller's transaction has written.
+func (g *Gate) PreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	if err := previewable(req); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	savepoint, err := tx.Begin(ctx)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
+	set, err := g.decidePreviewTx(ctx, savepoint, req)
+	if rollback := savepoint.Rollback(ctx); err == nil && rollback != nil {
+		return commsauthz.DecisionSet{}, rollback
+	}
+	return set, err
+}
+
+func previewable(req commsauthz.Request) error {
+	for _, r := range req.Recipients {
+		if err := r.Validate(); err != nil {
+			return fmt.Errorf("consent: this recipient cannot be put to the engine: %w", err)
+		}
+	}
+	if len(req.Recipients) == 0 {
+		return fmt.Errorf("consent: a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.DecisionSet, error) {
+	var set commsauthz.DecisionSet
+	modes, err := authorizationModesTx(ctx, tx)
+	if err != nil {
+		return set, err
+	}
+	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+		return set, err
+	}
+	for _, r := range req.Recipients {
+		d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
+		if err != nil {
+			return set, err
+		}
+		// Asked as staging so it answers what staging will; cleared because
+		// nothing here is recorded as a staging decision.
+		d.Phase = ""
+		d.Mode = ModeFor(modes, d.Resolved)
+		d.Requested = req.Context
+		if d.SupportedAlternatives, err = g.supportedAlternatives(ctx, tx, r, req, d); err != nil {
+			return set, err
+		}
+		set.Decisions = append(set.Decisions, d)
+	}
+	return set, nil
+}
+
+// switchableClaims are the reasons a sender may switch to in one press. Each
+// rests on what the contact asked for, which the record can show.
+var switchableClaims = []commsauthz.Category{
+	commsauthz.CategoryRequestedFollowup,
+	commsauthz.CategoryActiveDealFollowup,
+	commsauthz.CategoryPrecontractQuote,
+}
+
+// supportedAlternatives asks the same engine what this recipient's message
+// would be under each other switchable reason, when the claimed one did not
+// allow it. A reason counts only when the claim itself carries the send, so
+// a stop or a missing deal that refuses every reason offers none. A marketing
+// claim is offered none: a message its sender calls marketing is not made a
+// follow-up by a press.
+//
+// It decides inside the preview's transaction, which rolls back, so the
+// grounds the other reasons would record are never written.
+func (g *Gate) supportedAlternatives(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision) ([]commsauthz.Category, error) {
+	if req.Context == "" || req.Context == commsauthz.CategoryMarketing || d.Verdict == commsauthz.VerdictAllow {
+		return nil, nil
+	}
+	var out []commsauthz.Category
+	for _, claim := range switchableClaims {
+		if claim == req.Context {
+			continue
+		}
+		asked := req
+		asked.Context = claim
+		alt, err := g.decideOne(ctx, tx, r, asked, commsauthz.PhaseStaging)
+		if err != nil {
+			return nil, err
+		}
+		if alt.Verdict == commsauthz.VerdictAllow && alt.Resolved == claim {
+			out = append(out, claim)
+		}
+	}
+	return out, nil
 }
 
 // errPreviewComplete unwinds Preview's transaction once it has its answer.

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../../testing/story-utils";
 import {
+  reportingCatalogClient,
   reportingLeadsEvaluation,
   reportingPartnersEvaluation,
   reportingStoryEvaluation,
@@ -12,7 +13,7 @@ export default meta;
 type Story = StoryObj;
 export const Sales: Story = {
   render: () => (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ResultsSummary
         evaluation={reportingStoryEvaluation}
         onEvidence={() => {}}
@@ -24,7 +25,7 @@ export const Dark: Story = { ...Sales, globals: { theme: "dark" } };
 
 export const NoSalesThisPeriod: Story = {
   render: () => (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ResultsSummary
         evaluation={{
           ...reportingStoryEvaluation,
@@ -54,7 +55,7 @@ export const NoSalesThisPeriodDark: Story = {
 // Lead readings: a share out of its total and a time in hours.
 export const Leads: Story = {
   render: () => (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ResultsSummary
         evaluation={reportingLeadsEvaluation}
         onEvidence={() => {}}
@@ -66,7 +67,7 @@ export const Leads: Story = {
 // Partner readings, one of them as things stand rather than over a period.
 export const Partners: Story = {
   render: () => (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ResultsSummary
         evaluation={reportingPartnersEvaluation}
         onEvidence={() => {}}

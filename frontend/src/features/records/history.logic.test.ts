@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { distinctFields, groupByField } from "./history.logic";
+import {
+  distinctFields,
+  groupByField,
+  provenanceOfEntry,
+} from "./history.logic";
 
 type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
 
@@ -44,5 +48,36 @@ describe("distinctFields", () => {
     expect(
       distinctFields([e("name", "1"), e("amount", "2"), e("name", "3")]),
     ).toEqual(["name", "amount"]);
+  });
+});
+
+describe("provenanceOfEntry", () => {
+  const passport = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+
+  it("names the colleague an agent worked for and the tool, from the row itself", () => {
+    expect(
+      provenanceOfEntry({
+        actor_type: "agent",
+        actor_id: passport,
+        on_behalf_of_name: "Anna Weber",
+        agent_client: "Claude",
+      }),
+    ).toEqual({ kind: "agent", agent: "Claude", forName: "Anna Weber" });
+  });
+
+  it("keeps the unnamed tag for an agent with no colleague behind it", () => {
+    expect(
+      provenanceOfEntry({ actor_type: "agent", actor_id: passport }),
+    ).toEqual({ kind: "agent" });
+  });
+
+  it("adds no colleague to a connector's change", () => {
+    expect(
+      provenanceOfEntry({
+        actor_type: "connector",
+        actor_id: "connector:gmail",
+        on_behalf_of_name: "Anna Weber",
+      }),
+    ).toEqual({ kind: "connector", connector: "gmail" });
   });
 });

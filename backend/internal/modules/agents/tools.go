@@ -54,17 +54,14 @@ type StageResolver interface {
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 }
 
-// RegisterCoreTools wires the §2.1 CRUD set over one provider: the 🟢
-// tools, `advance_deal` (🟢→🟡 dynamic), and the 🟡 confirm-first tools the
-// approval loop carries — `archive_record`, `promote_lead` and
-// `merge_records`. The two write-shaped §2.2 intents that compose over the
-// SAME provider + stage seams — `qualify_lead` and `progress_deal` —
-// register here too; the read/draft intents and the lifecycle transitions
-// have their own seams (RegisterIntentTools, RegisterSlippingTools,
-// RegisterLifecycleTools).
+// RegisterCoreTools wires the record CRUD set over one provider. It holds the 🟢
+// tools, `advance_deal` (dynamic), and `archive_record`, `promote_lead` and
+// `merge_records`, which a tier floor can make confirm-first. `qualify_lead` and
+// `progress_deal` share the provider and stage seams, so they register here too.
 //
-// Every verb the contract declares with `x-mcp-tool` is registered by one of
-// those functions. A declared verb with no tool is not a gap to describe here:
+// Every verb the contract declares with `x-mcp-tool` is registered here or by
+// RegisterIntentTools, RegisterSlippingTools or RegisterLifecycleTools. A
+// declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
 	r.Register(readRecord{p: p, name: r.seats})
@@ -77,7 +74,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p, language: r.language})
 	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
-	r.Register(mergeRecords{p: p, language: r.language})
+	r.Register(mergeRecords{p: p, language: r.language, cases: r.contactCases})
 }
 
 // schema turns a hand-written JSON schema into the wire form, COMPACTED.
@@ -203,9 +200,9 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		Description:   createRecordCopy.render(),
 		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom/openDealRoomThread/replyDealRoomThread",
+		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room","deal_room_thread","deal_room_comment"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
@@ -362,19 +359,20 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider the workspace's channel provider list names."},
+			"channel_provider":{"type":"string","description":"Required for kind \"message\", else refused; one the workspace's channel providers name."},
 			"subject":{"type":"string","description":` + proseLanguageNote + `},
 			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"occurred_precision":{"enum":["instant","day"]},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
+			"meeting_status":{"type":"string","enum":` + activityMeetingStatusEnum + `,"description":"held only if the user says it happened"},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
 				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
-				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
+				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},

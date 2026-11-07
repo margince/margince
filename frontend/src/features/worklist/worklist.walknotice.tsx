@@ -1,26 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// What has happened to this walk since the reader started it.
-//
-// A walk is frozen at its first page so the order and the count hold still
-// while somebody pages — that is what stops the queue moving under them. The
-// two things freezing cannot hide are reported here rather than absorbed:
-// work that ARRIVED behind the reader and waits for a refresh, and work that
-// LEFT because it was dealt with, deleted, or is no longer theirs to see.
-//
-// AN OFFER, NOT AN ERROR. The day on screen is still correct — it is simply no
-// longer complete, and the remedy is to refresh when the reader is ready. A
-// warning tone would tell them something is wrong with a page that is working
-// exactly as designed.
-//
-// The way ON through the walk lives here too: the one control that asks for
-// the next page of the day.
+// "New priorities available". A walk is frozen at its first page, so rows
+// never reshuffle under the reader. Work that arrived behind them, or left,
+// is reported here, and a refresh applies it. An offer, not an error: the
+// rows on screen are still correct.
 
-import { useId } from "react";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { WorklistWalk } from "./worklist.queries";
@@ -84,35 +71,4 @@ function noticeText(
     });
   }
   return t("worklist.walk.gone", { gone: formatNumber(gone, locale) });
-}
-
-/**
- * The way to the rest of the day, drawn below BOTH panels: a next page's rows
- * land in whichever one their destination names, so a control inside either
- * would look dead whenever they all went to the other. The caption says so,
- * naming the panels by their own headings.
- */
-export function LoadMoreOfTheDay({
-  pending,
-  failed,
-  onMore,
-}: Readonly<{ pending: boolean; failed: boolean; onMore: () => void }>) {
-  const t = useT();
-  const whereId = useId();
-  return (
-    <div className="worklist-more">
-      <Button onClick={onMore} pending={pending} aria-describedby={whereId}>
-        {t("worklist.more")}
-      </Button>
-      <p className="t-caption" id={whereId}>
-        {t("worklist.more.where", {
-          today: t("worklist.queue"),
-          review: t("worklist.review"),
-        })}
-      </p>
-      {/* A refused page leaves the button looking exactly as an unpressed one
-          does, so the failure says the rest is still there. */}
-      {failed && <ErrorLine inline>{t("worklist.more.failed")}</ErrorLine>}
-    </div>
-  );
 }

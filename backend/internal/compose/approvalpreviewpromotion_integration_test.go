@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,7 +38,7 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			payload := fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify","evidence_note":"Buyer confirmed interest","deal":{"name":"Ignored by tool"}}`, lead.Id)
+			payload := fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify","evidence_note":"Buyer confirmed interest"}`, lead.Id)
 			if rest {
 				payload = `{"operation":"PromoteLead","body":{"trigger":"human_qualify","evidence":{"note":"Buyer confirmed interest"},"deal":{"amount_minor":250000,"currency":"USD"}}}`
 			}
@@ -85,5 +87,178 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 				t.Fatalf("actual promotion: %+v", out)
 			}
 		})
+	}
+}
+
+// The preview names the industry a promotion writes to the linked company. It
+// names none where the company already holds one, as the promotion writes none.
+func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		held *string
+	}{{"a company with no industry", nil}, {"a company with one", new("education")}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			perms := integration.AdminPerms
+			perms.Objects = maps.Clone(perms.Objects)
+			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
+			ctx := e.As(e.AdminUser, nil, perms)
+			company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Harbor Clinic", Industry: tc.held, Source: "manual"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+			lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{
+				FullName: new("Ines Buyer"), Email: new("ines@harbor.test"), CompanyName: new("Harbor Clinic"),
+				Industry: new("Healthcare"), Source: "manual",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
+			if _, err := e.Contacts.LinkLeadCompany(ctx, leadID, companyID); err != nil {
+				t.Fatal(err)
+			}
+			raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.Id)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc := NewApprovalsService(e.DB())
+			id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: leadID.UUID, ProposedChange: raw, DiffHash: hash})
+			if err != nil {
+				t.Fatal(err)
+			}
+			proposal, err := svc.GetWire(ctx, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			preview := proposal.Preview
+			if preview == nil || preview.State != "ready" || preview.Details == nil || preview.Effects == nil {
+				t.Fatalf("promotion preview: %+v", preview)
+			}
+			carried := ""
+			for _, detail := range *preview.Details {
+				if detail.Field == "promotion_company_industry" {
+					carried = detail.Value.Text
+				}
+			}
+			fills := slices.Contains(*preview.Effects, "promote_fill_company_industry")
+			if fills != (tc.held == nil) || (carried == "healthcare") != (tc.held == nil) {
+				t.Fatalf("effects %v and industry detail %q, want the carry named only for a company with none", *preview.Effects, carried)
+			}
+			input, err := promotionApprovalInput(proposal)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := e.Contacts.QualifyLead(ctx, leadID, input); err != nil {
+				t.Fatal(err)
+			}
+			after, err := e.Contacts.GetCompany(ctx, companyID, storekit.LiveOnly)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fills != (after.Industry != nil && string(*after.Industry) == "healthcare") {
+				t.Errorf("the preview said fills=%v and the company's industry is now %v", fills, after.Industry)
+			}
+		})
+	}
+}
+
+// An agent's staged promotion cites no activity. The preview shows the
+// engagement the promotion will rest on, and is not ready when the lead has none.
+func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testing.T) {
+	for _, tc := range []struct {
+		name, trigger string
+		wantReady     bool
+	}{{"a meeting the lead held", "meeting_held", true}, {"a reply the lead never sent", "inbound_reply", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			perms := integration.AdminPerms
+			perms.Objects = maps.Clone(perms.Objects)
+			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
+			ctx := e.As(e.AdminUser, nil, perms)
+			lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Mona Met"), Email: new("mona@example.test"), Source: "manual"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			meeting := ids.NewV7()
+			e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by, counterparty_email)
+			             VALUES ($1, 'meeting', 'Intro call', 'held', now(), 'manual', 'human:x', 'mona@example.test')`, meeting)
+			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, meeting, ids.UUID(lead.Id))
+			raw, hash, err := diffhash.Canonical(fmt.Appendf(nil, `{"lead_id":%q,"trigger":%q}`, lead.Id, tc.trigger))
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc := NewApprovalsService(e.DB())
+			id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: ids.UUID(lead.Id), ProposedChange: raw, DiffHash: hash})
+			if err != nil {
+				t.Fatal(err)
+			}
+			proposal, err := svc.GetWire(ctx, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			preview := proposal.Preview
+			if preview == nil || (preview.State == previewReadyState) != tc.wantReady {
+				t.Fatalf("preview of a %s promotion: %+v, want ready=%t", tc.trigger, preview, tc.wantReady)
+			}
+			if !tc.wantReady {
+				return
+			}
+			evidence := false
+			for _, detail := range *preview.Details {
+				evidence = evidence || detail.Field == "promotion_evidence"
+			}
+			if !evidence {
+				t.Errorf("the ready preview names no evidence, though the promotion records the held meeting: %+v", *preview.Details)
+			}
+		})
+	}
+}
+
+// Evidence the reviewer may discover but not read still makes a ready preview.
+// It is named by its date, and its subject stays withheld.
+func TestPromotionApprovalPreviewNamesWithheldEvidenceWithoutItsSubject(t *testing.T) {
+	e := integration.Setup(t)
+	perms := integration.AdminPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
+	ctx := e.As(e.AdminUser, nil, perms)
+	lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Nora Held"), Email: new("nora@example.test"), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	meeting := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by, counterparty_email, audience)
+	             VALUES ($1, 'meeting', 'Board compensation', 'held', now(), 'manual', 'human:someone-else', 'nora@example.test', 'participants')`, meeting)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, meeting, ids.UUID(lead.Id))
+	raw, hash, err := diffhash.Canonical(fmt.Appendf(nil, `{"lead_id":%q,"trigger":"meeting_held"}`, lead.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewApprovalsService(e.DB())
+	id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: ids.UUID(lead.Id), ProposedChange: raw, DiffHash: hash})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposal, err := svc.GetWire(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview := proposal.Preview
+	if preview == nil || preview.State != previewReadyState || preview.Details == nil {
+		t.Fatalf("preview of a promotion on withheld evidence: %+v, want ready", preview)
+	}
+	named := false
+	for _, detail := range *preview.Details {
+		if strings.Contains(detail.Value.Text, "Board compensation") {
+			t.Fatalf("the preview disclosed the withheld subject in %s", detail.Field)
+		}
+		if detail.Field == "promotion_evidence" {
+			named = detail.Value.Kind == previewValueDate && detail.Value.EntityId != nil && ids.UUID(*detail.Value.EntityId) == meeting
+		}
+	}
+	if !named {
+		t.Errorf("the preview does not name the withheld meeting by its date: %+v", *preview.Details)
 	}
 }

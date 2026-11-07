@@ -130,6 +130,18 @@ func addPartialDeliveryProof(t *testing.T, out map[string]judgelessProof, scenar
 		Remaining string `json:"remaining_names"`
 	}](t, sc.Expect.Answer)
 	remaining, _, _ := strings.Cut(expected[0].Remaining, "|")
+	// The correct answer quotes the request, so it takes the word before the
+	// expected name too: a one-word remaining text is refused.
+	fixture := fixtureValue[[]struct {
+		Messages []struct{ Body string } `json:"messages"`
+	}](t, sc.Fixture)
+	body := fixture[0].Messages[0].Body
+	at := strings.Index(body, remaining)
+	if at < 0 {
+		t.Fatalf("%s expects %q, which their request never says", sc.Name, remaining)
+	}
+	start := strings.LastIndexAny(strings.TrimSpace(body[:at]), " \t\r\n") + 1
+	remaining = body[start : at+len(remaining)]
 	out[sc.Name] = judgelessProof{correct: settlementReply(remaining, false), wrong: settlementReply(remaining, true), wantWrong: aitasks.OutcomeWrongAnswer}
 }
 

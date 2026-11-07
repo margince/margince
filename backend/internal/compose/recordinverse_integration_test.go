@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -201,6 +202,7 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 	} {
 		t.Run(tc.language, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.Contacts.SetClock(func() time.Time { return time.Date(2026, 9, 1, 12, 0, 0, 123456789, time.UTC) })
 			integration.SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 			name, email := "Lena Lead", "lena@prospect.test"
 			lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
@@ -208,7 +210,7 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 				t.Fatal(err)
 			}
 			leadID := ids.UUID(lead.Id)
-			contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"})
+			contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "human_qualify"})
 			if err != nil {
 				t.Fatalf("the machine promoting the lead: %v", err)
 			}
@@ -381,7 +383,7 @@ func TestAPromotionUndoIsRefusedToASeatThatMayNotChangeTheContact(t *testing.T) 
 		t.Fatal(err)
 	}
 	leadID := ids.UUID(lead.Id)
-	if _, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"}); err != nil {
+	if _, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
 		t.Fatal(err)
 	}
 	seat := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{

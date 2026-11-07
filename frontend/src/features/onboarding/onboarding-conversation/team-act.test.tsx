@@ -41,7 +41,7 @@ function renderTeam(
         ...meFixture({ allow: {} }),
         admin_password_link: options.passwordLink ?? false,
       }),
-    "GET /teams": () => jsonResponse({ data: [], next_cursor: null }),
+    "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
     "GET /users/assignable-roles": () =>
       jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
     "POST /users/access-preview": () =>

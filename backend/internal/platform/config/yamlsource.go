@@ -30,9 +30,9 @@ type unknownKey struct {
 // readYAML flattens one file to setting keys. A key that names a setting is a
 // leaf: a struct or map setting keeps its whole node, and its sub-keys are
 // never reported unknown. A missing file is an empty layer.
-func readYAML(path string, names known) (yamlLayer, []unknownKey, error) {
+func readYAML(readFile func(string) ([]byte, error), path string, names known) (yamlLayer, []unknownKey, error) {
 	layer := yamlLayer{path: path, values: map[string]*yaml.Node{}}
-	raw, err := os.ReadFile(path) // #nosec G304 -- the operator's own --config / --config-file path
+	raw, err := readFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return layer, nil, nil
 	}

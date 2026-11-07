@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -50,25 +51,36 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	return MailMessage(review, homeURL, words).Text
 }
 
-// mailDealLine is one deal, as the week recorded it.
+// mailDealItem is one deal, as the week recorded it.
 //
 // The LABEL is what was frozen when the review was written, never a lookup: a
 // deal renamed or deleted since still reads here as it did that week, which is
 // the same promise the panel makes.
-func mailDealLine(line DealLine, words mailcopy.Copy) string {
-	parts := []string{mailcopy.OneLine(line.Label), outcomeWord(line.Outcome, words)}
+func mailDealItem(line DealLine, words mailcopy.Copy) emailview.Item {
+	item := emailview.Item{Title: mailcopy.OneLine(line.Label), OneLine: true, Lines: []emailview.Line{{Text: outcomeWord(line.Outcome, words), Tone: outcomeTone(line.Outcome)}}}
 	if line.ToStageLabel != "" {
 		// A stage name is stored with no single-line validation, so it is the
 		// same species of input as the label beside it.
-		parts = append(parts, mailcopy.OneLine(line.ToStageLabel))
+		item.Lines = append(item.Lines, emailview.Line{Text: mailcopy.OneLine(line.ToStageLabel)})
 	}
 	// Money is a pair or it is absent — the same rule the wire follows. A bare
 	// amount is a number nobody can read.
 	if line.AmountMinor != nil && line.Currency != "" {
-		parts = append(parts, words.Money(*line.AmountMinor, line.Currency))
+		item.Lines = append(item.Lines, emailview.Line{Text: words.Money(*line.AmountMinor, line.Currency)})
 	}
-	parts = append(parts, words.Date(line.OccurredAt))
-	return strings.Join(parts, " — ")
+	item.Lines = append(item.Lines, emailview.Line{Text: words.Date(line.OccurredAt)})
+	return item
+}
+
+func outcomeTone(outcome string) emailview.Tone {
+	switch outcome {
+	case "won":
+		return emailview.Success
+	case "lost":
+		return emailview.Danger
+	default:
+		return emailview.Info
+	}
 }
 
 // MailAttempt is what one claim won: the review to render and the address to

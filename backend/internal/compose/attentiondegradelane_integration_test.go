@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -39,7 +40,7 @@ type stuckWaiting struct {
 	pool *pgxpool.Pool
 }
 
-func (w stuckWaiting) Unanswered(ctx context.Context, asOf time.Time, owner *ids.UUID) ([]attention.WaitingCustomer, bool, error) {
+func (w stuckWaiting) Unanswered(ctx context.Context, asOf time.Time, narrow attention.WaitingFor) ([]attention.WaitingCustomer, bool, error) {
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
@@ -47,7 +48,7 @@ func (w stuckWaiting) Unanswered(ctx context.Context, asOf time.Time, owner *ids
 	if err != nil {
 		return nil, false, err
 	}
-	return w.Waiting.Unanswered(ctx, asOf, owner)
+	return w.Waiting.Unanswered(ctx, asOf, narrow)
 }
 
 // shortLaneBudget keeps the seam's real snapshot and shortens only the wait,
@@ -105,7 +106,7 @@ type stuckSuggestions struct {
 	pool *pgxpool.Pool
 }
 
-func (s stuckSuggestions) CountOpen(ctx context.Context) (int, error) {
+func (s stuckSuggestions) CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error) {
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
@@ -113,7 +114,7 @@ func (s stuckSuggestions) CountOpen(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return s.attentionDealSuggestions.CountOpen(ctx)
+	return s.attentionDealSuggestions.CountOpen(ctx, owners)
 }
 
 func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {
@@ -131,11 +132,12 @@ func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *t
 	// The suggestion read needs company as well as deal, or it is withheld
 	// before it runs and the stall is never reached.
 	perms := leadRepPerms
+	perms.RowScope = principal.RowScopeTeam
 	perms.Objects = maps.Clone(leadRepPerms.Objects)
 	perms.Objects["company"] = principal.ObjectGrant{Read: true}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	started := time.Now()
-	page, err := svc.Worklist(ctx, "mine", "", ids.Nil, 50, "")
+	page, err := svc.Worklist(ctx, "team", "", ids.Nil, 50, "")
 	if err != nil {
 		t.Fatalf("the worklist failed with its suggestion read: %v — a source the page reports as unavailable took the page down instead", err)
 	}

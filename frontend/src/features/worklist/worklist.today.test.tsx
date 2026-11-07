@@ -81,7 +81,7 @@ describe("the day is one panel", () => {
     // every catalog, so asserting their absence tests nothing a regression
     // could fail. A focus card returning would draw its row outside this list.
     await waitFor(() => {
-      expect(screen.getByText("Today")).toBeTruthy();
+      expect(screen.getByText("Today", { selector: "h2, h3" })).toBeTruthy();
     });
     const lists = document.querySelectorAll("ol.worklist-list");
     expect(lists.length).toBe(1);

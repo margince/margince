@@ -71,16 +71,6 @@
   gap: var(--space-1);
 }
 
-/* The verbs for the conversation, at the foot where the reading ends. */
-.emaildetail__foot {
-  display: flex;
-  align-items: center;
-  gap: var(--gapActions);
-}
-.emaildetail__foot > .emaildetail__more {
-  margin-inline-start: auto;
-}
-
 /* What came with the message: a shelf of `FileChip` cards under a count.
    The cards flow and wrap rather than stacking one per line — three short
    names share a row, a scanner's sixty-character name takes a row alone and

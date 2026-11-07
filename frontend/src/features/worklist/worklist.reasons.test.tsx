@@ -9,6 +9,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
 // Why a row is worth the reader's morning, drawn.
@@ -62,7 +63,14 @@ function day(queue: WorklistItem[]): Worklist {
 function draw(queue: WorklistItem[]) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => jsonResponse(day(queue))),
+    vi.fn(async (input: RequestInfo | URL) =>
+      jsonResponse(
+        echoView(
+          String(input instanceof Request ? input.url : input),
+          day(queue),
+        ),
+      ),
+    ),
   );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -369,5 +377,44 @@ describe("a follow-up row says why it is there", () => {
     expect(line).toMatch(/met 1 day ago/);
     expect(line).toMatch(/no outgoing message recorded since/);
     expect(line).toMatch(/no attendee on file/);
+  });
+});
+
+// A pinned row shows a pin beside its name. The order alone does not say it.
+// A new pin or a change in the ranking moves the row. The reader would then
+// have to open each row's menu to find which one is pinned.
+describe("a pinned row shows that it is pinned", () => {
+  function taskRow(because: WorklistItem["because"]): WorklistItem {
+    return {
+      occurred_precision: "instant",
+      id: "t1",
+      source: "task",
+      category: "tasks",
+      level: 1,
+      consequence: "task_slips",
+      title: "Send the retrofit quote",
+      because,
+      actions: [],
+    };
+  }
+
+  it("shows the pin, named for a screen reader, and keeps the other reasons", async () => {
+    draw([taskRow([{ kind: "unassigned" }, { kind: "pinned" }])]);
+
+    expect(
+      await screen.findByRole("img", { name: en["worklist.pinnedMark"] }),
+    ).toBeTruthy();
+    expect(await screen.findByText(/\bno owner\b/)).toBeTruthy();
+    // The pin says it once: the reason line does not repeat it in words.
+    expect(screen.queryByText(/\bpinned by you\b/)).toBeNull();
+  });
+
+  it("shows no pin on a row that is not pinned", async () => {
+    draw([taskRow([{ kind: "unassigned" }])]);
+
+    expect(await screen.findByText(/\bno owner\b/)).toBeTruthy();
+    expect(
+      screen.queryByRole("img", { name: en["worklist.pinnedMark"] }),
+    ).toBeNull();
   });
 });

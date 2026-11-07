@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
 import { isValidElement } from "react";
 import { expect, it } from "vitest";
+import { KNOWN_SOURCES, rowHref } from "../../lib/worklistcopy";
 import { row } from "../../testing/worklist.testkit";
-import { KNOWN_SOURCES, rowHref } from "./worklist.copy";
-import { reviewFilter } from "./worklist.destinations";
+import { reviewView } from "./worklist.destinations";
 import { rowActivityId, rowSourceUnavailable } from "./worklist.noticesource";
 import type { WorklistItem } from "./worklist.queries";
 import { rowAnswer } from "./worklist.row.answer";
@@ -52,6 +52,24 @@ const CONTEXT = {
     }),
     via: "inline",
   },
+  contact_case: {
+    item: row({
+      source: "contact_case",
+      actions: ["merge"],
+      contact_case: {
+        anchor_id: "one",
+        revision: "r1",
+        members: [
+          { id: "one", label: "First contact" },
+          { id: "two", label: "Second contact" },
+        ],
+        owners: ["Ana"],
+        can_merge: true,
+        merge_mode: "ordinary",
+      },
+    }),
+    via: "inline",
+  },
   deal_suggestion: record("deal_suggestion", "company"),
   tag_suggestion: record("tag_suggestion", "contact"),
   task: activity("task"),
@@ -78,6 +96,7 @@ const CONTEXT = {
   dsr: queue("dsr"),
   notice_case: record("notice_case", "contact"),
   capture_health: queue("capture_health"),
+  booking_health: queue("booking_health"),
   domain_question: {
     item: row({
       source: "domain_question",
@@ -131,7 +150,7 @@ it.each(Object.entries(CONTEXT))(
     } else if (via === "activity") {
       expect(rowActivityId(item)).toBeTruthy();
     } else if (via === "group") {
-      expect(reviewFilter(item)).toBe("decisions");
+      expect(reviewView(item)).toBe("decisions");
     } else {
       const answer = rowAnswer(item, {
         working: false,

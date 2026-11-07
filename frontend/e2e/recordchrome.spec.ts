@@ -1,4 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
+import { company360 } from "./mockapi/records";
 import { RECORDS } from "./records";
 import { type MockApiOptions, mockApi } from "./seed";
 import { pageOverflow } from "./waits";
@@ -184,5 +186,131 @@ test.describe("the record's column holds still", () => {
         ).toEqual([]);
       });
     }
+  }
+
+  // The sweep's company has no counted sections, so no tab held the hidden
+  // ", " before its count, and only that span escaped a static strip.
+  test("does not pan sideways on a company whose counted tabs overflow the strip at 390px", async ({
+    page,
+  }) => {
+    const empty = { data: [], page: { has_more: false, total: 0 } };
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await mockApi(page);
+    await page.route("**/companies/o-brandt/360", (route) =>
+      route.fulfill({
+        json: {
+          ...company360,
+          contacts: empty,
+          next_steps: empty,
+          activities: empty,
+        },
+      }),
+    );
+    await page.goto("/#/companies/o-brandt");
+    const strip = page.locator(".recordtabs-strip");
+    await expect(strip.locator(".optioncount").first()).toBeVisible();
+
+    const measured = await strip.evaluate((element) => ({
+      overflow: element.scrollWidth - element.clientWidth,
+      hiddenText: element.querySelectorAll(".sr-only").length,
+    }));
+    expect(
+      measured.overflow,
+      "the strip fits, so nothing sits past its edge",
+    ).toBeGreaterThan(0);
+    expect(
+      measured.hiddenText,
+      "no tab holds a count's hidden separator",
+    ).toBeGreaterThan(0);
+    expect(await pageOverflow(page)).toEqual([]);
+  });
+});
+
+test.describe("a refused rename of the record's name", () => {
+  // The refusal is body type, not the name's heading type. The admin fixture
+  // cannot update contacts or companies (E2E_ADMIN_GRANTS): their names are text.
+  const RENAMED = RECORDS.filter(
+    (record) => record.screen !== "contacts" && record.screen !== "companies",
+  );
+  for (const record of RENAMED) {
+    test(`reads in body type on a ${record.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await openRecord(page, record.route);
+      await page.route(/\/v1\//, (route) =>
+        route.request().method() === "PATCH"
+          ? route.fulfill({
+              status: 422,
+              contentType: "application/problem+json",
+              body: JSON.stringify({
+                type: "about:blank",
+                title: "Unprocessable Entity",
+                status: 422,
+                detail: "This name cannot be saved.",
+              }),
+            })
+          : route.fallback(),
+      );
+
+      await page.locator(".record-split-rename .editable-value").click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByRole("textbox").fill("A refused name");
+      await dialog.getByRole("button", { name: de["record.save"] }).click();
+      const refusal = dialog.getByRole("alert");
+      await expect(refusal).toBeVisible();
+
+      const type = (locator: Locator) =>
+        locator.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return `${style.fontSize} ${style.fontWeight}`;
+        });
+      expect(
+        await type(refusal),
+        "the refusal of a rename is set in the name's heading type",
+      ).toBe(await type(page.locator("body")));
+    });
+  }
+});
+
+// A shell banner shortens the scroller the record stands in. The details card
+// caps its height to that scroller. At the end of a scroll in a short window,
+// its top stays in view under the banner instead of being cut off by it.
+test.describe("the details card clears a shell banner", () => {
+  for (const record of RECORDS) {
+    test(`on a ${record.name} at the end of a scroll in a short window`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1440, height: 600 });
+      await openRecord(page, record.route, { license: "rejected" });
+      await expect(page.locator(".appbanner")).toHaveCount(1);
+      await expect(page.locator(".record-aside")).toBeVisible();
+
+      const scrolled = await page
+        .locator(".main > .scroll")
+        .evaluate((scroller) => {
+          scroller.scrollTop = scroller.scrollHeight;
+          return scroller.scrollTop;
+        });
+      expect(scrolled, "the record is too short to scroll").toBeGreaterThan(0);
+
+      const scroller = await page.locator(".main > .scroll").boundingBox();
+      const details = await page
+        .locator(".record-split-details")
+        .first()
+        .boundingBox();
+      expect(scroller).not.toBeNull();
+      expect(details).not.toBeNull();
+      if (!scroller || !details) {
+        return;
+      }
+      expect(
+        details.y,
+        "the details card's top is cut by the scroller under the banner",
+      ).toBeGreaterThanOrEqual(scroller.y - 1);
+      expect(
+        details.y + details.height,
+        "the details card runs past the scroller's foot",
+      ).toBeLessThanOrEqual(scroller.y + scroller.height + 1);
+    });
   }
 });

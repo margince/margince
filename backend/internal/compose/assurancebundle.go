@@ -34,9 +34,12 @@ package compose
 // accumulated are archived as the sweep meets them.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -90,7 +93,8 @@ func bundleRunFindings(
 	defer func() {
 		if closeErr := deps.bundles.CloseCycle(ctx, cycle); closeErr != nil {
 			err = errors.Join(err, fmt.Errorf(
-				"compose: closing the cycle for run %s: %w", runID, closeErr))
+				"compose: closing the cycle for run %s: %w", runID, closeErr,
+			))
 		}
 	}()
 
@@ -108,10 +112,9 @@ func bundleRunFindings(
 	// whole list has been walked. Minting on first sight would title every task
 	// "1 finding" and then bundle three more onto it.
 	//
-	// ONE SUBJECT'S FAILURE IS NOT THE NIGHT'S. The list is ordered by severity
-	// and then by money at stake, so aborting on the first error would suppress
-	// every task below it — a single deal whose owner has left the company would
-	// silently cost the whole workspace its remaining tasks. Each failure is
+	// One subject's failure is not the night's. Aborting on the first error
+	// would suppress every task after it. A single deal whose owner has left
+	// would cost the whole workspace its remaining tasks, so each failure is
 	// carried and the walk continues.
 	var failed []error
 	for _, subject := range groupBySubject(open) {
@@ -163,26 +166,28 @@ func bundleableFindings(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
 ) ([]assurance.Exception, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT `+exceptionSelect(rawFindingMoney)+`
+		SELECT `+exceptionSelect(rawFindingMoney)+`, d.name, d.owner_id
 		  FROM assurance_exception e
 		  JOIN assurance_run_finding f ON f.exception_id = e.id AND f.run_id = $1
+		  JOIN deal d ON d.id = e.subject_id
 		  `+findingPricedJoin(rawFindingMoney.affected)+`
 		 WHERE e.status = 'open'
 		   AND e.subject_kind = 'deal'
 		   AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
 		                    WHERE r.exception_id = e.id
 		                      AND r.outcome = $2
-		                      AND r.remind_at > now())
-		 ORDER BY `+findingRank, runID, assurance.OutcomeRemindLater)
+		                      AND `+assurance.LiveRemindAtSQL("r", "$3")+` > now())
+		 ORDER BY `+findingRank, runID, assurance.OutcomeRemindLater, assurance.MaxSuppressionDays())
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the findings to bundle: %w", err)
 	}
 	defer rows.Close()
 
-	// scanException, shared with AssuranceExceptions: one select list, one
-	// scanner. Two copies of a positional scan drift into reading a currency
-	// into a status, and nothing fails loudly when they do.
-	return pgx.CollectRows(rows, scanException)
+	// The labelled scanner AssuranceExceptions uses, so the owner is the deal's
+	// live owner there and here. The finding's own owner_id is the scan's
+	// snapshot, and a deal handed over since would send its task to the former
+	// owner.
+	return pgx.CollectRows(rows, scanLabelledException)
 }
 
 // cycleScopeForRun names the cycle a run's findings bundle into.
@@ -203,14 +208,14 @@ type subjectFindings struct {
 	findings []assurance.Exception
 }
 
-// groupBySubject collects the findings per subject, KEEPING the read's order.
+// groupBySubject collects the findings per subject. Within a subject it keeps
+// the read's order, severity and then amount, so the most material finding
+// leads its bundle. The subjects themselves come in id order.
 //
-// A map alone would not: ranging one is randomised, so the task minted for a
-// subject would take a different finding's owner from night to night, and the
-// order findings bundle in would vary for no reason a reader could see. The
-// order matters because the first finding is the one whose owner becomes the
-// assignee, and the read already sorted by severity and amount — so the owner
-// carried is the one on the most material finding.
+// The subjects are not left in the read's order because tasks are minted in
+// the order this returns, and activity ids sort by creation. Minting the bigger
+// deal's task first would tell a reader masked from amounts which deal is
+// bigger.
 func groupBySubject(open []assurance.Exception) []subjectFindings {
 	var out []subjectFindings
 	at := map[string]int{}
@@ -224,6 +229,9 @@ func groupBySubject(open []assurance.Exception) []subjectFindings {
 		}
 		out[index].findings = append(out[index].findings, exception)
 	}
+	slices.SortFunc(out, func(a, b subjectFindings) int {
+		return cmp.Or(strings.Compare(a.kind, b.kind), strings.Compare(a.id.String(), b.id.String()))
+	})
 	return out
 }
 
@@ -248,13 +256,19 @@ func bundleSubject(
 
 	minted := false
 	if !found {
-		task, err = mintBundleTask(ctx, deps, runID, subject)
+		task, err = mintBundleTask(ctx, deps, runTaskKey(subject, runID), subject, nil)
 		if err != nil {
 			return false, err
 		}
 		minted = true
 	}
+	return minted, fileUnderTask(ctx, deps, cycle, task, subject)
+}
 
+// fileUnderTask files a subject's findings under its task, if it is still open.
+func fileUnderTask(
+	ctx context.Context, deps bundleDeps, cycle, task ids.UUID, subject subjectFindings,
+) error {
 	// The findings are filed on ONE transaction that holds the task, because
 	// whether it is still open was read before this line and a rep can answer
 	// it at any moment. Without the hold, a task completed in between takes
@@ -271,7 +285,7 @@ func bundleSubject(
 	// transaction of its own, so by the time this one opens the task is on the
 	// rep's list and they can answer it — "nobody has seen it yet" stops being
 	// true the moment the mint commits.
-	if err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+	return deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		open, err := taskStillOpenTx(ctx, tx, task)
 		if err != nil {
 			return err
@@ -284,10 +298,7 @@ func bundleSubject(
 			return nil
 		}
 		return bundleUnder(ctx, deps, tx, cycle, task, subject)
-	}); err != nil {
-		return minted, err
-	}
-	return minted, nil
+	})
 }
 
 // bundleUnder files every one of a subject's findings under one task.

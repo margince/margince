@@ -38,8 +38,9 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const mcpInfoPath = "../docs/reference/mcp-info.json"
@@ -98,7 +99,28 @@ const clientToolCeiling = 100
 //
 // Routers that may front actions of different tiers then bring it to 37: one
 // per family of verbs (find_records, read_context, change_state and the rest).
-const publishedToolCeiling = 37
+//
+// change_reports raises it to 38, by a maintainer decision: the slot holds the
+// write-scope reporting router, so later report writes join it as actions. The
+// user keeps 62 of the client's 100 slots for other servers.
+//
+// The UI-parity routers raise it to 44, by a maintainer decision: an agent may
+// do what its user does in the app. Six routers carry that work, each one
+// topic's actions behind one listing: change_access, change_attention,
+// change_offers, change_relationships, change_settings and read_details. The
+// user keeps 56 of the client's 100 slots.
+//
+// run_research raises it to 45, by a maintainer decision: AI work an agent starts
+// spends the enrich scope, and one router spends one scope.
+//
+// change_compliance and change_capture raise it to 47, by a maintainer decision.
+// Privacy work and what comes into the CRM are each one topic a user hands to
+// their agent, and neither fits an existing router's listing.
+//
+// change_my_settings raises it to 48. A request about the user's own name, hours
+// or voice picked the workspace-wide setting beside it in change_settings. Now the
+// client sees two tools, which tells them apart.
+const publishedToolCeiling = 48
 
 type mcpInfoFile struct {
 	Totals struct {
@@ -109,7 +131,7 @@ type mcpInfoFile struct {
 
 func TestThePublishedToolCountStaysUnderItsCeiling(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(mcpInfoPath)
+	raw, err := gatekit.ReadFile(mcpInfoPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", mcpInfoPath, err)
 	}

@@ -35,10 +35,12 @@ func frames(said technicalSummaryCopy) []struct {
 	}{
 		{"mailMoved", said.mailMoved, 2},
 		{"mailSet", said.mailSet, 1},
+		{"mailGone", said.mailGone, 1},
 		{"serviceGone", said.serviceGone, 1},
 		{"serviceNew", said.serviceNew, 1},
 		{"hostingMoved", said.hostingMoved, 2},
 		{"hostingSet", said.hostingSet, 1},
+		{"hostingGone", said.hostingGone, 1},
 		{"technologyGone", said.technologyGone, 1},
 		{"technologyNew", said.technologyNew, 1},
 	}

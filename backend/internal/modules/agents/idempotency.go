@@ -222,12 +222,25 @@ func (r *Registry) refuseUnkeyableCall(spec mcp.ToolSpec) error {
 				"omit it and check whether the first attempt took effect before repeating the call",
 			spec.Name, idempotencyKeyArg)}
 	}
+	if r.routeServedTool(spec.Name) {
+		return &BadArgsError{Cause: fmt.Errorf(
+			"%s runs its REST route, whose answer this surface cannot hand back as recorded, so it does "+
+				"not offer `%s`; omit it and read the record before repeating the call",
+			spec.Name, idempotencyKeyArg)}
+	}
 	if r.claims == nil {
 		return &BadArgsError{Cause: fmt.Errorf(
 			"this surface cannot make %s safe to retry, so `%s` is refused rather than ignored; "+
 				"omit it and treat the call as at-most-once yourself", spec.Name, idempotencyKeyArg)}
 	}
 	return nil
+}
+
+// routeServedTool reads back what registration recorded about a route verb.
+func (r *Registry) routeServedTool(name string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.routeServed[name]
 }
 
 // unitOwnedTool reads back what registration recorded about who shipped a tool.
@@ -258,6 +271,12 @@ func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserve
 	}
 	book, release := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
 	defer release()
+	if _, asked := errors.AsType[*askInChatError](runErr); asked {
+		// Nothing ran: the call waits for the user, and its retry is the same
+		// call under the same key.
+		r.releaseUnrunKey(ctx, spec, res, attempt)
+		return
+	}
 	if runErr != nil {
 		if err := r.claims.Fail(book, spec.Name, res.RetryKey, attempt, safeFailureReason(runErr)); err != nil {
 			slog.ErrorContext(book, "recording a failed call against its idempotency key failed; a retry of "+

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { bindingOf, declarationOf } from "../src/testing/classnames";
 import { parseSource, resolveRelative } from "./lib/source-tree";
 
 /** `X * 4` and `X + 3000`, the two ways a budget here is built from another. */
@@ -17,72 +18,47 @@ function arithmetic(
 }
 
 /**
- * A resolver for numbers written in this file: a literal, a name it gave a
- * number to, or arithmetic over those. A name imported from elsewhere does not
- * resolve, and that is reported rather than guessed at.
+ * A resolver for numbers: a literal, a name holding one in the scope it is
+ * read from, or arithmetic over those. A name the file never binds takes its
+ * value from `imported`. One that does not resolve is reported, not guessed at.
  */
-export function resolver(consts: Map<string, number>) {
-  const value = (node: ts.Expression): number | undefined => {
+export function resolver(imported: ReadonlyMap<string, number>) {
+  const value = (
+    node: ts.Expression,
+    reading: ReadonlySet<ts.Node> = new Set(),
+  ): number | undefined => {
     if (ts.isNumericLiteral(node)) return Number(node.text);
-    if (ts.isIdentifier(node)) return consts.get(node.text);
-    if (ts.isParenthesizedExpression(node)) return value(node.expression);
-    if (ts.isBinaryExpression(node)) return arithmetic(node, value);
+    if (ts.isIdentifier(node)) return named(node, reading);
+    if (ts.isParenthesizedExpression(node))
+      return value(node.expression, reading);
+    if (ts.isBinaryExpression(node))
+      return arithmetic(node, (side) => value(side, reading));
     return undefined;
   };
+  // `reading` holds the declarations on the way here, so `const A = B` beside
+  // `const B = A` ends unresolved instead of looping.
+  const named = (
+    name: ts.Identifier,
+    reading: ReadonlySet<ts.Node>,
+  ): number | undefined => {
+    const bound = bindingOf(name);
+    if (bound === undefined) return imported.get(name.text);
+    const declared = declarationOf(name);
+    if (!declared || !ts.isVariableDeclaration(declared)) return undefined;
+    if (!declared.initializer || reading.has(declared)) return undefined;
+    return value(declared.initializer, new Set([...reading, declared]));
+  };
   return value;
-}
-
-/** `const X = 5000` and `const Y = X * 4` anywhere in one file. */
-function declaredConsts(
-  source: ts.SourceFile,
-  seeded: Map<string, number>,
-): Map<string, number> {
-  // Every value each name is ever given, not the last one. This reader has no
-  // scope information: two `describe` blocks may each declare `SETTLE_MS`, or a
-  // function-local may shadow a module-level one.
-  // A name given two different values resolves to nothing, and a waiter that
-  // needed it is reported rather than folded to the wrong number.
-  const seen = new Map<string, Set<number>>();
-  for (const [name, resolved] of seeded) seen.set(name, new Set([resolved]));
-  const single = (): Map<string, number> => {
-    const settled = new Map<string, number>();
-    for (const [name, values] of seen) {
-      const only = values.size === 1 ? [...values][0] : undefined;
-      if (only !== undefined) settled.set(name, only);
-    }
-    return settled;
-  };
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer
-    ) {
-      const resolved = resolver(single())(node.initializer);
-      if (resolved !== undefined) {
-        const values = seen.get(node.name.text);
-        if (values) values.add(resolved);
-        else seen.set(node.name.text, new Set([resolved]));
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return single();
 }
 
 export function parse(file: string): ts.SourceFile {
   return parseSource(file, readFileSync(file, "utf8"));
 }
 
-/**
- * The numbers a module exports at its top level. Not `declaredConsts`, which
- * walks a whole file flat. There, a function-local `const POLL_MS = 1` would
- * shadow the exported `POLL_MS = 5000` and fold a 10000ms budget to 2ms.
- */
+/** The numbers a module exports at its top level. */
 function exportedConsts(source: ts.SourceFile): Map<string, number> {
   const known = new Map<string, number>();
-  const value = resolver(known);
+  const value = resolver(new Map());
   for (const statement of source.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     const exported = statement.modifiers?.some(
@@ -118,12 +94,12 @@ function takeImport(
 }
 
 /**
- * A test's numeric constants, including the ones it imports from a sibling
- * module. `{ timeout: READ_POLL_MS * EXPECTED_READS * 5 }` is a real budget,
- * and READ_POLL_MS lives in the hook it drives. One hop only: a budget two
- * modules away is reported unresolved, which is the safe end of that trade.
+ * The numeric constants a test imports from a sibling module.
+ * `{ timeout: READ_POLL_MS * EXPECTED_READS * 5 }` is a real budget, and
+ * READ_POLL_MS lives in the hook it drives. One hop only: a budget two modules
+ * away is reported unresolved, which is the safe end of that trade.
  */
-export function numericConsts(
+export function importedConsts(
   source: ts.SourceFile,
   file: string,
 ): Map<string, number> {
@@ -132,5 +108,5 @@ export function numericConsts(
     if (ts.isImportDeclaration(statement))
       takeImport(statement, file, imported);
   }
-  return declaredConsts(source, imported);
+  return imported;
 }

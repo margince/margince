@@ -35,7 +35,7 @@
 }
 /* A value's copy glyph is quiet like the chat glyph (callaction.css), and
    takes no room until the pointer or focus is on its row, so at rest the
-   address has the whole column and is cut only where it must be. */
+   value has the whole column. */
 .recorddetails .copy-action {
   display: inline-flex;
 }
@@ -52,9 +52,9 @@
 }
 .recorddetails-note {
   margin: 0;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--padCard);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-control);
-  background: var(--bgInset);
   font: var(--fontBodySmall);
   color: var(--textPrimary);
   text-wrap: pretty;

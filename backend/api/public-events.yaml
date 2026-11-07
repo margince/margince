@@ -39,6 +39,7 @@ components:
         - project.created
         - project.updated
         - project.phase_changed
+        - project.health_assessed
         - project.archived
         - list.created
         - list.updated
@@ -66,6 +67,7 @@ components:
         - deal_room.thread_resolved
         - deal_room.decision_recorded
         - offer.created
+        - offer.updated
         - offer.sent
         - offer.accepted
         - offer.rejected
@@ -116,8 +118,10 @@ components:
         - forecast.share_revoked
         - weekly_plan.updated
         - weekly_plan.help_requested
+        - sales_initiative.updated
         - activity.disposition_recorded
         - activity.marked_handled
+        - activity.readiness_recorded
         - relationship_nudge.decided
         - notice.read
         - approval.preference_changed
@@ -135,6 +139,7 @@ components:
         - consent.override_lifted
         - email_signature.changed
         - user_locale.changed
+        - user_timezone.changed
         - user_display_name.changed
         - user_greeting_name.changed
         - linkedin_account.changed
@@ -821,6 +826,39 @@ components:
           description: Why it moved; required by the API when to_phase is `closed`.
       additionalProperties: false
 
+    PublicEventProjectHealthAssessed:
+      type: object
+      x-event-type: project.health_assessed
+      x-entity-type: project
+      x-version: 1
+      description: >-
+        Payload for project.health_assessed: a reading of how the project is
+        going was appended to its history. Every row counts: a new reading, a
+        correction or the undo of an AI reading, by a user, their agent or the health job.
+        The project row itself is not written, so no project.updated goes with
+        it.
+      required:
+        - assessment_id
+        - state
+        - source
+      properties:
+        assessment_id:
+          type: string
+          format: uuid
+          description: The appended reading.
+        state:
+          type: string
+          description: >-
+            on_track, at_risk or off_track. On an undo row it is the reading the
+            undo restored, or on_track when the project reads as not judged
+            again.
+        source:
+          type: string
+          description: >-
+            human for a user, agent for their agent, ai for the health job, undo for a user undoing an AI
+            reading.
+      additionalProperties: false
+
     PublicEventProjectArchived:
       type: object
       x-event-type: project.archived
@@ -1003,6 +1041,11 @@ components:
         win_probability:
           type: integer
           description: The target stage's win probability, frozen at the moment of the move.
+        lost_reason_code:
+          type: string
+          description: >-
+            The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when
+            the loss names only a free note.
         partner_company_id:
           type: string
           format: uuid
@@ -1174,6 +1217,36 @@ components:
         captured_by:
           type: string
           description: The principal that created this revision.
+      additionalProperties: false
+
+    PublicEventOfferUpdated:
+      type: object
+      x-event-type: offer.updated
+      x-entity-type: offer
+      x-version: 1
+      description: >-
+        Payload for offer.updated: a draft offer was edited, its header or its
+        line items. Names what changed and carries no values, so a subscriber
+        reads the offer for them.
+      required:
+        - offer_id
+        - deal_id
+        - changed_fields
+      properties:
+        offer_id:
+          type: string
+          format: uuid
+          description: The edited draft offer.
+        deal_id:
+          type: string
+          format: uuid
+          description: The deal this offer belongs to.
+        changed_fields:
+          type: array
+          items: { type: string }
+          description: >-
+            The offer fields the edit moved, by their column names. A line
+            edit names line_items, beside any total it moved.
       additionalProperties: false
 
     PublicEventOfferSent:
@@ -2202,9 +2275,21 @@ components:
         The bounded delta of activity.updated. Each field is carried only when this update touched
         it. The key set is fixed, so it is typed rather than an open map.
       properties:
+        thread_key:
+          type: string
+          description: The activity's new conversation key, when its thread grouping changed.
+        automatic_task_repaired:
+          type: boolean
+          description: A reviewed correction changed the task's source link or cleared a generated deadline; fetch the task through its normal access gate.
         commitment_admissions_changed:
           type: boolean
           description: The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
+        request_settlement_changed:
+          type: boolean
+          description: The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate.
+        agenda_changed:
+          type: boolean
+          description: The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried.
         restored:
           type: boolean
           description: True when explicit request acceptance restores an archived unfinished reminder.
@@ -2233,14 +2318,28 @@ components:
           type: string
           format: date-time
           description: The activity's new due_at (absent when this update did not touch it).
+        due_has_time:
+          type: boolean
+          description: >-
+            Whether the new due_at names a time of day (true) or only a day (false). Carried
+            whenever this update names due_at.
         remind_at:
           type: string
           format: date-time
-          description: The activity's new remind_at (absent when this update did not touch it).
+          description: The activity's new remind_at (absent when this update did not set it).
+        remind_at_cleared:
+          type: boolean
+          description: >-
+            True when this update cleared the reminder: named as null by the caller, or ended
+            because the due date moved. A reminder a consumer mirrors stops firing then.
         assignee_id:
           type: string
           format: uuid
           description: The activity's new assignee (absent when this update did not touch it).
+        host_user_id:
+          type: string
+          format: uuid
+          description: The meeting's new host seat, when a calendar meeting was handed to the colleague who organized it (absent otherwise).
         is_done:
           type: boolean
           description: The activity's new completion state (absent when this update did not touch it).
@@ -2260,6 +2359,14 @@ components:
             How the meeting went, once somebody recorded it (absent when this
             update did not touch it). Meeting rows only; the update refuses the
             field on any other kind.
+        call_outcome:
+          type: string
+          enum: [reached, not_reached, voicemail, call_back_later, put_through]
+          x-enum-varnames: [CallEndedReached, CallEndedNotReached, CallEndedVoicemail, CallEndedCallBackLater, CallEndedPutThrough]
+          description: How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+        call_outcome_cleared:
+          type: boolean
+          description: True when this update removed the call's outcome, so the call has none again and counts as contact as before.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         direction:
@@ -2436,6 +2543,13 @@ components:
             How many deals the run considered. A consumer comparing this against the
             previous run's count sees a pass that covered less of the pipeline.
         eligible_signals: { type: integer }
+        deal_id:
+          type: string
+          format: uuid
+          description: >-
+            Set on a pass over this one deal, queued because the deal changed.
+            Its counts describe that deal alone and never the pipeline. Absent
+            on a pass over every deal.
       additionalProperties: false
     PublicEventForecastExceptionResolved:
       type: object
@@ -2591,6 +2705,33 @@ components:
             type: string
           description: Which parts of the plan moved — status, commitments.
       additionalProperties: false
+    PublicEventSalesInitiativeUpdated:
+      type: object
+      x-event-type: sales_initiative.updated
+      x-entity-type: sales_initiative
+      x-version: 1
+      description: >-
+        Payload for sales_initiative.updated. A sales initiative was defined,
+        changed, launched or had its picked and excluded records changed. The
+        entity is the initiative. `changed_fields` names what moved rather than
+        carrying it; the definition and the members stay on the record.
+      required:
+        - initiative_id
+        - status
+        - changed_fields
+      properties:
+        initiative_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, live, ended]
+        changed_fields:
+          type: array
+          items:
+            type: string
+          description: Which parts moved, such as definition, status, members.
+      additionalProperties: false
     PublicEventWeeklyPlanHelpRequested:
       type: object
       x-event-type: weekly_plan.help_requested
@@ -2697,6 +2838,36 @@ components:
         activity_id:
           type: string
           format: uuid
+      additionalProperties: false
+
+    PublicEventActivityReadinessRecorded:
+      type: object
+      x-event-type: activity.readiness_recorded
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for activity.readiness_recorded. One attendee said they are
+        ready for a meeting, or took that back (activities/meetingreadiness.go).
+        It holds for that attendee alone, at the preparation revision they
+        confirmed, and the attendee is not on the wire. A moved start, a new
+        agenda or a changed guest list makes the revision stale without a new
+        event.
+      required:
+        - activity_id
+        - state
+        - preparation_revision
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [ready, withdrawn]
+          description: >-
+            `ready` when the attendee confirmed, `withdrawn` when they undid it.
+        preparation_revision:
+          type: string
+          description: The preparation revision the confirmation was given at.
       additionalProperties: false
 
     PublicEventRelationshipNudgeDecided:
@@ -3278,8 +3449,9 @@ components:
         has_signature:
           type: boolean
           description: >-
-            Whether mail from this member now carries a sign-off. False after
-            a member empties the field, which is a chosen "send unsigned".
+            Whether the member has saved personal plain text or HTML. This reports
+            stored presence; sanitized HTML without visible text uses the usual fallback.
+            A workspace template or closing may still sign mail when this is false.
       additionalProperties: false
 
     PublicEventUserDeliveryChanged:
@@ -3306,6 +3478,29 @@ components:
           description: >-
             Which settings moved. Never empty: this event fires on a change, and
             a save that moved nothing writes nothing and publishes nothing.
+      additionalProperties: false
+    PublicEventUserTimezoneChanged:
+      type: object
+      x-event-type: user_timezone.changed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user_timezone.changed. A member's own time zone was stored
+        by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from
+        the browser on first sign-in, or the member's own pick. Booking reads
+        the member's working hours on it, and mail sent to them is timed by it.
+      required:
+        - timezone
+        - chosen
+      properties:
+        timezone:
+          type: string
+          description: The IANA name now stored, such as Europe/Berlin.
+        chosen:
+          type: boolean
+          description: >-
+            True when the member picked the zone themselves. A later browser
+            guess never replaces a chosen zone.
       additionalProperties: false
     PublicEventUserLocaleChanged:
       type: object

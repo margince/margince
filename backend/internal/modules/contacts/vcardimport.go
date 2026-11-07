@@ -318,6 +318,7 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 	}
 	// Parsing a field and then dropping it is the quieter defect. A reader who
 	// sees an address on the card expects to find it on the record.
+	contact.Employer = EmployerChoice{CompanyName: new(entry.Company), Role: contact.Title, Source: vcardSource}
 	contact.Address = vcardRecordAddress(entry)
 	for i, email := range entry.Emails {
 		contact.Emails = append(contact.Emails, ContactEmailInput{
@@ -367,6 +368,10 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		names = append(names, f.name)
 	}
 	corrected, err := s.standingCorrections(ctx, tx, contactID, append(names, fieldPhone))
+	if err != nil {
+		return cardStatement{}, err
+	}
+	corrected, err = keptFromAnAgent(ctx, tx, contactID, names, corrected)
 	if err != nil {
 		return cardStatement{}, err
 	}

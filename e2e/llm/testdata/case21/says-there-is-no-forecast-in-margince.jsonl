@@ -1,3 +1,0 @@
-{"type": "system", "subtype": "init", "tools": ["mcp__margince__read_forecast"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_forecast", "input": {"view": "readings"}}]}}
-{"type": "result", "subtype": "success", "is_error": false, "result": "## What we are bringing in\n\nThere is no forecast in Margince for this quarter, so treat the numbers below as a hand count: 1,240,000 open across seven deals, of which one — Weserbund — is unpriced and therefore not in the figure."}

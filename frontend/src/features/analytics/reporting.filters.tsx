@@ -10,33 +10,37 @@ import { Select } from "../../design-system/select";
 import { useNow } from "../../format/now";
 import { dayInZone, startOfDayInZone } from "../../format/timezone";
 import { useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
+import { DimensionFilters, FoldedDimensions } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
-import { useReportingPipelines } from "./reporting.queries";
 
-export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
-  "this_month",
-  "last_month",
-  "last_week",
-  "this_quarter",
-  "custom",
-];
+import { REPORTING_PERIODS } from "./reporting.selection";
+
+export { REPORTING_PERIODS } from "./reporting.selection";
 
 export function ReportingFilters({
   selection,
   onChange,
   showScope = true,
+  showPeriod = true,
   showPipeline = true,
   showTargets = true,
   showCloseWindow = showPipeline,
+  showDimensions = false,
   dates: controlledDates,
 }: Readonly<{
   showScope?: boolean;
+  // False leaves the period and its dates to a control elsewhere on the page.
+  showPeriod?: boolean;
   showPipeline?: boolean;
   showTargets?: boolean;
   showCloseWindow?: boolean;
+  // The product, country, industry and value basis dials, for a deal view;
+  // folded keeps them behind one toggle.
+  showDimensions?: boolean | "folded";
   dates?: Readonly<{
     from: string;
     through: string;
@@ -46,11 +50,12 @@ export function ReportingFilters({
   onChange: (selection: ReportingSelection) => void;
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   // The day the period's bounds are counted in, not the viewer's own.
   const today = isoOrBlank(dayInZone(useNow(0), zone)) || undefined;
   const context = useAnalyticsContext();
-  const pipelines = useReportingPipelines();
+  // A view whose figures take no pipeline never waits on the pipelines.
+  const pipelines = usePipelines(showPipeline);
   const [draftFrom, setDraftFrom] = useState(
     selection.interval
       ? dayInZone(Date.parse(selection.interval.start_at), zone)
@@ -97,25 +102,27 @@ export function ReportingFilters({
           }
         />
       )}
-      <Field label={t("reporting.period")}>
-        {(field) => (
-          <Select
-            {...field}
-            value={selection.period}
-            options={REPORTING_PERIODS.map((value) => ({
-              value,
-              label: t(`reporting.${value}`),
-            }))}
-            onChange={(value) => {
-              const period = REPORTING_PERIODS.find(
-                (candidate) => candidate === value,
-              );
-              if (period) onChange({ ...selection, period });
-            }}
-          />
-        )}
-      </Field>
-      {selection.period === "custom" && (
+      {showPeriod && (
+        <Field label={t("reporting.period")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={selection.period}
+              options={REPORTING_PERIODS.map((value) => ({
+                value,
+                label: t(`reporting.${value}`),
+              }))}
+              onChange={(value) => {
+                const period = REPORTING_PERIODS.find(
+                  (candidate) => candidate === value,
+                );
+                if (period) onChange({ ...selection, period });
+              }}
+            />
+          )}
+        </Field>
+      )}
+      {showPeriod && selection.period === "custom" && (
         <>
           <Field label={t("reporting.fromDate")}>
             {(field) => (
@@ -147,7 +154,7 @@ export function ReportingFilters({
               value={selection.pipeline_id ?? ""}
               options={[
                 { value: "", label: t("reporting.allPipelines") },
-                ...(pipelines.data?.data ?? []).map((pipeline) => ({
+                ...(pipelines.data ?? []).map((pipeline) => ({
                   value: pipeline.id,
                   label: pipeline.name,
                 })),
@@ -200,6 +207,13 @@ export function ReportingFilters({
             />
           )}
         </Field>
+      )}
+      {showDimensions === "folded" ? (
+        <FoldedDimensions selection={selection} onChange={onChange} />
+      ) : (
+        showDimensions && (
+          <DimensionFilters selection={selection} onChange={onChange} />
+        )
       )}
       <ErrorLine error={context.error ?? pipelines.error} />
     </div>

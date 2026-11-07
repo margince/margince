@@ -63,13 +63,16 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   capture_counterparty: "approval.kind.capture_counterparty",
   // A colleague asks the owner to share a contact capture kept private.
   contact_share: "approval.kind.contact_share",
+  // A colleague asks the owner to hand over a contact or company.
+  ownership_transfer: "approval.kind.ownership_transfer",
   company_name_promotion: "approval.kind.company_name_promotion",
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",
   // Retired: nothing stages it, but decided cards still carry it.
   transcript_proposal: "approval.kind.transcript_proposal",
-  commitment_task: "approval.kind.commitment_task",
+  // Retired the same way: a waiting card can still be rejected.
   stage_progression: "approval.kind.stage_progression",
+  commitment_task: "approval.kind.commitment_task",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
   disqualify_lead: "approval.kind.disqualify_lead",
   demote_lead: "approval.kind.demote_lead",

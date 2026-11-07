@@ -297,6 +297,7 @@ func TestAModelErrorInTheWalkLeavesTheContactACandidate(t *testing.T) {
 // secondMailbox connects Rep2's shared mailbox and returns its address.
 func (h *historyEnv) secondMailbox(t *testing.T) string {
 	t.Helper()
+	h.e.GrantRole(t, h.e.Rep2, "rep")
 	seat := seatAddress(t, h.e, h.e.Rep2)
 	h.e.WsExec(t, `UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, h.e.Rep2)
 	return seat

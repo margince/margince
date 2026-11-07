@@ -8,6 +8,7 @@ import { EmptyState, Skeleton } from "../../design-system/atoms";
 import { HowItStands } from "../../design-system/howitstands";
 import { Panel, PanelBody } from "../../design-system/panel";
 import type { HealthRating } from "../../design-system/readingtone";
+import { useRecordTimeline } from "../../design-system/recordtimeline";
 import {
   StandingDims,
   type StandingPeek,
@@ -25,8 +26,10 @@ import {
   useT,
 } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
-import { useRecordZone } from "../../lib/recordzone";
 import { activityMarks } from "../../lib/standingmarks";
+import { useViewerZone } from "../../lib/viewerzone";
+import { companyActivityVerdict } from "./companyactivity";
+import { nextBarLateness } from "./companynextbar";
 import {
   companyDimRows,
   companyVerdict,
@@ -63,9 +66,14 @@ export function CompanyHowItStands({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const payment = usePaymentHealth(companyId);
   const healthReason = useHealthReason();
+  // The 360's page seeds the line; a wider zoom pages older rows from the list.
+  const history = useRecordTimeline("company", companyId, {
+    firstPage: view?.activities,
+    enabled: Boolean(view?.activities),
+  });
   if (loading) {
     return (
       <Panel>
@@ -92,7 +100,16 @@ export function CompanyHowItStands({
     locale,
   });
   const withheld = omitted(view, "health");
-  const verdict = companyVerdict({ dimensions, withheld, moment: view.moment });
+  const late = nextBarLateness(view, zone, { t, plural, locale });
+  const verdict = companyVerdict({
+    dimensions,
+    withheld,
+    moment: view.moment && {
+      rule: view.moment.rule,
+      why_now: late?.sentence ?? view.moment.why_now,
+    },
+    unrated: companyActivityVerdict(view, { t, locale, zone }),
+  });
   const word = t(verdict.word);
   const words = { t, plural, locale, zone };
   const { events, gap } = companyTimeline(view, words);
@@ -140,7 +157,8 @@ export function CompanyHowItStands({
           record={zone}
           gap={gap}
           events={events}
-          marks={activityMarks(view.activities?.data ?? [], {
+          history={history}
+          marks={activityMarks(history.activities, {
             t,
             locale,
             zone,

@@ -42,6 +42,7 @@ import (
 	"encoding/json"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -53,6 +54,9 @@ type ListRecordsResult struct {
 	// NextCursor is absent rather than empty when there is no next page — an
 	// empty string reads as a cursor a caller might try to use.
 	NextCursor string `json:"next_cursor,omitempty"`
+	// Calendar is GET /activities' own field: present on an activity list read
+	// as the reader's diary, and only `connected` makes an empty day a free one.
+	Calendar *crmcontracts.ReaderCalendar `json:"calendar,omitempty"`
 }
 
 // QueryWorkspaceResult is what query_workspace answers: the records a plan
@@ -237,6 +241,9 @@ type MergeRecordsResult struct {
 	// SurvivorID is the target, never the source: the source is archived and
 	// redirected, so an id a caller keeps has to be the one that still resolves.
 	SurvivorID ids.UUID `json:"survivor_id"`
+	// Case is a contact case decision's outcome: who keeps access, who was
+	// skipped, and whether it was only a preview.
+	Case *crmcontracts.ContactCaseOutcome `json:"case,omitempty"`
 }
 
 // DraftEmailResult is what draft_email answers: a message nobody has sent.
@@ -351,6 +358,9 @@ type PrepForMeetingResult struct {
 	// other anchors name a record rather than a room, and there is no brief to
 	// write for them.
 	Brief *MeetingBriefResult `json:"brief,omitempty"`
+	// Preparation is the caller's own readiness for a meeting anchor they
+	// attend, with the revision confirm_meeting_ready takes.
+	Preparation *MeetingPreparationResult `json:"preparation,omitempty"`
 }
 
 // QualifiedField is one gap the tool filled and the evidence it filled it from.
@@ -372,6 +382,9 @@ type QualifyLeadResult struct {
 // and the note it left if it left one.
 type ProgressDealResult struct {
 	Deal wireRecord `json:"deal"`
+	// ProbabilityNote says the probability the move set from the new stage,
+	// absent when the move changed no stage.
+	ProbabilityNote string `json:"probability_note,omitempty"`
 	// NoteActivityID is absent when the call carried no note. It is a pointer
 	// rather than a zero uuid because "no note was asked for" and "a note whose
 	// id is all zeroes" are different claims, and only one of them is true.

@@ -71,7 +71,7 @@ func NewCohortPromoteGen(pool *pgxpool.Pool, store *contacts.Store, log *slog.Lo
 	// forever, and nothing about the call would look wrong.
 	return &CohortPromoteGen{
 		pool:  pool,
-		store: store.WithAudienceRecompute(activities.RecomputeAudienceTx),
+		store: cohortRepairStore(store),
 		log:   log,
 	}
 }
@@ -161,3 +161,7 @@ const (
 // so a link that appeared without anybody clicking is attributable to the pass
 // that wrote it rather than reading as the capture's own work.
 const cohortPromoteActor = "cohort-promote"
+
+func cohortRepairStore(store *contacts.Store) *contacts.Store {
+	return store.WithAudienceRecompute(activities.RecomputeAudienceTx)
+}

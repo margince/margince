@@ -9,10 +9,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatDateAbbrev, formatMoneyCompact } from "../../format/format";
+import { formatAnalyticsMoney, formatDateAbbrev } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { ForecastView } from "./analytics.forecast";
+import { AnalyticsScreen } from "./analytics";
+import { ForecastView, SharedForecastView } from "./analytics.forecast";
 
 // The population these tests read under. Workspace because that is what a
 // manager sees, and because a nameable scope is what the editor requires.
@@ -52,7 +53,12 @@ function readings(over: Record<string, unknown> = {}) {
     scope_kind: "workspace",
     won_minor: 40_000,
     evidence_minor: 120_000,
-    best_case_minor: 180_000,
+    likely_threshold: 90,
+    by_source: {
+      stage: { open_minor: 250_000, weighted_minor: 130_000 },
+      human: { open_minor: 0, weighted_minor: 0 },
+      margince: { open_minor: 0, weighted_minor: 0 },
+    },
     open_minor: 250_000,
     weighted_minor: 130_000,
     eligible_count: 12,
@@ -97,6 +103,15 @@ function forecastStub(opts: StubOpts = {}) {
     if (url.includes("/forecast/assurance/exceptions")) {
       return jsonResponse({ data: [] });
     }
+    if (url.includes("/forecast/assurance/preview")) {
+      return jsonResponse({
+        started: false,
+        eligible_deals: 12,
+        findings: [],
+        readiness: "needs_review",
+        sources: [{ source: "mail", state: "checked" }],
+      });
+    }
     if (url.includes("/forecast/assurance")) {
       if (opts.assuranceStatus === 404) {
         // What the contract says a fresh installation gets: "no run has
@@ -124,6 +139,45 @@ function forecastStub(opts: StubOpts = {}) {
 }
 
 describe("ForecastView", () => {
+  // The same two facts the Overview's caption states: the whole period, and
+  // the instant its actuals run through.
+  it("names the whole period and the cutoff as two facts", async () => {
+    vi.stubGlobal("fetch", forecastStub());
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+    const period = await screen.findByText("1 April – 30 June");
+    const through = screen.getByText("Actuals through 14/05/2026, 11:00");
+    expect(period.parentElement).toBe(through.parentElement);
+  });
+
+  // The landing names its basis, and the modelled finish is its own reading.
+  it("shows the landing's basis and the modelled finish apart", async () => {
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({
+        readings: readings({
+          landing: {
+            amount_minor: 160_000,
+            measure: "likely",
+            won_minor: 40_000,
+            remaining_minor: 120_000,
+          },
+          range_low_minor: 90_000,
+          range_high_minor: 210_000,
+        }),
+      }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+    expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
+    const model = screen
+      .getByText("Modelled quarter finish")
+      .closest("section");
+    expect(model?.textContent).toContain(
+      `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
+    );
+    const landing = screen.getByText("Landing").closest("section");
+    expect(landing?.textContent).not.toContain("80%");
+  });
+
   // The strip lays out one column per child. The records' figure beside a
   // call is a child of its own, or it wraps into a half row.
   it("gives the deal records' figure its own slot beside the call", async () => {
@@ -144,8 +198,9 @@ describe("ForecastView", () => {
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const records = await screen.findByText("From the deal records");
     const strip = records.closest<HTMLElement>("[style*='--stat-strip-slots']");
-    expect(strip?.style.getPropertyValue("--stat-strip-slots")).toBe("2");
-    expect(strip?.children).toHaveLength(2);
+    // The call, the records and the modelled finish: three slots, none added.
+    expect(strip?.style.getPropertyValue("--stat-strip-slots")).toBe("3");
+    expect(strip?.children).toHaveLength(3);
   });
 
   // The answer names BOTH figures. Shown only the call, a reader cannot tell
@@ -171,16 +226,13 @@ describe("ForecastView", () => {
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const answer = await screen.findByText(/Manager forecast:/i);
-    expect(answer.textContent).toContain("2,000.00");
-    expect(answer.textContent).toContain("1,600.00");
+    expect(answer.textContent).toContain("€2,000");
+    expect(answer.textContent).toContain("€1,600");
   });
 
-  // The gap between a call and its evidence has a DIRECTION, and one sentence
-  // cannot carry both: a signed figure in "… over evidence" printed a call
-  // twenty thousand short of its evidence as "-€200.00 over evidence", which is
-  // the wrong direction stated twice. Three arms, and the magnitude unsigned.
+  // A signed gap needs its own direction rather than an unconditional "over".
   describe("how far the call sits from the evidence", () => {
-    function withCall(amountMinor: number) {
+    function withCall(amountMinor: number, baseline?: string) {
       vi.stubGlobal(
         "fetch",
         forecastStub({
@@ -194,6 +246,7 @@ describe("ForecastView", () => {
               currency: "EUR",
               author_id: "u1",
               created_at: "2026-05-01T09:00:00Z",
+              baseline,
             },
           }),
         }),
@@ -201,25 +254,38 @@ describe("ForecastView", () => {
       render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     }
 
-    it("says a forecast above won plus confirmed commits is over it", async () => {
-      withCall(200_000);
-
-      const detail = await screen.findByText(/above won \+ confirmed commits$/);
+    // A call made before calls kept their baseline says so, rather than
+    // letting the gap read as what moved since.
+    it("says a call with no baseline cannot say what moved since", async () => {
+      withCall(200_000, "unavailable");
+      const detail = await screen.findByText(/above won \+ Likely/);
       expect(detail.textContent).toContain(
-        formatMoneyCompact(40_000, "EUR", "en"),
+        en["forecast.callHistoryUnavailable"],
       );
-      expect(detail.textContent).not.toContain("-");
     });
 
-    it("says a forecast below won plus confirmed commits is under it, not over it by a minus", async () => {
-      withCall(100_000);
+    it("says a forecast above won plus Likely is over it", async () => {
+      withCall(200_000);
 
-      const detail = await screen.findByText(/below won \+ confirmed commits$/);
+      const detail = await screen.findByText(/above won \+ Likely$/);
       expect(detail.textContent).toContain(
-        formatMoneyCompact(60_000, "EUR", "en"),
+        formatAnalyticsMoney(40_000, "EUR", "en"),
       );
       expect(detail.textContent).not.toContain("-");
-      expect(screen.queryByText(/above won \+ confirmed commits/)).toBeNull();
+      expect(detail.textContent).not.toContain(
+        en["forecast.callHistoryUnavailable"],
+      );
+    });
+
+    it("says a forecast below won plus Likely is under it, not over it by a minus", async () => {
+      withCall(100_000);
+
+      const detail = await screen.findByText(/below won \+ Likely$/);
+      expect(detail.textContent).toContain(
+        formatAnalyticsMoney(60_000, "EUR", "en"),
+      );
+      expect(detail.textContent).not.toContain("-");
+      expect(screen.queryByText(/above won \+ Likely/)).toBeNull();
     });
 
     // Its own arm rather than a zero: "±€0 over evidence" is a difference
@@ -235,9 +301,7 @@ describe("ForecastView", () => {
           ),
         ),
       ).toBeTruthy();
-      expect(
-        screen.queryByText(/(above|below) won \+ confirmed commits/),
-      ).toBeNull();
+      expect(screen.queryByText(/(above|below) won \+ Likely/)).toBeNull();
     });
   });
 
@@ -383,19 +447,14 @@ describe("ForecastView", () => {
     expect(screen.getByText("2")).toBeTruthy();
   });
 
-  // A fresh installation has been checked by nobody, and the panel must say so.
-  //
-  // 404 is this endpoint's ANSWER — the contract spells it "no run has
-  // completed yet" — so rendering it through the error gate told a reader the
-  // screen was broken when nothing had looked yet. Those are opposite
-  // instructions about whether to trust the readings above, which is why the
-  // wrong one is worth a test rather than a glance.
-  it("says nothing has been checked when no run has completed", async () => {
+  it("offers the input check when no run has completed", async () => {
     vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
-    expect(await screen.findByText(/Nothing checked yet/)).toBeTruthy();
-    // And NOT the broken-view state, which is what shipped.
+    expect(
+      await screen.findByRole("button", { name: "Start checking" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Nothing checked yet/)).toBeNull();
     expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
     expect(screen.queryByText(/not found/)).toBeNull();
   });
@@ -406,4 +465,106 @@ it("keeps an unread source visible even when there are no findings or readiness 
   render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
   const warning = await screen.findByText(/Not checked:.*mail/i);
   expect(warning.closest("details")).toBeNull();
+});
+
+// Likely is counted in full above the installation's threshold; Weighted
+// takes every open deal at its probability, split by where it comes from.
+it("states Likely at its threshold and Weighted by source, with no best case", async () => {
+  vi.stubGlobal(
+    "fetch",
+    forecastStub({
+      readings: readings({
+        likely_threshold: 80,
+        by_source: {
+          stage: { open_minor: 200_000, weighted_minor: 100_000 },
+          human: { open_minor: 40_000, weighted_minor: 24_000 },
+          margince: { open_minor: 10_000, weighted_minor: 6_000 },
+        },
+      }),
+    }),
+  );
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  expect(
+    await screen.findByText(
+      en["forecast.likely.help"].replace("{threshold}", "80%"),
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText(en["forecast.weighted.help"])).toBeTruthy();
+  const money = (minor: number) => formatAnalyticsMoney(minor, "EUR", "en");
+  expect(
+    screen.getByText(
+      `From stages ${money(100_000)} · set by hand ${money(24_000)} · Margince ${money(6_000)}`,
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/best case/i)).toBeNull();
+});
+
+// A share states its landing and modelled finish. A snapshot frozen before the
+// landing was kept says its basis is not recorded, and keeps its range.
+describe("SharedForecastView", () => {
+  it("keeps the shared route's loading state inside the page gutter", () => {
+    const before = globalThis.location.href;
+    try {
+      globalThis.history.replaceState(null, "", "#/analytics/shared/fixture");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => new Promise<Response>(() => {})),
+      );
+      const { container } = render(<AnalyticsScreen />);
+      expect(container.querySelector(".wrap")).not.toBeNull();
+    } finally {
+      cleanup();
+      globalThis.history.replaceState(null, "", before);
+    }
+  });
+
+  const ranged = {
+    range_low_minor: 90_000,
+    range_high_minor: 210_000,
+  };
+  function share(kind: "live" | "snapshot", over: Record<string, unknown>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          kind,
+          target: "forecast",
+          withheld: false,
+          readings: readings({ ...ranged, ...over }),
+        }),
+      ),
+    );
+    render(<SharedForecastView token="fixture" />);
+  }
+
+  it("shows a live share's landing basis beside its modelled finish", async () => {
+    share("live", {
+      landing: {
+        amount_minor: 160_000,
+        measure: "likely",
+        won_minor: 40_000,
+        remaining_minor: 120_000,
+      },
+    });
+    expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
+    expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+  });
+
+  it("says a snapshot from before the landing was kept has no recorded basis", async () => {
+    share("snapshot", {});
+    expect(await screen.findByText("Basis not recorded")).toBeTruthy();
+    expect(screen.getByText("Not recorded")).toBeTruthy();
+    const model = screen
+      .getByText("Modelled quarter finish")
+      .closest("section");
+    expect(model?.textContent).toContain(
+      `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
+    );
+  });
+
+  it("keeps the modelled finish on a live share that carries a range alone", async () => {
+    share("live", {});
+    expect(await screen.findByText("Modelled quarter finish")).toBeTruthy();
+    expect(screen.queryByText("Basis not recorded")).toBeNull();
+  });
 });

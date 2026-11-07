@@ -2,13 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useRef, useState } from "react";
+import { MeetingOutcome } from "../../components/meetingoutcome";
 import {
   useAutomationRetry,
   useClaimSettle,
-  useTaskUpdate,
+  useTaskDone,
 } from "../../components/taskactions";
-import { useCompleteTask } from "../../components/taskcomplete";
-import { completeFailureKey } from "../../components/taskwritefollowup";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
@@ -24,13 +23,13 @@ import {
   BriefSetAsides,
 } from "./worklist.briefverbs";
 import { DomainQuestionAnswer } from "./worklist.domainquestion";
-import { MeetingOutcome } from "./worklist.meetingoutcome";
 import { PlanWorkActions } from "./worklist.plan";
 import {
   useNudgeDismissal,
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
+import { MeetingReadyVerb, needsReadiness } from "./worklist.ready";
 import { replyTarget, WaitingReply } from "./worklist.reply";
 import { answerBelow } from "./worklist.suggestion";
 
@@ -82,35 +81,34 @@ const ANSWER_BY_SOURCE: Partial<
   Record<
     WorklistItem["source"],
     {
-      verb: WorklistItem["actions"][number];
-      draw: (item: WorklistItem) => RowPlacement;
+      verbs: readonly WorklistItem["actions"][number][];
+      draw: (item: WorklistItem, quiet: boolean) => RowPlacement;
     }
   >
 > = {
   notice: {
-    verb: "acknowledge",
+    verbs: ["acknowledge"],
     draw: (item) => ({ primary: <NoticeAcknowledge id={item.id} /> }),
   },
   failed_approval: {
-    verb: "acknowledge",
+    verbs: ["acknowledge"],
     draw: (item) => ({ primary: <FailedApprovalAnswer item={item} /> }),
   },
   automation_run: {
-    verb: "retry",
+    verbs: ["retry"],
     draw: (item) => ({ primary: <AutomationRetry id={item.id} /> }),
   },
-  // Keyed on `keep`, the server's signal that this row may be answered at all.
-  // The control then asks the row again for each button, so a seat offered one
-  // of the two draws only that one. Like meeting_outcome: one entry per source.
+  // Any answering verb draws the answer: a redirected site offers discard and
+  // reopen but never keep. The control asks the row again for each button.
   domain_question: {
-    verb: "keep",
+    verbs: ["keep", "keep_as_vendor", "discard", "reopen"],
     draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
   },
-  // Two verbs of equal weight, so the row has no primary. Cancelling and saying
-  // what came of it are equally likely about a meeting the product knows nothing
-  // about. Leading with either would read as an expectation it has not got.
+  // Verbs of equal weight, so the row has no primary. Any answer is plausible
+  // about a meeting the product knows nothing about. A filled verb would claim
+  // an expectation it has not got.
   meeting_outcome: {
-    verb: "decide",
+    verbs: ["decide"],
     draw: (item) => ({
       equals: (
         <MeetingOutcome
@@ -121,32 +119,42 @@ const ANSWER_BY_SOURCE: Partial<
           // always has one: the meeting's subject, written by whoever booked
           // it. The dialog falls back to its own heading when a row has none.
           title={item.title}
+          invalidateKeys={[worklistKey]}
+          cancellable={item.actions.includes("cancel")}
         />
       ),
     }),
   },
   conversation_claim: {
-    verb: "complete",
+    verbs: ["complete"],
     draw: (item) => ({ primary: <PromiseKept id={item.id} /> }),
   },
   task: {
-    verb: "complete",
-    draw: (item) => ({
-      primary: <TaskComplete id={item.id} version={item.version} />,
+    verbs: ["complete"],
+    draw: (item, quiet) => ({
+      primary: (
+        <TaskComplete id={item.id} version={item.version} quiet={quiet} />
+      ),
     }),
   },
   // The row's id is the contact's here, which is what the dismissal endpoint
   // takes, so this verb is offered on this lane alone. `dismiss` on brief_item
   // means something else and posts elsewhere, so this table is keyed by source.
   relationship_decay: {
-    verb: "dismiss",
-    draw: (item) => ({ primary: <NudgeDismiss contactId={item.id} /> }),
+    verbs: ["dismiss"],
+    draw: (item) => ({
+      primary: <NudgeDismiss contactId={item.id} permanent={false} />,
+      equals: <NudgeDismiss contactId={item.id} permanent />,
+    }),
   },
 };
 
+// `quiet` outlines the row's own verb where its card already holds a filled
+// one, since a card carries one filled button.
 export function rowAnswer(
   item: WorklistItem,
   brief: BriefAnswer,
+  quiet = false,
 ): RowPlacement {
   if (item.source === "weekly_commitment")
     return { primary: <PlanWorkActions item={item} /> };
@@ -160,8 +168,12 @@ export function rowAnswer(
   // Never a batch: a group row stands for a pile and names no single record.
   // Every id-keyed answer below would act on the wrong one.
   const keyed = ANSWER_BY_SOURCE[item.source];
-  if (keyed && !item.batch && item.actions.includes(keyed.verb)) {
-    return keyed.draw(item);
+  if (
+    keyed &&
+    !item.batch &&
+    keyed.verbs.some((verb) => item.actions.includes(verb))
+  ) {
+    return keyed.draw(item, quiet);
   }
   // Its own branch: this answer needs more than the row's id. The composer
   // files the sent message against a record, so the subject travels with it.
@@ -176,6 +188,10 @@ export function rowAnswer(
         move={item.move}
       />
     ) : undefined;
+  // The brief stays the way in; "I'm ready" stands beside it, never instead.
+  if (needsReadiness(item)) {
+    return { primary, equals: <MeetingReadyVerb item={item} /> };
+  }
   // A suggestion's acknowledgment never replaces the supported deal move.
   if (item.source === "brief_item" && !item.batch) {
     return {
@@ -191,15 +207,16 @@ export function rowAnswer(
   return { primary };
 }
 
-// Setting a lapsed contact aside for a month.
-//
-// Nobody is waiting on a quiet contact, so its row returns each morning.
-// Without a way to say "not this one, not now", a rep who decided meets it again.
+// Setting a lapsed contact aside for a month, or with `permanent` ("Stop
+// following") for good. A quiet contact's row returns each morning otherwise.
 //
 // Undoable from the confirmation, like every disposition beside it. The row
 // leaves the lane on success. Without undo, a misclick costs the reader the only
 // address they had for a contact they were not done with.
-function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
+function NudgeDismiss({
+  contactId,
+  permanent,
+}: Readonly<{ contactId: string; permanent: boolean }>) {
   const t = useT();
   const toast = useToast();
   const { dismiss, restore } = useNudgeDismissal();
@@ -208,38 +225,45 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
       pending={dismiss.isPending}
       onClick={() =>
         dismiss.mutate(
-          { contactId },
+          { contactId, permanent },
           {
             onSuccess: () =>
-              toast.show(t("worklist.verb.dismissed"), {
-                action: {
-                  kind: "undo",
-                  label: t("worklist.verb.dismissUndo"),
-                  // The toast dismisses itself when the action is pressed.
-                  // A failed undo leaves the contact set aside, with the only
-                  // way back already off the screen.
-                  //
-                  // mutateAsync and a catch: the dismissal removes the row.
-                  // By the time the reader presses Undo, this component is
-                  // unmounted, and React Query has dropped the observer that
-                  // per-call callbacks hang off. A refused undo would fail
-                  // with the screen silent.
-                  onAct: () => {
-                    restore.mutateAsync({ contactId }).catch(() =>
-                      toast.show(t("worklist.verb.dismissUndoFailed"), {
-                        tone: "danger",
-                      }),
-                    );
+              toast.show(
+                t(
+                  permanent
+                    ? "worklist.verb.stopped"
+                    : "worklist.verb.dismissed",
+                ),
+                {
+                  action: {
+                    kind: "undo",
+                    label: t("worklist.verb.dismissUndo"),
+                    // The toast dismisses itself when the action is pressed.
+                    // A failed undo leaves the contact set aside, with the only
+                    // way back already off the screen.
+                    //
+                    // mutateAsync and a catch: the dismissal removes the row.
+                    // By the time the reader presses Undo, this component is
+                    // unmounted, and React Query has dropped the observer that
+                    // per-call callbacks hang off. A refused undo would fail
+                    // with the screen silent.
+                    onAct: () => {
+                      restore.mutateAsync({ contactId }).catch(() =>
+                        toast.show(t("worklist.verb.dismissUndoFailed"), {
+                          tone: "danger",
+                        }),
+                      );
+                    },
                   },
                 },
-              }),
+              ),
             onError: () =>
               toast.show(t("worklist.verb.dismissFailed"), { tone: "danger" }),
           },
         )
       }
     >
-      {t("worklist.verb.dismiss")}
+      {t(permanent ? "worklist.verb.stopFollowing" : "worklist.verb.dismiss")}
     </Button>
   );
 }
@@ -301,20 +325,15 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
 function TaskComplete({
   id,
   version,
-}: Readonly<{ id: string; version: number | undefined }>) {
+  quiet,
+}: Readonly<{ id: string; version: number | undefined; quiet: boolean }>) {
   const t = useT();
-  const toast = useToast();
-  const update = useTaskUpdate([worklistKey]);
-  // A rejected PATCH otherwise leaves the button idle with nothing on screen
-  // to say so, and the reader has no reason to try again.
-  const complete = useCompleteTask(update, (error) =>
-    toast.show(t(completeFailureKey(error)), { tone: "danger" }),
-  );
+  const done = useTaskDone(id, version);
   return (
     <Button
-      variant="primary"
-      pending={update.isPending}
-      onClick={() => complete(id, version)}
+      variant={quiet ? "ghost" : "primary"}
+      pending={done.pending}
+      onClick={done.complete}
     >
       {t("tasks.complete")}
     </Button>
@@ -370,13 +389,15 @@ function refusalMessage(
       return "worklist.verb.retryRefusedRepeats";
     case "trigger_event_unavailable":
       return "worklist.verb.retryRefusedEventGone";
+    case "passport_revoked":
+      return "worklist.verb.retryRefusedPassportRevoked";
     default:
       return "worklist.verb.retryFailed";
   }
 }
 
 // How a meeting went is recorded by `MeetingOutcome` in
-// worklist.meetingoutcome.tsx. "Cancelled" writes that one word from the card;
+// components/meetingoutcome.tsx. "Cancelled" writes that one word from the card;
 // "Update" opens the composer bound to this meeting, where the outcome is typed.
 // Its dialog reads and patches the meeting: a form, a query and a mutation. That
 // is a screen's worth of code, not one row verb, so it has its own file.

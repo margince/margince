@@ -30,7 +30,8 @@ func scanExecution(row pgx.Row) (crmcontracts.ReportingExecution, error) {
 
 func (s *Service) execution(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.ReportingExecution, error) {
 	var b bindings
-	out, err := scanExecution(tx.QueryRow(ctx, "SELECT "+executionColumns+" FROM report_execution WHERE id="+b.add(id), b.values...))
+	query := "SELECT " + executionColumns + " FROM report_execution WHERE id=" + b.add(id)
+	out, err := scanExecution(tx.QueryRow(ctx, query, b.values...))
 	if err != nil {
 		return out, err
 	}
@@ -64,7 +65,8 @@ func (s *Service) ListExecutions(ctx context.Context, reportID ids.UUID, after *
 		if after != nil {
 			where += " AND id<" + b.add(*after)
 		}
-		rows, err := tx.Query(ctx, "SELECT "+executionColumns+" FROM report_execution WHERE "+where+" ORDER BY id DESC LIMIT "+b.add(limit+1), b.values...)
+		query := "SELECT " + executionColumns + " FROM report_execution WHERE " + where + " ORDER BY id DESC LIMIT " + b.add(limit+1)
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -161,14 +163,16 @@ func (s *Service) insertExecution(ctx context.Context, tx pgx.Tx, in executionIn
 	}
 	b = bindings{}
 	var existingHash string
-	if err := tx.QueryRow(ctx, "SELECT id,request_hash FROM report_execution WHERE execution_key="+b.add(in.Key), b.values...).Scan(&id, &existingHash); err != nil {
+	query := "SELECT id,request_hash FROM report_execution WHERE execution_key=" + b.add(in.Key)
+	if err := tx.QueryRow(ctx, query, b.values...).Scan(&id, &existingHash); err != nil {
 		return crmcontracts.ReportingExecution{}, err
 	}
 	if existingHash != in.Hash {
 		return crmcontracts.ReportingExecution{}, apperrors.ErrConflict
 	}
 	b = bindings{}
-	out, err := scanExecution(tx.QueryRow(ctx, "SELECT "+executionColumns+" FROM report_execution WHERE id="+b.add(id), b.values...))
+	statement := "SELECT " + executionColumns + " FROM report_execution WHERE id=" + b.add(id)
+	out, err := scanExecution(tx.QueryRow(ctx, statement, b.values...))
 	if err != nil {
 		return out, err
 	}
@@ -200,7 +204,8 @@ func (s *Service) RetryExecution(ctx context.Context, id ids.UUID) (crmcontracts
 			return apperrors.ErrConflict
 		}
 		var b bindings
-		command, err := tx.Exec(ctx, "UPDATE report_execution SET status='pending',retry_base_attempt=attempt,retry_at=NULL,reason=NULL WHERE id="+b.add(id)+" AND status="+b.add(before.Status), b.values...)
+		query := "UPDATE report_execution SET status='pending',retry_base_attempt=attempt,retry_at=NULL,reason=NULL WHERE id=" + b.add(id) + " AND status=" + b.add(before.Status)
+		command, err := tx.Exec(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}

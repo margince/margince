@@ -14,12 +14,17 @@ act on the mail by itself.
   be read, or the mail was too long to store whole.
 - **The text is the forwarded mail.** A forward that adds no words of its own
   shows the text of the forwarded mail. That text is not from the sender.
-- **The text has not been checked yet.** The mail was stored before Margince
+- **Email text not verified.** The mail was stored before Margince
   checked this. Margince checks it against the stored copy of the mail, and
-  restores text that an older version could not read. A mail with no stored
-  copy stays unchecked.
+  restores text that an older version could not read. Until the check runs,
+  the notice says that Margince cannot find requests or commitments in it.
+  Read the text and add a task if you need to follow up.
+- **This mail's text can no longer be checked.** The stored original of the
+  mail is missing or cannot be read, so Margince cannot tell whether it read all of the text. It
+  cannot find requests or commitments in this mail. Read the original in your
+  mail program and add any task by hand.
 
-Open such a mail in your mail program to read all of it.
+If text is missing, open the mail in your mail program to read all of it.
 
 ## What Margince does not do with it
 

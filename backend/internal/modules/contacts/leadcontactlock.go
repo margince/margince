@@ -57,6 +57,7 @@ func lockContactThenLead(
 // come before any row. Then come the last-activity clocks an employment at the
 // company moves, the candidate contact, its lanes, and the lead. A zero
 // candidate names no contact; a nil company moves no clock.
+// The promotion's industry carry (leadIndustryCarry) also relies on this company lock.
 func (s *Store) lockLeadForContact(ctx context.Context, tx pgx.Tx, id ids.LeadID, candidate ids.ContactID, company *ids.CompanyID) (ContactCandidate, error) {
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
 		return ContactCandidate{}, err
@@ -85,13 +86,13 @@ func (s *Store) lockLeadForContact(ctx context.Context, tx pgx.Tx, id ids.LeadID
 	return lanes, err
 }
 
-// promoteTargetMovedError says the contact or company a promotion locked is no
-// longer the lead's under the lock. QualifyLead starts over with the new one; a
+// promoteTargetMovedError says the contact, company or evidence a promotion
+// locked is no longer the lead's under the lock. QualifyLead starts over with the new one; a
 // caller that cannot start over reads it as a conflict.
 type promoteTargetMovedError struct{}
 
 func (e *promoteTargetMovedError) Error() string {
-	return "the contact or company this lead names changed while it was being promoted"
+	return "the contact, company or evidence this lead names changed while it was being promoted"
 }
 
 // refuseMovedCompany answers promoteTargetMovedError when the lead's linked
@@ -136,6 +137,13 @@ func (s *Store) promoteCandidate(ctx context.Context, tx pgx.Tx, id ids.LeadID) 
 	if err != nil {
 		return none, fmt.Errorf("read lead before resolving its contact: %w", err)
 	}
+	return s.leadPromotionTarget(ctx, tx, lead)
+}
+
+// leadPromotionTarget is the contact a promotion of this lead lands on, or zero
+// for a new one. An approval pins it, so the candidate and the pin agree.
+func (s *Store) leadPromotionTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (ids.ContactID, error) {
+	var none ids.ContactID
 	if lead.Status == crmcontracts.LeadStatusPromoted || lead.ArchivedAt != nil || leadIdentityName(lead) == "" {
 		return none, nil
 	}

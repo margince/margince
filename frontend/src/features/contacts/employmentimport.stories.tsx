@@ -91,3 +91,8 @@ export const MatchingACompany: Story = {
     await screen.findByRole("dialog", { name: "Match company" });
   },
 };
+
+export const MatchingACompanyDark: Story = {
+  ...MatchingACompany,
+  globals: { theme: "dark" },
+};

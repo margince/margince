@@ -5,7 +5,20 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Card, Checkbox, EmptyState } from "../../design-system/atoms";
+import {
+  ALL_AREAS,
+  areasComplete,
+  areasFormValue,
+  type PassportAreas,
+  WorkAreasChoice,
+} from "../../components/workareas";
+import {
+  Button,
+  Card,
+  Checkbox,
+  EmptyState,
+  SegmentedControl,
+} from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
@@ -19,7 +32,7 @@ import "./oauthconsent.css";
 // that decision is made, and the only one: the api serves no HTML, so there is
 // no other surface a consent decision can be taken on. GET /oauth/authorize
 // arms a single-use nonce, sets an HttpOnly Path=/oauth/authorize cookie
-// carrying its counterpart, and 302s to `/#/oauth-consent?…&consent=<nonce>`.
+// carrying its counterpart, and 302s to `/consent#/oauth-consent?…&consent=<nonce>`.
 // The nonce is deliberately absent from the consent-request endpoint's
 // response (the cookie never reaches it), so it is read out of the redirect
 // fragment instead and POSTed back — the POST proves possession of both
@@ -130,6 +143,40 @@ function toggled(current: ReadonlySet<Scope>, scope: Scope): Set<Scope> {
   return next;
 }
 
+// The two common grants, offered as one choice above the boxes. "Read and
+// draft" lets an assistant look and prepare without changing or sending
+// anything; "Full assistant" is every scope offered. Any other set is custom.
+const PRESETS = ["readDraft", "full", "custom"] as const;
+type Preset = (typeof PRESETS)[number];
+const READ_AND_DRAFT: readonly Scope[] = ["read", "draft"];
+
+function presetOf(
+  granted: ReadonlySet<Scope>,
+  offered: readonly Scope[],
+): Preset {
+  const readDraft = offered.filter((scope) => READ_AND_DRAFT.includes(scope));
+  const exactly = (set: readonly Scope[]) =>
+    set.length === granted.size && set.every((scope) => granted.has(scope));
+  if (exactly(offered)) return "full";
+  if (exactly(readDraft)) return "readDraft";
+  return "custom";
+}
+
+function presetScopes(
+  preset: Preset,
+  offered: readonly Scope[],
+  current: ReadonlySet<Scope>,
+): ReadonlySet<Scope> {
+  switch (preset) {
+    case "full":
+      return new Set(offered);
+    case "readDraft":
+      return new Set(offered.filter((scope) => READ_AND_DRAFT.includes(scope)));
+    case "custom":
+      return current;
+  }
+}
+
 // The ordinary path: every scope the client could ask for, ticked by default.
 // `consent` is a real nonce here, never "": OAuthConsent renders this only past
 // its own no-nonce guard.
@@ -150,12 +197,28 @@ function ConsentSelector({
     () => new Set(data.scopes),
   );
   const scopeList = data.scopes.filter((scope) => granted.has(scope)).join(" ");
+  // Every grant starts at all areas; the section hides itself when the role
+  // reaches one area, and the form then posts `all`.
+  const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
 
   return (
     <Card>
       <Heading size="xlarge">{t("consent.title")}</Heading>
       <p>{t("consent.asks", { client: data.client_name })}</p>
       <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
+      <SegmentedControl
+        options={PRESETS}
+        value={presetOf(granted, data.scopes)}
+        onChange={(preset) =>
+          setGranted((current) => presetScopes(preset, data.scopes, current))
+        }
+        labels={{
+          readDraft: t("consent.preset.readDraft"),
+          full: t("consent.preset.full"),
+          custom: t("consent.preset.custom"),
+        }}
+        label={t("consent.preset.label")}
+      />
       <div className="oauthconsent-scopes">
         {data.scopes.map((scope) => (
           <Checkbox
@@ -173,13 +236,23 @@ function ConsentSelector({
           />
         ))}
       </div>
+      <WorkAreasChoice
+        reachable={data.areas}
+        value={areas}
+        onChange={setAreas}
+      />
       <p className="t-caption">{t("consent.ceiling")}</p>
       {data.offline && <p>{t("consent.offline")}</p>}
       <div className="oauthconsent-verbs">
         <form method="post" action="/oauth/authorize">
           <HiddenAuthorizeFields params={params} consent={consent} />
           <input type="hidden" name="scopes" value={scopeList} />
-          <Button type="submit" variant="primary" disabled={granted.size === 0}>
+          <input type="hidden" name="areas" value={areasFormValue(areas)} />
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={granted.size === 0 || !areasComplete(areas)}
+          >
             {t("consent.approve")}
           </Button>
         </form>
@@ -189,6 +262,7 @@ function ConsentSelector({
           <Button type="submit">{t("consent.deny")}</Button>
         </form>
         {granted.size === 0 && <p>{t("consent.pickOne")}</p>}
+        {!areasComplete(areas) && <p>{t("workArea.pickOne")}</p>}
       </div>
     </Card>
   );

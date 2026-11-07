@@ -21,10 +21,11 @@ import (
 // order the chapters concatenate in is the order the export runs them in.
 func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored []ids.UUID) []sarSection {
 	sections := sarIdentitySections(pkg)
-	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails))
+	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
 	sections = append(sections, sarJudgementSections(pkg, authored)...)
@@ -264,15 +265,6 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// assignee_id is withheld: which colleague was given the work is a fact
 		// about the workspace, not about the subject, and a bare id would name
 		// a seat the subject has no way to resolve and no business resolving.
-		// BOTH KEYS, for the reason the erasure gives: a case opened through the
-		// subject's own link carries contact_id, one an officer opened by hand
-		// carries only the reference, and an export keyed on the link alone
-		// would show the subject the requests they made online and hide the
-		// ones somebody recorded for them.
-		{&pkg.RightsRequests, `SELECT kind, status, received_at, due_at, channel, receipt_reference,
-		          resolution
-		   FROM data_subject_request
-		   WHERE contact_id = $1 OR subject_ref = $1::text`, nil},
 		// THE LINKS THAT CAN STOP OUR MAIL, minted for this subject.
 		//
 		// token_hash is withheld and that is not a judgement call: the row holds
@@ -315,8 +307,8 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// acquisition_id is withheld for the reason source_entity_id above is:
 		// it points at a row exported in its own section, and a bare id would
 		// invite a reader to join across sections rather than read either.
-		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes,
-		          attempts, completed_at, blocked_reason, created_at
+		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes, source_kind,
+		          attempts, completed_at, blocked_reason, created_at, source_obtained_at, source_review_note
 		   FROM privacy_notice_case
 		   WHERE contact_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's

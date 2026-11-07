@@ -61,6 +61,26 @@ const rollup = {
   aggregated_account_count: 3,
   restricted_excluded: [],
   computed_at: "2026-07-01T09:30:00Z",
+  pipeline_state_at: "2026-07-01T09:30:00Z",
+  closed_won_period: {
+    grain: "quarter",
+    label: "2026-Q3",
+    start_at: "2026-07-01T00:00:00Z",
+    end_at: "2026-10-01T00:00:00Z",
+    anchor: "closed_at",
+    chosen: false,
+    previous: "2026-Q2",
+    next: null,
+  },
+  activity_window: {
+    start_at: "2026-07-01T09:30:00Z",
+    end_at: "2026-07-01T09:30:00Z",
+  },
+  current_periods: {
+    period_year: "2026",
+    period_quarter: "2026-Q3",
+    period_month: "2026-07",
+  },
 };
 
 describe("CompanyScreen — Relationships tab (P-5)", () => {
@@ -496,23 +516,42 @@ describe("CompanyScreen — the record's history", () => {
 // relationship started.
 describe("CompanyScreen — the timeline says where it stops", () => {
   it("says the activity list is cut when the 360 reports more", async () => {
-    stubFetch(companyBackstop, {
-      company360: {
-        ...company360,
-        activities: {
-          data: [
-            {
-              id: "a-1",
-              kind: "email",
-              subject: "Re: Lead Gen",
-              occurred_at: "2026-06-01T08:30:00Z",
-              direction: "inbound",
-            },
-          ],
-          page: { has_more: true, next_cursor: "c1" },
+    // How it stands pages one older row in to fill its quarter; the server
+    // still holds more after it.
+    const olderPage = {
+      data: [
+        {
+          id: "a-0",
+          kind: "note",
+          subject: "Intro",
+          occurred_at: "2025-11-03T08:30:00Z",
+        },
+      ],
+      page: { has_more: true, next_cursor: "c2" },
+    };
+    stubFetch(
+      async (url) =>
+        new URL(url).pathname.endsWith("/activities")
+          ? jsonResponse(olderPage)
+          : companyBackstop(url),
+      {
+        company360: {
+          ...company360,
+          activities: {
+            data: [
+              {
+                id: "a-1",
+                kind: "email",
+                subject: "Re: Lead Gen",
+                occurred_at: "2026-06-01T08:30:00Z",
+                direction: "inbound",
+              },
+            ],
+            page: { has_more: true, next_cursor: "c1" },
+          },
         },
       },
-    });
+    );
     render(<CompanyScreen id="o-1" />);
     await openHistory();
 

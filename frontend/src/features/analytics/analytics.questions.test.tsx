@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -110,16 +110,18 @@ describe("the Questions section", () => {
     ).toBeTruthy();
   });
 
-  it("is the last tab of Analytics", async () => {
+  it("opens from beside the tabs, not as one of them", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
     const tabs = await screen.findByRole("group", {
       name: "Analytics sections",
     });
-    const names = within(tabs)
-      .getAllByRole("button")
-      .map((tab) => tab.textContent);
-    expect(names.at(-1)).toBe("Custom reports");
+    expect(
+      within(tabs).queryByRole("button", { name: "Custom reports" }),
+    ).toBeNull();
+    expect(
+      await screen.findByRole("button", { name: "Custom reports" }),
+    ).toBeTruthy();
   });
 
   it("says the builder is withheld when the seat can read no population", async () => {
@@ -292,7 +294,7 @@ describe("a saved question the reader cannot ask as saved", () => {
     stubServer({ "GET /analytics/runs/run-2": () => jsonResponse(foreign) });
     renderView();
     expect(
-      await screen.findByText("Converted amount is at least €5,000.00"),
+      await screen.findByText("Converted amount is at least €5,000"),
     ).toBeTruthy();
   });
 

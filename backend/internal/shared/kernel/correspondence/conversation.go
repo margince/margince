@@ -31,14 +31,14 @@ func ThreadSQL(row, anchor string) string {
 // OurOutboundSQL is the test that row is mail we sent. The direction alone is
 // not: the provider's sent attestation or a colleague's sender stamp proves it.
 func OurOutboundSQL(row string) string {
-	return fmt.Sprintf(`%[1]s.direction = 'outbound'
-     AND (%[1]s.counterparty_outbound_attested OR %[1]s.sent_by_colleague IS NOT NULL)`, row)
+	return "(" + ExternalSQL(row) + " AND " + fmt.Sprintf(`%[1]s.direction = 'outbound'
+     AND (%[1]s.counterparty_outbound_attested OR %[1]s.sent_by_colleague IS NOT NULL)`, row) + ")"
 }
 
 // AuthenticatedInboundSQL is the test that row is captured inbound mail whose
 // sender the receiving server authenticated.
 func AuthenticatedInboundSQL(row string) string {
-	return fmt.Sprintf("(%[1]s.direction = 'inbound' AND %[1]s.captured_by LIKE 'connector:%%' AND %[1]s.inbound_sender_authenticated)", row)
+	return "(" + ExternalSQL(row) + " AND " + fmt.Sprintf("(%[1]s.direction = 'inbound' AND %[1]s.captured_by LIKE 'connector:%%' AND %[1]s.inbound_sender_authenticated)", row) + ")"
 }
 
 // ProvenSQL is the test that row's place in its conversation cannot be
@@ -46,3 +46,19 @@ func AuthenticatedInboundSQL(row string) string {
 func ProvenSQL(row string) string {
 	return `((` + OurOutboundSQL(row) + `) OR ` + AuthenticatedInboundSQL(row) + `)`
 }
+
+// SubjectMailSQL establishes direct collection independently of bulk delivery.
+// Only connector provenance can support closing a capture-origin notice duty.
+func SubjectMailSQL(row string) string {
+	return "(" + ExternalSQL(row) + " AND " + fmt.Sprintf(`(%[1]s.kind = 'email' AND %[1]s.direction = 'inbound'
+ AND %[1]s.archived_at IS NULL AND starts_with(%[1]s.captured_by, 'connector:')
+ AND (NOT %[1]s.bulk_mail_attested OR %[1]s.inbound_sender_authenticated))`, row) + ")"
+}
+
+// CapturedAcquisitionSQL recognizes provenance recorded by the capture pipeline.
+func CapturedAcquisitionSQL(row string) string {
+	return fmt.Sprintf(`(starts_with(%[1]s.captured_by, 'connector:') OR %[1]s.captured_by = 'agent:capture_counterparty_verdict')`, row)
+}
+
+// ExternalSQL separates customer evidence from operational correspondence.
+func ExternalSQL(row string) string { return row + ".internal_mail_authorization IS NULL" }

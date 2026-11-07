@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { useHealthReason } from "../../components/companylookups";
 import { LocaleProvider } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 
 // The server rates relationship and commercial health and names a reason code
 // beside its English sentence. The reader sees the code in their language, and
@@ -16,12 +16,12 @@ import { RecordZoneProvider } from "../../lib/recordzone";
 function wrapper(locale: "en" | "de" | "vi", zone = "UTC") {
   return ({ children }: { children: ReactNode }) => (
     <LocaleProvider initial={locale}>
-      <RecordZoneProvider zone={zone}>{children}</RecordZoneProvider>
+      <ViewerZoneProvider zone={zone}>{children}</ViewerZoneProvider>
     </LocaleProvider>
   );
 }
 
-const english = "No reply and no meeting for 77 days.";
+const english = "No reply from them and no meeting for 77 days.";
 
 describe("useHealthReason", () => {
   it("says a coded reason in the reader's language, with its values", () => {
@@ -32,7 +32,7 @@ describe("useHealthReason", () => {
         reason_code: "quiet",
         reason_params: { days: 77 },
       }),
-    ).toBe("Seit 77 Tagen keine Antwort und kein Termin erfasst.");
+    ).toBe("Seit 77 Tagen keine Antwort von ihnen und kein Termin.");
   });
 
   // Beside a timeline that counts from another exchange, a bare "77 days"
@@ -45,7 +45,7 @@ describe("useHealthReason", () => {
       reason_params: { days: 77, at: "2026-08-11T09:00:00Z" },
     });
     expect(said).toMatch(
-      /^Chưa ghi nhận phản hồi hoặc cuộc họp từ .*11.* \(77 ngày\)\.$/,
+      /^Chưa có phản hồi từ phía họ hay cuộc họp nào từ .*11.* \(77 ngày\)\.$/,
     );
     expect(said).not.toContain("{at}");
   });
@@ -63,7 +63,7 @@ describe("useHealthReason", () => {
 
   // The day is the record zone's, not UTC's: 17:30Z is already the next
   // morning in Ho Chi Minh City.
-  it("names a booked meeting's day in the record's zone", () => {
+  it("names a booked meeting's day in the reader's zone", () => {
     const en = renderHook(() => useHealthReason(), {
       wrapper: wrapper("en", "Asia/Ho_Chi_Minh"),
     });

@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { LocaleProvider } from "../i18n";
 import { Button, Field, SearchField, SegmentedControl } from "./atoms";
+import { DateInput } from "./dateinput";
 import { FilterBar } from "./filterbar";
 import { Select } from "./select";
 
@@ -55,6 +57,40 @@ export const WithActionsAndCaption: Story = {
       />
       {period}
     </FilterBar>
+  ),
+};
+
+// Quiet: the same dials on the page ground, for a view whose figures lead.
+export const Quiet: Story = {
+  render: () => (
+    <FilterBar
+      label="Filters"
+      quiet
+      actions={<Button variant="ghost">More</Button>}
+      caption="1 Oct – 31 Dec · actuals through 31 Oct"
+    >
+      {period}
+    </FilterBar>
+  ),
+};
+
+// Names inside the controls: each dial one chip, a date and a search
+// included, with no box drawn inside the chip.
+export const LabelsInside: Story = {
+  render: () => (
+    <LocaleProvider initial="en">
+      <FilterBar label="Filters" quiet labels="inside">
+        {period}
+        <Field label="From">
+          {(field) => (
+            <DateInput {...field} value="2026-10-01" onChange={() => {}} />
+          )}
+        </Field>
+        <Field label="Search">
+          {(field) => <SearchField {...field} value="" onChange={() => {}} />}
+        </Field>
+      </FilterBar>
+    </LocaleProvider>
   ),
 };
 

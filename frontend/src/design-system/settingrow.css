@@ -22,7 +22,7 @@
  * with nothing under it, and inside a Panel it lands a pixel above the panel's
  * own edge, where the two read as one thick border. */
 .settinglist > * + * {
-  border-top: 1px solid var(--borderSubtle);
+  border-top: 1px solid var(--groundSeam);
 }
 
 /* One decision. `align-items: center` is what puts a lone switch on the
@@ -156,6 +156,17 @@
 .settingrow-stack > .settingrow-control > * > .empty {
   padding: var(--space-4) var(--space-5);
   text-align: left;
+}
+
+/* A phone narrows both empty sentences to the rows' own inset. A rung, because
+   panel.css alone pays a pane's role inset to a state arm. */
+@media (max-width: 700px) {
+  .settinglist > .empty,
+  .settinglist > * > .empty,
+  .settingrow-stack > .settingrow-control > .empty,
+  .settingrow-stack > .settingrow-control > * > .empty {
+    padding-inline: var(--space-3);
+  }
 }
 
 /* A `Switch` in a row's ANSWER column, and the refusal it stacks under itself.
@@ -302,7 +313,7 @@
   transition: background-color var(--dur-state) var(--ease-out);
 }
 .panel > .settinglist-records > .settingrow:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* Narrow viewport: the two columns become one. A right-aligned control in a

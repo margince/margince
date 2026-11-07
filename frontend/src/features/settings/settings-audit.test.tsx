@@ -261,10 +261,10 @@ describe("AuditLogCard", () => {
     );
     render(<AuditLogCard />);
     const link = await screen.findByRole("link", { name: "Priya Shah" });
-    expect(link).toHaveAttribute("href", "#/contacts/p-1");
+    expect(link).toHaveAttribute("href", "/#/contacts/p-1");
   });
 
-  it("names a record without a label by its kind and its id's random tail, and asks the server nothing else", async () => {
+  it("names a record without a label by its kind and its id's random tail, and reads no record to name it", async () => {
     const backend = auditLogBackend({ entries: [created] });
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);
@@ -275,10 +275,16 @@ describe("AuditLogCard", () => {
     expect(
       screen.getByRole("button", { name: "Copy record ID" }),
     ).toBeInTheDocument();
-    const asked = backend.mock.calls.map(([input]) =>
-      String(input instanceof Request ? input.url : input),
+    const asked = backend.mock.calls.map(
+      ([input]) =>
+        new URL(
+          String(input instanceof Request ? input.url : input),
+          "http://localhost",
+        ).pathname,
     );
-    expect(asked.every((url) => /\/v1\/(me|audit-log)/.test(url))).toBe(true);
+    // The names read is the actor's picture; no record is read to name the row.
+    const allowed = new Set(["/v1/me", "/v1/audit-log", "/v1/users/names"]);
+    expect(asked.filter((path) => !allowed.has(path))).toEqual([]);
   });
 
   it("keeps the change detail hidden until the row is expanded", async () => {

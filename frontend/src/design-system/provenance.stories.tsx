@@ -72,6 +72,26 @@ export const EveryArm: Story = {
         />
       </div>
       <div style={row}>
+        <ProvenanceTag
+          provenance={{
+            kind: "system",
+            relay: { member: "self", fromAddress: "privacy@kps.test" },
+          }}
+        />
+        <ProvenanceTag
+          provenance={{
+            kind: "system",
+            relay: { member: "colleague", fromAddress: null },
+          }}
+        />
+        <ProvenanceTag
+          provenance={{
+            kind: "system",
+            relay: { member: "unknown", fromAddress: null },
+          }}
+        />
+      </div>
+      <div style={row}>
         <ProvenanceTag provenance={{ kind: "buyer" }} />
         <ProvenanceTag provenance={{ kind: "unknown" }} />
       </div>

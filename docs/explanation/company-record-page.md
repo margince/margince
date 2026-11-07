@@ -1,11 +1,15 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
+<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go backend/internal/modules/contacts/companyroster.go backend/internal/modules/contacts/company_counts.go backend/internal/modules/contacts/contact_list.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
 # The company record page: one gated read, text per viewer, named gaps
 
 The account page a rep opens on a company. It shows who works there, what is open, what moved, and what
 to do next. A written brief covers all of it. It is the largest composite surface in the product. Nearly
 all of it is put together in `internal/compose`. That is gated section reads inside one transaction
 (listed below), plus two groups that work across modules and own view state of their own.
+
+The contact count, company contact tab and company filter share the current roster.
+It includes a current second job and counts each contact once, within the reader's contact and link access.
+A primary employer stays a separate choice on the contact.
 
 ## The shape
 
@@ -25,7 +29,7 @@ More than one endpoint serves one screen. Which one owns which part:
    NAMED in sections_omitted     per-group grants   assembly (…/brief too,
                                                     deprecated, no UI)
              │
- POST …/view-ack             advance the visit baseline (explicit, human-only)
+ POST …/view-ack             advance the visit baseline (explicit)
  POST …/suggestions/dismiss  per-user, "not this, not now" — a rule's row or a scan's
  POST …/scan                 ensure the reader's account scan is current (human-only)
  GET  …/scan                 the scan as it stands: state, merged advice, the read's foot
@@ -143,9 +147,8 @@ nonce fence. That data is quoted between delimiter strings that are made new eac
 part of the prompt. The site read prompts use the same rule. This text is from outside the workspace, and
 must never be read as an order. The model runtime behind it is in [ai-runtime.md](ai-runtime.md).
 
-Both the brief and Ask are **human only** (`x-agent-access: human-only`, `security: [{ cookieAuth: [] }]`,
-and `auth.RequireHuman` at the service). A brief is a reading help for a human. An agent that reads records
-through a passport has the records themselves.
+An agent acting for its user reaches both, through `read_details` (`company_brief`) and
+`run_research` (`ask_about_company`, which needs the `enrich` scope). They run these same handlers, so an agent and a user get one answer.
 
 ## Ask
 
@@ -264,11 +267,10 @@ the same deals, tasks and subjects. So the two surfaces cannot disagree about wh
   know exists, but may not read, is not in the input. So the model cannot quote it.
 - A reader with no activity grant is refused, and is not shown a quiet account.
 
-**What it may say.** The *read* kinds sit beside the rule kinds:
-
-- `commitment_unmet`: we said we would do something, and nothing says it happened;
-- `question_unanswered`: they asked, and no later message of ours answers;
-- `risk_raised` and `need_raised`.
+**What it may say.** The [scan's finding kinds](../../backend/internal/compose/companyscan/write.go)
+sit beside the rules' findings. Promise decisions come from `activities.WithCommitmentAdmissions`.
+The scan creates no task, including for a message about a colleague's promise.
+A stored model finding also offers no task action. Existing commitment and task cards keep their actions.
 
 How a finding is held to the input:
 
@@ -384,10 +386,9 @@ done ahead of time look like a visit. The upsert only moves forward (`GREATEST(s
 ack of a slow tab can never move a newer one back. Two tabs on the same account end on the later visit,
 and do not fight to move the baseline back.
 
-It is **human only**, and that gate is required, not a second layer of guard. An agent principal holds
-the granting human's id as its `UserID` (that is how row scope works for passports). So "resolve the
-acting user" would write a baseline that marks an account as *seen* by a human who never opened it. That
-would use up their unread marker for them.
+It opens to a user or the agent on their passport. An agent principal holds its user's id as its
+`UserID`. So this marks the account as *seen* by that user and uses up their unread marker. Reading the
+record never does. So `change_attention` tells the agent to ask first.
 
 **The client waits before it sends.** `useAcknowledgeCompanyView` waits `VIEW_ACK_DWELL_MS` (5 seconds)
 with the account open before firing, and leaving cancels the timer. Opening a record and going right back
@@ -438,9 +439,9 @@ slot.
 
 ### The installation's second mark
 
-The record above shows one picture. The installation's own company shows two, because the sidebar draws
-it at two sizes. The wide lockup fits an open panel. A **square icon** serves the `56px` rail, where a
-wordmark scaled into a `32px` box is a row of lines nobody can read.
+The record above shows one picture. The installation's own company stores two. The sidebar head draws
+only a **square icon**, open or closed. A wordmark scaled into its `40px` square is a row of lines nobody
+can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is
 read back as `CompanyProfile.logo_icon_url`, and served from `GET /companies/{id}/logo/icon` under the
@@ -468,8 +469,9 @@ The badge chain runs first. The lane runs under one deadline, and a slow lockup 
 company its square mark.
 
 When no lockup resolves, the badge fills the wide slot, and the icon slot stays empty. When the lockup is
-itself square, or the best mark of the chain is not, no badge is stored either. The rail, when closed, falls
-back to the wide mark on its own, so a second copy would be bytes stored for nothing.
+itself square, or the best mark of the chain is not, no badge is stored either. When the icon slot is empty,
+the sidebar head measures the wide mark and draws it if it is square. A second copy would be bytes stored
+for nothing.
 
 Both marks wait on the dossier (`site_read.logo_object_key`, `site_read.logo_icon_object_key`). The
 confirm binds each to its slot on the record, slot by slot, under the rule that a human's choice wins.
@@ -477,8 +479,8 @@ Enrich reads of every other company keep resolving the one mark, with a square p
 into a record card's round avatar would be the row of lines nobody can read that the badge exists to
 avoid. `worker siteread` reports both slots, and every candidate each one tried.
 
-The two slots are chosen and cleared separately in settings. The rail, when closed, falls back to the
-wide mark when there is no icon.
+The two slots are chosen and cleared separately in settings. With no icon and no square wide mark, the
+sidebar head draws the company's monogram.
 
 ## The connections card
 

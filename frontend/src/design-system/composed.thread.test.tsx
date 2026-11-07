@@ -3,7 +3,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { GroupedTimelineList } from "./timeline";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
@@ -59,6 +59,36 @@ describe("a thread's card", () => {
     expect(screen.getByText("Calendar invitation")).toBeTruthy();
   });
 
+  it("marks a newsletter and leaves it out of either side's count", () => {
+    const reply = entry({
+      id: "in1",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+    });
+    const newsletter = entry({
+      id: "news",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+      automaticKind: "bulk",
+    });
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            newsletter,
+            reply,
+            entry({ id: "out1", direction: "outbound" }),
+          ]),
+        ]}
+      />,
+    );
+    expect(
+      screen.getByText("3 messages · 1 from them, 1 from your team"),
+    ).toBeTruthy();
+    expect(screen.getByText("Sent to a mailing list")).toBeTruthy();
+  });
+
   it("names the kind, the count and who it was with, and seats the verbs in its head", () => {
     render(
       <GroupedTimelineList
@@ -93,10 +123,9 @@ describe("a thread's card", () => {
     ).toBeTruthy();
     // Each name once, however many messages it was on.
     expect(screen.getByText("Ida Keller, Marc Dubois")).toBeTruthy();
-    // Inside the card, on its head line, rather than in the row's own
-    // actions column outside it.
+    // In the row's own verb slot, where every other entry keeps its verbs.
     expect(
-      screen.getByRole("button", { name: "Reply" }).closest(".tl-thread"),
+      screen.getByRole("button", { name: "Reply" }).closest(".tl-actions"),
     ).toBeTruthy();
   });
 
@@ -317,7 +346,7 @@ describe("a row's place on the axis", () => {
 it("shows commitment review counts on a thread without exposing private readings", () => {
   render(
     <GroupedTimelineList
-      zone={viewerZone()}
+      zone={browserZone()}
       groups={[
         thread([
           entry({ id: "visible", commitmentReviewCount: 2 }),
@@ -367,7 +396,7 @@ describe("the files a thread carried", () => {
         ]}
       />,
     );
-    const card = document.querySelector(".tl-thread");
+    const card = document.querySelector(".tl-thread-messages")?.parentElement;
     expect(
       card?.querySelector(":scope > .tl-meta .emailentry__files")?.textContent,
     ).toBe("3 attachments");
@@ -424,7 +453,9 @@ describe("the files a thread carried", () => {
       />,
     );
     expect(
-      document.querySelector(".tl-thread > .tl-meta .emailentry__files")
+      document
+        .querySelector(".tl-thread-messages")
+        ?.parentElement?.querySelector(":scope > .tl-meta .emailentry__files")
         ?.textContent,
     ).toBe("2 attachments");
 

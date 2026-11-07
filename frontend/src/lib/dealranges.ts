@@ -16,6 +16,8 @@ import { problemFieldErrorsOf } from "./problem";
 export const CLOSE_DAY_DIAL = "close_day";
 /** The value dial: a "min..max" pair in minor units of the base currency. */
 export const VALUE_DIAL = "value";
+/** The probability dial: a "min..max" pair of whole percents, 0 to 100. */
+export const WIN_PROBABILITY_DIAL = "win_probability";
 export const THIS_QUARTER = "this_quarter";
 
 const RANGE_SEPARATOR = "..";
@@ -48,21 +50,36 @@ export function parseDayRange(value: string | undefined): DayRange | undefined {
 }
 
 const MINOR = /^\d+$/;
+const PERCENT = /^(100|[1-9]?\d)$/;
 
-/** A "min..max" minor-unit range, or undefined for anything else. */
-export function parseMinorRange(
+function parseNumberRange(
   value: string | undefined,
+  end: RegExp,
 ): MinorRange | undefined {
   const ends = splitRange(value);
   if (!ends) return undefined;
   const [low, high] = ends;
-  if ((low && !MINOR.test(low)) || (high && !MINOR.test(high))) {
+  if ((low && !end.test(low)) || (high && !end.test(high))) {
     return undefined;
   }
   const min = low ? Number(low) : undefined;
   const max = high ? Number(high) : undefined;
   if (min !== undefined && max !== undefined && min > max) return undefined;
   return { min, max };
+}
+
+/** A "min..max" minor-unit range, or undefined for anything else. */
+export function parseMinorRange(
+  value: string | undefined,
+): MinorRange | undefined {
+  return parseNumberRange(value, MINOR);
+}
+
+/** A "min..max" range of whole percents, or undefined for anything else. */
+export function parsePercentRange(
+  value: string | undefined,
+): MinorRange | undefined {
+  return parseNumberRange(value, PERCENT);
 }
 
 /** The dial's value as a day range, with THIS_QUARTER counted from `today`. */
@@ -85,6 +102,10 @@ export function admitValueRange(value: string | undefined) {
   return parseMinorRange(value) ? value : undefined;
 }
 
+export function admitWinProbability(value: string | undefined) {
+  return parsePercentRange(value) ? value : undefined;
+}
+
 export function admitCurrency(value: string | undefined) {
   return value && /^[A-Z]{3}$/.test(value) ? value : undefined;
 }
@@ -102,11 +123,14 @@ export function rangeQueryParams(
   closeDay: DayRange | undefined,
 ) {
   const value = parseMinorRange(filters[VALUE_DIAL]);
+  const probability = parsePercentRange(filters[WIN_PROBABILITY_DIAL]);
   return {
     close_from: closeDay?.from,
     close_to: closeDay?.to,
     value_min: value?.min,
     value_max: value?.max,
+    win_probability_min: probability?.min,
+    win_probability_max: probability?.max,
     currency: admitCurrency(filters.currency),
     country: admitCountry(filters.country),
   };
@@ -128,6 +152,8 @@ const DIAL_OF_PARAMETER: Readonly<Record<string, string>> = {
   close_to: CLOSE_DAY_DIAL,
   value_min: VALUE_DIAL,
   value_max: VALUE_DIAL,
+  win_probability_min: WIN_PROBABILITY_DIAL,
+  win_probability_max: WIN_PROBABILITY_DIAL,
 };
 
 /** The dial that sends a deal list parameter. */
@@ -136,14 +162,24 @@ export function dialOfParameter(parameter: string): string {
 }
 
 /**
- * The deal dials this reader cannot narrow by. The value is typed in the base
- * currency, a company is picked by searching companies, and the rest the server
- * names.
+ * The deal dials this reader's role refuses: the ones the server names, and the
+ * company dial, which is picked by searching companies.
+ */
+export function roleRefusedDealDials(
+  reach: Omit<DialReach, "baseCurrency">,
+): ReadonlySet<string> {
+  const refused = new Set(reach.refused.map(dialOfParameter));
+  if (!reach.readsCompanies) refused.add("company_id");
+  return refused;
+}
+
+/**
+ * The deal dials this reader cannot narrow by: the role's, and the value while
+ * no base currency is known to type it in.
  */
 export function withheldDealDials(reach: DialReach): ReadonlySet<string> {
-  const withheld = new Set(reach.refused.map(dialOfParameter));
+  const withheld = new Set(roleRefusedDealDials(reach));
   if (!reach.baseCurrency) withheld.add(VALUE_DIAL);
-  if (!reach.readsCompanies) withheld.add("company_id");
   return withheld;
 }
 

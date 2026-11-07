@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -37,15 +36,17 @@ import (
 // the store every single time — leaving it out would spend a human's approval
 // on the one target that can never succeed.
 func (s *Store) RefuseArchiveCompany(ctx context.Context, id ids.CompanyID) error {
-	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
 			return err
 		}
-		return refuseIfAnchor(ctx, tx, id, "id",
-			"it cannot be archived. Archive a different company, or edit this one on the company page")
+		if err := auth.EnsureArchivable(ctx, tx, auth.CompanyArchive, id.UUID); err != nil {
+			return err
+		}
+		return companyArchiveAllowed(ctx, tx, id)
 	})
 }
 
@@ -59,7 +60,7 @@ func (s *Store) ArchiveCompany(
 	ctx context.Context, id ids.CompanyID, ifVersion *int64, opts ...WriteOption,
 ) (crmcontracts.Company, error) {
 	options := collectWriteOptions(opts)
-	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	active, err := s.activeColumns(ctx, companyEntity)
@@ -68,7 +69,7 @@ func (s *Store) ArchiveCompany(
 	}
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
+		if err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil {
 			return err
 		}
 		// The precondition, under the row lock the write takes: a caller that
@@ -97,10 +98,10 @@ func (s *Store) ArchiveCompany(
 // ArchiveCompany asks and answers nothing: the caller already knows which row
 // it archived.
 func (s *Store) ArchiveCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64) error {
-	if err := auth.Require(ctx, companyEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return err
 	}
-	if err := auth.EnsureWritable(ctx, tx, companyEntity, id.UUID); err != nil {
+	if err := lockThenEnsureArchivable(ctx, tx, companyEntity, auth.CompanyArchive, id.UUID); err != nil {
 		return err
 	}
 	_, err := archiveCompanyTx(ctx, tx, id, ifVersion, nil)
@@ -124,7 +125,7 @@ func archiveCompanyTx(
 	if err := companyArchiveAllowed(ctx, tx, id); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if _, err := readCompany(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+	if _, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 		return crmcontracts.Company{}, err
 	}
 
@@ -205,7 +206,7 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 var companyColumns = `id, display_name, legal_name, description, industry, size_band, owner_id, visibility,
 	address_line1, address_line2, address_city, address_region, address_postal_code, address_country,
 	` + addressCountriesSQL("company") + `,
-	lifecycle, parent_company_id, merged_into_id, logo_object_key, linkedin_url, source, captured_by,
+	lifecycle, parent_company_id, merged_into_id, logo_object_key, linkedin_url, phone, email, source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL(companyEntity) + `,
 	version, created_at, updated_at, archived_at, is_anchor, last_activity_at, legal_hold, assess_against_entity_id`

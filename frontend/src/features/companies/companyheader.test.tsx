@@ -1,12 +1,18 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import {
+  changeChoice,
+  openChoiceDialog,
+} from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyActionBadges, CompanyOwnerControl } from "./companyheader";
 import { CompanyHeadLines } from "./companyheaderfacts";
@@ -140,6 +146,12 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
+// The owner's choices as its dialog offers them.
+async function openOwnerChoices(user: UserEvent) {
+  const { chooser } = await openChoiceDialog(user, "Owner");
+  await user.click(chooser);
+}
+
 // The owner control, as the details' Ownership row mounts it.
 function renderFacts() {
   renderInApp(<CompanyOwnerControl company={COMPANY} />);
@@ -166,7 +178,8 @@ describe("who owns this record", () => {
     // over one still running, it reports an owner as departed on the evidence
     // of nothing having arrived yet.
     expect(
-      (await screen.findByRole("button", { name: "Change Owner" })).textContent,
+      (await screen.findByRole("button", { name: /^Change Owner/ }))
+        .textContent,
     ).toContain("Loading…");
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
@@ -269,10 +282,7 @@ describe("claiming an unowned account", () => {
     const user = userEvent.setup();
     renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change Owner" }),
-    );
-    await user.click(await screen.findByRole("option", { name: "The Reader" }));
+    await changeChoice(user, "Owner", "The Reader");
 
     await waitFor(() =>
       expect(calls.find((call) => call.path.endsWith("/claim"))).toMatchObject({
@@ -295,9 +305,7 @@ describe("claiming an unowned account", () => {
     const user = userEvent.setup();
     renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change Owner" }),
-    );
+    await openOwnerChoices(user);
     await screen.findByRole("option", { name: "The Reader" });
     expect(
       screen.getAllByRole("option").map((option) => option.textContent),
@@ -311,9 +319,7 @@ describe("claiming an unowned account", () => {
       <CompanyOwnerControl company={{ ...UNOWNED, writable: true }} />,
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Change Owner" }),
-    );
+    await openOwnerChoices(user);
     expect(
       await screen.findByRole("option", { name: "A Colleague" }),
     ).toBeTruthy();
@@ -326,22 +332,34 @@ describe("claiming an unowned account", () => {
     renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
     expect(await screen.findByText(en["field.unset"])).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
   });
 });
 
 // STATE-4a decides absent-vs-disabled by CAUSE, and an archive is state: the
 // menu used to drop every verb on an archived account, leaving a reader unable
 // to tell a record that is closed from a build without an edit button.
+// The menu reads the page's activity gate for its Add task row.
+function MenuHost({ company }: Readonly<{ company: Company }>) {
+  const activity = useActivityGate();
+  return (
+    <CompanyActionBadges
+      company={company}
+      activity={activity}
+      onAddTask={() => undefined}
+      onOpenHistory={() => undefined}
+      onSetUpPartner={() => undefined}
+    />
+  );
+}
+
 describe("an archived account's verbs", () => {
   it("stay in the menu, refused, each reachable from the one sentence naming the archive", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
     renderInApp(
-      <CompanyActionBadges
+      <MenuHost
         company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
       />,
     );
 
@@ -374,22 +392,69 @@ describe("an archived account's verbs", () => {
   });
 });
 
-// The design draws no relationship badge beside the name. The lifecycle chip is
-// the one pill that says where the account stands, and the relationship types
-// are a Profile tab field.
+// Beside the lifecycle chip the head says what the company is to the business:
+// a customer, a partner, or both on one record. Other relationship types stay a
+// Profile tab field.
 describe("the marks under an account's name", () => {
-  it("draws the lifecycle and no relationship badge, whatever the types", async () => {
+  it("draws customer and partner on one record, and no other type", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyMarks
-        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
+        company={{
+          ...COMPANY,
+          lifecycle: "opportunity",
+          relationship_types: ["customer", "partner", "supplier"],
+        }}
       />,
     );
 
     expect(
-      await screen.findByText(en["company.lifecycle.customer"]),
+      await screen.findByText(en["company.relType.customer"]),
     ).toBeTruthy();
-    expect(screen.queryByText(en["company.relType.partner"])).toBeNull();
+    expect(screen.getByText(en["company.relType.partner"])).toBeTruthy();
+    expect(screen.queryByText(en["company.relType.supplier"])).toBeNull();
+  });
+
+  it("names the partner's kinds and stage when the programme is readable", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyMarks
+        company={{
+          ...COMPANY,
+          relationship_types: ["partner"],
+          partner: {
+            company_id: COMPANY.id,
+            cert_status: "applied",
+            partner_kinds: ["referral", "hosting"],
+            relationship_stage: "contract_signed",
+            stage_label: "Contract signed",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Partner · Hosting, Referral · Contract signed"),
+    ).toBeTruthy();
+  });
+
+  it("does not repeat the customer the lifecycle chip already names", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyMarks
+        company={{
+          ...COMPANY,
+          lifecycle: "customer",
+          relationship_types: ["customer"],
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findAllByText(en["company.lifecycle.customer"]),
+    ).toHaveLength(1);
   });
 });
 
@@ -408,13 +473,7 @@ describe("setting up a partner program", () => {
       }).authorization,
     });
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
     );
@@ -437,20 +496,13 @@ describe("setting up a partner program", () => {
 });
 
 describe("the shape of the header's verbs", () => {
-  // The order every record type carries: the four verbs common to all of them
-  // first, then what is particular to an account, then the one verb a reader
-  // cannot walk back. A menu whose rows move between record types is a menu
-  // read from the top every time instead of aimed at.
+  // Every record type carries one order. Add task comes first, then the shared
+  // verbs, then the account's own, and last the one verb a reader cannot walk
+  // back. Rows that move between record types get read, not aimed at.
   it("lists the menu's verbs in the order every record carries them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
@@ -466,8 +518,10 @@ describe("the shape of the header's verbs", () => {
     expect(
       [...panel.querySelectorAll("button")].map((row) => row.textContent),
     ).toEqual([
+      en["log.addTask"],
       en["merge.company"],
       en["record.share"],
+      en["share.companyContacts"],
       en["record.fullHistory"],
       en["company.partnerSetUp"],
       en["record.archive"],
@@ -481,13 +535,7 @@ describe("the shape of the header's verbs", () => {
   it("draws no glyph on any row of the menu", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
@@ -504,7 +552,7 @@ it("names an owner for readers who cannot edit the company", async () => {
     <CompanyOwnerControl company={{ ...COMPANY, writable: false }} />,
   );
   expect(await screen.findByText("Mira Voss")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
 });
 // The stage beside the account's name. A real control, not the inline value
 // the Details grid carries: the header's is the design system's dropdown worn
@@ -562,7 +610,7 @@ describe("the lifecycle control beside the name", () => {
     // The button's box (`--controlHeight`), not the inline value's 24px one:
     // what the record layout suite measures is this element.
     expect(control.classList.contains("btn")).toBe(true);
-    expect(control.classList.contains("inline-editable")).toBe(false);
+    expect(control.closest(".editable-value")).toBeNull();
     expect(control.getAttribute("data-testid")).toBe("company-lifecycle");
     expect(control.textContent).toContain("Customer");
   });
@@ -571,21 +619,42 @@ describe("the lifecycle control beside the name", () => {
     const sent = stubPatch(200);
     const user = userEvent.setup();
     renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    await user.click(
+    await pickOption(
+      user,
       await screen.findByRole("combobox", { name: "Lifecycle" }),
+      "Prospect",
     );
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
     await waitFor(() => expect(sent).toEqual([{ lifecycle: "prospect" }]));
+  });
+
+  it("says under Live that only a colleague sets it", async () => {
+    stubPatch(200);
+    renderInApp(
+      <CompanyLifecycleControl company={{ ...COMPANY, lifecycle: "live" }} />,
+    );
+    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
+    const hint = document.getElementById(
+      control.getAttribute("aria-describedby") ?? "",
+    );
+    expect(hint?.textContent).toBe(en["company.lifecycle.live.help"]);
+  });
+
+  it("draws no help line under any other stage", async () => {
+    stubPatch(200);
+    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
+    await screen.findByRole("combobox", { name: "Lifecycle" });
+    expect(screen.queryByText(en["company.lifecycle.live.help"])).toBeNull();
   });
 
   it("does not write the stage the account already has", async () => {
     const sent = stubPatch(200);
     const user = userEvent.setup();
     renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    await user.click(
+    await pickOption(
+      user,
       await screen.findByRole("combobox", { name: "Lifecycle" }),
+      "Customer",
     );
-    await user.click(screen.getByRole("option", { name: "Customer" }));
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(sent).toEqual([]);
   });
@@ -595,8 +664,7 @@ describe("the lifecycle control beside the name", () => {
     const user = userEvent.setup();
     renderInApp(<CompanyLifecycleControl company={COMPANY} />);
     const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await user.click(control);
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(user, control, "Prospect");
     expect(
       await screen.findByText("Someone else changed this account."),
     ).toBeTruthy();
@@ -619,8 +687,7 @@ describe("the lifecycle control beside the name", () => {
     );
     const { rerender } = render(at(COMPANY));
     const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await user.click(control);
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(user, control, "Prospect");
     await screen.findByText("Someone else changed this account.");
     // The Details grid saved a different stage; the record refetched with it.
     rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
@@ -674,8 +741,7 @@ describe("the lifecycle control beside the name", () => {
     );
     const { rerender } = render(at(COMPANY));
     const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await user.click(control);
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(user, control, "Prospect");
     // While the header's write is out, the Details grid saves another stage.
     rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
     refuse(

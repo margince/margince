@@ -3,41 +3,8 @@
 
 package attention
 
-// The standing pass: a deal row says how the deal is doing, beside the step
-// that acts on it.
-//
-// nameTheStep answers WHAT TO DO. This answers WHAT YOU ARE WALKING INTO, and
-// the two were split because the reader needs both and the queue carried only
-// the first. A row saying "draft a reply" over a deal that has been cold for
-// three months is a different instruction from the same row over a deal closing
-// on Friday, and the row did not say which.
-//
-// THREE SOURCES, IN ONE ORDER, AND THE ORDER IS THE WHOLE RULE.
-//
-//  1. the deal's own cached card, when one is cached for this reader. Written
-//     from a timeline, seats and a deal room, model-authored and citation-checked.
-//  2. the night's brief finding for this deal, when the brief surfaced it and no
-//     card is cached. Grounded the same way — briefs.AnnotateCurrentRun refuses a
-//     finding citing outside the run it annotates — and about this same deal.
-//  3. nothing at all, which is the floor and is not a gap.
-//
-// WHY THE FLOOR IS NOTHING AND NOT A SENTENCE. The plan this implements called
-// for a deterministic third arm, and a deterministic STANDING is exactly what
-// this queue must not invent: the four standings are a reading of a deal, and
-// picking one from a level and a quiet-days count would be this pass deciding a
-// judgement that dealstatus owns — the second answer to one question that the
-// tree's own rule forbids. What the row keeps instead is what it always had:
-// its typed `because` reasons and its consequence, which the CLIENT phrases in
-// the reader's own language. That is the deterministic explanation. It is
-// already on every row, it needs no standing word to be useful, and a row
-// reaching the reader with no verdict is therefore still fully explained.
-//
-// So the contract carries TWO source members and both are readings. There is no
-// third for the deterministic case, because that case is not a verdict at all: a
-// row without one carries its typed `because` reasons, the client draws them
-// under their own heading, and they are already labelled as rules there.
-//
-// Held by TestADealWithNeitherAIReadingKeepsItsDeterministicExplanationAndMove.
+// Saved assessments retain their written date and current citation access.
+// They provide review context beside independently checked actions and facts.
 
 import (
 	"context"
@@ -47,11 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// DealStandings answers the already-written standing for each of these deals.
-//
-// Its implementation reads a cache and never assembles, which is what makes it
-// safe to call with a whole page of ids — the rule DealMoves states, for the
-// same reason.
+// DealStandings reads saved assessments in a batch, without rebuilding model prose.
 type DealStandings interface {
 	CachedStandings(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]DealStanding, error)
 }
@@ -63,14 +26,7 @@ type DealStanding struct {
 	AsOf         *time.Time
 }
 
-// nameTheStanding puts each deal row's already-written standing onto it.
-//
-// Runs AFTER the page is cut, like nameTheStep and for its reason: a standing is
-// drawn and never ranked, so reading one for a row the caller will not receive
-// would spend a query on nothing.
-//
-// The brief findings are handed in rather than read here; feed.go's assembleDay
-// states why they travel as a value.
+// nameTheStanding adds dated review context after paging; it never changes ranking.
 func (s *Service) nameTheStanding(
 	ctx context.Context, queue []crmcontracts.WorklistItem, findings map[ids.UUID]string,
 ) error {

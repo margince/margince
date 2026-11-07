@@ -136,13 +136,9 @@ type jobHealthHandlers struct {
 
 // GetJobHealth reports this workspace's background-job health.
 //
-// Gate order, fail-closed: human-only first, then admin. The payload
-// carries operational failure text and a fleet-wide view of the
-// dispatchers, and an admin-minted read-scoped passport satisfies every
-// object grant — so human-only is asserted here rather than inferred from
-// RBAC. The generated agent policy refuses a passport at the middleware
-// too; this check is the layer that does not depend on the wiring being
-// right.
+// Gate order, fail-closed: a user or their agent first, then the grant. The
+// payload carries operational failure text and a fleet-wide view of the
+// dispatchers, which an admin's agent may read as the admin does.
 func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// Queue depth and retry ladders: what an operator on call needs, and the
@@ -222,8 +218,18 @@ func deadWorkWindow(ctx context.Context, pool *pgxpool.Pool) (time.Duration, err
 func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.JobHealth {
 	kinds := make([]crmcontracts.JobKindHealth, 0, len(health.Kinds))
 	for _, k := range health.Kinds {
+		assessment := jobs.AssessHealth(k)
+		condition := crmcontracts.JobKindHealthCondition(assessment.Condition)
+		code := crmcontracts.JobKindHealthConditionCode(assessment.Code)
+		var expectation *int
+		if assessment.Expectation > 0 {
+			seconds := int(assessment.Expectation.Seconds())
+			expectation = &seconds
+		}
+		discarded, cancelled := int(k.Discarded), int(k.Cancelled)
 		kinds = append(kinds, crmcontracts.JobKindHealth{
-			Kind:                    k.Kind,
+			Kind:      k.Kind,
+			Condition: &condition, ConditionCode: &code, ExpectationSeconds: expectation, Discarded: &discarded, Cancelled: &cancelled,
 			Queue:                   k.Queue,
 			FleetWide:               k.FleetWide,
 			Waiting:                 int(k.Waiting),
@@ -235,8 +241,19 @@ func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.Jo
 		})
 	}
 
-	failures := make([]crmcontracts.JobFailure, 0, len(health.Failures))
-	for _, f := range health.Failures {
+	failures := jobFailuresResponse(health.Failures)
+
+	return crmcontracts.JobHealth{
+		GeneratedAt:     time.Now().UTC(),
+		DeadWindowHours: int(window / time.Hour),
+		Kinds:           kinds,
+		RecentFailures:  failures,
+	}
+}
+
+func jobFailuresResponse(rows []jobs.Failure) []crmcontracts.JobFailure {
+	failures := make([]crmcontracts.JobFailure, 0, len(rows))
+	for _, f := range rows {
 		rendered := renderFailure(f)
 		failures = append(failures, crmcontracts.JobFailure{
 			Kind:        f.Kind,
@@ -257,12 +274,7 @@ func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.Jo
 		})
 	}
 
-	return crmcontracts.JobHealth{
-		GeneratedAt:     time.Now().UTC(),
-		DeadWindowHours: int(window / time.Hour),
-		Kinds:           kinds,
-		RecentFailures:  failures,
-	}
+	return failures
 }
 
 // secondsOrAbsent TRUNCATES a measured age to whole seconds, and keeps an

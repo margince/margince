@@ -107,14 +107,14 @@ func TestTeamMorningRanksAcrossEveryRosterMember(t *testing.T) {
 	if !strings.Contains(message.Text, mailcopy.TeamFragment(b.Team1.String(), "")) {
 		t.Fatal("team mail opens the personal overview")
 	}
-	exportRecipientMail(t, "team-priority-de", message.Title, message.Text, emailview.Render(message))
+	exportRecipientMail(t, "team-priority-de", message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 }
 
 // seedRecipientOutcomes records a won deal and two due tasks on the Thursday of week.
 func seedRecipientOutcomes(t *testing.T, e *mailEnv, week time.Time) {
 	t.Helper()
 	thursday := week.AddDate(0, 0, 3).Add(12 * time.Hour)
-	e.Deals = e.Deals.WithClock(func() time.Time { return thursday })
+	e.Deals = e.Deals.SetClock(func() time.Time { return thursday })
 	e.Activities = e.Activities.WithClock(func() time.Time { return thursday })
 	pipeline, open, won := integration.DealFixture(t, e.Env)
 	deal := e.SeedDeal(t, "Northstar renewal", pipeline, open, &e.Rep1)
@@ -208,7 +208,7 @@ func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
 			"meeting":       words.MeetingMessage("Angebot besprechen", "Zweijahresvertrag", "Videoanruf", "https://example.test/manage", expiry, expiry.Add(45*time.Minute)),
 		}
 		for key, message := range messages {
-			exportRecipientMail(t, key+"-"+language, message.Title, message.Text, emailview.Render(message))
+			exportRecipientMail(t, key+"-"+language, message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 		}
 		for _, key := range consent.ControllerTemplateKeys() {
 			rendered, _, err := consent.RenderControllerTemplate(key, expiry, language)
@@ -216,7 +216,7 @@ func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
 				t.Fatal(err)
 			}
 			rendered = consent.CompleteControllerMessage(rendered, "Northstar GmbH", []string{"Northstar GmbH\nBeispielstraße 12\n10115 Berlin", "privacy@example.test"})
-			markup := consent.RenderControllerPresentation(rendered, "Northstar GmbH")
+			markup := consent.RenderControllerPresentation(rendered, "Northstar GmbH", "")
 			if language == "de" && (strings.Contains(markup, "deine Daten") || strings.Contains(markup, "Erfahre,")) {
 				t.Fatal("privacy preview and body use different address registers")
 			}
@@ -311,13 +311,13 @@ func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 			t.Fatalf("actual request missing: %s %v", help.String(), err)
 		}
 		message := help.Message(words.MailHelp, language, words.MailHelp)
-		exportRecipientMail(t, "team-help-"+language, message.Title, message.Text, emailview.Render(message))
+		exportRecipientMail(t, "team-help-"+language, message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 		message = weekly.MailMessage(partial, "https://example.test", words)
 		boundary := partial.NumericSummary.FigureCoverage.Meetings.RecordedSince
 		if boundary == nil || !strings.Contains(message.Text, words.Date(boundary.In(zone))) {
 			t.Fatalf("partial coverage lost its boundary: counts=%+v body=%s", partial.Counts, message.Text)
 		}
-		exportRecipientMail(t, "weekly-partial-"+language, message.Title, message.Text, emailview.Render(message))
+		exportRecipientMail(t, "weekly-partial-"+language, message.Title, message.Text, emailview.Render(message, emailview.Letterhead{}))
 	}
 }
 
@@ -372,12 +372,12 @@ func TestATeamWeeklyWithoutAnOriginKeepsEveryContentBlock(t *testing.T) {
 	if _, _, err := e.worker.engine.AssembleTeamFor(e.repCtx, e.Team1, "Northstar sales", []weekly.TeamMember{{UserID: e.Rep1, DisplayName: "Alex Example"}}, now); err != nil {
 		t.Fatal(err)
 	}
-	full, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
+	full, _, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	e.worker.mail.PublicBaseURL = ""
-	without, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
+	without, _, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +399,7 @@ func TestProductionControllerStagingPreviews(t *testing.T) {
 		lane := setupConfirmLane(t)
 		lane.store.WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
 		integration.SetBaseLanguage(lane.e.Admin(), t, lane.e.Pool, language)
-		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 			t.Fatal(err)
 		}
 		purpose, err := lane.store.CreatePurpose(lane.e.Admin(), "marketing_email", "Product news", true)

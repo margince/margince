@@ -42,7 +42,7 @@ func TestChangingDealCardLanguagePreservesTheReadersDismissal(t *testing.T) {
 		if card.Next != nil {
 			t.Fatalf("%s resurrected the dismissed work", language)
 		}
-		queued, err := svc.CachedMoves(e.Admin(), []ids.UUID{deal.UUID})
+		queued, err := svc.CurrentMoves(e.Admin(), []ids.UUID{deal.UUID})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,7 +59,7 @@ func TestChangingDealCardLanguagePreservesTheReadersDismissal(t *testing.T) {
 		if card.Next == nil || card.Next.Fingerprint == nil || *card.Next.Fingerprint != fingerprint {
 			t.Fatalf("%s changed the restored work identity", language)
 		}
-		queued, err = svc.CachedMoves(e.Admin(), []ids.UUID{deal.UUID})
+		queued, err = svc.CurrentMoves(e.Admin(), []ids.UUID{deal.UUID})
 		if err != nil {
 			t.Fatal(err)
 		}

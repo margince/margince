@@ -73,6 +73,7 @@ func seedEmaillessAlices(t *testing.T, e *integration.Env, count int) []ids.Cont
 // to Alice's address, and she answers.
 func captureFromAlice(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
+	authorizeCaptureMailbox(t, e, e.Rep1, "a@authz.test")
 	seedAttestedOutbound(t, e, "alice-out-1", aliceSender, "alice-t1")
 	captureNamedInbound(mailboxOwnerCtx(e, e.Rep1), t, e, "a@authz.test", "alice-in-1", aliceSender, "Alice Example", "alice-t1")
 	dispositionID, queued := openDisposition(t, e, aliceSender)

@@ -10,6 +10,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -34,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -48,10 +48,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
+	if err := start(ctx, os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, config.RoleWorker.Refusal(err))
 		os.Exit(1)
 	}
+}
+
+// start is --version when args ask for it, and the boot otherwise.
+func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-worker"))
+		return err
+	}
+	return run(ctx, args, stdout)
 }
 
 // run is the worker's boot sequence — the debug subcommands, flags,
@@ -72,15 +81,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
-	pool, err := database.NewPool(ctx, cfg.dsn)
+	pool, err := openWorkerPool(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
 	// Registered before the lanes' join below, so LIFO closes the pool after it.
 	defer pool.Close()
-	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
-		return err
-	}
 	resolveVault := workerVault(ctx, pool, cfg.settings)
 	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, cfg.settings, args, stdout); handled {
 		return err
@@ -140,11 +146,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// answers "still starting" until started.complete below, so coming up
 	// early never makes this replica look ready before it can work.
 	started := &bootGate{}
-	observe, err := startObserveListener(ctx, cfg, pool, rdb, started, logger)
-	if err != nil {
-		return err
+	stopObserve, atHead, err := observeUntilAtHead(ctx, cfg, pool, rdb, started, logger)
+	defer stopObserve()
+	if err != nil || !atHead {
+		// A release refusal also ends the wait. It must still exit non-zero.
+		return cmp.Or(err, releaseSkewRefusal(releaseSkewErr))
 	}
-	defer observe.Stop()
 
 	//nolint:contextcheck // boot-time wiring: the model path outlives any request context (cmd/api resolves the same path under the same waiver)
 	modelPath, err := selectModelPath(ctx, workerModelPathSpec(cfg, bootstrap), pool, logger)
@@ -178,7 +185,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
-	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, logger)
+	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, lanes.blob, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,

@@ -15,7 +15,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { CompanyTab } from "../../lib/companytab";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn } from "./company360";
 import { latestExchanges } from "./companyoverviewrows";
 import { activityHeadline } from "./companyrecent";
@@ -44,7 +44,7 @@ export function LatestCard({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
-  const rows = latestExchanges(view, useRecordZone());
+  const rows = latestExchanges(view, useViewerZone());
   const hidden = view.sections_omitted.includes("activities");
   return (
     <OverviewCard
@@ -83,7 +83,7 @@ function LatestRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const who = useWhoOf(activity, view);
   const title = activityHeadline(activity, t);
   const email = activity.email_summary;
@@ -126,7 +126,7 @@ function LatestRow({
 }
 
 // Who the exchange was with or by. That is the other side of an email, else
-// the colleague who recorded it, else the contact it is linked to.
+// the colleague who recorded it, else the one contact it is linked to.
 function useWhoOf(activity: Activity, view: Company360): string | undefined {
   const nameOf = recordNamesIn(view);
   const email = activity.email_summary;
@@ -142,6 +142,12 @@ function useWhoOf(activity: Activity, view: Company360): string | undefined {
   if (counterparty) {
     return counterparty;
   }
-  const linked = activity.links?.find((link) => link.entity_type === "contact");
-  return linked ? nameOf("contact", linked.entity_id) : undefined;
+  // Links come in id order, so the first of several contacts would be a pick
+  // by id. An exchange with several names none of them.
+  const [linked, ...others] = (activity.links ?? []).filter(
+    (link) => link.entity_type === "contact",
+  );
+  return linked && others.length === 0
+    ? nameOf("contact", linked.entity_id)
+    : undefined;
 }

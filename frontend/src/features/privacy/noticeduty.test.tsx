@@ -1,15 +1,27 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import { installFetchStub, meRoute } from "../../testing/story-utils";
 import {
   day,
   jsonResponse,
   renderWorklist,
   row,
 } from "../../testing/worklist.testkit";
+import { mailPreview } from "./controllermail.fixtures";
+import { NoticeCasesCard } from "./noticecases";
 
 afterEach(() => {
   cleanup();
@@ -43,7 +55,7 @@ function dutyDay(duty = OWED) {
 // The server a writer meets: the queue with one duty, a /me that may update
 // contacts, and every write recorded.
 function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
-  const writes: string[] = [];
+  const writes: { path: string; body: unknown }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -54,7 +66,7 @@ function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
       if (path.endsWith("/worklist")) {
         return jsonResponse(dutyDay(duty));
       }
-      if (path.endsWith(`/privacy/notice-cases/${OWED.id}`)) {
+      if (path.endsWith(`/privacy/notice-case-reviews/${OWED.id}`)) {
         return jsonResponse({
           id: OWED.id,
           contact_id: CONTACT,
@@ -66,16 +78,32 @@ function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
           created_at: "2026-01-28T09:00:00Z",
         });
       }
+      if (path.endsWith(`/contacts/${CONTACT}/consent/mail-preview`)) {
+        const kind = new URL(url).searchParams.get("kind");
+        return jsonResponse(
+          mailPreview(
+            kind === "privacy_notice"
+              ? "privacy_notice"
+              : "record_confirmation",
+            "de",
+            { to_address: "steve@kps.test" },
+          ),
+        );
+      }
       if (path.endsWith("/me")) {
         return jsonResponse(
           meFixture({
             seat,
-            allow: { contact: ["read", "update"], privacy_request: ["read"] },
+            allow: {
+              contact: ["read", "update"],
+              privacy_request: ["read", "update"],
+            },
           }),
         );
       }
       if (method === "POST") {
-        writes.push(path);
+        const text = request ? await request.text() : String(init?.body ?? "");
+        writes.push({ path, body: text ? JSON.parse(text) : null });
         return jsonResponse({
           delivered_to: "steve@kps.test",
           expires_at: "2026-10-27T00:00:00Z",
@@ -93,11 +121,12 @@ describe("a privacy-notice duty on the Focus card", () => {
   it("says what the duty is and sends the notice from the card's own pane", async () => {
     const writes = stubDuty();
     renderWorklist();
+    const user = userEvent.setup();
 
     expect(
       await screen.findByText("Privacy notice owed (GDPR Art. 14)"),
     ).toBeTruthy();
-    expect(screen.getByText(/did not get them from the contact/)).toBeTruthy();
+    expect(screen.getByText(en["noticeDuty.what"])).toBeTruthy();
     expect(
       await screen.findByRole("button", {
         name: "Ask them to confirm their details",
@@ -105,17 +134,54 @@ describe("a privacy-notice duty on the Focus card", () => {
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "End the duty…" })).toBeTruthy();
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Send privacy notice" }),
     );
-    await waitFor(() =>
-      expect(
-        writes.some((path) =>
-          path.endsWith(`/contacts/${CONTACT}/consent/privacy-notice`),
-        ),
-      ).toBe(true),
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        "Informationen zur Verarbeitung Ihrer personenbezogenen Daten",
+      ),
+    ).toBeTruthy();
+    expect(writes).toEqual([]);
+
+    await user.click(
+      within(dialog).getByRole("button", { name: en["notice.sendConfirm"] }),
     );
     expect(await screen.findByText(/Sent to steve@kps.test/)).toBeTruthy();
+    expect(writes).toEqual([
+      {
+        path: expect.stringMatching(
+          new RegExp(`/contacts/${CONTACT}/consent/privacy-notice$`),
+        ),
+        body: { language: "de" },
+      },
+    ]);
+  });
+
+  it("previews the confirmation request before asking, and Escape sends nothing", async () => {
+    const writes = stubDuty();
+    renderWorklist();
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["noticeDuty.askConfirm"],
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: en["controllerMail.confirmTitle"],
+    });
+    expect(
+      await within(dialog).findByText("Ihre Kontaktdaten prüfen"),
+    ).toBeTruthy();
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(writes).toEqual([]);
+    expect(
+      screen.getByRole("button", { name: en["noticeDuty.sendNotice"] }),
+    ).toBeTruthy();
   });
 
   it("says what the deadline rests on: how, when, who recorded it, and the rule", async () => {
@@ -158,4 +224,73 @@ describe("a privacy-notice duty on the Focus card", () => {
       screen.queryByRole("button", { name: en["noticeDuty.end"] }),
     ).toBeNull();
   });
+});
+
+it("reads a linked duty directly and invalidates the contact after sending", async () => {
+  stubDuty();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["contact360", CONTACT], { cached: true });
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <NoticeCasesCard caseId={OWED.id} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: en["noticeDuty.sendNotice"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    await within(dialog).findByRole("button", {
+      name: en["notice.sendConfirm"],
+    }),
+  );
+  await screen.findByText(/Sent to steve@kps.test/);
+  expect(client.getQueryState(["contact360", CONTACT])?.isInvalidated).toBe(
+    true,
+  );
+  const calls = vi.mocked(fetch).mock.calls;
+  expect(
+    calls.some(([input]) =>
+      String(input instanceof Request ? input.url : input)
+        .split("?")[0]
+        .endsWith("/worklist"),
+    ),
+  ).toBe(false);
+});
+
+it("shows an unavailable linked case without offering a send", async () => {
+  installFetchStub({
+    "GET /me": meRoute({
+      privacy_request: ["read"],
+      contact: ["read", "update"],
+    }),
+    "GET /privacy/notice-case-reviews/missing": () =>
+      new Response(
+        JSON.stringify({
+          status: 404,
+          type: "not_found",
+          title: "Case unavailable",
+        }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <NoticeCasesCard caseId="missing" />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("alert");
+  expect(
+    screen.queryByRole("button", { name: en["noticeDuty.sendNotice"] }),
+  ).toBeNull();
 });

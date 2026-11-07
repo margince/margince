@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -45,6 +44,7 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		preview.State = previewIncompleteState
 		return nil
 	}
+	r.touch(map[string][]ids.UUID{entityActivity: {proposal.Evidence.SourceID}, tableSignal: {proposal.SignalID}})
 	var current lifecyclereview.Finding
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := activities.ReadActivityContentTx(ctx, tx, ids.From[ids.ActivityKind](proposal.Evidence.SourceID), storekit.LiveOnly); err != nil {
@@ -115,8 +115,8 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 		if citation.SourceQuote == nil || source.Body == nil {
 			return nil, apperrors.ErrVersionSkew
 		}
-		proof := values.QuoteProof{Start: citation.SourceQuote.Start, End: citation.SourceQuote.End, SHA256: citation.SourceQuote.Sha256}
-		quote, valid := values.VerifyQuote(textlang.CurrentMessage(*source.Body), proof)
+		proof := lifecyclereview.QuoteProofOf(*citation.SourceQuote)
+		quote, valid := textlang.VerifySenderQuote(*source.Body, proof)
 		if !valid {
 			return nil, apperrors.ErrVersionSkew
 		}
@@ -128,9 +128,6 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 }
 
 func (r approvalPreviewReader) currentEvidence(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview) error {
-	if approval.Kind == deals.StageProgressionKind {
-		return r.progressionEvidencePreview(ctx, approval, preview)
-	}
 	if approval.Kind == lifecycleProposalKind {
 		return r.lifecycleEvidence(ctx, approval, preview)
 	}

@@ -96,7 +96,7 @@ Write one claim per sentence, plainly, addressing the reader as "you" where natu
 // access get different facts — not about preference. Language is not a
 // permission, so it does not follow the reader.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("relationship summary")
 }
 

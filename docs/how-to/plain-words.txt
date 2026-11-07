@@ -232,7 +232,6 @@ complete
 compliance
 compose
 concept
-concrete
 confidence
 config's
 configuration
@@ -500,7 +499,6 @@ ghost
 give
 given
 glossary
-glow
 go
 goal
 good
@@ -568,7 +566,6 @@ include
 index
 indigo
 industry
-infra
 ingest
 ingress
 ink
@@ -609,7 +606,6 @@ key
 kind
 kit
 know
-kubernetes
 label
 ladder
 land
@@ -668,7 +664,6 @@ made
 mail
 mailbox
 main
-maintainer
 make
 manifest
 many
@@ -679,7 +674,6 @@ mark
 markup
 mask
 match
-materials
 math
 matrix
 matters
@@ -749,7 +743,6 @@ no
 nobody
 node
 noise
-nomad
 non
 none
 normal
@@ -846,7 +839,6 @@ personal
 phase
 phone
 pick
-pieces
 pill
 pilot
 pin
@@ -873,7 +865,6 @@ prefer
 prefix
 prepare
 prerequisite
-presence
 present
 preset
 press
@@ -1127,7 +1118,6 @@ sort
 source
 sovereign
 space
-specification
 spend
 spine
 split
@@ -1169,7 +1159,6 @@ subscription
 such
 suffixed
 suggestion
-suit
 summary
 superellipse
 superuser

@@ -49,9 +49,13 @@ export const me: Handler = ({ json }, { options }) => {
 // with them, as the server does, so a saved card stops offering its default.
 export const myWorkingHours: Handler = ({ route, json }, state) => {
   if (route.request().method() === "PUT") {
+    // The zone is not part of the write; the server keeps its own.
     state.workingHours = {
       chosen: true,
-      working_hours: route.request().postDataJSON(),
+      working_hours: {
+        ...state.workingHours.working_hours,
+        ...route.request().postDataJSON(),
+      },
     };
   }
   return json(state.workingHours);
@@ -188,15 +192,26 @@ export const installationConfiguration: components["schemas"]["ConfigurationEntr
 
 // The banner keys on the two identities differing and on nothing else. It
 // does not read `reindex_needed`, which a drift-cancelled rebuild leaves set.
+// The two identities, shared by the shell banner's read and the status read
+// System health makes, so the two answer one installation.
+function reindexIdentities(needed: boolean) {
+  return {
+    configured_identity: "bge-m3@1024",
+    populated_identity: needed ? "nomic-embed-text@768" : "bge-m3@1024",
+  };
+}
+
 export const reindexStatus: Handler = ({ json }, { options }) => {
   const needed = options.embedReindex === "needed";
   return json({
-    configured_identity: "bge-m3@1024",
-    populated_identity: needed ? "nomic-embed-text@768" : "bge-m3@1024",
+    ...reindexIdentities(needed),
     reindex_needed: needed,
     status: "idle",
   });
 };
+
+export const reindexIdentitiesRead: Handler = ({ json }, { options }) =>
+  json(reindexIdentities(options.embedReindex === "needed"));
 
 // No OIDC provider unless a test seeds one: the flow has not shipped, and the
 // empty list proves no provider button renders.

@@ -6,6 +6,8 @@ package assurance
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // testYear is the year every fixture below sits in — the rules are about
@@ -20,14 +22,14 @@ func at(m time.Month, d int) time.Time {
 // a case proves is that field.
 func healthy() Subject {
 	return Subject{
-		DealID:           "d1",
-		Owner:            "u1",
-		AmountMinor:      new(int64(500_000)),
-		Currency:         "EUR",
-		ExpectedClose:    new(at(time.June, 30)),
-		Category:         "commit",
+		DealID:         "d1",
+		Owner:          "u1",
+		AmountMinor:    new(int64(500_000)),
+		Currency:       "EUR",
+		ExpectedClose:  new(at(time.June, 30)),
+		WinProbability: 90, Likely: true,
 		StageName:        "Negotiation",
-		LastInboundAt:    new(at(time.May, 10)),
+		Viability:        &SubjectViability{Outcome: viability.OutcomeEligible},
 		HasNextStep:      true,
 		HasEconomicBuyer: true,
 	}
@@ -74,7 +76,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			fires:    func(s Subject) Subject { s.CloseProvisional = true; return s },
 			// Provisional but not committed: the forecast does not rest on it.
 			quiet: func(s Subject) Subject {
-				s.CloseProvisional, s.Category = true, "pipeline"
+				s.CloseProvisional, s.Likely = true, false
 				return s
 			},
 		},
@@ -101,19 +103,12 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			ruleType: TypeNoNextStep,
 			fires:    func(s Subject) Subject { s.HasNextStep = false; return s },
 			// No next step on a deal nobody is forecasting is not a finding.
-			quiet: func(s Subject) Subject { s.HasNextStep, s.Category = false, "omitted"; return s },
+			quiet: func(s Subject) Subject { s.HasNextStep, s.Likely = false, false; return s },
 		},
 		{
 			ruleType: TypeNoEconomicBuyer,
 			fires:    func(s Subject) Subject { s.HasEconomicBuyer = false; return s },
-			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Category = false, "pipeline"; return s },
-		},
-		{
-			ruleType: TypeBuyerSilent,
-			fires:    func(s Subject) Subject { s.LastInboundAt = new(at(time.January, 5)); return s },
-			// Never heard from at all is a DIFFERENT finding, and not one this
-			// rule claims: a deal created today has no inbound either.
-			quiet: func(s Subject) Subject { s.LastInboundAt = nil; return s },
+			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Likely = false, false; return s },
 		},
 		{
 			ruleType: TypeCommitUnpriced,
@@ -122,7 +117,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 				return s
 			},
 			quiet: func(s Subject) Subject {
-				s.AmountMinor, s.Currency, s.Category = nil, "", "pipeline"
+				s.AmountMinor, s.Currency, s.Likely = nil, "", false
 				return s
 			},
 		},
@@ -194,7 +189,7 @@ func TestEveryRuleQuotingMoneyIsADealAmountType(t *testing.T) {
 	loaded.ExpectedClose = new(at(time.April, 30))
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
-	loaded.LastInboundAt = new(at(time.January, 5))
+	loaded.Viability = reviewRequired()
 	loaded.HasNextStep, loaded.HasEconomicBuyer = false, false
 	loaded.OfferTotalMinor = new(int64(123_456_789))
 	loaded.ContractTotalMinor = new(int64(234_567_891))
@@ -247,7 +242,7 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	loaded.ExpectedClose = new(at(time.April, 30))
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
-	loaded.LastInboundAt = new(at(time.January, 5))
+	loaded.Viability = reviewRequired()
 	loaded.HasEconomicBuyer = false
 	loaded.OfferTotalMinor = new(int64(100_000))
 	loaded.ContractTotalMinor = new(int64(90_000))
@@ -275,19 +270,28 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	}
 }
 
-func TestBuyerSilenceCountsDatesAcrossTheShortDay(t *testing.T) {
-	zone, err := time.LoadLocation("Europe/Berlin")
-	if err != nil {
-		t.Fatal(err)
+// reviewRequired is the assessment of a deal whose customer went silent.
+func reviewRequired() *SubjectViability {
+	return &SubjectViability{
+		Outcome:    viability.OutcomeReviewRequired,
+		Reasons:    []viability.Reason{viability.ReasonCustomerSilent, viability.ReasonCloseDateUnsupported},
+		SilentDays: 196,
 	}
-	asOf := time.Date(2026, 3, 30, 0, 5, 0, 0, zone)
-	subject := healthy()
-	last := time.Date(2026, 3, 29, 0, 5, 0, 0, zone)
-	subject.LastInboundAt = &last
-	cfg := DefaultConfig()
-	cfg.SilentDays = 1
-	finding := ask(t, TypeBuyerSilent, asOf, subject, cfg)
-	if finding == nil || finding.Observed["silent_days"] != 1 {
-		t.Fatalf("finding = %+v, want one calendar day of silence", finding)
+}
+
+// A retired type keeps its stored findings and no rule raises it again, even
+// on a deal the customer stopped answering.
+func TestNoRuleRaisesARetiredType(t *testing.T) {
+	t.Parallel()
+	silent := healthy()
+	silent.Viability = reviewRequired()
+	for _, rule := range Rules() {
+		if rule.Type == TypeDealViability || rule.Type == TypeBuyerSilent {
+			t.Errorf("rule %s asks a retired question", rule.Type)
+		}
+		if found := rule.Ask(at(time.May, 14), silent, DefaultConfig()); found != nil &&
+			(found.Type == TypeDealViability || found.Type == TypeBuyerSilent) {
+			t.Errorf("rule %s raised a retired %s finding", rule.Type, found.Type)
+		}
 	}
 }

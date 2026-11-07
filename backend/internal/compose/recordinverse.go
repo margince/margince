@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -296,7 +297,7 @@ func (e Evaluator) createStands(ctx context.Context, tx pgx.Tx, row AuditRow) (U
 		// somebody's calendar, which the activity archive refuses too.
 		var invited bool
 		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (SELECT 1 FROM meeting_invitation WHERE activity_id = $1 AND status <> 'canceled')`,
+			SELECT EXISTS (SELECT 1 FROM meeting_invitation i WHERE i.activity_id = $1 AND `+activities.InvitationHoldsMeetingSQL("i")+`)`,
 			row.EntityID).Scan(&invited); err != nil {
 			return Undoability{}, false, err
 		}
@@ -318,6 +319,9 @@ func (e Evaluator) createStands(ctx context.Context, tx pgx.Tx, row AuditRow) (U
 // archived by THIS entry: un-archived since, or archived again later, the
 // un-archive would reverse a different archive than the one on screen.
 func (e Evaluator) archiveStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
+	if row.EntityType == entityTypeActivity && activities.IsMeetingCopyArchive(row.Evidence) {
+		return refuse(ReasonNotRestorableByThisPath, "a meeting folded into the copy that stayed"), true, nil
+	}
 	if e.Archived != nil {
 		archived, err := e.Archived(ctx, tx, row.EntityType, row.EntityID)
 		if err != nil {

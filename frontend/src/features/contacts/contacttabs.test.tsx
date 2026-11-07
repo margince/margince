@@ -13,11 +13,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { telUri } from "../../format/contacturi";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactTimelineTab } from "./contacttabs";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 type Contact360 = components["schemas"]["Contact360"];
 type Deal = components["schemas"]["Deal"];
@@ -300,7 +305,7 @@ describe("the timeline tab", () => {
       <ContactTimelineTab contactId="p-1" view={threaded} />,
     );
 
-    expect(container.querySelectorAll(".tl-thread")).toHaveLength(1);
+    expect(container.querySelectorAll(".tl-thread-messages")).toHaveLength(1);
     expect(
       screen.getByText("2 messages · 1 from them, 1 from your team"),
     ).toBeTruthy();
@@ -609,6 +614,71 @@ describe("the deals tab", () => {
     expect(searched).not.toContain("companies");
   });
 
+  it("counts a floor, never a total, when the deal list is cut", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            amount_minor: 42_000_000,
+            currency: "EUR",
+          } satisfies Deal),
+      },
+      {},
+    );
+    const cut: Contact360 = {
+      ...view,
+      deal_roles: {
+        data: view.deal_roles?.data ?? [],
+        page: { has_more: true },
+      },
+    };
+    withProviders(<ContactDealsTab view={cut} />);
+    const open = await screen.findByText("1+");
+    expect(open.closest(".stat-card")?.textContent).toContain(
+      "of 1+ on record",
+    );
+    expect(
+      screen.queryByText(/€420k/i, { selector: ".stat-card *" }),
+    ).toBeNull();
+  });
+
+  it("withholds the next close when a deal on the list cannot be read", async () => {
+    stubWithSession(
+      {
+        "GET /deals/d-1": () =>
+          jsonResponse({
+            ...DEAL_D1,
+            expected_close_date: "2026-12-31",
+          } satisfies Deal),
+        "GET /deals/d-2": () =>
+          jsonResponse({ title: "Forbidden", status: 403 }, 403),
+      },
+      {},
+    );
+    const twoDeals: Contact360 = {
+      ...view,
+      deal_roles: {
+        data: [
+          ...(view.deal_roles?.data ?? []),
+          {
+            relationship_id: "r-2",
+            deal_id: "d-2",
+            deal_title: "Depot expansion",
+            deal_stage: "Qualified",
+            role: "champion",
+          },
+        ],
+        page: { has_more: false },
+      },
+    };
+    withProviders(<ContactDealsTab view={twoDeals} />);
+    await screen.findByText("1+");
+    const nextClose = screen.getByText("Next close").closest(".stat-card");
+    expect(nextClose?.textContent).toContain("—");
+    expect(nextClose?.textContent).not.toMatch(/Dec/);
+  });
+
   // Withheld rather than disabled: a grant the role does not hold is not a fact
   // about this contact, so there is nothing for a disabled button to explain.
   it("withholds the verb from a reader who may not write an edge", async () => {
@@ -881,6 +951,9 @@ describe("the meetings tab", () => {
     expect(screen.getByText("Upcoming")).toBeTruthy();
     expect(screen.getByText(/Prepare before the meeting/)).toBeTruthy();
     const draft = screen.getByRole("button", { name: "Draft agenda" });
+    // Beside the brief, the card's one filled verb, it is outlined with its ✦.
+    expect(draft.classList.contains("btn-aiQuiet")).toBe(true);
+    expect(draft.querySelector(".lucide-sparkles")).not.toBeNull();
     await userEvent.setup().click(draft);
     expect(acted).toEqual([draftAgenda]);
   });

@@ -35,6 +35,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
@@ -51,20 +52,43 @@ const summaryValueLimit = 48
 // uuidText finds an id written into a sentence.
 var uuidText = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
 
-// stagedSentence is the line an approver reads: the resolver's, which names the
-// records, plus every body field it leaves out. A resolver with no line, or one
-// that names a record by an id the reader cannot open, gives way to restSummary.
-func stagedSentence(info agents.StageInfo, said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
+// stagedParts is what an approver reads: the resolver's sentence, which names
+// the records, plus every body field it leaves out. A resolver with no line, or
+// one that names a record by an id the reader cannot open, gives way to restParts.
+func stagedParts(info agents.StageInfo, said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) crmcontracts.ApprovalSummaryParts {
 	if info.Summary == "" || uuidText.MatchString(info.Summary) {
-		return restSummary(said, pol, r, body)
+		return restParts(said, pol, r, body)
 	}
-	unshown := summaryFieldsWhere(said, body, func(key string, raw json.RawMessage) bool {
+	parts := crmcontracts.ApprovalSummaryParts{Sentence: info.Summary}
+	parts.Fields, parts.MoreFields = summaryFieldsWhere(said, body, func(key string, raw json.RawMessage) bool {
 		return !sentenceShows(info.Summary, key, raw)
 	})
-	if len(unshown) == 0 {
-		return info.Summary
+	return parts
+}
+
+// summaryLine joins the parts into approval.summary: the sentence, then each
+// field as key=value. It is the only joiner, so the line and the parts agree.
+func summaryLine(said approvalSummaryCopy, parts crmcontracts.ApprovalSummaryParts) string {
+	pairs := make([]string, 0, len(parts.Fields)+1)
+	for _, field := range parts.Fields {
+		pairs = append(pairs, field.Field+"="+field.Value)
 	}
-	return info.Summary + ": " + strings.Join(unshown, ", ")
+	if parts.MoreFields > 0 {
+		pairs = append(pairs, fmt.Sprintf(agents.MoreFields(said.lang), parts.MoreFields))
+	}
+	if len(pairs) == 0 {
+		return parts.Sentence
+	}
+	return parts.Sentence + ": " + strings.Join(pairs, ", ")
+}
+
+// stagedSummaryParts is the parts as approval.summary_parts stores them: nil
+// for a sentence alone, which has nothing to show apart.
+func stagedSummaryParts(parts crmcontracts.ApprovalSummaryParts) *crmcontracts.ApprovalSummaryParts {
+	if len(parts.Fields) == 0 && parts.MoreFields == 0 {
+		return nil
+	}
+	return &parts
 }
 
 // sentenceShows reports whether the sentence already tells the approver this
@@ -85,7 +109,7 @@ func sentenceShows(sentence, key string, raw json.RawMessage) bool {
 	return false
 }
 
-// restSummary describes the staged call: what it does to what, plus the
+// restParts describes the staged call: what it does to what, plus the
 // request body's own top-level fields. A body-less action route (send this
 // offer, archive this record) names the act alone — which is the whole change,
 // and says so.
@@ -97,22 +121,20 @@ func sentenceShows(sentence, key string, raw json.RawMessage) bool {
 // from it, and the operationId is the contract's word, not theirs. The tool
 // verb and the record type are already on the policy, and together they are the
 // sentence.
-func restSummary(said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) string {
-	head := actPhrase(said, pol, r.Method, r.URL.Path)
-	fields := summaryFields(said, body)
+func restParts(said approvalSummaryCopy, pol agentPolicy, r *http.Request, body []byte) crmcontracts.ApprovalSummaryParts {
+	parts := crmcontracts.ApprovalSummaryParts{Sentence: actPhrase(said, pol, r.Method, r.URL.Path)}
+	parts.Fields, parts.MoreFields = summaryFieldsWhere(said, body, nil)
 	// A CREATE is routed by its parent — createOffer posts under the deal the
 	// offer would belong to — and the parent appears nowhere in the body. The
 	// old head carried it by accident, inside the path; naming it is what keeps
 	// an approver able to tell which deal they are pricing.
 	if pol.Tool == toolCreateRecord {
 		if parent := createdUnder(r); parent != "" {
-			fields = append([]string{said.createdUnder + "=" + parent}, fields...)
+			parent := crmcontracts.ApprovalSummaryField{Field: said.createdUnder, Value: parent}
+			parts.Fields = append([]crmcontracts.ApprovalSummaryField{parent}, parts.Fields...)
 		}
 	}
-	if len(fields) == 0 {
-		return head
-	}
-	return head + ": " + strings.Join(fields, ", ")
+	return parts
 }
 
 // createdUnder is the record a nested create hangs off.
@@ -233,20 +255,15 @@ func upperFirst(phrase string) string {
 	return strings.ToUpper(phrase[:1]) + phrase[1:]
 }
 
-// summaryFields renders the body's top-level entries as key=value, sorted so
-// two renderings of the same call read the same way. A nested object or
-// array is named and counted rather than expanded: the inbox is a summary,
-// and proposed_change carries the whole envelope for anyone who wants it.
-func summaryFields(said approvalSummaryCopy, body []byte) []string {
-	return summaryFieldsWhere(said, body, nil)
-}
-
-// summaryFieldsWhere is summaryFields for the entries `keep` accepts, or all of
-// them when it is nil. The limit counts the kept entries.
-func summaryFieldsWhere(said approvalSummaryCopy, body []byte, keep func(string, json.RawMessage) bool) []string {
+// summaryFieldsWhere renders the body's top-level entries that `keep` accepts,
+// or all of them when it is nil, sorted so two renderings of one call read
+// alike. It returns at most summaryFieldLimit of them and the count left out.
+// A nested object or array is counted rather than expanded: proposed_change
+// carries the whole envelope for anyone who wants it.
+func summaryFieldsWhere(said approvalSummaryCopy, body []byte, keep func(string, json.RawMessage) bool) ([]crmcontracts.ApprovalSummaryField, int) {
 	var payload map[string]json.RawMessage
 	if len(strings.TrimSpace(string(body))) == 0 || json.Unmarshal(body, &payload) != nil {
-		return nil
+		return nil, 0
 	}
 	keys := make([]string, 0, len(payload))
 	for key, raw := range payload {
@@ -256,15 +273,12 @@ func summaryFieldsWhere(said approvalSummaryCopy, body []byte, keep func(string,
 	}
 	sort.Strings(keys)
 
-	rendered := make([]string, 0, len(keys))
-	for _, key := range keys {
-		if len(rendered) == summaryFieldLimit {
-			rendered = append(rendered, fmt.Sprintf(agents.MoreFields(said.lang), len(keys)-summaryFieldLimit))
-			break
-		}
-		rendered = append(rendered, key+"="+summaryValue(said, payload[key]))
+	shown := min(len(keys), summaryFieldLimit)
+	rendered := make([]crmcontracts.ApprovalSummaryField, 0, shown)
+	for _, key := range keys[:shown] {
+		rendered = append(rendered, crmcontracts.ApprovalSummaryField{Field: key, Value: summaryValue(said, payload[key])})
 	}
-	return rendered
+	return rendered, len(keys) - shown
 }
 
 // summaryValue renders one JSON value for a human. Strings lose their quotes

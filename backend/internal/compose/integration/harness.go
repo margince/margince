@@ -96,6 +96,12 @@ func Setup(t *testing.T) *Env {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	// Refused rather than reported, because the reset is what makes a leak
+	// invisible: it truncates the rows the leaked workers are still reading.
+	if leaked := leakedRunners(); leaked != "" {
+		t.Fatalf("a job runner outlived the test that started it, so this reset would "+
+			"pull the database out from under its workers:%s", leaked)
+	}
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
@@ -195,6 +201,9 @@ func ContractsStore(db *database.DB, dealStore *deals.Store) *contracts.Store {
 // same owner DSN the migration step uses.
 func SchemaPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
+	if err := testdb.EnsureSchema(context.Background(), OwnerConn(t)); err != nil {
+		t.Fatal(err)
+	}
 	dsn := os.Getenv("MARGINCE_TEST_DSN")
 	if dsn == "" {
 		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
@@ -314,12 +323,19 @@ func (e *Env) AgentCtx() context.Context {
 // assertion vacuously.
 func (e *Env) AgentFor(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
 	t.Helper()
+	return e.AgentOnPassport(t, human, teams, perms, ids.New[ids.PassportKind]())
+}
+
+// AgentOnPassport is AgentFor acting under a passport the test seeded, so the
+// audit row resolves the tool the passport was granted to.
+func (e *Env) AgentOnPassport(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions, passport ids.PassportID) context.Context {
+	t.Helper()
 	teamIDs := make([]ids.TeamID, 0, len(teams))
 	for _, team := range teams {
 		teamIDs = append(teamIDs, ids.From[ids.TeamKind](team))
 	}
 	agent := identity.AgentIdentity{
-		PassportID:  ids.New[ids.PassportKind](),
+		PassportID:  passport,
 		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
 		OnBehalfOf:  ids.From[ids.UserKind](human),
 		SeatType:    string(principal.SeatFull),
@@ -330,21 +346,6 @@ func (e *Env) AgentFor(t *testing.T, human ids.UUID, teams []ids.UUID, perms pri
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, agent.Principal())
-}
-
-// SeedPassport inserts a live passport for Rep1 and returns its id. Rows
-// that reference a passport carry a real foreign key, so a synthetic id
-// would be rejected by the database rather than by the code under test.
-func (e *Env) SeedPassport(t *testing.T, owner *pgx.Conn, label string) ids.UUID {
-	t.Helper()
-	id := ids.NewV7()
-	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
-		VALUES ($1, $2, $2, $3, ARRAY['read','write'], $4, now() + interval '1 day')`,
-		id, e.Rep1, label, "hash-"+id.String()); err != nil {
-		t.Fatalf("seeding passport %s: %v", label, err)
-	}
-	return id
 }
 
 // AgentCtxWithPassport is AgentCtx carrying a passport id, which is what a

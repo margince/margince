@@ -12,7 +12,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -25,7 +24,7 @@ import (
 // way the lifecycle seams build theirs. gate is the one whose volume meter an
 // agent's changed records are admitted against.
 func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
-	contactsStore, tasks := contacts.NewStore(db), activities.NewStore(db)
+	contactsStore, tasks := newContactsStore(db), activities.NewStore(db)
 	targets := bulkTargets(contactsStore, deals.NewStore(db, DealsInstallation()))
 	targets[crmcontracts.BulkRecordTypeWorklistItem] = worklistBulkTarget{tasks: tasks, claims: contactsStore}
 	return &bulkEngine{
@@ -42,11 +41,11 @@ func newBulkEngine(db *database.DB, gate *auth.Gate) *bulkEngine {
 // volume meter, the one the tool registry charges an agent's changed records
 // to, so the change is admitted against the counter it is paid into.
 func (s *Server) wireBulkSurface(pool *pgxpool.Pool) {
-	s.bulkHandlers = bulkHandlers{engine: newBulkEngine(InstallationDB(pool),
-		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)))}
+	s.bulkHandlers = bulkHandlers{
+		engine: newBulkEngine(InstallationDB(pool), auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter))),
+	}
 }
 
-// bulkHandlers is the REST door onto the bulk-change engine.
 type bulkHandlers struct {
 	engine *bulkEngine
 }

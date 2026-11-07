@@ -72,7 +72,7 @@ func remapCompanyIndustry(ctx context.Context, tx pgx.Tx, id ids.CompanyID) erro
 	if err != nil {
 		return err
 	}
-	current, err := readCompany(ctx, tx, id, storekit.IncludeArchived, nil)
+	current, err := readCompanyRow(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {
 		return fmt.Errorf("contacts: reading a company before its industry is mapped: %w", err)
 	}

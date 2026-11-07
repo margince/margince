@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
@@ -14,7 +14,12 @@ import {
 import type { ComposeThread } from "./composeanchor";
 import type { DraftAsk, FollowUp } from "./composedraftcall";
 
-import { fillFromDraft, keptTag, useDraftMutation } from "./composedraftcall";
+import {
+  draftingSubject,
+  fillFromDraft,
+  keptTag,
+  useDraftMutation,
+} from "./composedraftcall";
 import type { DraftNeed, PendingAction } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { RelinkKind } from "./composerelink";
@@ -106,6 +111,7 @@ export function useVoiceDraft({
   bodyId,
   voiceProfileId,
   sendPending,
+  sourceBlocked,
 }: Readonly<{
   open: boolean;
   fields: ComposeFields;
@@ -122,6 +128,7 @@ export function useVoiceDraft({
   bodyId: string;
   voiceProfileId: string | null;
   sendPending: boolean;
+  sourceBlocked?: boolean;
 }>) {
   const t = useT();
   const { account, draftEpoch, body, html, intent } = fields;
@@ -136,6 +143,10 @@ export function useVoiceDraft({
       document.getElementById(bodyId)?.scrollIntoView?.({ block: "nearest" });
     });
   };
+
+  // The last draft that reached the body, so it arrives as a model's words do.
+  // A draft the rep's own words held back never shows.
+  const [drafted, setDrafted] = useState<string | null>(null);
 
   const draft = useDraftMutation({
     entityId,
@@ -157,6 +168,9 @@ export function useVoiceDraft({
       });
       // The rep's words stood in the way, so say the new draft was dropped.
       fields.setDraftKept(!written);
+      if (written) {
+        setDrafted(result.draft.body);
+      }
       revealDraftedBody();
     },
     resetUnavailable: () => {
@@ -173,6 +187,8 @@ export function useVoiceDraft({
       ask.body === body &&
       ask.html === html &&
       ask.intent === intent &&
+      (answering !== undefined ||
+        ask.subject === draftingSubject(fields.subject)) &&
       ask.activityId === answering &&
       ask.entityId === entityId &&
       ask.entityType === entityType &&
@@ -223,6 +239,7 @@ export function useVoiceDraft({
   const rejectionInFlight = discard.isPending;
   const ask = (instruction?: string): DraftAsk => ({
     activityId: answering,
+    subject: draftingSubject(fields.subject),
     entityType,
     entityId,
     followUp,
@@ -230,7 +247,6 @@ export function useVoiceDraft({
     epoch: draftEpoch.current,
     body,
     html,
-    servedBody: fields.servedBody,
     grounding: { ...account.grounding, recipientId, projectId },
     ...(instruction === undefined ? {} : { instruction }),
   });
@@ -238,7 +254,7 @@ export function useVoiceDraft({
     run: () => draft.mutate(ask()),
     pending: draft.isPending,
     disabled: draftBlocked({
-      busy: rejectionInFlight || sendPending,
+      busy: rejectionInFlight || sendPending || sourceBlocked === true,
       answering,
       intent,
       anchorActivity: thread.anchorActivity,
@@ -259,6 +275,7 @@ export function useVoiceDraft({
     control,
     discardControl,
     rejectionInFlight,
+    drafted,
     need: draftNeed(groundable, recipient),
     // A rewrite replaces the body, so it waits for any draft in flight.
     rewrite: (instruction: string) => draft.mutate(ask(instruction)),
@@ -274,6 +291,7 @@ export function useDraftOnOpen({
   asked,
   mail,
   settled,
+  held,
   body,
   control,
 }: Readonly<{
@@ -283,6 +301,7 @@ export function useDraftOnOpen({
   mail: boolean;
   /** A saved draft has had its chance to come back. */
   settled: boolean;
+  held: boolean;
   body: string;
   control: PendingAction;
 }>) {
@@ -295,8 +314,12 @@ export function useDraftOnOpen({
       started.current = false;
       return;
     }
+    if (held) {
+      started.current = true;
+      return;
+    }
     if (started.current || !ready || disabled || pending) return;
     started.current = true;
     run();
-  }, [wanted, ready, disabled, pending, run]);
+  }, [wanted, ready, held, disabled, pending, run]);
 }

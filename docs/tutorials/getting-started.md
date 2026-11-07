@@ -51,8 +51,8 @@ against the empty database, it sets up the company and the admin
 user from the settings file `config/margince.yaml`. On the first run, `make dev` makes
 that file (and the admin password file) from
 [`config/margince.example.yaml`](../../config/margince.example.yaml), and
-then leaves it alone. Edit it as you like, or delete it to start over. No
-screen or endpoint runs this first setup, and no request creates a workspace.
+then leaves it alone. Edit it as you like, or delete it to start over. With no `bootstrap_admin`, the api writes a one-time setup token to
+`config/margince-setup-token` and serves the setup screen instead, where the first admin claims the installation.
 
 ## 4. Sign in
 
@@ -60,8 +60,12 @@ Open <http://localhost:8080>. It serves the web app and sends `/v1` on to the
 API behind it, so it is the only URL you need.
 
 Sign in as `admin@demo.test` with `operator-supplied-first-password` (from
-`config/margince-admin-password`). The app asks you to set a new password
-before any other step works. The rest of this page follows that cold path.
+`config/margince-admin-password`). Those are the first credentials of an installation that
+`bootstrap_admin` created. The app asks you to set a new password before any other step works.
+The rest of this page follows that cold path.
+
+If you claimed the installation on the setup screen instead, sign in with the email and password
+you typed there. That account keeps its password, so the app does not ask you to change it first.
 
 `make seed-dev`, run against the running stack, is the short way past it. It
 does the first sign in of the admin and sets the password to `demo-password-123`.

@@ -1,14 +1,15 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import { renderWithQueryClient } from "../testing/queryrender";
 import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
 
 // Where Enter lands when the reader has not picked a row. A screen the words
-// match keeps it (palette.test.tsx holds that); a record found by search takes
-// it only when the words name it whole, and the results page otherwise.
+// match keeps it; palette.test.tsx holds that. A record found by search takes
+// it only when the words name it whole; otherwise the results page does. A row
+// that runs leaves the palette closed.
 
 afterEach(() => {
   cleanup();
@@ -44,15 +45,24 @@ function hits(data: readonly Record<string, string>[]) {
 }
 
 function renderPalette() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  render(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <CommandPalette open onClose={() => {}} commands={commands} />
-      </LocaleProvider>
-    </QueryClientProvider>,
+  renderWithQueryClient(
+    <CommandPalette open onClose={() => {}} commands={commands} />,
+  );
+}
+
+function PaletteWithOpener() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Search
+      </button>
+      <CommandPalette
+        open={open}
+        onClose={() => setOpen(false)}
+        commands={commands}
+      />
+    </>
   );
 }
 
@@ -96,6 +106,19 @@ describe("CommandPalette Enter", () => {
     expect(window.location.hash).toBe("#/search/straight");
   });
 
+  it("stays closed after Enter runs a row from a palette a button opened", async () => {
+    const user = steppedClock();
+    hits([]);
+    renderWithQueryClient(<PaletteWithOpener />);
+    const opener = screen.getByRole("button", { name: "Search" });
+    await user.click(opener);
+    await user.type(screen.getByRole("searchbox"), "deals");
+    await user.keyboard("{Enter}");
+    expect(document.activeElement).toBe(opener);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(window.location.hash).toBe("#/deals");
+  });
+
   // The arrows still choose: the see-all row leads, and the hits sit one
   // press below it.
   it("opens the hit the reader arrowed to", async () => {
@@ -131,4 +154,19 @@ describe("CommandPalette Enter", () => {
     await user.keyboard("{ArrowDown}{Enter}");
     expect(window.location.hash).toBe("#/search/quarterly/a2/activity");
   });
+});
+
+it("shows the address match above its normal group and opens the same lead", async () => {
+  const user = steppedClock();
+  hits([
+    { type: "company", id: "o1", title: "Example" },
+    { type: "lead", id: "l1", title: "Lena", identifier_match: "prefix" },
+  ]);
+  renderPalette();
+  await user.type(screen.getByRole("searchbox"), "lena@exam");
+  await screen.findByText("Best match");
+  const rows = screen.getAllByRole("button", { name: /Lena/ });
+  expect(rows).toHaveLength(2);
+  await user.click(rows[0]);
+  expect(window.location.hash).toBe("#/leads/l1");
 });

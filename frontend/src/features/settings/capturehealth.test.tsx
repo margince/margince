@@ -47,6 +47,7 @@ function stubRoutes(overrides: Record<string, () => Response> = {}) {
 const GENERATED = "2026-09-17T09:30:00Z";
 
 const HEALTH: Health = {
+  connection_concerns: [],
   generated_at: GENERATED,
   mailboxes: [
     {
@@ -289,4 +290,28 @@ it("calls a pass overdue once its last success is two cadences behind the report
       GENERATED,
     )?.label,
   ).toBe("captureHealth.warn.skipped");
+});
+
+it("lists concerned connections without message details", async () => {
+  stubRoutes({
+    "GET /admin/capture-health": () =>
+      jsonResponse({
+        ...HEALTH,
+        connection_concerns: [
+          {
+            user_id: "00000000-0000-7000-8000-000000000001",
+            connection_id: "00000000-0000-7000-8000-000000000002",
+            display_name: "Demo Member",
+            provider: "gmail",
+            account_label: "mailbox@example.test",
+            concern: "sync_stalled",
+            since: "2026-09-15T09:30:00Z",
+            last_success_at: "2026-09-15T09:30:00Z",
+          },
+        ],
+      }),
+  });
+  render(<CaptureHealthCard />);
+  expect(await screen.findByText("mailbox@example.test")).toBeTruthy();
+  expect(screen.getByText("Sync has stopped")).toBeTruthy();
 });

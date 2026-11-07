@@ -5,8 +5,9 @@ import type { components } from "../api/schema";
 import { formatActivityWhen } from "../format/activitywhen";
 import { useLocale, useT } from "../i18n";
 import { useActivity } from "../lib/activityread";
+import type { SourceOpenerFor } from "../lib/opensource";
 import { ProblemError, problemCode } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";
 import { type SectionState, SurfaceState } from "./surfacestate";
@@ -27,15 +28,16 @@ type Activity = components["schemas"]["Activity"];
  */
 export function SourceEvidence({
   activityId,
-  onOpenTranscript,
+  openerFor,
 }: Readonly<{
   activityId: string;
-  /** Open the transcript reader, which the host owns along with its drawer. */
-  onOpenTranscript: (id: string) => void;
+  /** The host's opener for the whole source (`useSourceOpener`). A source it
+   *  cannot open gets no button. */
+  openerFor: SourceOpenerFor;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The kind decides the form, so it is resolved before either is drawn. The
   // PLAIN activity read, not the email presentation: that endpoint refuses any
   // kind but `email`, so asking it first would 404 on every transcript.
@@ -68,13 +70,19 @@ export function SourceEvidence({
       </SurfaceState>
     );
   }
+  const open = openerFor({
+    id: source.id,
+    kind: source.kind,
+    contentState: source.content_state,
+  });
   if (source.kind === "email") {
     return (
       <SourceEmailPanel
         activityId={activityId}
         formatWhen={(at, precision) =>
-          formatActivityWhen(at, precision, locale, recordZone)
+          formatActivityWhen(at, precision, locale, readerZone)
         }
+        onOpenThread={open}
       />
     );
   }
@@ -86,16 +94,18 @@ export function SourceEvidence({
             source.occurred_at,
             source.occurred_precision,
             locale,
-            recordZone,
+            readerZone,
           ),
           source.subject,
         ]
           .filter(Boolean)
           .join(" · ")}
       </p>
-      <Button variant="ghost" onClick={() => onOpenTranscript(activityId)}>
-        {t("tasks.openSource")}
-      </Button>
+      {open && (
+        <Button variant="ghost" aria-haspopup="dialog" onClick={open}>
+          {t("tasks.openSource")}
+        </Button>
+      )}
     </div>
   );
 }

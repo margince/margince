@@ -37,7 +37,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -62,6 +61,8 @@ type OpenTask struct {
 	// a pointer the whole way to the wire rather than collapsing to a zero
 	// time somewhere in the middle.
 	DueAt *time.Time
+	// DueHasTime is true when DueAt names a time of day rather than a day.
+	DueHasTime bool
 	// AssigneeID and AssigneeName are absent together for an unassigned
 	// task: a promise with no owner, which is the single most useful thing
 	// this read surfaces.
@@ -187,8 +188,7 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(a.subject, ''), `+storekit.TaskDueSQL("a")+`,
-			a.assignee_id, coalesce(u.display_name, ''), a.created_at
+	rows, err := tx.Query(ctx, `SELECT `+openTaskColumns()+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id
 		WHERE `+joinAnd(where)+
@@ -248,6 +248,11 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 	if linkColumn(*entityType) == "" {
 		return &InvalidLinkTypeError{EntityType: *entityType}
 	}
+	// Row scope reads every deal and company, so a role without the type's
+	// read grant would learn which activities a record it cannot open holds.
+	if err := auth.Require(ctx, *entityType, principal.ActionRead); err != nil {
+		return err
+	}
 	// The record type IS the table name for every arm of this vocabulary, which
 	// is the same identity linkNameCoalesce reads.
 	return auth.EnsureVisible(ctx, tx, *entityType, *entityID)
@@ -258,7 +263,7 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities string, arg func(any) int) (where []string, err error) {
 	where = []string{
 		// The definition of the set, and the partial index's own predicate.
-		sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindTask))),
+		"a.kind = 'task'",
 		"a.is_done = false",
 		activityLive,
 	}
@@ -280,7 +285,7 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities stri
 		where = append(where, sprintf("a.assignee_id = $%d", arg(*in.AssigneeID)))
 	}
 	if in.ExcludeSystemMinted {
-		where = append(where, NotSystemMinted("a", arg))
+		where = append(where, "NOT "+SystemMintedExpr("a"))
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
@@ -310,7 +315,7 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities stri
 // projection keeps and for the same reason: "may I read this task" is an
 // any-link question, and answering it yes does not license naming every
 // other record the task touches. The rule has one spelling —
-// auth.LinkTargetVisibleClause — and both readers ask it.
+// auth.LinkTargetReadableClause, and both readers ask it.
 func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 	if len(tasks) == 0 {
 		return nil
@@ -323,7 +328,7 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 	}
 	args := []any{taskIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return err
 	}
@@ -355,7 +360,8 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 
 func scanOpenTask(row pgx.CollectableRow) (OpenTask, error) {
 	var t OpenTask
-	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt)
+	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt)
+	t.DueHasTime = t.DueHasTime && t.DueAt != nil
 	return t, err
 }
 
@@ -384,4 +390,9 @@ func joinAnd(terms []string) string {
 	}
 	out += outSb364.String()
 	return out
+}
+
+func openTaskColumns() string {
+	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
+		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at"
 }

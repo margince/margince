@@ -21,8 +21,19 @@ Six things are checked per run, and all six must hold:
                    The other direction: some call to `tool` carries what
                    `tool~regex` asks, when the target is named in free text
                    rather than one argument's exact value.
+  figures_from_results
+                   Is every money figure in the answer one Margince returned in
+                   this run? `true` checks each amount the answer states against
+                   the run's tool results, so a typed or invented figure fails.
   judge            Does the answer do what this sentence says? Each entry is a
                    criterion in plain words, decided by a model (judge.py).
+
+THE ANSWER IS SCORED, NOT THE PATH. A model may reach a right answer by more than
+one road, and a case that pins one tool fails a correct answer for taking another.
+Pin a tool only when the call is the outcome (a write the end state cannot show,
+or a refusal to call); otherwise state what the answer must hold and let the model
+choose. A run that calls nothing is scored the same way: its answer and end state
+show whether it could be right.
 
 WHICH HALF AN ASSERTION BELONGS IN is the whole design, and it was learned by
 measurement. A regex is reliable for a MECHANICAL fact — the answer carries this
@@ -248,6 +259,88 @@ def read_transcript(path):
     return called, "\n".join(said), calls
 
 
+def read_tool_results(path):
+    """The text of every tool result in a transcript, in order."""
+    results = []
+    for line in _open_checked(path):
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        content = (event.get("message") or {}).get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_result":
+                body = block.get("content")
+                if isinstance(body, list):
+                    body = " ".join(part.get("text", "") for part in body if isinstance(part, dict))
+                results.append(str(body or ""))
+    return results
+
+
+# A money figure as an answer writes it: a currency sign, code or word before or
+# after a number. A space groups thousands only before exactly three digits, so
+# "€5 6 deals" is €5 and a count, not €56.
+_DIGITS = r"\d{1,3}(?:[.,\u202f\u00a0 ]\d{3})+(?:[.,]\d{1,2})?(?!\d)|\d+(?:[.,]\d+)?"
+_SCALE = r"(?:\s?(?:[kK]|[mM]|bn|Mio\.?|million|thousand)\b)?"
+_CURRENCY_WORD = r"(?:EUR|USD|GBP|CHF|euros?|dollars?|pounds?)\b"
+_MONEY = re.compile(
+    rf"(?:[€$£]|\b(?:EUR|USD|GBP|CHF)\s?)\s?({_DIGITS})({_SCALE})"
+    rf"|\b({_DIGITS})({_SCALE})\s?(?:€|{_CURRENCY_WORD})"
+)
+_NUMBER = re.compile(r"\d[\d.,]*\d|\d")
+_SCALES = {"k": 1e3, "thousand": 1e3, "m": 1e6, "million": 1e6, "mio": 1e6, "mio.": 1e6, "bn": 1e9}
+
+
+def _amount(digits, scale):
+    """A written amount as (value, the step its writing rounds to)."""
+    text = re.sub(r"[\u202f\u00a0 ]", "", digits)
+    # One separator followed by exactly one or two digits is a decimal mark;
+    # every other separator groups thousands.
+    decimal = re.search(r"[.,](\d{1,2})$", text)
+    if decimal and not re.fullmatch(r"\d{1,3}([.,]\d{3})+", text):
+        whole = re.sub(r"[.,]", "", text[: decimal.start()])
+        value, step = float(f"{whole}.{decimal.group(1)}"), 10 ** -len(decimal.group(1))
+    else:
+        value, step = float(re.sub(r"[.,]", "", text)), 1.0
+    factor = _SCALES.get(scale.strip().lower(), 1) if scale.strip() else 1
+    return value * factor, step * factor
+
+
+def _holds(value, step, held):
+    near = lambda a, b: abs(a - b) <= step / 2 + 1e-9  # noqa: E731
+    if any(near(value, number) for number in held):
+        return True
+    return any(near(value, a + b) or near(value, abs(a - b)) for i, a in enumerate(held) for b in held[i + 1:])
+
+
+def figure_problems(said, results):
+    """Each money figure in the answer that no tool result of the run holds.
+
+    A result may carry an amount in minor units, so each number there counts
+    also as a hundredth of itself; an answer may round, so a figure holds when
+    a result is within half the step the answer wrote it to. A figure the answer
+    worked out, the sum or the gap of two returned figures, holds too.
+    """
+    held = []
+    for text in results:
+        for token in _NUMBER.findall(text):
+            number = _amount(token, "")[0]
+            held.append(number)
+            # Only a bare integer can be minor units; "1,240,000" is written
+            # for a reader, never as cents.
+            if token.isdigit():
+                held.append(number / 100)
+    problems = []
+    for match in _MONEY.finditer(said):
+        digits = match.group(1) or match.group(3)
+        value, step = _amount(digits, match.group(2) or match.group(4) or "")
+        if not _holds(value, step, held):
+            problems.append(f"stated {match.group(0).strip()!r}, which no tool result of this run holds")
+    return problems
+
+
 # The usage fields the terminal `result` event carries, and the ONLY ones read.
 # Named rather than summed by iterating whatever the event happens to hold: the
 # CLI's usage object grows fields between versions, and a total over "every
@@ -445,6 +538,51 @@ def unrun(path):
     return ""
 
 
+def _events(path, *subtypes):
+    """The transcript's system events of these subtypes, in order."""
+    found = []
+    with _open_checked(path) as lines:
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict) and event.get("type") == "system" and event.get("subtype") in subtypes:
+                found.append(event)
+    return found
+
+
+def _inside_repo(path):
+    real = os.path.realpath(path)
+    return real == _REPO_ROOT or real.startswith(_REPO_ROOT + os.sep)
+
+
+def unclean(path):
+    """What the candidate loaded besides the lane's server, or "" when nothing.
+
+    The lane measures a model that knows nothing of Margince, so a run that read
+    this repository's rules, the operator's memory, plugins, skills or hooks is
+    not scored. The CLI states each in its init line; a driver that writes its
+    own init line states none of them and passes.
+    """
+    inits = _events(path, "init")
+    if not inits:
+        return "the transcript carries no init line, so what the candidate loaded is unknown"
+    problems = []
+    for event in inits:
+        places = {event.get("cwd"), event.get("original_cwd"), *(event.get("additional_directories") or [])}
+        problems += [f"it started inside the repository ({place})" for place in sorted(places, key=str)
+                     if isinstance(place, str) and _inside_repo(place)]
+        if event.get("memory_paths"):
+            problems.append(f"it loaded the operator's memory ({json.dumps(event['memory_paths'])})")
+        problems += [f"it loaded the plugin {plugin.get('name')}" for plugin in event.get("plugins") or ()
+                     if isinstance(plugin, dict) and plugin.get("path") != "builtin"]
+        if event.get("skills"):
+            problems.append(f"it loaded skills: {', '.join(map(str, event['skills']))}")
+    problems += [f"it ran the hook {event.get('hook_name')}" for event in _events(path, "hook_started")]
+    return "; ".join(problems)
+
+
 def offered_problem(scenario, path):
     """Why this run could not have satisfied must_call, or "" when it could.
 
@@ -453,17 +591,10 @@ def offered_problem(scenario, path):
     that attached nothing — so the lane stops rather than scoring it. The
     tools are the ones the transcript's system line says were offered.
     """
-    offered = None
-    for line in _open_checked(path):
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("type") == "system" and event.get("subtype") == "init":
-            offered = event.get("tools") or []
-            break
-    if offered is None:
+    init = _events(path, "init")
+    if not init:
         return "the transcript carries no system line, so what was offered is unknown"
+    offered = init[0].get("tools") or []
     if not offered:
         return "the server offered no tools at all"
     offered = offered_verbs(offered, load_routes())
@@ -490,11 +621,11 @@ def tool_matches(called, want):
 # means in a must_mention entry, and it means the same thing here: this entry
 # holds when ANY of its alternatives does.
 #
-# It exists because some questions have more than one honest engine. Case 7 asks
-# for a count broken down by a dimension, and both run_report and
-# run_analytics_query produce it from the same population — so a scenario that
-# named one of them would be measuring which engine the model happened to pick
-# rather than whether the number came from a real aggregate. Separate entries
+# It exists because some questions have more than one honest engine. A count
+# broken down by a dimension comes from run_report or run_analytics_query over
+# the same population — so a scenario that named one of them would be measuring
+# which engine the model happened to pick rather than whether the number came
+# from a real aggregate. Separate entries
 # cannot say that: they are ANDed, and would demand both.
 #
 # The separator is `|` with NO surrounding space, because a scenario's list item
@@ -618,6 +749,12 @@ def check(scenario, transcript_path):
         if found:
             problems.append(f"said {found.group(0)!r}, which /{pattern}/ forbids")
 
+    figures = scenario.get("figures_from_results")
+    if figures == "true":
+        problems.extend(figure_problems(said, read_tool_results(transcript_path)))
+    elif figures is not None:
+        problems.append(f"figures_from_results is {figures!r}; the only value is true")
+
     # THE SEMANTIC HALF, last because it is the only one that can cost money and
     # the only one that can raise. judge.verdict never answers "no" for a judge
     # it could not reach — that is JudgeUnavailable, and it propagates out of
@@ -677,6 +814,7 @@ def main():
             ("effort", "E2E_LLM_EFFORT"),
             ("system_prompt", "E2E_LLM_SYSTEM_PROMPT"),
             ("search", "E2E_LLM_SEARCH"),
+            ("door", "E2E_LLM_DOOR"),
         ):
             if os.environ.get(variable):
                 record[field] = os.environ[variable]
@@ -708,6 +846,13 @@ def main():
             print(why)
             sys.exit(1)
         sys.exit(0)
+
+    if sys.argv[1] == "--clean":
+        problem = unclean(sys.argv[2])
+        if problem:
+            print(problem)
+            return 1
+        return 0
 
     if sys.argv[1] == "--offered":
         problem = offered_problem(parse_scenario(sys.argv[2]), sys.argv[3])

@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -54,25 +55,45 @@ func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 	return probeVisible(ctx, tx, table, id, probeLive)
 }
 
+// HideRow is a gate's answer to a row it found and the caller's scope does not
+// reach. It is ErrNotFound, as EnsureVisible answers, so "not yours" reads as
+// "not there". Only a gate that has told the two apart calls it.
+func HideRow(ctx context.Context, object string) error {
+	if recording(ctx) {
+		noteRefusal(ctx, rowRefusalPrefix+object)
+	}
+	return apperrors.ErrNotFound
+}
+
+// refuseRowChange is a gate's answer to a row the caller sees and may not change.
+func refuseRowChange(ctx context.Context, table string) error {
+	return RefuseRow(ctx, table, apperrors.ErrPermissionDenied)
+}
+
+// RefuseRow is a store's refusal of a record the caller sees. The rule is one
+// the record holds rather than a grant, such as the level it was recorded at. It
+// notes the refusal as a gate's and answers refusal, so a recorder never meets
+// a 403 no gate made.
+func RefuseRow(ctx context.Context, object string, refusal error) error {
+	if recording(ctx) {
+		noteRefusal(ctx, rowRefusalPrefix+object)
+	}
+	return refusal
+}
+
 func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mode rowProbe) error {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
 
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
+	terms, err := rowVisibleTerms(ctx, table, arg, mode == probeLive)
 	if err != nil {
 		return err
 	}
-	if clause == "" && mode == probeScoped {
+	if len(terms) == 0 && mode == probeScoped {
 		return nil
 	}
-	where := fmt.Sprintf("id = $%d", idPos)
-	if mode == probeLive {
-		where += " AND archived_at IS NULL"
-	}
-	if clause != "" {
-		where += " AND " + clause
-	}
+	where := strings.Join(append([]string{fmt.Sprintf("id = $%d", idPos)}, terms...), " AND ")
 
 	var visible bool
 	err = tx.QueryRow(ctx,
@@ -85,4 +106,21 @@ func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mod
 		return apperrors.ErrNotFound
 	}
 	return nil
+}
+
+// rowVisibleTerms is the row half of a visibility probe, shared by the
+// single-row probe above and PassingSubset: the live filter, then the scope.
+func rowVisibleTerms(ctx context.Context, table string, arg func(any) int, live bool) ([]string, error) {
+	clause, err := ScopeClauseFor(ctx, table, "", arg)
+	if err != nil {
+		return nil, err
+	}
+	var terms []string
+	if live {
+		terms = append(terms, "archived_at IS NULL")
+	}
+	if clause != "" {
+		terms = append(terms, clause)
+	}
+	return terms, nil
 }

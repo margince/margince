@@ -72,6 +72,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if err := refuseWebsiteLeadNotYetTold(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
@@ -191,6 +194,7 @@ func buildLeadSurvivorshipPatch(target, source crmcontracts.Lead) *storekit.Patc
 	fillString(p, "title", target.Title, source.Title)
 	fillString(p, leadCompanyColumn, target.CompanyName, source.CompanyName)
 	fillString(p, "candidate_company_key", target.CandidateCompanyKey, source.CandidateCompanyKey)
+	fillString(p, leadIndustryField, (*string)(target.Industry), (*string)(source.Industry))
 	fillString(p, "linkedin_url", target.LinkedinUrl, source.LinkedinUrl)
 	if target.Email == nil && source.Email != nil {
 		p.Set(leadEmailColumn, nil, string(*source.Email))
@@ -311,25 +315,32 @@ func lockLeadCompanyBeforeLead(ctx context.Context, tx pgx.Tx, sourceID ids.Lead
 }
 
 // carryLeadCompanyLink gives the survivor the loser's company link, fill-only.
-// It does so only when the survivor has none and its name still names that
-// company. A loser relinked since the lock answers a conflict.
+// It does so only when the survivor has none and its name or domain still
+// names that company. A loser relinked since the lock answers a conflict.
 func carryLeadCompanyLink(ctx context.Context, tx pgx.Tx, p *storekit.Patch, target, source crmcontracts.Lead, locked lockedCompany) error {
-	var sourceCompany *ids.CompanyID
-	if source.CompanyId != nil {
-		id := ids.From[ids.CompanyKind](ids.UUID(*source.CompanyId))
-		sourceCompany = &id
+	sourceCompany, err := leadLinkedCompany(ctx, tx, ids.From[ids.LeadKind](ids.UUID(source.Id)))
+	if err != nil {
+		return err
 	}
 	if !sameCompany(sourceCompany, locked.id) {
 		return apperrors.ErrConflict
 	}
-	if target.CompanyId != nil || locked.id == nil || !locked.live {
+	targetCompany, err := leadLinkedCompany(ctx, tx, ids.From[ids.LeadKind](ids.UUID(target.Id)))
+	if err != nil {
+		return err
+	}
+	if targetCompany != nil || locked.id == nil || !locked.live {
 		return nil
 	}
 	name := target.CompanyName
 	if name == nil {
 		name = source.CompanyName
 	}
-	named, err := namesCompany(ctx, tx, *locked.id, name)
+	key := target.CandidateCompanyKey
+	if key == nil {
+		key = source.CandidateCompanyKey
+	}
+	named, err := namesCompany(ctx, tx, *locked.id, name, key)
 	if err != nil || !named {
 		return err
 	}

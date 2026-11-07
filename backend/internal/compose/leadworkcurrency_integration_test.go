@@ -200,11 +200,11 @@ func TestUndatedContactArrivalStillReachesItsOwnersWorklist(t *testing.T) {
 	owner := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
 	now := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
 	tasks := attentionTasks{store: l.e.Activities.WithClock(func() time.Time { return now })}
-	rows, err := tasks.OpenForViewer(owner, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil)
+	rows, err := tasks.OpenForViewer(owner, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	total, err := tasks.CountOpenForViewer(owner, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil)
+	total, err := tasks.CountOpenForViewer(owner, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +270,7 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	}
 	reader := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
 	tasks := attentionTasks{store: l.e.Activities.WithClock(func() time.Time { return now })}
-	rows, err := tasks.OpenForViewer(reader, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil)
+	rows, err := tasks.OpenForViewer(reader, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,11 +301,11 @@ func assertLeadAdviceOnWorklist(t *testing.T, l *leadMailEnv, now time.Time, wan
 	t.Helper()
 	reader := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
 	tasks := attentionTasks{store: l.e.Activities.WithClock(func() time.Time { return now })}
-	due, err := tasks.OpenForViewer(reader, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil)
+	due, err := tasks.OpenForViewer(reader, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	total, err := tasks.CountOpenForViewer(reader, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil)
+	total, err := tasks.CountOpenForViewer(reader, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

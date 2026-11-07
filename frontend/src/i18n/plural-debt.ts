@@ -24,7 +24,6 @@ const STANDALONE: readonly string[] = [
   "aiSettings.providers.missing",
   "aiSettings.providers.value",
   "analytics.forecastPriced",
-  "brief.focus.position",
   "brief.weekly.scorecard.regressionsDetail",
   "brief.weekly.scorecard.respondedNoCohort",
   "brief.weekly.scorecard.unanswered",
@@ -35,7 +34,6 @@ const STANDALONE: readonly string[] = [
   "co.contacts.map.more",
   "co.contacts.map.scope",
   "co.contacts.map.scopePartial",
-  "co.deals.lostCount",
   "co.facts.showAll",
   "co.recent.minutes",
   "co.strip.convertedAsOf",
@@ -100,14 +98,12 @@ const PENDING: readonly string[] = [
   "contact.loops.dueInDays",
   "contact.strip.days",
   "embedreindex.entitiesPending",
-  "jobs.deadTotal",
   "lead.scoreSources",
   "ob.conv.recap.readTerminal",
   "ob.conv.voice.dimSentenceEvidence",
   "settings.voice.meter",
   "tagResult.totalVisible",
   "voice.insights.next.addWords",
-  "voice.insights.statSentence",
 ];
 
 /** Why one pre-existing single-key count is not yet a finding. */

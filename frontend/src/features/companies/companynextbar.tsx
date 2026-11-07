@@ -1,10 +1,13 @@
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { NextBar } from "../../design-system/nextbar";
-import { formatNumber } from "../../format/format";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
-import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { RecordNextBar } from "../../components/latestinbound";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
+import { formatDueCompact } from "../../format/format.dates";
+import { useLocale, usePlural, useT, type Words } from "../../i18n";
+import { type LatePromise, latePromise } from "../../lib/latepromise";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { taskDetail } from "../../lib/taskdetail";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useCompanySetAside } from "./companysetaside";
 import {
   MayBeDoneVerb,
@@ -43,17 +46,19 @@ export function nextBarTask(view: Company360): NextStep | undefined {
     : view.next_steps?.data[0];
 }
 
-/** Whole days a task is past its date at `as_of`, or nothing when it is not. */
-export function daysLate(
-  step: NextStep,
-  asOf: string,
+/**
+ * How late the bar's task is, or nothing when it is on time. "How it stands"
+ * reads it too, so the card's sentence and the bar's badge give one count.
+ */
+export function nextBarLateness(
+  view: Company360,
   zone: string,
-): number | undefined {
-  if (!step.overdue || !step.due_at) {
-    return undefined;
-  }
-  const days = calendarDaysBetween(new Date(step.due_at), new Date(asOf), zone);
-  return days > 0 ? days : undefined;
+  words: Words,
+): LatePromise | undefined {
+  const task = nextBarTask(view);
+  return task?.due_at
+    ? latePromise(task.due_at, view.as_of, zone, "task", words)
+    : undefined;
 }
 
 /**
@@ -95,7 +100,7 @@ export function CompanyNextBar({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deferOf } = useCompanySetAside(view.company.id);
   const fallback = momentFallbackVerb({
     view,
@@ -109,17 +114,12 @@ export function CompanyNextBar({
       ? view.moment
       : undefined;
   const task = nextBarTask(view);
-  const late = task && daysLate(task, view.as_of, zone);
+  const said = nextBarLateness(view, zone, { t, plural, locale });
+  const lateTag = said && { label: said.badge, tone: "danger" as const };
+  // The bar's task is the account's, not the reader's: its line names who holds it.
+  const holder = useTaskHolder(task?.assignee_id, task?.assignee_name);
+  const heldBy = (rest: ReactNode) => (task ? taskLine([holder, rest]) : rest);
   const count = otherTasks(view, task);
-  const lateTag =
-    late === undefined
-      ? undefined
-      : {
-          label: plural("co.next.daysLate", late, {
-            days: formatNumber(late, locale),
-          }),
-          tone: "danger" as const,
-        };
   const others = (view.next_steps?.data ?? []).filter(
     (step) => step.activity_id !== task?.activity_id,
   );
@@ -144,12 +144,16 @@ export function CompanyNextBar({
   if (moment) {
     const defer = momentDefer(moment, deferOf);
     return (
-      <NextBar
+      <RecordNextBar
+        // A company moment is an owed promise, which outranks a new mail.
+        urgent
+        about={moment.evidence.map((item) => item.id)}
         // The task the moment cites is the thing to do; the headline is the
         // server's sentence about it, kept for a moment that cites none.
         title={task?.subject ?? moment.headline}
         late={lateTag}
-        sub={moment.why_now}
+        detail={task && taskDetail(task)}
+        sub={heldBy(said?.sentence ?? moment.why_now)}
         insight={momentBasis(moment)}
         action={
           moment.may_be_done ? (
@@ -164,16 +168,24 @@ export function CompanyNextBar({
     );
   }
   return (
-    <NextBar
+    <RecordNextBar
+      // The Overview's "Last contact" tile already shows the last exchange.
+      lastExchange={false}
       title={task?.subject}
       late={lateTag}
-      sub={
+      detail={task && taskDetail(task)}
+      sub={heldBy(
         task?.due_at
           ? t("co.next.due", {
-              when: formatDayMonth(task.due_at, locale, zone),
+              when: formatDueCompact(
+                task.due_at,
+                task.due_has_time,
+                locale,
+                zone,
+              ),
             })
-          : undefined
-      }
+          : undefined,
+      )}
       action={task ? fallback : undefined}
       more={more}
     />

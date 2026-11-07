@@ -153,9 +153,17 @@ const SALES_READS: readonly {
 }[] = [
   {
     object: "custom_field",
-    opens: ["leads", "acquisition", "reviewtemplates", "recordroles", "fields"],
+    opens: [
+      "leads",
+      "acquisition",
+      "lossreasons",
+      "partners",
+      "reviewtemplates",
+      "recordroles",
+      "fields",
+    ],
   },
-  { object: "pipeline", opens: ["pipelines", "stageautomation"] },
+  { object: "pipeline", opens: ["pipelines"] },
   { object: "product", opens: ["products"] },
   { object: "offer_template", opens: ["products"] },
   { object: "tag", opens: ["tags"] },
@@ -236,11 +244,10 @@ const SEEDED_READ_PAGES = pagesNamed(
   // Nor `members`/`teams`: only the `admin` role is seeded `user_admin` or
   // `team_admin`, so no seeded role below it reaches either page.
   "pipelines",
-  // The same `pipeline:read` that opens Pipelines. The report is read-only, so
-  // a seat that may see the stages may see what their transitions have earned.
-  "stageautomation",
   "leads",
   "acquisition",
+  "lossreasons",
+  "partners",
   "reviewtemplates",
   "recordroles",
   "fields",
@@ -263,11 +270,10 @@ const SEEDED_OPS_PAGES = pagesNamed(
   // ops reads for pickers is answered by the endpoint, not by this page.
   "seats",
   "pipelines",
-  // The same `pipeline:read` that opens Pipelines. The report is read-only, so
-  // a seat that may see the stages may see what their transitions have earned.
-  "stageautomation",
   "leads",
   "acquisition",
+  "lossreasons",
+  "partners",
   "reviewtemplates",
   "recordroles",
   "fields",
@@ -402,7 +408,7 @@ describe("SettingsScreen page visibility", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("pipelines"));
   });
 
   it.each(SALES_READS)(
@@ -428,15 +434,14 @@ describe("SettingsScreen page visibility", () => {
         "fetch",
         settingsNavBackend({
           roles: ["ops"],
-          // The witness alongside the object under test: `pipeline` opens
-          // Pipelines and Stage automation and nothing else, so waiting for
-          // those rows proves the snapshot resolved before this asserts what
-          // is NOT there.
+          // The witness: `pipeline` opens Pipelines and nothing else. Waiting
+          // for those rows proves the snapshot resolved before this asserts
+          // what is not there.
           allow: { ...readOn(object), pipeline: ["read"] },
         }),
       );
       const { unmount } = renderHome();
-      await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+      await expectNavSettlesTo(floorPlus("pipelines"));
       unmount();
 
       vi.stubGlobal(

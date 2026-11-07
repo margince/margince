@@ -41,7 +41,7 @@ import (
 // half a digest cannot reach. Bumping it invalidates every cached assessment,
 // which is the point: yesterday's bands must not be served beside today's
 // (DOSS-AC-14).
-const growthFitAssemblyVersion = "growth-fit-assembly-v3"
+const growthFitAssemblyVersion = "growth-fit-assembly-v4"
 
 // growthFitPromptVersion is DERIVED from the prompt as it is SENT — boundary
 // rule included — so editing that wording bumps it whether or not anybody
@@ -171,9 +171,7 @@ type storedOffering struct {
 // the company's current facts or our own confirmation state.
 func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, force bool) (crmcontracts.CompanyGrowthFit, error) {
 	var zero crmcontracts.CompanyGrowthFit
-	// A growth fit is a reading aid for a contact; an agent reading records
-	// through a passport has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return zero, err
 	}
 	userID, err := actingUser(ctx)
@@ -214,7 +212,8 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		return s.enrich(ctx, cached.wire(companyID))
 	}
 
-	assessed, by, laneFailed := WriteGrowthFit(ctx, s.lane, in, offering.Confirmed, utc, lang)
+	lane, withheld := ai.ReadLane(ctx, s.lane)
+	assessed, by, laneFailed := WriteGrowthFit(ctx, lane, in, offering.Confirmed, utc, lang)
 	if laneFailed && cached.mayStandIn(found, fingerprint, utc()) {
 		// A lane that failed must not be able to DESTROY an assessment. The
 		// degraded answer is an abstention, and writing it over a real band
@@ -246,7 +245,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 	// reader is told "try again in a few minutes" by a row that guarantees the
 	// retry never happens. For a company held on human-entered values there is
 	// no expiry either, so that would be permanent.
-	if laneFailed {
+	if laneFailed || withheld {
 		return s.enrich(ctx, written.wire(companyID))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {

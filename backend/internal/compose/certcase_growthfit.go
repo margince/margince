@@ -31,6 +31,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"unicode"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -282,7 +283,53 @@ func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: "never cited: " + strings.Join(missing, ", "),
 		}
 	}
+	if spoken := selfReferenceText(kept); spoken != "" {
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: fmt.Sprintf("a claim or reason speaks as I: %q", spoken),
+		}
+	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// selfWords are the words a writer uses of itself alone. "We" and
+// "our" are absent: in a fit they name the reader's own company.
+// Not claims' singular writerSubjects: those match only an opening subject, and this grade reads every word.
+var selfWords = map[string]bool{
+	"I": true, "I'm": true, "I'd": true, "I'll": true, "I've": true,
+	"me": true, "Me": true, "my": true, "My": true, "myself": true, "Myself": true,
+}
+
+// selfReferenceText is the first kept claim or sub-score reason with a speaker,
+// or "" when the assessment states its findings without one.
+func selfReferenceText(kept companydossier.GrowthFitClaims) string {
+	texts := make([]string, 0, len(kept.SubScores))
+	for _, sub := range kept.SubScores {
+		texts = append(texts, sub.Reason)
+	}
+	for _, sentence := range kept.All() {
+		texts = append(texts, sentence.Text)
+	}
+	for _, text := range texts {
+		if speaksAsI(text) {
+			return text
+		}
+	}
+	return ""
+}
+
+// speaksAsI splits on whitespace and on em and en dashes, never on "/" or "-".
+// A pronoun after a dash is found, and "I/O-heavy" stays one word.
+func speaksAsI(text string) bool {
+	words := strings.FieldsFunc(strings.ReplaceAll(text, "’", "'"), func(r rune) bool {
+		return unicode.IsSpace(r) || r == '—' || r == '–'
+	})
+	for _, field := range words {
+		if selfWords[strings.TrimFunc(field, unicode.IsPunct)] {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *growthFitCase) bandAccepted(band crmcontracts.GrowthFitBand) bool {

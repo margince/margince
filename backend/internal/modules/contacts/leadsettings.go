@@ -95,7 +95,9 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 const settingsAuditVerb = "update"
 
 // ConfigSettings are this module's settings in the configuration registry.
-func ConfigSettings() []config.Any { return append(LeadSettingsSurface(), SignatureTemplate) }
+func ConfigSettings() []config.Any {
+	return append(LeadSettingsSurface(), SignatureTemplate, SharedMergeReviews)
+}
 
 // LeadSettingsSurface are the settings GET /leads/settings carries.
 func LeadSettingsSurface() []config.Any {

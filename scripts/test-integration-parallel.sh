@@ -19,9 +19,11 @@
 #              so a running dev stack and this lane never collide either. More
 #              than one package touches Redis, and at least two FLUSHDB between
 #              tests, so this is an isolation boundary rather than a convenience
-#              — see the NPKGS guard below for what happens when it is short.
-# Within a package nothing changes — still -p 1, the same sequential model that is
-# green today — so no test file needs editing.
+#              — batches wait before reusing the reserved test block.
+# Within a process nothing changes — still -p 1, the same sequential model that is
+# green today — so no test file needs editing. A package too heavy for one
+# process's timeout runs as several parts (split_parts in scripts/lib-laneorder.sh),
+# and each part is a process with its own private state like any other.
 #
 # Same teeth as the serial lane: zero-skip guard (a SKIP fails the run) and any
 # package failure fails the whole run. MARGINCE_ENV=dev is exported so the HTTP
@@ -52,8 +54,13 @@
 #                           (discovery/assigned/ran/meta) and per-package binary
 #                           covdata pods for the CI fan-in to reconcile + merge;
 #                           coverage instrumentation is on iff this is set
+#   INTEGRATION_BUILD_OUT   compile every lane package's covered test binary into
+#                           this directory, then stop: no database, no tests. CI
+#                           does this once per run, and its shards read the result
+#   INTEGRATION_BIN_DIR     shard mode only: run each package from the binary
+#                           INTEGRATION_BUILD_OUT left here instead of compiling it
 #   INTEGRATION_TIMEOUT     per-package go-test timeout, as <seconds>s (default
-#                           600s; the budget column parses this). Resolved in
+#                           900s; the budget column parses this). Resolved in
 #                           scripts/lib-testdb.sh, shared with the one-package lane
 #   MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN   owner + app DSNs (Makefile defaults)
 #
@@ -72,6 +79,7 @@ cd "$ROOT"
 # shellcheck source=scripts/lib-testdb.sh
 source "$ROOT/scripts/lib-testdb.sh"
 source "$ROOT/scripts/lib-laneorder.sh"
+source "$ROOT/scripts/lib-lanebinaries.sh"
 parse_test_dsn
 
 SHARD_IDX=0 SHARD_TOTAL=0
@@ -104,6 +112,22 @@ if [[ -n "$SHARD_OUT" ]]; then
   export COVERDIR
 fi
 
+BUILD_OUT="${INTEGRATION_BUILD_OUT:-}"
+BIN_DIR="${INTEGRATION_BIN_DIR:-}"
+if [[ -n "$BUILD_OUT" ]] && { (( SHARD_TOTAL > 0 )) || [[ -n "$BIN_DIR" ]]; }; then
+  echo "FAIL: INTEGRATION_BUILD_OUT compiles the whole lane and runs nothing — it takes neither INTEGRATION_SHARD nor INTEGRATION_BIN_DIR"
+  exit 1
+fi
+# The binaries carry coverage instrumentation, and only a shard with a manifest
+# directory has somewhere to put the pods they write.
+if [[ -n "$BIN_DIR" && -z "$SHARD_OUT" ]]; then
+  echo "FAIL: INTEGRATION_BIN_DIR runs covered binaries, so it needs INTEGRATION_SHARD_OUT for their pods"
+  exit 1
+fi
+[[ -z "$BUILD_OUT" ]] || case "$BUILD_OUT" in /*) ;; *) BUILD_OUT="$ROOT/$BUILD_OUT";; esac
+[[ -z "$BIN_DIR" ]] || case "$BIN_DIR" in /*) ;; *) BIN_DIR="$ROOT/$BIN_DIR";; esac
+export BIN_DIR
+
 # Per-package go-test timeout and its budget rule — shared with the one-package
 # lane (scripts/lib-testdb.sh resolve_it_timeout), so both cost a package the same.
 resolve_it_timeout
@@ -119,19 +143,19 @@ IT_BUDGET="$IT_TIMEOUT"
 # A sharded run executes a SLICE — CI's matrix gives each shard a sixth of the
 # tree — so the budget is generous headroom for it. An unsharded run executes
 # whole packages, and compose/integration alone is 2284 tests: measured at 886s
-# on an unmodified main, against a 600s bound. go test kills it at the ceiling,
+# on an unmodified main, past the bound a slice needs. go test kills it at the ceiling,
 # so NONE of its tests report, and a real regression in the same push would be
 # invisible behind a timeout.
 #
 # So an unsharded run gets a multiple, and the budget column still prices every
-# package against the 600s policy — "split it before it crosses" keeps being
+# package against the budget policy — "split it before it crosses" keeps being
 # said about a package that is genuinely too big. What stops is a hang detector
 # calibrated for a sixth of the work killing a run doing all of it.
 #
 # An explicit INTEGRATION_TIMEOUT overrides both halves, because a caller naming
 # a bound means it.
 if [[ -z "${INTEGRATION_TIMEOUT:-}" ]] && (( SHARD_TOTAL <= 1 )); then
-  # Three times the budget. The slowest package measures 1.5x it today, so this
+  # Twice the budget. The slowest package measures about 1x it today, so this
   # is headroom for a slower machine rather than a number chosen to fit — and it
   # is still far under the CI job limit this bound exists to pre-empt with a
   # legible message.
@@ -161,41 +185,51 @@ export LANE_COVER_FLAGS="-cover -coverpkg=./... -covermode=atomic"
 # dependencies. It runs beside the template build, which mostly waits on
 # Postgres; `wait` reports its status, so a failure cannot hide behind the `&`.
 prebuild_flags=(-tags=integration)
-if [[ -n "${COVERDIR:-}" ]]; then
+if [[ -n "${COVERDIR:-}" || -n "$BUILD_OUT" ]]; then
   read -r -a cover_flags <<< "$LANE_COVER_FLAGS"
   prebuild_flags+=("${cover_flags[@]}")
 fi
-prebuild_log="$(mktemp)"
-( cd "$ROOT/backend" && go build "${prebuild_flags[@]}" ./... ) > "$prebuild_log" 2>&1 &
-prebuild_pid=$!
-# A failed template build exits here under set -e; stop and reap the compiler
-# rather than leave it running. The lane's own EXIT trap below replaces this.
-trap 'kill "$prebuild_pid" 2>/dev/null || true; wait "$prebuild_pid" 2>/dev/null || true; rm -f "$prebuild_log"' EXIT
+# A run from binaries has nothing to compile, and a run that builds them needs
+# no database, so each skips the half that is not its own.
+prebuild_pid=""
+if [[ -z "$BUILD_OUT" && -z "$BIN_DIR" ]]; then
+  prebuild_log="$(mktemp)"
+  ( cd "$ROOT/backend" && go build "${prebuild_flags[@]}" ./... ) > "$prebuild_log" 2>&1 &
+  prebuild_pid=$!
+  # A failed template build exits here under set -e; stop and reap the compiler
+  # rather than leave it running. The lane's own EXIT trap below replaces this.
+  trap 'kill "$prebuild_pid" 2>/dev/null || true; wait "$prebuild_pid" 2>/dev/null || true; rm -f "$prebuild_log"' EXIT
+fi
 
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
-echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
-build_template
-
-prebuild_started=$SECONDS
-if ! wait "$prebuild_pid"; then
-  cat "$prebuild_log"
-  rm -f "$prebuild_log"
-  echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
-  exit 1
+if [[ -z "$BUILD_OUT" ]]; then
+  echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
+  build_template
 fi
-rm -f "$prebuild_log"
-echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_started ))s after the template was ready)"
+
+if [[ -n "$prebuild_pid" ]]; then
+  prebuild_started=$SECONDS
+  if ! wait "$prebuild_pid"; then
+    cat "$prebuild_log"
+    rm -f "$prebuild_log"
+    echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
+    exit 1
+  fi
+  rm -f "$prebuild_log"
+  echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_started ))s after the template was ready)"
+fi
 
 # Every integration test in this repo lives in the backend module.
 GO_DIRS=(backend)
 
 # Redis logical dbs available to the lane: every db the server serves except 0,
-# which `make dev` owns. Must match --databases in docker-compose.dev.yml.
-# It is one PER PACKAGE, not per concurrent job — a package's keys must survive
-# the whole package, and a slot freed by a finished package cannot be handed on
-# while its successor is still reading.
-REDIS_DBS=63
+# which `make dev` owns, and the block above this one, which the per-worktree
+# dev stacks take. So --databases in docker-compose.dev.yml is higher than this
+# number, not equal to it, and the gate asserts the offset rather than equality.
+# Packages in each batch own distinct databases until the whole batch exits.
+# Later batches reuse that block without entering the worktree dev allocation.
+REDIS_DBS=64
 
 # Candidate packages: every directory in the module that holds test files. Which
 # of them belong to THIS lane is decided by the build-constraint scan in
@@ -239,6 +273,9 @@ TIMEDOUT="$(mktemp)"
 LANE_T0="$(date +%s)"
 export LANE_T0 WALLCLOCK
 OUTDIR="$(mktemp -d)"
+# Each package process appends the large statements it sends here; the lane
+# checks them for a repeated content gate once every package passed.
+export MARGINCE_SQL_CENSUS_DIR="$OUTDIR/sql-census"
 # Set on the failing path only, and read by the trap below, which then leaves
 # $OUTDIR behind. The per-package logs are the ONLY copy of a failure that is not
 # interleaved with 35 other packages; deleting them on the way out made an
@@ -345,6 +382,9 @@ while IFS='|' read -r d rel; do
         # slice — does not apply, because `bench` is not built-in and nothing
         # in this lane defines it.
         'integration && bench') skip_file=1 ;;
+        # The weekly role sweep (make test-roles), kept out of the merge gate
+        # the same way and for the same reason as the benchmarks.
+        'integration && rolesweep') skip_file=1 ;;
         *)
           echo "FAIL: $f carries build constraint '$expr' — not one the static shard discovery knows" >&2
           echo "  teach the allowlist in scripts/test-integration-parallel.sh or simplify the constraint" >&2
@@ -402,6 +442,46 @@ NUNTAGGED=$(awk -F'|' '
   END { print n + 0 }
 ' "$LANE_PKGS" "$UNTAGGED")
 
+# What the lane's binaries are compiled from. The build records it, and a run
+# from binaries refuses them when its own checkout gives another answer.
+if [[ -n "$BUILD_OUT" || -n "$BIN_DIR" ]]; then
+  lane_packages=()
+  while IFS='|' read -r _ rel; do lane_packages+=("$rel"); done < "$LANE_PKGS"
+  source_stamp="$(lane_source_stamp "$ROOT/backend" integration "${lane_packages[@]+"${lane_packages[@]}"}")" || exit 1
+  [[ -z "$BIN_DIR" ]] || lane_bin_dir_check "$BIN_DIR" "$source_stamp" || exit 1
+fi
+
+# Build mode: one `go test` compiles and links every lane package, and the
+# keeper it runs instead of each binary copies that binary out. Every
+# discovered package must then have one, because a shard fails on a missing
+# binary and the build is the place to name the cause.
+if [[ -n "$BUILD_OUT" ]]; then
+  if (( NPKGS_DISCOVERED == 0 )); then
+    echo "FAIL: no integration packages discovered — nothing to compile"
+    exit 1
+  fi
+  lane_build_dir_prepare "$BUILD_OUT" "$source_stamp" || exit 1
+  build_started=$SECONDS
+  build_packages=("${lane_packages[@]}")
+  # -count=1: a cached result would skip the keeper, and with it the binary.
+  if ! ( cd "$ROOT/backend" \
+      && LANE_MODULE_DIR="$ROOT/backend" LANE_BUILD_OUT="$BUILD_OUT" \
+         go test -count=1 -vet=off -exec="\"$ROOT/scripts/test-integration-keep-binary.sh\"" \
+           "${prebuild_flags[@]}" "${build_packages[@]}" ); then
+    echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
+    exit 1
+  fi
+  missing=0
+  for rel in "${build_packages[@]}"; do
+    [[ -x "$BUILD_OUT/$rel/integration.test" ]] && continue
+    echo "FAIL: go test passed $rel but left no binary at $BUILD_OUT/$rel/integration.test"
+    missing=1
+  done
+  (( missing == 0 )) || exit 1
+  echo "OK: compiled ${#build_packages[@]} integration test binaries into $BUILD_OUT ($(( SECONDS - build_started ))s)"
+  exit 0
+fi
+
 if (( SHARD_TOTAL > 0 )); then
   if (( NTESTS < SHARD_TOTAL )); then
     echo "FAIL: discovered only $NTESTS integration tests for $SHARD_TOTAL shards — the discovery is broken or the shard count is absurd"
@@ -422,11 +502,15 @@ fi
 # per-slot FILE, not onto the work line — hundreds of test names make a regex
 # far past what xargs -I can carry. The union is also what confines the run to
 # tagged tests, so it is built in BOTH modes, not only when sharding.
+#
+# A package whose slice weighs more than a quarter of the timeout runs as
+# several parts, each its own process on its own clone. The weights are seconds
+# from one green CI run, and one slice of ./internal/compose has taken 2.6 times
+# as long on one runner as on another, so a part near the whole timeout would be
+# killed with every test passing.
+PART_SECONDS=$(( ${IT_TIMEOUT%s} / 4 ))
 GROUPED="$(mktemp)"
-awk -F'|' '
-  { key = $1 "|" $2; re[key] = (key in re) ? re[key] "|" $3 : $3 }
-  END { for (k in re) print k "|^(" re[k] ")$" }
-' "$ASSIGNED" | LC_ALL=C sort > "$GROUPED"
+split_parts "$ASSIGNED" "$ROOT/scripts/integration-test-timing.txt" "$PART_SECONDS" > "$GROUPED"
 REGEX_DIR="$(mktemp -d)"
 export REGEX_DIR
 : > "$WORK"
@@ -453,26 +537,16 @@ while IFS= read -r line; do
 done < "$GROUPED"
 rm -f "$GROUPED"
 
-NPKGS=$(wc -l < "$WORK" | tr -d ' ')
-# One Redis logical db per package, and there must be enough of them. Wrapping
-# the mapping instead is what this guard exists to prevent: two packages on one
-# db do not run slowly, they corrupt each other — platform/events and every
-# suite on platform/redistest FLUSHDB between tests, so a collision wipes the
-# other package's keys mid-test and the failure surfaces in whichever suite was
-# reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
-# databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.
-if (( NPKGS > REDIS_DBS )); then
-  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
-  exit 1
-fi
+NPARTS=$(wc -l < "$WORK" | tr -d ' ')
+NPKGS=$(LC_ALL=C sort -u "$WORK" | wc -l | tr -d ' ')
 # Say what was left to the unit lane. An unreported exclusion and a broken
 # selector produce the same silence, and this lane's whole contract is that a
 # thinner run must never read as a passing one.
 echo "test-integration-parallel: $NTESTS tagged tests in $NPKGS_DISCOVERED packages; skipped $NUNTAGGED untagged (they run in \`make check\`)"
 if (( SHARD_TOTAL > 0 )); then
-  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — $(wc -l < "$ASSIGNED" | tr -d ' ') of $NTESTS tests across $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
+  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — $(wc -l < "$ASSIGNED" | tr -d ' ') of $NTESTS tests across $NPKGS packages in $NPARTS processes, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
 else
-  echo "test-integration-parallel: $NPKGS packages, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
+  echo "test-integration-parallel: $NPKGS packages in $NPARTS processes, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
 fi
 
 # One job = clone an empty db + own a private MinIO bucket, run that package
@@ -489,9 +563,8 @@ run_one() {
   local db="margince_it_p${idx}_$$"
   local log="$outdir/$idx.log"
   local bucket; bucket="$(bucket_for "$idx")"
-  # Redis logical db per slot — db 0 stays reserved for `make dev`. The modulo
-  # never wraps in practice: the NPKGS guard above refuses the run rather than
-  # let two packages land on one db.
+  # The batch barrier lets this wrap only after the previous holder exits.
+  # Database 0 and the higher worktree dev block stay outside this mapping.
   local redis_db=$(( 1 + (idx - 1) % REDIS_DBS ))
   # Coverage args (empty unless COVERDIR is set — shard mode with a manifest
   # dir). -coverpkg=./... attributes cross-package exercise; binary output goes
@@ -503,6 +576,12 @@ run_one() {
     cover_post=(-args -test.gocoverdir="$COVERDIR/$idx")
   fi
   [[ -n "$runre" ]] && run_args=(-run "$runre")
+  # -vet=off: `make lint` vets tagged code with a superset of these analyzers, and
+  # gates/lintbuildtagreach_test.go holds that. A slot would only repeat it.
+  local test_cmd=(go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT"
+    "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}"
+    "$rel" "${cover_post[@]+"${cover_post[@]}"}")
+  [[ -z "${BIN_DIR:-}" ]] || test_cmd=(run_binary "$rel" "$COVERDIR/$idx" "${run_args[@]+"${run_args[@]}"}")
   {
     echo "=== integration $d $rel (db=$db bucket=$bucket redis-db=$redis_db${runre:+ sliced}) ==="
     make_clone "$db"
@@ -514,9 +593,7 @@ run_one() {
            MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
            MARGINCE_TEST_BLOBSTORE_BUCKET="$bucket" \
            MARGINCE_TEST_REDIS_DB="$redis_db" \
-        go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" \
-          "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}" \
-          "$rel" "${cover_post[@]+"${cover_post[@]}"}" ) || st=$?
+        "${test_cmd[@]}" ) || st=$?
     if ! drop_clone "$db"; then
       echo "FAIL: clone db $db was not dropped — leaked on the test cluster"
       if [[ "$st" -eq 0 ]]; then st=1; fi
@@ -534,13 +611,61 @@ run_one() {
   # result — a package's verdict is the EXIT line inside the log above, which the
   # reconciliation at the end reads.
   local ended=$(( $(date +%s) - LANE_T0 ))
-  printf '%s\n' "${rel}|${began}|${ended}" >> "$WALLCLOCK" || :
+  printf '%s\n' "${rel}|${began}|${ended}|${idx}" >> "$WALLCLOCK" || :
 }
-export -f run_one owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
+# run_binary REL COVERDIR [-run REGEX] — the `go test -v` of run_one, from the
+# binary the build left in BIN_DIR. It runs in the package directory, as go test
+# runs it, and then prints go test's closing "ok|FAIL <pkg> <secs>s" line, which
+# the cost report reads.
+run_binary() {
+  local rel="$1" coverdir="$2" st=0 t0 t1
+  shift 2
+  local run_flags=()
+  [[ "${1:-}" != "-run" ]] || run_flags=(-test.run="$2")
+  t0="${EPOCHREALTIME:-$(date +%s)}"
+  ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 \
+      -test.timeout="$IT_TIMEOUT" "${run_flags[@]+"${run_flags[@]}"}" -test.gocoverdir="$coverdir" ) || st=$?
+  t1="${EPOCHREALTIME:-$(date +%s)}"
+  local verdict="ok  "
+  (( st == 0 )) || verdict=FAIL
+  printf '%s\t%s\t%ss\n' "$verdict" "$rel" "$(lane_elapsed "$t0" "$t1")"
+  return "$st"
+}
+export -f run_one run_binary lane_elapsed lane_micros owner_clone_dsn app_clone_dsn make_clone drop_clone db_admin bucket_for
 # The workers run in re-exec'd shells, so a variable run_one reads must be
 # exported and not merely set. REDIS_DBS is the only one: unexported it expands
 # to empty, and `% ` is a division by zero rather than a wrong db.
 export REDIS_DBS
+
+# Compile this run's tests in one build before fanning out. `go build` above stops
+# short of test code. Each slot would otherwise compile its own while the first
+# packages run their tests on the same cores.
+#
+# Same flags as the `go test` in run_one, or that run recompiles. A package that
+# does not compile fails again in its own slot, which reports it per package.
+#
+# A run from binaries compiles nothing. It checks instead that the build left a
+# binary for every package of its slice, so a gap fails here by name and not as
+# an exec error inside one slot's log.
+if [[ -n "$BIN_DIR" ]]; then
+  missing=0
+  while IFS='|' read -r _ rel; do
+    [[ -x "$BIN_DIR/$rel/integration.test" ]] && continue
+    echo "FAIL: no test binary for $rel at $BIN_DIR/$rel/integration.test — the integration build did not produce it"
+    missing=1
+  done < "$WORK"
+  (( missing == 0 )) || exit 1
+  echo "test-integration-parallel: running $NPKGS packages from the binaries in $BIN_DIR"
+else
+  test_build_started=$SECONDS
+  test_packages=()
+  while IFS='|' read -r _ rel; do test_packages+=("$rel"); done < "$WORK"
+  if ( cd "$ROOT/backend" && go test -vet=off -exec=true "${prebuild_flags[@]}" "${test_packages[@]+"${test_packages[@]}"}" ) > /dev/null 2>&1; then
+    echo "test-integration-parallel: compiled the tests once ($(( SECONDS - test_build_started ))s)"
+  else
+    echo "test-integration-parallel: a test package does not compile; its slot prints the error"
+  fi
+fi
 
 # When the first package could START, which separates two very different costs
 # that both look like "before the tests ran": everything this script does before
@@ -549,11 +674,7 @@ export REDIS_DBS
 # is this script's to reduce.
 FANOUT_T0=$(( $(date +%s) - LANE_T0 ))
 
-# Fan out with a bounded worker pool. nl numbers the lines → stable per-job db
-# names + logs. The work line rides as a positional arg, not spliced into the
-# script, so the shard-mode regex characters never meet the shell.
-nl -ba -w1 -s'|' "$WORK" \
-  | xargs -P "$JOBS" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$OUTDIR"
+run_integration_packages "$WORK" "$JOBS" "$REDIS_DBS" "$OUTDIR"
 
 # Aggregate: print every log in package (idx) order, then enforce the teeth.
 fail=0
@@ -602,10 +723,11 @@ for base in $(cd "$OUTDIR" && ls -1 -- *.log 2>/dev/null | sort -n); do
   # The duration field is matched, not the line end: a covered shard appends
   # "coverage: NN.N% of statements" after it, and anchoring on s$ would have
   # priced every CI package at nothing — shard mode always sets COVERDIR.
-  awk -v rel="$rel" '
+  # The slot ends the row: parts of one package share its name.
+  awk -v rel="$rel" -v slot="$idx" '
     /^(ok|FAIL)[ \t]+[^ \t]+[ \t]+[0-9.]+s([ \t]|$)/ { secs = $3; sub(/s$/, "", secs) }
     /^--- (PASS|FAIL|SKIP): / { n++ }
-    END { if (secs != "") printf "%s|%s|%d\n", rel, secs, n + 0 }
+    END { if (secs != "") printf "%s|%s|%d|%s\n", rel, secs, n + 0, slot }
   ' "$log" >> "$TIMING" || true
 done
 
@@ -653,20 +775,14 @@ if [[ -s "$WALLCLOCK" ]] && [[ -s "$TIMING" ]]; then
   # Elapsed is computed here rather than in awk: systime() is a GNU extension and
   # this lane runs on BSD awk too.
   LANE_ELAPSED=$(( $(date +%s) - LANE_T0 ))
-  LC_ALL=C sort -t'|' -k3 -rn "$WALLCLOCK" | head -1 | awk -F"|" -v elapsed="$LANE_ELAPSED" -v fanout="$FANOUT_T0" -v timing="$TIMING" '
+  critical_part "$WALLCLOCK" "$TIMING" | awk -F"|" -v elapsed="$LANE_ELAPSED" -v fanout="$FANOUT_T0" '
     {
-      last = $1; began = $2; ended = $3
-      # The critical package'"'"'s own test seconds, so its slot time can be split
-      # into tests and provisioning. Tracked as FOUND rather than defaulted to
-      # zero: a package whose log carries no go-test duration (a build failure
-      # prints "FAIL pkg [build failed]", with no seconds) has a slot time here
-      # and no row there, and an absent duration read as 0.0 would report the
-      # entire slot as provisioning — inventing a number instead of admitting it
-      # is missing.
-      while ((getline line < timing) > 0) {
-        split(line, f, "|")
-        if (f[1] == last) { tests = f[2]; found = 1 }
-      }
+      last = $1; began = $2; ended = $3; tests = $4
+      # Tracked as FOUND rather than defaulted to zero: a package whose log
+      # carries no go-test duration (a build failure prints "FAIL pkg [build
+      # failed]", with no seconds) would otherwise report its entire slot as
+      # provisioning — inventing a number instead of admitting it is missing.
+      found = (tests != "")
       printf "test-integration-parallel: wall clock — %ds total\n", elapsed
       printf "  %ds  before any package could start (template, constraint scan, test enumeration)\n", fanout
       printf "  %ds  then %s waited for a slot\n", began - fanout, last
@@ -695,7 +811,8 @@ fi
 if [[ -s "$TIMING" ]] && (( SHARD_TOTAL == 0 )); then
   hint_dir="$(dirname "$MEASURED_HINT")"
   if mkdir -p "$hint_dir" 2>/dev/null && hint_tmp="$(mktemp "$hint_dir/.integration-lane-timing.XXXXXX" 2>/dev/null)"; then
-    cut -d'|' -f1,2 "$TIMING" > "$hint_tmp" 2>/dev/null \
+    # A package split into parts has one TIMING line per part; its hint is their sum.
+    awk -F'|' '{ secs[$1] += $2 } END { for (p in secs) printf "%s|%.3f\n", p, secs[p] }' "$TIMING" > "$hint_tmp" 2>/dev/null \
       && mv -f "$hint_tmp" "$MEASURED_HINT" 2>/dev/null \
       || rm -f "$hint_tmp"
   fi
@@ -708,10 +825,10 @@ fi
 if [[ "$NPKGS_DISCOVERED" -eq 0 ]]; then
   echo "FAIL: no integration packages discovered — the build-constraint scan admitted no tagged file (regression?)"
   fail=1
-elif [[ "$ran" -ne "$NPKGS" ]]; then
-  # $NPKGS is THIS run's package count — the shard's slice, not the lane total —
+elif [[ "$ran" -ne "$NPARTS" ]]; then
+  # $NPARTS is THIS run's process count — the shard's slice, not the lane total —
   # so it is the number a missing worker has to be counted against.
-  echo "FAIL: ran $ran package log(s) but this run has $NPKGS package(s) — a worker did not report; treating as red"
+  echo "FAIL: ran $ran package log(s) but this run started $NPARTS process(es) — a worker did not report; treating as red"
   fail=1
 fi
 
@@ -819,14 +936,24 @@ if [[ "$fail" -ne 0 ]]; then
   exit 1
 fi
 
+# A shard saw a slice of the statements, so it hands its seen senders to the
+# fan-in, which judges staleness over every shard. A whole lane judges it here.
+check_repeated_gates "$MARGINCE_SQL_CENSUS_DIR" "$OUTDIR/repeated-gates.txt"
+if [[ -n "$SHARD_OUT" ]]; then
+  cp "$OUTDIR/repeated-gates.txt" "$SHARD_OUT/repeated-gates.txt"
+else
+  stale_repeated_gates "$OUTDIR/repeated-gates.txt"
+fi
+
 # The manifests the fan-in reconciles: full discovery (identical across
 # shards), this shard's slice, and what actually ran.
 if [[ -n "$SHARD_OUT" ]]; then
   cp "$DISCOVERY" "$SHARD_OUT/discovery.txt"
   cp "$ASSIGNED" "$SHARD_OUT/assigned.txt"
   cp "$RAN" "$SHARD_OUT/ran.txt"
-  # "rel|seconds|tests" per package, so cost can be tracked across runs rather
-  # than re-derived by eye from a scrolled log.
+  # "rel|seconds|tests|slot" per process (a split package has one row per
+  # part), so cost can be tracked across runs rather than re-derived by eye
+  # from a scrolled log.
   cp "$TIMING" "$SHARD_OUT/timing.txt"
   cp "$TEST_TIMING" "$SHARD_OUT/test-timing.txt"
   printf 'shard=%s\ntotal=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" > "$SHARD_OUT/meta.txt"

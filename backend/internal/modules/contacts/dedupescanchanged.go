@@ -36,6 +36,19 @@ const (
 	dedupeScanPerRun = 5000
 )
 
+// dedupeRunReserve is how much of its job's deadline a pass leaves unspent. A
+// pass checks before each batch and stops once less than this remains. Every
+// batch has already moved its watermark, so the next run goes on from there. A
+// first pass over a large installation therefore takes a few runs and ends each
+// one itself, instead of the deadline cancelling a batch.
+const dedupeRunReserve = time.Minute
+
+// dedupeRunOutOfTime reports whether a pass should stop before its next batch.
+func dedupeRunOutOfTime(ctx context.Context) bool {
+	deadline, ok := ctx.Deadline()
+	return ok && time.Until(deadline) < dedupeRunReserve
+}
+
 // dedupeScanOverlap is how far back a caught-up pass sets its watermark. A
 // write that stays open longer than this and commits behind the watermark is
 // only found by the next change to its record.
@@ -50,6 +63,9 @@ type dedupeScanStream struct {
 	// nothing left to pair. An identifier row is read either way, because its
 	// record may still be live.
 	liveOnly bool
+	// rows narrows the table to the rows that name a record, as a compile-time
+	// literal its partial index matches.
+	rows string
 }
 
 // subject is the column naming the record a row belongs to: the record table's
@@ -68,6 +84,10 @@ var dedupeScanStreams = []dedupeScanStream{
 	{table: entityContact, entity: DedupeScanContacts, liveOnly: true},
 	{table: tableContactEmail, entity: DedupeScanContacts},
 	{table: tableContactPhone, entity: DedupeScanContacts},
+	// The second facts a similar company name needs (keepCorroborated): a
+	// stated phone number, and a contact employed at both companies.
+	{table: tableCompanyFact, entity: DedupeScanCompanies},
+	{table: tableRelationship, entity: DedupeScanCompanies, rows: "kind = 'employment' AND company_id IS NOT NULL"},
 }
 
 // DedupeScanResult counts one nightly pass: the records it ran through the
@@ -75,6 +95,9 @@ var dedupeScanStreams = []dedupeScanStream{
 type DedupeScanResult struct {
 	Examined int
 	Filed    int
+	// Stopped is true when the pass ran short of time and left the rest to
+	// the next run.
+	Stopped bool
 }
 
 // dedupeWatermark is a position in one table, in the order the pass reads
@@ -105,8 +128,13 @@ func (s *Store) ScanChangedForDuplicates(ctx context.Context) (DedupeScanResult,
 		return DedupeScanResult{}, fmt.Errorf("contacts: read the database clock: %w", err)
 	}
 	var result DedupeScanResult
+streams:
 	for _, stream := range dedupeScanStreams {
 		for read := 0; read < dedupeScanPerRun; {
+			if dedupeRunOutOfTime(ctx) {
+				result.Stopped = true
+				break streams
+			}
 			rows, page, err := s.scanChangedBatch(ctx, stream, cutoff)
 			if err != nil {
 				return result, fmt.Errorf("contacts: scan changed %s rows for duplicates: %w", stream.table, err)
@@ -121,7 +149,7 @@ func (s *Store) ScanChangedForDuplicates(ctx context.Context) (DedupeScanResult,
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		_, err := storekit.LogSystem(ctx, tx, dedupeScanSource, map[string]any{
-			"examined": result.Examined, "filed": result.Filed,
+			"examined": result.Examined, "filed": result.Filed, "stopped": result.Stopped,
 		})
 		return err
 	})
@@ -192,6 +220,9 @@ func (stream dedupeScanStream) changedSince(ctx context.Context, tx pgx.Tx, mark
 	live := ""
 	if stream.liveOnly {
 		live = "archived_at IS NULL AND "
+	}
+	if stream.rows != "" {
+		live += stream.rows + " AND "
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT updated_at, id, `+stream.subject()+` FROM `+stream.table+`

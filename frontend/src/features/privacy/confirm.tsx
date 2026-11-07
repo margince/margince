@@ -26,6 +26,7 @@ import {
 import { PrivacyNotice } from "./confirmprivacy";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
+import { useMailLanguage, usePublicLocale } from "./publiclocale";
 import "../settings/preferences.css";
 import "./confirm.css";
 
@@ -43,6 +44,9 @@ import "./confirm.css";
 
 export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();
+  // The link names its mail's language, so an expired link that the server
+  // answers with nothing still speaks it.
+  usePublicLocale();
   if (!token) {
     return (
       <div className="pref-page">
@@ -78,6 +82,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       return data;
     },
   });
+
+  // A contact who got the mail in Vietnamese lands on a Vietnamese page.
+  useMailLanguage(details.data?.language);
 
   // Edits are held against what the server sent, so a field the contact did not
   // touch is never submitted as a correction. Submitting an untouched field

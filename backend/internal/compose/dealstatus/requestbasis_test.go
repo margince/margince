@@ -100,9 +100,6 @@ func TestEveryCacheReaderRejectsAnEarlierProjection(t *testing.T) {
 		if decodeStored(payload, &decoded) {
 			t.Fatalf("main card reader admitted old projection %q", version)
 		}
-		if _, ok := moveFromPayload(payload); ok {
-			t.Fatalf("move reader admitted old projection %q", version)
-		}
 		if _, ok := cardFromPayload(payload); ok {
 			t.Fatalf("standing reader admitted old projection %q", version)
 		}

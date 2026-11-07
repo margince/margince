@@ -237,3 +237,14 @@ func TestIsNumberedPassageRequiresTheMarkerToEnd(t *testing.T) {
 		}
 	}
 }
+
+func TestResponseLineNamesCachedInputOnlyWhenTheProviderServedSome(t *testing.T) {
+	served := responseLine(probeCall{Reply: probeReply{InputTokens: 2600, CachedTokens: 2000, OutputTokens: 40}})
+	if !strings.Contains(served, "in 2600 tok  cached 2000 tok  out 40 tok") {
+		t.Errorf("a cache read is not reported beside the input it came from: %q", served)
+	}
+	cold := responseLine(probeCall{Reply: probeReply{InputTokens: 2600, OutputTokens: 40}})
+	if strings.Contains(cold, "cached") {
+		t.Errorf("a call that read nothing from the cache reports a cached count: %q", cold)
+	}
+}

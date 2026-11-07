@@ -26,6 +26,17 @@ function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;");
 }
 
+// privacyNoticeLines is the notice the form shows under its button at the point
+// of collection, and the policy it links to. Either alone still says something.
+function privacyNoticeLines(form: WebForm): string[] {
+  const notice = form.privacy_notice?.trim() ?? "";
+  const policy = form.privacy_notice_url?.trim() ?? "";
+  if (notice === "" && policy === "") return [];
+  const link =
+    policy === "" ? "" : `<a href="${escapeHtml(policy)}">Privacy policy</a>`;
+  return [`  <p>${[escapeHtml(notice), link].filter(Boolean).join(" ")}</p>`];
+}
+
 // browserSnippet is a plain HTML form with the three spam-check fields. It
 // works without the script; the script adds the fill time, the page and an id
 // so a double click lands once.
@@ -50,11 +61,28 @@ export function browserSnippet(form: WebForm, url: string): string {
     '  <input type="hidden" name="_mrg_id">',
     '  <input type="hidden" name="page_url">',
     '  <button type="submit">Send</button>',
+    ...privacyNoticeLines(form),
     "</form>",
     "<script>",
     '  document.querySelectorAll("form[data-margince-form]").forEach(function (form) {',
-    "    form.elements._mrg_ts.value = Date.now();",
+    // The first load's time survives a Back, which reloads the page and runs
+    // this again: a visitor's second send within seconds still lands.
+    '    var started = Date.now(), key = "margince-form-started:" + form.action;',
+    "    try {",
+    "      var kept = Number(sessionStorage.getItem(key));",
+    "      if (kept > 0 && kept < started) started = kept;",
+    "      sessionStorage.setItem(key, String(started));",
+    "    } catch (unavailable) {",
+    "      started = Date.now();",
+    "    }",
+    "    form.elements._mrg_ts.value = started;",
     "    form.elements.page_url.value = location.href;",
+    // A page back from Back may hold the last send's id, and a changed message
+    // under it would read as that send again. One page lifetime, one id.
+    '    form.elements._mrg_id.value = "";',
+    '    window.addEventListener("pageshow", function (event) {',
+    '      if (event.persisted) form.elements._mrg_id.value = "";',
+    "    });",
     '    form.addEventListener("submit", function () {',
     "      form.elements._mrg_id.value = form.elements._mrg_id.value || crypto.randomUUID();",
     "    });",

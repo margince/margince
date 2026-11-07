@@ -21,7 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -84,9 +86,9 @@ func captureMailFrom(t *testing.T, e *integration.Env, owner ids.UUID, domain, e
 	activityID := ids.New[ids.ActivityKind]()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by)
-			VALUES ($1, 'email', 'hi', 'inbound', 'gmail', $2, 'gmail:seed', 'connector:gmail')`,
-			activityID, activityID.String())
+			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by, occurred_at)
+			VALUES (@activity, 'email', 'hi', 'inbound', 'gmail', @source, 'gmail:seed', 'connector:gmail', @at)`,
+			pgx.StrictNamedArgs{"activity": activityID, "source": activityID.String(), "at": clocktest.Now(t)})
 		if err != nil {
 			return err
 		}
@@ -94,10 +96,10 @@ func captureMailFrom(t *testing.T, e *integration.Env, owner ids.UUID, domain, e
 		// owner, by their login address, as its one direct To recipient. A
 		// domain question is asked of that recipient (openQuestionForReaderSQL).
 		_, err = tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, role, address, user_id)
-			SELECT $1::uuid, 'from', $2::text, NULL::uuid
-			UNION ALL SELECT $1::uuid, 'to', lower(u.email), u.id FROM app_user u WHERE u.id = $3`,
-			activityID, email, owner)
+			INSERT INTO activity_participant (activity_id, role, address, user_id, address_domain_folded)
+			SELECT $1::uuid, 'from', $2::text, NULL::uuid, $4::text
+			UNION ALL SELECT $1::uuid, 'to', lower(u.email), u.id, u.email_domain_folded FROM app_user u WHERE u.id = $3`,
+			activityID, email, owner, owndomain.StoredOfAddress(email))
 		return err
 	}); err != nil {
 		t.Fatal(err)

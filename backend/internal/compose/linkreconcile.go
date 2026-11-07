@@ -70,15 +70,17 @@ type linkReconcileWorker struct {
 	pool     *pgxpool.Pool
 	store    *contacts.Store
 	pending  *capture.PendingStore
+	parties  *capture.Sink
 	receipts sweepRecorder
 	log      *slog.Logger
 }
 
-func newLinkReconcileWorker(pool *pgxpool.Pool, store *contacts.Store, log *slog.Logger) *linkReconcileWorker {
+func newLinkReconcileWorker(pool *pgxpool.Pool, store *contacts.Store, cfg CaptureConfig, log *slog.Logger) *linkReconcileWorker {
 	return &linkReconcileWorker{
 		pool:     pool,
 		store:    store,
 		pending:  capture.NewPendingStore(InstallationDB(pool)),
+		parties:  newCaptureSink(pool, cfg),
 		receipts: newSweepRecorder(pool),
 		log:      log,
 	}
@@ -110,7 +112,7 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 			w.receipts.skipped(sweepCtx, capture.SweepStrandedContacts)))
 	}
 	var linked, promoted int64
-	failed := leadErr
+	failed := errors.Join(leadErr, w.parties.RecoverPartyAdmissions(sweepCtx, 100))
 	for _, contact := range owed {
 		// Per contact, each on its own transaction, so one contact whose repair
 		// fails — a lock it could not take, a row a concurrent merge moved —
@@ -267,12 +269,13 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted 
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := filedMeetingHeldClause("a", arg)
-		rows, err := tx.Query(ctx, `
+		query := `
 			SELECT a.id
 			  FROM activity a
-			 WHERE `+where+`
+			 WHERE ` + where + `
 			 ORDER BY a.occurred_at DESC, a.id
-			 LIMIT `+fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick)), args...)
+			 LIMIT ` + fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("selecting the filed meetings still held: %w", err)
 		}
@@ -378,7 +381,7 @@ const linkReconcileActor = "link-reconcile"
 // publish refuse, so the sweep repaired nothing while looking like a job that
 // had simply not run yet.
 func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *contacts.Store) *linkReconcileWorker {
-	return newLinkReconcileWorker(pool, store, slog.Default())
+	return newLinkReconcileWorker(pool, store, CaptureConfig{}, slog.Default())
 }
 
 // ReconcileWorkspaceForTest drives ONE workspace's turn from another package.

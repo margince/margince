@@ -69,9 +69,13 @@ function verbsInOrder(): HTMLElement[] {
   );
 }
 
-/** The filled controls on the row's line — the lane's answer, or nothing. */
+/** The filled controls on the row's line. A row in a list has none. */
 function filled(verbs: readonly HTMLElement[]): HTMLElement[] {
-  return verbs.filter((verb) => verb.classList.contains("btn-primary"));
+  return verbs.filter(
+    (verb) =>
+      verb.classList.contains("btn-primary") ||
+      verb.classList.contains("btn-ai"),
+  );
 }
 
 // The lines of the row's menu, in order, read off the panel the trigger opens.
@@ -142,6 +146,7 @@ describe("a row's verbs are one line with the row's menu last", () => {
         id: "task-1",
         source: "task",
         title: "Send the quote",
+        actions: ["complete"],
         dispositions: ["not_mine"],
       }),
     );
@@ -154,10 +159,9 @@ describe("a row's verbs are one line with the row's menu last", () => {
     ]);
   });
 
-  // Finishing a task is the day's next move, so its answer wears the fill and
-  // no other verb on the line does. Asserted over every filled control, since a
-  // second fill would be two calls to action.
-  it("fills the answer and nothing else on the line", async () => {
+  // A row in a list has no fill. One per row reads as a column of loud
+  // buttons in changing colours. The answer still stands last before the menu.
+  it("fills nothing on a row in a list, the answer included", async () => {
     oneRow(
       row({
         id: "task-2",
@@ -172,7 +176,7 @@ describe("a row's verbs are one line with the row's menu last", () => {
     });
     const drawn = verbsInOrder();
     expect(drawn.at(-2)).toBe(done);
-    expect(filled(drawn)).toEqual([done]);
+    expect(filled(drawn)).toEqual([]);
   });
 
   // ONE CONTROL PER DESTINATION, whatever the WORDS on the controls.
@@ -229,12 +233,15 @@ describe("a row's verbs are one line with the row's menu last", () => {
         category: "meetings",
         title: "Quarterly review with Turbinenbau",
         occurred_at: "2026-08-31T08:00:00Z",
-        actions: ["decide"],
+        actions: ["decide", "cancel"],
       }),
     );
 
     const update = await screen.findByRole("button", {
-      name: en["worklist.verb.meetingUpdate"],
+      name: en["worklist.verb.meetingAddNotesFor"].replace(
+        "{subject}",
+        "Quarterly review with Turbinenbau",
+      ),
     });
     const drawn = verbsInOrder();
     expect(filled(drawn)).toEqual([]);
@@ -245,7 +252,10 @@ describe("a row's verbs are one line with the row's menu last", () => {
     ).toBeGreaterThan(-1);
     const cancelled = drawn.indexOf(
       screen.getByRole("button", {
-        name: en["worklist.verb.meetingCanceled"],
+        name: en["worklist.verb.meetingCanceledFor"].replace(
+          "{subject}",
+          "Quarterly review with Turbinenbau",
+        ),
       }),
     );
     expect(

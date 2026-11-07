@@ -302,7 +302,31 @@ describe("robots.txt lets link previews through and nothing else", () => {
     expect(allowed(agent, "/assets/app.js")).toBe(false);
   });
 
-  it("asks every other crawler not to fetch at all", () => {
+  it("allows an unlisted preview fetcher to read only public record cards", () => {
+    expect(allowed("UnlistedPreviewFetcher", "/r/deals/example")).toBe(true);
+    expect(
+      allowed(
+        "UnlistedPreviewFetcher",
+        "/v1/public/record-previews/deals/example",
+      ),
+    ).toBe(true);
     expect(allowed("Googlebot", "/")).toBe(false);
+    expect(allowed("UnlistedPreviewFetcher", "/v1/deals/example")).toBe(false);
+  });
+
+  it("allows an unlisted preview fetcher to read a booking page's card and logo, not its calendar", () => {
+    const fetcher = "UnlistedPreviewFetcher";
+    expect(allowed(fetcher, "/book/Ab3_x-9Qr")).toBe(true);
+    expect(allowed(fetcher, "/v1/public/booking/Ab3_x-9Qr/preview")).toBe(true);
+    expect(
+      allowed(fetcher, "/v1/public/booking/company-logo?entity=example"),
+    ).toBe(true);
+    expect(allowed(fetcher, "/v1/public/booking/Ab3_x-9Qr/availability")).toBe(
+      false,
+    );
+    expect(allowed(fetcher, "/v1/public/booking/Ab3_x-9Qr/profile")).toBe(
+      false,
+    );
+    expect(allowed(fetcher, "/v1/public/booking/Ab3_x-9Qr")).toBe(false);
   });
 });

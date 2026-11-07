@@ -73,7 +73,7 @@ func (w *csvWriters) activityBirthOf(row migration.Row, typed map[string]any) (a
 		return in, migration.Why(migration.ReasonActivityTypeUnnamed)
 	case in.OccurredAt == nil:
 		return in, migration.Why(migration.ReasonOccurredAtUnnamed)
-	case activities.CheckEntryHasContent(in.Kind, in.Subject, in.Body) != nil:
+	case activities.CheckEntryHasContent(in.Kind, in.Subject, in.Body, nil) != nil:
 		return in, migration.Why(migration.ReasonActivityEmpty)
 	}
 	return in, migration.Reason{}
@@ -81,13 +81,17 @@ func (w *csvWriters) activityBirthOf(row migration.Row, typed map[string]any) (a
 
 // predictActivityCreate asks the activities store, without writing, for the
 // refusals a filing meets outside the row's cells. One is a record the importer
-// may read but not attach to. The commit's own function answers the refusal.
+// may read but not attach to. Another is an outcome on a meeting that has not
+// taken place. The commit's own function answers the refusal.
 func (w *csvWriters) predictActivityCreate(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, migration.Reason, error) {
 	in, why := w.activityBirthOf(row, typed)
 	if why.Code != "" {
 		return predictUnwritable, why, nil
 	}
-	err := w.activities.ProbeLinkWrites(ctx, in.Links)
+	err := w.activities.ProbeLoggedOutcome(ctx, in)
+	if err == nil {
+		err = w.activities.ProbeLinkWrites(ctx, in.Links)
+	}
 	if why, refused := activityRefusalOf(err, textFields(row.Fields)); refused {
 		return predictUnwritable, why, nil
 	}

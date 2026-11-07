@@ -107,7 +107,12 @@ type ToolSpec struct {
 	// OpenAPIOp names the crm.yaml operations this tool runs as, operationIds
 	// joined by "/"; each declares this tool as its x-mcp-tool verb.
 	OpenAPIOp string
-	Egress    bool // true if the tool reaches outside the workspace (send_email, webhooks)
+	// Areas are the work areas a call lands in (platform/workarea). The registry
+	// fills them from the generated placement. It narrows them to one where a
+	// call's record type picks the operation. A passport limited to some areas
+	// is admitted when one of them is on.
+	Areas  []string
+	Egress bool // true if the tool reaches outside the workspace (send_email, webhooks)
 	// WaitsEvenForItsUser keeps a confirm-first tool waiting for a human when an
 	// agent acts as its user. Set where the model, not the colleague, picks the
 	// address the call reaches, and where a call cannot name the rows it changes.
@@ -123,11 +128,23 @@ type ToolSpec struct {
 	// listed tool replaces it. It still runs when called by name. Its name is
 	// the approval kind it stages and the key of its tier floor and retry claims.
 	Unlisted bool
+	// Gated marks an Unlisted tool that the registry's tool gate offers to some
+	// callers. For every other caller it does not exist: it is not listed and a
+	// call by its name gets the unknown-tool answer.
+	Gated bool
+	// ProtocolOnly marks a tool that measures the MCP protocol itself and has no
+	// REST route, because REST callers cannot answer what it asks.
+	ProtocolOnly bool
 	// ConfirmsInConversation marks a tool whose confirmation happens in the
 	// conversation that asked for it, never in the approval inbox. An exhausted
 	// volume budget refuses such a call outright instead of asking the connecting
 	// human for a release, so no inbox question is ever opened on its behalf.
 	ConfirmsInConversation bool
+	// AskUserFirst marks a tool whose effect cannot be taken back from the
+	// conversation. While it runs at once, its listing tells the client to get
+	// the user's yes first. Nothing enforces that; a human-approved call already
+	// has its yes.
+	AskUserFirst bool
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second
@@ -159,9 +176,10 @@ type ToolSpec struct {
 
 // ToolAction is one choice a router offers.
 type ToolAction struct {
-	Action string
-	Verb   string
-	Tier   RiskTier
+	Action       string
+	Verb         string
+	Tier         RiskTier
+	AskUserFirst bool
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's

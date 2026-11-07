@@ -13,7 +13,7 @@
 #
 # Layout under <artifacts-root> (the actions/download-artifact target dir):
 #   integration-shard-<k>/     discovery.txt assigned.txt ran.txt meta.txt
-#                              covdata/<slot>/ (binary pods)
+#                              repeated-gates.txt covdata/<slot>/ (binary pods)
 #   integration-covdata-unit/  binary pods from the unit `-cover` pass
 #
 # Usage: test-integration-reconcile.sh <artifacts-root> [cover-out]
@@ -23,6 +23,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+ROOT="$ROOT_DIR"
+source "$ROOT/scripts/lib-testdb.sh"
 
 ARTIFACTS="${1:?usage: test-integration-reconcile.sh <artifacts-root> [cover-out]}"
 COVER_OUT="${2:-}"
@@ -45,7 +47,7 @@ trap 'rm -f "$UNION"' EXIT
 
 for k in $(seq 1 "$TOTAL"); do
   d="$ARTIFACTS/integration-shard-$k"
-  for f in meta.txt discovery.txt assigned.txt ran.txt; do
+  for f in meta.txt discovery.txt assigned.txt ran.txt repeated-gates.txt; do
     [[ -f "$d/$f" ]] || fail "shard $k/$TOTAL is missing $f — its job reported green without a complete artifact"
   done
   grep -qx "shard=$k" "$d/meta.txt" || fail "shard $k artifact carries $(grep '^shard=' "$d/meta.txt") — artifact/matrix mix-up"
@@ -64,6 +66,12 @@ if ! diff "$REF_DISCOVERY" "$UNION" > /dev/null; then
   exit 1
 fi
 NTESTS="$(wc -l < "$REF_DISCOVERY" | tr -d ' ')"
+
+# Each shard saw a slice of the statements, so an allowlisted sender is stale
+# only when no shard saw it repeat the content gate.
+seen_files=()
+for k in $(seq 1 "$TOTAL"); do seen_files+=("$ARTIFACTS/integration-shard-$k/repeated-gates.txt"); done
+stale_repeated_gates "${seen_files[@]}" || fail "the repeated-gate allowlist names senders that no longer repeat — remove them"
 
 if [[ -n "$COVER_OUT" ]]; then
   unit_dir="$ARTIFACTS/integration-covdata-unit"

@@ -34,7 +34,7 @@ const (
 // single calendar, and its next meeting would be somebody else's.
 type MeetingHorizon interface {
 	// Calendar is whether the reader's own calendar connections feed the lane.
-	Calendar(ctx context.Context) (crmcontracts.WorklistCalendar, error)
+	Calendar(ctx context.Context) (crmcontracts.ReaderCalendar, error)
 	// NextCustomerMeeting is the reader's soonest booked customer meeting in
 	// window; found is false when none is.
 	NextCustomerMeeting(ctx context.Context, window MeetingWindow) (meeting crmcontracts.Contact360NextMeeting, found bool, err error)
@@ -49,7 +49,7 @@ func (s *Service) WithMeetingHorizon(h MeetingHorizon) *Service {
 
 // horizonRead is what the horizon answered, and the side reads that failed.
 type horizonRead struct {
-	calendar *crmcontracts.WorklistCalendar
+	calendar *crmcontracts.ReaderCalendar
 	next     *crmcontracts.Contact360NextMeeting
 	failed   []*crmcontracts.WorklistSourceUnavailable
 }
@@ -58,6 +58,7 @@ type horizonRead struct {
 // only when the lane answered and holds nothing left today: a withheld lane's
 // emptiness is not a free day, and a day with a meeting left needs no pointer past it.
 func (s *Service) meetingHorizon(ctx context.Context, day crmcontracts.Attention, until time.Time) horizonRead {
+	defer timeStage(ctx, "meeting_horizon")()
 	var out horizonRead
 	if s.horizon == nil || s.taskScope != TasksMine {
 		return out

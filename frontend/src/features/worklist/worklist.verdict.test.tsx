@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 
 // The standing line on a deal row.
@@ -13,8 +13,15 @@ import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
 // changes what the rep writes, and the row made them open the deal page to find
 // out.
 
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-10-12T09:00:00Z"));
+});
+
 afterEach(() => {
   cleanup();
+  vi.clearAllTimers();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -49,8 +56,14 @@ describe("the standing beside the step", () => {
     renderWorklist();
 
     expect(await screen.findByText("Blocked")).toBeTruthy();
+    expect(
+      screen
+        .getByText("Blocked")
+        .closest(".badge")
+        ?.classList.contains("badge-danger"),
+    ).toBe(false);
     expect(screen.getByText("Legal has not returned the DPA.")).toBeTruthy();
-    expect(screen.getByText("Assessment")).toBeTruthy();
+    expect(screen.getByText("Earlier assessment")).toBeTruthy();
   });
 
   // The night's finding is prose about the deal and carries no standing word.
@@ -86,7 +99,7 @@ describe("the standing beside the step", () => {
     renderWorklist();
 
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
-    expect(screen.queryByText("Assessment")).toBeNull();
+    expect(screen.queryByText("Earlier assessment")).toBeNull();
     // The deterministic explanation is still there.
     expect(screen.getByText(/41/)).toBeTruthy();
   });

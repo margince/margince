@@ -8,13 +8,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useId,
-  useState,
-} from "react";
+import { type ReactNode, useContext, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { Button, Modal, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -27,6 +21,7 @@ import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import { dealRecordKeys, derivedRecordKeys } from "../lib/activitykeys";
 import { LISTS_KEY } from "../lib/lists.queries";
 import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
+import { BulkUndoContext } from "./bulkundo";
 import {
   dialogWords,
   RECORD_KINDS,
@@ -68,33 +63,7 @@ export type BulkChangeRequest = Readonly<{
 
 export type Translate = ReturnType<typeof useT>;
 
-/**
- * Opens the undo of a change that just ran. The undo is its own press of the
- * same dialog: previewed, shown, confirmed. So it needs a host that outlives
- * the list's selection, whose bulk bar leaves once the change clears it.
- * `BulkUndoProvider` is that host. A change run as several batches is undone
- * batch by batch, one dialog after the other.
- */
-const BulkUndoContext = createContext<
-  ((requests: readonly BulkChangeRequest[]) => void) | null
->(null);
-
-/** The one place an undo's dialog is drawn, mounted beside the app. */
-export function BulkUndoProvider({
-  children,
-}: Readonly<{ children: ReactNode }>) {
-  const [queue, setQueue] = useState<readonly BulkChangeRequest[]>([]);
-  return (
-    <BulkUndoContext.Provider value={setQueue}>
-      {children}
-      <BulkChangeDialog
-        request={queue[0] ?? null}
-        onClose={() => setQueue([])}
-        onDone={() => setQueue((waiting) => waiting.slice(1))}
-      />
-    </BulkUndoContext.Provider>
-  );
-}
+export { BulkUndoProvider } from "./bulkundo";
 
 // The rows an undo can touch: the ones the change altered.
 function undoOf(

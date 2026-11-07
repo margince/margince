@@ -86,9 +86,9 @@ export const UnknownSender: Story = {
   play: lookUpSender,
 };
 
-// Dark is the theme this surface is most often SEEN in — it lives beside a mail
-// client, not inside the app shell — and its chrome bar is painted --bgRail,
-// which in dark sits a hair off --bgPage. If that step collapses, the surface
+// Dark is the theme this surface is most often SEEN in, since it lives beside a
+// mail client and not inside the app shell. Its chrome bar is painted
+// --bgInkField, which in dark sits a hair off --bgPage. If that step collapses, the surface
 // loses the one band that says whose product this is and where "back" lives.
 // The mini-record card and the isolation badge in the footer are the other two
 // grounds on trial.

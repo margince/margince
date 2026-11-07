@@ -7,7 +7,7 @@ import crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 func hasTypedProposalDisplay(kind string) bool {
 	switch kind {
-	case "capture_counterparty", "close_date_correction", "company_name_promotion", "contact_share", "deal_follow_up", "fx_rate_proposal", "held_draft", "linkedin_match", "site_lead", "vcard_create", "volume_release":
+	case "capture_counterparty", "close_date_correction", "company_name_promotion", "contact_share", "deal_follow_up", "fx_rate_proposal", "held_draft", "linkedin_match", "ownership_transfer", "site_lead", "vcard_create", "volume_release":
 		return true
 	default:
 		return false

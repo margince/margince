@@ -28,7 +28,7 @@ func recordSearchSeam(pool *pgxpool.Pool) agents.RecordSearch {
 	return func(ctx context.Context, q agents.RecordSearchQuery) (agents.RecordSearchPage, error) {
 		page, err := store.Search(ctx, search.Input{
 			Query: q.Text, Types: q.Types, Limit: q.Limit, Cursor: q.Cursor,
-			PerType: q.PerType, WithEmployees: q.WithEmployees, NearMatches: q.NearMatches,
+			AddressCompanies: true, PerType: q.PerType, WithEmployees: q.WithEmployees, NearMatches: q.NearMatches,
 		})
 		if err != nil {
 			return agents.RecordSearchPage{}, err
@@ -41,6 +41,9 @@ func recordSearchSeam(pool *pgxpool.Pool) agents.RecordSearch {
 			found := agents.RecordSearchHit{
 				Ref:   datasource.EntityRef{Type: datasource.EntityType(hit.Type), ID: hit.ID},
 				Match: agents.RecordMatch{Snippet: hit.Snippet},
+			}
+			if hit.IdentifierMatch != nil {
+				found.Match.IdentifierMatch = string(*hit.IdentifierMatch)
 			}
 			if hit.WorksAt != nil {
 				found.Match.WorksAt = &agents.RecordEmployer{

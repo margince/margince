@@ -42,6 +42,9 @@ describe("the type scale and the control geometry", () => {
       "--fontDisplayXLarge",
       "--fontDisplayLarge",
       "--fontDisplayMedium",
+      "--fontDisplayFigure",
+      "--fontPlateFigure",
+      "--fontPlateLeadFigure",
       "--fontLead",
       "--fontFamilyBody",
       "--controlHeight",
@@ -123,7 +126,7 @@ describe("the type scale and the control geometry", () => {
   // and this file is the one place that gate cannot speak for.
   it("spells no weight by value in the type scale", () => {
     const spelled = Object.entries(light)
-      .filter(([name]) => /^--font(Body|Heading|Display|Lead)/.test(name))
+      .filter(([name]) => /^--font(Body|Heading|Display|Plate|Lead)/.test(name))
       .filter(([, value]) => !value.startsWith("var(--fontWeight"))
       .map(([name, value]) => `${name}: ${value}`);
     expect(spelled, spelled.join("\n")).toEqual([]);

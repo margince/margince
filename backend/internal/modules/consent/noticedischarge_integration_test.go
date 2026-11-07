@@ -225,7 +225,7 @@ func TestTheConfirmMailItselfDischargesTheDuty(t *testing.T) {
 		&recordingStager{stage: func() ids.UUID { return seedDelivery(t, e) }},
 		&recordingVault{}, "https://crm.example.test/")
 
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact, "")
 	if err != nil {
 		t.Fatalf("mint a confirm link: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestAnInstallationWithNoRelayDischargesNothing(t *testing.T) {
 
 	seedSubjectAddress(t, e)
 
-	_, err := e.storeNoLane.IssueConfirmToken(e.ctx, e.contact)
+	_, err := e.storeNoLane.IssueConfirmToken(e.ctx, e.contact, "")
 	if !errors.Is(err, ErrNoMailLane) {
 		t.Fatalf("err = %v, want the refusal an installation with no relay owes", err)
 	}

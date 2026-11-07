@@ -45,19 +45,12 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Weber GmbH — Phase 2", pipeline, open, &e.Rep1)
 
-	queue := approvalsServiceWithEffects(e.Pool)
+	queue := NewApprovalsServiceWithEffects(e.Pool)
 	change, hash, err := diffhash.Canonical(json.RawMessage(`{"summary":"Send revised pricing","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := e.AgentCtx()
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		t.Fatal("missing staging actor")
-	}
-	actor.OnBehalfOf = e.Rep1
-	ctx = principal.WithActor(ctx, actor)
-	staged, err := queue.Stage(ctx, approvals.StageInput{
+	staged, err := queue.Stage(onBehalfOf(commitmentDispatchCtx(e), e.Rep1), approvals.StageInput{
 		Kind: "commitment_task", ProposedChange: change, DiffHash: hash,
 		TargetType: "deal", TargetID: deal, Summary: "Send revised pricing",
 	})
@@ -114,7 +107,7 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Example renewal", pipeline, open, &e.Rep1)
-	queue := approvalsServiceWithEffects(e.Pool)
+	queue := NewApprovalsServiceWithEffects(e.Pool)
 	ctx := e.AgentCtx()
 	actor, ok := principal.Actor(ctx)
 	if !ok {

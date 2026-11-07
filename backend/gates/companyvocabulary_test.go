@@ -32,7 +32,6 @@ package gates
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -162,12 +161,6 @@ var exempt = gatekit.Waive(map[string]string{
 
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
-	"e2e/llm/scenarios/case2-business-card.yaml": "one judged CRITERION quotes a sentence a " +
-		"model might write. The offline judge is keyed on sha256(criterion + answer), so " +
-		"rewording a criterion by one word orphans every verdict recorded against it — four " +
-		"of them here — and they can only be recomputed against a live model. The word is " +
-		"illustrative; the cache is not",
-
 	"backend/gates/rlsclaimsprose_test.go": "its waiver keys quote shipped migrations verbatim, " +
 		"and a shipped migration is never edited — the quote has to keep the word the SQL says",
 
@@ -208,7 +201,7 @@ func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 		if pathNamesTheOtherWord(f.path) {
 			t.Errorf("%s is NAMED for the record type's old name. It is called company.", f.path)
 		}
-		body, err := os.ReadFile(filepath.Join(repoRoot, f.path))
+		body, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)
 		}

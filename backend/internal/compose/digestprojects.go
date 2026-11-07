@@ -122,15 +122,16 @@ func digestNewCommitments(ctx context.Context, tx pgx.Tx, since, until time.Time
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `
+	query := `
 		SELECT p.id, p.name, p.key, count(*)::int
 		  FROM activity a
 		  JOIN activity_link al ON al.activity_id = a.id AND al.entity_type = 'project'
 		  JOIN project p ON p.id = al.project_id AND p.archived_at IS NULL
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		   AND a.created_at >= $1 AND a.created_at <= $2 AND `+scope+` AND `+content+` AND `+activities.CurrentTaskClause("a", until, identities, arg)+`
+		   AND a.created_at >= $1 AND a.created_at <= $2 AND ` + scope + ` AND ` + content + ` AND ` + activities.CurrentTaskClause("a", until, identities, arg) + `
 		 GROUP BY p.id, p.name, p.key
-		 ORDER BY count(*) DESC, p.name, p.id`, args...)
+		 ORDER BY count(*) DESC, p.name, p.id`
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("digest new commitments: %w", err)
 	}

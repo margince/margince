@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -42,6 +43,9 @@ type ResolveDomainTriageInput struct {
 	Source    string
 	Evidence  string
 	ReadID    ids.UUID
+	// SiteUnreadable marks an unreadable-site answer whose site was never
+	// read, as against one that was read and named nobody.
+	SiteUnreadable bool
 
 	// DossierName is the company name the site stated. Empty falls back to the
 	// domain's registrable label, which is what the pre-triage path always
@@ -50,6 +54,12 @@ type ResolveDomainTriageInput struct {
 	SeedURL     string
 	Fields      []DeepReadField
 	Facts       []DeepReadFact
+}
+
+// decidedByAUser reports an answer from a user or their agent, which the
+// machine's own withholding rules exist to ask for.
+func (in ResolveDomainTriageInput) decidedByAUser() bool {
+	return in.Source == DomainSourceHuman || in.Source == DomainSourceAgent
 }
 
 // ResolveDomainTriageResult reports what the verdict actually did.
@@ -105,7 +115,7 @@ func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDom
 		}
 		// No site, no name that explains the domain: nothing has EARNED a
 		// company. Left open, marked, and answerable later.
-		return markDispositionUnevidenced(ctx, tx, in.Domain, in.Evidence)
+		return markDispositionUnevidenced(ctx, tx, in.Domain, in.Evidence, in.SiteUnreadable)
 	})
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
@@ -124,7 +134,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	if !known {
 		return ResolveDomainTriageResult{}, fmt.Errorf("%w: no open question about %s", apperrors.ErrNotFound, in.Domain)
 	}
-	if in.Source == DomainSourceHuman && in.ReadID.IsZero() && prior.SiteReadID != nil {
+	if in.decidedByAUser() && in.ReadID.IsZero() && prior.SiteReadID != nil {
 		in.ReadID = *prior.SiteReadID
 	}
 	if prior.PendingReason == PendingForwardedIdentity && in.Status == DomainCompany && in.CompanyID == nil {
@@ -156,7 +166,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	if in.Status != DomainCompany {
 		return ResolveDomainTriageResult{}, settleDisposition(ctx, tx, in, nil)
 	}
-	if in.Source != DomainSourceHuman && DomainIdentityForwarded(in.Domain, in.SeedURL) {
+	if !in.decidedByAUser() && DomainIdentityForwarded(in.Domain, in.SeedURL) {
 		evidence, err := json.Marshal(DomainForwardEvidence{RequestedDomain: in.Domain, EffectiveURL: in.SeedURL, ReadID: in.ReadID, RedirectChain: []string{TriageSeedURL(in.Domain), in.SeedURL}})
 		if err != nil {
 			return ResolveDomainTriageResult{}, err
@@ -214,7 +224,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 // duplicate the dedupe chokepoint exists to prevent.
 func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, prior DomainDisposition) (ResolveDomainTriageResult, error) {
 	if in.CompanyID != nil {
-		if in.Source != DomainSourceHuman {
+		if !in.decidedByAUser() {
 			return ResolveDomainTriageResult{}, apperrors.ErrPermissionDenied
 		}
 		by, err := storekit.CapturedBy(ctx)
@@ -261,7 +271,7 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 	// nothing rearms the cursor and the one caller who could settle it is
 	// refused without being told why — the rule withholdForStaleEvidence states
 	// for the same reason.
-	if in.Source != DomainSourceHuman {
+	if !in.decidedByAUser() {
 		held, err := withholdForNameTwin(ctx, tx, in, match)
 		if err != nil || held {
 			return ResolveDomainTriageResult{}, err
@@ -352,7 +362,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 			WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id, contact_id`,
-		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance)
+		companyID, domainTriageSource(domain), by, candidates, owndomain.Fold(domain), mailClockSkewAllowance)
 	if err != nil {
 		return 0, fmt.Errorf("contacts: planting the employment edges for %s: %w", domain, err)
 	}
@@ -406,20 +416,9 @@ func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) (
 	rows, err := tx.Query(ctx, `
 		SELECT p.id
 		FROM contact p
-		WHERE p.archived_at IS NULL
-		  AND p.merged_into_id IS NULL
-		  AND EXISTS (
-			SELECT 1 FROM contact_email pe
-			WHERE pe.contact_id = p.id
-			  -- An address somebody no longer uses must not attach them to a
-			  -- new employer: a former colleague would be re-hired by a domain
-			  -- they left.
-			  AND pe.archived_at IS NULL
-			  AND (split_part(pe.email, '@', 2) = $1
-			       -- A literal suffix compare, never LIKE — see OnDomain.
-			       OR right(split_part(pe.email, '@', 2), length($1) + 1) = '.' || $1))
+		WHERE `+domainEmploymentCandidateSQL("p", "$1")+`
 		ORDER BY p.id
-		FOR UPDATE OF p`, domain)
+		FOR UPDATE OF p`, owndomain.Fold(domain))
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the contacts on %s: %w", domain, err)
 	}

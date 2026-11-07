@@ -461,7 +461,7 @@ describe("the deal page", () => {
     render(<DealScreen id="d1" />);
     const line = await screen.findByTestId("deal-project");
     await waitFor(() => expect(line.textContent).toBe("CRM rollout"));
-    expect(line.getAttribute("href")).toBe("#/projects/pr-1");
+    expect(line.getAttribute("href")).toBe("/#/projects/pr-1");
   });
 
   it("says a withheld project is withheld rather than drawing no line at all", async () => {

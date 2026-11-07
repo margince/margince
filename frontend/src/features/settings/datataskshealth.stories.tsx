@@ -145,3 +145,22 @@ export const NewerServerState: Story = {
     );
   },
 };
+
+export const PendingBeforeHistory: Story = {
+  render: report([
+    { ...runningDataTask, status: "failed", blocked_reason: "failed" },
+    {
+      ...runningDataTask,
+      task_id: "finished",
+      title: "Completed maintenance",
+      status: "done",
+    },
+    {
+      ...runningDataTask,
+      task_id: "optional",
+      title: "Optional repair",
+      version: 0,
+      blocked_reason: "review_required",
+    },
+  ]),
+};

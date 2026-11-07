@@ -36,6 +36,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -141,7 +142,7 @@ func (s *Store) PromoteContactCohortTx(
 	// before-image to judge — the subject is the contact whose cohort moved, not
 	// any one of the messages.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityContact, canonical.UUID,
-		map[string]any{"cohort_linked": len(linked), "cohort_promoted": len(promoted)})
+		map[string]any{cohortLinkedKey: len(linked), cohortPromotedKey: len(promoted)})
 	if err != nil {
 		return CohortPromotion{}, fmt.Errorf("contacts: auditing a cohort repair: %w", err)
 	}
@@ -391,8 +392,7 @@ func (s *Store) DomainsOwedTheirContacts(ctx context.Context, limit int) ([]Doma
 			    -- selector narrower than the write leaves a backlog nothing ever
 			    -- offers; one wider offers work the write will not take, and the
 			    -- domain is returned on every tick for ever.
-			   AND (split_part(pe.email, '@', 2) = od.domain
-			        OR right(split_part(pe.email, '@', 2), length(od.domain) + 1) = '.' || od.domain)
+			   AND `+owndomain.CoversSQL("pe.email_domain_folded", "od.domain_folded")+`
 			  JOIN contact p ON p.id = pe.contact_id
 			 WHERE od.archived_at IS NULL
 			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL
@@ -463,4 +463,14 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		return 0, err
 	}
 	return planted, nil
+}
+
+const (
+	cohortLinkedKey   = "cohort_linked"
+	cohortPromotedKey = "cohort_promoted"
+)
+
+// CohortAuditSQL identifies the additive address-to-contact repair by its immutable audit payload.
+func CohortAuditSQL(alias string) string {
+	return `COALESCE((` + alias + `.entity_type='contact' AND ` + alias + `.action='update' AND ` + alias + `.after ? '` + cohortLinkedKey + `' AND ` + alias + `.after ? '` + cohortPromotedKey + `'),false)`
 }

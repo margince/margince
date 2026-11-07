@@ -78,6 +78,7 @@ func advanceDealInput(req crmcontracts.AdvanceDealRequest, ifVersion *int64) (Ad
 		ReferencesFromRequest:    true,
 		ToStageID:                pathID[ids.StageKind](req.ToStageId),
 		LostReason:               req.LostReason,
+		LostReasonCode:           req.LostReasonCode,
 		IfVersion:                ifVersion,
 		WonWithoutContractDetail: req.WonWithoutContractDetail,
 	}
@@ -239,35 +240,9 @@ func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) Updat
 		in.Priority = &priority
 	}
 	in.AcquisitionSource = req.AcquisitionSource
-	if req.ForecastCategory != nil {
-		cat := string(*req.ForecastCategory)
-		in.ForecastCategory = &cat
-	}
+	in.WinProbability = req.WinProbability
 	if req.WaitUntil != nil {
 		in.WaitUntil = &req.WaitUntil.Time
 	}
 	return in
-}
-
-// transitionRefFromBody maps the two stage ids a transition is named by.
-//
-// The guard sits HERE rather than in the handler because three bodies carry
-// this pair — the policy save, the resume, and any transport that grows one
-// later — and an absent key decodes to the zero UUID with no error. Unchecked
-// it reaches the stage lookup, which matches nothing, and the caller is told a
-// stage they never named is not in the pipeline.
-func transitionRefFromBody(
-	pipelineID ids.PipelineID, from, to openapi_types.UUID,
-) (TransitionRef, error) {
-	if err := requireBodyID("from_stage_id", from); err != nil {
-		return TransitionRef{}, err
-	}
-	if err := requireBodyID("to_stage_id", to); err != nil {
-		return TransitionRef{}, err
-	}
-	return TransitionRef{
-		PipelineID:  pipelineID,
-		FromStageID: ids.From[ids.StageKind](ids.UUID(from)),
-		ToStageID:   ids.From[ids.StageKind](ids.UUID(to)),
-	}, nil
 }

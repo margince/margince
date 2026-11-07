@@ -17,24 +17,29 @@ import (
 // then what the machinery did. Two installations drawing the same movement in
 // different orders would be telling two different stories about one quarter.
 const (
-	BucketNew         = "new"
-	BucketPulledIn    = "pulled_in"
-	BucketPushedOut   = "pushed_out"
-	BucketAmount      = "amount"
+	BucketNew       = "new"
+	BucketPulledIn  = "pulled_in"
+	BucketPushedOut = "pushed_out"
+	BucketAmount    = "amount"
+	// BucketCategory is a deal's own probability moving; the wire keeps "category" for frozen movements.
 	BucketCategory    = "category"
 	BucketStageWeight = "stage_weight"
-	BucketWon         = "won"
-	BucketLost        = "lost"
-	BucketArchived    = "reopened_or_archived"
-	BucketFx          = "fx"
-	BucketDefinition  = "definition"
-	BucketModel       = "model"
+	// BucketRecordChanged is a deal whose weight moved while its stage did
+	// not: its stage chance or its risk effect moved with recorded outcomes.
+	BucketRecordChanged = "record_changed"
+	BucketWon           = "won"
+	BucketLost          = "lost"
+	BucketArchived      = "reopened_or_archived"
+	BucketFx            = "fx"
+	BucketDefinition    = "definition"
+	BucketModel         = "model"
 )
 
 // bucketOrder is the drawing order, and the ONE place it is stated.
 var bucketOrder = []string{
 	BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
-	BucketStageWeight, BucketWon, BucketLost, BucketArchived, BucketFx,
+	BucketStageWeight, BucketRecordChanged,
+	BucketWon, BucketLost, BucketArchived, BucketFx,
 	BucketDefinition, BucketModel,
 }
 
@@ -45,10 +50,9 @@ var bucketOrder = []string{
 // and fails when the weekly bridge has no bar for a member — the census that
 // stops a bucket added here from silently vanishing from a waterfall.
 //
-// Exported so a reader that must account for ALL of them derives the set rather
-// than keeping its own copy — the weekly bridge folds these twelve into seven
-// bars, and a hand-kept list there would silently drop a bucket added here,
-// which is money vanishing from a waterfall that still sums to something.
+// Exported so a reader that must account for every one derives the set. The
+// weekly bridge folds these into its bars. A hand-kept list there
+// would drop a bucket added here, and its money with it.
 //
 // Returned as a fresh slice because a package-level array would let one caller
 // reorder every other caller's waterfall.
@@ -63,6 +67,9 @@ func MovementBuckets() []string {
 // approximation — and it is the whole point: a waterfall whose bars do not
 // reach the closing bar is a picture that has to be explained away.
 type Movement struct {
+	// BaseCurrency is what both snapshots converted every amount to. Store.Movement
+	// refuses two snapshots in different base currencies.
+	BaseCurrency string
 	OpeningMinor int64
 	ClosingMinor int64
 	Buckets      []Bucket
@@ -94,6 +101,10 @@ type DealDelta struct {
 	// snapshot's stored reference rather than reconstructed from timestamps.
 	AuditID    *ids.UUID
 	ApprovalID *ids.UUID
+	// Causes lists the changes the deal went through, in drawing order. Bucket
+	// is the one its money is counted under;
+	// a deal whose amount, stage and close date all moved is still one row.
+	Causes []string
 }
 
 // snapshotSide is one end of the comparison: which reading is being explained,
@@ -112,6 +123,12 @@ type snapshotSide struct {
 	Scope        Scope
 	PipelineID   *ids.UUID
 	BaseCurrency string
+	// What the reading stood on, for comparing a call with it. The two
+	// fingerprints are empty on a snapshot taken before snapshots kept them.
+	ID                    ids.UUID
+	TakenAt               time.Time
+	PopulationFingerprint string
+	InputFingerprint      string
 	// Withheld says the lens dropped rows: deals this caller cannot read, or that
 	// no longer exist. A consumer that draws a complete-looking chart from the
 	// remainder must say the rest is withheld.
@@ -123,13 +140,17 @@ type snapshotSide struct {
 // not belong in the same total.
 type Reading string
 
-// The four money answers a movement can explain.
+// The money answers a movement can explain.
 const (
 	ReadingOpen     Reading = "open"
 	ReadingWeighted Reading = "weighted"
 	ReadingEvidence Reading = "evidence"
-	ReadingBestCase Reading = "best_case"
 )
+
+// everyReading lists the money answers. A call's drift is compared in each.
+//
+// Held by: TestEveryReadingIsComparedForACall (backend/internal/modules/forecasting/calldrift_test.go)
+var everyReading = []Reading{ReadingOpen, ReadingWeighted, ReadingEvidence}
 
 // Classify explains the difference between two snapshots of one reading.
 func Classify(reading Reading, from, to snapshotSide) Movement {
@@ -143,6 +164,7 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 	definitionChanged := from.DefinitionVersion != to.DefinitionVersion
 
 	out := Movement{
+		BaseCurrency: to.BaseCurrency,
 		OpeningMinor: totalOf(reading, from.Contributions),
 		ClosingMinor: totalOf(reading, to.Contributions),
 	}
@@ -193,6 +215,7 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 		out.Deals = append(out.Deals, DealDelta{
 			DealID: dealID, Bucket: BucketArchived, AmountMinor: delta,
 			FromMinor: new(contributionOf(reading, was)), ToMinor: new(int64(0)),
+			Causes: []string{BucketArchived},
 		})
 	}
 
@@ -251,10 +274,12 @@ func classifyRepricing(was, now Contribution) string {
 	switch {
 	case amountChanged(was, now):
 		return BucketAmount
-	case was.Category != now.Category:
+	case probabilitySetMoved(was, now):
 		return BucketCategory
-	case was.StageProbability != now.StageProbability:
+	case stageMoved(was, now) && was.StageProbability != now.StageProbability:
 		return BucketStageWeight
+	case weightRecordChanged(was, now):
+		return BucketRecordChanged
 	case fxChanged(was, now):
 		return BucketFx
 	default:
@@ -266,37 +291,11 @@ func classifyRepricing(was, now Contribution) string {
 	}
 }
 
-// amountChanged answers whether the deal's own money moved, including a deal
-// that BECAME unpriced: its full prior value leaves through this bucket rather
-// than through an exclusion nobody drew.
-func amountChanged(was, now Contribution) bool {
-	switch {
-	case was.AmountMinor == nil && now.AmountMinor == nil:
-		return false
-	case was.AmountMinor == nil || now.AmountMinor == nil:
-		return true
-	default:
-		return *was.AmountMinor != *now.AmountMinor || was.Currency != now.Currency
-	}
-}
-
-// fxChanged answers whether only the conversion moved. Checked after the
-// amount, so a deal whose price AND rate both moved reads as a repricing —
-// which is what happened to it commercially.
-func fxChanged(was, now Contribution) bool {
-	if was.BaseMinor == nil || now.BaseMinor == nil {
-		return was.BaseMinor != now.BaseMinor
-	}
-	return *was.BaseMinor != *now.BaseMinor
-}
-
 // inReading answers whether a contribution is part of one reading.
 func inReading(reading Reading, c Contribution) bool {
 	switch reading {
 	case ReadingEvidence:
 		return c.InEvidence
-	case ReadingBestCase:
-		return c.InBestCase
 	case ReadingWeighted, ReadingOpen:
 		return c.InOpen
 	default:
@@ -348,9 +347,46 @@ func dealDelta(
 		ToMinor:    new(contributionOf(reading, now)),
 		AuditID:    now.AuditID,
 		ApprovalID: now.ApprovalID,
+		Causes:     causesOf(was, existed, now),
 	}
 	if existed {
 		out.FromMinor = new(contributionOf(reading, was))
+	}
+	return out
+}
+
+// probabilitySetMoved reports a deal taking, leaving or moving its own probability.
+func probabilitySetMoved(was, now Contribution) bool {
+	if was.Source != now.Source {
+		return true
+	}
+	return now.Source != "" && now.Source != SourceStage && was.StageProbability != now.StageProbability
+}
+
+// causesOf lists every change between two contributions of one deal, whatever
+// reading is drawn. A new deal has one cause: it arrived.
+func causesOf(was Contribution, existed bool, now Contribution) []string {
+	if !existed {
+		return []string{BucketNew}
+	}
+	var out []string
+	for _, cause := range []struct {
+		name string
+		when bool
+	}{
+		{BucketPulledIn, !was.InOpen && now.InOpen},
+		{BucketPushedOut, was.InOpen && !now.InOpen && !now.InWon && !now.InLost},
+		{BucketAmount, amountChanged(was, now)},
+		{BucketCategory, probabilitySetMoved(was, now)},
+		{BucketStageWeight, stageMoved(was, now) && was.StageProbability != now.StageProbability},
+		{BucketRecordChanged, weightRecordChanged(was, now)},
+		{BucketWon, now.InWon && !was.InWon},
+		{BucketLost, now.InLost && !was.InLost},
+		{BucketFx, !amountChanged(was, now) && fxChanged(was, now)},
+	} {
+		if cause.when {
+			out = append(out, cause.name)
+		}
 	}
 	return out
 }

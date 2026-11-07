@@ -62,7 +62,7 @@ func (s *Service) Coverage(
 		if _, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active); err != nil {
 			return err
 		}
-		all, err := contacts.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
+		all, err := companyContactStrengths(ctx, tx, companyID, now, nil)
 		if err != nil {
 			return err
 		}

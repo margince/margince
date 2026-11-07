@@ -187,7 +187,7 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 }
 
 // admitRecordHistoryRead is the object-level half of this read's gate stack:
-// a human session, a known entity kind, and the read grant on it. The ROW-level
+// a user or their agent, a known entity kind, and the read grant on it. The ROW-level
 // half runs inside the transaction, because visibility is a statement.
 //
 // Separated from ListRecordHistory so the admission rules read as one list
@@ -195,7 +195,7 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 // one function doing two.
 func admitRecordHistoryRead(ctx context.Context, f RecordHistoryFilter) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return apperrors.ErrPermissionDenied
 	}
 	if !fieldHistoryEntityTypes[f.EntityType] {
@@ -272,8 +272,8 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 
 // queryRecordHistoryWindow fetches one keyset window of the record's audit
 // spine, newest first, with both display names resolved in SQL by the shared
-// auditActorNameJoins — and, unioned into the same window, the rows of the LINKS
-// the record is an end of (edgehistory.go).
+// auditattribution.ActorNameJoins. The rows of the links the record is an end
+// of (edgehistory.go) are unioned into the same window.
 //
 // Neither join carries a workspace predicate, and does not need one: both
 // match app_user.id, a global primary key, so a uuid can only ever resolve

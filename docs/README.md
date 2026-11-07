@@ -82,7 +82,11 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/rename-key-named-deals.md](how-to/rename-key-named-deals.md): rename imported deals whose name
   is the source key. Test with a dry run first.
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
+- [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
+  a new forecast model is tested against, before it is scored.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
+- [prove-a-tool-in-the-role-matrix.md](how-to/prove-a-tool-in-the-role-matrix.md): make a new MCP tool show
+  ✓ or ✗ for every role.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
 - [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
@@ -92,18 +96,25 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
 - [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
+- [land-through-develop.md](how-to/land-through-develop.md): merge into `develop` on a shorter CI run, and how
+  `develop` reaches `main`.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.
 - [mint-a-passport.md](how-to/mint-a-passport.md): make a passport token for an agent.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md): connect a client to the MCP tools.
+- [test-the-rest-surface-end-to-end.md](how-to/test-the-rest-surface-end-to-end.md): test the REST API
 - [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md): test the MCP tools
   with a real model (`make e2e-llm`).
+- [add-an-mcp-e2e-case.md](how-to/add-an-mcp-e2e-case.md): add a test case for the MCP tools and run it
+  on Claude and Codex.
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
 - [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
+- [measure-mail-import.md](how-to/measure-mail-import.md): measure a mail import.
+- [profile-mail-import.md](how-to/profile-mail-import.md): profile a mail import.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
   vLLM, with no cloud key.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): turn on the public lookup of what
@@ -124,6 +135,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
+- [build-a-custom-margince.md](how-to/build-a-custom-margince.md): which extension code a build
+  holds, and how to compose one.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
@@ -137,6 +150,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
+  extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
   of an extension runs as.
 - [land-companies-and-deals-from-an-extension.md](how-to/land-companies-and-deals-from-an-extension.md): hand the
@@ -155,6 +170,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 
 ### Reference: look it up
 
+- [API changes](reference/api-compatibility.md): when an API may change.
 - [modules.md](reference/modules.md): each module, what it owns, its tables and its API.
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
@@ -162,6 +178,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [webhook-events.md](reference/webhook-events.md): every webhook event and the fields it holds.
   Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
+- [worklist-source-census.md](reference/worklist-source-census.md): each source of work the Worklist reads, the
+  limit on it, and who it is for.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
@@ -170,11 +188,15 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
 - [ai-certification.md](reference/ai-certification.md): which AI features each model passed. Generated.
+- [mcp-parity.md](reference/mcp-parity.md): how much of the web app an agent can do through MCP. Generated.
+- [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): which MCP tools the tests use, and how they
   score. Generated.
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
+- [forecast-model-evaluation.md](reference/forecast-model-evaluation.md): the command that scores past
+  forecasts, and the values to set before a new model is tested.
 - [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
   with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.
@@ -189,6 +211,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [what-each-feature-needs.md](reference/what-each-feature-needs.md): the settings each feature needs,
   and what you see while one is missing.
 - [programs.md](reference/programs.md): what each program reads that is not a setting.
+- [Watch an installation](operations/observability.md): how to watch work, check a problem and show that it is fixed.
 - [operator-endpoints.md](reference/operator-endpoints.md) and [job-surfaces.md](reference/job-surfaces.md):
   the checks and numbers the api and the worker serve.
 - [worker-diagnostics.md](reference/worker-diagnostics.md): profile the worker, read one site, stop it.
@@ -326,6 +349,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Run it in production
 
 - [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [install-on-a-server.md](how-to/install-on-a-server.md): run a release on one Linux server, from its
+  files.
 - [change-a-setting.md](how-to/change-a-setting.md): change a setting, check it before a start, and see
   where each value comes from.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when

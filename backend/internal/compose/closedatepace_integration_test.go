@@ -79,6 +79,35 @@ func TestObservedCloseDateCarriesItsActualSampleAndPace(t *testing.T) {
 	}
 }
 
+// An imported win lands its moves in one instant. Its zero-day stints would
+// pull the median to nothing, so the pace and its sample leave them out.
+func TestImportedWinsDoNotSetTheSweepPace(t *testing.T) {
+	e := setupCloseDate(t)
+	run := integration.SeedIDRow(t, e.owner, importRunSeedSQL)
+	for range deals.CloseDateMinHistory + 1 {
+		id := ids.NewV7()
+		if _, err := e.owner.Exec(context.Background(), `INSERT INTO deal (id,name,pipeline_id,stage_id,status,closed_at,source,captured_by) VALUES ($1,'Imported won deal',$2,$3,'won',now(),'manual','human:x')`, id, e.pipeline, e.late); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.owner.Exec(context.Background(), `INSERT INTO deal_stage_history(deal_id,to_stage_id,changed_by,changed_at,provenance,import_run_id)
+			VALUES ($1,$2,'human:x',now()-interval '1 day','imported',$4),($1,$3,'human:x',now()-interval '1 day','imported',$4)`, id, e.early, e.late, run); err != nil {
+			t.Fatal(err)
+		}
+	}
+	id := e.seedSweepDeal(t, "Paced without imports", e.early, nil, new(-12), 3)
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	var samples int
+	var median float64
+	if err := e.owner.QueryRow(context.Background(), `SELECT (evidence->>'close_date_sample_count')::int,(evidence->>'close_date_median_stage_days')::float8 FROM audit_log WHERE entity_type='deal' AND entity_id=$1 AND evidence ? 'close_date_correction'`, id).Scan(&samples, &median); err != nil {
+		t.Fatalf("reading the correction: %v", err)
+	}
+	if samples != deals.CloseDateMinHistory || median != 14 {
+		t.Fatalf("pace from samples=%d median=%v, want the %d wins moved here at 14 days", samples, median, deals.CloseDateMinHistory)
+	}
+}
+
 func TestEstimateReceiptUsesOnlyRecordedAuthorizedObservations(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Observed receipt", e.early, nil, new(-12), 3)

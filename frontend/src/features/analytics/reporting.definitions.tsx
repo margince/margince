@@ -1,5 +1,5 @@
 import "./reporting.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -16,14 +16,19 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { metricLabel, unitLabel } from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+import { unitLabel } from "./reporting.model";
+import {
+  useReportingCatalog,
+  useReportingFramework,
+} from "./reporting.queries";
 
 type Framework = components["schemas"]["ReportingFramework"];
 export function ReportingDefinitions() {
@@ -32,13 +37,7 @@ export function ReportingDefinitions() {
   const [section, setSection] = useState("definitions");
   const canPublish = useCanWrite("reporting_framework", "update");
   const catalog = useReportingCatalog();
-  const framework = useQuery({
-    enabled: canPublish && section === "setup",
-    queryKey: ["reporting-framework"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/framework"));
-    },
-  });
+  const framework = useReportingFramework(canPublish && section === "setup");
   return (
     <>
       {canPublish && (
@@ -63,10 +62,7 @@ export function ReportingDefinitions() {
               {(catalog) => (
                 <>
                   {catalog.metrics.map((metric) => (
-                    <Disclosure
-                      key={metric.id}
-                      summary={metricLabel(metric.id, t)}
-                    >
+                    <Disclosure key={metric.id} summary={metric.label}>
                       <p>{metric.definition}</p>
                       <p className="t-caption">{metric.attribution}</p>
                       <p className="t-caption">{metric.incomplete_policy}</p>
@@ -100,7 +96,10 @@ export function ReportingDefinitions() {
                 <>
                   <p>
                     {t("reporting.revision", {
-                      revision: formatNumber(framework.revision, locale),
+                      revision: formatAnalyticsNumber(
+                        framework.revision,
+                        locale,
+                      ),
                     })}{" "}
                     · {t(`reporting.${framework.definition.template}`)}
                   </p>
@@ -119,22 +118,28 @@ export function ReportingDefinitions() {
   );
 }
 
+type Thresholds = NonNullable<Framework["definition"]["account_coverage"]>;
+
+// The Account coverage limits an admin publishes, with the server's defaults
+// shown where none was published yet.
+const THRESHOLDS: readonly {
+  key: keyof Thresholds;
+  label: MessageKey;
+  fallback: number;
+}[] = [
+  { key: "max_engaged_seats", label: "reporting.maxEngagedSeats", fallback: 1 },
+  { key: "untouched_days", label: "reporting.untouchedDays", fallback: 21 },
+  { key: "silent_days", label: "reporting.silentDays", fallback: 30 },
+  { key: "won_within_days", label: "reporting.wonWithinDays", fallback: 180 },
+];
+
 function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
   const t = useT();
   const client = useQueryClient();
   const scopes = useAnalyticsContext();
   const [definition, setDefinition] = useState(framework.definition);
   const [reason, setReason] = useState("");
-  const pipelines = useQuery({
-    queryKey: ["reporting-framework-pipelines"],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
-    },
-  });
+  const pipelines = usePipelines();
   const write = useMutation({
     mutationFn: async ({
       version,
@@ -152,9 +157,6 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["reporting-framework"] });
-      await client.invalidateQueries({
-        queryKey: ["reporting-overview-setup"],
-      });
     },
   });
   const toggleStage = (
@@ -210,7 +212,7 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
       <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
         {(result) => (
           <>
-            {result.data.map((pipeline) => (
+            {result.map((pipeline) => (
               <fieldset key={pipeline.id}>
                 <legend>
                   {pipeline.name} · {t("reporting.qualification")}
@@ -266,7 +268,7 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
                   value={capture.pipeline_id ?? ""}
                   options={[
                     { value: "", label: t("reporting.allPipelines") },
-                    ...(pipelines.data?.data ?? []).map((pipeline) => ({
+                    ...(pipelines.data ?? []).map((pipeline) => ({
                       value: pipeline.id,
                       label: pipeline.name,
                     })),
@@ -321,6 +323,33 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
         >
           {t("reporting.addCapture")}
         </Button>
+      </fieldset>
+      <fieldset>
+        <legend>{t("reporting.coverageThresholds")}</legend>
+        <p>{t("reporting.coverageThresholdsHelp")}</p>
+        <div className="reporting-toolbar">
+          {THRESHOLDS.map(({ key, label, fallback }) => (
+            <Field key={key} label={t(label)}>
+              {(field) => (
+                <TextInput
+                  {...field}
+                  inputMode="numeric"
+                  value={String(definition.account_coverage?.[key] ?? fallback)}
+                  onChange={(event) => {
+                    const digits = event.target.value.replace(/\D/g, "");
+                    setDefinition({
+                      ...definition,
+                      account_coverage: {
+                        ...definition.account_coverage,
+                        [key]: digits === "" ? fallback : Number(digits),
+                      },
+                    });
+                  }}
+                />
+              )}
+            </Field>
+          ))}
+        </div>
       </fieldset>
       <Field label={t("reporting.reason")} required>
         {(field) => (

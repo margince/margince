@@ -39,7 +39,7 @@ func (e *scoutEnv) rep(user ids.UUID, team ids.UUID) context.Context {
 
 // decider is the deals store with the acceptance effects the server wires.
 func (e *scoutEnv) decider() *deals.Store {
-	return e.Deals.WithClock(func() time.Time { return e.now }).WithSuggestionEffects(dealSuggestionEffects{})
+	return e.Deals.SetClock(func() time.Time { return e.now }).WithSuggestionEffects(dealSuggestionEffects{})
 }
 
 // onlySuggestion answers the company's one suggestion as the reader sees it.
@@ -90,6 +90,8 @@ func TestADismissalReArmsOnlyForNewerEvidence(t *testing.T) {
 	if _, err := e.decider().DismissSuggestion(e.signalReader(), suggestion.ID); err != nil {
 		t.Fatalf("dismissing: %v", err)
 	}
+	// Dismissed an hour back, so the held meeting logged after it has taken place.
+	e.WsExec(t, `UPDATE deal_suggestion SET decided_at = decided_at - interval '1 hour' WHERE id = $1`, suggestion.ID)
 	dismissedAt, err := time.Parse(time.RFC3339Nano,
 		e.WsScalar(t, `SELECT to_char(decided_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') FROM deal_suggestion WHERE id = $1`, suggestion.ID))
 	if err != nil {
@@ -223,7 +225,7 @@ func TestASuggestionIsShownOnlyToAReaderWhoMaySeeAllOfItsEvidence(t *testing.T) 
 		if shown := e.suggestions(reader, t, acme); len(shown) != 0 {
 			t.Errorf("%s who may not read one meeting is shown %d suggestions", name, len(shown))
 		}
-		if n, err := e.Deals.CountOpenSuggestions(reader); err != nil || n != 0 {
+		if n, err := e.Deals.CountOpenSuggestions(reader, deals.SuggestionQuery{}); err != nil || n != 0 {
 			t.Errorf("%s counts %d open suggestions (err %v), want 0", name, n, err)
 		}
 		if _, err := e.decider().DismissSuggestion(reader, e.onlySuggestion(rep1, t, acme).ID); !errors.Is(err, apperrors.ErrNotFound) {

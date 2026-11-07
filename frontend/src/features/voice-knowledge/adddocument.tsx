@@ -15,7 +15,7 @@ import {
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
 import { Select } from "../../design-system/select";
-import { foldForMatch } from "../../format/collate";
+import { searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -221,8 +221,7 @@ export function AddDocumentDialog({
   // a callback rebuilt on anything that changes while the reader types would
   // clear the list under them.
   const searchDeals = useCallback(
-    (query: string) =>
-      walkAccountDeals(fetchDealPage, foldForMatch(query.trim())),
+    (query: string) => walkAccountDeals(fetchDealPage, searchWords(query)),
     [fetchDealPage],
   );
 

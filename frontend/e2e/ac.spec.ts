@@ -1,8 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { loadLocale } from "../src/i18n/catalogs";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
+import { viewMenuName } from "../src/testing/listview.names";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
 import {
@@ -13,8 +15,12 @@ import {
   taskFromCall,
   typedTask,
 } from "./mockapi/calls";
-import { anna, mockApi } from "./seed";
-import { openedAt, pageOverflow, textsOf } from "./waits";
+import { anna, mockApi, servePrincipal } from "./seed";
+import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
+
+test.beforeAll(async () => {
+  await loadLocale("de");
+});
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -204,17 +210,14 @@ async function expectSettingsViewLanded(page: Page, view: string) {
     return;
   }
   const tab = view.slice("settings/".length);
-  // The trail rather than the settings nav level, because the nav level is not
-  // there at 390px — the rail becomes a phone bar and the tabs go with it, and
-  // an assertion that reads the rail passes vacuously on the one viewport this
-  // sweep exists for. The trail's current crumb names the tab at every width.
-  //
-  // The expected wording comes from the catalog under the SAME key the nav
-  // builds its label from, so this is not a second copy of the tab names.
+  // The page heading, because the nav level and the trail both leave a phone
+  // bar. The heading is named by the tab at every width, its switcher included.
+  // The expected wording comes from the catalog key the nav labels the tab with,
+  // so this is not a second copy of the tab names.
   await expect(
-    page.locator(".crumbs-current"),
+    page.locator(".pagetitle").getByRole("heading"),
     `#/${view} did not land on the ${tab} tab — the address fell back, so this sweep measured a page it never opened`,
-  ).toHaveText(de[`settings.tab.${tab}` as MessageKey]);
+  ).toHaveAccessibleName(de[`settings.tab.${tab}` as MessageKey]);
 }
 
 /**
@@ -405,22 +408,27 @@ test("AC-shell-3: ⌘K does nothing while a dialog is up", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
+test("AC-shell-7: the top bar's search opens the palette, and Enter on a row closes it for good", async ({
+  page,
+}) => {
   await page.goto("/#/home");
+  const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. A BUTTON, never a field: the palette owns the query, and a second
   // input taking one here is exactly what this criterion forbids.
   await expect(topbar.locator("input")).toHaveCount(0);
   await topbar.locator(".topbar-search").click();
-  await expect(
-    page.getByRole("searchbox", { name: "Befehlspalette" }),
-  ).toBeVisible();
+  await expect(input).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
   await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
     primaryDestinations.length,
   );
+  await input.fill("Pipeline");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#\/deals$/);
+  await expect(input).toHaveCount(0);
 });
 
 // The account menu carries what belongs to the CONTACT rather than to the page:
@@ -439,12 +447,20 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
-    menu.getByRole("menuitem", { name: "Einstellungen" }),
-  ).toHaveAttribute("href", "#/settings");
+    menu.getByRole("menuitem", { name: "Einstellungen", exact: true }),
+  ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
-  ).toHaveAttribute("href", "#/settings/meetings");
-  await expect(menu.locator("a[href]")).toHaveCount(2);
+  ).toHaveAttribute("href", "/#/settings/meetings");
+  // The head is the third link: the seat's own page, named by who it is for.
+  await expect(
+    menu.getByRole("menuitem", {
+      name: new RegExp(
+        `^${de["shell.accountSettingsAria"].replace("{who}", ".+")}$`,
+      ),
+    }),
+  ).toHaveAttribute("href", "/#/settings/account");
+  await expect(menu.locator("a[href]")).toHaveCount(3);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
   // Appearance is a submenu, not a control sitting open in the menu: three
@@ -457,6 +473,35 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await choices.getByRole("radio", { name: "Dunkel" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(choices.getByRole("radio", { name: "Dunkel" })).toBeChecked();
+});
+
+// Help and feedback is a submenu of real menu items, and the shortcuts it opens
+// are a dialog. Both are swept by axe in the state a reader reaches them in.
+test("help and feedback and the keyboard shortcuts meet AA", async ({
+  page,
+}) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  await accountTrigger(page).click();
+  const help = page
+    .locator(".topbar [role='menu']")
+    .first()
+    .getByRole("menuitem", { name: de["shell.helpMenu"] });
+  await help.press("ArrowRight");
+  const submenu = page.getByRole("menu", { name: de["shell.helpMenu"] });
+  await expect(submenu.getByRole("menuitem").first()).toBeFocused();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — help and feedback");
+
+  await submenu
+    .getByRole("menuitem", { name: de["shell.help.shortcuts"] })
+    .click();
+  const dialog = page.getByRole("dialog", { name: de["shell.help.shortcuts"] });
+  await expect(dialog).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — keyboard shortcuts");
+  await page.keyboard.press("Escape");
+  await expect(accountTrigger(page)).toBeFocused();
 });
 
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
@@ -547,6 +592,15 @@ test("features/10 §7: Tab closes the language list and carries on", async ({
   await expect(page.locator("body")).not.toBeFocused();
 });
 
+/** Board or Table is a choice in the deals list's View panel. */
+async function showDealsAsTable(page: Page) {
+  await page.getByRole("button", { name: viewMenuName("de") }).click();
+  await page
+    .getByRole("dialog", { name: viewMenuName("de") })
+    .getByRole("button", { name: de["deals.viewTable"], exact: true })
+    .click();
+}
+
 test("AC-pipeline-7: board↔table swaps views preserving the deal set", async ({
   page,
 }) => {
@@ -580,7 +634,7 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   const boardLink = boardCard.getByRole("link", { name: /Fleet retrofit/ });
   await expect(boardLink).toHaveAttribute("href", /#\/deals\/d-fleet/);
   await expect(boardCard).toContainText("Fleet retrofit");
-  await page.getByRole("button", { name: "Tabelle" }).click();
+  await showDealsAsTable(page);
   // The board is gone, so its card locator is the proof the view swapped
   // rather than drew both at once.
   await expect(boardCard).toHaveCount(0);
@@ -973,9 +1027,34 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   await mark.click();
   await expect(page).toHaveURL(/#\/deals\/d-fleet$/);
   await page.goto("/#/deals");
-  await page.getByRole("button", { name: "Tabelle" }).click();
+  await showDealsAsTable(page);
   const row = page.getByRole("row", { name: /Fleet retrofit/ });
   await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
+});
+
+// A stage busier than one column's page reads its next page from its own Load
+// more, and no other column reads or offers one.
+test("AC-pipeline-12: a busy stage's column loads its next page on its own", async ({
+  page,
+}) => {
+  test.skip(Boolean(process.env.BASE_URL), "it reads the busy-stage mock");
+  await mockApi(page, { busyStage: true });
+  await page.goto("/#/deals");
+  const qualify = page.locator('[data-stage="s1"]');
+  // The head states the report's count over every deal, not the page's cards.
+  await expect(qualify.locator(".board-col-count .optioncount")).toHaveText(
+    "31",
+  );
+  // The seeded Qualify deal and thirty more: 31, of which a page reads 25.
+  const cards = qualify.locator("[data-deal]");
+  await expect(cards).toHaveCount(25);
+  const loadMore = page.getByRole("button", { name: "Mehr laden" });
+  await expect(loadMore).toHaveCount(1);
+
+  await qualify.getByRole("button", { name: "Mehr laden" }).click();
+
+  await expect(cards).toHaveCount(31);
+  await expect(loadMore).toHaveCount(0);
 });
 
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
@@ -1008,27 +1087,10 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
-// The decision queue lives on Today now, one decision at a time: the focus lane
-// draws the staged proposal through the same ApprovalRow the retired Decisions
-// screen used, so the verb a contact presses is unchanged and this asserts it
-// where a contact now finds it.
-test("AC-inbox: the staged decision is on the day's queue", async ({
+test("AC-inbox: the staged decision is in the Decisions view", async ({
   page,
 }) => {
-  await page.goto("/#/worklist");
-  // The queue shows the decision by the sentence the SERVER composed for it,
-  // not by its kind: the old lane drew "E-Mail senden" from the kind label,
-  // and a queue that has to rank things across producers names each one by
-  // what it actually is. Answering it stays the approvals surface's own job,
-  // so the verbs are asserted where they live rather than here.
-  // That the decision is ANSWERABLE here is the claim worth making, so this
-  // asserts the verb rather than the text.
-  //
-  // The verb is "Entscheiden" and not a verdict: a decision is answered in a
-  // drawer now, so the queue draws the way IN to the answer rather than the
-  // answers themselves (AC-WORKLIST-SDR-03, which walks the drawer and asserts
-  // the verdicts inside it). Asserting "Übernehmen" here would be asserting the
-  // shape the row deliberately stopped having.
+  await page.goto("/#/home?queue=1&queue_view=decisions");
   await expect(
     page.getByText(/Send the follow-up to Anna Weber/).first(),
   ).toBeVisible();
@@ -1333,11 +1395,60 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
 
+test("AC-create-3: a company created with a domain offers the contacts on it, none ticked", async ({
+  page,
+}) => {
+  // A reader who may link contacts to a company, which the shared admin is not.
+  await servePrincipal(
+    page,
+    meFixture({
+      allow: {
+        company: ["read", "create", "update"],
+        contact: ["read", "update"],
+        relationship: ["read", "create"],
+      },
+    }),
+  );
+  await page.goto("/#/companies");
+  await page.getByRole("button", { name: de["create.company"] }).click();
+  await page
+    .getByLabel(`${de["create.displayName"]} *`)
+    .fill("Nordlicht Logistik GmbH");
+  await page.getByRole("button", { name: de["field.addDomain"] }).click();
+  await page
+    .getByLabel(`${de["field.domain"]} *`)
+    .fill("nordlicht-logistik.example");
+  await page.getByRole("button", { name: "Erstellen", exact: true }).click();
+  await expect(page).toHaveURL(/#\/companies\/o-new$/);
+
+  const dialog = page.getByRole("dialog", {
+    name: de["co.domainContacts.dialogTitle"],
+  });
+  const ticks = dialog.getByRole("checkbox");
+  await expect(ticks).toHaveCount(2);
+  await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: de["co.domainContacts.linkNone"] }),
+  ).toBeDisabled();
+
+  await dialog.getByRole("checkbox", { name: /Anja Petersen/ }).check();
+  const sent = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith("/companies/o-new/link-contacts"),
+  );
+  await dialog
+    .getByRole("button", { name: copy(de["co.domainContacts.link_one"]) })
+    .click();
+  expect((await sent).postDataJSON()).toEqual({ contact_ids: ["p-anja"] });
+  await expect(dialog).toBeHidden();
+});
+
 test.describe("§3.8: 390px mobile", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   for (const screen of CORE_SCREENS) {
-    test(`nothing scrolls sideways at 390px on #/${screen}`, async ({
+    test(`nothing scrolls sideways or hides at 390px on #/${screen}`, async ({
       page,
     }) => {
       await page.goto(`/#/${screen}`);
@@ -1351,6 +1462,7 @@ test.describe("§3.8: 390px mobile", () => {
       // Named offenders rather than a count: a bare number tells whoever broke
       // this that something is 169px too wide and nothing about what.
       expect(await pageOverflow(page)).toEqual([]);
+      expect(await listClipping(page)).toEqual([]);
     });
   }
 
@@ -1362,6 +1474,33 @@ test.describe("§3.8: 390px mobile", () => {
     await expectShellRendered(page);
     await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
     expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("the More menu opens above the bar and meets AA at 390px", async ({
+    page,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    const more = page.locator("nav.rail .railmore");
+    await more.click();
+    const menu = page.locator("nav.rail .railmenu");
+    await expect(menu).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await settleAnimations(page);
+    const menuBox = await menu.boundingBox();
+    const barBox = await page.locator("nav.rail").boundingBox();
+    expect(menuBox).not.toBeNull();
+    expect(barBox).not.toBeNull();
+    expect((menuBox?.y ?? 0) + (menuBox?.height ?? 0)).toBeLessThan(
+      barBox?.y ?? 0,
+    );
+    expect(await pageOverflow(page)).toEqual([]);
+    await expectNoAaViolations(page, "home, More menu open");
+
+    await more.click();
+    await expect(menu).toHaveCount(0);
+    await expect(more).toBeFocused();
   });
 
   // The palette is a full-height SHEET at this width — a 560px box floated at
@@ -1432,10 +1571,10 @@ test.describe("§3.8: 390px mobile", () => {
       // below the fold — a measurement of the wrong control is a green that
       // means nothing.
       //
-      // `btn-primary` is how the queue marks the one emerald verb. Where a row
-      // draws none — an inline decision offers several equal answers — the
-      // LOWEST control is measured instead, because a row is only workable
-      // when the reader can reach all of it.
+      // `btn-primary` is how the queue marks the one accent verb. An inline
+      // decision offers several equal answers and draws none. There the
+      // lowest control is measured, because a row works only when the reader
+      // can reach all of it.
       //
       // Read off the ROW, never from a list of the containers it groups its
       // verbs into. A selector naming those is a claim about which groups
@@ -1484,7 +1623,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("AC-WORKLIST-SDR-03: a decision is answered in a drawer, not in the row", async ({
     page,
   }) => {
-    await page.goto("/#/worklist");
+    await page.goto("/#/home?queue=1&queue_view=decisions");
     await page.waitForLoadState("networkidle");
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
@@ -1592,7 +1731,7 @@ test.describe("§3.8: 390px mobile", () => {
     test("the day's queue is workable with a thumb at 390px", async ({
       page,
     }) => {
-      await page.goto("/#/worklist");
+      await page.goto("/#/home?queue=1&queue_view=decisions");
       await page.waitForLoadState("networkidle");
       await settleAnimations(page);
       await expect(
@@ -2174,6 +2313,48 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");
   });
+
+  // The View panel is a popover on a desktop and a full-screen sheet at 390px.
+  // The closed toolbar sweeps only its button, never what it opens.
+  const VIEW_SIZES = [
+    { name: "desktop", width: 1280, height: 800 },
+    { name: "390px", width: 390, height: 844 },
+  ];
+  for (const screen of ["contacts", "companies", "deals", "leads"]) {
+    for (const size of VIEW_SIZES) {
+      for (const step of [null, "sort", "filters"]) {
+        const opened = step
+          ? `the View panel's ${step} step open`
+          : "the View panel open";
+        test(`no AA violations on #/${screen} with ${opened} at ${size.name}`, async ({
+          page,
+        }) => {
+          await page.setViewportSize(size);
+          await page.goto(`/#/${screen}`);
+          await page.waitForLoadState("networkidle");
+          await expectShellRendered(page);
+          await page
+            .getByRole("button", { name: viewMenuName("de") })
+            .first()
+            .click();
+          const panel = page.locator(".lt-vpanel");
+          await expect(panel).toBeVisible();
+          if (step) {
+            await panel.locator(`[data-view-row="${step}"]`).click();
+            await expect(panel.locator(".lt-vstep")).toBeVisible();
+          }
+          // Off the panel first: a row under the pointer would start its hover
+          // fade after the settle, and the scan would read it mid-fade.
+          await page.mouse.move(0, 0);
+          await settleAnimations(page);
+          await expectNoAaViolations(
+            page,
+            `${screen} — View panel${step ? ` (${step})` : ""} at ${size.name}`,
+          );
+        });
+      }
+    }
+  }
 
   // A report row's explain drawer, with the permission notice in it: the
   // closed page sweeps only the icon-only trigger, never what it opens.
@@ -3050,142 +3231,6 @@ test.describe("filters and views", () => {
   });
 });
 
-test.describe("stage automation, in German", () => {
-  // The rule and the report the page draws. Routed rather than seeded, because
-  // what is under test is the German surface over a KNOWN state — a suspension
-  // with a reason, and a transition nobody has decided about — and neither is a
-  // state the seed happens to produce.
-  const SUSPENDED_REASON =
-    "ein Zug hat einen Datensatz außerhalb des eigenen Workspace erreicht";
-
-  async function stubStageAutomation(
-    page: Page,
-    options: { suspended?: boolean } = {},
-  ) {
-    const suspended = options.suspended ?? true;
-    await page.route("**/stage-automation/report**", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          window_days: 30,
-          data: [
-            {
-              pipeline_id: "p1",
-              from_stage_id: "s1",
-              to_stage_id: "s2",
-              from_stage_name: "Erstkontakt",
-              to_stage_name: "Angebot",
-              reviewed: 240,
-              proposed: 0,
-              expired: 0,
-              superseded: 0,
-              accepted_clean: 236,
-              accepted_edited: 2,
-              rejected: 2,
-              auto_applied: 0,
-              unsafe: 1,
-              observation_days: 34,
-              clean_acceptance_rate: 0.98,
-              edit_rate: 0.01,
-              rejection_rate: 0.01,
-              // UNDER the 1% ceiling. The rule below is suspended for a SAFETY
-              // defect, which needs no volume — so the record has to be good,
-              // or the page would rightly draw "not earned yet" instead of the
-              // undo window this test is about.
-              unsafe_rate: 0.004,
-              evidence_kinds: [],
-            },
-          ],
-        }),
-      });
-    });
-    await page.route("**/stage-automation/policies/**", async (route) => {
-      if (route.request().method() !== "GET") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: "{}",
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data: [
-            {
-              id: "r1",
-              pipeline_id: "p1",
-              from_stage_id: "s1",
-              to_stage_id: "s2",
-              mode: "auto",
-              clean_acceptance_threshold: 0.95,
-              correction_reversal_threshold: 0.01,
-              min_reviewed: 200,
-              min_observation_days: 28,
-              window_days: 30,
-              undo_window_hours: 72,
-              version: 3,
-              ...(suspended
-                ? {
-                    suspended_at: "2026-09-03T10:00:00Z",
-                    suspended_reason: SUSPENDED_REASON,
-                  }
-                : {}),
-            },
-          ],
-        }),
-      });
-    });
-  }
-
-  test("a suspended transition says in German why it stopped, and promises no undo while it is stopped", async ({
-    page,
-  }) => {
-    await stubStageAutomation(page);
-    await page.goto("/#/settings/stageautomation");
-    await page.waitForLoadState("networkidle");
-
-    // The switch carries the transition's own stage names, so an admin reading
-    // three rules can tell which move each one governs.
-    await expect(
-      page.getByRole("switch", { name: /Erstkontakt → Angebot/ }),
-    ).toBeVisible();
-
-    // The product's own reason, in the reader's language and unabridged. It is
-    // the entire basis for deciding whether to start the transition again.
-    await expect(page.getByText(SUSPENDED_REASON)).toBeVisible();
-
-    // A SUSPENDED rule promises no undo window, because it applies nothing —
-    // and a screen saying "Rückgängig für 72 h" beside "Margince hat das
-    // gestoppt" would offer an undo for moves that are not being made.
-    await expect(page.getByText(/Rückgängig für/)).toBeHidden();
-
-    // The way back is a deliberate act with its own confirmation, not a
-    // toggle: lifting a safety stop by mis-click is the failure this guards.
-    await page.getByRole("button", { name: "Fortsetzen" }).click();
-    await expect(
-      page.getByText(/überspringt die Schwelle nicht/),
-    ).toBeVisible();
-  });
-
-  test("a running transition says in German how long a move can be taken back", async ({
-    page,
-  }) => {
-    await stubStageAutomation(page, { suspended: false });
-    await page.goto("/#/settings/stageautomation");
-    await page.waitForLoadState("networkidle");
-
-    // "Rückgängig machen", with the window a contact actually has. A screen that
-    // offered undo without saying how long it lasts leaves somebody to find
-    // out by trying it too late.
-    await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();
-    // And nothing about a stop, because there is none.
-    await expect(page.getByText("Von Margince ausgesetzt")).toBeHidden();
-  });
-});
-
 const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
   id: `share-${index}`,
   kind: index === 1 ? "snapshot" : "live",
@@ -3198,9 +3243,7 @@ const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
 // The analytics forecast for a reader who may share it, with the drawer open
 // from its trigger by the KEYBOARD, so every caller starts from the same place.
 async function openSharedLinks(page: Page) {
-  await page.route(/\/v1\/me$/, (route) =>
-    route.fulfill({ json: meFixture({ allow: { forecast: ["create"] } }) }),
-  );
+  await servePrincipal(page, meFixture({ allow: { forecast: ["create"] } }));
   await page.route(/\/v1\/forecast\/shares$/, (route) =>
     route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
   );
@@ -3276,10 +3319,9 @@ test.describe("the contact's access panel, open", () => {
     test(`no AA violations with it open (${colorScheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme });
       // A reader who may change it, so the switch is drawn and judged.
-      await page.route(/\/v1\/me$/, (route) =>
-        route.fulfill({
-          json: meFixture({ allow: { contact: ["read", "update"] } }),
-        }),
+      await servePrincipal(
+        page,
+        meFixture({ allow: { contact: ["read", "update"] } }),
       );
       await page.route("**/contacts/p-anna/360", (route) =>
         route.fulfill({
@@ -3396,29 +3438,30 @@ test.describe("calling a contact", () => {
   const callVerb = (scope: Page | Locator) =>
     scope.getByRole("link", { name: de["record.verb.call"], exact: true });
 
-  test("the header Call dials the primary of two numbers", async ({ page }) => {
+  test("the number in the details dials the primary of two numbers", async ({
+    page,
+  }) => {
     await page.goto(`/#/contacts/${CALLED_CONTACT}`);
     await expectShellRendered(page);
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
-    ).toHaveAttribute("href", tel);
+      page.locator(".record-aside").locator(`a[href="${tel}"]`),
+    ).toBeVisible();
   });
 
-  test("the header Call on a contact with no number is refused and says why", async ({
-    page,
-  }) => {
+  test("a contact with no number offers no Call at all", async ({ page }) => {
     await page.goto("/#/contacts/p-anna");
     await expectShellRendered(page);
-    const call = page.getByRole("button", {
-      name: de["contact.action.call"],
-      exact: true,
-    });
-    await expect(call).toBeDisabled();
-    await expect(call).toHaveAccessibleDescription(
-      de["contact.action.noPhone"],
-    );
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"] }),
+      page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", {
+        name: de["contact.action.call"],
+        exact: true,
+      }),
     ).toHaveCount(0);
   });
 
@@ -3476,13 +3519,13 @@ test.describe("calling a contact", () => {
       return { opener, dialog };
     }
 
-    test("a task from a call offers Call, Email and Open contact, in tab order", async ({
+    test("a task from a call offers Call, Draft email and Open contact, in tab order", async ({
       page,
     }) => {
       const { opener, dialog } = await openTask(page, taskFromCall.subject);
       const call = callVerb(dialog);
       const email = dialog.getByRole("button", {
-        name: de["record.verb.email"],
+        name: de["task.next.draftEmail"],
         exact: true,
       });
       const open = dialog.getByRole("link", {
@@ -3493,7 +3536,7 @@ test.describe("calling a contact", () => {
       await expect(email).toBeVisible();
       await expect(open).toHaveAttribute(
         "href",
-        `#/contacts/${CALLED_CONTACT}`,
+        `/#/contacts/${CALLED_CONTACT}`,
       );
       await settleAnimations(page);
       await expectNoAaViolations(page, "home (task from a call open)");
@@ -3516,7 +3559,7 @@ test.describe("calling a contact", () => {
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand offers Email and Open contact but no Call", async ({
+    test("a task typed by hand offers Call, Draft email and Open contact", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
@@ -3525,11 +3568,11 @@ test.describe("calling a contact", () => {
       ).toBeVisible();
       await expect(
         dialog.getByRole("button", {
-          name: de["record.verb.email"],
+          name: de["task.next.draftEmail"],
           exact: true,
         }),
       ).toBeVisible();
-      await expect(callVerb(dialog)).toHaveCount(0);
+      await expect(callVerb(dialog)).toHaveAttribute("href", tel);
     });
   });
 });

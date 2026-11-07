@@ -22,7 +22,11 @@ import {
   submittedValues,
   visibleFields,
 } from "./create.fields";
-import { OfferedNameControl, offeredHint } from "./create.offered";
+import {
+  OfferedNameControl,
+  offeredHint,
+  usePrefilledPick,
+} from "./create.offered";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // A submit button's resting and busy labels travel as one pair, so an edit
@@ -77,6 +81,10 @@ export function RecordFormBody({
   const t = useT();
   const formId = useId();
 
+  // Laid over the reader's values where the form shows and sends them. Other
+  // fields write from the reader's own, so the box stays untouched until used.
+  const prefilled = usePrefilledPick(fields, values, rows);
+  const answers = { ...values, ...prefilled };
   // A field its showWhen hides neither renders nor holds Save hostage.
   const shown = visibleFields(fields, values);
   // A write must not bring back an answer to a question withdrawn in between.
@@ -124,8 +132,15 @@ export function RecordFormBody({
       refusals.size === 0 &&
       !refuseUnreadableField(event.currentTarget)
     )
-      onSubmit(submittedValues(fields, values), rows);
+      onSubmit(submittedValues(fields, answers), rows);
   });
+  // A dialog titled with its one field's name says that name once.
+  const [only, ...others] = shown.filter((field) => !field.divider);
+  const titledByDialog =
+    dialog !== undefined &&
+    only !== undefined &&
+    others.length === 0 &&
+    dialog.title === fieldLabel(only, t);
   const stack = (
     <>
       {shown.map((field) => {
@@ -142,6 +157,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               formId={formId}
+              labelHidden={titledByDialog}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
@@ -155,6 +171,7 @@ export function RecordFormBody({
             <MultiselectField
               key={field.key}
               field={field}
+              labelHidden={titledByDialog}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
@@ -166,10 +183,17 @@ export function RecordFormBody({
           <Field
             key={field.key}
             label={fieldLabel(field, t)}
+            labelHidden={titledByDialog}
             required={field.required}
             hint={
               field.offers
-                ? offeredHint(field.offers, field.key, values, t)
+                ? offeredHint(
+                    field.offers,
+                    field.key,
+                    answers,
+                    t,
+                    Object.hasOwn(prefilled, field.key),
+                  )
                 : field.hint
             }
             error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
@@ -181,7 +205,7 @@ export function RecordFormBody({
                   type={field.type === "email" ? "email" : undefined}
                   offers={field.offers}
                   control={control}
-                  values={values}
+                  values={answers}
                   setValues={setVisibleValues}
                 />
               ) : (
@@ -215,7 +239,7 @@ export function RecordFormBody({
   );
   const actions = (
     <>
-      <Button type="button" onClick={onClose}>
+      <Button type="button" onClick={onClose} disabled={pending}>
         {t("create.cancel")}
       </Button>
       <Button
@@ -245,6 +269,7 @@ export function RecordFormBody({
       onClose={onClose}
       fieldCount={fields.filter((field) => !field.divider).length}
       unsaved={edited}
+      closeDisabled={pending}
       form={
         <form id={formId} className="form-stack" onSubmit={submit}>
           {stack}

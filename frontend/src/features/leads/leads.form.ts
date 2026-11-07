@@ -28,10 +28,12 @@ export function mapLeadUpdate(
     phone: field("phone"),
     title: field("title"),
     company_name: field("company_name"),
+    industry: field("industry"),
     origin: field("origin"),
     origin_detail: field("origin_detail"),
     candidate_company_key: field("candidate_company_key"),
     project_id: field("project_id"),
+    partner_company_id: field("partner_company_id"),
     owner_id: stringField(values.owner_id).trim() || undefined,
   };
 }

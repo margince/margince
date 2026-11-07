@@ -1,20 +1,23 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
+import { dealStatusFilter } from "../format/dealstatus";
 import { useNow } from "../format/now";
 import { dayInZone } from "../format/timezone";
 import type { MessageKey } from "../i18n/en";
+import { useCompanyZone } from "./companyzone";
 import {
   CLOSE_DAY_DIAL,
   closeDayRange,
   type DayRange,
   narrowsByRange,
   rangeQueryParams,
+  WIN_PROBABILITY_DIAL,
 } from "./dealranges";
+import { defaultPipelineOf } from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
-import { useRecordZone } from "./recordzone";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
+import { bandOfDial } from "./winprobabilitybands";
 
 /**
  * The pipeline a record belongs to, falling back to the default.
@@ -36,8 +39,7 @@ export function usePipeline(pipelineId?: string | null) {
       const pipeline =
         (pipelineId &&
           data.data.find((candidate) => candidate.id === pipelineId)) ||
-        data.data.find((candidate) => candidate.is_default) ||
-        data.data[0];
+        defaultPipelineOf(data.data);
       if (!pipeline) {
         throw new Error("no pipeline");
       }
@@ -96,7 +98,6 @@ export function dealsQueryParams(f: DealFilters) {
     status: dealStatusFilter(filters.status),
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
-    forecast_category: forecastCategoryFilter(filters.forecast_category),
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
     // Several ids and their mode, out of the one comma-joined string the
     // address carries them in. Spelled by the shared encoder rather than here,
@@ -111,25 +112,32 @@ export function dealsQueryParams(f: DealFilters) {
 
 // The close-day dial as days. "This quarter" is the fiscal quarter holding
 // today in the installation's zone, the one the reports count.
-function useCloseDay(value: string | undefined): DayRange | undefined {
-  const today = dayInZone(useNow(0), useRecordZone());
+export function useCloseDay(value: string | undefined): DayRange | undefined {
+  const today = dayInZone(useNow(0), useCompanyZone());
   const fiscalStart =
     useInstallationSettings().data?.fiscal_year_start_month ?? 1;
   return closeDayRange(value, today, fiscalStart);
 }
 
-/**
- * The deals the board and the table share.
- *
- * A keyset walk rather than one fixed page. The board draws a column per stage
- * out of whatever this holds. A single capped read would show a busy stage only
- * a fraction of its cards. Its header comes from the deals-by-stage report over
- * every matching deal, so it names the true count. A column saying "40 deals"
- * above six cards is what a pipeline view must not do.
- */
-export function useDeals(f: DealFilters) {
+export type DealListQuery = ReturnType<typeof dealsQueryParams> & {
+  cursor?: string;
+};
+
+export type DealListPage = Awaited<ReturnType<typeof readDealPage>>;
+
+export async function readDealPage(query: DealListQuery, signal?: AbortSignal) {
+  return unwrap(await api.GET("/deals", { params: { query }, signal }));
+}
+
+export function nextCursorOf(page: DealListPage): string | undefined {
+  return page.page?.has_more ? (page.page.next_cursor ?? undefined) : undefined;
+}
+
+/** The deals as one keyset walk over every stage. */
+export function useDeals(f: DealFilters, enabled = true) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   return useInfiniteQuery({
+    enabled,
     // The days, not the dial's word: a list opened after the quarter turns
     // never reuses the old quarter's cached page. Today is read at mount.
     queryKey: ["deals", f, closeDay],
@@ -137,20 +145,12 @@ export function useDeals(f: DealFilters) {
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => {
-      return unwrap(
-        await api.GET("/deals", {
-          params: {
-            query: {
-              ...dealsQueryParams({ ...f, closeDay }),
-              cursor: pageParam,
-            },
-          },
-        }),
-      );
-    },
-    getNextPageParam: (last) =>
-      last.page?.has_more ? (last.page.next_cursor ?? undefined) : undefined,
+    queryFn: ({ pageParam, signal }) =>
+      readDealPage(
+        { ...dealsQueryParams({ ...f, closeDay }), cursor: pageParam },
+        signal,
+      ),
+    getNextPageParam: nextCursorOf,
   });
 }
 
@@ -166,8 +166,8 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   if (filters.company_id) out.company_id = filters.company_id;
   const status = dealStatusFilter(filters.status);
   if (status) out.status = status;
-  const forecast = forecastCategoryFilter(filters.forecast_category);
-  if (forecast) out.forecast_category = forecast;
+  const band = bandOfDial(filters[WIN_PROBABILITY_DIAL]);
+  if (band) out.win_probability_band = band.key;
   if (filters.partner_company_id)
     out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
@@ -199,6 +199,11 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
     return "deals.totalsNoTeamFilter";
   }
   if (narrowsByRange(f.filters)) return "deals.totalsNoRangeFilter";
+  // The report narrows by band only, so a range no band matches has no total.
+  const probability = f.filters[WIN_PROBABILITY_DIAL];
+  if (probability && !bandOfDial(probability)) {
+    return "deals.totalsNoRangeFilter";
+  }
   return undefined;
 }
 
@@ -212,11 +217,11 @@ export function totalsRefusedBecause(
 }
 
 // useStageTotals reads the board's per-column totals from the deals-by-stage
-// report: a full aggregate over every matching deal, not the capped page
-// useDeals fetches. The server converts each deal before grouping by stage.
+// report: a full aggregate over every matching deal, not the pages the columns
+// have read. The server converts each deal before grouping by stage.
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
-export function useStageTotals(f: DealFilters) {
+export function useStageTotals(f: DealFilters, enabled = true) {
   return useQuery({
     // Under ["deals"], so the one invalidation every deal mutation fires
     // refreshes the column headers along with the cards. Keyed apart, a moved
@@ -225,7 +230,7 @@ export function useStageTotals(f: DealFilters) {
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: totalsWithheldBecause(f) === undefined,
+    enabled: enabled && totalsWithheldBecause(f) === undefined,
     queryFn: async (): Promise<Map<string, StageTotals> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
         params: { path: { report: "deals-by-stage" } },

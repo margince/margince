@@ -84,6 +84,7 @@ var managerObjects = grid(crud, map[string]grant{
 	"finance":               readOnly,
 	objForecast:             writeNoDelete,
 	objFxRate:               none,
+	objTaxRate:              none,
 	objImportRun:            none,
 	objInstallationSettings: readOnly,
 	"integrations":          readOnly,
@@ -181,6 +182,7 @@ var defaults = map[string]Document{
 			objEmbeddingReindex:     readUpdate,
 			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
+			objTaxRate:              createRead,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
 			objLicense:              readOnly,
@@ -234,8 +236,12 @@ var defaults = map[string]Document{
 	// count: a base is what an object added later inherits before anybody
 	// revisits this file, and inheriting "may read" is a smaller mistake than
 	// inheriting "may create and edit". The overrides below are the records
-	// they actually work. Those take writeNoDelete — create, read, same-day-correct, never
-	// delete — because archiving a commercial record is a manager's call.
+	// they actually work. Those take writeNoDelete (create, read,
+	// same-day-correct, never delete) because archiving someone else's
+	// commercial record is a manager's call. The owner of a contact, company
+	// or deal still archives it without delete (auth.ContactArchive,
+	// CompanyArchive, DealArchive). So does the author of a hand-logged note
+	// or task.
 	//
 	// The three departures from that rule each have a reason. `lead` is crud
 	// because disqualifying IS the delete and is routine rep work.
@@ -282,6 +288,7 @@ var defaults = map[string]Document{
 			"deal_room":         writeNoDelete,
 			objEmbeddingReindex: none,
 			objFxRate:           none,
+			objTaxRate:          none,
 			objImportRun:        none,
 			objIntroduction:     writeNoDelete,
 			"lead":              crud,
@@ -340,6 +347,7 @@ var defaults = map[string]Document{
 			objDataCoverage:     none,
 			objEmbeddingReindex: none,
 			objFxRate:           none,
+			objTaxRate:          none,
 			objImportRun:        none,
 			objLicense:          none,
 			objRetentionPolicy:  none,
@@ -378,11 +386,13 @@ var defaults = map[string]Document{
 	"ops": {
 		Objects: grid(crud, map[string]grant{
 			reportingReportDefinition: readOnly,
-			reportingSalesTarget:      readOnly,
-			reportingFrameworkObject:  readOnly,
-			reportingReportSchedule:   readOnly,
-			reportingReportEdition:    readOnly,
-			reportingCreditObject:     readOnly,
+			// An initiative is a commercial decision; an operator reads it.
+			"sales_initiative":       readOnly,
+			reportingSalesTarget:     readOnly,
+			reportingFrameworkObject: readOnly,
+			reportingReportSchedule:  readOnly,
+			reportingReportEdition:   readOnly,
+			reportingCreditObject:    readOnly,
 
 			objAiModelRate:          writeNoDelete,
 			objAiRouting:            readUpdate,
@@ -394,6 +404,7 @@ var defaults = map[string]Document{
 			objEmbeddingReindex:     readUpdate,
 			objForecast:             writeNoDelete,
 			objFxRate:               writeNoDelete,
+			objTaxRate:              createRead,
 			objInstallationSettings: readUpdate,
 			objIntroduction:         writeNoDelete,
 			objLicense:              readOnly,

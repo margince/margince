@@ -27,13 +27,14 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // renovateConfig is the shape this gate judges and nothing more.
@@ -57,7 +58,7 @@ const extensionHowTo = "docs/how-to/add-an-extension.md"
 
 func readRenovateConfig(t *testing.T) renovateConfig {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, "renovate.json"))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, "renovate.json"))
 	if err != nil {
 		t.Fatalf("reading renovate.json: %v", err)
 	}
@@ -113,7 +114,7 @@ func TestRenovateRaisesEveryGoPinInOneBranch(t *testing.T) {
 // direction this must not fail.
 func TestTheExtensionHowToPinIsOneRenovateCanFind(t *testing.T) {
 	t.Parallel()
-	doc, err := os.ReadFile(filepath.Join(repoRoot, extensionHowTo))
+	doc, err := gatekit.ReadFile(filepath.Join(repoRoot, extensionHowTo))
 	if err != nil {
 		t.Fatalf("reading %s: %v", extensionHowTo, err)
 	}
@@ -215,7 +216,7 @@ func assignmentIn(hit []string) string {
 func TestEveryMakefileImagePinIsOneRenovateCanOffer(t *testing.T) {
 	t.Parallel()
 	const makefile = "Makefile"
-	text, err := os.ReadFile(filepath.Join(repoRoot, makefile))
+	text, err := gatekit.ReadFile(filepath.Join(repoRoot, makefile))
 	if err != nil {
 		t.Fatalf("reading %s: %v", makefile, err)
 	}

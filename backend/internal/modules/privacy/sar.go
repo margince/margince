@@ -34,9 +34,11 @@ type SARPackage struct {
 	// ReportingQuestionAnswers are the kept question answer rows a record
 	// about the subject was counted in.
 	ReportingQuestionAnswers []map[string]any `json:"reporting_question_answers"`
-	Subject                  map[string]any   `json:"subject"`
-	Emails                   []map[string]any `json:"emails"`
-	Phones                   []map[string]any `json:"phones"`
+	// ReportingQuestionBindings are kept report card filters naming the subject.
+	ReportingQuestionBindings []map[string]any `json:"reporting_question_bindings"`
+	Subject                   map[string]any   `json:"subject"`
+	Emails                    []map[string]any `json:"emails"`
+	Phones                    []map[string]any `json:"phones"`
 	// The messaging-channel accounts bound to the subject: which provider
 	// identity writes as them, the handle it carries, whether they have blocked
 	// this installation's bot, and whether the binding is still live.
@@ -83,6 +85,7 @@ type SARPackage struct {
 	// meant a subject who asked to be erased, and was refused, could not see
 	// that the refusal existed — the one thing they would need to appeal it.
 	RightsRequests []map[string]any `json:"rights_requests"`
+	RequestProofs  []map[string]any `json:"request_proofs"`
 	// The unsubscribe links minted for this subject, which are capabilities
 	// over their own record and live two years.
 	//
@@ -116,6 +119,7 @@ type SARPackage struct {
 	// as the tombstone it becomes.
 	CommunicationExceptions []map[string]any `json:"communication_exceptions"`
 	RawCapture              []map[string]any `json:"raw_capture"`
+	CapturePartySources     []map[string]any `json:"capture_party_sources"`
 	FieldOrigins            []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.
@@ -265,12 +269,7 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		}
 		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
 
-		subject, err := rowMaps(ctx, tx, `
-			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
-			       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
-			       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
-			       p.source, p.created_at
-			FROM contact p WHERE p.id = $1`, contactID)
+		subject, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 		if err != nil {
 			return err
 		}
@@ -305,6 +304,15 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 	return pkg, err
 }
 
+// sarSubjectQuery is the subject's own row as the export hands it over. The
+// privacy notice page reads the same row to name the kinds it holds.
+const sarSubjectQuery = `
+	SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
+	       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
+	       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
+	       p.source, p.created_at
+	FROM contact p WHERE p.id = $1`
+
 // appendSubjectCustomValues merges the subject's stored cf_ values into
 // the export's subject map, keyed by column name. The column set comes
 // from the catalog with ANY status (see subjectcolumns.go): Art. 15 owes
@@ -331,12 +339,7 @@ func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, contactID ids.Con
 type sarSection struct {
 	dest  *[]map[string]any
 	query string
-	// args overrides the default single contact-id argument. Only the staged
-	// approvals section needs it: it reaches rows by the subject's addresses
-	// and lead twins as well as by their contact id, through the SAME predicate
-	// erasure uses — and that predicate takes those as bound parameters rather
-	// than rebuilding them in SQL, so the export and the erasure cannot come to
-	// different conclusions about which rows are the subject's.
+	// args replaces the default single contact-id argument.
 	args []any
 }
 
@@ -474,25 +477,6 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 			return nil, err
 		}
 		out = append(out, id)
-	}
-	return out, rows.Err()
-}
-
-// subjectStrings runs a one-column text query into a slice. The contact is $1,
-// and any further arguments follow it.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
-	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []string{}
-	for rows.Next() {
-		var v string
-		if err := rows.Scan(&v); err != nil {
-			return nil, err
-		}
-		out = append(out, v)
 	}
 	return out, rows.Err()
 }

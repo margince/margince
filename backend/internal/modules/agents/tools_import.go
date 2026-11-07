@@ -207,6 +207,7 @@ type commitImport struct {
 func (t commitImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   commitImportCopy.render(),
 		Instead:       commitImportCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,

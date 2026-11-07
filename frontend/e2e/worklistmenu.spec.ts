@@ -90,8 +90,8 @@ for (const { name, wide } of WIDTHS) {
     await openQueue(page, wide);
     const drawer = page.getByRole("dialog");
     const menus = drawer.getByRole("button", { name: /Weitere Aktionen für/ });
-    await expect(menus).toHaveCount(3);
-    for (let row = 0; row < 3; row++) {
+    await expect(menus).toHaveCount(2);
+    for (let row = 0; row < 2; row++) {
       await menus.nth(row).click();
       const panel = page.locator(".overflow-menu-items:not([hidden])");
       await expect(panel).toHaveCount(1);
@@ -169,11 +169,12 @@ test("a row menu with little room below opens upward at full height", async ({
 });
 
 // No room for the whole menu on either side: the lines keep their height and
-// the panel scrolls.
+// the panel scrolls. Expanded, so the filter chips hold one row whatever the
+// fonts: in the narrow drawer they can wrap until the menu fits above the lanes.
 test("a row menu taller than the window scrolls instead of squeezing", async ({
   page,
 }) => {
-  await openQueue(page, "0");
+  await openQueue(page, "1");
   const menu = page
     .getByRole("dialog")
     .getByRole("button", { name: /Weitere Aktionen für Price list/ });

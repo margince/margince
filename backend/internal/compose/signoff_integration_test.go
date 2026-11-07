@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -22,10 +23,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -131,6 +134,17 @@ func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 	if sent.InlineLogoKey != logoKey || !strings.Contains(sent.HTMLBody, "cid:"+connector.SignatureLogoContentID) {
 		t.Errorf("the staged message embeds logo %q in %q, want %q", sent.InlineLogoKey, sent.HTMLBody, logoKey)
 	}
+	personal := "<p>Personal {name}</p>" + connector.SignatureLogoTag
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "my own text", HTML: &personal}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{To: []string{recipient}, Subject: "Angebot", Body: signOffBody, ConsentPurpose: "transactional"}); err != nil {
+		t.Fatal(err)
+	}
+	sent = stager.staged[len(stager.staged)-1]
+	if sent.InlineLogoKey != logoKey || !strings.Contains(sent.HTMLBody, connector.SignatureLogoTag) || sent.Body != signOffBody+"\n\nPersonal {name}" {
+		t.Fatalf("personal logo send = %+v", sent)
+	}
 }
 
 // previewSignOff asks POST /emails:sign-off through the handlers the server
@@ -183,4 +197,162 @@ func seedTransactionalReply(t *testing.T, e *integration.Env) (anchorID ids.UUID
 		t.Fatalf("seed anchor: %v", err)
 	}
 	return anchorID, recipient
+}
+
+func TestPersonalMarkupAndItsClearingReachBothAlternativesThroughTheRealSend(t *testing.T) {
+	e := integration.Setup(t)
+	anchorID, recipient := seedTransactionalReply(t, e)
+	stager := &recordingStager{}
+	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: stager})
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	signatures := contacts.NewStore(InstallationDB(e.Pool)).WithSettings(StoredConfig(e.Pool))
+	if _, err := signatures.SaveSignatureTemplate(e.Admin(), "<p>Company template</p>"); err != nil {
+		t.Fatal(err)
+	}
+	own := `<p onclick="bad()"><b>Personal HTML</b><br>{name}</p><script>bad()</script><img src="https://tracker.test/pixel">`
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Saved plain", HTML: &own}); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct{ body, markup, text string }{
+		{signOffBody, "", "Personal HTML\n{name}"},
+		{signOffBody, "<p>Body with markup</p>", "Personal HTML\n{name}"},
+	} {
+		if _, err := adapter.store.SendEmail(ctx, activities.FromActivity(ids.From[ids.ActivityKind](anchorID)), activities.SendEmailInput{Recipients: []string{recipient}, Subject: "Angebot", Body: test.body, HTMLBody: test.markup, ConsentPurpose: "transactional"}, adapter.gate, adapter.stager); err != nil {
+			t.Fatal(err)
+		}
+		sent := stager.staged[len(stager.staged)-1]
+		if sent.Body != test.body+"\n\n"+test.text {
+			t.Errorf("text = %q", sent.Body)
+		}
+		if strings.Count(sent.HTMLBody, "<b>Personal HTML</b>") != 1 {
+			t.Errorf("markup = %q", sent.HTMLBody)
+		}
+		for _, denied := range []string{"Company template", "Saved plain", "onclick", "bad()", "tracker.test", "Viele Grüße"} {
+			if strings.Contains(sent.HTMLBody, denied) || strings.Contains(sent.Body, denied) {
+				t.Errorf("send kept %q: %+v", denied, sent)
+			}
+		}
+	}
+	empty := ""
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Saved plain", HTML: &empty}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := adapter.SendEmail(ctx, anchorID, agents.SendEmailArgs{To: []string{recipient}, Subject: "Angebot", Body: signOffBody, ConsentPurpose: "transactional"}); err != nil {
+		t.Fatal(err)
+	}
+	sent := stager.staged[len(stager.staged)-1]
+	if sent.Body != signOffBody+"\n\nCompany template" || !strings.Contains(sent.HTMLBody, "<p>Company template</p>") || strings.Contains(sent.HTMLBody, "Personal HTML") {
+		t.Fatalf("cleared send = %+v", sent)
+	}
+}
+
+func TestPersonalMarkupOmissionClearingAndUnicodeLimitsUseTheSignatureStore(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	signatures := contacts.NewStore(InstallationDB(e.Pool))
+	own := "<p>" + strings.Repeat("界", contacts.SignatureMaxRunes-7) + "</p>"
+	saved, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Saved plain", HTML: &own})
+	if err != nil || saved.HTML != own {
+		t.Fatalf("boundary save = %+v, %v", saved, err)
+	}
+	saved, err = signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "New plain"})
+	if err != nil || saved.HTML != own || saved.Body != "New plain" {
+		t.Fatalf("omitted save = %+v, %v", saved, err)
+	}
+	tooLong := own + "界"
+	_, err = signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "New plain", HTML: &tooLong})
+	var limit *contacts.SignatureTooLongError
+	if !errors.As(err, &limit) || limit.Field != "html" || limit.Runes != contacts.SignatureMaxRunes+1 {
+		t.Fatalf("limit error = %v", err)
+	}
+	payload, err := json.Marshal(map[string]string{"body": "New plain", "html": tooLong})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPut, "/v1/me/email-signature", bytes.NewReader(payload)).WithContext(ctx)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	contacts.NewHandlers(InstallationDB(e.Pool)).SaveMyEmailSignature(response, request)
+	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), `"field":"html"`) {
+		t.Fatalf("HTTP limit = %d %s", response.Code, response.Body.String())
+	}
+	empty := ""
+	saved, err = signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "New plain", HTML: &empty})
+	if err != nil || saved.HTML != "" || saved.Body != "New plain" {
+		t.Fatalf("clearing save = %+v, %v", saved, err)
+	}
+	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "", HTML: &own}); err != nil {
+		t.Fatal(err)
+	}
+	var proof string
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT jsonb_agg(jsonb_build_object('before', a.before, 'after', a.after, 'event', o.envelope))::text
+   FROM event_outbox o JOIN audit_log a ON a.id = (o.envelope->'trace'->>'audit_log_id')::uuid
+   WHERE o.envelope->>'type' = 'email_signature.changed'`).Scan(&proof)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox o JOIN audit_log a ON a.id=(o.envelope->'trace'->>'audit_log_id')::uuid
+ WHERE o.envelope->>'type'='email_signature.changed' AND a.before ? 'has_html_signature' AND a.after ? 'has_html_signature'`); got != 4 {
+		t.Fatalf("HTML audit presence recorded %d changes, want 4", got)
+	}
+	for _, private := range []string{"界", "Saved plain", "New plain", "<p>"} {
+		if strings.Contains(proof, private) {
+			t.Errorf("audit or event contains signature content %q", private)
+		}
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'email_signature.changed' AND envelope->'payload'->>'has_signature' = 'true'`); got != 4 {
+		t.Errorf("signed change events = %d, want 4 including HTML without plain text", got)
+	}
+}
+
+func TestSignatureDraftAndSaveRefuseInvalidOptionalMarkup(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+	for _, test := range []struct {
+		preview bool
+		body    string
+	}{
+		{true, `{"body":"","draft":{"html":"` + strings.Repeat("界", contacts.SignatureMaxRunes+1) + `"}}`},
+		{false, `{"body":"","html":null}`},
+	} {
+		request := httptest.NewRequest(http.MethodPost, "/v1/emails:sign-off", strings.NewReader(test.body)).WithContext(ctx)
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		if test.preview {
+			newActivitiesHandlers(e.Pool).PreviewEmailSignOff(response, request)
+		} else {
+			contacts.NewHandlers(InstallationDB(e.Pool)).SaveMyEmailSignature(response, request)
+		}
+		if response.Code != http.StatusUnprocessableEntity {
+			t.Fatalf("invalid markup accepted: %d %s", response.Code, response.Body.String())
+		}
+	}
+}
+
+func TestDepartedSendersCannotChangeTheirSignature(t *testing.T) {
+	for _, departure := range []string{"deactivated", "archived"} {
+		t.Run(departure, func(t *testing.T) {
+			e := integration.Setup(t)
+			ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)
+			signatures := contacts.NewStore(InstallationDB(e.Pool))
+			if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Original"}); err != nil {
+				t.Fatal(err)
+			}
+			if departure == "deactivated" {
+				e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep1)
+			} else {
+				e.WsExec(t, `UPDATE app_user SET archived_at = now() WHERE id = $1`, e.Rep1)
+			}
+			if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Changed"}); !errors.Is(err, apperrors.ErrNotFound) {
+				t.Fatalf("departed save: %v", err)
+			}
+			if got := e.WsScalar(t, `SELECT body FROM email_signature WHERE owner_id = $1`, e.Rep1); got != "Original" {
+				t.Fatalf("stored signature = %q", got)
+			}
+			if got := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'email_signature.changed'`); got != 1 {
+				t.Fatalf("signature events = %d", got)
+			}
+		})
+	}
 }

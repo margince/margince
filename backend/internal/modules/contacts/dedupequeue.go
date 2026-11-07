@@ -82,28 +82,29 @@ type DedupeCandidateRow struct {
 	DisposedBy  *ids.UUID
 	DisposedAt  *time.Time
 	CreatedAt   time.Time
-	// CanDecide says whether THIS caller could actually dispose of the pair.
+	// CanDecide says whether this caller could dismiss the pair or undo a
+	// decision on it. That needs write authority over both ends, because a
+	// dismissal suppresses both records for the whole workspace.
 	//
-	// Deciding needs write authority over BOTH ends — dismissing suppresses
-	// both records as duplicates for the whole workspace, and merging rewrites
-	// one into the other. A pair whose ends have different owners is therefore
-	// undecidable by any bounded seat, and it is a common shape: capture creates
-	// the near-duplicate owned by the mailbox owner while the incumbent belongs
-	// to whoever worked it.
-	//
-	// The queue lists it anyway, because the contact who can SEE a duplicate is
-	// the contact best placed to notice it. What was missing is the truth about
-	// the buttons: they were rendered unconditionally and the refusal arrived
-	// only after the POST.
+	// The queue lists a pair either way, because the contact who can SEE a
+	// duplicate is the contact best placed to notice it. The flags tell the
+	// client whether the buttons will work before the POST does.
 	CanDecide bool
+	// CanMerge and KeepID are OfferMerge for this pair while it is open. KeepID
+	// names the end that must survive when only one direction is admitted.
+	CanMerge bool
+	KeepID   *ids.UUID
 }
 
 // DedupeQueueInput filters one list page.
 type DedupeQueueInput struct {
 	Status     string // open (default) | merged | not_a_duplicate
-	EntityType string // "" = both
-	Cursor     string
-	Limit      int
+	EntityType string // "" = every type, or EntityTypes when set
+	// EntityTypes narrows an unfiltered read to these types, in the query, so
+	// a page and the count beside it answer the same set.
+	EntityTypes []string
+	Cursor      string
+	Limit       int
 }
 
 const (
@@ -161,6 +162,23 @@ func decodeDedupeCursor(token string) (dedupeCursor, error) {
 	return c, nil
 }
 
+// requireDedupeReadOf gates a read narrowed to some record types on those
+// types alone.
+func requireDedupeReadOf(ctx context.Context, entityTypes []string) error {
+	if len(entityTypes) == 0 {
+		return requireDedupeRead(ctx, "")
+	}
+	for _, entityType := range entityTypes {
+		if entityType == "" {
+			return &DedupeInputError{Field: auditKeyEntityType, Msg: "must name a record type"}
+		}
+		if err := requireDedupeRead(ctx, entityType); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // requireDedupeRead gates the queue read on the entities it exposes: the
 // unfiltered queue shows both record types, so it needs both reads.
 func requireDedupeRead(ctx context.Context, entityType string) error {
@@ -191,7 +209,10 @@ func requireDedupeWrite(ctx context.Context, entityType string) error {
 
 // ListDedupeCandidates pages the queue, confidence-sorted (AC-dedupe-1).
 func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) ([]DedupeCandidateRow, string, error) {
-	if err := requireDedupeRead(ctx, in.EntityType); err != nil {
+	if in.EntityType != "" {
+		in.EntityTypes = []string{in.EntityType}
+	}
+	if err := requireDedupeReadOf(ctx, in.EntityTypes); err != nil {
 		return nil, "", err
 	}
 	if in.Status == "" {
@@ -215,14 +236,14 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	// answer is a predicate over the two subject rows, and asking it row by row
 	// would be two round trips per candidate for a fact the query already has
 	// the joins for.
-	decidable, err := dedupeDecidableExpr(ctx, arg, in.Status == dispositionOpen)
+	authority, err := dedupeSideWritableColumns(ctx, arg, in.Status == dispositionOpen)
 	if err != nil {
 		return nil, "", err
 	}
 	query := `
 		SELECT id, entity_type, coalesce(left_contact_id, left_company_id, left_lead_id), coalesce(right_contact_id, right_company_id, right_lead_id),
 		       confidence, evidence, disposition, disposed_by, disposed_at, created_at,
-		       ` + decidable + `
+		       ` + authority + `
 		FROM dedupe_candidate
 		WHERE disposition = $1 AND archived_at IS NULL`
 	// Liveness binds the OPEN lane only. A decided pair is a record of what
@@ -236,9 +257,8 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	if visClause != "" {
 		query += " AND " + visClause
 	}
-	if in.EntityType != "" {
-		args = append(args, in.EntityType)
-		query += fmt.Sprintf(" AND entity_type = $%d", len(args))
+	if len(in.EntityTypes) > 0 {
+		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(in.EntityTypes))
 	}
 	if in.Cursor != "" {
 		cur, err := decodeDedupeCursor(in.Cursor)
@@ -260,11 +280,13 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 		defer res.Close()
 		for res.Next() {
 			var r DedupeCandidateRow
+			var writers PairWriters
 			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
 				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
-				&r.CanDecide); err != nil {
+				&writers.Left, &writers.Right); err != nil {
 				return err
 			}
+			r.pairAuthority(writers)
 			rows = append(rows, r)
 		}
 		return res.Err()
@@ -291,19 +313,24 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 // badge and the list answering the same question: a count that disagreed with
 // the page under it would send a reader looking for rows that were never
 // theirs.
-func (s *Store) CountOpenDedupeCandidates(ctx context.Context) (int, error) {
-	if err := requireDedupeRead(ctx, ""); err != nil {
+//
+// Entity types narrow it as they narrow the list; none counts every type.
+func (s *Store) CountOpenDedupeCandidates(ctx context.Context, entityTypes ...string) (int, error) {
+	if err := requireDedupeReadOf(ctx, entityTypes); err != nil {
 		return 0, err
 	}
 	query := `SELECT count(*) FROM dedupe_candidate WHERE disposition = $1 AND archived_at IS NULL`
 	args := []any{dispositionOpen}
-	visClause, err := dedupeVisibilityClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) }, true)
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	visClause, err := dedupeVisibilityClause(ctx, arg, true)
 	if err != nil {
 		return 0, err
 	}
 	if visClause != "" {
 		query += " AND " + visClause
+	}
+	if len(entityTypes) > 0 {
+		query += fmt.Sprintf(" AND entity_type = ANY($%d)", arg(entityTypes))
 	}
 	var open int
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -326,7 +353,10 @@ func (s *Store) GetDedupeCandidate(ctx context.Context, id ids.UUID) (DedupeCand
 		if err != nil {
 			return err
 		}
-		return bothSidesReadable(ctx, tx, row)
+		if err := bothSidesReadable(ctx, tx, row); err != nil {
+			return err
+		}
+		return readPairAuthority(ctx, tx, &row)
 	})
 	if err != nil {
 		return DedupeCandidateRow{}, err
@@ -395,11 +425,9 @@ func readDedupeCandidate(ctx context.Context, tx pgx.Tx, id ids.UUID) (DedupeCan
 // get filed against something?" A caller reaching for the paged list to answer
 // that would have to walk pages looking for its own id.
 //
-// The permission check and the visibility clause are the LIST's own, called
-// here rather than restated: a pair surfaces only when both sides are visible
-// to the caller, because the evidence snapshot quotes both records, so naming a
-// pair is a read of them. Two spellings of that rule would eventually disagree,
-// and the one that drifted would be the one leaking a record's existence.
+// The permission check, the visibility clause and the merge flags are the
+// LIST's own. A pair surfaces only when the caller sees both sides, because its
+// evidence quotes both records. A second spelling would drift and leak a record.
 //
 // A non-nil only keeps just those pair ids, so a write can ask after the pairs
 // it filed itself.
@@ -418,15 +446,19 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		return nil, nil
 	}
 	args := []any{dispositionOpen, id}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	authority, err := dedupeSideWritableColumns(ctx, arg, true)
+	if err != nil {
+		return nil, err
+	}
 	query := fmt.Sprintf(`
 		SELECT id, entity_type, coalesce(left_contact_id, left_company_id, left_lead_id),
 		       coalesce(right_contact_id, right_company_id, right_lead_id),
-		       confidence, evidence, disposition, disposed_by, disposed_at, created_at
+		       confidence, evidence, disposition, disposed_by, disposed_at, created_at, %s
 		  FROM dedupe_candidate
 		 WHERE disposition = $1 AND archived_at IS NULL
-		   AND (%s = $2 OR %s = $2)`, side.left, side.right)
-	visClause, err := dedupeVisibilityClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) }, true)
+		   AND (%s = $2 OR %s = $2)`, authority, side.left, side.right)
+	visClause, err := dedupeVisibilityClause(ctx, arg, true)
 	if err != nil {
 		return nil, err
 	}
@@ -434,11 +466,9 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		query += " AND " + visClause
 	}
 	if only != nil {
-		args = append(args, only)
-		query += fmt.Sprintf(" AND id = ANY($%d)", len(args))
+		query += fmt.Sprintf(" AND id = ANY($%d)", arg(only))
 	}
-	args = append(args, openCandidatesNamingLimit)
-	query += fmt.Sprintf(" ORDER BY confidence DESC, id DESC LIMIT $%d", len(args))
+	query += fmt.Sprintf(" ORDER BY confidence DESC, id DESC LIMIT $%d", arg(openCandidatesNamingLimit))
 
 	var rows []DedupeCandidateRow
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -449,10 +479,13 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		defer res.Close()
 		for res.Next() {
 			var r DedupeCandidateRow
+			var writers PairWriters
 			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
-				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt); err != nil {
+				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
+				&writers.Left, &writers.Right); err != nil {
 				return err
 			}
+			r.pairAuthority(writers)
 			rows = append(rows, r)
 		}
 		return res.Err()

@@ -1,0 +1,73 @@
+/* The arrival of machine-written words. Two animations on one element: a soft
+   edge wipes the block in from the top, and the text is painted with a band of
+   indigo and green that slides on until the page's ink has crossed it. The
+   colour is the element's own background clipped to its text, so every line
+   and every child is coloured by one moving layer, not one per word. The
+   attribute comes off when the colour ends (aireveal.tsx), and the block is
+   plain text again. */
+[data-ai-reveal="run"] {
+  background-image: linear-gradient(
+    100deg,
+    var(--textPrimary) 0 33.4%,
+    var(--aiText) 45%,
+    var(--accentText) 58%,
+    color-mix(in oklab, var(--aiText) 55%, var(--accentText)) 72%,
+    var(--aiText) 86%,
+    var(--accentText) 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  mask-image: linear-gradient(172deg, currentColor 45%, transparent 55%);
+  mask-size: 100% 300%;
+  mask-repeat: no-repeat;
+  caret-color: var(--textPrimary);
+  animation:
+    aireveal-wipe 0.9s var(--ease-out) both,
+    aireveal-color 1.9s linear both;
+}
+/* Waiting to be on screen: the words stay out of sight until they play. */
+[data-ai-reveal="wait"] {
+  opacity: 0;
+}
+/* A control inside the words (a citation, a link) keeps its own ink: on its
+   own fill, text painted from the parent's layer would be invisible. */
+[data-ai-reveal="run"] :where(a, button, [role="button"]) {
+  -webkit-text-fill-color: currentColor;
+}
+@keyframes aireveal-wipe {
+  from {
+    mask-position: 0 100%;
+  }
+  to {
+    mask-position: 0 0;
+  }
+}
+/* The band flows while the words arrive, then the ink crosses it. */
+@keyframes aireveal-color {
+  0% {
+    background-position: 100% 0;
+  }
+  50% {
+    background-position: 72% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+@keyframes aireveal-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* Reduced motion: the words fade in once, in their own ink. */
+@media (prefers-reduced-motion: reduce) {
+  [data-ai-reveal="run"] {
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    mask-image: none;
+    animation: aireveal-fade var(--dur-move) linear both;
+  }
+}

@@ -164,3 +164,77 @@ export const DayMeeting: Story = {
     await expect(cell.textContent).not.toMatch(/\d:\d/);
   },
 };
+
+// The drawer for one figure in a given coverage state, against the routes
+// that would list its records if it asked.
+function FigureIn({
+  coverage,
+  value,
+}: Readonly<{
+  coverage: (typeof reportingStoryEvaluation.metrics)[number]["coverage"];
+  value: number | null;
+}>) {
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/evidence": () =>
+      jsonResponse({
+        context: reportingStoryEvaluation.context,
+        metric: "bookings_won",
+        rows: [],
+        truncated: false,
+      }),
+  });
+  return (
+    <StoryProviders>
+      <ReportingEvidenceDrawer
+        evaluation={{
+          ...reportingStoryEvaluation,
+          metrics: reportingStoryEvaluation.metrics.map((metric) =>
+            metric.id === "bookings_won"
+              ? { ...metric, value, coverage }
+              : metric,
+          ),
+        }}
+        reference={{ metric: "bookings_won", context_id: "interval" }}
+        onClose={() => {}}
+      />
+    </StoryProviders>
+  );
+}
+
+// A measured zero: its explanation, then its empty permitted population.
+export const MeasuredZero: Story = {
+  render: () => (
+    <FigureIn coverage={{ status: "no_data", withheld: false }} value={0} />
+  ),
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    await dialog.findByText(en["reporting.evidenceZero"]);
+  },
+};
+
+// A figure that failed lists nothing and offers to read it again.
+export const FailedFigure: Story = {
+  render: () => (
+    <FigureIn coverage={{ status: "failed", withheld: false }} value={null} />
+  ),
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    await dialog.findByText(en["reporting.evidenceUnavailable"]);
+    await expect(
+      dialog.getByRole("button", { name: en["common.retry"] }),
+    ).toBeInTheDocument();
+  },
+};
+
+// A figure hidden from the reader shows neither its records nor their count.
+export const HiddenFigure: Story = {
+  render: () => (
+    <FigureIn coverage={{ status: "ok", withheld: true }} value={null} />
+  ),
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    await dialog.findByText(en["reporting.evidenceWithheld"]);
+    await expect(dialog.queryByRole("table")).toBeNull();
+  },
+};

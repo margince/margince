@@ -161,6 +161,11 @@ func (s *Service) refuseMalformedGrant(ctx context.Context, in CreateGrantInput)
 	if err := httperr.RequireBodyID("record_id", in.RecordID); err != nil {
 		return err
 	}
+	return s.ValidateRecordGrantFields(ctx, in)
+}
+
+// ValidateRecordGrantFields checks a share before its target records are selected.
+func (s *Service) ValidateRecordGrantFields(ctx context.Context, in CreateGrantInput) error {
 	if err := httperr.RequireBodyID("subject_id", in.SubjectID); err != nil {
 		return err
 	}
@@ -179,28 +184,19 @@ func (s *Service) refuseMalformedGrant(ctx context.Context, in CreateGrantInput)
 // createRecordGrantInTx is the share itself: who may grant it, who may hold
 // it, and the audited upsert.
 func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (grantRow, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return grantRow{}, errors.New("crmauth: only a human shares records directly; agents stage through the approval gate")
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return grantRow{}, err
 	}
+	actor, _ := principal.Actor(ctx)
 	// Scope-intersection: you can only share what you can see (H1
 	// probe on the client-supplied record reference).
 	if err := auth.EnsureLinkTarget(ctx, tx, in.RecordType, in.RecordID); err != nil {
 		return grantRow{}, err
 	}
-	subjectTable := "app_user"
-	if in.SubjectType == grantSubjectTeam {
-		subjectTable = grantSubjectTeam
-	}
-	var subjectExists bool
-	if err := tx.QueryRow(ctx,
-		storekit.SQLf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1)`, subjectTable),
-		in.SubjectID).Scan(&subjectExists); err != nil {
+	if err := grantRecipientExists(ctx, tx, in); err != nil {
 		return grantRow{}, err
 	}
-	if !subjectExists {
-		return grantRow{}, apperrors.ErrNotFound
-	}
+
 	// Two rules bind a grant, and they judge different seats.
 	//
 	// Scope-intersection (ADR-0039) judges the grantor at every access level.
@@ -236,21 +232,9 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	// same row. `expires_at` takes the proposed value even when it is NULL: the
 	// contract says a re-assert resets it, and a COALESCE would make an expiry
 	// unclearable. `granted_by` moves to the caller, who is now accountable.
-	out, err := scanGrant(tx.QueryRow(ctx, `
-		INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
-		                          access, granted_by, reason, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (record_type, record_id, subject_type, subject_id) DO UPDATE
-		SET access     = EXCLUDED.access,
-		    expires_at = EXCLUDED.expires_at,
-		    reason     = EXCLUDED.reason,
-		    granted_by = EXCLUDED.granted_by,
-		    version    = record_grant.version + 1
-		RETURNING `+grantColumns,
-		in.RecordType, in.RecordID, in.SubjectType, in.SubjectID,
-		in.Access, actor.UserID, in.Reason, in.ExpiresAt))
+	out, err := upsertGrant(ctx, tx, in, actor.UserID)
 	if err != nil {
-		return grantRow{}, fmt.Errorf("upsert record_grant: %w", err)
+		return grantRow{}, err
 	}
 	// `record_share` in both directions, downgrades included: the contract pins
 	// the verb, and `record_unshare` belongs to revocation. Both images render
@@ -259,6 +243,31 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	if _, err := storekit.Audit(ctx, tx, "record_share",
 		in.RecordType, in.RecordID, before, grantImage(out)); err != nil {
 		return grantRow{}, fmt.Errorf("audit record_share: %w", err)
+	}
+	return out, nil
+}
+
+// upsertGrant writes one grant by its natural key. A share and a merge's owner
+// carry both write through it. The caller holds the write-identity lock.
+func upsertGrant(ctx context.Context, tx pgx.Tx, in CreateGrantInput, grantedBy ids.UUID) (grantRow, error) {
+	values := []any{in.RecordType, in.RecordID, in.SubjectType, in.SubjectID, in.Access, grantedBy, in.Reason, in.ExpiresAt}
+	placeholders := make([]string, len(values))
+	for i := range values {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+	out, err := scanGrant(tx.QueryRow(ctx, `
+		INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
+		                          access, granted_by, reason, expires_at)
+		VALUES (`+strings.Join(placeholders, ", ")+`)
+		ON CONFLICT (record_type, record_id, subject_type, subject_id) DO UPDATE
+		SET access     = EXCLUDED.access,
+		    expires_at = EXCLUDED.expires_at,
+		    reason     = EXCLUDED.reason,
+		    granted_by = EXCLUDED.granted_by,
+		    version    = record_grant.version + 1
+		RETURNING `+grantColumns, values...))
+	if err != nil {
+		return grantRow{}, fmt.Errorf("upsert record_grant: %w", err)
 	}
 	return out, nil
 }
@@ -414,10 +423,10 @@ func mayRevoke(ctx context.Context, tx pgx.Tx, actor principal.Principal, grant 
 // RevokeRecordGrant deletes one share. A nil ifVersion revokes whatever the
 // grant now says; a stale one refuses, since a re-assert may have changed it.
 func (s *Service) RevokeRecordGrant(ctx context.Context, id ids.UUID, ifVersion *int64) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return errors.New("crmauth: only a human revokes shares directly; agents stage through the approval gate")
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return err
 	}
+	actor, _ := principal.Actor(ctx)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// FOR UPDATE for the reason the assertion path takes it: this row is
 		// both the thing being deleted and the audit's before image, and a

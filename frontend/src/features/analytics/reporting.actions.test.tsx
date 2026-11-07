@@ -51,7 +51,7 @@ it("sends independent pipeline, target-period and expected-close filters and ope
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   await screen.findByRole("heading", { name: "Sales won over time" });
@@ -168,7 +168,10 @@ it("creates a fiscal-quarter count target on every pipeline and pages the target
     "GET /analytics/targets": () =>
       jsonResponse({ data: reportingTargets, next_cursor: "next-target" }),
     "GET /analytics/metrics": () =>
-      jsonResponse({ metrics: reportingStoryCatalog.metrics }),
+      jsonResponse({
+        metrics: reportingStoryCatalog.metrics,
+        presets: reportingStoryCatalog.presets,
+      }),
     "POST /analytics/targets": write,
   });
   const fetch = vi.spyOn(globalThis, "fetch");

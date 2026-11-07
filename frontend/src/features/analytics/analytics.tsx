@@ -1,31 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { ChevronDown, FileText } from "lucide-react";
+import { type ReactNode, Suspense } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, EmptyState } from "../../design-system/atoms";
-import { DataTable } from "../../design-system/datatable";
+import { Button, PendingBody } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { FilterBar } from "../../design-system/filterbar";
-import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
-import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { QueryStates } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
-import { formatDateTime } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import {
   openAnalyticsSection,
-  SECTIONS,
   type Section,
-  sectionFromAddress,
 } from "../../lib/analytics.address";
-import { useCan } from "../../lib/capability";
 import { problemStatus, unwrap } from "../../lib/problem";
 import {
   type ReviewActions,
   ReviewActionsContext,
   useReviewActions,
 } from "../../lib/reviewactions";
-import { useRoute } from "../../lib/router";
+import { navigate } from "../../lib/router";
+import { replaceDial } from "../../lib/urlstate";
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
@@ -33,144 +29,57 @@ import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import { type DataCoverageRow, useDataCoverage } from "./analytics.coverage";
 import { FirstRunNotice } from "./analytics.firstrun";
-import { ForecastView, SharedForecastView } from "./analytics.forecast";
-import { sourceName } from "./analytics.forecast.review";
-import { MyOutcomesView } from "./analytics.outcomes";
-import { QuestionsView } from "./analytics.questions";
+import { AnalyticsOverview } from "./analytics.overview";
+import {
+  OverviewNavigation,
+  useOverviewRegistration,
+} from "./analytics.overview.navigation";
 import { AnalyticsScopePicker } from "./analytics.scope";
+import {
+  ForecastView,
+  FramedSection,
+  QuestionsView,
+  ReportBoard,
+  ReportingDefinitions,
+  ReportingLibrary,
+  ReportingOverview,
+  ReportingTargets,
+  SharedForecastView,
+} from "./analytics.sections";
+import {
+  SETUP_LABEL,
+  type SetupSection,
+  useAnalyticsSections,
+} from "./analytics.tabs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
-import { ReportingDefinitions } from "./reporting.definitions";
-import { ReportingLibrary } from "./reporting.library";
-import { ReportingOverview } from "./reporting.overview";
-import { ReportingTargets } from "./reporting.targets";
+import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
-// Analytics: a picker over three reports — deals-by-stage (unweighted beside
-// weighted), forecast (category readings plus the server-derived "slipped"
-// bucket), and open deals per company. "Explain this number" opens the executed
-// plan and the exact rows the headline reconciles to. Both weighted figures come
-// straight off the report's own weighted_amount_minor measure, rounded PER DEAL
-// and then summed, so neither screen re-derives one from the raw total. All
-// three bodies render into ONE panel whose action band carries the explain
-// toggle: the segment changes what the panel holds, not what the page is.
-import { ReportCard, SECTION_REPORTS, useReportRun } from "./analytics.reports";
-
-export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
-
-// Every word a coverage row's state can carry, spelled per state so an
-// unread source never borrows a read one's copy. A hand-kept mirror of the
-// server's own vocabulary; an unknown state renders its raw word rather than
-// a wrong sentence.
-const COVERAGE_STATE_KEY: Readonly<Record<string, MessageKey>> = {
-  checked: "analytics.covChecked",
-  stale: "analytics.covStale",
-  unavailable: "analytics.covUnavailable",
-  permission_limited: "analytics.covPermissionLimited",
-  not_connected: "analytics.covNotConnected",
-};
-
-// Which connectors the nightly check could read, and how far. Ops-facing: the
-// server gates the read, and a seat without the grant never sees the tab.
-function DataCoverageView({
-  locale,
-  timezone,
-}: Readonly<{ locale: Locale; timezone: string }>) {
-  const t = useT();
-  const coverage = useDataCoverage();
-  const allowed = useCan("data_coverage", "read");
-  if (!allowed) {
-    return <EmptyState>{t("common.permissionDenied")}</EmptyState>;
-  }
-  return (
-    <QueryGate query={coverage} pendingLabel={t("analytics.sectionCoverage")}>
-      {(run) =>
-        run == null ? (
-          <Panel title={t("analytics.sectionCoverage")}>
-            <EmptyState>
-              {t("analytics.coverageNeverRun")}
-              <Button
-                variant="link"
-                onClick={() => openAnalyticsSection("forecast")}
-              >
-                {t("analytics.sectionForecast")}
-              </Button>
-            </EmptyState>
-          </Panel>
-        ) : (
-          <Panel title={t("analytics.sectionCoverage")}>
-            <PanelBody>
-              <PanelIntro>{t("analytics.coverageSub")}</PanelIntro>
-              <DataTable
-                label={t("analytics.sectionCoverage")}
-                columns={[
-                  {
-                    key: "source",
-                    header: t("analytics.covSource"),
-                    render: (row: DataCoverageRow) => sourceName(row.source, t),
-                  },
-                  {
-                    key: "state",
-                    header: t("analytics.covState"),
-                    render: (row: DataCoverageRow) => {
-                      const stateKey = COVERAGE_STATE_KEY[row.state];
-                      return stateKey ? t(stateKey) : row.state;
-                    },
-                  },
-                  {
-                    key: "through",
-                    header: t("analytics.covThrough"),
-                    render: (row: DataCoverageRow) =>
-                      row.checked_through
-                        ? formatDateTime(row.checked_through, locale, timezone)
-                        : "—",
-                  },
-                ]}
-                rows={run.sources}
-                rowKey={(row) => row.source}
-              />
-              {/* Record-level input problems live where they are answered: the
-                Forecast input review. One resolution surface, not two. */}
-              <Button
-                variant="link"
-                onClick={() => openAnalyticsSection("forecast")}
-              >
-                {t("review.title")}
-              </Button>
-              {run.sources.some((source) => source.state !== "checked") && (
-                <p className="t-caption">{t("reporting.coverageAction")}</p>
-              )}
-            </PanelBody>
-          </Panel>
-        )
-      }
-    </QueryGate>
-  );
-}
+import { SECTION_REPORTS, useReportRun } from "./analytics.reports.queries";
 
 export function AnalyticsScreen({
   reviewActions,
 }: Readonly<{ reviewActions?: ReviewActions }> = {}) {
   const inheritedReviewActions = useReviewActions();
+  const { dials: overviewDials, register: registerOverview } =
+    useOverviewRegistration();
   const t = useT();
   const { locale } = useLocale();
-  // Which SECTION is open is an ADDRESS, so a reader can link to one and Back
-  // steps between the sections they looked at rather than leaving the screen.
-  // Read here rather than taken as a prop, so this screen stays drivable on its
-  // own: a suite that renders it directly goes on pressing the tabs.
-  const route = useRoute();
-  const requested = sectionFromAddress(
-    route.screen === "analytics" ? route.id : undefined,
-  );
   // The server decides which population this reader measures and which ones
   // they may choose. Read once here and handed down, so every card on the page
   // is answering about the same set.
   const context = useAnalyticsContext();
-  const { selection, selectScope } = useAnalyticsSelection(context.data);
+  const { selection, selectScope, refusedScope } = useAnalyticsSelection(
+    context.data,
+  );
 
+  const { route, section, tabs, setup, library, holding } =
+    useAnalyticsSections(context.data?.default_scope.kind);
   const pipelinesQuery = useQuery({
     queryKey: ["pipelines", "with-archived"],
+    // Only report cards name stages, so the other sections never wait on this.
+    enabled: !holding && SECTION_REPORTS[section].length > 0,
     // Archived too: a deal keeps its stage when its pipeline is archived.
     queryFn: async () =>
       unwrap(
@@ -179,36 +88,6 @@ export function AnalyticsScreen({
         }),
       ).data,
   });
-
-  const canReadReports = useCan("report_definition", "read");
-  const canReadTargets = useCan("sales_target", "read");
-  const canReadFramework = useCan("reporting_framework", "read");
-  const canReadCoverage = useCan("data_coverage", "read");
-  const coverageProbe = useDataCoverage();
-  const availableSections = SECTIONS.filter((candidate) => {
-    if (candidate === "performance") return canReadReports && canReadFramework;
-    if (candidate === "reports") return canReadReports;
-    if (candidate === "targets") return canReadTargets;
-    if (candidate === "definitions") return canReadFramework;
-    if (candidate === "outcomes") {
-      return context.data?.default_scope.kind === "owner";
-    }
-    if (candidate === "coverage") {
-      // The read starts only with the ops grant; the tab appears
-      // after the server has answered.
-      return canReadCoverage && coverageProbe.isSuccess;
-    }
-    return true;
-  });
-  const section =
-    ["performance", "reports", "targets", "definitions"].includes(requested) &&
-    !availableSections.includes(requested)
-      ? "forecast"
-      : requested;
-  const tabs = analyticsTabs(availableSections);
-  const setup = availableSections.filter(isSetupSection);
-  // Which population the figures cover, drawn first in the section's own
-  // filter bar so every filter on the page sits in one row.
   const scopeControl =
     selection && context.data ? (
       <div className="analytics-scope-control">
@@ -221,105 +100,178 @@ export function AnalyticsScreen({
     ) : null;
 
   if (route.screen === "analytics" && route.id === "shared" && route.id2)
-    return <SharedForecastView token={route.id2} />;
+    return (
+      <Suspense
+        fallback={
+          <div className="wrap">
+            <PendingBody label={t("analytics.sections")} />
+          </div>
+        }
+      >
+        <SharedForecastView token={route.id2} />
+      </Suspense>
+    );
 
   return (
     <div className="wrap">
-      <RecordTabs
-        options={tabs}
-        // A custom report is opened from Reports, so that tab stays marked
-        // while one is open. A Setup page marks no tab: the menu names it.
-        value={
-          section === "questions" && tabs.includes("reports")
-            ? "reports"
-            : section
-        }
-        onChange={openAnalyticsSection}
-        labels={{
-          reports: t("analytics.sectionReports"),
-          targets: t("reporting.targets"),
-          definitions: t("reporting.definitions"),
-          forecast: t("analytics.sectionForecast"),
-          pipeline: t("analytics.sectionPipeline"),
-          performance: t("analytics.sectionPerformance"),
-          outcomes: t("analytics.sectionOutcomes"),
-          coverage: t("analytics.sectionCoverage"),
-          delivery: t("analytics.sectionDelivery"),
-          questions: t("analytics.sectionQuestions"),
-        }}
-        label={t("analytics.sections")}
-        trailing={
-          setup.length > 0 ? (
-            <Popover label={t("analytics.setup")}>
-              {setup.map((candidate) => (
-                <Button
-                  key={candidate}
-                  variant="link"
-                  onClick={() => openAnalyticsSection(candidate)}
-                >
-                  {t(SETUP_LABEL[candidate])}
-                </Button>
-              ))}
-            </Popover>
-          ) : undefined
-        }
-      />
-      <div className="analytics-body">
-        <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
-          <SectionBody
-            section={section}
-            locale={locale}
-            context={context.data}
-            contextQuery={context}
-            selection={selection}
-            onSelectScope={selectScope}
-            scopeControl={scopeControl}
-            stages={stagesOfEveryPipeline(pipelinesQuery.data ?? [], (name) =>
-              t("analytics.retiredPipeline", { name }),
+      <OverviewNavigation value={registerOverview}>
+        <RecordTabs
+          options={tabs}
+          // Reports and Setup pages mark no tab: the button beside the row names
+          // where the reader is.
+          value={section}
+          onChange={(next) => {
+            if (section === "overview" && overviewDials.current)
+              navigate(
+                { screen: "analytics", id: next },
+                overviewDials.current,
+              );
+            else openAnalyticsSection(next);
+          }}
+          labels={{
+            overview: t("analytics.sectionOverview"),
+            reports: t("analytics.sectionReports"),
+            targets: t("reporting.targets"),
+            definitions: t("reporting.definitions"),
+            forecast: t("analytics.sectionForecast"),
+            pipeline: t("analytics.sectionPipeline"),
+            performance: t("analytics.sectionPerformance"),
+            sdr: t(VIEW_SHAPE.sdr.label),
+            leads: t(VIEW_SHAPE.leads.label),
+            partners: t(VIEW_SHAPE.partners.label),
+            conversion: t(VIEW_SHAPE.conversion.label),
+            outcomes: t("analytics.sectionOutcomes"),
+            coverage: t("analytics.sectionCoverage"),
+            accounts: t("analytics.sectionAccounts"),
+            delivery: t("analytics.sectionDelivery"),
+            questions: t("analytics.sectionQuestions"),
+          }}
+          label={t("analytics.sections")}
+          trailing={
+            <TabVerbs library={library} setup={setup} section={section} />
+          }
+        />
+        <div className="analytics-body">
+          <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
+            {holding ? (
+              <PendingBody label={t("analytics.sections")} />
+            ) : refusedScope && context.data ? (
+              <ScopeRefused
+                fallback={context.data.default_scope}
+                allowed={context.data.allowed_scopes}
+              />
+            ) : (
+              <Suspense
+                fallback={<PendingBody label={t("analytics.sections")} />}
+              >
+                <SectionBody
+                  section={section}
+                  locale={locale}
+                  context={context.data}
+                  contextQuery={context}
+                  selection={selection}
+                  onSelectScope={selectScope}
+                  scopeControl={scopeControl}
+                  stages={stagesOfEveryPipeline(
+                    pipelinesQuery.data ?? [],
+                    (name) => t("analytics.retiredPipeline", { name }),
+                  )}
+                />
+              </Suspense>
             )}
-          />
-        </ReviewActionsContext>
-      </div>
+          </ReviewActionsContext>
+        </div>
+      </OverviewNavigation>
     </div>
   );
 }
 
-// The tab row: every analysis section this reader may open, drawn whichever
-// one is open, so the row never changes shape under the reader.
-const TAB_SECTIONS: readonly Section[] = [
-  "performance",
-  "forecast",
-  "pipeline",
-  "outcomes",
-  "delivery",
-  "reports",
-];
-
-// Administration rather than analysis, behind one menu at the row's end.
-type SetupSection = Extract<Section, "targets" | "definitions" | "coverage">;
-
-const SETUP_LABEL: Readonly<Record<SetupSection, MessageKey>> = {
-  targets: "reporting.targets",
-  definitions: "reporting.definitions",
-  coverage: "analytics.sectionCoverage",
-};
-
-function isSetupSection(section: Section): section is SetupSection {
-  return section in SETUP_LABEL;
+// The address names a population this reader may not choose: a link from a
+// colleague who sees more, or a grant withdrawn since. Nothing is read until
+// the reader takes the population they do have.
+function ScopeRefused({
+  fallback,
+  allowed,
+}: Readonly<{
+  fallback: components["schemas"]["AnalyticsScope"];
+  allowed: readonly components["schemas"]["AnalyticsScope"][];
+}>) {
+  const t = useT();
+  // Named when it can be. A bare address may open a remembered question,
+  // and the page must open on the population this button names.
+  const named = allowed.some((scope) => scopeKey(scope) === scopeKey(fallback));
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("analytics.scopeRefused")}
+      actions={
+        <Button
+          onClick={() =>
+            replaceDial("scope", named ? scopeKey(fallback) : undefined)
+          }
+        >
+          {t("analytics.scopeRefusedUse", { scope: fallback.label })}
+        </Button>
+      }
+    >
+      <p>{t("analytics.scopeRefusedBody")}</p>
+    </Callout>
+  );
 }
 
-// The row keeps its own order, not the address list's that `available` follows.
-// Custom reports open from Reports; a reader who may not read saved reports
-// still asks their own questions, so for them it is a tab of its own.
-export function analyticsTabs(available: readonly Section[]): Section[] {
-  const tabs = TAB_SECTIONS.filter((section) => available.includes(section));
-  return tabs.includes("reports") || !available.includes("questions")
-    ? tabs
-    : [...tabs, "questions"];
+function TabVerbs({
+  library,
+  setup,
+  section,
+}: Readonly<{
+  library: Section | undefined;
+  setup: readonly SetupSection[];
+  section: Section;
+}>) {
+  const t = useT();
+  if (!library && setup.length === 0) return null;
+  return (
+    <div className="analytics-tab-verbs">
+      {library && (
+        <Button
+          variant="ghost"
+          aria-current={section === library ? "page" : undefined}
+          onClick={() => openAnalyticsSection(library)}
+        >
+          <FileText aria-hidden="true" />
+          {t(
+            library === "reports"
+              ? "analytics.sectionReports"
+              : "analytics.sectionQuestions",
+          )}
+        </Button>
+      )}
+      {setup.length > 0 && (
+        <Popover
+          variant="ghost"
+          label={
+            <>
+              {t("analytics.setup")}
+              <ChevronDown aria-hidden="true" />
+            </>
+          }
+        >
+          {setup.map((candidate) => (
+            <Button
+              key={candidate}
+              variant="link"
+              onClick={() => openAnalyticsSection(candidate)}
+            >
+              {t(SETUP_LABEL[candidate])}
+            </Button>
+          ))}
+        </Popover>
+      )}
+    </div>
+  );
 }
 
-// One section's body, chosen in its own component so the screen's own render
-// stays a header plus a choice rather than a ladder of ternaries.
 function SectionBody({
   section,
   locale,
@@ -351,15 +303,31 @@ function SectionBody({
         onSelectScope={onSelectScope}
       />
     ) : null;
+  const view = viewOfSection(section);
+  if (view) {
+    return selection ? (
+      <ReportingOverview
+        // Keyed by view, so an open drawer never outlives the tab it was
+        // opened on.
+        key={view}
+        view={view}
+        scope={selection.scope}
+        scopeControl={scopeControl}
+        emptyNotice={emptyNotice}
+      />
+    ) : null;
+  }
   switch (section) {
-    case "performance":
-      return selection ? (
-        <ReportingOverview
-          scope={selection.scope}
+    case "overview":
+      return (
+        <OverviewSection
+          context={context}
+          contextQuery={contextQuery}
+          selection={selection}
           scopeControl={scopeControl}
           emptyNotice={emptyNotice}
         />
-      ) : null;
+      );
     case "reports":
       return (
         <ReportingLibrary
@@ -383,13 +351,17 @@ function SectionBody({
         </>
       ) : null;
     case "coverage":
+    case "accounts":
+    case "outcomes":
       // Nothing renders before the frame arrives, so no zone is guessed.
       return context ? (
-        <DataCoverageView locale={locale} timezone={context.timezone} />
-      ) : null;
-    case "outcomes":
-      return context ? (
-        <MyOutcomesView defaultScope={context.default_scope} locale={locale} />
+        <FramedSection
+          section={section}
+          context={context}
+          selection={selection}
+          scopeControl={scopeControl}
+          locale={locale}
+        />
       ) : null;
     case "forecast":
       return selection && context ? (
@@ -417,17 +389,47 @@ function SectionBody({
           {section === "delivery" && (
             <p className="sub">{t("analytics.deliveryCoversAll")}</p>
           )}
-          {SECTION_REPORTS[section].map((report) => (
-            <ReportCard
-              key={report}
-              report={report}
-              stages={stages}
-              locale={locale}
-            />
-          ))}
+          <ReportBoard
+            reports={SECTION_REPORTS[section]}
+            stages={stages}
+            locale={locale}
+          />
         </>
       );
   }
+}
+
+function OverviewSection({
+  context,
+  contextQuery,
+  selection,
+  scopeControl,
+  emptyNotice,
+}: Readonly<{
+  context: components["schemas"]["AnalyticsContext"] | undefined;
+  contextQuery: ContextQuery;
+  selection: AnalyticsSelection | null;
+  scopeControl: ReactNode;
+  emptyNotice: (holdsDeals: boolean | undefined) => ReactNode;
+}>) {
+  const t = useT();
+  if (selection && context)
+    return (
+      <AnalyticsOverview
+        context={context}
+        scope={selection.scope}
+        scopeControl={scopeControl}
+        emptyNotice={emptyNotice}
+      />
+    );
+  return (
+    <QueryStates
+      query={contextQuery}
+      pendingLabel={t("analytics.sectionOverview")}
+    >
+      {null}
+    </QueryStates>
+  );
 }
 
 type ContextQuery = Readonly<{
@@ -478,20 +480,17 @@ function PipelineSection({
   return (
     <>
       {scope && (
-        <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+        <FilterBar label={t("analytics.filters")} quiet labels="inside">
+          {scopeControl}
+        </FilterBar>
       )}
       {emptyNotice(first.data?.scope_holds_deals)}
-      {SECTION_REPORTS.pipeline.map((report) => (
-        <ReportCard
-          // Keyed by scope too, so an open explanation never outlives the
-          // records it explains.
-          key={scope ? `${report}:${scopeKey(scope)}` : report}
-          report={report}
-          stages={stages}
-          locale={locale}
-          scope={scope}
-        />
-      ))}
+      <ReportBoard
+        reports={SECTION_REPORTS.pipeline}
+        stages={stages}
+        locale={locale}
+        scope={scope}
+      />
     </>
   );
 }

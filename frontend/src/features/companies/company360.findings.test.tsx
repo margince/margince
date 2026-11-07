@@ -511,6 +511,10 @@ describe("company view — the account's primary actions", () => {
     expect(
       await screen.findByRole("button", { name: "Log activity" }),
     ).toBeTruthy();
+    // Add task is the first row of the header's menu.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
     expect(
       await screen.findByRole("button", { name: "Add task" }),
     ).toBeTruthy();
@@ -526,6 +530,9 @@ describe("company view — the account's primary actions", () => {
     // without the feature. Both are offered and refused, and both point at the
     // one sentence that says what is true of the record.
     const log = await screen.findByRole("button", { name: "Log activity" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
     const task = await screen.findByRole("button", { name: "Add task" });
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);

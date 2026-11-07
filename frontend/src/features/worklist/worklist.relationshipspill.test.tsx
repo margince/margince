@@ -71,8 +71,8 @@ function day(queue: Worklist["queue"]): Worklist {
   };
 }
 
-// The server does the narrowing; the stub answers each filter with the rows
-// the server would, and records which filter was asked for.
+// The server does the narrowing; the stub answers each filter or view with the
+// rows the server would, and records which one was asked for.
 function stubServer() {
   const asked: (string | null)[] = [];
   vi.stubGlobal(
@@ -82,7 +82,11 @@ function stubServer() {
       if (!url.pathname.endsWith("/worklist")) {
         return Response.json({ data: [] });
       }
-      const filter = url.searchParams.get("filter");
+      const view = url.searchParams.get("view");
+      const filter =
+        view === "decisions" || view === "system"
+          ? view
+          : url.searchParams.get("filter");
       asked.push(filter);
       const queue =
         filter === "relationships"
@@ -136,7 +140,7 @@ it("keeps upkeep under System, without the quiet relationship", async () => {
   renderWorklist();
   await user.click(
     await screen.findByRole("button", {
-      name: new RegExp(`^${en["worklist.filter.system"]}`),
+      name: new RegExp(`^${en["worklist.view.system"]}`),
     }),
   );
   await waitFor(() => expect(asked).toContain("system"));

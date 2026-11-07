@@ -15,8 +15,8 @@ import {
 } from "../../testing/story-utils";
 import { DealsScreen } from "./deals";
 
-// An address can carry a dial this reader may not narrow by. The list drops it
-// from the query, so no hidden filter narrows the rows without a chip to clear.
+// An address can carry a dial this reader may not narrow by. The list names it
+// and asks for no deals, rather than show wider rows under the narrowed address.
 const meta: Meta = {
   title: "Records/Deals/Withheld filters",
   parameters: { layout: "padded" },
@@ -128,31 +128,31 @@ function screen() {
   );
 }
 
-async function expectOnlyReadableDial(
+async function expectRefusedDialNamed(
   canvasElement: HTMLElement,
   withheld: { parameter: string; chip: string },
 ) {
   const canvas = within(canvasElement);
   await expect(
-    await canvas.findByRole("group", { name: "Stage: Qualify" }),
+    await canvas.findByText(
+      `Your role cannot narrow deals by ${withheld.chip}.`,
+      { exact: false },
+    ),
   ).toBeTruthy();
   await expect(
-    await canvas.findByRole("link", { name: /Fleet retrofit/ }),
-  ).toBeTruthy();
+    canvas.queryByRole("link", { name: /Fleet retrofit/ }),
+  ).toBeNull();
   const chipNames = canvas
     .queryAllByRole("group")
     .map((group) => group.getAttribute("aria-label") ?? "");
   await expect(
     chipNames.filter((name) => name.startsWith(`${withheld.chip}:`)),
   ).toEqual([]);
-  await expect(sent.length).toBeGreaterThan(0);
-  await expect(
-    sent.filter((query) => query.includes(`${withheld.parameter}=`)),
-  ).toEqual([]);
+  await expect(sent).toEqual([]);
 }
 
 // A reader without company.read cannot pick a company, so the company dial in
-// the address is not applied.
+// the address is named as refused.
 export const CompanyDialWithoutCompanyRead: Story = {
   beforeEach: () => {
     installDealsBackend("company_id", { allow: { deal: ["read", "update"] } });
@@ -160,14 +160,14 @@ export const CompanyDialWithoutCompanyRead: Story = {
   },
   render: screen,
   play: async ({ canvasElement }) =>
-    expectOnlyReadableDial(canvasElement, {
+    expectRefusedDialNamed(canvasElement, {
       parameter: "company_id",
       chip: "Company",
     }),
 };
 
 // The server names the partner filter as refused for this role, so the list
-// never sends it.
+// names it and never sends it.
 export const PartnerDialTheServerRefuses: Story = {
   beforeEach: () => {
     installDealsBackend("partner_company_id", {
@@ -178,7 +178,7 @@ export const PartnerDialTheServerRefuses: Story = {
   },
   render: screen,
   play: async ({ canvasElement }) =>
-    expectOnlyReadableDial(canvasElement, {
+    expectRefusedDialNamed(canvasElement, {
       parameter: "partner_company_id",
       chip: "Partner",
     }),

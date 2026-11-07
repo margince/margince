@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -55,16 +56,11 @@ const (
 	// at write time (modules/deals writes inside the RLS tx), so a deal's stage row
 	// is never invisible to the deal's own scope.
 	joinStageForWinProbability = "JOIN stage s ON s.id = t.stage_id"
-	colWinProbability          = "s.win_probability"
 
-	// weightedAmountMinorExpr is the REPORT ENGINE's spelling of "weighted
-	// value" (formulas §6, AC-F1): round PER DEAL, half away from zero, so a
-	// roll-up over it equals the sum of its own rows exactly. Shared by every
-	// spec that joins stage for win_probability, so the forecast report and any
-	// other per-stage weighted figure read this one expression. The multiply casts to
-	// numeric first — the contract puts no ceiling on amount_minor below the
-	// bigint bounds, and bigint × smallint overflows before the scaling below
-	// would otherwise widen it.
+	// weightedAmountMinorExpr is the report engine's weighted value (AC-F1):
+	// rounded per deal, half away from zero, so a roll-up equals the sum of its
+	// rows. Every weighted report measure reads it. The multiply
+	// casts to numeric first: bigint × smallint can overflow before the scaling.
 	//
 	// It scales by ×0.01 rather than ÷100, and that is not a style choice.
 	// Numeric multiplication is EXACT — the result scale is the sum of the
@@ -86,7 +82,8 @@ const (
 	// TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit
 	// (weightedvalueparity_integration_test.go), which embed this constant so
 	// an edit here is what runs there.
-	weightedAmountMinorExpr = "round((t.amount_minor::numeric * s.win_probability) * 0.01)::bigint"
+	// reportChanceToken is the forecast's chance in use, learned risk effect included.
+	weightedAmountMinorExpr = "round((t.amount_minor::numeric * " + reportChanceToken + ") * 0.01)::bigint"
 	// fieldWeightedAmountMinor is the API-facing measure name every spec that
 	// defines weightedAmountMinorExpr registers it under.
 	fieldWeightedAmountMinor = "weighted_amount_minor"
@@ -248,26 +245,17 @@ type reportSpec struct {
 	grants map[string]string
 }
 
-// forecastCategoryExpr is the forecast's effective-category dimension
-// (formulas §11, AC-F9): a claimed commit/best_case deal whose close
-// date is past, missing, or still a provisional machine guess is NOT
-// counted in those totals — it groups under 'slipped' until a human
-// confirms a real date. The exclusion lives in the dimension itself, so
-// the aggregate, its filter, and the drill-through all read the same
-// row set and keep reconciling exactly (no post-hoc subtraction).
-// "Today" buckets in the installation's reporting zone (data-semantics §2 r4).
-//
-// The zone arrives as a BIND parameter, written here as reportZoneToken and
-// substituted for a real $n once the statement is assembled (reportsql.go
-// bindReportTokens) — the catalog is a static map of expressions, so it has
-// no bind position to name at the point it is written. Postgres still does the date arithmetic, which is what keeps
-// the DST rules and the day boundary where they were when the zone was a
-// column on a joined row.
-const forecastCategoryExpr = `(CASE WHEN t.forecast_category IN ('commit','best_case')
-		AND (t.expected_close_date IS NULL
-			OR t.expected_close_date < (timezone(` + reportZoneToken + `, now()))::date
-			OR t.close_date_provisional)
-	THEN 'slipped' ELSE t.forecast_category END)`
+// colWinProbability is the deal's effective win probability, the figure the
+// forecast weights by and the deal list filters on.
+var colWinProbability = deals.WinProbabilitySQL("t")
+
+// winProbabilityBandExpr groups deals into the bands the analytics tiles draw.
+// 90_plus is Likely at the shipped threshold.
+var winProbabilityBandExpr = `(CASE WHEN ` + colWinProbability + ` = 0 THEN 'zero'
+	WHEN ` + colWinProbability + ` < 30 THEN '1_29'
+	WHEN ` + colWinProbability + ` < 60 THEN '30_59'
+	WHEN ` + colWinProbability + ` < 90 THEN '60_89'
+	ELSE '90_plus' END)`
 
 // fromClause renders the base table (aliased t) plus the spec's fixed
 // lookup joins — the one spelling shared by the aggregate plan and the
@@ -366,6 +354,9 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	if err != nil {
 		return reportOutcome{}, err
 	}
+	if err := refuseUngroupedNativeMoney(spec, groupBy, req.Filters, aggregates); err != nil {
+		return reportOutcome{}, err
+	}
 
 	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
 	if err != nil {
@@ -431,9 +422,6 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		// Its own refusal: nothing here is out of vocabulary, so the vocabulary
 		// error would name a field the caller never wrote.
 		return nil, nil, &EmptyReportPlanError{}
-	}
-	if err := refuseUngroupedNativeMoney(spec, groupBy, aggregates); err != nil {
-		return nil, nil, err
 	}
 	return columns, selects, nil
 }

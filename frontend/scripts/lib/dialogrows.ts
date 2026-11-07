@@ -26,13 +26,13 @@ import {
   type Prop,
   primitiveKey,
   rootsOf,
-  tag,
   upper,
   type Values,
   variantsOf,
   whereOf,
   within,
 } from "./dialoglayout";
+import { type Memo, memoKey, newMemo, remembered } from "./dialogmemo";
 import {
   childOfJsx,
   climb,
@@ -66,14 +66,19 @@ type Guest = {
   key: string;
 };
 type Keys = { keys: ReadonlySet<string>; modal: string };
-type Gate = Keys & { owners: Owners; outer: Chain[]; host?: Handed };
+type Gate = Keys & {
+  owners: Owners;
+  outer: Chain[];
+  host?: Handed;
+  memo: Memo;
+};
 
 const HEADING = primitiveKey("heading", "Heading");
 const DIALOG: Chain[] = [[["modal"]]];
 
 // A component that renders a dialog around its children.
 const wraps = ({ keys }: Pick<Keys, "keys">, n: ts.Node) =>
-  upper(n) && isDialogTag(n.getSourceFile(), tag(n), keys);
+  isDialogTag(n, keys);
 // `role="dialog"` alone makes any element a dialog box.
 const isDialog = (g: Pick<Keys, "keys">, n: ts.Node) =>
   literal(n, "role") === "dialog" || wraps(g, n);
@@ -124,9 +129,16 @@ function dialogBoxes(
   }
   return dialogBoxes(g, inner, handedAt(e, def, outer), depth + 1);
 }
+// Each ancestor is asked again for every element under it, so the answer is
+// kept. Beyond the host in force it reads g.modal and g.keys, which the memo,
+// made once per run, never outlives.
+function boxesAt(g: Gate, p: ts.Node): Chain[] {
+  const key = memoKey(g.memo, g.host, p);
+  return remembered(g.memo.boxes, key, () => boxesDrawnAt(g, p));
+}
 // A component's classes land on the root holding its children; a dialog's
 // box stands outside that root unless it is that root.
-function boxesAt(g: Gate, p: ts.Node): Chain[] {
+function boxesDrawnAt(g: Gate, p: ts.Node): Chain[] {
   const modal = keyIs(p, g.modal);
   const slot = upper(p) && !modal ? childrenSlot(p) : undefined;
   const def = defOf(p);
@@ -192,9 +204,15 @@ function spaces(owners: Owners, cls: string[], chain: Chain, across: boolean) {
   });
   return flow.down || (across && flow.across);
 }
+// Asked once per row under `parent`, so the answer is kept per parent and view.
+function stacks(g: Gate, v: View, parent: ts.Node, across = true) {
+  const { host, outer, memo } = g;
+  const key = memoKey(memo, host, outer, v.placement, v.links, parent, across);
+  return remembered(memo.stacks, key, () => stacksRows(g, v, parent, across));
+}
 // `across` counts a row's gap too; a margin doubles only a gap it stacks on.
 // A box with a conditional class stacks only if every branch does.
-function stacks(g: Gate, v: View, parent: ts.Node, across = true) {
+function stacksRows(g: Gate, v: View, parent: ts.Node, across: boolean) {
   const outer = ancestry(g, v, parent);
   return boxesAt(g, parent).every(([box, ...outside]) =>
     outer.every((chain) =>
@@ -435,7 +453,7 @@ export function rowsAcross(
   owners: Owners,
   keys: Keys,
 ) {
-  const base: Gate = { ...keys, owners, outer: DIALOG };
+  const base: Gate = { ...keys, owners, outer: DIALOG, memo: newMemo() };
   const rows = new Map<string, Row>();
   const seen = new Set<string>();
   const judged = new Set<ts.Node>();

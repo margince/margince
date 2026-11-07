@@ -203,7 +203,7 @@ func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain com
 	fetcher := webread.New()
 	return &siteDeepReadWorker{
 		pool:        pool,
-		contacts:    contacts.NewStore(InstallationDB(pool)),
+		contacts:    newContactsStore(InstallationDB(pool)),
 		crawler:     newSiteCrawler(fetcher, crawlCeiling),
 		extract:     evidenceExtractor{fetch: fetcher, brain: brain, factBrain: factBrain},
 		triageBrain: triageBrain,

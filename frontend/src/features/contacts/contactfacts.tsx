@@ -5,39 +5,21 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { rosterOwnerName } from "../../components/entityref";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { ContactLink } from "../../design-system/contactlink";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import { Popover } from "../../design-system/popover";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
 import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
-import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
-type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
-
-// The fixed word claims the destination is LinkedIn, and a crawl or connector
-// can write any host into `social`. So the host is checked before the anchor
-// is drawn; otherwise the word stands alone.
-function ProfileLink({ href }: Readonly<{ href: string }>) {
-  const t = useT();
-  const label = t("contact.page.linkedin");
-  if (!linkedinUrl(href)) {
-    return label;
-  }
-  return (
-    <OffsiteLink href={href} className="pe-meta-link">
-      {label}
-    </OffsiteLink>
-  );
-}
 
 // The buying role is what the relationship edge records, never read off a
 // title. A contact with a title can still have none, and then the cell is gone.
@@ -47,7 +29,7 @@ export function ContactFacts({
 }: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const ownerName = useMemberName(contact.owner_id);
   const email = contact.primary_email;
   const phone = primaryPhone(contact.phones)?.phone;
@@ -93,7 +75,10 @@ export function ContactFacts({
       )}
       {typeof contact.social?.linkedin === "string" && (
         <Fact label={t("contact.page.linkedin")}>
-          <ProfileLink href={contact.social.linkedin} />
+          <LinkedInChip
+            href={contact.social.linkedin}
+            name={contact.full_name}
+          />
         </Fact>
       )}
       <Fact label={t("contact.page.owner")}>
@@ -124,10 +109,7 @@ export function ContactFacts({
  * source. The popover behind it answers which one, which for a mailbox capture
  * is a message id no reader should have to scan past.
  */
-export function ContactSource({
-  contact,
-  createdBy,
-}: Readonly<{ contact: Contact; createdBy?: PrincipalAttribution }>) {
+export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
   const viewerId = useViewerId();
   return (
@@ -142,7 +124,7 @@ export function ContactSource({
               contact.source,
               contact.imported_from,
             ),
-            createdBy,
+            contact.created_by,
           )}
         />
       }

@@ -157,13 +157,13 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 	type owed struct {
 		id       ids.UUID
 		kind     string
-		occurred *time.Time
+		obtained time.Time
 		captured bool
 	}
 	var pending []owed
 	for rows.Next() {
 		var o owed
-		if err := rows.Scan(&o.id, &o.kind, &o.occurred, &o.captured); err != nil {
+		if err := rows.Scan(&o.id, &o.kind, &o.obtained, &o.captured); err != nil {
 			rows.Close()
 			return fmt.Errorf("read an acquisition: %w", err)
 		}
@@ -184,8 +184,8 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		return err
 	}
 	for _, o := range pending {
-		duty, isOwed := consent.DutyFor(o.kind)
-		if !isOwed {
+		duty, needsCase := consent.DutyFor(o.kind)
+		if !needsCase {
 			continue
 		}
 		// Their own mail was captured before this ran: the source capture could
@@ -195,24 +195,12 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.U
 		if wrote && o.captured && o.kind == contacts.AcquiredUnknownLegacy {
 			continue
 		}
-		// The clock runs from the ACQUISITION, not from now: an import landing
-		// today carrying last year's business card is already late, and dating
-		// the duty from the import would restart a clock that has been running
-		// for a year.
-		//
-		// consent.AddMonths, not a span of hours and not raw AddDate: a fixed
-		// 30 days is short in a 31-day month, and AddDate normalizes 31 January
-		// into 3 March. AddMonths clamps to the last day of the target month,
-		// which is what "one month" means when the day does not exist in it.
-		from := n.now()
-		if o.occurred != nil {
-			from = *o.occurred
-		}
+		// A known source without a date still owes notice; capture time is its latest possible bound.
 		if err := consent.OpenNoticeCaseTx(ctx, tx, consent.NoticeCaseInput{
 			ContactID:     ids.From[ids.ContactKind](contactID),
 			AcquisitionID: o.id,
 			Rule:          duty.Rule,
-			DueAt:         consent.AddMonths(from, duty.Months),
+			DueAt:         consent.AddMonths(o.obtained, duty.Months),
 			AllowedRoutes: duty.Routes,
 			State:         duty.State,
 		}); err != nil {

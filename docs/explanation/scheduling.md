@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -11,20 +11,44 @@ meeting.
 ## Hours belong to the host
 
 The hours a host can be booked are a fact about one host, so each host sets their own. No setting for the whole
-installation replaces them. Hours a host never set fall back to 09:00 to 17:00, Monday to Friday,
-in the installation timezone. An agent acting for someone else may not set them, because when a
+installation replaces them. Hours a host never set fall back to 09:00 to 17:00, Monday to Friday.
+Hours are read in the host's own time zone, which is one setting per user under Settings → Account
+and is not part of the hours. A host with no stored zone is read in the installation timezone. An agent acting for someone else may not set them, because when a
 host can be booked is that host's call.
+
+## A page with no calendar is paused, and says so
+
+A booking page saved before the profile existed names no calendar, and nothing migrates it. One
+rule, `Store.pagePaused`, decides whether a standing page is open: switched on, and `blocker` is
+`none`. The guest profile, the free-time read, both booking reads and the link card ask it.
+
+The guest profile of a paused page answers the host's name and `paused: true`, so the guest page
+can say whose page is closed. Every other field is empty, zero or false, and shows nothing about
+the calendar. The free-time read and the
+booking call answer as for an unknown slug, before any body is read, because the slug is the
+capability. Only a retry of a booking the page already took is answered, since that caller holds
+its own key. A proposal is paused by its calendar only, not by the standing page's switch.
+
+The host's own profile carries `blocker`. It is read from the connection row and the host's
+authority, never from a provider call. `no_calendar` is a page that names none, `calendar_read_only`
+a connection without the write grant, and `calendar_unavailable` a connection that is gone or
+refused.
 
 ## Free times are read live, and a failed read shows no times
 
 The invite engine reads the provider's busy time at the moment of the request. Google gets a
-free/busy query plus only the event data it needs. Microsoft gets `calendarView`, asked for in UTC.
+free/busy query plus only the event data it needs, and the event read decides where free/busy
+cannot find a calendar. Microsoft gets `calendarView`, asked for in UTC.
 Margince trusts the times that answer returns, all-day bounds included. It refuses an answer that
 ignores the timezone request, rather than reading it in the host's zone. Busy time never becomes a
 CRM activity, and the public `/availability` API never returns titles, guests or event text.
 
 A missing calendar, a wrong answer, a failed page, or a page count past its limit makes Margince
 refuse to answer with times. Times that may be taken would mislead a guest, so none are shown.
+
+An event that starts and ends at the same time blocks no time, even when the host keeps time
+free before and after meetings. An event that ends before it starts still makes Margince refuse
+to answer with times.
 
 Local holds, and moves still waiting on the provider, count as booked. The database rule that stops
 two holds sharing time counts each one as open at its end. So one meeting can start where another
@@ -50,7 +74,8 @@ attempt landed:
 - When an answer does not show whether a write worked, Margince looks the event up before it
   writes again.
 - Delivery takes a lease with a version number and makes a limited number of attempts. After
-  that, the meeting shows `needs attention`, and a retry works on the same invite.
+  that, the meeting shows `needs attention` with the reason `delivery_failed`, and a retry works on
+  the same invite.
 - Each saved calendar ID points to the real calendar behind it. If the host connects a different
   account, an event Margince cannot find does not turn into a wrong cancel.
 
@@ -62,6 +87,22 @@ change a managed invite behind the host's back.
 Provider capture matches the host's copy of the event to the existing activity, even before the
 first copy is committed. A provider check every 15 minutes copies changed times and cancels back to
 the same activity.
+
+## A refused calendar parks the whole queue
+
+A calendar that refuses Margince refuses every invite of that host, so trying each one five times
+spends the attempts for nothing. `calendarAuthFailure` decides it, whichever provider call failed.
+The first refusal parks the finishing invite. It also parks every queued invite of the same host and
+calendar that no worker holds under lease. A held invite parks itself when its own attempt ends.
+All of them share one `attention_episode`, and the host gets one notice for it, keyed on that id.
+
+Parking and resuming write the domain row, the audit row and the outbox event together. Each
+delivery pass first resumes a parked queue under the host's lock. The host must have granted the
+calendar again since the disconnect, and the `blocker` the booking page reads must be `none`. The
+latest disconnect of each host and calendar stays in `meeting_calendar_episode` after its invites
+resume. So a refusal that was in flight during the resume parks nothing, and a later one is a new
+disconnect. A trigger clears the reason each time the status moves on,
+so no writer has to do it.
 
 ## Video links come with the create
 
@@ -82,13 +123,35 @@ Browser and agent invite writes use the same activities store and the same provi
 time, subject, place and the full event text that goes outside. The delivery worker checks the
 host's live rights again, and the send right of any passport the request came from.
 
-So older callers keep working, `book_meeting` and `/bookings` stay record-only: they send no
-invite. `/availability` without `reliable=true` stays a read of CRM data only, and the agent answer
+`/bookings` uses the same engine. The guest is the first contact link, else the first lead link,
+else a contact that one of its `attendee_emails` names. Every other address joins the same event.
+A booking with no guest is refused with `invitee_required`. To record a meeting without a guest,
+log it. Agents book with `invite_meeting` only.
+
+Each further address is matched under the host's row scope. A contact comes first, then a live
+colleague, then a lead. An address that matches none of them counts as typed by the host.
+
+The provider save matches it again. It asks the consent gate only about addresses a contact or lead
+holds. A colleague and an address no record holds get the invite without that check.
+
+The approval preview and the staged summary mark an address as typed when no record the host can
+read stands behind it. They mark it the same way when a hidden record holds it, so the marker tells
+the host nothing about records they cannot see. Only a contact's or colleague's row keeps a name: a
+lead's row is an address row that no lead scope guards.
+
+`/availability` without `reliable=true` stays a read of CRM data only, and the agent answer
 says so. No email or ICS file stands in when a provider write fails. So a failed write never turns
 into a claim that the meeting is confirmed.
 
 The activity carries `invitation_status` apart from `meeting_status`. So delivery state and the
 held or no-show outcome never write over each other.
+
+`held` and `no_show` say the meeting took place. So `meetingoutcomestart.go` refuses them while its start
+is still ahead, on every write: log, replay, update and import. A move keeps the outcome only when the new
+start has passed too, and otherwise sets the meeting back to `booked`. The invite engine, a move copied from
+the provider (`meetingmove.go`) and the repair task in `meetingnoonrepair.go` all follow that rule. A move
+sent through the invite also drops the outcome when it changes the start, because the outcome described
+the old time.
 
 Provider contracts: [Google: create an event](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert),
 [Google free/busy](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query),

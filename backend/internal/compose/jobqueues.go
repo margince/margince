@@ -9,10 +9,15 @@ package compose
 
 import "github.com/riverqueue/river"
 
+const graphProjectionQueue = "graph_projection"
+
 func jobQueues() map[string]river.QueueConfig {
 	return map[string]river.QueueConfig{
-		river.QueueDefault: {MaxWorkers: 5},
-		"data_task":        {MaxWorkers: 1},
+		river.QueueDefault:   {MaxWorkers: 5},
+		"data_task":          {MaxWorkers: 1},
+		mailHistoryQueue:     {MaxWorkers: 2},
+		mailAdmissionQueue:   {MaxWorkers: 1},
+		graphProjectionQueue: {MaxWorkers: 1},
 		// A send carrying files is long and outbound-bound — a three-minute
 		// upload budget, because a 20 MiB album cannot cross the wire in
 		// thirty seconds. It is the category this file's posture was written
@@ -49,6 +54,9 @@ func jobQueues() map[string]river.QueueConfig {
 		// itself. The pacer enforces the interval; this bound enforces the
 		// single thread. Neither alone is enough.
 		geocodeQueue: {MaxWorkers: geocodeMaxWorkers},
+		// One worker: a one-deal input check waits on the nightly pass's lock,
+		// so a second worker would only wait beside it.
+		assuranceRescanQueue: {MaxWorkers: assuranceRescanMaxWorkers},
 		// ONE worker, and it is the service's terms rather than a performance
 		// choice. VIES describes itself as a service for occasional
 		// verification, throttles by IP and blocks abusers, so a second worker
@@ -82,4 +90,13 @@ func jobQueues() map[string]river.QueueConfig {
 		// control: outbound-bound, so the deep-read posture (accountingReadQueue).
 		accountingReadQueue: {MaxWorkers: accountingReadMaxWorkers},
 	}
+}
+
+// WorkerQueueConcurrency derives process job demand from the declared queue limits.
+func WorkerQueueConcurrency() int {
+	total := 0
+	for _, queue := range jobQueues() {
+		total += queue.MaxWorkers
+	}
+	return total
 }

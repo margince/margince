@@ -63,6 +63,12 @@ func (r *recordingStager) QueueConfirmationTx(_ context.Context, _ pgx.Tx, in Co
 	return ids.NewV7(), nil
 }
 
+// PresentConfirmationTx answers the rendered words unbranded; compose's own
+// suite covers the branding.
+func (r *recordingStager) PresentConfirmationTx(_ context.Context, _ pgx.Tx, in ConfirmationSend) (PresentedMail, error) {
+	return PresentedMail{Subject: in.Rendered.Subject, Text: in.Rendered.Body}, nil
+}
+
 // recordingVault keeps the sealed link, which is the only place the plaintext
 // legitimately exists between minting and dispatch.
 type recordingVault struct {
@@ -77,7 +83,16 @@ func (v *recordingVault) Put(_ context.Context, secret string) (string, error) {
 		return "", v.fail
 	}
 	v.sealed = secret
-	return "vault-ref-" + secret[len(secret)-6:], nil
+	link, _, _ := strings.Cut(secret, "?")
+	return "vault-ref-" + link[len(link)-6:], nil
+}
+
+// sealedConfirmToken is the token inside a sealed confirm link, without the
+// language the link carries after it.
+func sealedConfirmToken(sealed string) (string, bool) {
+	_, fragment, found := strings.Cut(sealed, "#/confirm/")
+	token, _, _ := strings.Cut(fragment, "?")
+	return token, found
 }
 
 func confirmRequest(t *testing.T, e *channelConsentEnv, h Handlers) *httptest.ResponseRecorder {
@@ -261,11 +276,10 @@ func TestAMintedLinkOpensTheSubjectsOwnRecord(t *testing.T) {
 	// The token that was SEALED must be the one the public page resolves. A
 	// lane that seals one token and stores another is a link nobody can use,
 	// and nothing upstream of the recipient would notice.
-	_, token, found := strings.Cut(vault.sealed, "#/confirm/")
+	token, found := sealedConfirmToken(vault.sealed)
 	if !found {
 		t.Fatalf("no confirm link was sealed: %q", vault.sealed)
 	}
-	token = strings.Fields(token)[0]
 
 	ref, err := e.store.ResolveConfirmToken(context.Background(), token, FetchByAHuman)
 	if err != nil {

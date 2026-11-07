@@ -56,7 +56,7 @@
   height: 10px;
   border-radius: 50%;
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--ground);
   border: 2px solid var(--accent);
 }
 

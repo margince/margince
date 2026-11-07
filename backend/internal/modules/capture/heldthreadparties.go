@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -62,7 +63,7 @@ func heldThreadPartiesTx(ctx context.Context, tx pgx.Tx, threads []HeldThread) e
 		  JOIN activity a ON a.id = p.activity_id AND a.archived_at IS NULL AND `+content+`
 		 WHERE p.activity_id = ANY($`+fmt.Sprint(opening)+`)
 		   AND p.address IS NOT NULL AND p.user_id IS NULL
-		   AND NOT EXISTS (SELECT 1 FROM app_user u WHERE lower(u.email) = p.address)
+		   AND NOT EXISTS (SELECT 1 FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "p.address", "p.address_domain_folded")+`)
 		 ORDER BY p.activity_id,
 		          CASE p.role WHEN 'from' THEN 0 WHEN 'to' THEN 1 WHEN 'cc' THEN 2 ELSE 3 END,
 		          p.address`, args...)

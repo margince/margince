@@ -9,6 +9,7 @@ import { useT } from "../../../i18n";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
 import { CompanyStep } from "../onboarding-company-form";
 import { ManualCompanyInterview } from "../onboarding-manual-interview";
+import { SaveRefusalLine } from "./save-refusal-line";
 
 // The company act's work surface: exactly one scene at a time — the pending
 // decision, the triage review, the manual interview, or the edit escape
@@ -256,8 +257,6 @@ function ArtifactBody(props: CompanyActArtifactProps) {
           embedded
           draft={props.draft}
           setField={props.setField}
-          saved={false}
-          saveError={props.saveError}
           missingRequired={props.missingRequired}
           read={props.read}
           onPickEntity={props.onPickEntity}
@@ -265,23 +264,28 @@ function ArtifactBody(props: CompanyActArtifactProps) {
           setSelectedFactKeys={props.setSelectedFactKeys}
           onFieldBlur={persistLater}
         />
+        {/* The refusal rides the sticky bar: the reader presses Confirm from
+            anywhere in a long form, so the answer must be where they pressed. */}
         <div className="mw-confirm-company">
-          <p className="t-caption">{t("ob.ai.confirmBoundary")}</p>
-          <Button
-            variant="primary"
-            disabled={props.confirmDisabled || props.confirmPending}
-            onClick={props.onConfirm}
-          >
-            {props.confirmPending ? (
-              <>
-                <span className="ob-spinner" /> {t("ob.s1.saving")}
-              </>
-            ) : (
-              <>
-                <Check aria-hidden /> {t("ob.ai.confirmCompany")}
-              </>
-            )}
-          </Button>
+          <SaveRefusalLine message={props.saveError} />
+          <div className="mw-confirm-company-row">
+            <p className="t-caption">{t("ob.ai.confirmBoundary")}</p>
+            <Button
+              variant="primary"
+              disabled={props.confirmDisabled || props.confirmPending}
+              onClick={props.onConfirm}
+            >
+              {props.confirmPending ? (
+                <>
+                  <span className="ob-spinner" /> {t("ob.s1.saving")}
+                </>
+              ) : (
+                <>
+                  <Check aria-hidden /> {t("ob.ai.confirmCompany")}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </>
     );

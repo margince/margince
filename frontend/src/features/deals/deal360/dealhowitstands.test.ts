@@ -57,6 +57,20 @@ function read(over: Partial<DealStandingInputs>) {
   return riskDim(inputs, words);
 }
 
+function lossReason(key: string, label: string) {
+  return {
+    id: "r-1",
+    key,
+    label,
+    active: false,
+    sort_order: 10,
+    system: true,
+    version: 1,
+    created_at: "2026-10-01T08:00:00Z",
+    updated_at: "2026-10-01T08:00:00Z",
+  };
+}
+
 // Won and lost are final: the card heads with the outcome, not a reading of a
 // deal still being decided.
 describe("a closed deal's verdict", () => {
@@ -73,21 +87,54 @@ describe("a closed deal's verdict", () => {
     });
   });
 
-  it("says why a lost deal was lost, calmly", () => {
+  it("keeps a lost deal's note out of its headline", () => {
     expect(
       closedVerdict(
         deal({
           status: "lost",
           closed_at: "2026-05-13T12:00:00Z",
-          lost_reason: "Budget frozen",
+          lost_reason: "  Budget frozen  ",
         }),
         words,
       ),
     ).toEqual({
       word: t("deals.statusLost"),
-      sentence: `${t("deal.standing.closedOn", { date: "13 May" })} · Budget frozen`,
+      sentence: t("deal.standing.closedOn", { date: "13 May" }),
+      note: "Budget frozen",
       tone: "neutral",
     });
+  });
+
+  it("heads with the reason and sets the note under it", () => {
+    const verdict = closedVerdict(
+      deal({
+        status: "lost",
+        closed_at: "2026-05-13T12:00:00Z",
+        lost_reason_code: "price",
+        lost_reason: "Went with the cheaper bid",
+      }),
+      words,
+      [lossReason("price", "Price")],
+    );
+    expect(verdict?.sentence).toBe(
+      `${t("deal.standing.closedOn", { date: "13 May" })} · Price`,
+    );
+    expect(verdict?.note).toBe("Went with the cheaper bid");
+  });
+
+  it("says a code-only loss by its reason's label", () => {
+    const reasons = [lossReason("price", "Price")];
+    expect(
+      closedVerdict(
+        deal({
+          status: "lost",
+          closed_at: "2026-05-13T12:00:00Z",
+          lost_reason_code: "price",
+        }),
+        words,
+        reasons,
+      )?.sentence,
+    ).toBe(`${t("deal.standing.closedOn", { date: "13 May" })} · Price`);
   });
 
   it("claims no day an imported close does not carry", () => {

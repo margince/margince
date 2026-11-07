@@ -13,11 +13,12 @@ import {
   formatDayLong,
   formatTimeOfDay,
 } from "../../format/format";
-import { dayInZone, viewerZone } from "../../format/timezone";
+import { browserZone, dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { BookingFooter, useBookingIntent } from "./booking-common";
+import { useViewerZone } from "../../lib/viewerzone";
+import { useBookingIntent, useBookingTitle } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 import {
   dayRefusal,
@@ -39,6 +40,10 @@ import {
   videoAppOf,
 } from "./booking-guest-parts";
 import "./booking-guest.css";
+import {
+  UnreadableCalendarLine,
+  unreadableCalendarOf,
+} from "./unreadable-calendar";
 
 type Availability = components["schemas"]["MeetingAvailability"];
 
@@ -57,7 +62,12 @@ export function BookingGuestScreen({
 }: Readonly<{ hostSlug: string; proposalToken?: string; preview?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [zone, setZone] = useState(viewerZone);
+  // A guest has only the browser's clock; a signed-in host previewing their
+  // own page starts from their own zone.
+  const readerZone = useViewerZone();
+  const [zone, setZone] = useState(() =>
+    preview ? readerZone : browserZone(),
+  );
   const intent = useBookingIntent();
   const client = useQueryClient();
   const [now] = useState(() => Date.now());
@@ -78,6 +88,9 @@ export function BookingGuestScreen({
       company_name: value.company_name ?? "",
       proposal: "proposal" in value ? value.proposal : null,
       video_app: videoAppOf(value, preview),
+      // A used proposal turns enabled off; the server's paused answers its
+      // calendar. The host's preview has only the switch.
+      paused: !value.enabled || ("paused" in value && value.paused),
     }),
     queryFn: async () => {
       if (preview) {
@@ -134,7 +147,7 @@ export function BookingGuestScreen({
     preview ? profile.data : undefined,
   ];
   const readable =
-    profile.isSuccess && !needsCalendar && (preview || profile.data.enabled);
+    profile.isSuccess && !needsCalendar && (preview || !profile.data.paused);
   const slots = useQuery({
     queryKey: [...readKey, visible?.from, visible?.to, locale],
     enabled: readable,
@@ -218,7 +231,8 @@ export function BookingGuestScreen({
     setSelected(null);
     if (!next.startsWith(monthKey)) setMonth(monthOf(next));
   };
-  const publicUnavailable = !preview && !profile.data?.enabled;
+  const publicUnavailable = !preview && profile.data?.paused !== false;
+  useBookingTitle(preview ? null : guestTitle(t, profile.data));
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
@@ -229,6 +243,12 @@ export function BookingGuestScreen({
             ) : (
               <>
                 {preview && <PreviewNotice enabled={host.enabled} />}
+                {preview && (
+                  <UnreadableCalendarLine
+                    calendar={unreadableCalendarOf(dayRead.error)}
+                    provider={"provider" in host ? (host.provider ?? "") : ""}
+                  />
+                )}
                 {host.company_name && (
                   <header className="book-brand">
                     <CompanyLogo
@@ -334,10 +354,20 @@ export function BookingGuestScreen({
             )
           }
         </QueryGate>
-        <BookingFooter />
       </div>
     </div>
   );
+}
+
+// The tab names the host only while their page takes bookings; a paused or
+// missing page keeps a generic title, as its link-preview card does.
+function guestTitle(
+  t: ReturnType<typeof useT>,
+  host: { paused: boolean; host_name: string } | undefined,
+): string {
+  return host && !host.paused && host.host_name
+    ? t("book.pageTitle", { host: host.host_name })
+    : t("book.pageTitleGeneric");
 }
 
 // A busy month's read stops after a bounded number of pages; a day past where

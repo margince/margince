@@ -64,9 +64,10 @@ of these sources that has one:
 A value replaces the one below it whole. A list or an object from a higher source is never merged
 with a lower one. An empty variable counts as unset, in the environment and in the `.env` file.
 
-**The `.env` file.** Nothing reads a `.env` file unless `--env-file` names one. It takes
+**The `.env` file.** Nothing reads a `.env` file unless `--env-file` or `MARGINCE_ENV_FILE` names one. It takes
 `NAME=value` lines, an optional `export ` in front, `#` comments, and single or double quotes. A `$` in a
-value stays a `$`, and no other variable is put in its place. When a name is on two lines, the last one wins.
+value stays a `$`, and no other variable is put in its place; only a secret reads a
+[reference](#secrets). When a name is on two lines, the last one wins.
 
 **The loader's own names.** `--config`, `--config-file`, `--env-file` and `--config-trace` come only
 from a flag or the environment, and `MARGINCE_ENV` only from the environment. They choose the files,
@@ -74,9 +75,9 @@ so a file cannot set them: a value for one in the `.env` file or a YAML file sto
 `--check-config` is a flag only, with no variable.
 
 **What stops the boot.** Margince lists every fault at once, so one restart fixes them all. A boot
-stops on any of these:
+stops on any of these, and on the checks each program adds, such as a mail relay with no host:
 
-- a flag it does not know;
+- a flag it does not know, which stops the load before any other source is read, so it is the only fault listed;
 - a key in either YAML file that no program reads, a seed key included;
 - a value that fails the check of its setting or seed;
 - a required value that no source sets;
@@ -95,8 +96,9 @@ A section with a wrong name is one fault, not one for each key under it. A wrong
 variable name gets the nearest real name when it is within two edits of it.
 
 **Trace mode.** `--config-trace`, or `MARGINCE_CONFIG_TRACE=true`, logs each source read, in the
-order above, with its path. Then it logs one line per setting with its value and where the value
-came from. A secret shows `<secret>` in place of its value.
+order above. A file shows its path. The flags and the environment show how many values each set.
+Then it logs one line per setting with its value and where the value came from. A secret shows
+`<secret>` in place of its value.
 
 **Check mode.** `--check-config` on the api or the worker reads every source and the seeds as a boot
 does, then stops. It prints the trace and the variables no program reads to stdout and every fault
@@ -154,8 +156,8 @@ reference to it.
 
 | Credential | Sources, first match wins | When no source has a value |
 |---|---|---|
-| SMTP password | `email.smtp.password` → a copy an earlier release sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
-| License | `MARGINCE_LICENSE` → `license.token` (or the older `license.token_file`) → a copy an earlier release sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
+| SMTP password | `email.smtp.password` → the file `email.smtp.password_file` names → a copy an earlier release sealed in the vault; `${none}` deletes that copy, [when it may](storage-secrets-and-license.md#the-vault-may-hold-copies-of-the-two-deployment-credentials) | The relay is used with no password. |
+| License | `license.token` (variable `MARGINCE_LICENSE`) → the file the older `license.token_file` names → a copy an earlier release sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
 ### Seeds
 
@@ -201,7 +203,8 @@ Without a binding or `--ai-fake`, the worker does not start its AI runner or its
 Each setting has a key in `margince.yaml` and a variable, and some have a flag. A value from any of
 them must pass the same check. A secret key takes a `${file:...}` or `${env:...}` reference in the
 file. Programs names the programs that read the setting. A Type that says stored marks a setting an
-admin can also change under Settings.
+admin can also change under Settings. One that also says kept by a reset keeps its saved value through a
+[data reset](data-reset.md).
 
 <!-- generated:config:start -->
 <!-- Written by tools/gen-config from the settings registry: edit a setting's declaration, then run `make config-gen`. -->
@@ -222,7 +225,7 @@ admin can also change under Settings.
 | `blobstore_secret_key` | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | `string`, secret | — | api, worker | Secret key for the object store. |
 | `blobstore_use_ssl` | `MARGINCE_BLOBSTORE_USE_SSL` | — | `bool` | `false` | api, worker | Reach the object store over TLS. |
 | `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs. |
-| `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph connect flows. |
+| `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state and the questions an MCP tool asks in the chat; required for the Gmail and Graph connect flows. |
 | `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when `MARGINCE_OWNER_DSN` is unset. |
 | `geocode_base_url` | `MARGINCE_GEOCODE_BASE_URL` | `--geocode-base-url` | `string` | — | api, worker | Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued. |
 | `gmail_client_id` | `MARGINCE_GMAIL_CLIENT_ID` | `--gmail-client-id` | `string` | — | api, worker | Google OAuth client id of the Gmail capture connector. |
@@ -269,18 +272,18 @@ admin can also change under Settings.
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `ai.budget` | `MARGINCE_AI_BUDGET` | — | `object`, stored | `{"tokens_per_full_user":12000000,"company_monthly_tokens":null}` | api, worker | The monthly AI token budget of the company, as `tokens_per_full_user` and `company_monthly_tokens` (null for the total over its users). |
+| `ai.budget` | `MARGINCE_AI_BUDGET` | — | `object`, stored, kept by a reset | `{"tokens_per_full_user":12000000,"company_monthly_tokens":null}` | api, worker | The monthly AI token budget of the company, as `tokens_per_full_user` and `company_monthly_tokens` (null for the total over its users). |
 | `ai.capture_payloads` | `MARGINCE_AI_CAPTURE_PAYLOADS` | — | `bool` | `false` | api, worker | Keep each AI call's request and answer in `ai_call_payload`, aged by its retention policy; set it on the api and the worker together. |
 | `ai.price_sync` | `MARGINCE_AI_PRICE_SYNC` | — | `object`, stored | `{"auto_sync":true}` | api, worker | Whether the daily job syncs model prices, as `{"auto_sync"`: true\|false}. Refresh now runs either way. |
-| `ai.provider_keys_anthropic` | `ANTHROPIC_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the Anthropic provider; required only when a binding names it. |
-| `ai.provider_keys_gemini` | `GEMINI_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the Gemini provider; required only when a binding names it. |
-| `ai.provider_keys_gemini_vertex` | `GEMINI_VERTEX_SA_JSON` | — | `string`, secret, stored | — | api, worker | BYOK service-account key (the JSON key file's contents) for the `gemini_vertex` provider; required only when a binding names it. |
-| `ai.provider_keys_jev` | `TYPESAFE_API_KEY` | — | `string`, secret, stored | — | api, worker | API key for the TypeSafe decision provider; required only when the decisions lane binds it. |
-| `ai.provider_keys_jev_compatible` | `JEV_COMPATIBLE_API_KEY` | — | `string`, secret, stored | — | api, worker | API key for a `jev_compatible` decision server; sent when set and never required. |
-| `ai.provider_keys_openai` | `OPENAI_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the OpenAI provider; required only when a binding names it. |
-| `ai.provider_keys_openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | — | `string`, secret, stored | — | api, worker | BYOK API key for the `openai_compatible` provider; required only when a binding names it. |
-| `ai.routing` | `MARGINCE_AI_ROUTING_BINDING` | — | `object`, stored | — | api, worker | The tier-to-model binding, in the shape `seeds.ai_routing` takes (JSON in the environment). Unset binds no models. |
-| `ai.task_overrides` | `MARGINCE_AI_TASK_OVERRIDES` | — | `object`, stored | `{}` | api, worker | Each task's thinking level and timeouts, as the JSON object PUT `/ai/task-overrides` takes. Unset keeps the product's values. |
+| `ai.provider_keys_anthropic` | `ANTHROPIC_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK API key for the Anthropic provider; required only when a binding names it. |
+| `ai.provider_keys_gemini` | `GEMINI_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK API key for the Gemini provider; required only when a binding names it. |
+| `ai.provider_keys_gemini_vertex` | `GEMINI_VERTEX_SA_JSON` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK service-account key (the JSON key file's contents) for the `gemini_vertex` provider; required only when a binding names it. |
+| `ai.provider_keys_jev` | `TYPESAFE_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | API key for the TypeSafe decision provider; required only when the decisions lane binds it. |
+| `ai.provider_keys_jev_compatible` | `JEV_COMPATIBLE_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | API key for a `jev_compatible` decision server; sent when set and never required. |
+| `ai.provider_keys_openai` | `OPENAI_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK API key for the OpenAI provider; required only when a binding names it. |
+| `ai.provider_keys_openai_compatible` | `OPENAI_COMPATIBLE_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK API key for the `openai_compatible` provider; required only when a binding names it. |
+| `ai.routing` | `MARGINCE_AI_ROUTING_BINDING` | — | `object`, stored, kept by a reset | — | api, worker | The tier-to-model binding, in the shape `seeds.ai_routing` takes (JSON in the environment). Unset binds no models. |
+| `ai.task_overrides` | `MARGINCE_AI_TASK_OVERRIDES` | — | `object`, stored, kept by a reset | `{}` | api, worker | Each task's thinking level and timeouts, as the JSON object PUT `/ai/task-overrides` takes. Unset keeps the product's values. |
 
 ### `analytics`
 
@@ -303,6 +306,10 @@ admin can also change under Settings.
 | `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, 1 to 200, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
+| `capture.gmail_mailbox_quota` | `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` | — | `int` | `6000` | api, worker | Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google. |
+| `capture.gmail_project_quota` | `MARGINCE_CAPTURE_GMAIL_PROJECT_QUOTA` | — | `int` | `1200000` | api, worker | Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process. |
+| `capture.history_concurrency` | `MARGINCE_CAPTURE_HISTORY_CONCURRENCY` | — | `int` | `1` | api, worker | Limit on history imports running at once across the installation. Use the same value in every process. |
+| `capture.history_hold` | `MARGINCE_CAPTURE_HISTORY_HOLD` | — | `bool` | `false` | api, worker | Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol. |
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
 | `capture.mail_sync_interval_seconds` | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | — | `int`, 30 to 3600, stored | `120` | api, worker | Seconds a working mailbox connection waits between polls. |
 | `capture.max_backfill_months` | `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | — | `int` | `0` | api, worker | How far back a mailbox import may reach, for the whole installation; 0 is no cap. |
@@ -335,7 +342,8 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
 | `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, 15 to 10080, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
-| `contacts.signature_template` | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — | `string`, stored | — | api, worker | The email signature of the workspace, used in place of the own signature of each sender; empty means none. |
+| `contacts.shared_merge_reviews` | `MARGINCE_CONTACTS_SHARED_MERGE_REVIEWS` | — | `bool`, stored | `false` | api, worker | Let any owner of a possible duplicate merge the whole case, keeping the other owners' access to the remaining contact through a record grant. |
+| `contacts.signature_template` | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — | `string`, stored | — | api, worker | Workspace email signature template, used when the sender has no personal HTML; empty means none. |
 | `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning. |
 
 ### `data_tasks`
@@ -344,13 +352,21 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `data_tasks.pace` | `MARGINCE_DATA_TASKS_PACE` | `--data-tasks-pace` | `duration` | `1s` | worker | Delay between saved batches of data tasks. |
 
+### `database`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `database.worker_max_connections` | `MARGINCE_WORKER_MAX_CONNECTIONS` | `--worker-max-connections` | `int` | `12` | worker | Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation. |
+| `database.worker_statement_cache_capacity` | `MARGINCE_WORKER_STATEMENT_CACHE_CAPACITY` | `--worker-statement-cache-capacity` | `int` | `256` | worker | Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN `default_query_exec_mode`. |
+
 ### `deals`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `deals.legal_review_enabled` | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a deal be sent to legal for review, and let a `legal_reviewed` criterion hold a deal at its stage. |
 | `deals.maintenance_writes_enabled` | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | — | `bool`, stored | `true` | api, worker | Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes. |
-| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `false` | api, worker | Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move. |
+| `deals.silent_close_days` | `MARGINCE_DEALS_SILENT_CLOSE_DAYS` | — | `int`, 60 to 730, stored | `120` | api, worker | Days without word from the customer after which Margince closes an open deal as lost. |
+| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `true` | api, worker | Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move. |
 
 ### `email`
 
@@ -368,12 +384,13 @@ admin can also change under Settings.
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
-| `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
-| `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
-| `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
-| `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored | `false` | api, worker | Every member must use two-step sign-in. |
-| `identity.require_sso` | `MARGINCE_IDENTITY_REQUIRE_SSO` | — | `bool`, stored | `false` | api, worker | Members other than admins sign in only through a sign-in provider. |
+| `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored, kept by a reset | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
+| `identity.mcp_client_check` | `MARGINCE_IDENTITY_MCP_CLIENT_CHECK` | — | `bool`, stored, kept by a reset | `false` | api, worker | Admins may run the `check_client` tool from an AI tool to test whether it can answer a form. |
+| `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
+| `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
+| `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored, kept by a reset | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
+| `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored, kept by a reset | `false` | api, worker | Every member must use two-step sign-in. |
+| `identity.require_sso` | `MARGINCE_IDENTITY_REQUIRE_SSO` | — | `bool`, stored, kept by a reset | `false` | api, worker | Members other than admins sign in only through a sign-in provider. |
 
 ### `installation`
 
@@ -384,30 +401,33 @@ admin can also change under Settings.
 | `installation.agent_runner_interval_seconds` | `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | — | `int`, 10 to 3600, stored | `30` | api, worker | Seconds between the passes of the agent scheduler. |
 | `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
 | `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
-| `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
-| `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
-| `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
-| `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
+| `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored, kept by a reset | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
+| `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
 | `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
-| `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
-| `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
-| `installation.dead_work_banner_hours` | `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | — | `int`, stored | `24` | api, worker | Hours the job-health banner looks back before it calls dead work a problem. |
-| `installation.fiscal_year_start_month` | `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | — | `int`, stored | `1` | api, worker | The month the business year begins, 1 to 12. |
+| `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored, kept by a reset | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
+| `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored, kept by a reset | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
+| `installation.dead_work_banner_hours` | `MARGINCE_INSTALLATION_DEAD_WORK_BANNER_HOURS` | — | `int`, stored, kept by a reset | `24` | api, worker | Hours the job-health banner looks back before it calls dead work a problem. |
+| `installation.fiscal_year_start_month` | `MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH` | — | `int`, stored, kept by a reset | `1` | api, worker | The month the business year begins, 1 to 12. |
 | `installation.follow_up_reconcile_interval_seconds` | `MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the follow-up reconcile passes. |
-| `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored | `commit_evidence` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
+| `installation.forecast_forward_measure` | `MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE` | — | `string`, stored, kept by a reset | `likely` | api, worker | Which remaining-pipeline reading a projected landing is built from. |
+| `installation.forecast_likely_threshold` | `MARGINCE_INSTALLATION_FORECAST_LIKELY_THRESHOLD` | — | `int`, stored, kept by a reset | `90` | api, worker | The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date. |
+| `installation.forecast_self_correcting` | `MARGINCE_INSTALLATION_FORECAST_SELF_CORRECTING` | — | `bool`, stored, kept by a reset | `true` | api, worker | Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage. |
 | `installation.geocode_backfill_interval_seconds` | `MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `3600` | api, worker | Seconds between the sweeps that add missing map points, or 0 for off. |
 | `installation.gmail_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GMAIL_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 144, stored | `48` | api, worker | Hours before a Gmail push subscription ends that it is renewed. |
 | `installation.gmail_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GMAIL_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, 600 to 43200, stored | `21600` | api, worker | Seconds between the scans for Gmail push subscriptions due for renewal. |
 | `installation.graph_watch_renew_within_hours` | `MARGINCE_INSTALLATION_GRAPH_WATCH_RENEW_WITHIN_HOURS` | — | `int`, 24 to 60, stored | `24` | api, worker | Hours before a Microsoft Graph mail subscription ends that it is renewed. |
 | `installation.graph_watch_scan_interval_seconds` | `MARGINCE_INSTALLATION_GRAPH_WATCH_SCAN_INTERVAL_SECONDS` | — | `int`, 600 to 43200, stored | `21600` | api, worker | Seconds between the scans for Microsoft Graph mail subscriptions due for renewal. |
-| `installation.name` | `MARGINCE_INSTALLATION_NAME` | — | `string`, stored | — | api, worker | The company's name. Set at boot, it also refuses a different name on the company profile. |
+| `installation.individual_performance` | `MARGINCE_INSTALLATION_INDIVIDUAL_PERFORMANCE` | — | `bool`, stored, kept by a reset | `true` | api, worker | Show each colleague's figures in reports, forecasts and team reviews. Off, each member sees their own figures and team totals only. |
+| `installation.name` | `MARGINCE_INSTALLATION_NAME` | — | `string`, stored, kept by a reset | — | api, worker | The company's name. Set at boot, it also refuses a different name on the company profile. |
 | `installation.oauth_access_token_ttl_minutes` | `MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES` | — | `int`, 5 to 129600, stored | `43200` | api, worker | Minutes an access token from the OAuth handshake of a connector lives, for the first token and every refresh. |
 | `installation.retention_sweep_interval_seconds` | `MARGINCE_INSTALLATION_RETENTION_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the retention sweeps. |
 | `installation.send_max_age_hours` | `MARGINCE_INSTALLATION_SEND_MAX_AGE_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours a delivery held back by the send rate may wait before it stops with a reason. |
 | `installation.send_rate_limit` | `MARGINCE_INSTALLATION_SEND_RATE_LIMIT` | — | `int`, 1 to 1000, stored | `30` | api, worker | Messages one mailbox may send per send-rate window. |
 | `installation.send_rate_window_seconds` | `MARGINCE_INSTALLATION_SEND_RATE_WINDOW_SECONDS` | — | `int`, 10 to 3600, stored | `60` | api, worker | Seconds in the window the send rate is counted over. |
 | `installation.technical_backfill_interval_seconds` | `MARGINCE_INSTALLATION_TECHNICAL_BACKFILL_INTERVAL_SECONDS` | — | `int`, stored | `21600` | api, worker | Seconds between the sweeps that add missing technical profiles, or 0 for off. |
-| `installation.time_format` | `MARGINCE_INSTALLATION_TIME_FORMAT` | — | `string`, stored | `locale` | api, worker | How times of day are written: locale, 24h or 12h. |
+| `installation.time_format` | `MARGINCE_INSTALLATION_TIME_FORMAT` | — | `string`, stored, kept by a reset | `locale` | api, worker | How times of day are written: locale, 24h or 12h. |
 | `installation.time_scan_interval_seconds` | `MARGINCE_INSTALLATION_TIME_SCAN_INTERVAL_SECONDS` | — | `int`, 60 to 86400, stored | `3600` | api, worker | Seconds between the time-scan passes. |
 | `installation.webhook_retry_interval_seconds` | `MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS` | — | `int`, 10 to 3600, stored | `30` | api, worker | Seconds between the passes that retry failed webhook deliveries. |
 
@@ -482,9 +502,8 @@ An admin changes each setting whose Type says stored, in [Every setting](#every-
 Settings. An operator can also set one from any boot source, which then locks it in the app as
 [The lock](#where-a-value-comes-from) says.
 
-A data reset keeps the saved rows of the first 12 settings, from `installation.name` to
-`identity.oidc_group_role_map`, of `ai.routing`, `ai.task_overrides` and `ai.budget`, and of each
-`ai.provider_keys_*`. It deletes the rest.
+A data reset keeps the saved row of each setting whose Type says kept by a reset, and deletes the
+rest.
 
 Each `ai.provider_keys_*` is a secret. Its saved row holds only a reference to the key sealed in the
 key vault. A boot value is read where it is and is never sealed into the vault. A key sealed before
@@ -510,7 +529,7 @@ reset from taking over.
 Some bounds are checked in code and not shown in the Type column.
 `installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
 and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
-`installation.forecast_forward_measure` takes `commit_evidence`, `weighted` or `manager_call`.
+`installation.forecast_forward_measure` takes `likely`, `weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,
@@ -543,6 +562,15 @@ exports it. So a value there shows `.env.local` as its source, and locks its con
 The script's own defaults, such as `MARGINCE_PUBLIC_BASE_URL`, `MARGINCE_AI_FAKE` and the blobstore
 bucket, are exported only for a name that neither the environment nor `.env.local` sets. None of them
 is passed as a flag, because a flag outranks `.env.local`.
+
+Of the settings, the stack passes three as flags: `--addr` (the api only), `--dsn` and `--redis`. So
+`MARGINCE_ADDR` and `MARGINCE_REDIS` in `.env.local` have no effect. The script reads `MARGINCE_DSN`
+and `MARGINCE_OWNER_DSN` from `.env.local` before it builds `--dsn`. It keeps their user, password,
+host, port and query, and puts the stack's own database name in place of theirs. The script reads
+`.env.local` as shell, so put a value that holds `$`, a space or a quote in single quotes.
+
+When `.env.local` is missing, `make dev` copies [`.env.example`](../../.env.example) to it, with
+every line commented out.
 
 `MARGINCE_ENV` names the posture, and no trust decision rests on it. Nothing that deletes data
 keys off it. `operations.allow_data_reset` arms the data reset. That is why the dev setting that

@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -93,6 +94,10 @@ func fileCaptureReview(ctx context.Context, tx pgx.Tx, review ReviewMatch, pair 
 // DH-DDL-1); the unique pair index makes a re-detection a no-op — reported
 // as recorded=false so counters stay honest.
 func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a, b ids.UUID, confidence float64, evidence []map[string]any, source, by string) (bool, error) {
+	live, err := lockLiveDedupeSubjects(ctx, tx, entityType, a, b)
+	if err != nil || !live {
+		return false, err
+	}
 	left, right := a, b
 	if right.String() < left.String() {
 		left, right = right, left
@@ -194,16 +199,7 @@ func acquiredFromCapture(replied bool) string {
 	return AcquiredUnknownLegacy
 }
 
-// acquiredFromCaptureTx widens acquiredFromCapture by the mail itself: an
-// address that SENT us a captured message gave us its data by writing, whether
-// or not we had written first. Bulk mail does not count, as it does not for a
-// reply (capture's wroteBackTx): a newsletter is a list writing to everyone,
-// not the sender writing to us. A first mail from a stranger is them contacting
-// us, and a disclosure duty for it would be owed to nobody. Only the reverse —
-// an address we wrote to, or saw on a Cc, that never wrote — stays unknown,
-// unless a seat's mailbox already held mail with it before that seat connected
-// the mailbox (mailbox_history): mail the seat sent to it, or received mail
-// that named it on To or Cc.
+// Direct collection follows the sender, regardless of how many recipients received the mail.
 func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email string) (string, error) {
 	if kind := acquiredFromCapture(replied); kind == AcquiredSubjectInitiated {
 		return kind, nil
@@ -211,11 +207,14 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 	var wrote bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
-		  SELECT 1 FROM activity_participant p
-		    JOIN activity a ON a.id = p.activity_id
-		   WHERE p.role = 'from' AND p.address = lower($1)
-		     AND a.direction = 'inbound' AND a.archived_at IS NULL
-		     AND NOT a.bulk_mail_attested)`, email).Scan(&wrote); err != nil {
+          WITH senders AS MATERIALIZED (
+            SELECT activity_id FROM activity_participant
+            WHERE role='from' AND lower(address)=lower(@address) AND address=lower(@address))
+          SELECT 1 FROM senders p CROSS JOIN LATERAL (
+            SELECT internal_mail_authorization,kind,direction,archived_at,captured_by,
+                   bulk_mail_attested,inbound_sender_authenticated
+            FROM activity WHERE id=p.activity_id OFFSET 0) a
+          WHERE `+correspondence.SubjectMailSQL("a")+`)`, pgx.NamedArgs{"address": email}).Scan(&wrote); err != nil {
 		return "", fmt.Errorf("contacts: did this address write to us: %w", err)
 	}
 	if wrote {

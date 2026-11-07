@@ -64,6 +64,7 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	if err != nil {
 		return nil, err
 	}
+	covered := len(messages) < extractThreadMessages
 	// Nothing older LEFT is not the same as nothing to read. A thread grows at
 	// the same instant as its newest message — the count moves and the clock
 	// does not — and one whose history is fully covered has an empty older
@@ -76,10 +77,30 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 		}
 	}
 	messages = finishThreadWindow(ctx, thread, messages)
+	if covered {
+		coverThreadStart(thread)
+	}
 	if olderThan != nil {
 		return withCurrentThreadContext(ctx, tx, thread.Key, messages)
 	}
 	return messages, nil
+}
+
+// coverThreadStart lowers the read's cursor to the thread's oldest message.
+// A window short of its limit holds all the mail this read may reach.
+// threadHasMoved compares the cursor with every message on the key, but the
+// window reads only one correspondence. Without this, older mail of another
+// correspondence keeps the thread due, and every pass re-reads the same window.
+func coverThreadStart(thread *settledThread) {
+	if thread.Oldest == nil || thread.OldestID == nil {
+		return
+	}
+	if thread.ReadFromNow != nil && thread.ReadFromIDNow != nil &&
+		(thread.ReadFromNow.Before(*thread.Oldest) ||
+			(thread.ReadFromNow.Equal(*thread.Oldest) && thread.ReadFromIDNow.String() <= thread.OldestID.String())) {
+		return
+	}
+	thread.ReadFromNow, thread.ReadFromIDNow = thread.Oldest, thread.OldestID
 }
 
 // threadWindow reads one window, oldest first. olderThan bounds it above; nil

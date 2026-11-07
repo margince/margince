@@ -53,13 +53,12 @@ const visitBaseline = `CASE WHEN v.visited_at >= now() - interval '30 minutes'
 // joinedCap bounds the members a list read names as joined since the visit.
 const joinedCap = 500
 
-// VisitList records that the signed-in user opened the list. Only a human
-// visits: an agent reading through a passport carries its human's user id,
-// and a visit written for it would spend that user's "since your last visit"
-// on a page they never opened.
+// VisitList records that the signed-in user opened the list. It spends their
+// "since your last visit", so an agent calls it only when they ask, and a read
+// through a passport writes no visit.
 func (s *Store) VisitList(ctx context.Context, id ids.ListID) (ListVisit, error) {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman || p.UserID == (ids.UUID{}) {
+	if !ok || !p.HumanOrItsAgent() || p.UserID == (ids.UUID{}) {
 		return ListVisit{}, fmt.Errorf("only a signed-in user visits a list: %w", apperrors.ErrPermissionDenied)
 	}
 	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {
@@ -150,7 +149,7 @@ func pulses(ctx context.Context, tx pgx.Tx, entityType string, listIDs []ids.Lis
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT v.list_id, b.since,
 		       count(ev.id) FILTER (WHERE ev.action = $%[1]d),
 		       count(ev.id) FILTER (WHERE ev.action = $%[2]d)
@@ -159,8 +158,8 @@ func pulses(ctx context.Context, tx pgx.Tx, entityType string, listIDs []ids.Lis
 		LEFT JOIN list_member_event ev ON ev.list_id = v.list_id AND ev.occurred_at > b.since
 		     AND ev.action IN ($%[1]d, $%[2]d) AND %[3]s
 		WHERE v.user_id = $%[4]d AND v.list_id = ANY($%[5]d) AND b.since IS NOT NULL
-		GROUP BY v.list_id, b.since`, arg(memberEntered), arg(memberLeft), visible, arg(p.UserID), arg(listIDs), visitBaseline),
-		args...)
+		GROUP BY v.list_id, b.since`, arg(memberEntered), arg(memberLeft), visible, arg(p.UserID), arg(listIDs), visitBaseline)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -192,14 +191,15 @@ func (s *Store) joinedSinceVisit(ctx context.Context, l listRow) ([]ids.UUID, er
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			SELECT ev.entity_id FROM list_visit v
 			JOIN list_member_event ev ON ev.list_id = v.list_id AND ev.action = $%[1]d
 			  AND ev.occurred_at > (%[2]s) AND %[3]s
 			WHERE v.user_id = $%[4]d AND v.list_id = $%[5]d
 			  AND EXISTS (SELECT 1 FROM list_live_member s WHERE s.list_id = ev.list_id AND s.entity_id = ev.entity_id)
 			GROUP BY ev.entity_id ORDER BY max(ev.occurred_at) DESC LIMIT $%[6]d`,
-			arg(memberEntered), visitBaseline, visible, arg(p.UserID), arg(l.ID), arg(joinedCap)), args...)
+			arg(memberEntered), visitBaseline, visible, arg(p.UserID), arg(l.ID), arg(joinedCap))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}
@@ -216,7 +216,7 @@ func (s *Store) joinedSinceVisit(ctx context.Context, l listRow) ([]ids.UUID, er
 // its arguments are registered only when its SQL is used.
 func observedVisibleClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
 	visible := "FALSE"
-	if auth.Require(ctx, entityType, principal.ActionRead) == nil {
+	if auth.Allows(ctx, entityType, principal.ActionRead) {
 		scope, err := recordScope(ctx, entityType, "e", arg)
 		if err != nil {
 			return "", err

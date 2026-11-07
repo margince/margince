@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { openViewStep, viewButton } from "../testing/listview.testkit";
 import { type ListChip, ListTable, type ListView } from "./listtable";
 import { pagerSlots } from "./listtable.paging";
 import { columns, render, testRows } from "./listtable.testkit";
@@ -29,6 +30,7 @@ function MountReporter({ onMount }: Readonly<{ onMount: () => void }>) {
 
 describe("views", () => {
   it("switching a view reports its index and applies its sort and filters", async () => {
+    const user = userEvent.setup();
     const chips: readonly ListChip[] = [
       {
         key: "status",
@@ -60,7 +62,7 @@ describe("views", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "New leads" }));
+    await user.click(screen.getByRole("button", { name: "New leads" }));
     expect(onViewChange).toHaveBeenCalledWith(1);
     expect(sortOnChange).toHaveBeenCalledWith("name");
     expect(onChipChange).toHaveBeenCalledWith("status", "new");
@@ -370,7 +372,7 @@ describe("a row as a link", () => {
       />,
     );
     const [first] = screen.getAllByRole("link");
-    expect(first.getAttribute("href")).toBe(`#/rows/${testRows(2)[0].id}`);
+    expect(first.getAttribute("href")).toBe(`/#/rows/${testRows(2)[0].id}`);
   });
 
   it("leaves the cell as plain text when the caller names no address", () => {
@@ -415,7 +417,7 @@ describe("dismissing a popup from the keyboard", () => {
     },
   ];
 
-  it("closes the filter menu on Escape and puts focus back on its trigger", async () => {
+  it("closes the View panel on Escape from a step and puts focus back on View", async () => {
     const user = userEvent.setup();
     render(
       <ListTable
@@ -426,17 +428,16 @@ describe("dismissing a popup from the keyboard", () => {
         chips={chips}
       />,
     );
-    const trigger = screen.getByRole("button", { name: "Filter" });
-    await user.click(trigger);
-    expect(screen.getByRole("group", { name: "Filter" })).toBeTruthy();
+    await openViewStep(user, "Filters");
 
     await user.keyboard("{Escape}");
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    expect(document.activeElement).toBe(trigger);
+    const view = await viewButton();
+    expect(view.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(view);
   });
 
-  it("closes the Display menu on Escape too, which keeps its own open state", async () => {
+  it("closes an applied filter's menu on Escape and puts focus back on its segment", async () => {
     const user = userEvent.setup();
     render(
       <ListTable
@@ -444,16 +445,20 @@ describe("dismissing a popup from the keyboard", () => {
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
+        chips={chips}
+        chosen={{ status: "new" }}
       />,
     );
-    const trigger = screen.getByRole("button", { name: "Display" });
-    await user.click(trigger);
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    const segment = screen.getByRole("button", {
+      name: "More actions for the Status filter",
+    });
+    await user.click(segment);
+    expect(segment.getAttribute("aria-expanded")).toBe("true");
 
     await user.keyboard("{Escape}");
 
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    expect(document.activeElement).toBe(trigger);
+    expect(segment.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(segment);
   });
 });
 
@@ -600,5 +605,31 @@ describe("phone card layout hooks", () => {
     expect(value.getAttribute("data-label")).toBe("Value");
     expect(note.getAttribute("data-label")).toBe("Note");
     expect(region.getAttribute("data-label")).toBe("Region");
+  });
+});
+
+// A search narrowed to no rows may get rows back with the next keystroke, so
+// its count line stays. A list with nothing to narrow and no rows drops it.
+describe("the count line", () => {
+  const table = (search: string, rows: number) => (
+    <ListTable
+      rows={testRows(rows)}
+      columns={columns}
+      rowKey={(row) => row.id}
+      unit="rows"
+      search={{ value: search, answered: search, onChange: () => undefined }}
+    />
+  );
+
+  it("holds its line for a narrowed list with no rows, and only then", () => {
+    const { container, rerender } = render(table("", 3));
+    const line = () => container.querySelector(".lt-count");
+    expect(line()).toHaveTextContent("1 to 3 of 3 rows");
+
+    rerender(<LocaleProvider initial="en">{table("zzqx", 0)}</LocaleProvider>);
+    expect(line()).toBeEmptyDOMElement();
+
+    rerender(<LocaleProvider initial="en">{table("", 0)}</LocaleProvider>);
+    expect(line()).toBeNull();
   });
 });

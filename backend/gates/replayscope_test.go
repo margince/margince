@@ -22,7 +22,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"slices"
 	"sort"
 	"strconv"
@@ -50,6 +49,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	"Contact":                              {table: "contact", idPath: "id"},
 	"Company":                              {table: "company", idPath: "id"},
 	"Deal":                                 {table: "deal", idPath: "id"},
+	"DealAdvanced":                         {table: "deal", idPath: "id"},
 	"Lead":                                 {table: "lead", idPath: "id"},
 	"Project":                              {table: "project", idPath: "id"},
 	// A contract has no owner column; it is row-scoped through the deal it came
@@ -67,6 +67,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	"DealSuggestionAcceptance": {object: "deal", moduleProbe: "deal_suggestion", idPath: "suggestion.id", rowNote: "the acceptance hands back the suggestion it decided, probed like DealSuggestion; the deal it opened rides as a companion"},
 
 	"Activity":            {table: "activity", idPath: "id"},
+	"SalesDecision":       {table: "activity", idPath: "id"},
 	"VoiceProfile":        {table: "voice_profile", idPath: "id"},
 	"List":                {table: "list", idPath: "id"},
 	"SavedView":           {table: "saved_view", idPath: "id"},
@@ -84,7 +85,10 @@ var rowScopedResponses = map[string]expectedTarget{
 	// employer it attached them to. The contact is the record a replay hands
 	// back, so it is probed exactly as PromoteLeadResponse above is — the
 	// company id beside it is a reference, not a second body.
-	"QuickCaptureContactResult": {table: "contact", idPath: "contact.id"},
+	"QuickCaptureContactResult":  {table: "contact", idPath: "contact.id"},
+	"LinkContactEmployerResult":  {table: "contact", idPath: "contact.id"},
+	"LinkCompanyContactsResult":  {table: "company", pathParam: "id"},
+	"ShareCompanyContactsResult": {table: "company", pathParam: "id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
 	// owner column the generic probe could read. It still carries an id and
@@ -107,6 +111,8 @@ var rowScopedResponses = map[string]expectedTarget{
 	// so the bulk engine owns the probe.
 	"BulkChangeResult": {moduleProbe: "bulk_batch", idPath: "batch_id"},
 	"RecordGrant":      {tableField: "record_type", idPath: "record_id"},
+	"OwnershipRequest": {tableField: "record_type", idPath: "record_id"},
+	"OwnershipOffer":   {tableField: "record_type", idPath: "record_id"},
 	// A health assessment has no owner column: its visibility IS the project it
 	// judges, which the body names as project_id. Probed rather than waved
 	// through, because a replay hands back how a delivery is going — something
@@ -261,7 +267,7 @@ var companionRecordFields = map[string]string{
 // companionsInContract names the row-scoped references a route's response
 // schemas carry, beyond the record the replay is keyed on.
 //
-// ONLY FOR A BODY THAT WRAPS A RECORD, and the distinction is the whole rule.
+// Only for a body that wraps a record or is keyed by its route parameter.
 // `company_id` on a Deal is the deal's own field: the live read of that
 // deal returns it to anyone who can see the deal, so replaying it discloses
 // nothing the product would not. `company_id` on QuickCaptureContactResult
@@ -271,21 +277,46 @@ var companionRecordFields = map[string]string{
 // A dotted idPath is what says the body is a wrapper: the record is nested
 // inside it, and the fields beside it are the wrapper's own. TOP-LEVEL
 // properties only, for the same reason — the nested record's fields are its
-// own, covered by the probe that already resolves it.
+// own, covered by the probe that already resolves it. A body keyed by its route
+// parameter is no record, so every id its array elements name is a companion.
 func companionsInContract(t *testing.T, schemas []string, got expectedTarget) []string {
 	t.Helper()
-	if !strings.Contains(got.idPath, ".") {
-		return nil
-	}
+	wraps, projects := strings.Contains(got.idPath, "."), got.pathParam != ""
 	var out []string
 	for _, schema := range schemas {
-		for field, table := range schemaRecordFields(t, schema) {
-			out = append(out, table+":"+field)
+		if wraps {
+			for field, table := range schemaRecordFields(t, schema) {
+				out = append(out, table+":"+field)
+			}
+		}
+		if wraps || projects {
+			out = append(out, arrayCompanions(t, schema)...)
 		}
 	}
 	sort.Strings(out)
 	return out
 }
+
+// arrayCompanions are the record ids each element of a top-level array of
+// named schemas carries, as "table:field[].id_field".
+func arrayCompanions(t *testing.T, schema string) []string {
+	t.Helper()
+	var out []string
+	for field, format := range contractSchemaProperties(t)[schema] {
+		item, isArray := strings.CutPrefix(format, arrayOfSchema)
+		if !isArray {
+			continue
+		}
+		for idField, table := range schemaRecordFields(t, item) {
+			out = append(out, table+":"+field+"[]."+idField)
+		}
+	}
+	return out
+}
+
+// arrayOfSchema prefixes the item schema of an array property in
+// contractSchemaProperties, where a scalar property holds its format.
+const arrayOfSchema = "array-of:"
 
 // schemaRecordFields reads one named schema's top-level uuid properties that
 // name a row-scoped record.
@@ -316,7 +347,7 @@ const noResponseBody = "no-response-body"
 // reading only one would let the other's row scope go unchecked.
 func successResponseSchemas(t *testing.T) map[string][]string {
 	t.Helper()
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}
@@ -410,7 +441,7 @@ func classifyResponse(schemas []string, got expectedTarget) (string, expectedTar
 func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 	t.Helper()
 	out := map[string]expectedTarget{}
-	forEachMapEntry(t, "replayableOperations", func(route string, value ast.Expr) {
+	forEachMapEntry(t, "replayableOperations", func(route string, value ast.Expr, constants map[string]string) {
 		lit, ok := value.(*ast.CompositeLit)
 		if !ok {
 			t.Fatalf("%s: replayableOperations[%q] is not a replayTarget literal — teach this extractor the new shape", replayScopeSource, route)
@@ -423,10 +454,10 @@ func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 			}
 			name, _ := kv.Key.(*ast.Ident)
 			if name != nil && name.Name == "companions" {
-				entry.companions = companionRefs(t, route, kv.Value)
+				entry.companions = companionRefs(t, route, kv.Value, constants)
 				continue
 			}
-			text := stringLiteral(t, kv.Value)
+			text := stringLiteral(t, kv.Value, constants)
 			switch {
 			case name == nil:
 				t.Fatalf("%s: replayableOperations[%q] has an unnamed field", replayScopeSource, route)
@@ -454,7 +485,7 @@ func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 }
 
 // companionRefs reads a companions slice literal as "table:idPath" strings.
-func companionRefs(t *testing.T, route string, expr ast.Expr) []string {
+func companionRefs(t *testing.T, route string, expr ast.Expr, constants map[string]string) []string {
 	t.Helper()
 	slice, ok := expr.(*ast.CompositeLit)
 	if !ok {
@@ -476,9 +507,9 @@ func companionRefs(t *testing.T, route string, expr ast.Expr) []string {
 			switch {
 			case name == nil:
 			case name.Name == "table":
-				table = stringLiteral(t, kv.Value)
+				table = stringLiteral(t, kv.Value, constants)
 			case name.Name == "idPath":
-				idPath = stringLiteral(t, kv.Value)
+				idPath = stringLiteral(t, kv.Value, constants)
 			}
 		}
 		out = append(out, table+":"+idPath)
@@ -487,19 +518,13 @@ func companionRefs(t *testing.T, route string, expr ast.Expr) []string {
 	return out
 }
 
-// replayScopeConsts holds the file's string consts, so a reason written once
-// and referenced by name reads the same to this gate as an inline literal.
-// gatekit:fixture state this file's own walk writes as it parses, read back to
-// resolve a name — a cache, so nothing here is ratified or goes stale.
-var replayScopeConsts = map[string]string{}
-
 // stringLiteral flattens a string literal, a concatenation of them (the
 // reasons wrap across lines), or a reference to a string const in the file.
-func stringLiteral(t *testing.T, expr ast.Expr) string {
+func stringLiteral(t *testing.T, expr ast.Expr, constants map[string]string) string {
 	t.Helper()
 	switch node := expr.(type) {
 	case *ast.Ident:
-		text, ok := replayScopeConsts[node.Name]
+		text, ok := constants[node.Name]
 		if !ok {
 			t.Fatalf("%s: %s is not a string const in this file — teach this extractor where it comes from", replayScopeSource, node.Name)
 		}
@@ -514,7 +539,7 @@ func stringLiteral(t *testing.T, expr ast.Expr) string {
 		}
 		return text
 	case *ast.BinaryExpr:
-		return stringLiteral(t, node.X) + stringLiteral(t, node.Y)
+		return stringLiteral(t, node.X, constants) + stringLiteral(t, node.Y, constants)
 	default:
 		t.Fatalf("%s: expected a string literal, found %T", replayScopeSource, expr)
 		return ""
@@ -524,12 +549,13 @@ func stringLiteral(t *testing.T, expr ast.Expr) string {
 // forEachMapEntry walks one named package-level map literal, failing loudly
 // on any element that is not a plain "key": value pair rather than dropping
 // it silently.
-func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast.Expr)) {
+func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast.Expr, constants map[string]string)) {
 	t.Helper()
 	file, err := gatekit.ParseFile(replayScopeSource, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", replayScopeSource, err)
 	}
+	constants := map[string]string{}
 	// Collect the file's string consts first: an entry may reference one by
 	// name, and a name resolves to the same claim as the literal would.
 	for _, decl := range file.Decls {
@@ -547,7 +573,7 @@ func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast
 				if err != nil {
 					t.Fatalf("%s: unquoting const %s: %v", replayScopeSource, value.Names[0].Name, err)
 				}
-				replayScopeConsts[value.Names[0].Name] = text
+				constants[value.Names[0].Name] = text
 			}
 		}
 	}
@@ -573,7 +599,7 @@ func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast
 				if !ok {
 					t.Fatalf("%s: %s holds a non key/value element — teach this extractor the new shape", replayScopeSource, name)
 				}
-				visit(stringLiteral(t, kv.Key), kv.Value)
+				visit(stringLiteral(t, kv.Key, constants), kv.Value, constants)
 			}
 		}
 	}
@@ -595,7 +621,7 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 	if contractProperties != nil {
 		return contractProperties
 	}
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}
@@ -604,6 +630,9 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 			Schemas map[string]struct {
 				Properties map[string]struct {
 					Format string `yaml:"format"`
+					Items  struct {
+						Ref string `yaml:"$ref"`
+					} `yaml:"items"`
 				} `yaml:"properties"`
 			} `yaml:"schemas"`
 		} `yaml:"components"`
@@ -620,6 +649,9 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 		fields := map[string]string{}
 		for field, property := range schema.Properties {
 			fields[field] = property.Format
+			if item, ok := strings.CutPrefix(property.Items.Ref, "#/components/schemas/"); ok {
+				fields[field] = arrayOfSchema + item
+			}
 		}
 		contractProperties[name] = fields
 	}

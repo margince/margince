@@ -274,7 +274,7 @@ func (s *Store) CreateLeadOrigin(ctx context.Context, in CreateLeadOriginInput) 
 		key = deriveSourceKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
-		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginKeyField, Code: "invalid_key", Message: "key must be a non-empty lowercase value"}
+		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginKeyField, Code: codeInvalidKey, Message: "key must be a non-empty lowercase value"}
 	}
 	if key == leadOriginFilterUnset {
 		return crmcontracts.LeadOrigin{}, &values.ParseError{

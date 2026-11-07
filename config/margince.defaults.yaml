@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=./margince.schema.json
 # Written by tools/gen-config; every setting at its default. Do not edit: copy from it.
+#
+# Copy only the lines you change: a stored setting set in a file is locked in the app. A secret
+# shows a file reference in place of a default, so point it at a file that holds the value.
 
 version: 1
 
@@ -82,6 +85,10 @@ capture:
   confidentiality_pass_cap: 40
   freemail_extra: null
   freemail_never: null
+  gmail_mailbox_quota: 6000
+  gmail_project_quota: 1200000
+  history_concurrency: 1
+  history_hold: false
   mail_sharing: true
   mail_sync_interval_seconds: 120
   max_backfill_months: 0
@@ -105,16 +112,22 @@ consent:
 contacts:
   first_response_enabled: false
   first_response_target_minutes: 240
+  shared_merge_reviews: false
   signature_template: null
   unassigned_escalation_user_id: null
 
 data_tasks:
   pace: 1s
 
+database:
+  worker_max_connections: 12
+  worker_statement_cache_capacity: 256
+
 deals:
   legal_review_enabled: true
   maintenance_writes_enabled: true
-  stage_autopilot_enabled: false
+  silent_close_days: 120
+  stage_autopilot_enabled: true
 
 email:
   enabled: false
@@ -128,6 +141,7 @@ email:
 
 identity:
   enabled_oidc_providers: null
+  mcp_client_check: false
   oauth_dynamic_registration: true
   oauth_metadata_documents: true
   oidc_group_role_map: null
@@ -150,12 +164,15 @@ installation:
   dead_work_banner_hours: 24
   fiscal_year_start_month: 1
   follow_up_reconcile_interval_seconds: 86400
-  forecast_forward_measure: commit_evidence
+  forecast_forward_measure: likely
+  forecast_likely_threshold: 90
+  forecast_self_correcting: true
   geocode_backfill_interval_seconds: 3600
   gmail_watch_renew_within_hours: 48
   gmail_watch_scan_interval_seconds: 21600
   graph_watch_renew_within_hours: 24
   graph_watch_scan_interval_seconds: 21600
+  individual_performance: true
   name: null
   oauth_access_token_ttl_minutes: 43200
   retention_sweep_interval_seconds: 86400

@@ -98,12 +98,13 @@ func (s *Store) IssueLeadPrivacyNotice(ctx context.Context, in LeadNotice) (bool
 		if err != nil || already {
 			return err
 		}
-		tokenRowID, expires, err := s.mintLeadNoticeTokenTx(ctx, tx, in.LeadID, address, hashPublicToken(token))
+		language := s.mailLanguage(ctx, tx)
+		tokenRowID, expires, err := s.mintLeadNoticeTokenTx(ctx, tx, in.LeadID, address, hashPublicToken(token), language)
 		if err != nil {
 			return err
 		}
 		deliveryID, err := s.stageConfirmMail(ctx, tx, confirmMailInput{
-			leadID: in.LeadID, recipient: address, kind: LinkPrivacyNotice,
+			leadID: in.LeadID, recipient: address, kind: LinkPrivacyNotice, language: language,
 			tokenRowID: tokenRowID, link: s.confirmLink(token), expiresAt: expires,
 		})
 		if err != nil {
@@ -115,7 +116,7 @@ func (s *Store) IssueLeadPrivacyNotice(ctx context.Context, in LeadNotice) (bool
 		told = true
 		return writeLeadNoticeTx(ctx, tx, leadNoticeRow{
 			leadID: &in.LeadID, approvalID: in.ApprovalID, deliveryID: &deliveryID,
-			locale: s.mailLanguage(ctx, tx), state: "queued",
+			locale: language, state: "queued",
 		})
 	})
 	return told, err
@@ -165,16 +166,16 @@ func leadNoticeAddressTx(ctx context.Context, tx pgx.Tx, in LeadNotice) (string,
 // the address out: if the notice fails the lead is deleted, and an address in
 // the append-only audit would outlive it.
 func (s *Store) mintLeadNoticeTokenTx(
-	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, address, tokenHash string,
+	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, address, tokenHash, language string,
 ) (ids.UUID, time.Time, error) {
 	issued := s.now().UTC()
 	expires := issued.Add(confirmTokenTTL)
 	var tokenRowID ids.UUID
+	args := []any{leadID, tokenHash, address, issued, expires, LinkPrivacyNotice, language}
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO confirm_token (lead_id, token_hash, delivered_to, issued_at, expires_at, kind)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id`,
-		leadID, tokenHash, address, issued, expires, LinkPrivacyNotice).Scan(&tokenRowID); err != nil {
+		INSERT INTO confirm_token (lead_id, token_hash, delivered_to, issued_at, expires_at, kind, question_locale)
+		VALUES (`+storekit.Placeholders(args)+`)
+		RETURNING id`, args...).Scan(&tokenRowID); err != nil {
 		return ids.UUID{}, time.Time{}, fmt.Errorf("consent: minting the lead's notice link: %w", err)
 	}
 	if _, err := storekit.AuditEvent(ctx, tx, "create", "confirm_token", tokenRowID, map[string]any{

@@ -165,7 +165,7 @@ func TestTheContactWriterRefusesALiveLeadsKeysUnlessItConvertsThatLead(t *testin
 	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 	write := func(spec ContactSpec) error {
 		return e.store.tx(ctx, func(tx pgx.Tx) error {
-			_, err := createContact(ctx, tx, ContactResolution{Decision: DecisionNoMatch}, spec)
+			_, err := createContact(ctx, tx, e.store, ContactResolution{Decision: DecisionNoMatch}, spec)
 			return err
 		})
 	}

@@ -87,7 +87,7 @@ func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
 		owed                           bool
 	}{
 		{"delivery", "Here is the pricing: ten seats cost EUR 100 per month.", activities.RequestSettled, "", false},
-		{"acknowledgement", "Thanks, I will check and send the pricing.", activities.RequestStillOwed, "Send the pricing", true},
+		{"acknowledgement", "Thanks, I will check and send the pricing.", activities.RequestStillOwed, "send the pricing", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			o := setupOwed(t)
@@ -106,7 +106,7 @@ func TestJoinedSentMailNeedsSemanticSettlement(t *testing.T) {
 				t.Fatal(err)
 			}
 			messageID := o.e.WsScalar(t, `SELECT source_id FROM activity WHERE id=$1`, sent.ActivityID)
-			incoming := o.capture(t, owedMail{from: "pat@customer.example", to: o.seat, subject: "Re: Please send pricing", messageID: "reply-before-copy@customer.example", inReplyTo: messageID, at: o.now.Add(-time.Hour)})
+			incoming := o.capture(t, owedMail{from: "pat@customer.example", to: o.seat, subject: "Re: Please send pricing", messageID: "reply-before-copy@customer.example", inReplyTo: messageID, at: o.now.Add(-time.Hour), body: "Could you send the pricing for ten seats?"})
 			if o.threadKey(t, incoming) != o.threadKey(t, anchor) {
 				t.Fatal("reply did not join the sent message before its mailbox copy")
 			}

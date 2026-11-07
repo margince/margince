@@ -18,6 +18,7 @@ import {
   writtenByPageContact,
   writtenByReader,
 } from "../../lib/messagevoice";
+import type { SourceRef } from "../../lib/opensource";
 import type { Activity, Contact360 } from "./contactmemory";
 import type { OverviewRow } from "./contactoverview.rows";
 
@@ -25,21 +26,24 @@ type InteractionLabel = ReturnType<typeof useInteractionLabel>;
 type Entry = NonNullable<Contact360["conversation_memory"]>[number];
 type Status = Entry["status"];
 
-/** One conversation as a card row, with the email it opens, if any. */
+/** One conversation as a card row, with the source it opens, if any. */
 export type MemoryRow = OverviewRow &
-  Readonly<{ kind: Activity["kind"]; emailId: string | null }>;
+  Readonly<{
+    kind: Activity["kind"];
+    source: SourceRef | null;
+    context?: string;
+  }>;
 
 type Said = Readonly<{
   key: string;
   kind: Activity["kind"];
   provider: string | null;
-  // The timeline row the conversation came from; a thread entry has none.
   row: Activity | null;
   occurredAt: string;
   occurredPrecision: OccurredPrecision;
   title: string;
   status: Status;
-  emailId: string | null;
+  source: SourceRef | null;
 }>;
 
 /**
@@ -55,8 +59,26 @@ export function memoryRows(
   recordZone: string,
 ): MemoryRow[] {
   const entries = view.conversation_memory ?? [];
-  const said =
-    entries.length > 0 ? entries.map(fromEntry) : folded(view, t, recordZone);
+  const timeline = folded(view, t, recordZone);
+  const notes = timeline.filter(
+    (row) => row.kind === "note" && row.row?.content_state === "available",
+  );
+  const projected = entries
+    .filter(
+      (entry) =>
+        entry.channel !== "note" ||
+        notes.some((row) => row.key === entry.first_activity_id),
+    )
+    .map((entry) => fromEntry(entry, view));
+  const seen = new Set(projected.map((row) => row.source?.id));
+  const said = (
+    entries.length > 0
+      ? [...projected, ...notes.filter((row) => !seen.has(row.key))]
+      : timeline.filter(
+          (row) =>
+            row.kind !== "note" || row.row?.content_state === "available",
+        )
+  ).sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt));
   return said.map((row) => ({
     key: row.key,
     title: row.title || interactionLabel(row.kind, row.provider),
@@ -75,7 +97,11 @@ export function memoryRows(
       .join(" · "),
     pill: statusPill(row.status, t),
     kind: row.kind,
-    emailId: row.emailId,
+    source: row.source,
+    context:
+      row.kind === "note" && row.row?.content_state === "available"
+        ? row.row.body?.trim().slice(0, 280)
+        : undefined,
   }));
 }
 
@@ -89,21 +115,36 @@ export function callBackNumber(
   return primaryPhone(contact.phones)?.phone;
 }
 
-function fromEntry(entry: Entry): Said {
+function fromEntry(entry: Entry, view: Contact360): Said {
   return {
     key: entry.key,
     kind: entry.channel,
     provider: entry.channel_provider ?? null,
-    row: null,
+    row:
+      entry.channel === "note"
+        ? (view.activities?.data.find(
+            (row) => row.id === entry.first_activity_id,
+          ) ?? null)
+        : null,
     occurredAt: entry.occurred_at,
     occurredPrecision: entry.occurred_precision,
     title: entry.title,
     // An entry carries no author or page role, so nothing here overrides the
     // duty the server stated for it.
     status: entry.status ?? null,
-    emailId:
-      entry.channel === "email" ? (entry.first_activity_id ?? null) : null,
+    source: entrySource(entry, view),
   };
+}
+
+// An entry carries no content state, so its first activity opens only when the
+// page read that activity and saw it readable. An email opens regardless,
+// because the message reader checks the audience itself.
+function entrySource(entry: Entry, view: Contact360): SourceRef | null {
+  const id = entry.first_activity_id;
+  if (!id) return null;
+  const row = view.activities?.data.find((activity) => activity.id === id);
+  if (row) return { id, kind: row.kind, contentState: row.content_state };
+  return entry.channel === "email" ? { id, kind: "email" } : null;
 }
 
 function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
@@ -131,7 +172,7 @@ function folded(view: Contact360, t: Translator, recordZone: string): Said[] {
           ? t("email.withheldSubject")
           : (row.email_summary?.subject ?? row.subject ?? ""),
       status: statusOf(row, rows),
-      emailId: row.kind === "email" ? row.id : null,
+      source: { id: row.id, kind: row.kind, contentState: row.content_state },
     };
   });
 }
@@ -161,9 +202,8 @@ function statusOf(row: Activity, rows: readonly Activity[]): Status {
   return null;
 }
 
-// Who spoke. A meeting is both sides by its nature; a note has no side. A
-// message names its recorded author. A call records who logged it, not who
-// dialled, and a thread entry carries no author, so neither names anybody.
+// Notes name their recorded author. A meeting still names both sides, and a
+// thread without a single recorded author makes no attribution.
 function directionWord(said: Said, t: Translator): string {
   if (!said.row) {
     return "";
@@ -171,7 +211,11 @@ function directionWord(said: Said, t: Translator): string {
   if (said.kind === "meeting") {
     return t("contact.card.bothSides");
   }
-  if (said.kind !== "email" && said.kind !== "message") {
+  if (
+    said.kind !== "email" &&
+    said.kind !== "message" &&
+    said.kind !== "note"
+  ) {
     return "";
   }
   return authorWord(said.row, t);

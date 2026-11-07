@@ -35,7 +35,9 @@ import {
 } from "./listqueryparams";
 
 export {
+  isNarrowed,
   LIST_PAGE_SIZES,
+  type ListOpening,
   type ListQuery,
   listFetchLimit,
   listPageOf,
@@ -136,6 +138,7 @@ export function useListQuery<Row>({
   initialFilters,
   screenDials = NO_SCREEN_DIALS,
   paramScope,
+  enabled,
 }: Readonly<{
   key: string;
   fetchPage: (
@@ -175,6 +178,8 @@ export function useListQuery<Row>({
    * address alone only makes the link contacts paste uglier. See `scoped`.
    */
   paramScope?: string;
+  /** Whether the list may be asked for this query; it is not, while false. */
+  enabled?: (query: ListQuery) => boolean;
 }>) {
   const [params, setParams] = useUrlParams();
   const opening = useMemo<ListQuery>(
@@ -288,6 +293,7 @@ export function useListQuery<Row>({
 
   const infinite = useInfiniteQuery({
     queryKey: [key, query],
+    enabled: enabled?.(query) ?? true,
     queryFn: ({ pageParam }) => fetchPage(query, pageParam),
     initialPageParam: FIRST_PAGE,
     getNextPageParam: (last) =>
@@ -300,6 +306,8 @@ export function useListQuery<Row>({
     rows,
     query,
     setQuery,
+    initialSort: opening.sort,
+    initialFilters: opening.filters,
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
@@ -318,6 +326,10 @@ export type ListState<Row> = Readonly<{
   rows: Row[];
   query: ListQuery;
   setQuery: Dispatch<SetStateAction<ListQuery>>;
+  /** The order the list opens on; absent, the server's own. */
+  initialSort?: string;
+  /** The filters the screen opens the list with. */
+  initialFilters?: Readonly<Record<string, string>>;
   /**
    * The address prefix this list's dials carry, so the surface addresses the
    * rendered page under the same name the rest of the dials go by. Undefined for

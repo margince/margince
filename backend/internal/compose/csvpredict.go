@@ -17,6 +17,7 @@ import (
 	"errors"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -83,6 +84,21 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 	if refusal.Code != "" {
 		why := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(refusal)
 		return outcome, &why, err
+	}
+	if err == nil && w.object == migration.ObjectContact && outcome != predictUnwritable && outcome != predictCollidesSkipped && link.problem == nil {
+		employer, previewErr := w.previewImportedEmployer(ctx, row, typed)
+		if why, refused := employerRefusalWhy(previewErr); refused {
+			problem := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Kind: migration.ProblemBrokenLink}.Because(why)
+			return predictUnwritable, &problem, nil
+		}
+		if previewErr != nil {
+			return outcome, nil, previewErr
+		}
+		w.rememberPredictedEmployer(row.ExternalID, employer)
+		if employer.Effect == contacts.ContactEmployerCreateEffect {
+			problem := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(migration.Why(migration.ReasonEmployerWillCreate, "name", textFields(row.Fields)[csvEmployerName]))
+			return outcome, cmp.Or(unknownOwner, &problem), nil
+		}
 	}
 	return outcome, cmp.Or(link.problem, unknownOwner), err
 }

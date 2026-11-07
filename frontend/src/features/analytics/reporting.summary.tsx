@@ -1,16 +1,18 @@
+import type { ComponentProps } from "react";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
+import { scopeKey } from "./analytics.context";
 import {
-  metricLabel,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
   reportingCompactAmount,
   reportingPeriodLabel,
 } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 
 export function TargetProgress({
   value,
@@ -28,7 +30,7 @@ export function TargetProgress({
     <p className="t-caption">
       {t("reporting.remaining")}: {format(Math.max(0, target - value))}
       {target > 0
-        ? ` · ${t("reporting.attainment", { percent: formatNumber(Math.round((value / target) * 100), locale) })}`
+        ? ` · ${t("reporting.attainment", { percent: formatAnalyticsNumber(Math.round((value / target) * 100), locale) })}`
         : ""}
     </p>
   );
@@ -38,13 +40,18 @@ export function TargetProgress({
 // what is open now. Each view shows the ones it read.
 const HEADLINE_METRICS = [
   "bookings_won",
+  "closed_win_rate",
+  "qualified_pipeline_created",
   "forecast_landing",
   "open_pipeline",
   "meetings_held",
   "accepted_opportunities",
   "leads_created",
+  "leads_qualified",
   "leads_promoted",
   "lead_first_response",
+  "leads_awaiting_response",
+  "leads_awaiting_response_now",
   "partner_pipeline",
   "partner_won",
   "partner_commission",
@@ -53,19 +60,25 @@ const HEADLINE_METRICS = [
 
 export function ResultsSummary({
   evaluation,
+  density,
+  lead,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
+  density?: ComponentProps<typeof StatStrip>["density"];
+  // The first figure leads the plate, as on Overview.
+  lead?: boolean;
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const metrics = HEADLINE_METRICS.flatMap(
     (id) => evaluation.metrics.find((metric) => metric.id === id) ?? [],
   );
   if (!metrics.length) return null;
   return (
-    <StatStrip>
+    <StatStrip density={density} lead={lead}>
       {metrics.map((metric) => {
         const amount = (value: number | null | undefined) =>
           reportingCompactAmount(
@@ -81,7 +94,7 @@ export function ResultsSummary({
           <StatCard
             key={metric.id}
             narrow="row"
-            label={metricLabel(metric.id, t)}
+            label={metricName(metric.id)}
             value={amount(metric.value)}
             detail={
               <>
@@ -91,7 +104,7 @@ export function ResultsSummary({
                     {t("reporting.targetPeriodSummary", {
                       actual: amount(actual),
                       target: amount(target),
-                      percent: formatNumber(
+                      percent: formatAnalyticsNumber(
                         Math.round((actual / target) * 100),
                         locale,
                       ),
@@ -136,6 +149,12 @@ export function ResultsSummary({
               </>
             }
             onOpen={headlineOpen(metric, onEvidence)}
+            href={
+              metric.id === "forecast_landing" &&
+              metric.coverage.status !== "no_data"
+                ? forecastHref(evaluation.selection)
+                : undefined
+            }
             meter={comparable ? { filled: actual, total: target } : undefined}
           />
         );
@@ -163,7 +182,7 @@ function OutcomePeriod({
         {/* Out of nothing says no more than the status beside it. */}
         {!metric.denominator
           ? ""
-          : `${t("reporting.outOf", { total: formatNumber(metric.denominator, locale) })} · `}
+          : `${t("reporting.outOf", { total: formatAnalyticsNumber(metric.denominator, locale) })} · `}
         {headlineBasis(evaluation, metric, { t, plural, locale })}
       </span>
       {metric.coverage.status !== "ok" &&
@@ -176,7 +195,7 @@ function OutcomePeriod({
 
 // What a headline figure is about. Sales won covers the chosen period. Open
 // pipeline is the state now, so it names a moment and a count. The forecast
-// landing is always this fiscal quarter's.
+// landing is always this fiscal quarter's, on the basis it was projected with.
 function headlineBasis(
   evaluation: ReportingEvaluation,
   metric: ReportingEvaluation["metrics"][number],
@@ -191,12 +210,17 @@ function headlineBasis(
     return count == null
       ? t("reporting.openPipelineAsOf", { at })
       : plural("reporting.openPipelineBasis", count, {
-          count: formatNumber(count, locale),
+          count: formatAnalyticsNumber(count, locale),
           at,
         });
   }
+  // An edition stored before the basis was kept says the basis is unknown.
   if (metric.id === "forecast_landing") {
-    return t("reporting.forecastLandingBasis");
+    const landing = metric.forecast_basis?.landing;
+    const basis = landing
+      ? t(`forecast.basis.${landing.measure}`)
+      : t("forecast.basis.unknown");
+    return `${t("reporting.forecastLandingBasis")} · ${basis}`;
   }
   // A figure read as things stand names the moment, not a period.
   if (metric.evidence.context_id === "state") {
@@ -208,7 +232,19 @@ function headlineBasis(
 }
 
 // The forecast landing is a projection, not a sum of records. Its evidence is
-// the Forecast section, where each part opens its own deals.
+// the Forecast section, where each part opens its own deals: a link that
+// carries this selection's scope, pipeline and period.
+function forecastHref(selection: ReportingEvaluation["selection"]): string {
+  return analyticsSectionHref(
+    "forecast",
+    new Map([
+      ["scope", scopeKey(selection.scope)],
+      ["pipeline", selection.pipeline_id ?? "all"],
+      ["period", selection.period],
+    ]),
+  );
+}
+
 function headlineOpen(
   metric: ReportingEvaluation["metrics"][number],
   onEvidence: (reference: ReportingEvidenceRef) => void,
@@ -216,8 +252,6 @@ function headlineOpen(
   if (metric.coverage.status === "no_data") {
     return undefined;
   }
-  if (metric.id === "forecast_landing") {
-    return () => openAnalyticsSection("forecast");
-  }
+  if (metric.id === "forecast_landing") return undefined;
   return () => onEvidence(metric.evidence);
 }

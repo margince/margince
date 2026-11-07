@@ -9,7 +9,7 @@ import {
   installFetchStub,
   StoryProviders,
 } from "../testing/story-utils";
-import { CallAction } from "./callaction";
+import { CallAction, linkVerb } from "./callaction";
 import { Fact, RecordFacts } from "./recordfacts";
 
 // Each appearance with a number that dials, one `telUri` refuses, and none.
@@ -201,4 +201,13 @@ export const IconRefusedByPage: Story = {
       </p>
     </div>
   ),
+};
+
+export const RecordLink: Story = {
+  render: () =>
+    linkVerb(
+      "#/contacts/01a00000-0000-7000-8000-000000000001",
+      null,
+      "Open contact",
+    ),
 };

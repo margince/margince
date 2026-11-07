@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -32,6 +33,7 @@ import (
 // is about. It is a projection of the caller's own 360 — nothing here
 // re-queries, so anything absent is absent because that caller may not see it.
 type Input struct {
+	Subject string `json:"subject,omitempty"`
 	// Intent is the caller's own steering ("shorter", "ask for Tuesday"). The
 	// one field they typed, and the one field not fenced.
 	Intent string `json:"intent,omitempty"`
@@ -165,9 +167,11 @@ type ActIn struct {
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
 	At      string `json:"at"`
-	// Inbound says who spoke. A draft that answers what THEY said reads very
-	// differently from one that follows up on what we said, and the direction
-	// is the only thing that tells them apart.
+	// Inbound says the other side wrote it, from the row's voice where that
+	// names a side and from the transport otherwise.
+	//
+	// A draft answering them reads differently from one following up on us.
+	// Read as the wrong side's word, a row writes the wrong message.
 	Inbound bool `json:"inbound"`
 	// Snippet is the opening of what this message says.
 	//
@@ -214,6 +218,7 @@ func FromView(
 	}
 	in := Input{
 		Intent:     strings.TrimSpace(req.Intent),
+		Subject:    strings.TrimSpace(req.Subject),
 		RewriteOf:  strings.TrimSpace(req.RewriteOf),
 		Envelope:   req.Envelope,
 		CompanyID:  view.Company.Id.String(),
@@ -244,6 +249,7 @@ func FromView(
 		}
 		in.Project = &project
 	}
+	in.Subject = in.RequestedSubject()
 	return in, nil
 }
 
@@ -372,7 +378,7 @@ func foldRecent(view crmcontracts.Company360) []ActIn {
 			ID:      act.Id.String(),
 			Kind:    string(act.Kind),
 			At:      activitywhen.Text(act),
-			Inbound: act.Direction != nil && *act.Direction == crmcontracts.ActivityDirectionInbound,
+			Inbound: theirWord(act),
 		}
 		if act.Subject != nil {
 			item.Subject = *act.Subject
@@ -439,14 +445,25 @@ func (in Input) String() string {
 		in.Company, in.Recipient.Name, in.Deal != nil)
 }
 
-// Threaded is always false here, and that is what this surface IS: it opens a
-// new conversation, so no subject it writes can be a reply to anything. The
-// method exists so the shared check reads the same shape from every surface.
-func (Input) Threaded() bool { return false }
-
-// ThreadSubject is false: this surface opens a conversation.
-func (Input) ThreadSubject() (string, bool) { return "", false }
+// RequestedSubject excludes filing tags that would give drafting no topic.
+func (in Input) RequestedSubject() string {
+	key := ""
+	if in.Project != nil {
+		key = in.Project.Key
+	}
+	return draftcore.SubjectForDraft(in.Subject, key)
+}
 
 // Booked is false: an account draft folds no meeting, so nothing here can
 // support a day. A surface that gains one answers from it rather than here.
 func (Input) Booked() bool { return false }
+
+// theirWord says the other side wrote this row, which is what the draft reads
+// to tell answering them from following up on ourselves.
+//
+// A row whose author names no side reads the transport. One that neither can
+// answer is not theirs, so a draft that cannot tell treats it as context.
+func theirWord(act crmcontracts.Activity) bool {
+	ours, known := activities.WroteItOurSide(act)
+	return known && !ours
+}

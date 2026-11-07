@@ -74,10 +74,8 @@ type settleExpectation struct {
 	// RemainingNames is a phrase the still_owed answer has to contain, lowered
 	// before comparison.
 	//
-	// Several renderings may be separated by "|", and any one satisfies it: the
-	// thing owed has more than one honest name, and a single token pinned a
-	// language with it — this phrase is our own note to ourselves, and the
-	// models write it in the thread's language as readily as the installation's.
+	// Several renderings may be separated by "|", and any one satisfies it. The
+	// answer quotes their request, so at least one rendering must appear in it.
 	//
 	// Empty asserts nothing about the wording — the verdict
 	// alone is the claim — which is what a settled or unsure case wants.
@@ -129,6 +127,9 @@ func (requestSettleCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 				Subject: m.Subject, Body: m.Body, OffThread: m.OffThread,
 			}
 		}
+		// The first message is the request, as in the candidate read, so the
+		// remaining quote is checked against it.
+		messages[0].ID = requestID
 		batch[i] = settleCandidate{
 			Request:  activities.RepliedRequest{RequestID: requestID, NewestAnswerID: ids.NewV7()},
 			Messages: messages,
@@ -211,6 +212,11 @@ func refuseUnreachableSettlements(want []settleExpectation, threads settleFixtur
 			return fmt.Errorf(
 				"request_settlement/request_settle: conversation %d expects the answer to name %q, but its verdict is %q and only still_owed carries a remaining phrase",
 				i+1, expectation.RemainingNames, expectation.Verdict)
+		}
+		if expectation.RemainingNames != "" && !remainingNamesIt(threads[i].Messages[0].Body, expectation.RemainingNames) {
+			return fmt.Errorf(
+				"request_settlement/request_settle: conversation %d expects the answer to name %q, but the remaining phrase quotes their request and no rendering appears in it",
+				i+1, expectation.RemainingNames)
 		}
 	}
 	return nil

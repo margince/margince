@@ -18,14 +18,17 @@ package analyticsquery
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
 // Plan is a compiled query: the statement, its arguments, and what the columns
 // mean.
 type Plan struct {
-	SQL  string
-	Args []any
+	SQL             string
+	Args            []any
+	PopulationWhere []string
+	PopulationArgs  []any
 	// Columns names each selected column IN ORDER — the group keys, then the
 	// measures. Results map by position, which is what lets a caller's alias
 	// stay out of the SQL entirely.
@@ -52,6 +55,11 @@ type Plan struct {
 	// so discloses nothing by difference.
 	ExcludedSQL  string
 	ExcludedArgs []any
+	// ContributorsSQL answers, per group and over the answer's own `WHERE`, the
+	// distinct seats behind it, with ContributorsArgs as its bind list. Empty
+	// when the entity names no contributor.
+	ContributorsSQL  string
+	ContributorsArgs []any
 }
 
 // defaultLimit bounds an answer nobody bounded.
@@ -136,6 +144,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 		return Plan{}, err
 	}
 	where = append(where, scoped...)
+	contributorsSQL, contributorsArgs := contributors(entity, selects[:groupCount], where, args)
 
 	sql := fmt.Sprintf("SELECT %s FROM %s%s", strings.Join(selects, ", "), entity.From, whereSQL(where))
 	if groupCount > 0 {
@@ -147,11 +156,14 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	if groupCount > 0 {
 		sql += " ORDER BY " + groupPositions(groupCount)
 	}
+	populationArgs := slices.Clone(args)
 	sql += fmt.Sprintf(" LIMIT %s", bind(AppliedLimit(q.Limit)))
 
 	plan := Plan{
 		SQL: sql, Args: args, Columns: columns,
+		PopulationWhere: slices.Clone(where), PopulationArgs: populationArgs,
 		GroupCount: groupCount, CountColumn: countColumn,
+		ContributorsSQL: contributorsSQL, ContributorsArgs: contributorsArgs,
 	}
 	plan.ExcludedSQL, plan.ExcludedArgs, err = excludedCount(entity, q, scope)
 	if err != nil {
@@ -200,6 +212,19 @@ func excludedCount(entity Entity, q Query, scope ScopeClauses) (string, []any, e
 	where = append(where, "NOT ("+strings.Join(filters, " AND ")+")")
 	return fmt.Sprintf("SELECT count(*) FROM %s WHERE %s",
 		entity.From, strings.Join(where, " AND ")), args, nil
+}
+
+// contributors renders the statement that lists the seats behind each group.
+func contributors(entity Entity, groups, where []string, args []any) (string, []any) {
+	if entity.Contributor == "" {
+		return "", nil
+	}
+	sql := fmt.Sprintf("SELECT array_agg(DISTINCT %[1]s) FILTER (WHERE %[1]s IS NOT NULL) FROM %[2]s%[3]s",
+		entity.Contributor, entity.From, whereSQL(where))
+	if len(groups) > 0 {
+		sql += " GROUP BY " + strings.Join(groups, ", ")
+	}
+	return sql, slices.Clone(args)
 }
 
 // countRowsColumn is the name of the count every plan carries. Prefixed so it
@@ -305,6 +330,14 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 		field, ok := entity.Lookup(f.Field)
 		if !ok {
 			return nil, unknownFilterField(entity, f.Field)
+		}
+		if f.Basis != nil && field.Period != nil && !valuelessOps[f.Op] {
+			clause, err := periodClause(*field.Period, f, arg)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, clause)
+			continue
 		}
 		form := filterSQL[f.Op]
 		if valuelessOps[f.Op] {

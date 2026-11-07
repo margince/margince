@@ -1,5 +1,4 @@
 import type { components } from "../../api/schema";
-import { MailCoverageNotice } from "../../components/mailcoveragenotice";
 import type { ContactTab } from "../../lib/contacttab";
 import { useUrlParams } from "../../lib/urlstate";
 import {
@@ -19,11 +18,13 @@ export function ContactOverview({
   onAction,
   onOpenEmail,
   onOpenTab,
+  onAddTask,
 }: Readonly<{
   view: Contact360;
   onAction: (action: components["schemas"]["ContactMomentAction"]) => void;
   onOpenEmail: (id: string) => void;
   onOpenTab: (tab: ContactTab) => void;
+  onAddTask?: () => void;
 }>) {
   // The whole queue opens as a drawer over the record, the same one the Home
   // page draws. A reader who leaves the record to see everything owed has
@@ -43,9 +44,9 @@ export function ContactOverview({
         onAction={onAction}
         onOpenEmail={onOpenEmail}
         onOpenTasks={openQueue}
+        onAddTask={onAddTask}
       />
       <ContactHowItStands view={view} />
-      <MailCoverageNotice coverage={view.mail_coverage} />
       <div className="pe-overview-grid">
         <div className="pe-overview-column">
           <ContactCommitmentsCard

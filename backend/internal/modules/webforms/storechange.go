@@ -6,11 +6,14 @@ package webforms
 import (
 	"context"
 	"errors"
+	"net/http"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,10 +28,13 @@ type UpdateInput struct {
 	SenderSecret         *string
 	LeadOrigin           *string
 	OwnerID              *ids.UUID
+	ProductID            *ids.UUID
 	FieldMap             *map[string]string
 	ConsentRequired      *bool
 	ConsentPolicyVersion *string
 	ConsentWording       *string
+	PrivacyNotice        *string
+	PrivacyNoticeURL     *string
 	RedirectURL          *string
 	SuccessMessage       *string
 	State                *string
@@ -41,8 +47,11 @@ type UpdateInput struct {
 const (
 	colLeadOrigin           = "lead_origin"
 	colOwnerID              = "owner_id"
+	colProductID            = "product_id"
 	colConsentPolicyVersion = "consent_policy_version"
 	colConsentWording       = "consent_wording"
+	colPrivacyNotice        = "privacy_notice"
+	colPrivacyNoticeURL     = "privacy_notice_url"
 	colRedirectURL          = "redirect_url"
 	colSuccessMessage       = "success_message"
 )
@@ -51,8 +60,11 @@ func clearableColumns(f Form) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		colLeadOrigin:           {Column: colLeadOrigin, Current: f.LeadOrigin},
 		colOwnerID:              {Column: colOwnerID, Current: f.OwnerID},
+		colProductID:            {Column: colProductID, Current: f.ProductID},
 		colConsentPolicyVersion: {Column: colConsentPolicyVersion, Current: f.ConsentPolicyVersion},
 		colConsentWording:       {Column: colConsentWording, Current: f.ConsentWording},
+		colPrivacyNotice:        {Column: colPrivacyNotice, Current: f.PrivacyNotice},
+		colPrivacyNoticeURL:     {Column: colPrivacyNoticeURL, Current: f.PrivacyNoticeURL},
 		colRedirectURL:          {Column: colRedirectURL, Current: f.RedirectURL},
 		colSuccessMessage:       {Column: colSuccessMessage, Current: f.SuccessMessage},
 	}
@@ -77,8 +89,11 @@ func (in UpdateInput) merged(f Form) (Form, error) {
 	}
 	assign(&f.LeadOrigin, in.LeadOrigin)
 	assign(&f.OwnerID, in.OwnerID)
+	assign(&f.ProductID, in.ProductID)
 	assign(&f.ConsentPolicyVersion, in.ConsentPolicyVersion)
 	assign(&f.ConsentWording, in.ConsentWording)
+	assign(&f.PrivacyNotice, in.PrivacyNotice)
+	assign(&f.PrivacyNoticeURL, in.PrivacyNoticeURL)
 	assign(&f.RedirectURL, in.RedirectURL)
 	assign(&f.SuccessMessage, in.SuccessMessage)
 	if in.FieldMap != nil {
@@ -111,10 +126,16 @@ func clearField(f *Form, field string) {
 		f.LeadOrigin = nil
 	case colOwnerID:
 		f.OwnerID = nil
+	case colProductID:
+		f.ProductID = nil
 	case colConsentPolicyVersion:
 		f.ConsentPolicyVersion = nil
 	case colConsentWording:
 		f.ConsentWording = nil
+	case colPrivacyNotice:
+		f.PrivacyNotice = nil
+	case colPrivacyNoticeURL:
+		f.PrivacyNoticeURL = nil
 	case colRedirectURL:
 		f.RedirectURL = nil
 	case colSuccessMessage:
@@ -133,6 +154,9 @@ func (in UpdateInput) check(f Form) error {
 	case in.SenderSecret != nil && *in.SenderSecret == "":
 		return badInput("sender_secret", "must not be empty")
 	}
+	if err := checkPrivacyNotice(f.PrivacyNotice, f.PrivacyNoticeURL); err != nil {
+		return err
+	}
 	return checkSettings(f.FieldMap, f.ConsentRequired, f.ConsentWording, f.RedirectURL, f.SuccessMessage, in.SenderSecret)
 }
 
@@ -141,6 +165,9 @@ func (in UpdateInput) check(f Form) error {
 // the row no longer points at it.
 func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Form, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
+		return Form{}, err
+	}
+	if err := refuseAgentSecretChange(ctx, in); err != nil {
 		return Form{}, err
 	}
 	newRef, err := s.replacementSecret(ctx, id, in.SenderSecret)
@@ -162,10 +189,13 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 			return err
 		}
 		next, err := in.merged(current)
+		if err == nil {
+			err = refuseAgentPromiseChange(ctx, current, next)
+		}
 		if err != nil {
 			return err
 		}
-		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID); err != nil {
+		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID, in.ProductID); err != nil {
 			return err
 		}
 		p := patchFor(current, next)
@@ -227,6 +257,8 @@ func patchFor(current, next Form) *storekit.Patch {
 		colLeadOrigin:           {current.LeadOrigin, next.LeadOrigin},
 		colConsentPolicyVersion: {current.ConsentPolicyVersion, next.ConsentPolicyVersion},
 		colConsentWording:       {current.ConsentWording, next.ConsentWording},
+		colPrivacyNotice:        {current.PrivacyNotice, next.PrivacyNotice},
+		colPrivacyNoticeURL:     {current.PrivacyNoticeURL, next.PrivacyNoticeURL},
 		colRedirectURL:          {current.RedirectURL, next.RedirectURL},
 		colSuccessMessage:       {current.SuccessMessage, next.SuccessMessage},
 	} {
@@ -236,6 +268,9 @@ func patchFor(current, next Form) *storekit.Patch {
 	}
 	if next.OwnerID != nil {
 		p.Set(colOwnerID, current.OwnerID, next.OwnerID)
+	}
+	if next.ProductID != nil {
+		p.Set(colProductID, current.ProductID, next.ProductID)
 	}
 	return p
 }
@@ -307,4 +342,56 @@ func (s *Store) ArchiveForm(ctx context.Context, id ids.UUID) (Form, error) {
 	}
 	s.dropSecret(ctx, out.SecretRef, "web form archived")
 	return out, nil
+}
+
+const fieldSenderSecret = "sender_secret"
+
+// refuseAgentSecretChange keeps a form's secret with a user. An agent may change
+// the rest of a form, but a secret it chose would let it post leads as that form.
+func refuseAgentSecretChange(ctx context.Context, in UpdateInput) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	if in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret) {
+		return &httperr.DetailedError{
+			Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
+			Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
+		}
+	}
+	return nil
+}
+
+// refuseAgentPromiseChange keeps with a user what a form promises a visitor and
+// where it takes posts from. Each has legal weight, or lets a site post leads.
+func refuseAgentPromiseChange(ctx context.Context, current, next Form) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalAgent {
+		return nil
+	}
+	same := sameOrigins(current.AllowedOrigins, next.AllowedOrigins) &&
+		current.ConsentRequired == next.ConsentRequired &&
+		sameText(current.ConsentWording, next.ConsentWording) &&
+		sameText(current.ConsentPolicyVersion, next.ConsentPolicyVersion) &&
+		sameText(current.PrivacyNotice, next.PrivacyNotice) &&
+		sameText(current.PrivacyNoticeURL, next.PrivacyNoticeURL)
+	if same {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "agent_sets_no_form_promise",
+		Detail: "an agent does not change a form's origins, consent or privacy notice; ask the user to do it in the app",
+	}
+}
+
+func sameText(a, b *string) bool {
+	return (a == nil) == (b == nil) && (a == nil || *a == *b)
+}
+
+// sameOrigins compares two allowlists as sets, because their order means nothing.
+func sameOrigins(a, b []string) bool {
+	a, b = slices.Clone(a), slices.Clone(b)
+	slices.Sort(a)
+	slices.Sort(b)
+	return slices.Equal(a, b)
 }

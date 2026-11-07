@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Calendar, Mail } from "lucide-react";
+import { Calendar, Globe, Mail, Server, Webhook } from "lucide-react";
 import { useState } from "react";
 import { Card } from "./atoms";
 import { ChoiceList } from "./choicelist";
@@ -55,6 +55,31 @@ function Live({
 
 export const Answered: Story = {
   render: () => <Live initial="only_chosen" />,
+};
+
+// What the answers act on, under the question and inside its group.
+export const WithDetail: Story = {
+  render: () => (
+    <ChoiceList
+      legend="What happens to the 2 open tasks on this deal?"
+      detail={
+        <ul className="t-caption">
+          <li>Send the final invoice</li>
+          <li>Return the loan device</li>
+        </ul>
+      }
+      value=""
+      onChange={() => {}}
+      choices={[
+        { value: "complete", label: "Complete all" },
+        { value: "keep", label: "Keep" },
+      ]}
+    />
+  ),
+};
+export const WithDetailDark: Story = {
+  ...WithDetail,
+  globals: { theme: "dark" },
 };
 
 // The unanswered group: no option carries the dot, so nothing claims to be the
@@ -234,6 +259,77 @@ export const SingleCardsWithMark: Story = {
 export const SingleCardsWithMarkDark: Story = {
   ...SingleCardsWithMark,
   globals: { theme: "dark" },
+};
+
+const SOURCES = [
+  {
+    value: "site" as const,
+    label: "Your website",
+    description: "A form on your own pages.",
+    mark: <Globe aria-hidden="true" />,
+    group: "No developer needed",
+  },
+  {
+    value: "server" as const,
+    label: "Website server",
+    description: "Your server forwards each enquiry, signed.",
+    mark: <Server aria-hidden="true" />,
+    group: "For developers",
+  },
+  {
+    value: "webhook" as const,
+    label: "Webhook",
+    description: "A webhook made with a builder's API.",
+    mark: <Webhook aria-hidden="true" />,
+    group: "For developers",
+  },
+];
+
+function GroupedLive() {
+  const [value, setValue] = useState<"" | "site" | "server" | "webhook">(
+    "site",
+  );
+  return (
+    <ChoiceList
+      legend="Where is your form?"
+      layout="cards"
+      value={value}
+      choices={SOURCES}
+      onChange={setValue}
+    />
+  );
+}
+
+// Plates under a label per kind. Each group fills the width on its own, so a
+// group of two never leaves an empty column beside a group of one or three.
+export const GroupedCards: Story = { render: () => <GroupedLive /> };
+export const GroupedCardsDark: Story = {
+  ...GroupedCards,
+  globals: { theme: "dark" },
+};
+
+function TilesLive() {
+  const [value, setValue] = useState<"" | "site" | "server" | "webhook">(
+    "site",
+  );
+  return (
+    <ChoiceList
+      legend="Where is your form?"
+      layout="tiles"
+      value={value}
+      choices={SOURCES}
+      onChange={setValue}
+    />
+  );
+}
+
+// Compact tiles picked by sight: a mark in a square, the name, one short line,
+// and a tick on the chosen tile. Groups share one row.
+export const Tiles: Story = { render: () => <TilesLive /> };
+export const TilesDark: Story = { ...Tiles, globals: { theme: "dark" } };
+export const TilesPhone: Story = {
+  ...Tiles,
+  globals: { viewport: { value: "phone" } },
 };
 
 function LinkLive() {

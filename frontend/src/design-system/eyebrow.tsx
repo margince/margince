@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import { Heading, type HeadingSize } from "./heading";
+import "./eyebrow.css";
 
 // The micro-label that sits above the thing it names; its type rule is defined
 // on the `.t-eyebrow` role hook. It was spelled out five times across three
@@ -44,25 +45,30 @@ export function Eyebrow({
   className,
   id,
   size,
-}: Readonly<{
-  // Defaults to `span`: the label use, which invents no document structure. A
-  // caller that means a heading says so and takes the responsibility for where
-  // it sits in the outline.
-  as?: EyebrowElement;
-  children: ReactNode;
-  className?: string;
-  id?: string;
-  /** The type of a heading eyebrow, when its level is deeper in the outline
-   *  than its look: a step line over a page title is an h2 set small. */
-  size?: HeadingSize;
-}>) {
+  action,
+}: Readonly<
+  {
+    // Defaults to `span`: the label use, which invents no document structure. A
+    // caller that means a heading says so and takes the responsibility for where
+    // it sits in the outline.
+    children: ReactNode;
+    className?: string;
+    id?: string;
+    /** The type of a heading eyebrow, when its level is deeper in the outline
+     *  than its look: a step line over a page title is an h2 set small. */
+    size?: HeadingSize;
+  } & (
+    | { as?: "span" | "dt"; action?: never }
+    | { as: "h2" | "h3" | "h4"; action?: ReactNode }
+  )
+>) {
   const classes = ["t-eyebrow", className ?? ""].filter(Boolean).join(" ");
   // A heading goes through `Heading`, the one spelling of the element in this
   // tree. The other two stay written out: `dt` is a definition term and `span`
   // claims no place in the outline, so neither is a heading and `Heading`
   // rightly does not offer them.
   if (isHeadingElement(as)) {
-    return (
+    const heading = (
       <Heading
         size={size ?? HEADING_SIZE[as]}
         as={as}
@@ -71,6 +77,14 @@ export function Eyebrow({
       >
         {children}
       </Heading>
+    );
+    return action ? (
+      <div className="eyebrow-head">
+        {heading}
+        {action}
+      </div>
+    ) : (
+      heading
     );
   }
   const Tag = as;

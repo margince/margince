@@ -45,8 +45,8 @@
 # cache is both the stale-path source above and a file two sessions write at
 # once. Each checkout gets its own directory, keyed by its absolute path, under
 # ~/.cache/golangci-lint/ — INSIDE golangci's default Linux cache root
-# deliberately, because the "Cache the golangci-lint analysis cache" steps in
-# ci.yml and cache-warm.yml save and restore exactly that directory, and a partition outside it would
+# deliberately, because ci.yml restores and cache-warm.yml saves exactly that
+# directory, and a partition outside it would
 # silently turn every CI lint cold. The cost is one cold analysis per new
 # worktree; the detector below stays armed for a caller who points
 # GOLANGCI_LINT_CACHE somewhere shared anyway. Clearing a stale cache remains
@@ -59,7 +59,9 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 if [[ -z "${GOLANGCI_LINT_CACHE:-}" ]]; then
   # cksum, not shasum: POSIX, present everywhere this runs. The basename rides
   # along so a human listing the cache directory can tell the partitions apart.
-  export GOLANGCI_LINT_CACHE="$HOME/.cache/golangci-lint/$(basename "$root")-$(printf '%s' "$root" | cksum | cut -d' ' -f1)"
+  # GOLANGCI_CACHE_PASS splits one checkout's cache per pass: `make check` runs
+  # the baseline and strict passes at once, and this wrapper turns off the lock.
+  export GOLANGCI_LINT_CACHE="$HOME/.cache/golangci-lint/$(basename "$root")-$(printf '%s' "$root" | cksum | cut -d' ' -f1)${GOLANGCI_CACHE_PASS:+-$GOLANGCI_CACHE_PASS}"
 fi
 
 # Prefer the version-pinned install from `make tools` over whatever is on PATH,

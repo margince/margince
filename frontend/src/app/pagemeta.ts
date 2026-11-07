@@ -26,9 +26,8 @@ import {
 /**
  * Screens that head THEMSELVES, so the shell prints no heading above them.
  *
- * Brief greets the reader by name in its own h1 — "Guten Morgen, Demo." — and
- * the shell's own nav label above it named the page a second time at heading
- * level.
+ * Brief greets the reader by name in its own h1 ("Guten Morgen, Demo"). The
+ * shell's nav label above it named the page a second time at heading level.
  * Two top-level headings is no outline at all, and it is the same defect the
  * shell already avoids for a record (whose name is its heading) and a unit.
  *
@@ -79,9 +78,8 @@ export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
   // filter page heads itself (headsItself), and the shell's subtitle goes
   // with the heading it hangs on.
   filters: "filters.subtitle",
-  // Whose messages these are is the fact the page most needs to state, and it
-  // is true of the whole page: a scheduled send is readable only by the contact
-  // who scheduled it, so nothing here is a queue somebody else can work.
+  // A scheduled send holds unsent words and blind copies, and only the one who
+  // scheduled it can read it; the page states that once.
   scheduled: "sched.sub",
 };
 

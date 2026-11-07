@@ -36,18 +36,34 @@ type PrivacyInformation struct {
 	// contact_acquisition_evidence's own closed vocabulary. Art. 14(2)(f)
 	// requires naming the source.
 	AcquiredAs string
-	// AcquiredAt is when the acquisition happened. Where the creating door did
-	// not record a time, the evidence row's own write stands in — the same
-	// coalesce the notice-case deadline runs on, so the page and the duty date
-	// the acquisition alike. Nil only where there is no evidence row at all.
+	// AcquiredAt is the actual acquisition date, including a later source assessment.
+	// Capture time orders unknown history but does not stand in for acquisition.
 	AcquiredAt *time.Time
 	// Purposes are what the installation uses this contact's data for, by
 	// published name. PurposeKeys holds each one's key at the same index, so a
 	// page can name the purposes the product seeds in its reader's language.
 	Purposes    []string
 	PurposeKeys []string
+	// PurposeBases is why each purpose may use the data, at the same index.
+	PurposeBases []string
 	// Rights are the codes a page renders in its own language.
 	Rights []string
+	// Controller is who answers for the data; DataCategories, Recipients and
+	// Retention are the rest of what the page owes (privacyinfoparts.go).
+	Controller     ControllerParticulars
+	DataCategories []string
+	Recipients     []string
+	Retention      []RetentionRule
+}
+
+// newDisclosure is the answer before anything is read: every list empty
+// rather than absent, and the fixed lists filled.
+func newDisclosure() PrivacyInformation {
+	return PrivacyInformation{
+		Rights: subjectRights(), Recipients: disclosureRecipients(),
+		Purposes: []string{}, PurposeKeys: []string{}, PurposeBases: []string{},
+		DataCategories: []string{}, Retention: []RetentionRule{},
+	}
 }
 
 // subjectRights is what Art. 14(2)(c)-(e) requires naming, in the order a
@@ -67,10 +83,8 @@ func subjectRights() []string {
 
 // assembleDisclosure builds the Art. 14 answer for one contact.
 //
-// It reads the EARLIEST acquisition, because that is the one whose duty is
-// being discharged: a contact obtained from a list in March and met again at a
-// conference in June was first obtained in March, and the disclosure is about
-// how they came to be in the system at all.
+// It reads the earliest known source, using an officer's assessment where present.
+// Unknown history cannot displace a confirmed source in the disclosure.
 //
 // It carries no name, no employer, no address and no phone. The message said we
 // hold information about you and here is what and why; it did not offer to show
@@ -79,13 +93,15 @@ func subjectRights() []string {
 func (s *Store) assembleDisclosure(
 	ctx context.Context, contactID ids.ContactID,
 ) (PrivacyInformation, error) {
-	out := PrivacyInformation{Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{}}
+	out := newDisclosure()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			SELECT kind, coalesce(occurred_at, captured_at)
-			  FROM contact_acquisition_evidence
-			 WHERE contact_id = $1
-			 ORDER BY coalesce(occurred_at, captured_at), id
+			SELECT coalesce(n.source_kind, e.kind),
+                   CASE WHEN n.source_kind IS NOT NULL THEN n.source_obtained_at ELSE e.occurred_at END
+              FROM contact_acquisition_evidence e LEFT JOIN privacy_notice_case n ON n.acquisition_id = e.id
+             WHERE e.contact_id = $1
+             ORDER BY (coalesce(n.source_kind, e.kind) = 'unknown_legacy'),
+                      coalesce(n.source_obtained_at, e.occurred_at, e.captured_at), e.id
 			 LIMIT 1`, contactID).Scan(&out.AcquiredAs, &out.AcquiredAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// A contact with no acquisition row predates the doors that write
@@ -96,19 +112,20 @@ func (s *Store) assembleDisclosure(
 		} else if err != nil {
 			return fmt.Errorf("consent: reading how this contact was obtained: %w", err)
 		}
-		return readDisclosedPurposes(ctx, tx, &out)
+		return readControllerTx(ctx, tx, &out)
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.readHeld(ctx, NoticeSubject{ContactID: contactID}, &out)
 }
 
 // assembleLeadDisclosure is assembleDisclosure for a website lead. Only a lead
 // read off a company's public website holds a notice link. So that is its
 // source, dated when the lead was captured.
 func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (PrivacyInformation, error) {
-	out := PrivacyInformation{
-		Rights: subjectRights(), Purposes: []string{}, PurposeKeys: []string{},
-		AcquiredAs: acquiredFromAPublicSource,
-	}
+	out := newDisclosure()
+	out.AcquiredAs = acquiredFromAPublicSource
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var capturedAt time.Time
 		if err := tx.QueryRow(ctx, `SELECT created_at FROM lead WHERE id = $1`, leadID).
@@ -116,9 +133,12 @@ func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (
 			return fmt.Errorf("consent: reading when this lead was obtained: %w", err)
 		}
 		out.AcquiredAt = &capturedAt
-		return readDisclosedPurposes(ctx, tx, &out)
+		return readControllerTx(ctx, tx, &out)
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.readHeld(ctx, NoticeSubject{LeadID: leadID}, &out)
 }
 
 // acquiredFromAPublicSource mirrors contacts.AcquiredPublicOrBusinessSource:
@@ -127,28 +147,6 @@ func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (
 // Held by: TestThePublicSourceAcquisitionIsSpelledTheSameOnBothSides
 // (backend/gates/acquisitionvocabulary_test.go)
 const acquiredFromAPublicSource = "public_or_business_source"
-
-// readDisclosedPurposes fills in what the installation uses data for, which a
-// contact's and a lead's disclosure state alike.
-func readDisclosedPurposes(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
-	rows, err := tx.Query(ctx, `
-		SELECT key, label FROM consent_purpose
-		 WHERE archived_at IS NULL
-		 ORDER BY label`)
-	if err != nil {
-		return fmt.Errorf("consent: reading what this installation uses data for: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var key, label string
-		if err := rows.Scan(&key, &label); err != nil {
-			return err
-		}
-		out.Purposes = append(out.Purposes, label)
-		out.PurposeKeys = append(out.PurposeKeys, key)
-	}
-	return rows.Err()
-}
 
 // acquiredUnknownLegacy mirrors contacts.AcquiredUnknownLegacy, which this
 // module may not import — consent and contacts are siblings.

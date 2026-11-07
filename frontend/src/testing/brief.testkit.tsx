@@ -43,11 +43,14 @@ export function render(ui: ReactNode): RenderResult & { client: QueryClient } {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const result = rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  // A wrapper rather than a wrapped tree, so `rerender` keeps the providers.
+  const result = rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
   return { ...result, client };
 }
 
@@ -73,7 +76,7 @@ export type Routes = Record<
 // report went with Brief's open-pipeline panel — and a read that arrives by
 // accident is named rather than quietly served an empty page.
 const DEFAULTS: Routes = {
-  "GET /teams": () => jsonResponse({ data: [] }),
+  "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /me": () => jsonResponse(meFixture()),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
   "GET /digest": () =>
@@ -87,6 +90,21 @@ const DEFAULTS: Routes = {
     jsonResponse({
       as_of: "2026-09-13T08:00:00Z",
       receipts: [],
+      truncated: false,
+    }),
+  // Home asks for the changes Margince made beside the receipts; a quiet
+  // night has none.
+  "GET /deal-corrections/pending": () =>
+    jsonResponse({
+      as_of: "2026-09-13T08:00:00Z",
+      deals: 0,
+      closed: 0,
+      redated: 0,
+      revalued: 0,
+      probabilities: 0,
+      moved: 0,
+      base_currency: "EUR",
+      bundles: [],
       truncated: false,
     }),
   // The receipt at the foot of the page. Every lane, `totals` and both caveat

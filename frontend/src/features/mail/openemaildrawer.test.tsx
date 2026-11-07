@@ -3,12 +3,18 @@
 // The email drawer's verbs: Reply and Forward open the composer in place of
 // the drawer, and the drawer comes back when the composer closes.
 
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { messageText } from "../../design-system/richtext-testing";
-import { viewerZone } from "../../format/timezone";
+import { emailDetailKey } from "../../design-system/emailmessage";
+import { threadOrder } from "../../design-system/emailthread";
+import {
+  messageText,
+  writeMessage,
+} from "../../design-system/richtext-testing";
+import { browserZone } from "../../format/timezone";
+import { meFixture } from "../../testing/mefixture";
 import {
   activity202,
   jsonResponse,
@@ -22,10 +28,12 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 const MESSAGE = "01a05500-0000-7000-8000-0000000000a1";
 const ANA = "01a05500-0000-7000-8000-0000000000c1";
+const LATEST = "01a05500-0000-7000-8000-0000000000a2";
 
 const PRESENTATION: EmailPresentation = {
   id: MESSAGE,
@@ -64,10 +72,13 @@ const PRESENTATION: EmailPresentation = {
   version: 3,
 };
 
-function drawer() {
-  stubRoutes({
+function drawer(
+  initial = PRESENTATION,
+  overrides: Record<string, () => Response> = {},
+) {
+  const sent = stubRoutes({
     [`GET /activities/${MESSAGE}/email-presentation`]: () =>
-      jsonResponse(PRESENTATION),
+      jsonResponse(initial),
     // The composer keeps its words as a draft; the server echoes them back.
     "PUT /mail-drafts": () =>
       jsonResponse({
@@ -93,17 +104,208 @@ function drawer() {
         subject: "Angebot Q4",
         direction: "inbound",
       }),
+    ...overrides,
   });
-  render(
+  const view = render(
     <OpenEmailDrawer
       activityId={MESSAGE}
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={vi.fn()}
     />,
   );
+  return { ...view, sent };
 }
 
 describe("the email drawer's verbs", () => {
+  it("opens a new latest message on refresh without reopening folded messages", async () => {
+    const user = userEvent.setup();
+    let current = PRESENTATION;
+    const latest: EmailPresentation = {
+      ...PRESENTATION,
+      id: LATEST,
+      body: "The revised offer works for us.",
+      summary: {
+        ...PRESENTATION.summary,
+        activity_id: LATEST,
+        occurred_at: "2026-09-02T09:15:00Z",
+      },
+      occurred_at: "2026-09-02T09:15:00Z",
+      from: [{ address: "buyer@example.test", display_name: "Latest sender" }],
+    };
+    const { queryClient } = drawer(PRESENTATION, {
+      [`GET /activities/${MESSAGE}/email-presentation`]: () =>
+        jsonResponse(current),
+      [`GET /activities/${LATEST}/email-presentation`]: () =>
+        jsonResponse(latest),
+    });
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Fold the message from Ana Sommer",
+      }),
+    );
+    current = {
+      ...PRESENTATION,
+      thread: { members: [latest.summary], next_cursor: null },
+    };
+    await act(() =>
+      queryClient.invalidateQueries({ queryKey: emailDetailKey(MESSAGE) }),
+    );
+    expect(
+      await screen.findByRole("article", { name: "Latest sender" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("article", { name: "Ana Sommer" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fold the message from Latest sender",
+      }),
+    );
+    await act(() =>
+      queryClient.invalidateQueries({ queryKey: emailDetailKey(MESSAGE) }),
+    );
+    expect(screen.queryByRole("article", { name: "Latest sender" })).toBeNull();
+    expect(screen.queryByRole("article", { name: "Ana Sommer" })).toBeNull();
+  });
+
+  it("orders equal-time messages consistently whichever message was opened", () => {
+    const sibling = { ...PRESENTATION.summary, activity_id: LATEST };
+    const fromOlder = threadOrder({
+      ...PRESENTATION,
+      thread: { members: [sibling], next_cursor: null },
+    });
+    const fromNewer = threadOrder({
+      ...PRESENTATION,
+      id: LATEST,
+      summary: sibling,
+      thread: { members: [PRESENTATION.summary], next_cursor: null },
+    });
+    expect(fromOlder.map((message) => message.activity_id)).toEqual([
+      LATEST,
+      MESSAGE,
+    ]);
+    expect(fromNewer).toEqual(fromOlder);
+  });
+
+  it("keeps a newer withheld message and its actions private", async () => {
+    const user = userEvent.setup();
+    const newest = {
+      ...PRESENTATION.summary,
+      activity_id: LATEST,
+      occurred_at: "2026-09-02T09:15:00Z",
+    };
+    drawer(
+      { ...PRESENTATION, thread: { members: [newest], next_cursor: null } },
+      {
+        [`GET /activities/${LATEST}/email-presentation`]: () =>
+          jsonResponse({
+            ...PRESENTATION,
+            id: LATEST,
+            body: "Private newer text",
+            can_reply: true,
+            access: { ...PRESENTATION.access, content_state: "withheld" },
+          }),
+      },
+    );
+    expect(
+      await screen.findByText("This message is not shared with you"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Private newer text")).toBeNull();
+    const newestRow = within(screen.getByRole("list")).getAllByRole(
+      "listitem",
+    )[0];
+    expect(newestRow).toBeDefined();
+    if (!newestRow) throw new Error("Newest message is missing");
+    expect(
+      within(newestRow).queryByRole("button", { name: "Reply" }),
+    ).toBeNull();
+    expect(
+      within(newestRow).queryByRole("button", { name: "Forward" }),
+    ).toBeNull();
+    await user.click(
+      within(newestRow).getByRole("button", { name: "Collapse" }),
+    );
+    expect(
+      screen.queryByText("This message is not shared with you"),
+    ).toBeNull();
+  });
+
+  it.each(["newest", "older"])(
+    "sends a reply to the %s message from that message's actions",
+    async (target) => {
+      const user = userEvent.setup();
+      const latest: EmailPresentation = {
+        ...PRESENTATION,
+        id: LATEST,
+        occurred_at: "2026-09-02T09:15:00Z",
+        summary: {
+          ...PRESENTATION.summary,
+          activity_id: LATEST,
+          occurred_at: "2026-09-02T09:15:00Z",
+          subject: "Updated offer",
+        },
+        body: "The revised offer works for us.",
+        from: [
+          { address: "buyer@example.test", display_name: "Latest sender" },
+        ],
+      };
+      const { sent } = drawer(
+        {
+          ...PRESENTATION,
+          thread: {
+            members: [PRESENTATION.summary, latest.summary],
+            next_cursor: null,
+          },
+        },
+        {
+          [`GET /activities/${LATEST}/email-presentation`]: () =>
+            jsonResponse(latest),
+          [`GET /activities/${LATEST}`]: () =>
+            jsonResponse({
+              ...activity202,
+              id: LATEST,
+              subject: "Updated offer",
+              direction: "inbound",
+            }),
+          [`POST /activities/${LATEST}/send-email`]: () =>
+            jsonResponse(activity202, 202),
+          [`POST /activities/${MESSAGE}/send-email`]: () =>
+            jsonResponse(activity202, 202),
+        },
+      );
+      await screen.findByText(latest.body ?? "");
+      const rows = within(screen.getByRole("list")).getAllByRole("listitem");
+      expect(rows).toHaveLength(2);
+      expect(rows[0].textContent).toContain("The revised offer works for us.");
+      expect(rows[1].textContent).toContain(
+        "Können wir Dienstag kurz sprechen?",
+      );
+
+      expect(screen.getByRole("article", { name: "Ana Sommer" })).toBeTruthy();
+      const message = screen.getByRole("article", {
+        name: target === "older" ? "Ana Sommer" : "Latest sender",
+      });
+      await user.click(within(message).getByRole("button", { name: "Reply" }));
+      await screen.findByRole("dialog", {
+        name: target === "older" ? "Re: Angebot Q4" : "Re: Updated offer",
+      });
+      await user.type(screen.getByLabelText("To"), "buyer@example.test");
+      await user.tab();
+      writeMessage("Body", "Let us pick this up next week.");
+      await user.click(screen.getByRole("button", { name: "Send" }));
+      const repliedTo = target === "older" ? MESSAGE : LATEST;
+      await waitFor(() =>
+        expect(
+          sent.some(
+            (request) =>
+              request.key === `POST /activities/${repliedTo}/send-email`,
+          ),
+        ).toBe(true),
+      );
+      expect(
+        await screen.findByText("Sent and added to this thread."),
+      ).toBeTruthy();
+    },
+  );
+
   it("steps aside for a reply in the thread, and comes back when it closes", async () => {
     const user = userEvent.setup();
     drawer();
@@ -138,3 +340,58 @@ describe("the email drawer's verbs", () => {
     expect(messageText("Body")).toContain("Können wir Dienstag kurz sprechen?");
   });
 });
+
+it("books with the sender of an incoming email and carries the message as context", async () => {
+  const user = userEvent.setup();
+  drawer(
+    {
+      ...PRESENTATION,
+      summary: { ...PRESENTATION.summary, direction: "inbound" },
+      from: [{ address: "ana@brandt.example", contact_id: ANA }],
+    },
+    {
+      [`GET /contacts/${ANA}`]: () =>
+        jsonResponse({ id: ANA, attachable: true }),
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { activity: ["read", "create"] } })),
+    },
+  );
+  await user.click(await screen.findByRole("button", { name: "More actions" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Book a meeting" }),
+  );
+  expect(window.location.hash).toBe(
+    `#/book/contact-${ANA}?activity=${MESSAGE}`,
+  );
+});
+
+it.each([false, undefined, "forbidden"])(
+  "hides booking when the sender contact cannot take activities: %s",
+  async (attachable) => {
+    const { queryClient } = drawer(
+      {
+        ...PRESENTATION,
+        summary: { ...PRESENTATION.summary, direction: "inbound" },
+        from: [{ address: "ana@brandt.example", contact_id: ANA }],
+      },
+      {
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              allow: { contact: ["read"], activity: ["read", "create"] },
+            }),
+          ),
+        [`GET /contacts/${ANA}`]: () =>
+          attachable === "forbidden"
+            ? jsonResponse({ title: "Forbidden", status: 403 }, 403)
+            : jsonResponse({ id: ANA, attachable }),
+      },
+    );
+    await waitFor(() =>
+      expect(queryClient.getQueryState(["contact", ANA])?.status).toBe(
+        attachable === "forbidden" ? "error" : "success",
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Book a meeting" })).toBeNull();
+  },
+);

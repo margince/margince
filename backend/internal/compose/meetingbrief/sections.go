@@ -159,7 +159,7 @@ func headerSection(in Input) []Sentence {
 // where it sits, and when it is meant to land.
 func (said briefCopy) dealHeaderLine(deal DealIn) string {
 	parts := []string{deal.Name}
-	if amount := contactcontext.SpokenAmount(deal.AmountMinor, deal.Currency); amount != "" {
+	if amount := contactcontext.SpokenAmount(derefInt(deal.AmountMinor), deal.Currency); amount != "" {
 		parts = append(parts, amount)
 	}
 	if deal.Stage != "" {

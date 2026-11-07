@@ -15,6 +15,7 @@ import { HomeRepairControls } from "./homerepair";
 import {
   classificationRepairReview,
   proposalRepairReview,
+  provenanceRepairReview,
   repairReview,
   suggestionRepairReview,
 } from "./homerepair.fixtures";
@@ -174,4 +175,24 @@ export const MessageClassification: Story = {
       canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
     ).toBeInTheDocument();
   },
+};
+
+export const SourceAndGeneratedDate: Story = {
+  render: example(true, false, provenanceRepairReview),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Preview items" }),
+    );
+    await expect(
+      await canvas.findByText("Correct source or generated date"),
+    ).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Apply 1 reviewed change" }),
+    ).toBeVisible();
+  },
+};
+export const SourceAndGeneratedDateDark: Story = {
+  ...SourceAndGeneratedDate,
+  globals: { theme: "dark" },
 };

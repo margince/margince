@@ -37,6 +37,10 @@ type Coverage struct {
 	CoverageBp              int64
 	BaseCurrency            string
 	ReplanRecommended       bool
+	// CallNeedsReview is frozen with the coverage: whether the call it reads
+	// had an open input-check finding when the week closed. Nil when no call
+	// was checked, so an older week never reads as current.
+	CallNeedsReview *bool
 }
 
 // TeamClose is what freezing the team's forecast hands back: the landing per
@@ -84,16 +88,27 @@ func (r TeamReview) ReplanRecommended() bool {
 
 // withheldFromReader removes what the reader may not read now from a frozen
 // week. Coverage against a manager's call carries the call, which needs
-// forecast read. A reader without it gets the horizon as not authorized.
+// forecast read. A reader without it gets the horizon as not authorized. A
+// reader who may not read meetings gets no meeting figure or pattern.
 //
 // summarise composes the summary again from what is left. One writer serves
 // every reader, and none of them reads a withheld figure through a sentence.
 func withheldFromReader(ctx context.Context, review *TeamReview) {
-	if auth.ReadGranted(ctx, "forecast") {
+	forecast, meetings := auth.ReadGranted(ctx, "forecast"), MayReadMeetings(ctx)
+	leads := !review.LeadsWithheld && MayReadLeads(ctx)
+	if forecast && meetings && leads {
 		return
 	}
-	for i, c := range review.Coverage {
-		review.Coverage[i] = CoverageRefused(c.PeriodKind, c.BaseCurrency)
+	if !forecast {
+		for i, c := range review.Coverage {
+			review.Coverage[i] = CoverageRefused(c.PeriodKind, c.BaseCurrency)
+		}
+	}
+	if !leads {
+		withholdTeamLeads(review)
+	}
+	if !meetings {
+		withholdTeamMeetings(review)
 	}
 	if review.Summary != "" {
 		review.Summary = summarise(*review)

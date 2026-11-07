@@ -36,12 +36,12 @@ import (
 // whether that object is ALREADY APPROVED, which is the difference between
 // telling the agent to wait for a human and telling it to spend what it holds.
 //
-// It is the one entry point every agent-gate stager uses — the MCP registry's
-// refusal branch, the per-field split on both doors, and the REST gate's — so
-// the invariant is a property of the engine rather than of the callers that
-// remembered. Engine stagers (a website read, a nightly sweep) keep Stage: they
-// propose a CHANGE a human accepts, not a call an agent retries, and nothing
-// re-presents their id.
+// It is the one entry point every agent-gate stager uses: the MCP registry's
+// refusal branch and the REST gate's. So the invariant is a property of the
+// engine rather than of the callers that remembered.
+// Engine stagers (a website read, a nightly sweep) keep Stage. They propose a
+// CHANGE a human accepts, not a call an agent retries. Nothing re-presents
+// their id.
 func (s *Service) StageAgentCall(ctx context.Context, in StageInput) (ids.ApprovalID, bool, error) {
 	// A call's identity IS its diff hash — computed by every gate stager over the
 	// canonicalized call the redemption re-hashes — so a logical Identity has
@@ -162,7 +162,7 @@ func (s *Service) liveApprovalForCallInTx(ctx context.Context, tx pgx.Tx, in Sta
 	var undecided ids.ApprovalID
 	for _, c := range candidates {
 		if c.Status == statusPending {
-			stale, err := withdrawStalePendingInTx(ctx, tx, c.ID)
+			stale, err := s.withdrawStalePendingInTx(ctx, tx, c.ID)
 			if err != nil {
 				return liveAuthority{}, false, err
 			}
@@ -216,7 +216,7 @@ func (s *Service) redeemableNowInTx(ctx context.Context, tx pgx.Tx, a row, p pri
 		}
 		return false, err
 	}
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
+	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
 		}

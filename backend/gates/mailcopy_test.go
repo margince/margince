@@ -25,14 +25,15 @@ package gates
 // — so the failure mode is a loud one.
 
 import (
-	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // mailLabelPairs are the Go fields that must equal a frontend key, per field.
@@ -80,7 +81,7 @@ var mailLabelPairs = []struct {
 // thought to list here.
 func mailLabelLanguages(t *testing.T) []string {
 	t.Helper()
-	document, err := os.ReadFile(mailLanguageContract)
+	document, err := gatekit.ReadFile(mailLanguageContract)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +138,7 @@ func TestEveryMailLabelMatchesTheScreenThatShowsIt(t *testing.T) {
 // therefore reads as absent, which the caller reports rather than skipping.
 func frontendCatalog(t *testing.T, language string) map[string]string {
 	t.Helper()
-	source, err := os.ReadFile("../frontend/src/i18n/" + language + ".ts")
+	source, err := gatekit.ReadFile("../frontend/src/i18n/" + language + ".ts")
 	if err != nil {
 		t.Fatalf("reading the %s catalog: %v", language, err)
 	}
@@ -184,6 +185,34 @@ func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 					language, written.Type().Field(i).Name)
 			}
 		}
+	}
+}
+
+// TestTheContractsMailLanguagesAreTheCatalogs holds the languages a rep may pick
+// for a mail equal to those the catalog has copy for, in both directions.
+func TestTheContractsMailLanguagesAreTheCatalogs(t *testing.T) {
+	t.Parallel()
+	document, err := gatekit.ReadFile(mailLanguageContract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := regexp.MustCompile(`\n    MailLanguage:\s*\n\s*type: string\s*\n\s*enum: \[([^\]]*)\]`).
+		FindStringSubmatch(string(document))
+	if declared == nil {
+		t.Fatal("the contract's MailLanguage enum could not be read, so this gate compares nothing")
+	}
+	var offered []string
+	for raw := range strings.SplitSeq(declared[1], ",") {
+		offered = append(offered, strings.TrimSpace(raw))
+	}
+	var carried []string
+	for _, language := range mailcopy.Languages() {
+		carried = append(carried, string(language))
+	}
+	if !slices.Equal(offered, carried) {
+		t.Errorf("the contract's MailLanguage is %v and the mail catalog carries %v: a rep picks from the "+
+			"first and the mail is written from the second, so keep them equal, in mailcopy.Languages() order",
+			offered, carried)
 	}
 }
 

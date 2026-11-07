@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -29,13 +29,14 @@ export type AnalyticsSelection = {
  * asking the question itself would be a second answer, and the two would
  * disagree the first time somebody's grants changed.
  */
+export const analyticsContextOptions = queryOptions({
+  queryKey: ANALYTICS_CONTEXT_KEY,
+  queryFn: async ({ signal }) =>
+    unwrap(await api.GET("/analytics/context", { signal })),
+});
+
 export function useAnalyticsContext() {
-  return useQuery({
-    queryKey: ANALYTICS_CONTEXT_KEY,
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/context", {}));
-    },
-  });
+  return useQuery(analyticsContextOptions);
 }
 
 /**
@@ -44,24 +45,32 @@ export function useAnalyticsContext() {
  * The scope is part of every query key, so changing it refetches rather than
  * showing the previous population's numbers under the new label.
  */
+export function resolveAnalyticsSelection(
+  context: AnalyticsContext | undefined,
+  named: string | undefined,
+) {
+  const chosen = context?.allowed_scopes.find(
+    (scope) => scopeKey(scope) === named,
+  );
+  const refusedScope = !!context && !!named && !chosen;
+  const selection: AnalyticsSelection | null = context
+    ? { scope: chosen ?? context.default_scope }
+    : null;
+  return { selection, refusedScope };
+}
+
 export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
   const [params] = useUrlParams();
-  const chosen = context?.allowed_scopes.find(
-    (scope) => scopeKey(scope) === params.get("scope"),
+  const named = params.get("scope");
+  const answer = useMemo(
+    () => resolveAnalyticsSelection(context, named),
+    [context, named],
   );
-
-  const selection = useMemo<AnalyticsSelection | null>(() => {
-    if (!context) {
-      return null;
-    }
-    return { scope: chosen ?? context.default_scope };
-  }, [context, chosen]);
-
-  const selectScope = useCallback((scope: AnalyticsScope) => {
-    replaceDial("scope", scopeKey(scope));
-  }, []);
-
-  return { selection, selectScope };
+  const selectScope = useCallback(
+    (scope: AnalyticsScope) => replaceDial("scope", scopeKey(scope)),
+    [],
+  );
+  return { ...answer, selectScope };
 }
 
 /**
@@ -123,6 +132,6 @@ export function writableScope(
  * the same words, and a cache that collapsed them would serve one team's
  * numbers under the other's name.
  */
-export function scopeKey(scope: AnalyticsScope): string {
+export function scopeKey(scope: Pick<AnalyticsScope, "kind" | "id">): string {
   return scope.id ? `${scope.kind}:${scope.id}` : scope.kind;
 }

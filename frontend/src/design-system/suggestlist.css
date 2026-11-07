@@ -11,7 +11,6 @@
   z-index: 70;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
@@ -54,7 +53,7 @@
    the popup tracks one active option through `aria-activedescendant` whichever
    input moved it. */
 .suggest-option.is-active {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* The row the field holds, by weight in the primary ink, neutral like
    Select's chosen option. */

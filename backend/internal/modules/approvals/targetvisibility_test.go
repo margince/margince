@@ -240,11 +240,11 @@ func TestAStagedCreateOnAPersonalTableIsDecidableByItsStagerAlone(t *testing.T) 
 // with no query behind it fails LOUDLY. A wrong answer against some other
 // type's table is worse than an error, because it reads as a decision.
 func TestAClassifiedTargetWithNoQueryFailsLoudly(t *testing.T) {
-	if _, err := targetExists(context.Background(), nil, "chartreuse", ids.NewV7()); err == nil {
-		t.Error("targetExists answered for a type with no existence query, instead of naming the gap")
+	if _, err := targetsExist(context.Background(), nil, "chartreuse", []ids.UUID{ids.NewV7()}); err == nil {
+		t.Error("targetsExist answered for a type with no existence query, instead of naming the gap")
 	}
-	if _, err := targetOwnedByActor(context.Background(), nil, "chartreuse", ids.NewV7()); err == nil {
-		t.Error("targetOwnedByActor answered for a type with no ownership query, instead of naming the gap")
+	if _, err := targetsOwnedByActor(context.Background(), nil, "chartreuse", []ids.UUID{ids.NewV7()}); err == nil {
+		t.Error("targetsOwnedByActor answered for a type with no ownership query, instead of naming the gap")
 	}
 }
 
@@ -253,11 +253,12 @@ func TestAClassifiedTargetWithNoQueryFailsLoudly(t *testing.T) {
 // would ask about rows nobody owns.
 func TestAPersonalTargetIsInvisibleToAPrincipalWithNoHumanIdentity(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
-	visible, err := targetOwnedByActor(ctx, nil, targetSavedView, ids.NewV7())
+	view := ids.NewV7()
+	visible, err := targetsOwnedByActor(ctx, nil, targetSavedView, []ids.UUID{view})
 	if err != nil {
-		t.Fatalf("targetOwnedByActor: %v — the nil tx proves no query was issued, so this must refuse before one", err)
+		t.Fatalf("targetsOwnedByActor: %v — the nil tx proves no query was issued, so this must refuse before one", err)
 	}
-	if visible {
+	if visible[view] {
 		t.Error("a principal with no human identity was shown personal state")
 	}
 }

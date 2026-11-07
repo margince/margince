@@ -3,23 +3,26 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { Breadcrumb } from "../../design-system/breadcrumb";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { contactQuery } from "../../lib/contact.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
+import { useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
   BookingBlocked,
   type BookingMode,
   BookingPicker,
   type BookingSlot,
+  overlapsAPick,
 } from "./booking-picker";
 import { type BookingEdit, BookingReview } from "./booking-review";
 import { useWorkingHours } from "./working-hours";
@@ -40,7 +43,9 @@ export function BookingInviteScreen({
   contactId,
 }: Readonly<{ contactId?: string }>) {
   const t = useT();
-  const [zone, setZone] = useState(viewerZone);
+  // A signed-in host starts from their own zone.
+  const readerZone = useViewerZone();
+  const [zone, setZone] = useState(readerZone);
   const [mode, setMode] = useState<BookingMode>("propose");
   const [picks, setPicks] = useState<BookingSlot[]>([]);
   const [edits, setEdits] = useState<Edits>({});
@@ -53,12 +58,21 @@ export function BookingInviteScreen({
     ...contactQuery(selectedId || undefined),
     enabled: !!selectedId,
   });
+  const activity = useActivityGate(
+    contact.isError ? null : (contact.data ?? null),
+  );
   const saved = profile.data;
   const provider = saved?.provider ?? "";
   const { ready, connections } = useBookingCalendar(provider, false);
   const settled = !profile.isPending && !connections.isPending;
   const name = contact.data?.full_name;
-  const draft = bookingDraft(edits, contact.data, saved, selectedId, t);
+  const [params] = useUrlParams();
+  const draft = {
+    ...bookingDraft(edits, contact.data, saved, selectedId, t),
+    dealId:
+      selectedId === contactId ? (params.get("deal") ?? undefined) : undefined,
+    replyToActivityId: params.get("activity") ?? undefined,
+  };
   const edit = (change: BookingEdit) =>
     setEdits((current) => ({
       ...current,
@@ -81,6 +95,7 @@ export function BookingInviteScreen({
         onClose={back}
       />
       <ErrorLine error={profile.error} />
+      <ErrorLine error={contact.error} />
       <ChoiceList
         legend={t("scheduling.method")}
         hideLegend
@@ -135,6 +150,10 @@ export function BookingInviteScreen({
           />
         )}
         <BookingReview
+          contactPending={activity.pending}
+          contactRefusal={
+            activity.refusalKey ? t(activity.refusalKey) : undefined
+          }
           mode={mode}
           draft={draft}
           onEdit={edit}
@@ -151,8 +170,9 @@ export function BookingInviteScreen({
   );
 }
 
-// A proposal offers up to three times and an invite exactly one, so a pick
-// toggles within the mode's bound rather than silently growing past it.
+// A proposal offers up to three times and an invite one. A pick toggles
+// within the mode's bound rather than silently growing past it. A time that
+// shares minutes with a pick offers that pick twice, so it is refused.
 export function togglePick(
   current: readonly BookingSlot[],
   slot: BookingSlot,
@@ -161,6 +181,7 @@ export function togglePick(
   if (current.some((option) => option.start === slot.start))
     return current.filter((option) => option.start !== slot.start);
   if (mode === "invite") return [slot];
+  if (overlapsAPick(current, slot)) return [...current];
   return current.length < 3 ? [...current, slot] : [...current];
 }
 
@@ -216,14 +237,13 @@ function BookingHead({
   );
 }
 
+// The address the server chose, and no rule of our own.
+//
+// It is null when every address is archived, so a fallback that read the only
+// entry in `emails` would invite an address somebody retired. The server's rule
+// skips those, and it is the rule the contact page shows.
 function bookingRecipient(contact?: Contact) {
-  const addresses = contact?.emails ?? [];
-  const [only, ...others] = addresses;
-  return (
-    contact?.primary_email ??
-    addresses.find((address) => address.is_primary)?.email ??
-    (only !== undefined && others.length === 0 ? only.email : "")
-  );
+  return contact?.primary_email ?? "";
 }
 
 async function searchBookingContacts(q: string) {

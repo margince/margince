@@ -1,6 +1,6 @@
 # CASE 56 — Not the same contact.
 #
-# The business card in case 2 files a possible duplicate and the answer says so.
+# A business card files a possible duplicate when the contact it names is already here.
 # Here the user knows better: the other Lucy Vo on file is a different contact.
 # decide_duplicate is the verb for that call. It is undoable (decision reopen
 # lifts it), which is the whole reason an assistant may make it, and it is the
@@ -12,7 +12,7 @@
 # must_not_mention below holds; the lane does not fail a run for an extra call
 # by itself.
 name: case56_not_the_same
-criteria: [1]
+criteria: [1, 2]
 
 writes: true
 
@@ -30,7 +30,17 @@ must_call:
   - resolve_duplicates
 
 must_call_with:
+  - create_record.record_type=contact
   - resolve_duplicates.decision=not_the_same
+
+# The card's own words make the contact. The address carries the company's
+# domain too, so Terralogic is matched where it is not the address.
+must_call_matching:
+  - 'create_record~lucy\.vo@terralogic-vn\.test'
+  - 'create_record~terralogic(?!-vn)'
+
+must_not_call_with:
+  - change_capture~import_vcards
 
 may_call:
   - read_tags

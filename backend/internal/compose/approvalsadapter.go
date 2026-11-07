@@ -50,6 +50,7 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 		CoTargetType:   in.CoTargetType,
 		CoTargetID:     in.CoTargetID,
 		Summary:        in.Summary,
+		SummaryParts:   in.SummaryParts,
 	})
 }
 

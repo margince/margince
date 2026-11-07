@@ -302,7 +302,7 @@ func (s importSlicer) stop(
 // rather than leaving it queued.
 func addImportJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	slicer := newImportSlicer(pool, log)
-	addDeclaredWorker[ImportValidateArgs](reg, &importValidateWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap})
+	addDeclaredWorker[ImportValidateArgs](reg, &importValidateWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap, readBudget: cfg.ImportTestReadBudget})
 	addDeclaredWorker[ImportCommitArgs](reg, &importCommitWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap})
 	addDeclaredWorker[ImportUndoArgs](reg, &importUndoWorker{slicer: slicer})
 }

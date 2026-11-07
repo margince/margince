@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -30,9 +31,7 @@ func employmentFirstObservedSQL(contact, domain, activity, skew string) string {
 		   JOIN activity_participant ap ON lower(ap.address) = lower(pe.email)
 		   JOIN activity ev ON ev.id = ap.activity_id
 		  WHERE pe.contact_id = %[1]s
-		    -- A literal suffix compare, never LIKE — see OnDomain.
-		    AND (split_part(pe.email, '@', 2) = %[2]s
-		         OR right(split_part(pe.email, '@', 2), length(%[2]s) + 1) = '.' || %[2]s)
+		    AND `+owndomain.CoversSQL("pe.email_domain_folded", "%[2]s")+`
 		    AND %[4]s
 		),
 		(SELECT ev.occurred_at FROM activity ev
@@ -78,7 +77,7 @@ func observeEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInpu
 		 WHERE r.id = seen.id AND seen.at IS NOT NULL
 		   AND (seen.was IS NULL OR seen.at < seen.was)
 		RETURNING r.id, seen.was, r.first_observed_at`,
-		contactID, companyID, domain, in.ActivityID, mailClockSkewAllowance).Scan(&edgeID, &before, &after)
+		contactID, companyID, owndomain.Fold(domain), in.ActivityID, mailClockSkewAllowance).Scan(&edgeID, &before, &after)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

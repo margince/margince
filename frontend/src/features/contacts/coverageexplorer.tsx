@@ -13,7 +13,7 @@ import {
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { forReader } from "../../format/collate";
+import { forReader, holdsEveryWord, searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { incompleteGraph } from "../records/record360";
@@ -146,10 +146,9 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
   // paged, and a coverage comparison built from a page reports the team as
   // covering nobody the moment a reader narrows the list — a false claim, not
   // a smaller one.
+  const words = searchWords(contactFilter);
   const rows = accountContacts(graph).filter((contact) =>
-    contact.full_name
-      .toLowerCase()
-      .includes(contactFilter.trim().toLowerCase()),
+    holdsEveryWord(words, [contact.full_name]),
   );
 
   return (

@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PLAIN_SUMMARY_WORDS } from "./approvalsummary.testkit";
 import type { DecisionApproval, DecisionCardLabels } from "./decisioncard";
 import {
   DecisionDeck,
@@ -32,6 +33,7 @@ const CARD_LABELS: DecisionCardLabels = {
   expired: "This ran out of time.",
   draftSubject: "Subject",
   draftBody: "Message",
+  summaryWords: PLAIN_SUMMARY_WORDS,
   noContent: "Nothing to read.",
   loading: "Reading the proposal",
 };

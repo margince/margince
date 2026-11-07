@@ -73,6 +73,9 @@ func lockedSurfaces() []lockedSurface {
 		{"/legal-reviews/settings", "/v1/legal-reviews/settings", []lockedWrite{
 			{method: http.MethodPut, path: "/v1/legal-reviews/settings", body: map[string]any{"enabled": false}},
 		}},
+		{"/dedupe/settings", "/v1/dedupe/settings", []lockedWrite{
+			{method: http.MethodPut, path: "/v1/dedupe/settings", body: map[string]any{"enabled": true}},
+		}},
 		{"/privacy/controller-particulars", "/v1/privacy/controller-particulars", []lockedWrite{
 			{method: http.MethodPut, path: "/v1/privacy/controller-particulars", body: map[string]any{"legal_name": "Other GmbH"}},
 		}},
@@ -95,7 +98,12 @@ func (r rawJSON) MarshalJSON() ([]byte, error) { return []byte(r), nil }
 // unsurfaced are the stored settings no HTTP surface writes, so no response
 // reports their lock. A scan of the save calls cannot name them: identity and
 // capture save through a loop variable. The census fails when one gains a surface.
-var unsurfaced = []string{"consent.authorization_modes", "deals.stage_autopilot_enabled", "deals.maintenance_writes_enabled"}
+var unsurfaced = []string{
+	"consent.authorization_modes",
+	"deals.stage_autopilot_enabled",
+	"deals.maintenance_writes_enabled",
+	"deals.silent_close_days",
+}
 
 // censusValues are boot values for the stored settings that declare no
 // usable default. Every other stored setting is set to its own default.

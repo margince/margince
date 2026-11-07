@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -88,13 +89,13 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			}
 			id := ids.UUID(message.Id)
 			judge := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
-			if applied, err := e.Activities.SetCaptureLabel(judge, id, tc.label); err != nil || !applied {
+			if applied, err := e.LabelCapture(judge, id, tc.label); err != nil || !applied {
 				t.Fatalf("label: %t %v", applied, err)
 			}
 			if applied, err := e.Activities.SetOwedVerdict(judge, id, activities.OwedVerdictAsksUs, "test-rules", at); err != nil || !applied {
 				t.Fatalf("request: %t %v", applied, err)
 			}
-			waiting, cut, err := (attentionWaiting{store: e.Activities, contacts: e.Contacts}).Unanswered(e.Admin(), at.Add(time.Hour), nil)
+			waiting, cut, err := (attentionWaiting{store: e.Activities, contacts: e.Contacts}).Unanswered(e.Admin(), at.Add(time.Hour), attention.WaitingFor{})
 			if err != nil || cut {
 				t.Fatalf("waiting: truncated=%t err=%v", cut, err)
 			}

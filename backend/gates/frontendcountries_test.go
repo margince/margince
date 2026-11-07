@@ -5,26 +5,26 @@
 
 package gates
 
-// The deal list's country filter offers the codes the server stores, and no other.
-// frontend/src/features/deals/assignedcountries.ts mirrors contacts.AssignedCountryCodes,
+// The country filters offer the codes the server stores, and no other.
+// frontend/src/format/assignedcountries.ts mirrors contacts.AssignedCountryCodes,
 // and this gate fails when either side has a code the other lacks.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-const frontendAssignedCountries = "../frontend/src/features/deals/assignedcountries.ts"
+const frontendAssignedCountries = "../frontend/src/format/assignedcountries.ts"
 
 var tsCountryCode = regexp.MustCompile(`"([A-Z]{2})"`)
 
 func TestTheFrontendCountryListMatchesTheGoOne(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendAssignedCountries)
+	source, err := gatekit.ReadFile(frontendAssignedCountries)
 	if err != nil {
 		t.Fatalf("reading the frontend country list: %v", err)
 	}

@@ -47,7 +47,7 @@ A problem never stops the whole import. It either skips that one row, or the row
 
 These skip the row:
 - a value its field does not take, such as an amount that is not a number or a date not in `YYYY-MM-DD`;
-- a company link that finds no company, or finds more than one (**Broken link**);
+- a company reference that finds no company, or an employer name that finds more than one or conflicts with its work email (**Broken link**);
 - a row with no value in its `ref` column, or a `ref` that an earlier row of the same file already used;
 - an email address, domain or LinkedIn address that another live record already holds, when the row would create a second record under it;
 - a row whose record was archived since the earlier import;
@@ -59,7 +59,7 @@ A contact row with **First name** and **Last name** filled takes its full name f
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
 - a tag that does not exist yet (**New tag**): the import creates it;
-- a company name that is already in Margince: the import creates a second company and files the pair for review (**Duplicate**).
+- a company row whose name is already in Margince: the import creates a second company and files the pair for review (**Duplicate**).
 Also called: rows skipped, import errors, why was my row not imported.
 
 ### What does **Import anyway** do?
@@ -147,7 +147,7 @@ An `activities.csv` row is one note, call, meeting or email, put on the timeline
 |---|---|
 | `type` | `note`, `call`, `meeting` or `email`. A message and a task are not imported. |
 | `subject` and `body` | A short title, and the text of the note or of what was said. |
-| `occurred_at` | `YYYY-MM-DD`, or a date and time with its zone. A date alone means the start of that day, in UTC. |
+| `occurred_at` | `YYYY-MM-DD`, or a date and time with its zone. A date alone names the day, with no time. |
 | `links` | Records as `type:key`, split by `;`, such as `deal:D-1001; contact:jo@acme.com`. The type is company, contact, lead or deal. At most 25. |
 | `duration_minutes` | Whole minutes, for a call or a meeting. |
 | `meeting_status` | `booked`, `held`, `no_show` or `canceled`, for a meeting only. |
@@ -161,6 +161,7 @@ A row is skipped, with its reason, in these cases:
 - its type is missing or unknown, or it is a message or a task;
 - its time has no zone, or is after now;
 - it has minutes or a meeting status that its type does not take;
+- it marks a meeting `held` or `no_show` before the meeting has started. A date with no time counts once that day is over;
 - it links a call or a meeting to a company;
 - it has a link in the wrong form, or none of its links finds a record;
 - you may not add activities to one of the records it links to.
@@ -170,6 +171,12 @@ Also called: import notes, import calls, import meetings, import emails, import 
 On the contact, choose **More actions**, then **Import activities**, and upload one CSV. It opens as **Importing into** the contact's name.
 Every row goes on that contact's timeline, so the file needs no `links` column. A ZIP is not taken here. Only an admin or ops user sees the item.
 Also called: import a contact's history, add past calls to a contact.
+
+### How does a contact get its employer?
+A contact's `company_name` finds a company with that name or creates one if none matches. The test run says when it will create a company. A work email also checks for an employer; an unknown business domain waits for review. Consumer email gives no company.
+
+An employer name that conflicts with the work domain skips that row with a reason. An existing main employer stays as it is. Undo includes a company the import created for a contact, under the same rules as other created companies.
+Also called: import employers, create a missing company, company name on a contact.
 
 ### What if a link is broken?
 A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. See **Import anyway** above.
@@ -193,7 +200,7 @@ A pair someone has dismissed or reopened is never closed this way. A closed pair
 Also called: duplicate gone, shorter duplicate list, fewer duplicates.
 
 ### Does Margince find duplicates that were already there before?
-Yes. Every night Margince compares each company and contact that changed that day with all the others. It lists each new pair it finds on the duplicate list. An upgrade compares every record once.
+Yes. Every night Margince compares each company and contact that changed that day with all the others. It lists each new pair it finds on the duplicate list. When many records changed, it carries on where it stopped the next time it runs. An upgrade compares every record once.
 
 So two companies that one import wrote at the same time are listed, and so are records written before a matching rule existed. A pair someone has dismissed or merged is never listed again. Margince never merges a pair by itself.
 Also called: old duplicates, duplicates from before, duplicates not found, existing duplicates.

@@ -1,14 +1,15 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts, wideCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
 import {
+  reportingCatalogClient,
   reportingStoryEvaluation,
   reportingStoryRoutes,
   reportingStoryScope,
@@ -27,9 +28,12 @@ it("keeps meeting and accepted-handoff evidence distinct in the paired graph", a
   const evidence = vi.fn();
   installFetchStub(reportingStoryRoutes(sdrEvaluation));
   const { container } = render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={sdrEvaluation} onEvidence={evidence} />
     </StoryProviders>,
+  );
+  await waitFor(() =>
+    expect(container.querySelectorAll(".report-chart-column")).toHaveLength(8),
   );
   const bars = container.querySelectorAll<HTMLButtonElement>(
     ".report-chart-column",
@@ -57,11 +61,11 @@ it("renders forecast support and reconciled movement with boundary evidence", as
   const evidence = vi.fn();
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={forecastEvaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
-  await user.click(screen.getByRole("button", { name: /Opening.*760/ }));
+  await user.click(await screen.findByRole("button", { name: /Opening.*760/ }));
   expect(evidence).toHaveBeenLastCalledWith({
     metric: "open_pipeline",
     context_id: "movement_opening",
@@ -84,7 +88,7 @@ it("labels snapshot selection as sharing and keeps the forecast at one quarterly
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingForecastGraphs scope={reportingStoryScope} />
     </StoryProviders>,
   );
@@ -121,7 +125,7 @@ it("shows missing capture history as unavailable instead of drawing a fabricated
       })),
   } satisfies typeof forecastEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -133,7 +137,7 @@ it("shows missing capture history as unavailable instead of drawing a fabricated
   ).not.toBeInTheDocument();
 });
 
-it("names every movement bar in words, never by the server's bucket key", () => {
+it("names every movement bar in words, never by the server's bucket key", async () => {
   const keys = ["new", "reopened_or_archived", "stage_weight", "fx"];
   const evaluation = {
     ...forecastEvaluation,
@@ -150,7 +154,7 @@ it("names every movement bar in words, never by the server's bucket key", () => 
       })),
   } satisfies typeof forecastEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -160,7 +164,7 @@ it("names every movement bar in words, never by the server's bucket key", () => 
     "Stage weight changes",
     "Exchange rate changes",
   ]) {
-    expect(screen.getAllByText(word).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(word)).length).toBeGreaterThan(0);
   }
   for (const key of keys) {
     expect(screen.queryByText(key)).not.toBeInTheDocument();
@@ -172,7 +176,7 @@ it("opens forecast source evidence and returns to the chart", async () => {
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingForecastGraphs scope={reportingStoryScope} />
     </StoryProviders>,
   );
@@ -207,7 +211,7 @@ it.each(["Capture failed; retry the scheduled capture", undefined])(
     } satisfies typeof forecastEvaluation;
     installFetchStub(reportingStoryRoutes(evaluation));
     render(
-      <StoryProviders>
+      <StoryProviders client={reportingCatalogClient()}>
         <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
       </StoryProviders>,
     );
@@ -227,7 +231,7 @@ it("opens the stage-age chart evidence context", async () => {
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
@@ -256,12 +260,12 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
   expect(
-    screen.getByRole("heading", { name: "Accepted handoffs" }),
+    await screen.findByRole("heading", { name: "Accepted handoffs" }),
   ).toBeVisible();
   expect(
     document.querySelectorAll(".report-chart-column").length,
@@ -270,8 +274,8 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
 });
 
 it.each([
-  { actual: 21600000, label: "€84k remaining" },
-  { actual: 34000000, label: "€40k above target" },
+  { actual: 21600000, label: "€84,000 remaining" },
+  { actual: 34000000, label: "€40,000 above target" },
 ])("shows target attainment with $label", ({ actual, label }) => {
   const evaluation = {
     ...reportingStoryEvaluation,
@@ -285,7 +289,7 @@ it.each([
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -308,7 +312,7 @@ it("omits unassigned target columns for SDR outcomes", async () => {
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -340,7 +344,7 @@ it("withholds stage-age marks for a small cohort without printing zero days", as
   } satisfies typeof reportingStoryEvaluation;
   installFetchStub(reportingStoryRoutes(evaluation));
   const { container } = render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -351,7 +355,7 @@ it("withholds stage-age marks for a small cohort without printing zero days", as
   ).toBeVisible();
   expect(container.querySelector(".report-chart-range-dot")).toBeNull();
   expect(container.querySelector(".report-chart-range-band")).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Sample details" }));
+  await user.click(screen.getByRole("button", { name: "Reporting details" }));
   expect(
     screen.getByText(/Observations: 2 · Too few observations/),
   ).toBeVisible();
@@ -405,7 +409,7 @@ it("keeps the movement label readable in its evidence drawer", async () => {
   } satisfies typeof forecastEvaluation;
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingEvidenceDrawer
         evaluation={evaluation}
         reference={reference}
@@ -420,7 +424,7 @@ it("keeps the movement label readable in its evidence drawer", async () => {
 it("marks one failed chart and keeps drawing the others", () => {
   installFetchStub(reportingStoryRoutes());
   const baseline = render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={reportingStoryEvaluation}
         onEvidence={() => {}}
@@ -447,7 +451,7 @@ it("marks one failed chart and keeps drawing the others", () => {
     ],
   } satisfies typeof reportingStoryEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -475,7 +479,7 @@ it("keeps the accepted-opportunities series when only the meetings reading faile
     ),
   } satisfies typeof sdrEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -500,7 +504,7 @@ it("shows how many priced deals make each stage's value", () => {
       })),
   } satisfies typeof reportingStoryEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -541,7 +545,7 @@ function ownerChartEvaluation(withTargets: boolean) {
 it("says whom an owner chart credits and how much of the target period has passed", () => {
   installFetchStub(reportingStoryRoutes());
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={ownerChartEvaluation(true)}
         onEvidence={() => {}}
@@ -559,7 +563,7 @@ it("says whom an owner chart credits and how much of the target period has passe
 it("says nothing about the target period where no target applies to the chart", () => {
   installFetchStub(reportingStoryRoutes());
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={ownerChartEvaluation(false)}
         onEvidence={() => {}}
@@ -572,7 +576,7 @@ it("says nothing about the target period where no target applies to the chart", 
 it("credits a saved edition's sales to the owner it captured", () => {
   installFetchStub(reportingStoryRoutes());
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={ownerChartEvaluation(true)}
         editionId="e-1"
@@ -588,4 +592,30 @@ it("credits a saved edition's sales to the owner it captured", () => {
   expect(
     screen.queryByText("Credited to each deal’s current owner"),
   ).toBeNull();
+});
+
+// With individual performance off, a reader sees only their own bar on the
+// owner chart. The chart says why above its bars, or one bar reads as a team
+// of one.
+it("says why an owner chart drawn from the reader's own figures has one bar", () => {
+  installFetchStub(reportingStoryRoutes());
+  const reason =
+    "An administrator switched off individual performance, so this shows your own figures only. Team totals stay complete.";
+  const base = ownerChartEvaluation(false);
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingCharts
+        evaluation={{
+          ...base,
+          charts: base.charts.map((chart) => ({
+            ...chart,
+            points: chart.points.slice(0, 1),
+            coverage: { status: "partial", withheld: true, reason },
+          })),
+        }}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(screen.getByText(reason)).toBeInTheDocument();
 });

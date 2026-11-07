@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isImeCommit } from "../lib/imecommit";
-import { Field, SearchField } from "./atoms";
+import { SearchField } from "./atoms";
 import { DateInput } from "./dateinput";
 import {
   ACTIVITY_KINDS,
@@ -58,6 +58,8 @@ export function TimelineFilterBar({
   onChange: (next: TimelineFilters) => void;
 }>) {
   const t = useT();
+  const fromId = useId();
+  const toId = useId();
   const [draft, setDraft] = useState(value.q ?? "");
   // The draft follows a filter reset from outside (a record change): a box
   // still showing the previous record's word would claim a search that is
@@ -106,36 +108,51 @@ export function TimelineFilterBar({
             }
           }}
         />
+        {/* The words sit before each box on its line, not above it: a label
+            over the box would stand it taller than the dials beside it. */}
         <span className="timeline-filters-range">
-          <Field label={t("timeline.filters.from")}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={value.after ?? ""}
-                max={value.before || undefined}
-                onChange={(event) =>
-                  onChange({ ...value, after: event.target.value })
-                }
-              />
-            )}
-          </Field>
-          <Field label={t("timeline.filters.to")}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={value.before ?? ""}
-                min={value.after || undefined}
-                onChange={(event) =>
-                  onChange({ ...value, before: event.target.value })
-                }
-              />
-            )}
-          </Field>
+          <DateBound label={t("timeline.filters.from")} htmlFor={fromId}>
+            <DateInput
+              id={fromId}
+              value={value.after ?? ""}
+              max={value.before || undefined}
+              onChange={(event) =>
+                onChange({ ...value, after: event.target.value })
+              }
+            />
+          </DateBound>
+          <DateBound label={t("timeline.filters.to")} htmlFor={toId}>
+            <DateInput
+              id={toId}
+              value={value.before ?? ""}
+              min={value.after || undefined}
+              onChange={(event) =>
+                onChange({ ...value, before: event.target.value })
+              }
+            />
+          </DateBound>
         </span>
       </div>
       {value.q && (
         <p className="t-caption">{t("timeline.filters.searchOmitsLimited")}</p>
       )}
     </div>
+  );
+}
+
+// One end of the range: its word, then its box, with the box's refusal on a
+// line of its own below them.
+function DateBound({
+  label,
+  htmlFor,
+  children,
+}: Readonly<{ label: string; htmlFor: string; children: ReactNode }>) {
+  return (
+    <span className="timeline-filters-bound">
+      <label className="timeline-filters-label" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+    </span>
   );
 }

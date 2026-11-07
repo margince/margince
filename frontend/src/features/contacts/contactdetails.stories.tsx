@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { isLocale } from "../../i18n";
+import { catalogs, isLocale, type Locale } from "../../i18n";
 import {
   callMessengersRoute,
   installFetchStub,
@@ -11,18 +11,18 @@ import {
 } from "../../testing/story-utils";
 import { ContactDetails } from "./contactdetails";
 
+function storyLocale(parameters: Record<string, unknown>): Locale | undefined {
+  const asked = parameters.locale;
+  return typeof asked === "string" && isLocale(asked) ? asked : undefined;
+}
+
 const meta: Meta<typeof ContactDetails> = {
   title: "Records/Contact 360/Details",
   component: ContactDetails,
   decorators: [
     (Story, { parameters }) => {
-      const asked: unknown = parameters.locale;
       return (
-        <StoryProviders
-          locale={
-            typeof asked === "string" && isLocale(asked) ? asked : undefined
-          }
-        >
+        <StoryProviders locale={storyLocale(parameters)}>
           <Story />
         </StoryProviders>
       );
@@ -397,8 +397,13 @@ const twoNumbers: components["schemas"]["Contact"] = {
 
 // Each number keeps one line, its kind beside it or (with no room) under it,
 // and its chat glyph after both.
-async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
-  await within(canvasElement).findAllByRole("button", { name: "Open a chat" });
+async function expectNumbersOnOneLine(
+  canvasElement: HTMLElement,
+  locale: Locale = "en",
+) {
+  await within(canvasElement).findAllByRole("button", {
+    name: catalogs[locale]["callAction.chats"],
+  });
   const handles = [
     ...canvasElement.querySelectorAll<HTMLElement>(".fieldgrid-handle"),
   ].filter((handle) => handle.querySelector(".callaction-chats"));
@@ -424,7 +429,8 @@ async function expectNumbersOnOneLine(canvasElement: HTMLElement) {
 
 export const TwoNumbers: Story = {
   args: { contact: twoNumbers },
-  play: ({ canvasElement }) => expectNumbersOnOneLine(canvasElement),
+  play: ({ canvasElement, parameters }) =>
+    expectNumbersOnOneLine(canvasElement, storyLocale(parameters)),
 };
 export const TwoNumbersPhone: Story = {
   ...TwoNumbers,

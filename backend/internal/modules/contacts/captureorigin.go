@@ -37,6 +37,10 @@ func writtenAboutByAnybodySQL(verdict, accept, repair string) string {
 		          AND NOT ` + captureWriterSQL("act.captured_by", verdict, accept, repair) + `)`
 }
 
+// linkedFromALeadSQL is the test that a lead was promoted into contact p or made
+// from it. Either may fold in a record somebody typed.
+const linkedFromALeadSQL = `EXISTS (SELECT 1 FROM lead l WHERE l.promoted_contact_id = p.id OR l.from_contact_id = p.id)`
+
 // CaptureMintedForSeatTx keeps the candidates a mailbox purge may anonymise for
 // one seat: contacts capture created for that seat that nobody has worked on.
 //
@@ -55,9 +59,7 @@ func CaptureMintedForSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, candi
 		  FROM contact p
 		 WHERE p.id = ANY($1) AND p.owner_id = $2
 		   AND `+captureorigin.ContactSQL("$3", "$4", "$5")+`
-		   AND NOT EXISTS (
-		       SELECT 1 FROM lead l
-		        WHERE l.promoted_contact_id = p.id OR l.from_contact_id = p.id)
+		   AND NOT `+linkedFromALeadSQL+`
 		   AND NOT EXISTS (
 		       SELECT 1 FROM audit_log a
 		        WHERE a.entity_type = 'contact' AND a.entity_id = p.id

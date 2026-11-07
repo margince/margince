@@ -1,11 +1,6 @@
-import {
-  CalendarDays,
-  Check,
-  CheckSquare,
-  FileText,
-  Phone,
-} from "lucide-react";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { CalendarDays, Check, FileText, Phone } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
+import { useActivityGate } from "../../components/activitygate";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { EntityRef } from "../../components/entityref";
 import { LogActivityAction } from "../../components/logactivity.action";
@@ -13,9 +8,7 @@ import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
 import { ACTION_PARAM, CALL_ACTION } from "../../lib/leads.address";
-import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
@@ -85,21 +78,12 @@ export function LeadActions({
   onEmailOpenChange: (open: boolean) => void;
 }>) {
   const t = useT();
-  // useCanWrite, not useCan: the drawer below issues a POST, and a read seat is
-  // refused before RBAC is consulted. The contact and company headers state the
-  // same rule for this pair of verbs, in contactactions.tsx and its sibling.
-  // This is independent of the terminal check. A live lead a seat may not log
-  // against is refused for this reason, not that one.
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const logRefusedId = useId();
-  // A guard that has not answered yet refuses nothing: claiming a refusal
-  // `/me` has not decided is worse than a control that is briefly quiet.
-  const logGrantKnown = me.data?.authorization !== undefined;
+  // Independent of the terminal check: a live lead a seat may not log against
+  // is refused for this reason, not that one.
+  const activity = useActivityGate();
   const archived = lead.archived_at ? terminalReasonId : undefined;
-  const logRefused =
-    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
-  const logPending = !archived && !logGrantKnown;
+  const logRefused = archived ?? activity.refusedId;
+  const logPending = !archived && activity.pending;
   // The verb the reader arrived to perform, named by the address rather than
   // guessed. A link sent here to log a call says so. The drawer then opens on
   // the call instead of the note they would have to change.
@@ -168,8 +152,8 @@ export function LeadActions({
         reasonId={logRefused}
         onClick={() => setDrawer("meet")}
       />
-      {!archived && logGrantKnown && !canLog && (
-        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
+      {!archived && activity.refusedId && (
+        <p id={activity.sentenceId}>{t("record.logActivityRefused")}</p>
       )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in, the same pair contactactions.tsx and
@@ -184,15 +168,6 @@ export function LeadActions({
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
-      </Button>
-      <Button
-        disabled={logPending}
-        reasonId={logRefused}
-        title={t("log.addTask")}
-        onClick={() => setDrawer("task")}
-      >
-        <CheckSquare aria-hidden="true" />
-        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
       </Button>
       {drawer && (
         <LogActivityAction
@@ -222,6 +197,14 @@ export function LeadActions({
         label={t("record.moreActions")}
         word={t("record.verb.more")}
       >
+        {/* First: the most frequent verb in the menu. */}
+        <Button
+          disabled={logPending}
+          reasonId={logRefused}
+          onClick={() => setDrawer("task")}
+        >
+          {t("log.addTask")}
+        </Button>
         {/* The ways back out of a closure, offered by the closure that was
             taken: a promotion is the demote's to reverse, a disqualification
             the reopen's. Neither is on a live lead. */}

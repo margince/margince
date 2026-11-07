@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -74,10 +75,10 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 		}
 		var args []any
 		arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
-		status, source, row, reason := arg(DomainProvider), arg(DomainSourceHuman), arg(base), arg(PendingVendorVerdict)
+		status, source, row, reason := arg(DomainProvider), arg(DomainDecisionSource(ctx)), arg(base), arg(PendingVendorVerdict)
 		var id ids.UUID
 		err = tx.QueryRow(ctx, `UPDATE company_domain_disposition
-   SET status = `+status+`, source = `+source+`, pending_reason = NULL, next_attempt_at = NULL, updated_at = now()
+   SET status = `+status+`, source = `+source+`, pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false, next_attempt_at = NULL, updated_at = now()
  WHERE domain = `+row+` AND status = 'pending' AND pending_reason = `+reason+` RETURNING id`, args...).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The row is locked, so only its own state refuses: no open vendor question.
@@ -88,7 +89,7 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 		}
 		_, err = storekit.Audit(ctx, tx, "update", entityCompany, id,
 			map[string]any{auditKeyDomain: base, auditKeyStatus: prior.Status, auditKeySource: prior.Source, domainPendingReasonKey: prior.PendingReason},
-			map[string]any{auditKeyDomain: base, auditKeyStatus: DomainProvider, auditKeySource: DomainSourceHuman, domainPendingReasonKey: ""})
+			map[string]any{auditKeyDomain: base, auditKeyStatus: DomainProvider, auditKeySource: DomainDecisionSource(ctx), domainPendingReasonKey: ""})
 		return err
 	})
 }
@@ -97,20 +98,15 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 // the shared waiting horizon (storekit.WaitingHorizonSQL), archived or not.
 // The From participant names the sender, never the page's contact.
 //
-// The host is matched reversed, so a domain and its subdomains are one range of
-// idx_aparticipant_sender_host_reversed. The range ends at '/', the byte after
-// '.'. A `LIKE '%.' || domain` match has no index, so every question would read
-// all inbound mail in the horizon.
+// The host is matched through idx_aparticipant_sender_domain_reversed. Without
+// it every question would read all inbound mail in the horizon.
 func vendorMailSQL(mail, domain string, asOf time.Time, arg func(any) int) string {
-	host := `(reverse(split_part(lower(vendor_sender.address), '@', 2)) COLLATE "C")`
-	reversed := `reverse(` + domain + `)`
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return mail + `.kind = 'email' AND ` + mail + `.direction = 'inbound'
  AND EXISTS (SELECT 1 FROM activity_participant vendor_sender
   WHERE vendor_sender.activity_id = ` + mail + `.id AND vendor_sender.role = 'from'
-  AND vendor_sender.address IS NOT NULL
-  AND (` + host + ` = (` + reversed + ` COLLATE "C")
-   OR (` + host + ` >= ((` + reversed + ` || '.') COLLATE "C") AND ` + host + ` < ((` + reversed + ` || '/') COLLATE "C")))
+  AND vendor_sender.address_domain_folded IS NOT NULL
+  AND ` + owndomain.CoversIndexedSQL("vendor_sender.address_domain_folded", domain) + `
   AND EXISTS (SELECT 1 FROM contact_email vendor_contact WHERE vendor_contact.email = lower(vendor_sender.address) AND vendor_contact.archived_at IS NULL))
  AND ` + mail + `.occurred_at <= ` + instant + `
  AND ` + mail + `.occurred_at >= ` + instant + ` - make_interval(days => ` + storekit.WaitingHorizonSQL(asOf, arg) + `)`

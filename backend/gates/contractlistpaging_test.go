@@ -25,7 +25,6 @@ package gates
 // existing rather than by somebody remembering it.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -41,6 +40,9 @@ import (
 // and the next reader can check. It only shrinks — a route that grows a
 // continuation leaves, and one that cannot be cut short says why it cannot.
 var boundedButWhole = gatekit.Waive(map[string]string{
+	"listLegacyLossReasons (/loss-reasons/legacy)": "the most frequent notes still to map, and the answer carries " +
+		"`distinct_total`, so the screen says how many remain. Mapping and applying a page takes those " +
+		"notes off the list, and the next read is the rest",
 	"explainLeadScore (/leads/{id}/score)": "the bound applies to the retained series, which " +
 		"the route answers only under `history=true` — it takes a cursor and carries a `page` " +
 		"for that arm, and the required set is the CURRENT explanation's, where there is one " +
@@ -256,7 +258,7 @@ func (o pagedListOperation) answersAContinuation(schemas map[string]map[string]a
 
 func pagedListContract(t *testing.T) pagedListSpec {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

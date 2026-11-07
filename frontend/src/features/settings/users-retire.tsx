@@ -3,12 +3,12 @@
 
 import "./users-admin.css";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { api } from "../../api/client";
-import { Field } from "../../design-system/atoms";
+import { Button, Field } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { QueryStates } from "../../design-system/querystates";
-import { Select } from "../../design-system/select";
+import { RecordPicker } from "../../design-system/recordpicker";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import {
@@ -18,6 +18,7 @@ import {
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import {
+  matchingMembers,
   memberAnchorId,
   memberMutationKey,
   type User,
@@ -36,7 +37,6 @@ export function RetireMember({
   onClose: () => void;
 }>) {
   const t = useT();
-  const me = useMe();
   const toast = useToast();
   const refresh = useMemberRefresh();
   const [target, setTarget] = useState("");
@@ -95,6 +95,7 @@ export function RetireMember({
         [t("users.work.deals"), owned.deal],
         [t("users.work.projects"), owned.project],
         [t("users.work.tasks"), owned.task],
+        [t("users.work.lists"), owned.list ?? 0],
         [t("users.work.alerts"), preview.data?.signal_count ?? 0],
       ]
     : [];
@@ -124,35 +125,14 @@ export function RetireMember({
       }
     >
       <p>{t(merge ? "users.mergeBody" : "users.removeBody")}</p>
-      <Field
-        label={t(merge ? "users.survivingMember" : "users.handover.action")}
-      >
-        {(control) => (
-          <Select
-            {...control}
-            value={target}
-            onChange={setTarget}
-            options={[
-              ...(!merge ? [{ value: "", label: t("users.noHandover") }] : []),
-              ...members
-                .filter(
-                  (one) =>
-                    one.id !== member.id &&
-                    (!merge || one.id !== me.data?.user.id) &&
-                    !one.is_agent &&
-                    one.status !== "suspended" &&
-                    (merge || one.status === "active"),
-                )
-                .map((one) => ({
-                  value: one.id,
-                  label: `${one.display_name} (${one.email})`,
-                })),
-            ]}
-            placeholder={t("users.chooseMember")}
-            disabled={retire.isPending}
-          />
-        )}
-      </Field>
+      <RetirementTarget
+        memberId={member.id}
+        members={members}
+        merge={merge}
+        target={target}
+        onChange={setTarget}
+        disabled={retire.isPending}
+      />
       <QueryStates query={preview} pendingLabel={t("users.workToTransfer")}>
         {null}
       </QueryStates>
@@ -188,5 +168,86 @@ export function RetireMember({
         <p key={code}>{memberRetirementConsequence(code, t)}</p>
       ))}
     </ConfirmModal>
+  );
+}
+
+function RetirementTarget({
+  memberId,
+  members,
+  merge,
+  target,
+  onChange,
+  disabled,
+}: Readonly<{
+  memberId: string;
+  members: readonly User[];
+  merge: boolean;
+  target: string;
+  onChange: (id: string) => void;
+  disabled: boolean;
+}>) {
+  const t = useT();
+  const me = useMe();
+  const selected = members.find((one) => one.id === target);
+  const searchMembers = useCallback(
+    async (query: string) =>
+      matchingMembers(members, query)
+        .filter(
+          (one) =>
+            one.id !== memberId &&
+            (!merge || one.id !== me.data?.user.id) &&
+            !one.is_agent &&
+            one.status !== "suspended" &&
+            (merge || one.status === "active"),
+        )
+        .map((one) => ({
+          id: one.id,
+          name: one.display_name,
+          detail: one.email,
+        })),
+    [members, memberId, me.data?.user.id, merge],
+  );
+  return (
+    <Field
+      label={t(merge ? "users.survivingMember" : "users.handover.action")}
+      hint={
+        !target
+          ? t(merge ? "users.chooseMember" : "users.noHandover")
+          : undefined
+      }
+      hintLive={!merge}
+    >
+      {(control) => (
+        <>
+          <RecordPicker
+            {...control}
+            searchTargets={searchMembers}
+            selected={
+              selected
+                ? {
+                    id: selected.id,
+                    name: selected.display_name,
+                    detail: selected.email,
+                  }
+                : null
+            }
+            onPick={(candidate) => onChange(candidate.id)}
+            disabled={disabled}
+          />
+          {!merge && target && (
+            <Button
+              variant="link"
+              disabled={disabled}
+              onClick={() => {
+                onChange("");
+                document.getElementById(control.id)?.focus();
+              }}
+            >
+              {t("field.unset")}
+            </Button>
+          )}
+        </>
+      )}
+    </Field>
   );
 }

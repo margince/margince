@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { components } from "../../api/schema";
 import { useInteractionLabel } from "../../components/interactionchrome";
 import { Button } from "../../design-system/atoms";
@@ -8,10 +9,19 @@ import {
   OverviewRow,
 } from "../../design-system/overviewcard";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import {
+  useActivityUnavailable,
+  useReadableActivityList,
+} from "../../lib/activityread";
+import { useSourceOpener } from "../../lib/opensource";
+import { useViewerZone } from "../../lib/viewerzone";
 import { omitted } from "./contact360";
 import { CardLink, rowPill } from "./contactcards";
-import { callBackNumber, memoryRows } from "./contactmemory.rows";
+import {
+  callBackNumber,
+  type MemoryRow,
+  memoryRows,
+} from "./contactmemory.rows";
 
 // What was said: conversations as entities, condensed. The History tab stays
 // the whole ledger, with its filters, faces and Reply. A summary never
@@ -36,15 +46,23 @@ export function ContactMemory({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const readable = useMemo(
+    () =>
+      (view.as_of ? (view.activities?.data ?? []) : [])
+        .filter((row) => row.content_state === "available")
+        .map((row) => row.id),
+    [view.activities?.data, view.as_of],
+  );
+  useReadableActivityList(readable);
   // When a conversation happened is a fact about the record, so it reads in
   // the record's zone and two colleagues name the same day.
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const interactionLabel = useInteractionLabel();
   const withheld =
     omitted(view, "activities") && omitted(view, "conversation_memory");
   const rows = withheld
     ? []
-    : memoryRows(view, t, interactionLabel, locale, recordZone).slice(
+    : memoryRows(view, t, interactionLabel, locale, readerZone).slice(
         0,
         GLANCE,
       );
@@ -60,49 +78,99 @@ export function ContactMemory({
     >
       {rows.length > 0 && (
         <OverviewList>
-          {rows.map((row) => {
-            const emailId = row.emailId;
-            const number = callBackNumber(row.kind, view.contact);
-            return (
-              <OverviewRow
-                key={row.key}
-                title={
-                  emailId ? (
-                    <Button
-                      variant="link"
-                      className="pe-card-open"
-                      onClick={() => onOpenEmail(emailId)}
-                    >
-                      {row.title}
-                    </Button>
-                  ) : (
-                    row.title
-                  )
-                }
-                sub={row.sub}
-                right={
-                  number ? (
-                    <>
-                      {rowPill(row)}
-                      <CallAction
-                        appearance="button"
-                        label={t("record.verb.call")}
-                        number={number}
-                        record={{
-                          entityType: "contact",
-                          entityId: view.contact.id,
-                        }}
-                      />
-                    </>
-                  ) : (
-                    rowPill(row)
-                  )
-                }
-              />
-            );
-          })}
+          {rows.map((row) => (
+            <MemoryEntry
+              key={row.key}
+              row={row}
+              contact={view.contact}
+              onOpenEmail={onOpenEmail}
+            />
+          ))}
         </OverviewList>
       )}
     </OverviewCard>
+  );
+}
+
+function MemoryEntry({
+  row,
+  contact,
+  onOpenEmail,
+}: Readonly<{
+  row: MemoryRow;
+  contact: Contact360["contact"];
+  onOpenEmail: (id: string) => void;
+}>) {
+  const t = useT();
+  const openerFor = useSourceOpener(onOpenEmail);
+  const unavailable = useActivityUnavailable(row.source?.id ?? undefined);
+  if (unavailable) return null;
+  const open = row.source ? openerFor(row.source) : undefined;
+  // A message opens from its title, as every email row does. Any
+  // other entry gets a View beside it, named for the row it opens.
+  const email = row.kind === "email";
+  const number = callBackNumber(row.kind, contact);
+  const pill = rowPill(row);
+  const verbs = [
+    open && !email && (
+      <Button
+        key="view"
+        variant="link"
+        aria-haspopup="dialog"
+        aria-label={t("contact.memory.viewEntry", {
+          title: row.title,
+        })}
+        onClick={open}
+      >
+        {t("contact.memory.view")}
+      </Button>
+    ),
+    number && (
+      <CallAction
+        key="call"
+        appearance="button"
+        label={t("record.verb.call")}
+        number={number}
+        record={{
+          entityType: "contact",
+          entityId: contact.id,
+        }}
+      />
+    ),
+  ].filter(Boolean);
+  return (
+    <OverviewRow
+      key={row.key}
+      title={
+        open && email ? (
+          <Button variant="link" className="pe-card-open" onClick={open}>
+            {row.title}
+          </Button>
+        ) : (
+          row.title
+        )
+      }
+      sub={
+        <>
+          {row.sub}
+          {row.context && (
+            <>
+              <br />
+              <span>{row.context}</span>
+            </>
+          )}
+        </>
+      }
+      right={
+        verbs.length > 0 ? (
+          <>
+            {pill}
+            {verbs}
+          </>
+        ) : (
+          pill
+        )
+      }
+    />
   );
 }

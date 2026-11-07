@@ -127,6 +127,35 @@ func TestAMeetingKeepsTheRelationshipOffAtRisk(t *testing.T) {
 	}
 }
 
+// A calendar meeting whose start passed and that nobody reported keeps us in
+// touch on every reading of the Company 360 page. The relationship is not
+// quiet. The meeting is the last one met, the last contact, and the contact's
+// last interaction for strength.
+func TestAPastMeetingNobodyReportedKeepsTheAccountInTouch(t *testing.T) {
+	e := integration.Setup(t)
+	acct := seedQuietAccount(t, e)
+	metAt := acct.now.AddDate(0, 0, -3).Truncate(time.Second)
+	captureMeetingWith(t, e, acct.contact, "evt-unreported-review", metAt)
+
+	page := pageOf(t, e, acct)
+	got := page.Health.Relationship
+	if got == nil || got.ReasonCode == nil || *got.ReasonCode != crmcontracts.HealthDimensionReasonCodeLastMet {
+		t.Fatalf("relationship = %+v, want last met three days ago, not quiet from their message", got)
+	}
+	if page.Health.LastMeetingAt == nil || !page.Health.LastMeetingAt.Equal(metAt) {
+		t.Errorf("last meeting = %v, want the unreported meeting at %v", page.Health.LastMeetingAt, metAt)
+	}
+	if page.LastContact == nil || page.LastContact.Kind != crmcontracts.Company360LastContactKindMeeting {
+		t.Errorf("last contact = %+v, want the unreported meeting", page.LastContact)
+	}
+	if page.Contacts == nil || len(page.Contacts.Data) != 1 {
+		t.Fatalf("contacts = %+v, want the one employed contact", page.Contacts)
+	}
+	if last := page.Contacts.Data[0].Strength.LastInteraction; last == nil || !last.Equal(metAt) {
+		t.Errorf("the contact's last interaction = %v, want the unreported meeting at %v", last, metAt)
+	}
+}
+
 // The other direction: a meeting held before the threshold is not current
 // contact, and a canceled one is not contact at all — for the company rating
 // and for the contact strength fold alike.
@@ -185,11 +214,20 @@ func TestAMeetingCountsOnlyAsWhatItsStatusAndTimeSay(t *testing.T) {
 			e := integration.Setup(t)
 			acct := seedQuietAccount(t, e)
 			subject, at := "Status check", acct.now.AddDate(0, 0, -tc.days)
-			if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-				Kind: "meeting", Subject: &subject, MeetingStatus: &tc.status, OccurredAt: &at, Source: "manual",
+			logged := at
+			if tc.status == "held" && tc.days < 0 {
+				logged = acct.now.AddDate(0, 0, -1)
+			}
+			meeting, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+				Kind: "meeting", Subject: &subject, MeetingStatus: &tc.status, OccurredAt: &logged, Source: "manual",
 				Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: acct.contact}},
-			}); err != nil {
+			})
+			if err != nil {
 				t.Fatalf("logging the meeting: %v", err)
+			}
+			if !logged.Equal(at) {
+				// Writers refuse held before the start; older rows can carry it.
+				e.WsExec(t, `UPDATE activity SET occurred_at = $1 WHERE id = $2`, at, ids.UUID(meeting.Id))
 			}
 
 			got := relationshipOf(t, e, acct)

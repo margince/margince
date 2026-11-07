@@ -190,7 +190,7 @@ func TestALostDealLeavesAGatedStageWithoutLegal(t *testing.T) {
 	}
 	reason := "budget cut"
 	if _, err := e.store.AdvanceDeal(e.asRequester(), dealID, AdvanceDealInput{
-		ToStageID: ids.From[ids.StageKind](ids.UUID(lost.Id)), LostReason: &reason,
+		ToStageID: ids.From[ids.StageKind](ids.UUID(lost.Id)), LostReason: &reason, LostReasonCode: new("other"),
 	}); err != nil {
 		t.Fatalf("losing a deal on a gated stage was refused: %v", err)
 	}

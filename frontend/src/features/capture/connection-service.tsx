@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowRight, CalendarDays, History, Mail } from "lucide-react";
+import { ArrowRight, History } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ServiceList, ServiceRow } from "../../design-system/servicerow";
@@ -12,15 +12,16 @@ import {
   VENDOR_SERVICES,
 } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { ImportWindow } from "../../lib/connect-account";
+import { SERVICE_ICON, SERVICE_WORDS } from "../../lib/connect-services";
 import {
   missingCalendarWriteGrant,
   serviceBadge,
 } from "../../lib/connector-status";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { usePastEmail } from "./connection-past-email";
 
 // One thing an account brings in (new mail, past email, the calendar) as a line
@@ -52,8 +53,10 @@ export function AccountServices({
   heldWindow: ImportWindow | null;
   /** The provider whose consent is on its way, if any. */
   connectPendingFor: Provider | undefined;
-  /** Asks for a missing service's consent for the first time. */
-  onConnect: (provider: Provider) => void;
+  /** Asks for a missing service's consent for the first time; null when the
+   *  reader may connect nothing, which leaves the missing services and the
+   *  past-email import out. */
+  onConnect: ((provider: Provider) => void) | null;
   onImport: () => void;
 }>) {
   const t = useT();
@@ -63,7 +66,7 @@ export function AccountServices({
   return (
     <ServiceList label={label}>
       {mail && <ConnectedService conn={mail} kind="mail" />}
-      {!mail && mailProvider && (
+      {!mail && mailProvider && onConnect && (
         <MissingService
           kind="mail"
           connectLabel={t("connectors.connectMail")}
@@ -71,7 +74,7 @@ export function AccountServices({
           onConnect={() => onConnect(mailProvider)}
         />
       )}
-      {vendor && mail?.can_backfill && (
+      {vendor && mail?.can_backfill && onConnect && (
         <PastEmailService
           mail={mail}
           heldWindow={heldWindow}
@@ -81,7 +84,7 @@ export function AccountServices({
       {calendar && vendor && (
         <ConnectedService conn={calendar} kind="calendar" />
       )}
-      {!calendar && calendarProvider && (
+      {!calendar && calendarProvider && onConnect && (
         <MissingService
           kind="calendar"
           connectLabel={t("connectors.connectCalendar")}
@@ -95,19 +98,12 @@ export function AccountServices({
 
 type ServiceKind = "mail" | "calendar";
 
-const SERVICE_ICON = { mail: Mail, calendar: CalendarDays } as const;
-
 function useServiceWords(kind: ServiceKind) {
   const t = useT();
-  return kind === "mail"
-    ? {
-        name: t("connectors.svc.newMail"),
-        desc: t("connectors.svc.newMailDesc"),
-      }
-    : {
-        name: t("connectors.svc.calendar"),
-        desc: t("connectors.svc.calendarDesc"),
-      };
+  return {
+    name: t(SERVICE_WORDS[kind].name),
+    desc: t(SERVICE_WORDS[kind].desc),
+  };
 }
 
 function PastEmailService({
@@ -140,6 +136,7 @@ function PastEmailService({
 }
 
 function LastSynced({ conn }: Readonly<{ conn: CaptureConnection }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   if (conn.last_success_at === undefined) {
@@ -147,7 +144,7 @@ function LastSynced({ conn }: Readonly<{ conn: CaptureConnection }>) {
   }
   return conn.last_success_at
     ? t("connectors.lastSynced", {
-        at: formatDateTime(conn.last_success_at, locale, viewerZone()),
+        at: formatDateTime(conn.last_success_at, locale, readerZone),
       })
     : t("connectors.neverSynced");
 }

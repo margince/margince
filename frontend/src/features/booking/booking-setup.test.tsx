@@ -22,6 +22,7 @@ import { mount, view } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { BookingGuestScreen } from "./booking-guest";
@@ -50,6 +51,7 @@ it("books from an empty Meetings tab with this contact selected", async () => {
 it("opens meeting settings in another tab without discarding the invitation draft", async () => {
   const user = userEvent.setup();
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, provider: "", enabled: false }),
@@ -64,7 +66,7 @@ it("opens meeting settings in another tab without discarding the invitation draf
   const settings = await screen.findByRole("link", {
     name: "Open meeting settings",
   });
-  expect(settings.getAttribute("href")).toBe("#/settings/meetings");
+  expect(settings.getAttribute("href")).toBe("/#/settings/meetings");
   expect(settings.getAttribute("target")).toBe("_blank");
   await user.type(
     screen.getByLabelText("Message for your guest"),
@@ -205,6 +207,7 @@ it("refreshes the worker's version after a cancellation conflict", async () => {
 
 it("warns when an active public page cannot send calendar invitations", async () => {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () =>
       jsonResponse({ data: [{ ...bookingConnection, scopes: [] }] }),
     "GET /scheduling/profile": () => jsonResponse(bookingProfile),
@@ -231,6 +234,7 @@ it("pauses a public link without overwriting meeting settings saved in another t
   let latest = { ...bookingProfile, enabled: true };
   const writes: unknown[] = [];
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(latest),
     "PUT /scheduling/profile": (body) => {
@@ -258,6 +262,7 @@ it("keeps focus on Accept bookings after its answer comes back", async () => {
   const user = userEvent.setup();
   let latest = { ...bookingProfile, enabled: true };
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(latest),
     "PUT /scheduling/profile": () => {
@@ -280,6 +285,7 @@ it("keeps focus on Accept bookings after its answer comes back", async () => {
 
 it("names the link once on its own page, in the heading and not again on the card", async () => {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(bookingProfile),
   });
@@ -305,6 +311,7 @@ it("keeps focus on Accept bookings when the answer brings the first link", async
     public_url: undefined,
   };
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(latest),
     "PUT /scheduling/profile": () => {
@@ -328,6 +335,7 @@ it("hands focus back to Replace link once the new link lands", async () => {
   const user = userEvent.setup();
   let latest = { ...bookingProfile };
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(latest),
     "PUT /scheduling/profile": () => {
@@ -358,6 +366,7 @@ it("keeps a failed copy's remedy over a replaced link until the next copy", asyn
   const user = userEvent.setup();
   let latest = { ...bookingProfile };
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(latest),
     "PUT /scheduling/profile": () => {

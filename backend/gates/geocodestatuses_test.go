@@ -16,7 +16,6 @@ package gates
 // same constant.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -24,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // arrayLiteral is one quoted value in a CHECK's ARRAY[...] as the catalog
@@ -32,12 +32,12 @@ var arrayLiteral = regexp.MustCompile(`'([^']*)'::text`)
 
 func TestTheGeocodeStatusesAreTheColumnsCheck(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, headCatalogPath))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
 	if err != nil {
 		t.Fatalf("reading %s: %v", headCatalogPath, err)
 	}
 	catalog := string(raw)
-	check := catalogLine(t, catalog, "public.company.company_geocode_status_check ")
+	check := catalogLine(t, catalog, "public.company_geocode_state.company_geocode_state_status_check ")
 	var admitted []string
 	for _, m := range arrayLiteral.FindAllStringSubmatch(check, -1) {
 		admitted = append(admitted, m[1])
@@ -46,10 +46,10 @@ func TestTheGeocodeStatusesAreTheColumnsCheck(t *testing.T) {
 	slices.Sort(admitted)
 	slices.Sort(named)
 	if !slices.Equal(admitted, named) {
-		t.Errorf("company.geocode_status admits %v and contacts.GeocodeStatuses names %v. "+
+		t.Errorf("company_geocode_state.status admits %v and contacts.GeocodeStatuses names %v. "+
 			"Change both together, or a status one side writes is one the other refuses", admitted, named)
 	}
-	if stamp := "NEW.geocode_status := '" + contacts.GeocodeStale + "';"; !strings.Contains(catalog, stamp) {
+	if stamp := "SET status = '" + contacts.GeocodeStale + "'"; !strings.Contains(catalog, stamp) {
 		t.Errorf("the address trigger no longer stamps %q, so it and contacts.GeocodeStale have drifted", stamp)
 	}
 }

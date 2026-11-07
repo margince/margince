@@ -225,13 +225,13 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 		if err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, fmt.Sprintf(firstResponseSQL,
+		query := fmt.Sprintf(firstResponseSQL,
 			content,
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),
 			ownDomainSenderSQL("inbound", arg(ownDomains)),
-			medianPercentile),
-			args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
+			medianPercentile)
+		if err := tx.QueryRow(ctx, query, args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}
 		// A second statement, so a second argument list. Each value takes the

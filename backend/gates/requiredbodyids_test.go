@@ -19,8 +19,8 @@ package gates
 // bodies someone remembered: the walk finds every request body with such a field
 // and requires each to be either PROBED (a mapping refuses it by name, proved in
 // the owning module's test) or WAIVED with a reason. A new required id upstream
-// fails here until someone decides which it is, and a waiver that stops being
-// true fails too — so the list of unguarded bodies can only shrink.
+// fails here until someone decides which it is. A waiver whose body no longer
+// declares a required id fails too.
 //
 // Where the guard goes: httperr.RequireBodyID is the one implementation, called
 // from the point where the decoded body becomes store input — a mapping where the
@@ -58,7 +58,6 @@ var probedRequiredIDBodies = map[string]bool{
 	"CreateContractRequest":             true,
 	"AdvanceDealRequest":                true,
 	"CreateStageRequest":                true,
-	"SetTransitionPolicyRequest":        true,
 	"ApplyTagRequest":                   true,
 	"ListMemberChangeRequest":           true,
 	"MergeTagsRequest":                  true,
@@ -66,10 +65,12 @@ var probedRequiredIDBodies = map[string]bool{
 	"RecordCommunicationContextRequest": true,
 	"IssueDoubleOptInJSONBody":          true,
 	"SetProjectStakeholderRequest":      true,
+	"ContactCaseDecisionRequest":        true,
 	"DraftIntroRequestJSONBody":         true,
 	"DraftIntroNoteJSONBody":            true,
 	"SetProjectCompanyRequest":          true,
 	"CreateRecordGrantRequest":          true,
+	"ShareCompanyContactsRequest":       true,
 	"CreateRecordAssignmentRequest":     true,
 	"MergeContactJSONBody":              true,
 	"LinkFinanceSourceCustomerRequest":  true,
@@ -80,13 +81,15 @@ var probedRequiredIDBodies = map[string]bool{
 	"RelinkActivitiesRequest":           true,
 	"DraftCompanyEmailJSONBody":         true,
 	"AcceptExtractionRequest":           true,
+	"FileChatCaptureRequest":            true,
 	"CreateDealRoomRequest":             true,
 	"RaiseNoticeRequest":                true,
 }
 
-// unguardedRequiredIDBodies is what is left, and both entries are WAIVERS rather
-// than gaps: neither can produce the defect. Every body that could has a guard
-// and a probe.
+// unguardedRequiredIDBodies is what is left, and every entry is a WAIVER rather
+// than a gap: none can produce the defect. Every body that could has a guard and
+// a probe. A retired route's waiver rests on its 501, and the walk sees only the
+// body. Whoever restores the route owes that body a guard and a probe.
 //
 // The list is kept — rather than deleted along with the last real gap — because
 // the walk fails on a body it can neither find probed nor find waived. A required
@@ -94,10 +97,13 @@ var probedRequiredIDBodies = map[string]bool{
 // it is, which is the difference between having fixed eleven things and having
 // closed the class.
 var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
+	"DeclareExistingCustomerNoticeRequest": "DeclareNoticeInput.validate refuses a zero legal_entity_id as a 422 naming the field, before any lookup",
+	"SetTransitionPolicyRequest":           "the route is retired and answers 501 without reading its body",
 	// Not a request body at all: the GDPR data-subject-request ENTITY, whose `id`
 	// is its own primary key rather than a caller-supplied reference. Waived
 	// because the name heuristic above cannot tell the two apart, and narrowing
 	// the heuristic to exclude it would risk excluding a real body.
+	"OwnershipRequest":   "not a request body — a handover request as the server answers it; every id is read from the stored request",
 	"DataSubjectRequest": "not a request body — the DSR entity; `id` is its own key, not a caller-supplied reference",
 	// Multipart never decodes into this generated type. The handler
 	// (activities/handlers_attachment.go) calls ParseMultipartForm and
@@ -117,6 +123,8 @@ var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	// Served by the registry: the handler passes the raw body to
 	// Registry.Invoke, which refuses an absent required argument by name.
 	"ProgressDealRequest": "registry-served; never decoded into this type, and Invoke refuses an absent to_stage_id by name",
+	// Served by the registry for both readiness verbs, as ProgressDealRequest is.
+	"MeetingReadyRequest": "registry-served; never decoded into this type, and Invoke refuses an absent activity_id by name",
 })
 
 func TestEveryContractBodyWithARequiredIDIsAccountedFor(t *testing.T) {

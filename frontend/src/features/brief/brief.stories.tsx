@@ -3,6 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { calendarDay } from "../../format/calendarday";
+import { UTC_ZONE } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   type Approval,
@@ -10,10 +12,12 @@ import {
   deals,
   decisionRow,
   digest,
+  firstWeek,
   lapsed,
   NOT_FOUND,
   narratedWeek,
   pipelineRows,
+  quietRun,
   ranked,
   readingsDay,
   report,
@@ -26,6 +30,10 @@ import {
   wholeDecisions,
   wholeMeetings,
 } from "../../testing/brief.fixtures";
+import {
+  expectDialPlacement,
+  expectReportFillsPane,
+} from "../../testing/briefheadchecks";
 import {
   installFetchStub,
   jsonResponse,
@@ -67,6 +75,20 @@ type Frame = {
   day?: Worklist;
   /** Extra routes a frame's own play() needs. */
   extra?: RouteMap;
+};
+
+// Home judges its own completeness from the overnight receipt, so the list
+// fallback's envelope would crash every frame.
+const quietNight = {
+  as_of: "2026-09-13T08:00:00Z",
+  since: "2026-09-12T08:00:00Z",
+  done: [],
+  needs_you: [],
+  could_not_complete: [],
+  watching: [],
+  totals: { done: 0, needs_you: 0, could_not_complete: 0, watching: 0 },
+  not_shown: [],
+  sources_unavailable: [],
 };
 
 function brief({
@@ -113,7 +135,7 @@ function brief({
           page: { next_cursor: null, has_more: false },
         }),
       ...approvalRoutes,
-      "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
+      "GET /weekly-reviews": () => jsonResponse(ARCHIVE),
       "GET /weekly-reviews/latest": () =>
         weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
       "GET /digest": () =>
@@ -150,6 +172,16 @@ function brief({
           truncated: false,
         }),
       "POST /reports/deals-by-stage": () => pipeline(),
+      "GET /magic": () => jsonResponse(quietNight),
+      // The plan's week is required by the contract, which the fallback list
+      // page lacks.
+      "GET /weekly-plans/current": () =>
+        jsonResponse({
+          id: "01a00000-0000-7000-8000-0000000000c1",
+          local_week_start: WEEK_START,
+          status: "open",
+          commitments: [],
+        }),
       ...extra,
     });
     return (
@@ -210,8 +242,8 @@ export const DecisionApproved: Story = {
     // in hand on the card, and the one after it listed under it.
     await waitFor(() =>
       expect(
-        canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
-      ).toHaveLength(1),
+        canvasElement.querySelectorAll("#brief-today .brief-triage > li"),
+      ).toHaveLength(2),
     );
   },
 };
@@ -471,6 +503,7 @@ export const WorkingMorning: Story = {
         "GET /brief": () =>
           jsonResponse({ ...ranked, generated_at: "2026-09-13T05:30:00Z" }),
         "GET /digest": () => jsonResponse({ title: "Not found" }, 404),
+        "GET /magic": () => jsonResponse(quietNight),
         "GET /worklist/handled": () =>
           jsonResponse({
             as_of: day.as_of,
@@ -497,4 +530,96 @@ export const DigestUnavailable: Story = {
     approvals: [...singles],
     extra: { "GET /digest": () => jsonResponse(NOT_FOUND, 501) },
   }),
+};
+
+// ── The panes ───────────────────────────────────────────────────────────────
+
+// The work and the rail each on one pane, folded into one column on a phone.
+export const TodayPhone: Story = {
+  render: brief({ approvals: [...singles] }),
+  tags: ["uat-phone"],
+};
+
+// A dark pane is see-through; the focus card on it stays opaque over its ring.
+export const TodayDark: Story = {
+  globals: { theme: "dark" },
+  render: brief({ approvals: [...singles] }),
+  play: ({ canvasElement }) => expectDialPlacement(canvasElement),
+};
+
+function onWeekly() {
+  const prior = globalThis.location.hash;
+  globalThis.location.hash = "#/home?view=weekly";
+  return () => {
+    globalThis.location.hash = prior;
+  };
+}
+
+// Eight weeks of reports, newest first, each with what it won.
+const ARCHIVE = (() => {
+  const won = [3, 1, 2, 0, 1, 4, 1, 2];
+  const weeks = won.map((_, back) =>
+    // Read in UTC from a UTC noon, so no reader's zone moves the date.
+    calendarDay(
+      new Date(Date.parse(`${WEEK_START}T12:00:00Z`) - back * 7 * 864e5),
+      UTC_ZONE,
+    ),
+  );
+  return {
+    weeks,
+    entries: weeks.map((week, at) => ({ week, deals_won: won[at] ?? 0 })),
+  };
+})();
+
+export const Week: Story = {
+  beforeEach: onWeekly,
+  render: brief({ approvals: [] }),
+  play: async ({ canvasElement }) => {
+    await expectReportFillsPane(canvasElement);
+    await expectDialPlacement(canvasElement);
+  },
+};
+
+export const WeekPhone: Story = {
+  ...Week,
+  tags: ["uat-phone"],
+};
+
+// The head's facts line ends on the agent's badge, then the dial.
+export const TodayBriefed: Story = {
+  render: brief({
+    approvals: [...singles],
+    extra: { "GET /brief": () => jsonResponse(quietRun) },
+  }),
+  play: ({ canvasElement }) => expectDialPlacement(canvasElement),
+};
+
+export const TodayBriefedPhone: Story = {
+  ...TodayBriefed,
+  tags: ["uat-phone"],
+};
+
+// A week nobody narrated: its frozen time and counted sentence share the dial's
+// line. The stepper ends the line over the week's days.
+export const WeekCounted: Story = {
+  beforeEach: onWeekly,
+  render: brief({
+    approvals: [],
+    weekly: firstWeek,
+    extra: {
+      "GET /weekly-reviews": () =>
+        jsonResponse({ weeks: [WEEK_START, "2026-06-22"] }),
+    },
+  }),
+  play: Week.play,
+};
+
+export const WeekCountedPhone: Story = {
+  ...WeekCounted,
+  tags: ["uat-phone"],
+};
+
+export const WeekNotWrittenYet: Story = {
+  beforeEach: onWeekly,
+  render: brief({ approvals: [], weekly: null }),
 };

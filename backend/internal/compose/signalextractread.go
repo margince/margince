@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -122,6 +123,11 @@ type settledThread struct {
 	// the window it chose is the only thing that knows.
 	ReadFromNow   *time.Time
 	ReadFromIDNow *ids.UUID
+	// Oldest and OldestID are the thread's own lower end as the queue measured
+	// it: the pair threadHasMoved holds the cursor against. Nil outside the
+	// queue, where no cursor is written.
+	Oldest   *time.Time
+	OldestID *ids.UUID
 	// PrivateTo is the one reader this conversation answers to, or the zero
 	// value when every message on it is workspace-readable.
 	//
@@ -239,7 +245,8 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		var privateTo *ids.UUID
 		if err := rows.Scan(&thread.Key, &thread.CompanyID,
 			&thread.Newest, &thread.Count, &privateTo,
-			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID); err != nil {
+			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID,
+			&thread.Oldest, &thread.OldestID); err != nil {
 			return nil, fmt.Errorf("read a thread due for a read: %w", err)
 		}
 		if privateTo != nil {
@@ -271,6 +278,9 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 func recordThreadRefusal(
 	ctx context.Context, tx pgx.Tx, thread settledThread, now time.Time,
 ) (int, error) {
+	if current, err := lockScannedThread(ctx, tx, thread); err != nil || !current {
+		return 0, err
+	}
 	var refusals int
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO signal_thread_scan
@@ -308,6 +318,9 @@ func recordThreadRefusal(
 // lowers nothing and raises the count, and clamping it would hide exactly the
 // change it exists to notice.
 func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now time.Time) error {
+	if current, err := lockScannedThread(ctx, tx, thread); err != nil || !current {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO signal_thread_scan
 		  (thread_key, last_activity_at, message_count, scanned_at,
@@ -355,4 +368,19 @@ func markThreadScanned(ctx context.Context, tx pgx.Tx, thread settledThread, now
 		return fmt.Errorf("record where the read got to: %w", err)
 	}
 	return nil
+}
+
+func lockScannedThread(ctx context.Context, tx pgx.Tx, thread settledThread) (bool, error) {
+	if err := storekit.LockThreadKeysTx(ctx, tx, thread.Key); err != nil {
+		return false, err
+	}
+	var messages []ids.UUID
+	for _, message := range thread.Messages {
+		messages = append(messages, message.ID)
+	}
+	var moved bool
+	if err := tx.QueryRow(ctx, `SELECT NOT EXISTS (SELECT 1 FROM activity WHERE thread_key=@scanThread AND archived_at IS NULL) OR EXISTS (SELECT 1 FROM activity WHERE id = ANY(@messages::uuid[]) AND thread_key IS DISTINCT FROM @scanThread)`, pgx.NamedArgs{"messages": messages, "scanThread": thread.Key}).Scan(&moved); err != nil {
+		return false, err
+	}
+	return !moved, nil
 }

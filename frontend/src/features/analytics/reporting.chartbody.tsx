@@ -8,17 +8,17 @@ import {
 } from "../../design-system/report-charts";
 import { Waterfall } from "../../design-system/waterfall";
 import {
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
   formatDateTime,
-  formatMoneyCompact,
-  formatNumber,
   MONEY_ABSENT,
 } from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { chartTitle } from "./reporting.chartlabel";
+import { CohortTable } from "./reporting.cohort";
 import { withDealCount } from "./reporting.dealcount";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
-  blockLabel,
-  metricLabel,
   type ReportingChart,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -27,6 +27,8 @@ import {
   reportingMoneyUnit,
 } from "./reporting.model";
 import { movementLabel } from "./reporting.movement";
+import { useMetricNames } from "./reporting.queries";
+import { selectReading } from "./reporting.readingselect";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
 import { TargetProgress } from "./reporting.summary";
 import "./reporting.css";
@@ -37,26 +39,28 @@ export function ChartBody({
   chart,
   evaluation,
   onEvidence,
+  trendSize,
+  headline = true,
 }: Readonly<{
   chart: ReportingChart;
   evaluation: ReportingEvaluation;
   onEvidence: EvidenceAction;
+  /** `compact` is a shorter trend, for one beside a lead figure. */
+  trendSize?: "default" | "compact";
+  /** False where the chart's head already states its total. */
+  headline?: boolean;
 }>) {
   const t = useT();
-  const plural = usePlural();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
   const compact = (value: number) =>
     reportingMoneyUnit(chart.unit, evaluation.context.currency)
-      ? formatMoneyCompact(value, evaluation.context.currency, locale)
+      ? formatAnalyticsMoney(value, evaluation.context.currency, locale)
       : format(value);
   const readings = chart.points.map((point) => ({
     ...point,
-    label:
-      chart.kind === "target_progress"
-        ? metricLabel(chart.metric, t)
-        : point.label,
     amount: reportingCompactAmount(
       point.value,
       chart.unit,
@@ -70,20 +74,10 @@ export function ChartBody({
     targetAmount: point.target == null ? undefined : compact(point.target),
     upperAmount: format(point.upper),
   }));
-  const onSelect = (key: string) => {
-    if (
-      chart.kind === "pipeline_movement" &&
-      (key === "opening" || key === "closing")
-    ) {
-      onEvidence({ metric: chart.metric, context_id: `movement_${key}` });
-      return;
-    }
-    const reference = chart.points.find((point) => point.key === key)?.evidence;
-    if (reference) onEvidence(reference);
-  };
+  const onSelect = (key: string) => selectReading(chart, key, onEvidence);
   const shared = {
     readings,
-    label: chartTitle(chart, evaluation, t),
+    label: chartTitle(chart, evaluation, t, metricName),
     dataLabel: t("reporting.data"),
     valueLabel: t("reporting.actual"),
     onSelect,
@@ -101,7 +95,7 @@ export function ChartBody({
           }
           axisLabel={(value) =>
             reportingMoneyUnit(chart.unit, evaluation.context.currency)
-              ? formatMoneyCompact(value, evaluation.context.currency, locale)
+              ? formatAnalyticsMoney(value, evaluation.context.currency, locale)
               : format(value)
           }
           reference={
@@ -113,6 +107,7 @@ export function ChartBody({
                   label: t("reporting.target"),
                 }
           }
+          size={trendSize}
         />
       );
     }
@@ -142,37 +137,14 @@ export function ChartBody({
       );
     case "stage_distribution":
       return (
-        <>
-          <p className="reporting-headline t-num">
-            {reportingCompactAmount(
-              evaluation.metrics.find((metric) => metric.id === chart.metric)
-                ?.value,
-              chart.unit,
-              evaluation.context.currency,
-              locale,
-            )}
-          </p>
-          <GroupedBars
-            chart={chart}
-            label={shared.label}
-            amount={(point) =>
-              withDealCount(
-                reportingCompactAmount(
-                  point.value,
-                  chart.unit,
-                  evaluation.context.currency,
-                  locale,
-                ),
-                point.observations,
-                plural,
-                locale,
-              )
-            }
-            format={format}
-            countHeader={t("reporting.stageDeals")}
-            onSelect={onSelect}
-          />
-        </>
+        <StageChart
+          chart={chart}
+          evaluation={evaluation}
+          label={shared.label}
+          format={format}
+          headline={headline}
+          onSelect={onSelect}
+        />
       );
     case "breakdown":
       return (
@@ -182,6 +154,15 @@ export function ChartBody({
           label={shared.label}
           format={format}
           onSelect={onSelect}
+        />
+      );
+    case "stage_cohort":
+    case "lead_cohort":
+      return (
+        <CohortTable
+          chart={chart}
+          label={shared.label}
+          onEvidence={onEvidence}
         />
       );
     case "sdr_outcomes":
@@ -423,7 +404,7 @@ function GroupedBars({
                     render: (point: ChartPoint) =>
                       point.observations == null
                         ? MONEY_ABSENT
-                        : formatNumber(point.observations, locale),
+                        : formatAnalyticsNumber(point.observations, locale),
                   },
                 ]),
           ]}
@@ -433,24 +414,54 @@ function GroupedBars({
   );
 }
 
-export function chartTitle(
-  chart: ReportingChart,
-  evaluation: ReportingEvaluation,
-  t: Translator,
-): string {
-  if (chart.kind === "owner_attainment")
-    return t("reporting.ownerMetric", { metric: metricLabel(chart.metric, t) });
-  if (chart.kind === "target_progress") return metricLabel(chart.metric, t);
-  if (chart.kind === "breakdown")
-    return t("reporting.breakdownTitle", {
-      metric: metricLabel(chart.metric, t),
-    });
-  if (
-    chart.kind === "sdr_outcomes" &&
-    !evaluation.charts.some(
-      (other) => other.kind === "sdr_outcomes" && other.metric !== chart.metric,
-    )
-  )
-    return metricLabel(chart.metric, t);
-  return blockLabel(chart.kind, t);
+// Today's stock by stage, under the total it splits unless the head says it.
+function StageChart({
+  chart,
+  evaluation,
+  label,
+  format,
+  headline,
+  onSelect,
+}: Readonly<{
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
+  label: string;
+  format: (value: number | null | undefined) => string;
+  headline: boolean;
+  onSelect: (key: string) => void;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const { currency } = evaluation.context;
+  return (
+    <>
+      {headline && (
+        <p className="reporting-headline t-num">
+          {reportingCompactAmount(
+            evaluation.metrics.find((metric) => metric.id === chart.metric)
+              ?.value,
+            chart.unit,
+            currency,
+            locale,
+          )}
+        </p>
+      )}
+      <GroupedBars
+        chart={chart}
+        label={label}
+        amount={(point) =>
+          withDealCount(
+            reportingCompactAmount(point.value, chart.unit, currency, locale),
+            point.observations,
+            plural,
+            locale,
+          )
+        }
+        format={format}
+        countHeader={t("reporting.stageDeals")}
+        onSelect={onSelect}
+      />
+    </>
+  );
 }

@@ -148,7 +148,7 @@ func DaysBetween(from, to Moment, zone *time.Location) int {
 // too. So one bound on occurred_at holds both arms and keeps a range scan.
 func BegunSQL(alias, asOf string) string {
 	return fmt.Sprintf(`(%[1]s.occurred_at <= greatest(%[2]s, %[3]s) AND (%[1]s.occurred_precision = 'day' OR %[1]s.occurred_at <= %[2]s))`,
-		alias, asOf, todayAnchorSQL(asOf))
+		alias, asOf, TodayAnchorSQL(asOf))
 }
 
 // MeetingTookPlaceSQL is MeetingTookPlace for the meeting under alias at asOf,
@@ -156,7 +156,7 @@ func BegunSQL(alias, asOf string) string {
 // occurred_at is an anchor, so "its date is over" is an anchor before today's.
 func MeetingTookPlaceSQL(alias, asOf string) string {
 	return fmt.Sprintf(`(%[1]s.occurred_at <= greatest(%[2]s, %[3]s) AND (%[1]s.occurred_precision = 'day' AND %[1]s.occurred_at < %[3]s OR %[1]s.occurred_precision = 'instant' AND %[1]s.occurred_at <= %[2]s))`,
-		alias, asOf, todayAnchorSQL(asOf))
+		alias, asOf, TodayAnchorSQL(asOf))
 }
 
 // HappenedSQL is Happened for the activity under alias at asOf.
@@ -165,8 +165,8 @@ func HappenedSQL(alias, asOf string) string {
 		alias, meetingKind, MeetingTookPlaceSQL(alias, asOf), BegunSQL(alias, asOf))
 }
 
-// todayAnchorSQL is AnchorIn(asOf, installation zone) in SQL.
-func todayAnchorSQL(asOf string) string {
+// TodayAnchorSQL is AnchorIn(asOf, installation zone) in SQL.
+func TodayAnchorSQL(asOf string) string {
 	return `((date_trunc('day', CAST(` + asOf + ` AS timestamptz) AT TIME ZONE ` + installationZoneSQL +
 		`) + interval '12 hours') AT TIME ZONE 'UTC')`
 }
@@ -220,6 +220,12 @@ func dateEndSQL(alias string) string {
 // the order a calendar reads, and where "after the meeting" begins.
 func StartSQL(alias string) string {
 	return StartAtSQL(alias+".occurred_at", alias+".occurred_precision")
+}
+
+// IsAnchorSQL is "at could be a date's Anchor": noon UTC to the microsecond. A day entry
+// is always stored there, so any other instant is a time of day.
+func IsAnchorSQL(at string) string {
+	return `((` + at + ` AT TIME ZONE 'UTC')::time = TIME '12:00:00')`
 }
 
 // StartAtSQL is StartSQL for an activity time held elsewhere than its own

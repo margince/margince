@@ -92,12 +92,11 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.goto("/#/deals/d-fleet");
   await page.getByRole("button", { name: "Weitere Aktionen" }).click();
   await page.getByRole("button", { name: "Details bearbeiten" }).click();
-  await page
-    .getByRole("button", { name: "Unternehmen ändern", exact: true })
-    .click();
+  await page.getByRole("button", { name: /^Unternehmen ändern/ }).click();
+  const group = page.getByRole("dialog", { name: "Unternehmen", exact: true });
   await choose(
     page,
-    page.getByRole("combobox", { name: "Projekt", exact: true }),
+    group.getByRole("combobox", { name: "Projekt", exact: true }),
     "Brandt ERP",
   );
   const patched = page.waitForRequest(
@@ -105,16 +104,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
       request.url().endsWith("/v1/deals/d-fleet") &&
       request.method() === "PATCH",
   );
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await group.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
-  // The saved drawer stays open for more edits, so close it before the page
-  // behind it is used again. Escape while the save is in flight would ask to
-  // discard it, so wait for the group to leave its edit state first.
-  await expect(
-    page.getByRole("button", { name: "Speichern", exact: true }),
-  ).toBeHidden();
+  // The group's dialog closes on save; Escape then shuts the drawer under it
+  // without an ask, before the page behind is used again.
+  await expect(group).toBeHidden();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   // The deal header now carries the project as a chip linking to its page.
   await expect(page.getByTestId("deal-project")).toHaveText("Brandt ERP");
 
@@ -212,9 +208,15 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // 5. The timeline accumulates what is filed under the project: relink the
   // deal's note to the project and it appears here with the coverage count.
   await page.goto("/#/deals/d-fleet");
-  const relink = timeline.getByRole("button", { name: "Neu verknüpfen" });
-  await onDealHistory(() => expect(relink).toBeVisible({ timeout: 2000 }));
-  await relink.click();
+  // Relink sits in the row's "More actions" menu. The menu is portalled out of
+  // the row, so the item is found on the page.
+  const noteVerbs = timeline
+    .locator("li", { hasText: "Kickoff mit Brandt IT" })
+    .first()
+    .getByRole("button", { name: "Weitere Aktionen" });
+  await onDealHistory(() => expect(noteVerbs).toBeVisible({ timeout: 2000 }));
+  await noteVerbs.click();
+  await page.getByRole("button", { name: "Neu verknüpfen" }).click();
   await dialog
     .getByRole("searchbox", {
       name: "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",

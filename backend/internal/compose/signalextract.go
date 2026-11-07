@@ -12,10 +12,13 @@ package compose
 // the prose, and nothing but a reader gets it out.
 //
 // What it writes is an OBSERVATION and nothing more: a signal row, attributed
-// to this producer, dismissible. It changes no lifecycle, opens no deal and
-// creates no task — those are structural claims about the record and they
-// stage for a human (the proposal reconciler). A wrong signal is a card
-// somebody clears; a wrong structural write is a record somebody has to find.
+// to this producer, dismissible. It changes no lifecycle and opens no deal;
+// those are structural claims about the record and they stage for a human
+// (the proposal reconciler). A promise it reads goes to the commitment
+// dispatch. That writes a colleague's task only when no confirmation is needed
+// and confidence reaches its own higher threshold. Otherwise it stages a
+// proposal. A wrong signal is a card somebody clears; a wrong structural write
+// is a record somebody has to find.
 //
 // Every message reaches the model inside its own fence span (ADR-0075), and
 // every cited id is checked against the ids this call supplied. A sender who
@@ -38,7 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -152,7 +155,7 @@ func (x *SignalExtractor) readThread(
 	}
 	events, err := x.askReading(ctx, thread)
 	if errors.Is(err, errRefusedReading) {
-		return 0, x.deferRefusedReading(ctx, wsID, thread, now, err)
+		return 0, x.deferRefusedReading(ctx, thread, now, err)
 	}
 	if err != nil {
 		// A provider or budget failure is not this thread's fault, so the
@@ -169,7 +172,7 @@ func (x *SignalExtractor) readThread(
 	events = append(events, more...)
 	raised, _, err := x.commitReading(ctx, thread, events, now, true)
 	if errors.Is(err, errRefusedReading) {
-		return raised, x.deferRefusedReading(ctx, wsID, thread, now, err)
+		return raised, x.deferRefusedReading(ctx, thread, now, err)
 	}
 	return raised, err
 }
@@ -235,7 +238,7 @@ func (x *SignalExtractor) keepFirstReading(
 	if !read {
 		return raised, nil
 	}
-	return raised, x.deferRefusedReading(ctx, wsID, thread, now, refusal)
+	return raised, x.deferRefusedReading(ctx, thread, now, refusal)
 }
 
 // unjudgedMessages are the messages this pass reads for the first time. Each
@@ -258,55 +261,6 @@ func unjudgedMessages(thread settledThread, events []extractedEvent) []ids.UUID 
 	return focus
 }
 
-// deferRefusedReading counts one refused reading of this conversation and
-// leaves it due for the next pass — or parks it, once the attempts are gone.
-//
-// The WATERMARK DOES NOT MOVE, and the refusal is COUNTED. A refusal says this
-// reply was unusable, not that the conversation holds nothing, and the two are
-// worlds apart for a reader: retiring the thread on the first one would drop
-// whatever it actually says for good. Leaving it due forever is the other
-// failure — dueThreads takes the newest extractThreadCap conversations, so a
-// thread that never settles holds a slot in every pass and the backlog behind
-// it is never reached. The count parks it after extractRefusalCap readings of
-// the SAME text. Parking is a deferral, not a verdict: a new message unparks
-// it, and so does time, because the model that could not read it is not the
-// model that will be asked next week.
-//
-// The refusal is not returned as an error either. Nothing here failed that a
-// retry of the PASS would fix, and faulting the job would re-run every other
-// thread to reach this one.
-func (x *SignalExtractor) deferRefusedReading(
-	ctx context.Context, wsID ids.WorkspaceID, thread settledThread, now time.Time, refusal error,
-) error {
-	var refusals int
-	if markErr := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
-		counted, countErr := recordThreadRefusal(ctx, tx, thread, now)
-		refusals = counted
-		return countErr
-	}); markErr != nil {
-		return markErr
-	}
-	// clampToken for the same reason validateExtractPayload uses it on every
-	// echoed token: this error can carry model output, the model read untrusted
-	// mail, and an operator log is not the place for either a correspondent's
-	// chosen volume or their private text.
-	if refusals >= extractRefusalCap {
-		// Said differently once the attempts are gone, because it means
-		// something different: nobody will look at this conversation again for
-		// a week, and whatever it states is not on the account until then. A
-		// per-refusal line at the same level would bury that in the noise of
-		// the two that preceded it.
-		x.log.WarnContext(ctx, "signal extract: parking a conversation nothing could read",
-			"thread_key", thread.Key, "refusals", refusals,
-			"parked_for", extractParkFor.String(), "error", clampToken(refusal.Error()))
-		return nil
-	}
-	x.log.InfoContext(ctx, "signal extract: refusing the model's reading, will try again",
-		"thread_key", thread.Key, "refusals", refusals,
-		"of", extractRefusalCap, "error", clampToken(refusal.Error()))
-	return nil
-}
-
 // commitReading writes the signals this conversation stated and advances its
 // watermark in ONE transaction, and reports how many signals were raised.
 // Without retire the events are written and the watermark stays, for a reading
@@ -316,7 +270,17 @@ func (x *SignalExtractor) commitReading(
 	ctx context.Context, thread settledThread, events []extractedEvent, now time.Time, retire bool,
 ) (int, bool, error) {
 	raised, complete, read := 0, true, false
-	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+	original := thread
+	if err := withRetryingWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
+		raised, complete, read = 0, true, false
+		thread = original
+
+		if err := storekit.WaitThreadKeysTx(ctx, tx, []string{thread.Key}); err != nil {
+			return err
+		}
+		if current, err := lockScannedThread(ctx, tx, thread); err != nil || !current {
+			return err
+		}
 		if err := lockPromiseSources(ctx, tx, threadMessageIDs(thread)); err != nil {
 			return err
 		}

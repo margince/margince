@@ -220,3 +220,24 @@ func TestFieldResolvesExactlyRoutableLeadFields(t *testing.T) {
 		t.Error("a field outside the routable set must resolve to \"\" (never matches)")
 	}
 }
+
+func TestAStaleRoutingRuleStopsTheWholeConfiguration(t *testing.T) {
+	owners, active := routingPool(2)
+	for _, value := range []string{"", "web"} {
+		cfg := RoutingConfig{Owners: owners[:1], Rules: []RoutingRule{
+			{Field: "origin", Equals: "web", OwnerID: owners[0]},
+			{Field: "source", Equals: value, OwnerID: owners[1]},
+		}}
+		chosen, reason, ok := chooseOwner(cfg, leadRoutingFacts{Origin: "web"}, map[ids.UserID]int{}, active)
+		if ok || reason != "stale_rules" || !chosen.IsZero() {
+			t.Fatalf("stale rule with value %q picked %v by %q (ok=%v)", value, chosen, reason, ok)
+		}
+		if got := cfg.staleRuleFields(); len(got) != 1 || got[0] != "source" {
+			t.Errorf("stale rule fields = %v, want [source]", got)
+		}
+	}
+	live := RoutingConfig{Rules: []RoutingRule{{Field: "origin", Equals: "web", OwnerID: owners[1]}}}
+	if got := live.staleRuleFields(); len(got) != 0 {
+		t.Errorf("a rule on origin is reported stale: %v", got)
+	}
+}

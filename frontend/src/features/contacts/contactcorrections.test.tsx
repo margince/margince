@@ -312,7 +312,7 @@ describe("what the card says in the reader's language", () => {
     expect(await screen.findByText("Tên")).toBeTruthy();
     expect(screen.getByText("Họ")).toBeTruthy();
     const text = container.textContent ?? "";
-    expect(text).toContain("Đọc từ email của họ");
+    expect(text).toContain("Đọc từ chữ ký email của họ");
     expect(text).toContain("Đọc từ một nguồn đã ghi nhận");
     expect(text).not.toMatch(/contact\.|capture_enrich|a_channel_from/);
   });

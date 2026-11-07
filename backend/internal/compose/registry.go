@@ -9,6 +9,7 @@ package compose
 // imports a sibling module (ADR-0054 §9).
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -86,14 +88,16 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, 
 // every path that can lose the vector lane says so on the wire rather than
 // serving a lexically-ranked page under a semantic label.
 func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.EmailDrafter, send SendPath, enricher agents.CompanyEnricher, embedder search.Embedder, transcriptOnLanding activities.TranscriptReadEnqueue, imports agents.Imports, meetingBrief agents.MeetingBriefReader, log *slog.Logger, features registryFeatures, opts ...agents.RegistryOption) *agents.Registry {
+	log = cmp.Or(log, slog.Default())
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
 	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
-	opts = append(opts, withContractTierFloor(),
+	opts = append(opts, withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
-		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))),
-		agents.WithChangeWords(agentChangeWords(db)))
+		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
+		agents.WithChangeWords(agentChangeWords(db)),
+		agents.WithContactCaseMerger(contactCaseMergerSeam(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
@@ -102,18 +106,18 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
 	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
+	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(readViews(agentPolicies)))
+	agents.RegisterRouteVerbs(registry, declaredRouteVerbs(agentPolicies), routeThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
-	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: contacts.NewStore(db)})
+	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db)})
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
-	agents.RegisterReportTool(registry,
-		reportToolRunner(newReportEngine(pool)),
-		reportToolCatalog(), reportPlanVocabulary())
-	agents.RegisterReportVocabularyTool(registry,
-		agents.NewReportVocabularyResource(reportToolCatalog()))
+	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(), reportPlanVocabulary())
+	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
 	agents.RegisterReportingTool(registry, reportingReader(pool))
+	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
 	agents.RegisterAnalyticsReportTool(registry,
 		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
 	// The UI and tools share calculation engines and current-reader disclosure rules.
@@ -137,7 +141,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	searchRetriever, retriever := registryRetrievers(pool, embedder)
 	// One engine ranks search_records and resolves an intent tool's record_name.
 	recordSearch := recordSearchSeam(pool)
-	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch)
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, provider, meetingReadiness{store: activities.NewStore(db)})
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
 	agents.RegisterRecordSearchTool(registry, provider, recordSearch)
@@ -154,17 +158,18 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
 	agents.RegisterDocumentTools(registry, documentSeam{srv: features.served, db: db})
-	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays)
+	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays, runner.SweepQuietDays)
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
-	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, contacts.NewStore(InstallationDB(pool))), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
+	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, newContactsStore(InstallationDB(pool))), coverageReader(pool, newContactsStore(InstallationDB(pool))),
 		introPathLister(pool),
-		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
+		atRiskLister(pool, newContactsStore(InstallationDB(pool))))
 	comms := newCommsAdapter(pool, drafter, send)
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterClientCheckTool(registry, log)
 	agents.RegisterRouters(registry)
 	registerComposedTools(registry)
 	return registry
@@ -248,21 +253,10 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 	}
 }
 
-// decidingApprovalsService builds the approvals engine the TOOL surface decides
-// through: the registration list plus the send-dependent releases.
-//
-// Both halves or neither. The list alone leaves held_draft — the one kind whose
-// release is a send — with no executor on this engine, so approving one here
-// would commit the decision, answer the caller success, and leave the message
-// held forever. The HTTP inbox gets the same two halves at a different moment
-// (applySendPath), because its surface is built before the send path is
-// assembled and this one is built after.
-// The process logger rides along for the reason the HTTP door takes one: a
-// bundle member whose effect fails AFTER its decision has committed is reported
-// to the caller by outcome alone, so the cause has nowhere to go but the log —
-// and this is the door where the wire carries the least.
+// decidingApprovalsService adds send-dependent releases to tool decisions.
+// Its logger retains failures that happen after a decision commits.
 func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger) *approvals.Service {
-	svc := approvalsServiceWithEffects(pool)
+	svc := NewApprovalsServiceWithEffects(pool)
 	registerLateApprovalEffects(svc, pool, send)
 	if log != nil {
 		svc = svc.WithLogger(log)

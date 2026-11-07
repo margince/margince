@@ -23,12 +23,18 @@ export function monthName(month: number, locale: Locale): string {
  * The month a calendar grid is showing, such as "August 2026".
  *
  * A month a reader is looking at, not a moment. The grid is built from local
- * dates, so this reads the local date back instead of pinning a zone.
+ * dates, so this reads the local date back instead of pinning a zone. A
+ * caller placing a UTC-dated moment names that zone.
  */
-export function monthAndYear(month: Date, locale: Locale): string {
+export function monthAndYear(
+  month: Date,
+  locale: Locale,
+  zone?: string,
+): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     month: "long",
     year: "numeric",
+    timeZone: zone,
   }).format(month);
 }
 
@@ -120,6 +126,27 @@ export function formatDateAbbrev(
     month: "short",
     year: "numeric",
   }).format(displayDay(utcIso, zone));
+}
+
+/**
+ * Two dates as one span that names their shared month and year once, as
+ * "1–6 Nov 2026" or "1 Oct – 31 Dec 2026", in each locale's own range form.
+ */
+export function formatDateAbbrevRange(
+  fromIso: string,
+  toIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  if (dateTimePreferences().dateFormat !== "locale")
+    return `${formatDate(fromIso, locale, zone)} – ${formatDate(toIso, locale, zone)}`;
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).formatRange(displayDay(fromIso, zone), displayDay(toIso, zone));
 }
 
 /**
@@ -281,4 +308,33 @@ export function hourInZone(instant: Date, zone: string): number {
     timeZone: zone,
   }).format(instant);
   return Number.parseInt(hour, 10);
+}
+
+/**
+ * A task's due date, with its time of day when the task has one
+ * (`due_has_time`). A read that does not carry the flag passes nothing and
+ * gets the date alone.
+ */
+export function formatDue(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  locale: Locale,
+  zone: string,
+): string {
+  return hasTime === true
+    ? formatDateTime(dueAt, locale, zone)
+    : formatDate(dueAt, locale, zone);
+}
+
+/** formatDue in the day-and-month form a row or a chip has room for. */
+export function formatDueCompact(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  locale: Locale,
+  zone: string,
+): string {
+  const day = formatDayMonth(dueAt, locale, zone);
+  return hasTime === true
+    ? `${day}, ${formatTimeOfDay(dueAt, locale, zone)}`
+    : day;
 }

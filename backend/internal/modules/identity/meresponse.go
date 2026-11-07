@@ -17,8 +17,23 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// TeamWeekOf answers which teams' frozen weeks the caller may open, on the
+// predicate the week is served on. /me and /worklist both carry it, so a screen
+// that needs only this answer never assembles the day to read it.
+func TeamWeekOf(ctx context.Context) crmcontracts.TeamWeekReach {
+	switch auth.TeamWeekReachOf(ctx) {
+	case auth.ReachesEveryTeam:
+		return crmcontracts.TeamWeekReachEveryTeam
+	case auth.ReachesTeamsLed:
+		return crmcontracts.TeamWeekReachTeamsLed
+	default:
+		return crmcontracts.TeamWeekReachNone
+	}
+}
 
 // meResponse renders /me for one principal. It is a method rather than a
 // function because every posture it reports beyond the identity itself — the
@@ -42,6 +57,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			Id:           openapi_types.UUID(id.UserID.UUID),
 			Email:        openapi_types.Email(id.Email),
 			DisplayName:  id.DisplayName,
+			AvatarUrl:    AvatarURL(id.UserID.UUID, id.AvatarKey),
 			GreetingName: id.GreetingName,
 			Status:       "active",
 			Locale:       contractLocale(id.Locale),
@@ -52,10 +68,13 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			// The twelve hard-coded "Europe/Berlin" literals on the frontend
 			// are what a caller does when no correct answer is served.
 			// margince/margince#26.
-			Timezone: optionalString(id.Timezone),
+			Timezone:       optionalString(id.Timezone),
+			TimezoneChosen: timezoneChosenFlag(id.Timezone, id.TimezoneChosen),
+			TimezoneSetBy:  id.TimezoneSetBy,
 		},
 		Roles:                   roles,
 		Teams:                   teams,
+		TeamWeek:                new(TeamWeekOf(actorCtx(ctx, id))),
 		WorkspaceName:           id.WorkspaceName,
 		NonProduction:           h.nonProduction,
 		DataResetAvailable:      &h.dataResetAvailable,

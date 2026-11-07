@@ -61,6 +61,9 @@ type Handlers struct {
 	// when it finishes, so a test can wait for the captured mail without
 	// sleeping. Nil in production.
 	resetSendStarted func()
+	// sendBudget is a test seam: a shorter budget for the invitation send, so
+	// a test can see a send run out of time. Zero in production.
+	sendBudget time.Duration
 
 	// The unauthenticated endpoints carry their own throttles: login
 	// attempts cost a full Argon2 verification each and reset requests
@@ -135,9 +138,11 @@ type Handlers struct {
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).
 	installationBrand InstallationBrand
-	// refusedDealFilters names the deal list filters the caller is refused.
-	// Nil omits them (meparts.go).
-	refusedDealFilters RefusedDealFilters
+	analyticsStartup  AnalyticsStartup
+	// refusedDealFilters and refusedLeadFilters name the deal and lead list
+	// filters the caller is refused. Nil omits them (meparts.go).
+	refusedDealFilters RefusedFilters
+	refusedLeadFilters RefusedFilters
 	// mcpResource is the canonical MCP server URL (public_base_url +
 	// "/mcp"), injected by the composition root from deployment config.
 	// The RFC 9728 protected-resource document advertises this verbatim
@@ -151,6 +156,8 @@ type Handlers struct {
 	// passportUsage reads each live passport's running window. Nil lists
 	// passports without usage.
 	passportUsage PassportUsageReader
+	// reachableAreas lists the areas a passport may be limited to for the caller.
+	reachableAreas ReachableAreas
 
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the
@@ -354,7 +361,7 @@ func (h Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 // never binds the session identity read here (serveAsAgent below), so an agent
 // arrives without one and is answered 401 rather than a partial profile — which
 // is why the contract's passport claim is deprecated as permanently null.
-func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request, params crmcontracts.GetCurrentPrincipalParams) {
 	id, ok := identityFrom(r.Context())
 	if !ok {
 		httperr.Unauthorized(w, r, "no session")
@@ -368,6 +375,9 @@ func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	if params.Prepare != nil && *params.Prepare == crmcontracts.GetCurrentPrincipalParamsPrepareAnalytics && h.analyticsStartup != nil {
+		me.AnalyticsStartup = h.readAnalyticsStartup(actorCtx(r.Context(), id))
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	httperr.WriteJSON(w, http.StatusOK, me)

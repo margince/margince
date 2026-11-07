@@ -5,9 +5,13 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -15,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -43,9 +48,13 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	system, key := provenance.WebFormSource, landing.SourceKey
 	subject := "Website form: " + landing.FormName
 	body := webFormNote(landing)
+	raw, err := webFormRaw(landing)
+	if err != nil {
+		return err
+	}
 	_, _, err = l.activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
-		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource,
+		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource, Raw: &raw,
 	})
 	if err != nil {
 		return fmt.Errorf("compose: writing the website form's note: %w", err)
@@ -53,9 +62,9 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	return nil
 }
 
-// lead answers the record the note belongs on. Nil with no error is a contact
-// this principal may not read. Its owner has a task about it, and nothing more
-// is written.
+// lead answers the record the note belongs on. Nil with no error means nothing
+// more is written. That is a contact this principal may not read, whose owner
+// has a task about it, or an address on the erasure list.
 func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*activities.ActivityLinkInput, error) {
 	active, err := l.catalog.ActiveColumns(ctx, "lead")
 	if err != nil {
@@ -63,19 +72,7 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 	}
 	in := webFormLeadInput(landing)
 	in.CustomFields = webFormCustomFields(active, landing.Enquiry)
-	lead, _, err := l.leads.CreateLead(ctx, in)
-	if _, fieldGone := errors.AsType[storekit.CustomFieldErrors](err); fieldGone {
-		// A field was retired or changed since the catalog read. The values
-		// are on the note, so the lead lands without them.
-		in.CustomFields = nil
-		lead, _, err = l.leads.CreateLead(ctx, in)
-	}
-	if _, ownerGone := errors.AsType[*auth.AssigneeNotAllowedError](err); ownerGone {
-		// The form's owner was deactivated after it was saved. The lead goes to
-		// the unassigned queue rather than being refused to the visitor.
-		in.OwnerID = nil
-		lead, _, err = l.leads.CreateLead(ctx, in)
-	}
+	lead, err := l.createLead(ctx, in)
 	if duplicate, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: duplicate.ExistingID.UUID}, nil
 	}
@@ -85,10 +82,38 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 		}
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: held.ContactID.UUID}, nil
 	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		// The visitor gets the receipt every post gets. A refusal would tell an
+		// anonymous sender that the address belongs to an erased subject.
+		return nil, nil //nolint:nilnil // an erased address has no note target, and that is no failure
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: ids.UUID(lead.Id)}, nil
+}
+
+// createLead lands the lead without whatever the form names that has gone since
+// it was saved. A visitor is never refused over the form's own setup. Each retry
+// clears one thing, and any of them can be the one refused first.
+func (l webFormLeads) createLead(ctx context.Context, in contacts.CreateLeadInput) (crmcontracts.Lead, error) {
+	for {
+		lead, _, err := l.leads.CreateLead(ctx, in)
+		_, fieldGone := errors.AsType[storekit.CustomFieldErrors](err)
+		_, ownerGone := errors.AsType[*auth.AssigneeNotAllowedError](err)
+		switch {
+		case fieldGone && in.CustomFields != nil:
+			// The values are on the note, so the lead lands without them.
+			in.CustomFields = nil
+		case errors.Is(err, contacts.ErrLeadProductRetired) && in.ProductID != nil:
+			in.ProductID = nil
+		case ownerGone && in.OwnerID != nil:
+			// The unassigned queue takes the lead of a deactivated owner.
+			in.OwnerID = nil
+		default:
+			return lead, err
+		}
+	}
 }
 
 func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
@@ -103,6 +128,7 @@ func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 		owner := ids.From[ids.UserKind](*landing.OwnerID)
 		in.OwnerID = &owner
 	}
+	in.ProductID = landing.ProductID
 	// A number without its country prefix is kept on the note rather than
 	// refusing the visitor's whole submission over it.
 	if _, err := values.ParsePhone(e.Phone); err == nil {
@@ -154,8 +180,9 @@ func originDetail(e webforms.Enquiry) string {
 // maxOriginDetail is the lead.origin_detail bound (lead_origin_detail_bounded).
 const maxOriginDetail = 500
 
-// webFormNote is the timeline note. It holds what the visitor wrote, every
-// field the lead has no column for, and the consent in the form's own words.
+// webFormNote is the timeline note: the consent the form recorded, then what
+// the visitor sent as a quote. Every line the visitor wrote is quoted, so no
+// field of theirs can pass for a line Margince wrote, such as the consent.
 func webFormNote(landing webforms.Landing) string {
 	e := landing.Enquiry
 	var b strings.Builder
@@ -180,12 +207,86 @@ func webFormNote(landing webforms.Landing) string {
 	for _, u := range e.UTM {
 		line(u.Name, u.Value)
 	}
-	if e.Consent && landing.ConsentWording != nil {
-		consent := "ticked: " + *landing.ConsentWording
-		if landing.ConsentPolicyVersion != nil {
-			consent += " (policy " + *landing.ConsentPolicyVersion + ")"
-		}
-		line("Consent", consent)
+	sent := quoted(strings.TrimSpace(b.String()))
+	consent := webFormConsent(landing)
+	if consent == "" || sent == "" {
+		return consent + sent
 	}
-	return strings.TrimSpace(b.String())
+	return consent + "\n\n" + sent
+}
+
+// webFormRaw keeps the submission field by field on the note, where the
+// activity read answers it as `web_form`. The body says the same as text.
+//
+//craft:ignore naked-any raw is the activity's free-form source payload column
+func webFormRaw(landing webforms.Landing) (map[string]any, error) {
+	e := landing.Enquiry
+	sent := crmcontracts.WebFormSubmission{
+		Message: optional(e.Message), FullName: optional(e.FullName), Email: e.Email,
+		Phone: optional(e.Phone), Company: optional(e.Company), Title: optional(e.Title),
+		Extra: webFormValues(e.Extra), PageUrl: optional(e.PageURL), Referrer: optional(e.Referrer),
+		Campaign: webFormValues(e.UTM),
+	}
+	if landing.ConsentWording != nil {
+		formID := openapi_types.UUID(landing.FormID)
+		sent.Consent = &crmcontracts.WebFormConsent{
+			Ticked: e.Consent, Wording: *landing.ConsentWording, PolicyVersion: landing.ConsentPolicyVersion,
+			FormId: &formID, FormName: optional(landing.FormName), PageUrl: optional(e.PageURL),
+		}
+	}
+	encoded, err := json.Marshal(sent)
+	if err != nil {
+		return nil, fmt.Errorf("compose: encoding the website form's fields: %w", err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(encoded, &raw); err != nil {
+		return nil, fmt.Errorf("compose: decoding the website form's fields: %w", err)
+	}
+	return raw, nil
+}
+
+func webFormValues(fields []webforms.Field) []crmcontracts.WebFormValue {
+	out := make([]crmcontracts.WebFormValue, len(fields))
+	for i, f := range fields {
+		out[i] = crmcontracts.WebFormValue{Name: f.Name, Value: f.Value}
+	}
+	return out
+}
+
+// webFormConsent is the form's own record of its consent box. The admin's
+// wording is kept to one line, so the record is the one line it reads as.
+func webFormConsent(landing webforms.Landing) string {
+	switch {
+	case landing.ConsentWording == nil:
+		return ""
+	case !landing.Enquiry.Consent:
+		return "Consent: not ticked"
+	}
+	consent := "Consent: ticked: " + mailcopy.OneLine(*landing.ConsentWording)
+	if landing.ConsentPolicyVersion != nil {
+		consent += " (policy " + mailcopy.OneLine(*landing.ConsentPolicyVersion) + ")"
+	}
+	return consent
+}
+
+// quoted marks every line of text as a Markdown quote. It splits on each break
+// a reader may draw, so no line of the text is shown unmarked.
+func quoted(text string) string {
+	if text == "" {
+		return ""
+	}
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	var lines []string
+	start := 0
+	for i, r := range text {
+		if mailcopy.LineBreak(r) {
+			lines = append(lines, text[start:i])
+			start = i + utf8.RuneLen(r)
+		}
+	}
+	lines = append(lines, text[start:])
+	for i, l := range lines {
+		lines[i] = strings.TrimRight("> "+l, " ")
+	}
+	return strings.Join(lines, "\n")
 }

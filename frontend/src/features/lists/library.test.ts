@@ -134,6 +134,15 @@ describe("a cut", () => {
     ).toEqual([view.name]);
   });
 
+  it("searches the way the palette does: accents either way, words in any order", () => {
+    expect(
+      cutLibrary(items, { ...ALL, q: "dînner" }, captionOf).map(nameOf),
+    ).toEqual([mineList.name]);
+    expect(
+      cutLibrary(items, { ...ALL, q: "guests october" }, captionOf).map(nameOf),
+    ).toEqual([mineList.name]);
+  });
+
   it("holds archived lists back until they are asked for", () => {
     expect(cutLibrary(items, ALL, captionOf).map(nameOf)).not.toContain(
       archivedList.name,

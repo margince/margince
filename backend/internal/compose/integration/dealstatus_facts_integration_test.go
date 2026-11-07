@@ -110,7 +110,7 @@ func TestFactsOnlyRefreshNeverCallsTheModelEvenWhenTheRequestChanges(t *testing.
 
 func assertCachedRequestMove(ctx context.Context, t *testing.T, service *dealstatus.Service, dealID ids.UUID, want string) {
 	t.Helper()
-	moves, err := service.CachedMoves(ctx, []ids.UUID{dealID})
+	moves, err := service.CurrentMoves(ctx, []ids.UUID{dealID})
 	if err != nil {
 		t.Fatal(err)
 	}

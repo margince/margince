@@ -22,11 +22,12 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // anyTable is the scope a spelling applies when it cannot be attributed to one
@@ -72,9 +73,11 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
 	"VisibleSubset":      {argument: 2},
+	"PassingSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
-	"LinkTargetVisibleClause": {table: anyTable},
+	"LinkTargetVisibleClause":  {table: anyTable},
+	"LinkTargetReadableClause": {table: anyTable},
 
 	"ActivityDiscoverClause":           {table: "activity"},
 	"ActivityContentClause":            {table: "activity"},
@@ -82,10 +85,12 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureActivityVisibleLive":        {table: "activity"},
 	"EnsureActivityContentVisible":     {table: "activity"},
 	"EnsureActivityContentVisibleLive": {table: "activity"},
+	"ActivityContentSubset":            {table: "activity"},
 
 	"SignalScopeClause":       {table: "signal"},
 	"EnsureSignalVisible":     {table: "signal"},
 	"EnsureSignalVisibleLive": {table: "signal"},
+	"SignalVisibleLiveSubset": {table: "signal"},
 
 	// The edge conjunction bounds the relationship by its ENDPOINTS: each
 	// endpoint column is tested with VisiblePredicate over its own table, so a
@@ -96,6 +101,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"RelationshipEndpointScope": {endpoints: true},
 	"EnsureRelationshipVisible": {endpoints: true},
 	"EdgeReadScope":             {endpoints: true},
+	"RelationshipVisibleSubset": {endpoints: true},
 }
 
 // scopeSpelling is one spelling's table: fixed, read off an argument, or the
@@ -138,7 +144,7 @@ func TestEveryRowScopeSpellingSaysWhichTableItBounds(t *testing.T) {
 // `partner_company` and no such table exists.
 func referenceColumns(t *testing.T, tables map[string]bool) map[string]string {
 	t.Helper()
-	catalog, err := os.ReadFile(filepath.Join(repoRoot, headCatalogPath))
+	catalog, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
 	if err != nil {
 		t.Fatalf("reading the schema catalog this census derives its columns from: %v", err)
 	}
@@ -601,5 +607,48 @@ const (
 	// The data task runs as the system principal over the workspace. A unique id
 	// goes only into promoteLeadTx, which locks both records and rechecks the
 	// promotion; several ids leave the lead untouched. No id reaches a caller.
-	modulesTierUnscopedCeiling = 144
+	//
+	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
+	// audit unsupported signature numbers. Its caller requires the system actor;
+	// the workspace repair returns a count, never contacts to a reader.
+	//
+	// 147-148: activities.lockMeetingFacts and readPreparations read a meeting's
+	// participant contact ids only to hash them into the guest-list fingerprint
+	// of the preparation revision. The meeting itself is content-gated first.
+	// No id is returned.
+	//
+	// 149: forecasting.attachOpenDeals reads the deal ids of frozen contribution
+	// rows for the forecast evaluation, which only a system principal may run.
+	// Each id joins a deal to its outcome and is dropped from the dataset.
+	//
+	// 150: contacts.fileLinkedInTwins finds every live contact holding the
+	// LinkedIn profile a write just set. The lane searches the whole workspace
+	// by design, as the address-variant lane does. The ids become review rows
+	// inside the write, and none is returned to its caller.
+	//
+	// 151: deals.StuckAfter returns the won-deal stage pace keyed by stage id.
+	// A stage is configuration every member reads, and the pace is a duration.
+	//
+	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
+	// guests onto the meeting that stays, under a system job or a calendar sync.
+	// The contacts move between two rows of one meeting, and nothing is returned.
+	//
+	// 153: deals.correctionReceiptSelect is the SELECT list every change report
+	// shares, with no `WHERE` of its own. Each caller (RecentCorrectionsOwnedBy,
+	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
+	//
+	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
+	// website lead holds, for the privacy page. It reads presence flags only,
+	// for the lead the link resolved, and returns no reference.
+	//
+	// 155: ai.eraseSamplesTx finds every voice profile holding a sample copied
+	// from erased mail or naming an erased contact. An erasure must reach every
+	// owner's profile, so no row scope applies. Each id is only locked, and the
+	// call returns nothing but an error.
+	// 156–162: derived-work maintenance adds seven contact references:
+	// signature retry/release selectors (two), the misattribution repair's
+	// ordered locks (one), and interaction retry/release/lock/queue selectors
+	// (four). Their system-only callers consume these keys inside maintenance;
+	// none enters a response. Human graph reads retain their object and row gates.
+	modulesTierUnscopedCeiling = 162
 )

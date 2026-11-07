@@ -3,10 +3,21 @@ import { Phone, Plus } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import {
+  expectAppliedFiltersOneLine,
+  LONG_FILTER_CHIPS,
+  LONG_FILTER_VALUES,
+  WIDE,
+} from "../testing/appliedfilterchecks";
 import { Button } from "./atoms";
 import { IconAction } from "./iconaction";
 import { Menu, useCloseOnEscape } from "./listmenu";
-import { CountLine, ListSurface, type ListView } from "./listsurface";
+import {
+  CountLine,
+  countSays,
+  ListSurface,
+  type ListView,
+} from "./listsurface";
 
 // The surface's header when its sentence is longer than the row: German runs
 // the count a third longer than English, and a list with six saved views and
@@ -126,6 +137,98 @@ export const GermanCountPhone: Story = {
   play: async ({ canvasElement }) => nothingPushedOut(canvasElement),
 };
 
+// A list whose count comes back with each search. The story's own buttons
+// answer it, so a play can measure the pending moment.
+function SearchedSurface() {
+  const [query, setQuery] = useState("");
+  const [pending, setPending] = useState(true);
+  const [rows, setRows] = useState(0);
+  const answer = (found: number) => {
+    setRows(found);
+    setPending(false);
+  };
+  return (
+    <>
+      <ListSurface
+        title="Leads"
+        views={VIEWS}
+        count={
+          pending || !countSays(rows) ? undefined : (
+            <CountLine unit="Leads" first={1} last={rows} total={rows} />
+          )
+        }
+        holdCount={pending || (query !== "" && rows === 0)}
+        action={<Button>Neuer Lead</Button>}
+        search={{
+          value: query,
+          onChange: (next) => {
+            setQuery(next);
+            setPending(true);
+          },
+        }}
+      >
+        <p>Zeilen</p>
+      </ListSurface>
+      <Button onClick={() => answer(25)}>25 Zeilen</Button>
+      <Button onClick={() => answer(0)}>Keine Zeilen</Button>
+    </>
+  );
+}
+
+function toolbarTop(canvasElement: HTMLElement): number {
+  const tools = canvasElement.querySelector(".lt-tools");
+  if (!(tools instanceof HTMLElement)) {
+    throw new Error("the list surface drew no toolbar");
+  }
+  return tools.getBoundingClientRect().top;
+}
+
+// On a phone the count has its own line. A search, even one narrowed to no
+// rows, keeps that line; only a list with nothing at all drops it.
+export const CountHoldsItsLinePhone: Story = {
+  name: "Count holds its line, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <SearchedSurface />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Alle" });
+    const some = canvas.getByRole("button", { name: "25 Zeilen" });
+    const none = canvas.getByRole("button", { name: "Keine Zeilen" });
+    const search = canvas.getByRole("searchbox");
+    const loading = toolbarTop(canvasElement);
+    await userEvent.click(some);
+    await canvas.findByText("Leads 1 bis 25 von 25");
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+
+    await userEvent.type(search, "a");
+    await waitFor(() =>
+      expect(canvasElement.querySelector(".lt-count")).toBeEmptyDOMElement(),
+    );
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+    await userEvent.click(some);
+    await canvas.findByText("Leads 1 bis 25 von 25");
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+
+    await userEvent.type(search, "zzqx");
+    await userEvent.click(none);
+    await expect(
+      canvasElement.querySelector(".lt-count"),
+    ).toBeEmptyDOMElement();
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+    await userEvent.type(search, "y");
+    await userEvent.click(none);
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+
+    await userEvent.clear(search);
+    await userEvent.click(none);
+    await waitFor(() =>
+      expect(canvasElement.querySelector(".lt-count")).toBeNull(),
+    );
+    await expect(toolbarTop(canvasElement)).toBeLessThan(loading);
+  },
+};
+
 function SortMenuBesideAVerb() {
   const [open, setOpen] = useState<string | null>("sort");
   useCloseOnEscape(open, () => setOpen(null));
@@ -153,7 +256,7 @@ export const MenuUnderATip: Story = {
   render: () => <SortMenuBesideAVerb />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const menu = canvas.getByRole("group", { name: "Sort by" });
+    const menu = await canvas.findByRole("group", { name: "Sort by" });
     const call = canvas.getByRole("button", { name: "Call" });
     await userEvent.hover(call);
     const body = within(document.body);
@@ -167,3 +270,55 @@ export const MenuUnderATip: Story = {
     await expect(menu).not.toHaveClass("open");
   },
 };
+
+// Applied filters longer than a phone's line: they stay one line, which
+// scrolls sideways inside the card, and the page itself never does.
+export const LongAppliedFilterPhone: Story = {
+  name: "Long applied filter, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => {
+    const line = await waitFor(() => {
+      const found = canvasElement.querySelector(".lt-applied-rows");
+      if (!(found instanceof HTMLElement)) {
+        throw new Error("the applied filters drew no line");
+      }
+      return found;
+    });
+    const card = canvasElement.querySelector(".lt");
+    if (!(card instanceof HTMLElement)) {
+      throw new Error("the list surface did not render");
+    }
+    await expect(line.scrollWidth).toBeGreaterThan(line.clientWidth);
+    await expect(line.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card.getBoundingClientRect().right,
+    );
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
+};
+
+// The same filters on a desktop line: each stays one line at the control height.
+export const LongAppliedFilterWide: Story = {
+  name: "Long applied filter, wide",
+  parameters: WIDE,
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => <LongFilters />,
+  play: async ({ canvasElement }) => expectAppliedFiltersOneLine(canvasElement),
+};
+
+function LongFilters() {
+  return (
+    <ListSurface
+      title="Leads"
+      chips={LONG_FILTER_CHIPS}
+      chosen={LONG_FILTER_VALUES}
+      onChipChange={() => undefined}
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  );
+}

@@ -36,6 +36,7 @@ type TeamMember struct {
 
 // TeamReview is one team's frozen week.
 type TeamReview struct {
+	LeadsWithheld  bool
 	NumericSummary *crmcontracts.WeeklyNumericSummary
 	ID             ids.UUID
 	TeamID         ids.UUID
@@ -72,6 +73,8 @@ type TeamReview struct {
 	// Attention is computed when the review is read, never frozen: what needs
 	// the manager now, over the frozen roster.
 	Attention TeamAttentionItems
+	// MeetingsWithheld is Review.MeetingsWithheld for the team's week.
+	MeetingsWithheld bool
 }
 
 // FrozenMember is one seat on the team that week, as it was named then.
@@ -141,6 +144,9 @@ func (e *Engine) AssembleTeamFor(
 	var review TeamReview
 	var created bool
 	err := e.withMeasurementSnapshot(ctx, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		thisWeek, err := WeekStartOf(ctx, tx, now)
 		if err != nil {
 			return err
@@ -163,6 +169,9 @@ func (e *Engine) AssembleTeamFor(
 		// summary is built from all of them and travels in that one INSERT.
 		if err := e.measureTeamWeek(ctx, tx, &review, members, now); err != nil {
 			return err
+		}
+		if review.LeadsWithheld || !MayReadLeads(ctx) {
+			withholdTeamLeads(&review)
 		}
 		review.Summary = summarise(review)
 		id, wrote, err := insertTeamReview(ctx, tx, review)
@@ -272,6 +281,7 @@ func gatherTeamWeek(
 			UserID: member.UserID, DisplayName: member.DisplayName, Measured: true,
 		})
 		counts, memberMoney := frozen.counts, frozen.money
+		review.LeadsWithheld = review.LeadsWithheld || frozen.leadsWithheld
 		plans.add(frozen.plans)
 		review.Counts.RepsCounted++
 		addTeamCounts(&review.Counts, counts)

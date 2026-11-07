@@ -2,13 +2,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  LatestInboundLine,
+  useLatestInbound,
+} from "../../components/latestinbound";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
 import { useToast } from "../../design-system/toast";
 import { leadIdentityName } from "../../format/leadname";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
@@ -17,9 +20,9 @@ import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { leadBand } from "./leadband";
-import { LeadDetails } from "./leaddetails";
+import { LeadDetails, useFieldSave } from "./leaddetails";
 import { LeadPulse, LeadSubtitle } from "./leadheader";
-import { LeadHistoryTab } from "./leadhistory";
+import { LeadHistoryTab, LeadLatestInbound } from "./leadhistory";
 import { LeadDealsTab } from "./leadraillinks";
 import "./leads.css";
 
@@ -42,6 +45,8 @@ export type Lead = components["schemas"]["Lead"];
 export type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
 import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
+import type { RecordTabId } from "../../lib/recordtaborder";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useAddressedTab } from "../records/recordtab";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 
@@ -53,7 +58,11 @@ import { WorklistReturnLink } from "../worklist/worklist.return";
  */
 export type LeadWriter = ReturnType<typeof useLeadPatch>;
 
-const LEAD_TABS = ["overview", "deals", "history"] as const;
+const LEAD_TABS = [
+  "overview",
+  "history",
+  "deals",
+] as const satisfies readonly RecordTabId[];
 
 // The lead-360's "overview" pane, split out of LeadScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
@@ -99,6 +108,7 @@ function useLadderRefresh(id: string): () => void {
  * record it had not read yet.
  */
 function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const queryClient = useQueryClient();
   const refreshAfterTouch = useLadderRefresh(id);
@@ -143,6 +153,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // the SAME one rather than a copy of it (RecordEmailVerb's own controlled
   // mode).
   const [composing, setComposing] = useState(false);
+  const latest = useLatestInbound("lead", lead.id);
+  const saveField = useFieldSave(lead);
 
   return (
     <RecordView
@@ -155,11 +167,26 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         />
       }
       name={leadIdentityName(lead) || t("lead.unnamed")}
+      rename={{
+        label: t("create.fullName"),
+        value: lead.full_name ?? "",
+        canEdit: !writer.readOnly,
+        readOnlyReason: writer.readOnlyReason,
+        onSave: saveField("full_name", true),
+      }}
       identity={lead.id}
       nameBadge={<LeadSubtitle lead={lead} />}
       // A reader has to know this is a prospect and not a contact before they
       // read anything else about them.
       pulse={<LeadPulse lead={lead} />}
+      latest={
+        tab !== "overview" && (
+          <LatestInboundLine
+            latest={latest}
+            onOpen={() => setTab("overview")}
+          />
+        )
+      }
       actions={
         <LeadActions
           lead={lead}
@@ -177,7 +204,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       // The shell stamps timeline rows in this zone. The viewer's own is the
       // default for a prospect. A lead carries no workspace location of its
       // own to prefer over where the reader is.
-      zone={viewerZone()}
+      zone={readerZone}
       band={leadBand({ lead, writer, reasonId: terminalReasonId, t })}
       // The same strip every record in the product carries. It is a place a reader
       // navigates, drawn as a rule with the open body underlined, rather than
@@ -206,18 +233,20 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       }
     >
       {tab === "overview" && (
-        <LeadOverviewPane
-          lead={lead}
-          id={id}
-          writer={writer}
-          promotion={promotion}
-          terminalReasonId={terminalReasonId}
-          thread={threadQuery}
-          asOf={asOf}
-          onOpenEmail={setOpenEmail}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
-        />
+        <LeadLatestInbound latest={latest} leadId={lead.id}>
+          <LeadOverviewPane
+            lead={lead}
+            id={id}
+            writer={writer}
+            promotion={promotion}
+            terminalReasonId={terminalReasonId}
+            thread={threadQuery}
+            asOf={asOf}
+            onOpenEmail={setOpenEmail}
+            onQualify={() => setDialog("qualify")}
+            onDisqualify={() => setDialog("disqualify")}
+          />
+        </LeadLatestInbound>
       )}
       {tab === "deals" && (
         <LeadDealsTab
@@ -243,7 +272,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
           call's own thread and the History tab's rows both open into it. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
       />
     </RecordView>

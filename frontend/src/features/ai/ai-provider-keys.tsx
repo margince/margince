@@ -10,6 +10,7 @@ import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useProviderHealth } from "../../lib/ai-provider-health";
+import { providerName } from "../../lib/ai-provider-names";
 import { providerUsage, useRouting } from "../../lib/ai-routing-query";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
@@ -31,7 +32,6 @@ import {
   useTestProviderKey,
 } from "./ai-provider-key-test";
 import { isOpenRouter } from "./ai-provider-links";
-import { providerName } from "./ai-provider-names";
 import {
   hasProviderSettings,
   ProviderSettingsForm,

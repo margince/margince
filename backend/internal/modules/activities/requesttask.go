@@ -66,16 +66,19 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 		return crmcontracts.Activity{}, false, err
 	}
 	if replay != nil {
-		return replayRequestTask(ctx, tx, *replay, pending, userID)
+		return s.replayRequestTask(ctx, tx, *replay, pending, userID, in)
 	}
 	if !pending {
 		return crmcontracts.Activity{}, false, apperrors.ErrConflict
+	}
+	if err := s.checkTaskRecommendation(ctx, tx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	if in.Subject != nil && strings.TrimSpace(*in.Subject) != "" {
 		request.Subject = in.Subject
 	}
 	request.Body = in.Body
-	request.DueAt, request.RemindAt = in.DueAt, in.RemindAt
+	request.DueAt, request.DueHasTime, request.RemindAt = in.DueAt, in.DueHasTime, in.RemindAt
 	request.CustomFields, request.customColumns, request.customChecked = in.CustomFields, in.customColumns, in.customChecked
 	return s.LogActivityTx(ctx, tx, request)
 }
@@ -97,7 +100,7 @@ func requestAcceptingUser(ctx context.Context, in LogActivityInput) (ids.UUID, e
 	return actor.UserID, nil
 }
 
-func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, pending bool, userID ids.UUID) (crmcontracts.Activity, bool, error) {
+func (s *Store) replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, pending bool, userID ids.UUID, in LogActivityInput) (crmcontracts.Activity, bool, error) {
 	task, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), storekit.IncludeArchived)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -111,7 +114,7 @@ func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activ
 	if task.ArchivedAt != nil && (task.IsDone == nil || !*task.IsDone) && !pending {
 		return crmcontracts.Activity{}, false, apperrors.ErrConflict
 	}
-	return restoreRequestTask(ctx, tx, task, pending, userID)
+	return s.restoreRequestTask(ctx, tx, task, pending, userID, in)
 }
 
 // emailRequestTask is the reply reminder for one request, filed under who

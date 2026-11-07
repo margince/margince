@@ -5,8 +5,6 @@ import type {
   FormEventHandler,
   ReactNode,
 } from "react";
-import { formatNumber } from "../format/format";
-import { useLocale } from "../i18n";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { useWaited } from "./waited";
 import "./badge.css";
@@ -30,8 +28,12 @@ export {
   Textarea,
   TextInput,
 } from "./field";
+
+import { OptionCount } from "./optioncount";
+
 export { OverflowMenu } from "./overflowmenu";
 export { TableScroll } from "./tablescroll";
+export { OptionCount };
 
 /**
  * The closed tone vocabulary, as a value the type is read from. The story and
@@ -58,11 +60,18 @@ type BadgeTone = (typeof BADGE_TONES)[number];
 
 type PlainTone = Exclude<BadgeTone, "ai">;
 
-// One leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
+// One leading mark, a glyph, the `live` dot or a caller's own `mark` (a tag's
+// tone dot); an `ai` badge's is Sparkles. Every mark sits outside the label, so
+// the badge's gap spaces it and a truncating label never clips it.
+type NoMark = { icon?: never; live?: never; dot?: never; mark?: never };
 type BadgeMark =
-  | { tone?: PlainTone; icon?: LucideIcon; live?: never; dot?: never }
-  | { tone?: PlainTone; icon?: never; live?: boolean; dot?: boolean }
-  | { tone: "ai"; icon?: never; live?: never; dot?: never };
+  | ({ tone?: PlainTone } & Omit<NoMark, "icon"> & { icon?: LucideIcon })
+  | ({ tone?: PlainTone } & Omit<NoMark, "live" | "dot"> & {
+        live?: boolean;
+        dot?: boolean;
+      })
+  | ({ tone?: PlainTone } & Omit<NoMark, "mark"> & { mark?: ReactNode })
+  | ({ tone: "ai" } & NoMark);
 
 export function Badge({
   variant = "soft",
@@ -70,6 +79,7 @@ export function Badge({
   icon,
   live,
   dot,
+  mark,
   wrap,
   children,
 }: Readonly<
@@ -96,6 +106,7 @@ export function Badge({
         <span className="badge-dot" aria-hidden />
       )}
       {Icon && <Icon size={12} aria-hidden="true" />}
+      {!provenance && mark}
       <span className="badge-label">{children}</span>
     </span>
   );
@@ -189,7 +200,7 @@ export function Skeleton({
   height = 14,
 }: Readonly<{
   width: number | string;
-  height?: number;
+  height?: number | string;
 }>) {
   return <div className="skeleton" style={{ width, height }} />;
 }
@@ -394,43 +405,13 @@ export function SectionHeader({
   );
 }
 
-/**
- * The figure beside an option's name, in a strip that counts what is behind
- * each one.
- *
- * One component because the count is four decisions, not a number: tabular
- * figures so a column of them lines up, the reader's own number format, the
- * CHIP it is drawn as, and the SEPARATOR — which is the one that was missing.
- * Both strips rendered `{label}{count}` as adjacent nodes, so the accessible
- * name a screen reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
- * visually hidden because the gap between them is already drawn in CSS; what it
- * fixes is the spoken name, where there was nothing between the two at all.
- *
- * The chip is the component's own (`.optioncount`, atoms.css) and takes no
- * class from its caller: every host was styling the same figure itself, which
- * is how one count came to be drawn two ways on two strips of one record. It
- * carries no ink of its own either — it inherits the host's, so the figure goes
- * quiet beside a quiet label and dark beside a pressed one.
- *
- * It renders INSIDE the option's button, which is what puts the figure in that
- * option's accessible name rather than leaving it to a sighted reader alone.
- */
-export function OptionCount({ count }: Readonly<{ count: number }>) {
-  const { locale } = useLocale();
-  return (
-    <>
-      <span className="sr-only">, </span>
-      <span className="optioncount t-num">{formatNumber(count, locale)}</span>
-    </>
-  );
-}
-
 export function SegmentedControl<Option extends string>({
   options,
   value,
   onChange,
   labels,
   counts,
+  floors,
   label,
   marks,
 }: Readonly<{
@@ -449,6 +430,8 @@ export function SegmentedControl<Option extends string>({
   // screen reader announces "Contacts 6" rather than leaving the figure to a
   // sighted reader alone.
   counts?: Partial<Record<Option, number>>;
+  // Options whose count is a floor, drawn "25+": the read stopped at a bound.
+  floors?: Partial<Record<Option, boolean>>;
   // Accessible name for the control as a whole (the `fieldset` group); a
   // screen reader announces it alongside each option so the buttons aren't
   // read out of context. Optional so existing callers are unaffected.
@@ -472,7 +455,9 @@ export function SegmentedControl<Option extends string>({
             onClick={() => onChange(option)}
           >
             {labels[option]}
-            {count !== undefined && <OptionCount count={count} />}
+            {count !== undefined && (
+              <OptionCount count={count} floor={floors?.[option]} />
+            )}
             {marks?.[option] && <span className="segmented-mark" aria-hidden />}
           </button>
         );

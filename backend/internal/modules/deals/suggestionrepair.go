@@ -54,7 +54,7 @@ func SuggestionRepairPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limi
 	limit = min(limit, suggestionMaxLimit)
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	visible, err := suggestionVisibleClause(ctx, arg)
+	visible, err := suggestionVisibleClause(ctx, arg, "")
 	if err != nil {
 		return nil, err
 	}

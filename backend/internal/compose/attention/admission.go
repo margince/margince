@@ -41,8 +41,10 @@ var sourceOwnerAnswers = map[crmcontracts.WorklistItemSource]ownerAnswers{
 	// The requested decider, or nobody when no one was asked.
 	crmcontracts.WorklistItemSourceApproval:        answers(ownerNamed, ownerNobody),
 	crmcontracts.WorklistItemSourceDedupeCandidate: answers(ownerNamed, ownerNobody),
-	crmcontracts.WorklistItemSourceDealSuggestion:  answers(ownerNamed, ownerNobody),
-	crmcontracts.WorklistItemSourceTagSuggestion:   answers(ownerNamed, ownerNobody),
+	// The member owner the page was raised for, or nobody when no member has one.
+	crmcontracts.WorklistItemSourceContactCase:    answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceDealSuggestion: answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceTagSuggestion:  answers(ownerNamed, ownerNobody),
 	// The deal's owner, attached after classification.
 	crmcontracts.WorklistItemSourceBriefItem:  answers(ownerFromTheDeal),
 	crmcontracts.WorklistItemSourceDealAtRisk: answers(ownerFromTheDeal),
@@ -57,6 +59,7 @@ var sourceOwnerAnswers = map[crmcontracts.WorklistItemSource]ownerAnswers{
 	crmcontracts.WorklistItemSourceUndelivered:         answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceNotice:              answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceCaptureHealth:       answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceBookingHealth:       answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceDomainQuestion:      answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceAwaitingReply:       answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceMeetingFollowUp:     answers(ownerTheReader),

@@ -8,8 +8,11 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../testing/story-utils";
 import { CompanyScreen } from "./companies";
+import { offerDomainContacts } from "./companycontacts/domaincontacts";
+import { domainCandidates } from "./companycontacts/domaincontacts.fixtures";
 
 // CompanyScreen reads through the api client on mount — fixtures mirror
 // companies.test.tsx's `company`.
@@ -240,6 +243,26 @@ const rollup = {
   aggregated_account_count: 1,
   restricted_excluded: [],
   computed_at: "2026-07-13T09:00:00Z",
+  pipeline_state_at: "2026-07-13T09:00:00Z",
+  closed_won_period: {
+    grain: "quarter",
+    label: "2026-Q3",
+    start_at: "2026-07-01T00:00:00Z",
+    end_at: "2026-10-01T00:00:00Z",
+    anchor: "closed_at",
+    chosen: false,
+    previous: "2026-Q2",
+    next: null,
+  },
+  activity_window: {
+    start_at: "2026-07-13T09:00:00Z",
+    end_at: "2026-07-13T09:00:00Z",
+  },
+  current_periods: {
+    period_year: "2026",
+    period_quarter: "2026-Q3",
+    period_month: "2026-07",
+  },
 };
 
 const overviewRoutes = {
@@ -405,6 +428,33 @@ export const CompanyContacts: Story = {
     });
     return (
       <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// A company just created from the list, whose domain matches contacts not
+// linked to it: the page opens with them offered, nothing ticked.
+export const CompanyAfterCreate: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1";
+    installFetchStub({
+      "GET /me": meRoute({
+        company: ["read", "update"],
+        contact: ["read", "update"],
+        relationship: ["read", "create"],
+      }),
+      ...overviewRoutes,
+      "GET /companies/o-1/link-candidates": () =>
+        jsonResponse({ data: domainCandidates, truncated: false }),
+      "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
+      "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
+    });
+    const client = storyQueryClient();
+    offerDomainContacts(client, company);
+    return (
+      <StoryProviders client={client}>
         <CompanyScreen id="o-1" />
       </StoryProviders>
     );

@@ -72,11 +72,12 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 	// company the company branch could return and a find is a contact the
 	// contact branch could: the installation's own company seeds no one.
 	companyWhere := conjunction("o.archived_at IS NULL", companyBranch.narrowing("o"), companyScope)
-	edgeWhere := conjunction("r.kind = 'employment'", "r.archived_at IS NULL",
-		employment.IsCurrentSQL("r.ended_at"), edgeScope)
+	edgeWhere := conjunction(employment.CurrentMembershipSQL("r"), edgeScope)
 	contactWhere := conjunction("t.archived_at IS NULL", contactBranch.narrowing("t"), contactScope)
 	words := queryWords(query, tailPos, hasFragment, arg)
-	companyWhole := companyBranch.ownMatch("o", matchExpression(entityCompany, headPos, tailPos, hasFragment), identifierPos)
+	wholeQuery := matchExpression(entityCompany, headPos, tailPos, hasFragment)
+	companyWhole := fmt.Sprintf("o.id=ANY(ARRAY(SELECT named.id FROM company named WHERE %s UNION SELECT identified.id FROM company identified WHERE %s))",
+		companyNameMatch("named", wholeQuery), companyBranch.identifier.ExactSQL(identifierPos.position(true), "identified.id"))
 	companyScore := companyBranch.ownScore("o", scoreExpression(entityCompany, "o", headPos, tailPos, hasFragment), identifierPos)
 	// Wrapped, so DISTINCT ON's ORDER BY binds to the arm and not to the union.
 	// The score -1/(1+rank) lies in [-1, 0), below every own-text hit's
@@ -84,13 +85,13 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 	// second ordering. DISTINCT ON keeps one row per contact: their
 	// best-matching employer, the primary job first where they hold two there.
 	return fmt.Sprintf(`SELECT '%[1]s'::text AS rtype, e.id, e.title, NULL::text AS snippet, e.score,
-	       e.employer_id, e.employer_name
+	       e.employer_id, e.employer_name, NULL::text AS identifier_match
 	  FROM (
 	        SELECT DISTINCT ON (t.id) t.id, %[2]s AS title,
 	               (-1.0 / (1.0 + m.match_rank))::float8 AS score,
 	               m.id AS employer_id, m.name AS employer_name
 	          FROM (
-	                SELECT o.id, %[3]s AS name, o.search_tsv, %[4]s AS whole,
+	                SELECT o.id, %[3]s AS name, %[12]s AS search_tsv, %[4]s AS whole,
 	                       (%[8]s + ts_rank_cd(o.search_tsv, %[9]s, 32))::float8 AS match_rank
 	                  FROM company o
 	                 WHERE o.id IN (%[10]s)
@@ -105,7 +106,7 @@ func employerArmSQL(ctx context.Context, query string, headPos, tailPos int, has
 		contactBranch.ownMatch("t", matchExpression(entityContact, headPos, tailPos, hasFragment), identifierPos),
 		companyScore, words.any(),
 		words.seedsSQL(companyWhole, companyScore, companyWhere, arg(employerArmCompanies)),
-		words.everyFoundIn("t", "m")), nil
+		words.everyFoundIn("t", "m"), companyNameTSV("o")), nil
 }
 
 // typedWords holds one tsquery per word, for the employer arm to test one at a
@@ -141,7 +142,7 @@ func (w typedWords) seedsSQL(whole, wholeScore, companyWhere string, limitPos in
 	for _, word := range w[:min(len(w), employerArmSeededWords)] {
 		seeds = append(seeds, fmt.Sprintf(
 			`(SELECT o.id FROM company o WHERE o.search_tsv @@ %[1]s AND %[2]s ORDER BY ts_rank_cd(o.search_tsv, %[1]s, 32) DESC, o.id LIMIT $%[3]d)`,
-			word, companyWhere, limitPos))
+			word, conjunction(companyWhere, companyNameTSV("o")+" @@ "+word), limitPos))
 	}
 	return strings.Join(seeds, " UNION ")
 }
@@ -176,4 +177,12 @@ func conjunction(clauses ...string) string {
 		return "true"
 	}
 	return strings.Join(present, " AND ")
+}
+
+func companyNameTSV(alias string) string {
+	return fmt.Sprintf("to_tsvector('simple',f_unaccent(f_fold_apostrophes(concat_ws(' ',%s.display_name,%s.legal_name))))", alias, alias)
+}
+
+func companyNameMatch(alias, query string) string {
+	return fmt.Sprintf("(%s.search_tsv @@ %s AND %s @@ %s)", alias, query, companyNameTSV(alias), query)
 }

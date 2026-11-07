@@ -290,7 +290,7 @@ func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	reason := "Budget moved"
 	pid, held := holdInHumanTx(t, e, w, func(tx pgx.Tx) error {
 		_, err := w.store.AdvanceDealTx(w.ctx, tx, ids.From[ids.DealKind](closing), deals.AdvanceDealInput{
-			ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason,
+			ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason, LostReasonCode: new("other"),
 		}, deals.CustomColumns{})
 		return err
 	}, release)
@@ -450,7 +450,7 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 	envelope.OccurredAt = captureNow
 	queue := &readingQueue{}
 	trigger := compose.NewStageEvidenceTrigger(e.Pool, compose.StageEvidenceDeals(e.Pool), compose.StageEvidenceDomains(e.Pool),
-		queue, nil, slog.Default()).WithClock(func() time.Time { return captureNow })
+		queue, slog.Default()).WithClock(func() time.Time { return captureNow })
 	for range 2 {
 		if err := trigger.HandleEvent(context.Background(), envelope); err != nil {
 			t.Fatalf("delivering the relink event: %v", err)

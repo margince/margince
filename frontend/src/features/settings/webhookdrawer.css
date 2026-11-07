@@ -70,25 +70,6 @@
   gap: var(--space-2);
 }
 
-.webhook-events-frame {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  min-height: var(--inputHeight);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-sm);
-}
-
-.webhook-events-invalid {
-  border-color: var(--dangerText);
-}
-
-.webhook-picker-panel {
-  width: min(28rem, calc(100vw - 2 * var(--space-4)));
-}
-
 .webhook-picker {
   display: flex;
   flex-direction: column;
@@ -105,6 +86,7 @@
 
 .webhook-picker-list {
   max-height: 400px;
+  position: relative;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -187,11 +169,6 @@
   }
 }
 
-/* The ⓘ beside a heading: a bare glyph in the secondary ink. */
-.webhook-help {
-  color: var(--textSecondary);
-}
-
 /* Target and state at two to one, as the mockup sets them. */
 .webhook-target-row > .field:first-child {
   flex: 2 1 280px;
@@ -221,10 +198,6 @@
   gap: var(--space-2);
 }
 
-.webhook-events-add {
-  margin-inline-start: auto;
-}
-
 /* A stored value: one dashed box holding the lock, the mark and Replace. */
 .webhook-sealed {
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
@@ -236,7 +209,8 @@
   margin-inline-start: auto;
 }
 
-.webhook-insert-panel {
+/* The popover's own panel class positions it (fixed), so it needs no position here. */
+.popover-panel.webhook-insert-panel {
   max-height: 320px;
   overflow: auto;
 }
@@ -245,11 +219,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.webhook-help svg {
-  width: var(--controlIcon);
-  height: var(--controlIcon);
 }
 
 /* The ⓘ sits right after its label, as on every other section here. */
@@ -262,16 +231,10 @@
   align-items: flex-start;
 }
 
-/* The picker reads three lines per event, so it is wider than a pick list. */
-.popover-panel.webhook-picker-panel {
-  inline-size: min(28rem, calc(100vw - 2 * var(--space-4)));
-  max-inline-size: none;
-}
-
 .webhook-picker-group {
   padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgWell);
 }
 
 .webhook-picker-group-name {

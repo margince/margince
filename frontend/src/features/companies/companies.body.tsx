@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { JustIn } from "../../components/latestinbound";
 import { RecordTeam } from "../../components/recordteam";
 import type { useTaskUpdate } from "../../components/taskactions";
 import { EmptyState } from "../../design-system/atoms";
@@ -6,7 +7,6 @@ import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import type { CompanyTab } from "../../lib/companytab";
-import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -15,6 +15,7 @@ import { PartnerTab } from "../projects/partners";
 import { openCitation } from "../records/record360";
 import type { Company, Company360View } from "./companies";
 import type { useCitedReceipt } from "./companies.chronology";
+import { CompanyLatestInbound } from "./companies.chronology";
 import { CompanyOverviewStack } from "./companies.overview";
 import { CompanyProfileTab } from "./companies.profile";
 import { CompanyDealsAndTasksTabs } from "./companies.tabs";
@@ -28,6 +29,7 @@ import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import { useCompanyVerbRefusal } from "./companyheader";
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./companytabs.css";
 
 // What the composer is anchored on. A reply answers the message it names. An
@@ -96,6 +98,7 @@ export function CompanyRecordBody({
   taskUpdate,
   onOpenHistory,
   refusedReasonId,
+  latest,
 }: Readonly<{
   company: Company;
   view?: Company360View;
@@ -123,12 +126,13 @@ export function CompanyRecordBody({
   // The page's one sentence about why this account takes no changes, by id,
   // for the profile tab's relationship edges.
   refusedReasonId?: string;
+  latest?: JustIn;
 }>) {
   // The anchor the composer is drawn from, kept after `composing` clears. The
   // drawer stays mounted to animate out, and dropping the anchor on close would
   // empty it in front of the reader. Null only before the first composer opens.
   const shownAnchor = useRef<ComposeAnchor | null>(null);
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const canWriteCompany =
     useCanWriteRecord("company", company) && !company.archived_at;
   const verbRefusal = useCompanyVerbRefusal(company);
@@ -155,20 +159,26 @@ export function CompanyRecordBody({
               calendar, what changed since the last visit, and the suggestions.
               They come in the order a rep works them, with facts, assessments
               and recommendations labelled apart. */}
-          <CompanyOverviewStack
-            company={company}
-            view={view}
-            loading={loading}
-            failed={failed}
-            onOpenTab={onTab}
-            taskUpdate={taskUpdate}
-            onOpenRecord={openCitation}
+          <CompanyLatestInbound
+            latest={latest}
+            companyId={company.id}
             onOpenEmail={receipt.openEmail}
-            onOpenTasks={() => onTab("tasks")}
-            onOpenTask={onOpenTaskFromToday}
-            onLogActivity={onLogActivity}
-            onDraftTo={(id) => onCompose({ kind: "account", id })}
-          />
+          >
+            <CompanyOverviewStack
+              company={company}
+              view={view}
+              loading={loading}
+              failed={failed}
+              onOpenTab={onTab}
+              taskUpdate={taskUpdate}
+              onOpenRecord={openCitation}
+              onOpenEmail={receipt.openEmail}
+              onOpenTasks={() => onTab("tasks")}
+              onOpenTask={onOpenTaskFromToday}
+              onLogActivity={onLogActivity}
+              onDraftTo={(id) => onCompose({ kind: "account", id })}
+            />
+          </CompanyLatestInbound>
         </div>
       )}
       <ContactMeetingBrief
@@ -303,7 +313,7 @@ export function CompanyRecordBody({
           the same reason: both are what a chip on this page opens into. */}
       <OpenEmailDrawer
         activityId={receipt.email}
-        zone={recordZone}
+        zone={readerZone}
         onClose={receipt.closeEmail}
       />
       <CompanyProfileTab

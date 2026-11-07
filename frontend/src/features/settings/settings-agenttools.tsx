@@ -28,6 +28,7 @@ import { dotTier } from "../../lib/autonomy";
 import { usePassports } from "../../lib/passports.queries";
 import { unwrap } from "../../lib/problem";
 import "./settings-agents.css";
+import { holdsEveryWord, searchWords } from "../../format/collate";
 
 type AgentTool = components["schemas"]["AgentTool"];
 
@@ -58,15 +59,13 @@ export function AgentToolsCard() {
   const reachable = (tool: AgentTool) =>
     !scopeId || tool.required_scope == null || granted.has(tool.required_scope);
   const all = tools.data?.data ?? [];
-  const needle = query.trim().toLowerCase();
-  const shown = matching(all, needle);
+  const words = searchWords(query);
+  const shown = matching(all, words);
   // A row found by its key alone shows the key, or nothing on it says why.
   const keyHit = (tool: AgentTool) =>
-    needle !== "" &&
-    tool.name.toLowerCase().includes(needle) &&
-    ![tool.title, tool.description].some((text) =>
-      text.toLowerCase().includes(needle),
-    );
+    words.length > 0 &&
+    holdsEveryWord(words, [tool.name]) &&
+    !holdsEveryWord(words, [tool.title, tool.description]);
 
   return (
     <Panel title={t("tools.title")}>
@@ -107,9 +106,9 @@ export function AgentToolsCard() {
       <PanelBody>
         {shown.length > 0 ? (
           <ToolGroups
-            key={needle === "" ? "browse" : "search"}
+            key={words.length === 0 ? "browse" : "search"}
             groups={groupByScope(shown)}
-            searching={needle !== ""}
+            searching={words.length > 0}
             reachable={reachable}
             keyHit={keyHit}
           />
@@ -127,15 +126,10 @@ export function AgentToolsCard() {
 
 function matching(
   tools: readonly AgentTool[],
-  needle: string,
+  words: readonly string[],
 ): readonly AgentTool[] {
-  if (needle === "") {
-    return tools;
-  }
   return tools.filter((tool) =>
-    [tool.title, tool.name, tool.description].some((text) =>
-      text.toLowerCase().includes(needle),
-    ),
+    holdsEveryWord(words, [tool.title, tool.name, tool.description]),
   );
 }
 

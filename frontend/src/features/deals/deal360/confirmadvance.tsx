@@ -1,16 +1,21 @@
 import { type FormEvent, useState } from "react";
 import type { components } from "../../../api/schema";
-import { Field, TextInput } from "../../../design-system/atoms";
+import { Field, Textarea } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { useAgentTierMap, verbTier } from "../../../lib/autonomy";
+import {
+  choosableLossReasons,
+  useLossReasons,
+} from "../../../lib/lossreasons.queries";
 import { problemFieldErrorsOf } from "../../../lib/problem";
 import {
   WON_REASON_LABELS,
   WON_REASONS,
   type WonReason,
 } from "../../../lib/winreason";
+import { LostReasonFields } from "../lostreasonfields";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 import { useWinQuestion } from "./winevidence";
@@ -65,6 +70,9 @@ export type AdvanceInput = {
   version: number | undefined;
   toStage: Stage;
   lostReason?: string;
+  // The reason a loss counts under, from the administered list. The note in
+  // lostReason explains it.
+  lostReasonCode?: string;
   // Why this win has no signed contract behind it. Absent on the ordinary win,
   // where the contract IS the answer — the server distinguishes the two, and
   // that distinction is what makes "how many won deals have no paper" a
@@ -103,6 +111,7 @@ export function ConfirmAdvanceModal({
   const t = useT();
   const tierMap = useAgentTierMap();
   const [lostReason, setLostReason] = useState("");
+  const [lostCode, setLostCode] = useState("");
   const [wonReason, setWonReason] = useState<WonReason | "">("");
   const [wonDetail, setWonDetail] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -133,6 +142,7 @@ export function ConfirmAdvanceModal({
   const dismiss = () => {
     setSubmitting(false);
     setLostReason("");
+    setLostCode("");
     setWonReason("");
     setWonDetail("");
     setRefusedDealId(null);
@@ -141,6 +151,9 @@ export function ConfirmAdvanceModal({
   };
 
   const needsLostReason = shown?.toStage.semantic === "lost";
+  const lossReasons = choosableLossReasons(
+    useLossReasons(needsLostReason).data,
+  );
   // Only a win with no signed contract is asked how it happened. A question
   // every rep must answer gets the same lie from every rep.
   const winQuestion = useWinQuestion(pending, refusedDealId, submitting);
@@ -150,7 +163,7 @@ export function ConfirmAdvanceModal({
   // Said beside Confirm rather than left to a grey button: the reader is told
   // which answer the close still needs.
   const unanswered = (() => {
-    if (needsLostReason && lostReason.trim() === "") {
+    if (needsLostReason && lostCode === "") {
       return t("deals.lostReasonNeeded");
     }
     if (needsWonReason && wonReason === "") {
@@ -172,9 +185,12 @@ export function ConfirmAdvanceModal({
     const tasksToComplete = closeTasks.chosen;
     const withoutPaper =
       needsWonReason && (await winQuestion.stillBare(asked.dealId));
+    const lostLabel = lossReasons.find(
+      (reason) => reason.key === lostCode,
+    )?.label;
     const why = closeReason({
       wonAsked: withoutPaper,
-      lost: lostReason,
+      lost: [lostLabel, lostReason.trim()].filter(Boolean).join(" — "),
       won: wonReason,
       detail: wonDetail,
       t,
@@ -184,6 +200,7 @@ export function ConfirmAdvanceModal({
       version: asked.version,
       toStage: asked.toStage,
       lostReason: lostReason.trim() || undefined,
+      lostReasonCode: needsLostReason ? lostCode : undefined,
       ...wonAnswer(withoutPaper, wonReason, wonDetail),
     }).catch((error: unknown) => error);
     setSubmitting(false);
@@ -202,7 +219,8 @@ export function ConfirmAdvanceModal({
     dismiss();
   };
 
-  // Enter in a reason field closes the deal only when Confirm would.
+  // Enter in a picker, or ⌘/Ctrl+Enter in a note, closes the deal only when
+  // Confirm would.
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
     if (pending && refusal === undefined && !submitting) {
@@ -231,15 +249,13 @@ export function ConfirmAdvanceModal({
           {(needsLostReason || needsWonReason) && (
             <form className="form-stack" onSubmit={submit}>
               {needsLostReason && (
-                <Field label={t("deals.lostReason")}>
-                  {(control) => (
-                    <TextInput
-                      {...control}
-                      value={lostReason}
-                      onChange={(event) => setLostReason(event.target.value)}
-                    />
-                  )}
-                </Field>
+                <LostReasonFields
+                  reasons={lossReasons}
+                  code={lostCode}
+                  note={lostReason}
+                  onCode={setLostCode}
+                  onNote={setLostReason}
+                />
               )}
               {needsWonReason && (
                 <WonReasonFields
@@ -338,8 +354,9 @@ function WonReasonFields({
       {reason === WON_REASON_NEEDING_DETAIL && (
         <Field label={t("deals.winReasonDetail")}>
           {(control) => (
-            <TextInput
+            <Textarea
               {...control}
+              grow
               value={detail}
               onChange={(event) => onDetail(event.target.value)}
             />

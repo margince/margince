@@ -73,8 +73,6 @@ function renderForm(
       setField={vi.fn()}
       onPickEntity={vi.fn()}
       read={read}
-      saved={false}
-      saveError={null}
       missingRequired={[]}
       selectedFactKeys={[]}
       setSelectedFactKeys={vi.fn()}

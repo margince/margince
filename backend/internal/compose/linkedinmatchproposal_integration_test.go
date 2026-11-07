@@ -69,7 +69,7 @@ func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testi
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	staged, err := StageLinkedInMatches(ctx, e.Pool, svc, store)
 	if err != nil {
 		t.Fatalf("staging: %v", err)
@@ -120,7 +120,7 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -282,7 +282,7 @@ func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -431,7 +431,7 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -497,7 +497,7 @@ func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testi
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -546,7 +546,7 @@ func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) 
 	refused := before[0].ConnectionID
 
 	// Through the real reject, which is what a member does.
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -590,7 +590,7 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if _, err := StageLinkedInMatches(ctx, e.Pool, svc, store); err != nil {
 		t.Fatalf("staging: %v", err)
 	}
@@ -641,7 +641,7 @@ func TestAColleagueDecidingAMatchAppliesItToTheStagersConnection(t *testing.T) {
 	if _, err := store.MatchLinkedInConnections(stager, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	if staged, err := StageLinkedInMatches(stager, e.Pool, svc, store); err != nil || staged != 1 {
 		t.Fatalf("staging = %d, %v; want the one folded-name match", staged, err)
 	}

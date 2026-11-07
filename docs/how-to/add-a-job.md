@@ -45,7 +45,9 @@ never one job row that loops over every workspace.
 2. **Run the generator** with `make gen`.
    `backend/tools/gen-jobs` checks the whole contract and writes two files again; never edit either by hand.
    `backend/internal/platform/jobs/specs_gen.go` is the `Spec` table every reader reads.
-   `backend/internal/compose/jobkinds_gen.go` holds the closed `declaredJobArgs` union.
+   `backend/internal/compose/jobkinds_gen.go` holds each type’s marker.
+   A marker names its exact args type, so a wrapper cannot use it. A gate refuses markers written by hand.
+
    It also holds one role check per kind, run when the code compiles.
    This step fails on a contract that cannot hold.
 
@@ -174,10 +176,10 @@ The failures you meet first, in the order you would meet them:
 | `make gen` | `kind "x": declares a cadence but its role is "worker"` | No clock ever starts a worker that runs from the queue. Move the `cadence` to the dispatcher |
 | `make gen` | `kind "x": opts_owner is fan_out but no max_attempts is declared` | The fan-out helper reads that number, and nothing else gives it. Without it, River tries 25 times and says nothing |
 | `make gen` | `kind "x": args field "F" is declared a scalar with no reason` | A value that is not an id must say why it is safe in a table that GDPR Article 17 erasure never reaches |
-| `go build` | `CloseDateWorkspaceArgs does not satisfy declaredJobArgs` | The kind is not in `api/jobs.yaml`, or you have not run `make gen` since you declared it |
-| `golangci-lint` | `register through addDeclaredWorker — a kind absent from api/jobs.yaml is not in declaredJobArgs, and a direct registration also escapes jobs.Govern and the boot-time totality check` | You called the River register API, not `addDeclaredWorker` |
+| `go build` | `CloseDateWorkspaceArgs does not satisfy declaredJobArgs[CloseDateWorkspaceArgs] (missing method declaredJobType)` | The kind is not in `api/jobs.yaml`, or you have not run `make gen` since you declared it |
+| `golangci-lint` | `register through addDeclaredWorker — a kind absent from api/jobs.yaml is missing its generated registration marker, and a direct registration also escapes jobs.Govern and the boot-time totality check` | You called the River register API, not `addDeclaredWorker` |
 | `golangci-lint` | `a periodic tick is api/jobs.yaml's to declare — give the kind a cadence: and let periodicFor build it` | You reached the River `PeriodicJobBundle` from inside a worker |
-| start | `jobs: N kind(s) not declared in api/jobs.yaml: … — add them there and run` `make gen` | A kind passed the compiler: a second name for a kind, a test file path, or a generated union edited by hand |
+| start | `jobs: N kind(s) not declared in api/jobs.yaml: … — add them there and run` `make gen` | A kind passed the compiler: a second name for a kind, a test file path, or a generated marker edited by hand |
 | start | `compose: a worker is registered under a kind the contract pairs with another args type` | `Kind()` returns the other kind's string. River would work those rows under the other kind's timeout, queue and limit, and your kind would have no worker |
 | start | `compose: fanning out to "y", which no declared kind names in fans_out_to` | Declare the fan-out link of the dispatcher. `fans_out_to` is the register of what may take a fan-out at all |
 | `jobrole_test.go` | `X is a River job (it declares Kind()) but is not in api/jobs.yaml` | An args type with no declaration. It would run on the River default of one minute and not show on either job page |

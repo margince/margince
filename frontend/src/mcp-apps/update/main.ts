@@ -7,10 +7,11 @@ import { viewRenderer } from "../parts";
 import {
   changesOf,
   changeTable,
+  recordLine,
   recordName,
   recordNoun,
   refusalPanel,
-  summaryPanel,
+  savedPanel,
   withArticle,
 } from "../summary";
 import { asRecord, asText, type ToolCall, type Warning } from "../types";
@@ -39,8 +40,11 @@ function updatedPanel(updated: Record<string, unknown>): HTMLElement {
   const noun = recordNoun(asText(updated.record_type), fields);
   const name = recordName(fields);
   const rows = changeTable(changesOf(updated.changes), { before: true });
-  return summaryPanel(
-    name === "" ? `Updated ${withArticle(noun)}` : `Updated ${noun} "${name}"`,
-    rows ?? el("p", "intro", "The change is saved in Margince."),
+  const said = rows ?? el("p", "intro", "The change is saved in Margince.");
+  if (name === "") return savedPanel(`Updated ${withArticle(noun)}`, said);
+  return savedPanel(
+    `Updated ${withArticle(noun)}`,
+    recordLine(name, asText(updated.id), noun),
+    said,
   );
 }

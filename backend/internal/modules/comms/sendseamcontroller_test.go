@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -32,6 +33,8 @@ func (f *fakeRelay) SendControllerMail(_ context.Context, msg ControllerMessage)
 	f.seen = msg
 	return f.err
 }
+
+func (f *fakeRelay) SenderAddress() string { return "" }
 
 // fakeVault is the key vault boundary. It counts reads and destructions
 // separately, because the two answer different questions: whether the link ever
@@ -311,5 +314,47 @@ func TestOneSealedLinkPopulatesBothAlternativesWithoutChangingTheRow(t *testing.
 	}
 	if !strings.Contains(delivery.HTMLBody, LinkPlaceholder) {
 		t.Fatal("dispatch modified persisted markup")
+	}
+}
+
+// A notice staged under the company logo goes out with that logo attached.
+// Once the workspace has removed the logo, the name takes its place. Either
+// way the notice keeps its staged Message-ID.
+func TestANoticeCarriesTheStagedCompanyLogoOrFallsBackToTheName(t *testing.T) {
+	head := emailview.Letterhead{Name: "Northstar GmbH", Attribution: "Powered by Margince", LogoContentID: connector.LetterheadLogoContentID}
+	message := emailview.Message{Title: "Your request", Text: "We recorded your request.", Language: "en"}
+	for _, tc := range []struct {
+		name, key string
+		attached  bool
+	}{
+		{name: "logo stored", key: "logos/a", attached: true},
+		{name: "logo removed", key: "logos/replaced", attached: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			del := controllerDelivery()
+			del.Body, del.PayloadRef = message.Text, ""
+			del.HTMLBody, del.InlineLogoKey = emailview.Render(message, head), tc.key
+			store := &fakeStore{delivery: del}
+			relay := &fakeRelay{}
+			d := newTestDispatcher(store, fakeResolver{}, &stubConsent{}).
+				WithInlineImages(&storedLogos{}).
+				WithControllerRelay(relay, &fakeVault{})
+			if outcome, _, err := d.DispatchWithWait(context.Background(), del.ID); err != nil || outcome != OutcomeSent {
+				t.Fatalf("DispatchWithWait = %v, %v; want sent", outcome, err)
+			}
+			if relay.seen.MessageID != del.MessageID {
+				t.Errorf("sent as %q, want the staged Message-ID %q", relay.seen.MessageID, del.MessageID)
+			}
+			showsLogo := strings.Contains(relay.seen.HTMLBody, "cid:"+connector.LetterheadLogoContentID)
+			if !tc.attached {
+				if len(relay.seen.Inline) != 0 || showsLogo || !strings.Contains(relay.seen.HTMLBody, "Northstar GmbH") {
+					t.Fatalf("a removed logo sent %d part(s), logo markup %v; want the name alone", len(relay.seen.Inline), showsLogo)
+				}
+				return
+			}
+			if len(relay.seen.Inline) != 1 || relay.seen.Inline[0].ContentID != connector.LetterheadLogoContentID || !showsLogo {
+				t.Fatalf("the stored logo went out as %+v, logo markup %v; want one part under the letterhead's content id", relay.seen.Inline, showsLogo)
+			}
+		})
 	}
 }

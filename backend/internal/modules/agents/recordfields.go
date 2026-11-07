@@ -43,19 +43,17 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:         reflect.TypeFor[crmcontracts.CreateContactRequest](),
-		datasource.EntityCompany:         reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
-		datasource.EntityDeal:            reflect.TypeFor[crmcontracts.CreateDealRequest](),
-		datasource.EntityLead:            reflect.TypeFor[crmcontracts.CreateLeadRequest](),
-		datasource.EntityActivity:        reflect.TypeFor[crmcontracts.CreateActivityRequest](),
-		datasource.EntityProject:         reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-		datasource.EntityRelationship:    reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
-		datasource.EntityProduct:         reflect.TypeFor[crmcontracts.CreateProductRequest](),
-		datasource.EntityOfferTemplate:   reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
-		datasource.EntityOffer:           reflect.TypeFor[crmcontracts.CreateOfferRequest](),
-		datasource.EntityDealRoom:        reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
-		datasource.EntityDealRoomThread:  reflect.TypeFor[crmcontracts.OpenDealRoomThreadRequest](),
-		datasource.EntityDealRoomComment: reflect.TypeFor[crmcontracts.PostDealRoomCommentRequest](),
+		datasource.EntityContact:       reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.CreateDealRequest](),
+		datasource.EntityLead:          reflect.TypeFor[crmcontracts.CreateLeadRequest](),
+		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.CreateActivityRequest](),
+		datasource.EntityProject:       reflect.TypeFor[crmcontracts.CreateProjectRequest](),
+		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.CreateProductRequest](),
+		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
+		datasource.EntityOffer:         reflect.TypeFor[crmcontracts.CreateOfferRequest](),
+		datasource.EntityDealRoom:      reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
 	}
 	// An activity patch cannot reach its LINKS: UpdateActivityRequest declares
 	// no link field, so this list has none to describe. A relationship patch
@@ -110,10 +108,14 @@ func contractFieldNames(t reflect.Type) []string {
 	return names
 }
 
-// acceptedFieldNames is what a write's fields may name: the contract body's own
-// fields and the parent ids its route carries in its path, sorted.
-func acceptedFieldNames(shape reflect.Type, parents []string) []string {
-	names := append(contractFieldNames(shape), parents...)
+// acceptedFieldNames is what a write's fields may name, sorted: the contract
+// body's own fields less the ones this surface withholds. The parent ids its
+// route carries in its path count too.
+func acceptedFieldNames(shape reflect.Type, parents, withheld []string) []string {
+	names := slices.DeleteFunc(contractFieldNames(shape), func(name string) bool {
+		return slices.Contains(withheld, name)
+	})
+	names = append(names, parents...)
 	sort.Strings(names)
 	return names
 }
@@ -181,7 +183,7 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 		return &BadArgsError{Field: fieldsArg, Cause: errors.New("fields must be a JSON object, not null")}
 	}
 	accepted := make(map[string]struct{})
-	for _, name := range acceptedFieldNames(shape, shapes.parents[recordType]) {
+	for _, name := range acceptedFieldNames(shape, shapes.parents[recordType], shapes.withheld[recordType]) {
 		accepted[name] = struct{}{}
 	}
 	var unknown []string
@@ -239,6 +241,11 @@ const windowNote = `,"description":"` + windowRule + `"`
 
 // pastDayNeedsATime is the activity-write sentence for a day named without an
 // hour. An omitted occurred_at is the call's own moment; the server dates a day.
+// meetingStatusRule is the sentence create_record and update_record carry about
+// an activity's meeting_status. log_activity says it on the field itself, where
+// it costs the tool's window less.
+const meetingStatusRule = ` Set meeting_status held only when the user says the meeting took place.`
+
 const pastDayNeedsATime = ` No occurred_at means now; a past day with no time: its date, occurred_precision "day".`
 
 // argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member
@@ -340,10 +347,14 @@ type writeShapes struct {
 	// parents are the parent ids a create names among its fields, which its
 	// REST route carries in its path.
 	parents map[string][]string
+	// withheld are body fields the REST route takes and this tool refuses.
+	withheld map[string][]string
 }
 
 var (
-	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes, parents: createParentFields}
+	createWriteShapes = writeShapes{
+		types: createShapes, rendered: createRecordShapes, parents: createParentFields, withheld: createWithheldFields,
+	}
 	updateWriteShapes = writeShapes{types: updateShapes, rendered: updateRecordShapes}
 )
 

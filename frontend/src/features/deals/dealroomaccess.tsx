@@ -1,4 +1,4 @@
-import { Link2 } from "lucide-react";
+import { Link2, MailX } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
@@ -7,11 +7,11 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { humanizeToken } from "../settings/audit";
 import { CAPABILITIES, CAPABILITY_LABELS } from "./dealroomcapability";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../../design-system/surfacestate";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   CapabilityDialog,
   InviteDialog,
@@ -116,6 +116,16 @@ function useReadingSoFar(participant: Participant): string {
     : ` · ${count}`;
 }
 
+// Whether the relay took the invitation for a buyer who has not come in yet.
+// The relay's answer is stamped on the row just after the invite answers.
+function mailSent(participant: Participant): boolean {
+  return (
+    !participant.has_signed_in &&
+    (participant.delivery_state === "sent" ||
+      participant.delivery_state === "delivered")
+  );
+}
+
 // Where the seat stands, as the badge at the row's end. A link asked for is
 // the one a rep has to act on, so it reads before signed in.
 function SeatBadge({
@@ -132,6 +142,9 @@ function SeatBadge({
   if (participant.has_signed_in) {
     return <Badge tone="success">{t("access.state.signedInBadge")}</Badge>;
   }
+  if (participant.delivery_state === "failed") {
+    return <Badge tone="warning">{t("access.state.mailFailedBadge")}</Badge>;
+  }
   return <Badge>{t("access.state.invitedBadge")}</Badge>;
 }
 
@@ -142,7 +155,7 @@ function ParticipantRow({
 }: Readonly<{ room: DealRoom; participant: Participant; mayManage: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [confirming, setConfirming] = useState<
     "revoke" | "reissue" | "capability" | null
   >(null);
@@ -176,11 +189,20 @@ function ParticipantRow({
             : participant.has_signed_in
               ? t("access.state.active")
               : t("access.state.invited")}
+          {!revoked && mailSent(participant)
+            ? ` · ${t("access.mail.sent")}`
+            : ""}
           {participant.last_seen_at
-            ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
+            ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, readerZone) })}`
             : ""}
           {readingSoFar}
         </p>
+        {participant.delivery_state === "failed" && !revoked ? (
+          <p className="t-caption access-row-request">
+            <MailX aria-hidden />
+            {t("access.mail.failed")}
+          </p>
+        ) : null}
         {participant.link_requested_at && !revoked ? (
           <p className="t-caption access-row-request">
             <Link2 aria-hidden />
@@ -188,7 +210,7 @@ function ParticipantRow({
               when: formatDateAbbrev(
                 participant.link_requested_at,
                 locale,
-                recordZone,
+                readerZone,
               ),
             })}
           </p>

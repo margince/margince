@@ -30,7 +30,8 @@ package gates
 //
 // What it cannot see: an off-by-one in the SQL's month shift, or a to_char
 // pattern that renders the right shape from the wrong instant. Those are
-// arithmetic rather than shape, and they are held by TestQuarterBounds and by
+// arithmetic rather than shape, and they are held by
+// TestTheRollupWithNoPeriodSumsTheFiscalQuarterUnderWay and by
 // TestWinLossPeriodBucketsFollowTheInstallationFiscalYear /
 // TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay in
 // internal/compose/report_winloss_integration_test.go, which execute the real
@@ -46,10 +47,11 @@ package gates
 // above say whether the behaviour actually moved.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -71,7 +73,7 @@ const (
 // its place.
 func readFiscalSource(t *testing.T, path string) string {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

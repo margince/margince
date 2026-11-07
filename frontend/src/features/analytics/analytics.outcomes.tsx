@@ -5,12 +5,16 @@ import { StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatMoneyCompact, formatNumber } from "../../format/format";
+import {
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
+} from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
 import { rowCount, rowMoney } from "./analytics.cells";
+import { MySdrWork } from "./analytics.outcomes.sdr";
 import { MyTargets } from "./analytics.outcomes.targets";
 import { MEETING_STATUSES } from "./analytics.questions.values";
 
@@ -41,6 +45,11 @@ export function MyOutcomesView({
 }: Readonly<{ defaultScope: AnalyticsScopeWire; locale: Locale }>) {
   const t = useT();
   const self = defaultScope.kind === "owner" ? (defaultScope.id ?? null) : null;
+  // The pipeline section opens on the same own records these readings count.
+  const pipelineHref = analyticsSectionHref(
+    "pipeline",
+    self ? new Map([["scope", `owner:${self}`]]) : new Map(),
+  );
 
   const pipelineQuery = useQuery({
     queryKey: ["report", "pipeline-current", "outcomes", self],
@@ -101,7 +110,7 @@ export function MyOutcomesView({
   const baseCurrency = pipelineQuery.data?.base_currency ?? null;
   const noRow = t(absentReading(pipelineQuery));
   const pipelineCount = pipelineRow
-    ? formatNumber(rowCount(pipelineRow, "deal_count"), locale)
+    ? formatAnalyticsNumber(rowCount(pipelineRow, "deal_count"), locale)
     : noRow;
   const rawMinor = pipelineRow ? rowMoney(pipelineRow, "raw_minor") : null;
   // The currency names what the figure is IN, so a read with none to name drops
@@ -115,7 +124,7 @@ export function MyOutcomesView({
     ? t("analytics.noBaseCurrency")
     : rawMinor == null
       ? t("analytics.forecastNoAmount")
-      : formatMoneyCompact(rawMinor, baseCurrency, locale);
+      : formatAnalyticsMoney(rawMinor, baseCurrency, locale);
   const meetingRows = meetingsQuery.data?.rows ?? [];
   const meetingsByStatus = new Map(
     meetingRows
@@ -126,6 +135,7 @@ export function MyOutcomesView({
   return (
     <>
       <MyTargets self={self} locale={locale} />
+      <MySdrWork self={self} locale={locale} />
       <Panel title={t("analytics.myPipeline")}>
         <PanelBody>
           <StatStrip>
@@ -136,7 +146,7 @@ export function MyOutcomesView({
               narrow="row"
               label={t("analytics.count")}
               value={pipelineCount}
-              onOpen={() => openAnalyticsSection("pipeline")}
+              href={pipelineHref}
             />
             <StatCard
               narrow="row"
@@ -151,7 +161,7 @@ export function MyOutcomesView({
                   ? t("analytics.noBaseCurrencyWhy")
                   : undefined
               }
-              onOpen={() => openAnalyticsSection("pipeline")}
+              href={pipelineHref}
             />
           </StatStrip>
         </PanelBody>
@@ -170,7 +180,7 @@ export function MyOutcomesView({
                 label={t(status.labelKey)}
                 value={
                   meetingsQuery.isSuccess
-                    ? formatNumber(
+                    ? formatAnalyticsNumber(
                         meetingsByStatus.get(status.key) ?? 0,
                         locale,
                       )

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect, type Page, type Request, test } from "@playwright/test";
+import { nearestRank } from "./quantile";
 import { mockApi } from "./seed";
 
 /**
@@ -90,17 +91,6 @@ async function throttle(page: Page) {
     await new Promise((resolve) => setTimeout(resolve, FAST_3G.latency));
     await route.fallback();
   });
-}
-
-/** Nearest-rank quantile, the same method the Go harness reports — so a value
- * here is a latency that actually happened rather than an interpolation between
- * two that did not. One spelling for every quantile this file reports: the
- * published record used to inline the same arithmetic twice more, and three
- * copies of a rank formula are three chances to be off by one. */
-function nearestRank(samples: number[], quantile: number): number {
-  const sorted = [...samples].sort((a, b) => a - b);
-  const rank = Math.ceil(sorted.length * quantile) - 1;
-  return sorted[Math.min(Math.max(rank, 0), sorted.length - 1)];
 }
 
 /**

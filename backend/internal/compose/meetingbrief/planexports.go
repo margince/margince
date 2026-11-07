@@ -12,7 +12,10 @@ package meetingbrief
 // exactly the change that breaks the original, which is the failure the
 // certification lane exists to catch.
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // DeterministicPlanFor is the floor for one assembled meeting.
 func DeterministicPlanFor(in Input) Plan {
@@ -95,13 +98,7 @@ func PlanProse(plan Plan) string {
 // Held by: TestTheCertExportsReachTheWholePlan
 // (backend/internal/compose/meetingbrief/planexports_test.go)
 func planSentences(plan Plan) []Sentence {
-	var out []Sentence
-	if plan.Objective != nil {
-		out = append(out, plan.Objective.Sentence)
-	}
-	if plan.Opening != nil {
-		out = append(out, *plan.Opening)
-	}
+	out := objectiveSentences(plan)
 	if plan.TopRisk != nil {
 		out = append(out, plan.TopRisk.Text)
 	}
@@ -112,5 +109,39 @@ func planSentences(plan Plan) []Sentence {
 		out = append(out, moment.Summary)
 	}
 	out = append(out, plan.Advance.Minimum, plan.Advance.Best, plan.Advance.Fallback)
+	return out
+}
+
+// ObjectiveCites reports whether the objective or the opening rests on any of
+// these records. These two fields must serve the meeting's own deal.
+func ObjectiveCites(plan Plan, activityIDs ...string) bool {
+	for _, sentence := range objectiveSentences(plan) {
+		for _, cited := range sentence.Evidence {
+			if slices.Contains(activityIDs, cited.EntityID) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// ObjectiveProse is the text of the objective and the opening.
+func ObjectiveProse(plan Plan) string {
+	var prose strings.Builder
+	for _, sentence := range objectiveSentences(plan) {
+		prose.WriteString(sentence.Text)
+		prose.WriteString("\n")
+	}
+	return prose.String()
+}
+
+func objectiveSentences(plan Plan) []Sentence {
+	var out []Sentence
+	if plan.Objective != nil {
+		out = append(out, plan.Objective.Sentence)
+	}
+	if plan.Opening != nil {
+		out = append(out, *plan.Opening)
+	}
 	return out
 }

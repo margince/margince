@@ -9,7 +9,8 @@ import { Badge } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
-import { isUnprepared } from "./worklist.copy";
+import { isUnprepared } from "../../lib/meetingreadiness";
+import { PinnedMark } from "./worklist.pinmark";
 import type { WorklistItem } from "./worklist.queries";
 import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";
@@ -22,9 +23,9 @@ import "./worklist.row.compact.css";
  * ONE object, handed to whichever column the surface asked for, so the two
  * densities cannot come to say different things about one piece of work.
  *
- * Strings rather than the item, deliberately: `when` is written against the
- * reader's clock and the record's zone, `facts` against the reader's currency,
- * and the reasons are phrased by `worklist.copy.ts`. A column that took the
+ * Strings rather than the item. `when` is written against the
+ * reader's clock and the record's zone, `facts` against the reader's currency.
+ * The reasons are phrased by `lib/worklistcopy.ts`. A column that took the
  * item and re-derived any of them would be a second author of the row's words.
  */
 export type RowReadings = Readonly<{
@@ -47,6 +48,8 @@ export type RowReadings = Readonly<{
   detail?: string | null;
   /** A grouped row's named members. */
   sample: readonly string[];
+  /** Whether the row shows the reader's pin. The Brief's rows withhold it. */
+  pinned: boolean;
   /** The zone a verdict's timestamps are read in. */
   zone: string;
   /** The record the row is about, linked, where the row does not link it,
@@ -126,6 +129,7 @@ export function CompactRowLine({
         {isUnprepared(item) && (
           <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
         )}
+        {readings.pinned && <PinnedMark />}
       </p>
       {said.length > 0 && (
         <p className="worklist-row-because">{said.join(" · ")}</p>

@@ -28,10 +28,12 @@ type Availability = components["schemas"]["CaptureProviderAvailability"];
 function stubEmptyRoster(
   providers: Availability[] = [],
   allow: GrantSpec = {},
+  seatCapture?: components["schemas"]["SeatCapture"],
 ) {
   stubWithSession(
     {
-      "GET /connectors": () => jsonResponse({ data: [], providers }),
+      "GET /connectors": () =>
+        jsonResponse({ data: [], providers, seat_capture: seatCapture }),
       "GET /capture/settings": () =>
         jsonResponse({
           auto_enrich: true,
@@ -98,6 +100,45 @@ describe("the empty Mail and calendar card", () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
+  it.each([
+    {
+      missing: "contact" as const,
+      says: "Your role cannot create contacts, so Margince cannot capture your mail. Ask an admin to change your role.",
+    },
+    {
+      missing: "seat" as const,
+      says: "Your seat is read-only, so Margince cannot capture your mail. Ask an admin for a full seat.",
+    },
+  ])(
+    "offers no connect when $missing is missing, and names it",
+    async ({ missing, says }) => {
+      const refused = ["gmail", "graph", "imap"].map((provider) => ({
+        provider: provider as Availability["provider"],
+        reason: "role_cannot_capture" as const,
+      }));
+      stubEmptyRoster(
+        refused,
+        {},
+        {
+          allowed: false,
+          reason: "role_cannot_capture",
+          missing,
+        },
+      );
+      render(<ConnectorsCard />);
+
+      expect(await screen.findByText(says)).toBeInTheDocument();
+      const panel = mailPanel();
+      expect(
+        within(panel).queryByRole("button", { name: /^Connect/ }),
+      ).toBeNull();
+      expect(
+        within(panel).queryByRole("button", { name: "Add account" }),
+      ).toBeNull();
+      expect(screen.queryByTestId("connect-tile-google")).toBeNull();
+    },
+  );
+
   it("opens the dialog on what the pressed vendor brings in", async () => {
     stubEmptyRoster();
     render(<ConnectorsCard />);
@@ -156,7 +197,7 @@ describe("the empty Mail and calendar card", () => {
     const link = await within(microsoft).findByRole("link", {
       name: "Open Sign-in and apps",
     });
-    expect(link).toHaveAttribute("href", "#/settings/authentication");
+    expect(link).toHaveAttribute("href", "/#/settings/authentication");
     expect(
       within(microsoft).getByText(
         "Set up the company Microsoft 365 app to turn it on.",

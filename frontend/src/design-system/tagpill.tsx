@@ -65,10 +65,14 @@ export function TagPill({
 }>) {
   const t = useT();
   return (
-    <Badge>
-      {!archived && isTagTone(tone) && (
-        <span className={`tagpill-dot tagpill-dot-${tone}`} aria-hidden />
-      )}
+    <Badge
+      mark={
+        !archived &&
+        isTagTone(tone) && (
+          <span className={`tagpill-dot tagpill-dot-${tone}`} aria-hidden />
+        )
+      }
+    >
       {name}
       {archived ? ` · ${t("tags.archived")}` : ""}
     </Badge>

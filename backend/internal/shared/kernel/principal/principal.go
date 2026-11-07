@@ -93,6 +93,20 @@ func (s ScopeSet) Has(sc Scope) bool {
 	return ok
 }
 
+// WorkAreas are the areas of work a passport may act in. The zero value admits
+// every area, those added later included, so an agent principal minted without
+// a passport row keeps the reach it had.
+type WorkAreas struct {
+	// Limited admits only Chosen; an area added later is then off.
+	Limited bool
+	Chosen  []string
+}
+
+// Includes reports whether a call placed in area may run.
+func (w WorkAreas) Includes(area string) bool {
+	return !w.Limited || slices.Contains(w.Chosen, area)
+}
+
 // Principal is the typed actor behind a call — it mirrors the
 // audit_log.actor_* columns and the event-envelope actor. Never inferred;
 // always set by the auth/Passport layer.
@@ -109,6 +123,8 @@ type Principal struct {
 	ConnectionID ids.UUID
 	OnBehalfOf   ids.UUID // the human authority behind an agent/connector action; zero otherwise
 	Scopes       ScopeSet // effective = Passport scopes ∩ granting human's RBAC ("agent ≤ human")
+	// Areas bound an agent the way Scopes do, by where it acts rather than how.
+	Areas WorkAreas
 
 	// Locale is the display language a human chose, empty when they never did.
 	// It rides the principal so wording written for the caller needs no query.
@@ -129,9 +145,15 @@ type Principal struct {
 // Such an agent may do without a human's approval whatever that colleague could
 // do unaided in the product. Their live grants bound it at the store, as they
 // bound the colleague. A passportless agent is automatic work with nobody behind
-// it, and keeps the confirm-first tier and the human-edit precedence split.
+// it, and keeps the confirm-first tier.
 func (p Principal) ActsAsItsUser() bool {
 	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()
+}
+
+// HumanOrItsAgent reports whether p is a human, or an agent acting for one on
+// their passport. Either may do what that human does in the product.
+func (p Principal) HumanOrItsAgent() bool {
+	return p.Type == PrincipalHuman || p.ActsAsItsUser()
 }
 
 // Action is one CRUD verb of the object-level RBAC matrix

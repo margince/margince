@@ -178,8 +178,8 @@ export const Reference: StoryObj = {
 };
 
 /**
- * The drawer a row opens: the thread oldest first. The opened message is
- * whole, the earlier one folded to its row, and the verbs sit in the foot.
+ * The drawer a row opens: the thread newest first. The newest message is
+ * whole, the earlier one folded to its row, and actions sit under each message.
  */
 export const Detail: StoryObj = {
   render: () => {

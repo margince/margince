@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -81,15 +82,28 @@ func compiledInCodes() []string {
 	return codes
 }
 
-// NewInstallationSettingsFor is the installation-settings store with the
-// jurisdiction change wired to the floor carry, the one way the surface and its
-// tests build it.
+// NewInstallationSettingsFor is the installation-settings store with both
+// hooks wired: a jurisdiction change carries the floor, and a calendar move
+// keeps saved periods. The surface and its tests build it this one way.
 func NewInstallationSettingsFor(pool *pgxpool.Pool) *identity.InstallationSettingsStore {
-	return identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool)).WithCountryChange(carryFloorOnCountryChange)
+	return identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool)).
+		WithCountryChange(carryFloorOnCountryChange).
+		WithCalendarChange(keepSavedPeriodsOnCalendarChange)
 }
 
 // carryFloorOnCountryChange is the hook a jurisdiction change runs: privacy
 // keeps the floor the change would weaken on the mail already held.
 func carryFloorOnCountryChange(ctx context.Context, tx pgx.Tx, store *settings.Store, from, to jurisdiction.Code) error {
 	return privacy.CarryOnChangeTx(ctx, tx, store, from, to, time.Now())
+}
+
+// EntityFloorCarry is the hook a legal entity move or country change runs:
+// privacy keeps the floor the change would shorten on the mail already held.
+func EntityFloorCarry(pool *pgxpool.Pool) contacts.FloorCarry {
+	store := NewSettingsStore(pool)
+	return func(ctx context.Context, tx pgx.Tx, from, to contacts.EntityJurisdiction) error {
+		return privacy.CarryOnEntityChangeTx(ctx, tx, store, identity.CountryForDecision,
+			privacy.EntityJurisdiction{Default: from.Default, Country: jurisdiction.Code(from.Country)},
+			privacy.EntityJurisdiction{Default: to.Default, Country: jurisdiction.Code(to.Country)}, time.Now())
+	}
 }

@@ -1,11 +1,10 @@
 import {
-  COMPANY_LIFECYCLE_LABELS,
-  COMPANY_LIFECYCLE_STAGES,
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
 } from "../../format/companylifecycle";
 import { formatNumber } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { WON_REASON_LABELS, WON_REASONS } from "../../lib/winreason";
 
 // Re-exported so the surfaces that read the map by name keep their import, and
 // so this file stays the one place a reader looks for approval-kind vocabulary.
@@ -84,8 +83,10 @@ export const EDITABLE_FIELDS: Readonly<
       field: "proposed_lifecycle",
       as: "choice",
       label: "company.lifecycle",
-      options: COMPANY_LIFECYCLE_STAGES,
-      optionLabels: COMPANY_LIFECYCLE_LABELS,
+      // Live is not offered: an approval runs as the system, and only a
+      // signed-in person may set an account live.
+      options: LIFECYCLE_OPTIONS.filter((stage) => stage !== "live"),
+      optionLabels: LIFECYCLE_LABELS,
     },
   ],
   // An automation-composed email waiting for a human to read, correct and
@@ -100,6 +101,10 @@ export const EDITABLE_FIELDS: Readonly<
   // A LinkedIn match is answered with its two boxes, never by retyping the
   // export's strings: the server refuses an edit to anything else.
   linkedin_match: [],
+  // A handover is answered yes or no. The note is the asker's words, and the
+  // rest names who gives and who receives, which the server will not let an
+  // edit change.
+  ownership_transfer: [],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },
@@ -129,34 +134,6 @@ export const EDITABLE_FIELDS: Readonly<
   // back. An edit to any of them would silently do nothing, so none is
   // offered rather than each looking like a live field that quietly is not.
   vcard_create: [],
-  // The ONE thing on a stage card a rep may change, and only when the move
-  // lands on a won stage with no signed agreement: why this deal was won
-  // without paper. The proposer cannot answer it — no reading of a mailbox
-  // establishes why there is no contract — so the card carries the question,
-  // and the server refuses the move until it is answered.
-  //
-  // Everything else in the payload is what the question is ABOUT: which deal,
-  // which stages, which criteria were met and what they rest on. A reader who
-  // disagrees with any of that says no rather than editing it into a different
-  // move.
-  //
-  // The vocabulary and its labels come from deals.tsx rather than a second copy
-  // here: both are derived from the generated contract type, so a reason added
-  // to crm.yaml stops this file compiling until it has a label.
-  stage_progression: [
-    {
-      field: "won_without_contract_reason",
-      as: "choice",
-      label: "deals.winReason",
-      options: WON_REASONS,
-      optionLabels: WON_REASON_LABELS,
-    },
-    {
-      field: "won_without_contract_detail",
-      as: "text",
-      label: "deals.winReasonDetail",
-    },
-  ],
 };
 
 // A rate proposal's apply re-reads the sheet, so its lost race is answered by

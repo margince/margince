@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -26,6 +27,9 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if in.WithOutsideParty {
+		in.outsideParty = outsidePartyClause(ctx, tx)
+	}
 	limit := storekit.ClampLimit(in.Limit)
 	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
 	if err != nil {
@@ -36,8 +40,12 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		order = requestPriorityOrder
 	}
 
+	columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 	rows, err := tx.Query(ctx,
-		`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
+		`SELECT `+columns+sorted.CursorKeySuffix()+
 			` FROM activity a WHERE `+strings.Join(where, " AND ")+
 			order+sprintf(" LIMIT %d", limit+1),
 		waitingListArgs(in, args)...)
@@ -61,6 +69,15 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	for _, row := range paged {
 		activities = append(activities, row.activity)
 	}
+	if in.positions != nil && in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
+		for i := range min(len(paged), limit) {
+			after, err := sorted.EncodePageCursor(paged[i].key, paged[i].activity.CreatedAt, ids.UUID(paged[i].activity.Id))
+			if err != nil {
+				return nil, storekit.Page{}, err
+			}
+			*in.positions = append(*in.positions, after)
+		}
+	}
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
@@ -74,32 +91,43 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		}
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
-	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := AttachLinks(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := WithOffersEmail(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := StampActivitiesWritable(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := withCustomValues(ctx, tx, in.Columns.cols, pageOf(activities)); err != nil {
+	if err := FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in)); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	return activities, page, nil
+}
+
+// FinishActivityRows fills rows read through ActivityProjection and
+// ScanActivityRow with the rest a row off /activities carries. That is mail
+// facts, links, creators, affordances and custom-field values. A reader outside
+// this module that scans rows itself calls it, so its rows answer the same.
+func FinishActivityRows(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity, asOf time.Time) error {
+	if err := WithEmailRowFacts(ctx, tx, activities, asOf); err != nil {
+		return err
+	}
+	if err := AttachLinks(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := WithCreators(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := WithOffersEmail(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := WithCommitmentAdmissions(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := StampActivityAffordances(ctx, tx, activities, asOf); err != nil {
+		return err
+	}
+	return withCustomValues(ctx, tx, columns.cols, pageOf(activities))
 }
 
 func requireActivityListScope(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) error {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	if in.AssigneeID != nil && (in.TaskAsOf == nil || in.TaskAsOf.IsZero()) {
+	if in.AssigneeID != nil && (in.AsOf == nil || in.AsOf.IsZero()) {
 		return apperrors.ErrInvalidArgument
 	}
 
@@ -118,4 +146,18 @@ func requireActivityListScope(ctx context.Context, tx pgx.Tx, in ListActivitiesI
 		}
 	}
 	return nil
+}
+
+// listClock is the instant a page is judged at. A store read sets AsOf from
+// its clock; without one it is the wall clock that clock defaults to.
+func listClock(in ListActivitiesInput) time.Time {
+	return orWallClock(in.AsOf)
+}
+
+// orWallClock is at, or the wall clock the store's clock defaults to.
+func orWallClock(at *time.Time) time.Time {
+	if at != nil {
+		return *at
+	}
+	return time.Now()
 }

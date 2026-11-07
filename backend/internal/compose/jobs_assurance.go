@@ -143,7 +143,8 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 	// means the args were built somewhere that does not.
 	if strings.TrimSpace(job.Args.RequestedBy) == "" {
 		return jobs.FaultContext(ctx, fmt.Errorf(
-			"%s: a pass somebody asked for carries no asker", job.Args.Kind()))
+			"%s: a pass somebody asked for carries no asker", job.Args.Kind(),
+		))
 	}
 	return jobs.FaultContext(ctx, w.sweep.check(wsCtx, job.Args.Workspace, &job.Args.RequestedBy))
 }
@@ -162,8 +163,7 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 // that stopped changing.
 func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requestedBy *string) error {
 	store := assurance.NewStore(InstallationDB(w.pool))
-	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
-	result, err := scanner.Scan(ctx, w.now(), requestedBy)
+	result, err := assuranceScanner(w.pool, store).Scan(ctx, w.now(), requestedBy)
 	if err != nil {
 		return err
 	}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -44,8 +44,9 @@ reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
 Routing uses the **URL hash** (`#/deals/01J9ZK` → `{ screen: "deals", id: "01J9ZK" }`).
-So any plain file host serves `index.html` for every entry point, and the
-server needs no fallback for the web app. A hash may carry a query of its own.
+Record links also carry `/r/{kind}/{id}` before the hash so a preview fetcher can name the record.
+The web tier serves the app for a browser and sends other fetches to the public card endpoint.
+`AppLink` keeps app links rooted at the same origin. A hash may carry a query of its own.
 The router removes it, so a `?utm=…` never ends up in a screen name.
 
 ## The layers
@@ -118,6 +119,29 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   reader uses (`format/plural.ts`). `one-plural-rule.test.ts` refuses a
   `count === 1` that chooses a message key in any file outside this folder.
 
+  `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.
+  `LocaleProvider` waits for the catalog before drawing its content.
+  The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.
+  Retry clears the failed catalog request before reading it again.
+
+  The `Analytics` route starts with the messages reached by its static imports and deferred
+  components that request the copy their first screen needs through `frontend/src/i18n/lazy.tsx`.
+  `frontend/scripts/gen-essential-copy.mjs` follows those imports from the same entry paths as
+  the bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
+  complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
+  A language change also loads the complete catalog.
+
+  `frontend/src/bootstrap.ts` starts the session read through `frontend/src/lib/session.read.ts`
+  while the app loads. `frontend/src/main.tsx` waits for `frontend/src/app/startup-session.ts` to
+  register the prepared query before it renders the app.
+
+  `frontend/src/app/analytics-prefetch.ts` keeps the response time when
+  filling the shared query cache. Expired responses are read again.
+  Once the session grants are known, it starts `Analytics` reads in that cache.
+  The opening page and the rendered views use the same functions in
+  `frontend/src/features/analytics/analytics.overview.questions.ts`.
+  Sign-in forms, closed drawers and other `Analytics` sections load when opened.
+
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
   `en-US`. The locale only changes how things show: it never changes what is
@@ -128,6 +152,17 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   fixed value such as `+02:00` is rejected at the edge with an error. No turning
   one kind of money into another, no counting on calendar dates, and no locale
   going back into what is stored.
+
+  Every time a signed-in screen shows is read in the reader's own zone,
+  `useViewerZone()` from `lib/viewerzone.tsx`. That is the zone the user chose
+  under Settings → Account, or their browser's until they have one.
+  `useCompanyZone()` (`lib/companyzone.tsx`) is for reports
+  and for days the server counts on the company's clock. `browserZone()` is for
+  public screens, sign-in and a browser's own date-time input.
+  `src/format/timezone.ts` states the rule, and the census in
+  `src/format/zone-by-purpose.test.ts` lists every file that uses an exception,
+  each with its reason. A file that is not on that list reads the reader's
+  zone.
 
 ### Each feature stands alone
 
@@ -241,17 +276,21 @@ too.
 
 ## Colour
 
-The app shell is **glass over the light page**, as
+The app shell has a panel rail and a clear top bar over the theme ground, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark rail group in `tokens.css` (`--bgRail`, `--railIconActive`,
-`--overlayScrim`) is for the dark green field
-only. Its comment says it has no theme, `white-alpha` in both themes, which is
-correct for that field. That field is the tooltips the small rail shows, the bar
-of the client surface, and the surfaces for the web site and the deck. A new
-app panel styled from those tokens is styled, in error, as the public web site.
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
+`--overlayScrim`) is the one dark green field, the same in both themes. It is
+for what passes over the page, such as the tooltips the folded sidebar shows
+and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
+is styled in error.
+
+The text colours made for the page fail on that field: `--textSecondary` and `--accentText` measure
+under 3:1 there. `src/design-system/inkfield.css` lists every part of the app drawn on the field. Inside
+those parts, it points the text, link and focus tokens at the field's own colours. A link there has a line
+under it. A new part on the field goes in that list; `inkfield.test.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
@@ -368,7 +407,7 @@ even if the test tree breaks.
 | Type list | `frontend/scripts/check-font-lock.sh` | a `font-family` other than Outfit (titles), Geist (body text, numbers too) or Geist Mono (code only), plus the named fallbacks; and Mono in any place but `code`, `pre`, `samp` and `.code-block`, which `design-system/mono.test.ts` refuses too |
 | No emoji | `frontend/scripts/check-icon-glyph.sh` | an emoji in rendered code. Comments are removed first, since the 🟢/🟡 tier marks are our style and render through `AutonomyDot` |
 | Spacing | `frontend/scripts/check-ds-spacing.sh` | a **new** `margin`, `padding` or `gap` in `px`, written in place. It reads only lines changed against `origin/main`, and skips a line marked `// ds:ignore <reason>` |
-| Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that sets the space of a design-system part the design system already spaces, or sets the size of one it already sizes: `font-size`, `line-height`, `letter-spacing`. Both lists are derived from `design-system/*.css` on every run. Also a rule that writes a fixed step where a role exists: the `*-actions` gap, the `*-cards` gap, the `*-card` or `*-panel` `padding`. **Whole tree**: moving a CSS class into the design system turns screen rules nobody touched into findings in lines no change holds. A case with no role to name it is skipped with `/* ds:ignore <reason> */` on its line. `check-ds-spacing-roles.test.sh` tests its verdict against test trees |
+| Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that sets the space of a design-system part the design system already spaces, or sets the size of one it already sizes: `font-size`, `line-height`, `letter-spacing`. Both lists are derived from `design-system/*.css` on every run. Also a rule that writes a fixed step where a role exists: the `*-actions` gap, the `*-cards` gap, the `*-card` or `*-panel` `padding`, the `*-panes` `gap` or `column-gap` (`--gapPanes`), and the `*-pane` `padding` (`--padPane`). **Whole tree**: moving a CSS class into the design system turns screen rules nobody touched into findings in lines no change holds. A case with no role to name it is skipped with `/* ds:ignore <reason> */` on its line. `check-ds-spacing-roles.test.sh` tests its verdict against test trees |
 | Type source | `design-system/type-source.test.ts` | text type set by value in any file but `tokens.css`. In every `.css` under `frontend/src` and every style object outside tests, `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`. `font` takes a `--font*` token and `font-weight` a `--fontWeight*` one. Two values that place things are accepted, only inside the two UA style blocks. It refuses `uppercase` text by every route: `font-variant-caps`, the `font-variant` short form, the `small-caps` features, and a `.toUpperCase()` whose result is rendered. Fails closed: a set with no `app.css`, under 100 CSS files or under 100 component files fails and does not pass empty |
 | Action rows | `design-system/actionrow.test.ts` | an element whose direct parts are two or more buttons and nothing else, and that does not get `gap: var(--gapActions)` from a class it names or from its own `style` value. That includes a class that **no CSS file declares**, which a gate that reads only CSS cannot see. A line is skipped with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
@@ -385,8 +424,7 @@ even if the test tree breaks.
 
 `craft static`, in `make check` and in CI, reads only the comment lines a
 change adds to a `frontend/` file. The frontend lane is separate from the Go
-merge gate and needs Node and pnpm. Run `make check-fe` (or
-`make frontend-check`) before pushing a frontend change.
+merge gate and needs Node and pnpm.
 
 ## Where to look first
 

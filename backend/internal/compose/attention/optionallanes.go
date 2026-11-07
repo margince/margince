@@ -55,6 +55,7 @@ func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) l
 	if !l.bound {
 		return named
 	}
+	defer timeStage(ctx, l.name)()
 	var items []crmcontracts.AttentionItem
 	err := s.degradable(ctx, laneBudget, func(context.Context) error {
 		var err error
@@ -127,7 +128,10 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetingsAhead(ctx, asOf, until)
+				booked, more, err := s.meetingsAhead(ctx, asOf, until)
+				if err == nil {
+					out.MeetingsMoreAvailable = &more
+				}
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -201,7 +205,7 @@ func (s *Service) optionalLanes(
 			into: &out.NoticeCases, count: &out.Counts.NoticeCases,
 		},
 		{
-			name: "relationship_decay", bound: s.decay != nil,
+			name: "relationship_decay", bound: s.decay != nil && !s.omitDecay,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				lapsed, more, err := s.decay.Lapsed(ctx, s.taskScope, s.taskOwner)
 				if err == nil {
@@ -213,6 +217,18 @@ func (s *Service) optionalLanes(
 		},
 	}
 	return append(lanes, s.operationalLanes(ctx, asOf, out)...)
+}
+
+// bookingLane is the reader's own paused booking page, at most one card.
+func (s *Service) bookingLane(ctx context.Context, out *crmcontracts.Attention) optionalLane {
+	return optionalLane{
+		name: "booking_health", bound: s.bookingHealth != nil,
+		read: func() ([]crmcontracts.AttentionItem, error) {
+			concerns, err := s.bookingHealth.BookingConcerns(ctx)
+			return renderEach(concerns, bookingItem), err
+		},
+		into: &out.BookingHealth, count: &out.Counts.BookingHealth,
+	}
 }
 
 // operationalLanes is the second half of the list: what is broken between
@@ -231,6 +247,7 @@ func (s *Service) operationalLanes(
 			},
 			into: &out.CaptureHealth, count: &out.Counts.CaptureHealth,
 		},
+		s.bookingLane(ctx, out),
 		{
 			name: "domain_questions", bound: s.domainQuestions != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
@@ -360,7 +377,11 @@ func fill(
 }
 
 func (s *Service) readRisk(ctx context.Context, out *crmcontracts.Attention) ([]crmcontracts.AttentionItem, error) {
-	risky, cut, err := s.atRisk.Quiet(ctx)
+	owners, err := s.recordOwners(ctx)
+	if err != nil {
+		return nil, err
+	}
+	risky, cut, err := s.atRisk.Quiet(ctx, owners)
 	if err != nil {
 		return nil, err
 	}

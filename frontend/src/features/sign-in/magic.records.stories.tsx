@@ -6,12 +6,12 @@ import type { ComponentProps } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import type { MagicLine } from "../../lib/magic.queries";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
 
 type MagicLineRecords = components["schemas"]["MagicLineRecords"];
@@ -101,4 +101,13 @@ export const Opened: Story = {
     await dialog.findByRole("heading", { name: en["magic.records.title"] });
     await dialog.findByText("Kandu GmbH");
   },
+};
+
+export const LongRecordName: Story = {
+  args: {
+    summary:
+      "overnight_at_risk_sweep:2026-11-02:ac028e011ede4821a2467a462a9cc370_end-2 and 2 more",
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

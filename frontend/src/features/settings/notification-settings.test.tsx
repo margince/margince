@@ -38,6 +38,7 @@ function everyClass(): Preference[] {
     { class: "approval_pending", delivery: "email", chosen: false },
     { class: "automation", delivery: "in_app", chosen: false },
     { class: "lead_sla", delivery: "in_app", chosen: false },
+    { class: "project_health", delivery: "in_app", chosen: false },
     { class: "capture", delivery: "in_app", chosen: false },
     { class: "system", delivery: "in_app", chosen: false },
     { class: "coach", delivery: "in_app", chosen: false },
@@ -105,7 +106,7 @@ describe("NotificationSettingsCard", () => {
     vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
     render(<NotificationSettingsCard />);
 
-    expect(await screen.findAllByRole("combobox")).toHaveLength(6);
+    expect(await screen.findAllByRole("combobox")).toHaveLength(7);
   });
 
   // The server's order is its own; the reader meets what waits on them first.
@@ -119,6 +120,7 @@ describe("NotificationSettingsCard", () => {
     );
     expect(rows).toEqual([
       "notification-delivery-approval_pending",
+      "notification-delivery-project_health",
       "notification-delivery-coach",
       "notification-delivery-lead_sla",
       "notification-delivery-automation",

@@ -110,12 +110,45 @@
   min-inline-size: 0;
   display: flex;
   align-items: center;
+  position: relative;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
 .recordtabs-strip::-webkit-scrollbar {
   display: none;
+}
+
+/* With no scrollbar, a tab cut at the strip's edge read as the last one. So
+   an end that hides tabs fades out, and only that end: a fade on a strip that
+   fits would promise tabs that are not there. The classes come from the
+   script that measures the scroll, so the fade is still. Focus scrolls a tab
+   clear of the fade, so the tab a keyboard stands on is never the faded one. */
+.recordtabs-strip {
+  /* A gradient takes no logical direction, so its start follows the strip's. */
+  --recordtabs-fade-from: 90deg;
+  --recordtabs-fade-start: 0px;
+  --recordtabs-fade-end: 0px;
+  scroll-padding-inline: var(--space-8);
+  mask-image: linear-gradient(
+    var(--recordtabs-fade-from),
+    transparent,
+    black var(--recordtabs-fade-start),
+    black calc(100% - var(--recordtabs-fade-end)),
+    transparent
+  );
+}
+.recordtabs-strip:dir(rtl) {
+  --recordtabs-fade-from: 270deg;
+}
+.recordtabs-strip:not(.is-clipped-start, .is-clipped-end) {
+  mask-image: none;
+}
+.recordtabs-strip.is-clipped-start {
+  --recordtabs-fade-start: var(--space-8);
+}
+.recordtabs-strip.is-clipped-end {
+  --recordtabs-fade-end: var(--space-8);
 }
 
 /* The current tab is marked by a rule under it rather than by a fill: the
@@ -138,6 +171,9 @@
   font-weight: var(--fontWeightMedium);
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    color var(--dur-state) var(--ease-out),
+    border-color var(--dur-state) var(--ease-out);
 }
 
 .recordtabs-tab:first-child {
@@ -169,6 +205,47 @@
   color: var(--textPrimary);
   border-block-end-color: var(--textPrimary);
   cursor: default;
+}
+.recordtabs-tab:hover:not([aria-pressed="true"], [aria-current="page"]) {
+  border-block-end-color: var(--borderStrong);
+}
+
+/* One underline that travels to the tab a reader picks, so the eye follows
+   the move. Anchored in CSS: no script measures the tabs, and a browser
+   without anchor positioning keeps each tab's own underline above. */
+@supports (anchor-name: --a) and
+  (anchor-scope: all) and
+  (position-anchor: --a) and
+  (inset-inline-start: anchor(start)) {
+  .recordtabs-strip {
+    anchor-scope: --recordtabs-open;
+  }
+  .recordtabs-tab[aria-pressed="true"],
+  .recordtabs-tab[aria-current="page"] {
+    anchor-name: --recordtabs-open;
+    border-block-end-color: transparent;
+  }
+  .recordtabs-strip::after {
+    content: "";
+    position: absolute;
+    position-anchor: --recordtabs-open;
+    inset-inline-start: anchor(start);
+    inset-inline-end: anchor(end);
+    inset-block-end: anchor(bottom);
+    block-size: 2px;
+    border-radius: var(--r-full);
+    corner-shape: round;
+    background: var(--textPrimary);
+    pointer-events: none;
+    transition:
+      inset-inline-start var(--dur-move) var(--ease-out),
+      inset-inline-end var(--dur-move) var(--ease-out);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recordtabs-strip::after {
+    transition: none;
+  }
 }
 
 /* Something waits behind this tab. An accent dot rather than an indigo one:

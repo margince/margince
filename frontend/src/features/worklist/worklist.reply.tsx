@@ -15,19 +15,18 @@
 // the tree allows and this is one idea that reads whole on its own.
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { intentAbout } from "../../lib/compose.intent";
+import { useViewerZone } from "../../lib/viewerzone";
+import { partyName, phrasedReasons, reasonText } from "../../lib/worklistcopy";
 import {
   ChannelReplyAction,
   ComposeModal,
   RELINK_KINDS,
   type RelinkKind,
 } from "../mail/compose";
-import { phrasedReasons, reasonText } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 /**
@@ -82,6 +81,7 @@ export function WaitingReply({
   item: WorklistItem;
   to: { type: RelinkKind; id: string };
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -107,7 +107,7 @@ export function WaitingReply({
                   ? "worklist.verb.draft_follow_up_now"
                   : "worklist.verb.draft_reply_now",
               ),
-              intent: replyIntent(item, t, locale),
+              intent: replyIntent(item, t, locale, readerZone),
             }
           : undefined
       }
@@ -139,9 +139,10 @@ function replyIntent(
   item: WorklistItem,
   t: Translator,
   locale: Locale,
+  zone: string,
 ): string {
   const why = phrasedReasons(item, false).flatMap(
-    (reason) => reasonText(reason, t, locale, viewerZone()) ?? [],
+    (reason) => reasonText(reason, t, locale, zone, partyName(item)) ?? [],
   )[0];
   // The composer's own phrase for answering a message, not a second spelling
   // of it: one sentence reaches the model whichever surface opened the drawer.
@@ -173,7 +174,6 @@ function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <>
       <Button variant="ai" onClick={() => setOpen((seq) => (seq ?? 0) + 1)}>
-        <Sparkles aria-hidden="true" />
         {t("worklist.verb.draft_follow_up_now")}
       </Button>
       {open !== null && (

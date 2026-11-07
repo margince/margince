@@ -21,10 +21,11 @@ package gates
 // that hard-codes part of its subject has become a second copy of it.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // suppressionKindCheck reads the CHECK the catalog records for the column that
@@ -40,7 +41,7 @@ var suppressionKindLiteral = regexp.MustCompile(`'([a-z_]+)'::text`)
 func TestEverySuppressionKindIsClassifiedByTheMigrationThatAddedTheLevel(t *testing.T) {
 	t.Parallel()
 
-	catalog, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the schema catalog: %v", err)
 	}
@@ -58,7 +59,7 @@ func TestEverySuppressionKindIsClassifiedByTheMigrationThatAddedTheLevel(t *test
 			"the column shipped with: the pattern has stopped matching", len(kinds))
 	}
 
-	classifier, err := os.ReadFile(levelClassifyingMigration)
+	classifier, err := gatekit.ReadFile(levelClassifyingMigration)
 	if err != nil {
 		t.Fatalf("reading the migration that classifies each kind: %v", err)
 	}

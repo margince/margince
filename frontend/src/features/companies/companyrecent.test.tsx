@@ -88,6 +88,22 @@ const callRow: Activity = {
   is_done: false,
 };
 
+type CompanyContact = NonNullable<Company360["contacts"]>["data"][number];
+
+function contactEntry(contactId: string, fullName: string): CompanyContact {
+  return {
+    contact_id: contactId,
+    full_name: fullName,
+    deal_roles: [],
+    consent: {},
+    strength: {
+      score: 0,
+      bucket: "none",
+      factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+    },
+  };
+}
+
 function view(activities: Activity[]): Company360 {
   return {
     as_of: "2026-09-01T09:00:00Z",
@@ -173,6 +189,37 @@ describe("the Overview's Latest card", () => {
     expect(titles[0]).toContain("Re: the renewal quote");
     expect(titles[1]).toContain("Depot walkthrough");
     expect(screen.queryByText("Retrofit walkthrough")).toBeNull();
+  });
+
+  // A call a system recorded has no other side and no colleague, so the contact
+  // it links is who it was with. Of several, none is chosen: links come in id
+  // order, and the first would be a pick by id.
+  it("names the one contact a call links, and none of several", () => {
+    const linkedTo = (...ids: string[]): Activity => ({
+      ...callRow,
+      captured_by: "system:calendar",
+      links: ids.map((id) => ({ entity_type: "contact", entity_id: id })),
+    });
+    const withContacts = {
+      ...view([linkedTo("p-2")]),
+      contacts: {
+        data: [
+          contactEntry("p-1", "Anna Brandt"),
+          contactEntry("p-2", "Ben Ortiz"),
+        ],
+        page: { has_more: false, next_cursor: null },
+      },
+    };
+    const { unmount } = renderCard(withContacts);
+    expect(screen.getByText(/^Ben Ortiz · /)).toBeTruthy();
+    unmount();
+
+    renderCard({
+      ...withContacts,
+      activities: view([linkedTo("p-1", "p-2")]).activities,
+    });
+    expect(screen.getByText("Depot walkthrough")).toBeTruthy();
+    expect(screen.queryByText(/Anna Brandt|Ben Ortiz/)).toBeNull();
   });
 
   it("says there is nothing yet on an account with no exchange", () => {

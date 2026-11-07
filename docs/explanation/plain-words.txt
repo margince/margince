@@ -352,7 +352,6 @@ deadlocking
 deal
 decide
 decision
-deck
 declaration
 declare
 decode
@@ -1293,7 +1292,6 @@ shader
 shape
 shard
 sharded
-sharding
 shards
 share
 sharper

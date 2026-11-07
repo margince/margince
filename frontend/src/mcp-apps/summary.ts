@@ -6,8 +6,9 @@
 // its values carry a name in place of an id. A view has no catalog and no
 // network to look either up.
 
+import { badge } from "./badge";
 import { el } from "./bridge";
-import { panel, panelBody } from "./parts";
+import { avatar, panel, panelBody } from "./parts";
 import { asList, asRecord, asText } from "./types";
 import { ABSENT, day, money } from "./values";
 
@@ -85,6 +86,48 @@ export function changesOf(value: unknown): Change[] {
     .filter((c) => c.field !== "" && c.label !== "");
 }
 
+/** detailsOf reads the operands a staged action carries, each as a change
+ *  that sets its value, so changeTable draws them without a before. */
+export function detailsOf(value: unknown): Change[] {
+  return asList(value)
+    .map(asRecord)
+    .map((d) => ({
+      field: asText(d.field),
+      label: asText(d.label),
+      before: shownOf(undefined),
+      after: shownOf(d.value),
+    }))
+    .filter((d) => d.field !== "" && d.label !== "");
+}
+
+/** A summary value is already text as the server bounded it, shown as sent. */
+const SUMMARY_VALUE = "summary_value";
+
+/** A summary taken apart: the sentence, its field values, and how many more. */
+export type SummaryParts = { sentence: string; fields: Change[]; more: number };
+
+/** summaryPartsOf reads `summary_parts`, or null where the answer carries none. */
+export function summaryPartsOf(value: unknown): SummaryParts | null {
+  const parts = asRecord(value);
+  const sentence = asText(parts.sentence);
+  if (sentence === "") return null;
+  const fields = asList(parts.fields)
+    .map(asRecord)
+    .map((f) => ({
+      field: asText(f.field),
+      label: inWords(asText(f.field)),
+      before: shownOf(undefined),
+      after: shownOf({ kind: SUMMARY_VALUE, text: asText(f.value) }),
+    }))
+    .filter((f) => f.field !== "");
+  const count = parts.more_fields;
+  const more =
+    typeof count === "number" && Number.isInteger(count) && count > 0
+      ? count
+      : 0;
+  return { sentence, fields, more };
+}
+
 /** inWords names a field the server sent no label for by its words. */
 export function inWords(name: string): string {
   const words = name
@@ -130,6 +173,8 @@ export function shown(field: string, value: Shown): string {
       return "Name not available";
     case "execution":
       return "Set when approved";
+    case SUMMARY_VALUE:
+      return value.text === "" ? ABSENT : value.text;
   }
   if (/(_at|_date)$/.test(field) && day(value.text) !== ABSENT) {
     return day(value.text);
@@ -151,18 +196,17 @@ export function changeTable(
   const table = el("table", "evidence");
   const body = el("tbody");
   for (const change of rows) {
-    const after = shown(change.field, change.after);
+    const after = el("span", "value-now", shown(change.field, change.after));
+    const cell = el("td", "name");
+    if (opts.before) {
+      cell.append(
+        el("span", "value-was", shown(change.field, change.before)),
+        el("span", "value-arrow", " → "),
+      );
+    }
+    cell.appendChild(after);
     const tr = el("tr");
-    tr.append(
-      el("th", "meta", change.label),
-      el(
-        "td",
-        "name",
-        opts.before
-          ? `${shown(change.field, change.before)} → ${after}`
-          : after,
-      ),
-    );
+    tr.append(el("th", "meta", change.label), cell);
     body.appendChild(tr);
   }
   table.appendChild(body);
@@ -174,7 +218,26 @@ export function summaryPanel(
   title: string,
   ...lines: HTMLElement[]
 ): HTMLElement {
-  const card = panel(title, { level: "h1" });
+  return statusPanel(title, undefined, ...lines);
+}
+
+/** savedPanel is the card for a write that went through, marked as saved. */
+export function savedPanel(
+  title: string,
+  ...lines: HTMLElement[]
+): HTMLElement {
+  return statusPanel(title, badge("Saved", "success"), ...lines);
+}
+
+function statusPanel(
+  title: string,
+  action: HTMLElement | undefined,
+  ...lines: HTMLElement[]
+): HTMLElement {
+  const card = panel(
+    title,
+    action === undefined ? { level: "h1" } : { level: "h1", action },
+  );
   const body = panelBody();
   body.append(...lines);
   card.appendChild(body);
@@ -199,4 +262,22 @@ export function refusalPanel(
       words === "" || UUID.test(words) ? "Ask the assistant why." : words,
     ),
   );
+}
+
+/**
+ * recordLine names the record a write landed on: its chip, its name and its
+ * kind, as a row of colleagues reads in the app.
+ */
+export function recordLine(
+  name: string,
+  id: string,
+  noun: string,
+): HTMLElement {
+  const line = el("div", "record-line");
+  line.append(
+    avatar(name, id),
+    el("p", "name", name),
+    badge(noun.charAt(0).toUpperCase() + noun.slice(1)),
+  );
+  return line;
 }

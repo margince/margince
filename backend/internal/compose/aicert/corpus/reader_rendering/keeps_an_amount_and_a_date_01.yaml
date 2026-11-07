@@ -1,0 +1,22 @@
+name: reader_rendering_keeps_an_amount_and_a_date
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "email"
+  subject: "Angebot 2026-118"
+  body: "Guten Tag Herr Lindqvist,\n\nanbei das Angebot über 48.500 EUR netto für die Wartung. Das Angebot ist gültig bis zum 15.12.2026. Bitte melden Sie sich bei Fragen unter +49 40 1234567.\n\nViele Grüße\nMara Keller"
+  source: "de"
+  target: "en"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["2026-118", "Lindqvist", "48.500 EUR", "15.12.2026", "+49 40 1234567", "Mara Keller"]
+    omits: []
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The amount, the offer number, the date and the phone number are kept exactly as written. The rendering says the offer is net and valid until that date."

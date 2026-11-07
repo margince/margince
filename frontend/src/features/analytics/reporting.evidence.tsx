@@ -1,69 +1,35 @@
 import "./reporting.css";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef } from "react";
-import { api } from "../../api/client";
-import { EntityRef } from "../../components/entityref";
+import { useQueryClient } from "@tanstack/react-query";
+import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
-import { DataTable } from "../../design-system/datatable";
-import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
-import { Heading } from "../../design-system/heading";
-import { Modal } from "../../design-system/modal";
-import { Popover } from "../../design-system/popover";
-import { QueryGate } from "../../design-system/querystates";
-import { Stack } from "../../design-system/stack";
-import { formatActivityWhen } from "../../format/activitywhen";
-import { formatDateTime, formatNumber } from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { isEntityKind } from "../../lib/entity";
-import { isVersionSkewOf, throwProblem } from "../../lib/problem";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import { cohortOutcomeLabel } from "./reporting.cohort";
+import { EvidenceFrame } from "./reporting.evidenceframe";
+import { EvidenceRecords } from "./reporting.evidencerecords";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
-  metricLabel,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
-  reportingAmount,
   reportingPeriodLabel,
-  reportingQuery,
-  unitLabel,
 } from "./reporting.model";
 import { movementLabel } from "./reporting.movement";
-import { useReportingPages } from "./reporting.pagination";
 import {
   reloadReportingFigures,
+  useMetricNames,
   useReportingCatalog,
 } from "./reporting.queries";
 
-const metricDateHeading: Partial<
-  Record<ReportingEvidenceRef["metric"], MessageKey>
-> = {
-  bookings_won: "reporting.closedOn",
-  meetings_held: "reporting.meetingOn",
-  accepted_opportunities: "reporting.acceptedOn",
-  leads_created: "reporting.createdOn",
-  leads_promoted: "reporting.createdOn",
-  lead_status_moves: "reporting.movedOn",
-  lead_first_response: "reporting.arrivedOn",
-  partner_pipeline: "reporting.createdOn",
-  partner_won: "reporting.closedOn",
-  partner_commission: "reporting.accruedOn",
-};
+type ReportingCoverage = components["schemas"]["ReportingCoverage"];
 
-// A record's figure is a deal's value unless the metric counts or times it, or
-// the money is a commission rather than the deal.
-function valueHeading(
-  reference: ReportingEvidenceRef,
-  unit: string | undefined,
-  t: Translator,
-): string {
-  if (reference.metric === "partner_commission")
-    return t("reporting.commissionAmount");
-  return unit === "count" || unit === "days" || unit === "hours"
-    ? unitLabel(unit, t)
-    : t("reporting.dealValue");
-}
-
+/**
+ * The one evidence drawer: what a figure measures, the time and scope it was
+ * read for, its coverage, then the records behind it. The records are listed
+ * under the receipt the figure was read with. A figure that failed, is not
+ * supported or is hidden lists none and says why.
+ */
 export function ReportingEvidenceDrawer({
   evaluation,
   reference,
@@ -76,43 +42,15 @@ export function ReportingEvidenceDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
-  const plural = usePlural();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
-  const client = useQueryClient();
-  const title = useId();
-  const heading = useRef<HTMLHeadingElement>(null);
-  const { cursor, next: setCursor, back, canBack } = useReportingPages();
-  const query = useQuery({
-    queryKey: ["reporting-evidence", evaluation, reference, editionId, cursor],
-    queryFn: async () => {
-      const params = { ...reference, cursor, limit: 50 };
-      const result = editionId
-        ? await api.GET("/analytics/editions/{id}/evidence", {
-            params: { path: { id: editionId }, query: params },
-          })
-        : await api.GET("/analytics/evidence", {
-            params: {
-              query: {
-                ...reportingQuery(evaluation.selection),
-                ...params,
-                evaluation_key: evaluation.evaluation_key,
-                evaluated_at: evaluation.context.evaluated_at,
-                framework_revision: evaluation.context.framework_revision,
-              },
-            },
-          });
-      if (result.error) throwProblem(result.error);
-      return result.data;
-    },
-  });
   const catalog = useReportingCatalog();
   const definition = catalog.data?.metrics.find(
     (metric) => metric.id === reference.metric,
   );
-  const { metric, point, interval, selectedValue } = evidenceSelection(
-    evaluation,
-    reference,
-  );
+  const selected = evidenceSelection(evaluation, reference);
+  const { metric, point, outcome, interval } = selected;
+  const state = figureState(selected.coverage, selected.selectedValue);
   const stateLabel = editionId
     ? formatDateTime(
         evaluation.context.state_at,
@@ -120,183 +58,104 @@ export function ReportingEvidenceDrawer({
         evaluation.context.timezone,
       )
     : t("reporting.currentPipeline");
-  const dateHeading = t(
-    metricDateHeading[reference.metric] ?? "reporting.period",
-  );
+  const heading = evidenceHeading(evaluation, reference, metricName, t);
   return (
-    <Modal
-      open
+    <EvidenceFrame
+      title={heading.title}
       onClose={onClose}
-      labelledBy={title}
-      intent="drawer"
-      initialFocusTo={() => heading.current}
-    >
-      <DrawerHead>
-        <Heading
-          ref={heading}
-          tabIndex={-1}
-          id={title}
-          as="h2"
-          size="medium"
-          className="modal-title"
-        >
-          {metricLabel(reference.metric, t)}
-        </Heading>
-        <p className="t-caption">
-          {evaluation.context.scope.label}
-          {point?.label
+      lines={[
+        evaluation.context.scope.label +
+          (point?.label
             ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
-            : ""}
-        </p>
+            : "") +
+          (outcome
+            ? ` · ${cohortOutcomeLabel(outcome, t)} · ${formatAnalyticsNumber(outcome.count, locale)}`
+            : ""),
+        interval
+          ? reportingPeriodLabel(
+              { ...interval, end_at: reference.through ?? interval.end_at },
+              evaluation.context.timezone,
+              locale,
+            )
+          : stateLabel,
+        t(
+          editionId ? "reporting.evidenceFrozenAt" : "reporting.evidenceReadAt",
+          {
+            at: formatDateTime(
+              evaluation.context.evaluated_at,
+              locale,
+              evaluation.context.timezone,
+            ),
+            currency: evaluation.context.currency,
+          },
+        ),
+      ]}
+    >
+      <EvidenceDefinition
+        editionId={editionId}
+        version={metric?.version}
+        definition={definition}
+      />
+      {selected.coverage && selected.coverage.status !== "ok" && (
         <p className="t-caption">
-          {interval
-            ? reportingPeriodLabel(
-                {
-                  ...interval,
-                  end_at: reference.through ?? interval.end_at,
-                },
-                evaluation.context.timezone,
-                locale,
-              )
-            : stateLabel}
+          {t(`reporting.status.${selected.coverage.status}`)}
+          {selected.coverage.reason ? ` · ${selected.coverage.reason}` : ""}
         </p>
-      </DrawerHead>
-      <DrawerBody>
-        <Stack gap="4">
-          <MetricDefinition
-            definition={definition}
-            version={metric?.version}
-            frozen={Boolean(editionId)}
-          />
-          {metric?.coverage.status !== undefined &&
-            metric.coverage.status !== "ok" && (
-              <Popover
-                onHover
-                label={t(`reporting.status.${metric.coverage.status}`)}
-              >
-                <p>{metric.coverage.reason}</p>
-              </Popover>
-            )}
-          <Popover onHover label={t("reporting.contextDetails")}>
-            <p>
-              {evaluation.context.currency} · {evaluation.context.timezone}
-            </p>
-            <p>
-              {editionId ? t("reporting.frozen") : t("reporting.live")} ·{" "}
-              {formatDateTime(
-                evaluation.context.evaluated_at,
-                locale,
-                evaluation.context.timezone,
-              )}
-            </p>
-          </Popover>
-          {selectedValue != null && (
-            <p className="t-num">
-              {t("reporting.selectedValue")}:{" "}
-              {reportingAmount(
-                selectedValue,
-                metric?.unit ?? definition?.unit ?? "count",
-                evaluation.context.currency,
-                locale,
-              )}
-            </p>
-          )}
-          {isVersionSkewOf(query.error) ? (
-            <ErrorLine
-              actions={
-                <Button
-                  onClick={() => {
-                    reloadReportingFigures(client);
-                    onClose();
-                  }}
-                >
-                  {t("common.retry")}
-                </Button>
-              }
-            >
-              {t("reporting.evidenceStale")}
-            </ErrorLine>
-          ) : (
-            <QueryGate query={query} pendingLabel={t("reporting.evidence")}>
-              {(evidence) => (
-                <>
-                  <p>
-                    {plural("reporting.pageRecords", evidence.rows.length, {
-                      count: formatNumber(evidence.rows.length, locale),
-                    })}
-                  </p>
-                  <DataTable
-                    label={t("reporting.evidence")}
-                    rows={evidence.rows}
-                    rowKey={(row) => row.key}
-                    columns={[
-                      {
-                        key: "source",
-                        header: t("reporting.record"),
-                        render: (row) => {
-                          if (row.restricted) return t("reporting.restricted");
-                          // Every record type with a page links, in a new tab so the evidence
-                          // stays open. Anything else (an activity, a governance row) stays its label.
-                          return row.source_id &&
-                            row.source_type &&
-                            isEntityKind(row.source_type) ? (
-                            <EntityRef
-                              kind={row.source_type}
-                              id={row.source_id}
-                              name={row.label}
-                              newTab
-                            />
-                          ) : (
-                            row.label
-                          );
-                        },
-                      },
-                      {
-                        key: "date",
-                        header: dateHeading,
-                        render: (row) =>
-                          row.occurred_at
-                            ? formatActivityWhen(
-                                row.occurred_at,
-                                row.occurred_precision ?? "instant",
-                                locale,
-                                evidence.context.timezone,
-                              )
-                            : "—",
-                      },
-                      {
-                        key: "amount",
-                        header: valueHeading(reference, metric?.unit, t),
-                        render: (row) =>
-                          reportingAmount(
-                            row.value,
-                            metric?.unit ?? definition?.unit ?? "count",
-                            evidence.context.currency,
-                            locale,
-                          ),
-                      },
-                    ]}
-                  />
-                  {canBack && (
-                    <Button variant="ghost" onClick={back}>
-                      {t("reporting.back")}
-                    </Button>
-                  )}
-                  {evidence.next_cursor && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => setCursor(evidence.next_cursor)}
-                    >
-                      {t("reporting.next")}
-                    </Button>
-                  )}
-                </>
-              )}
-            </QueryGate>
-          )}
-        </Stack>
-      </DrawerBody>
-    </Modal>
+      )}
+      {state === "unavailable" ? (
+        <FigureUnavailable withheld={selected.coverage?.withheld === true} />
+      ) : (
+        <EvidenceRecords
+          evaluation={evaluation}
+          reference={reference}
+          editionId={editionId}
+          zero={state === "zero"}
+          unit={selected.metric?.unit ?? definition?.unit ?? "count"}
+          selectedValue={selected.selectedValue}
+          knownTotal={heading.total}
+          onClose={onClose}
+        />
+      )}
+    </EvidenceFrame>
+  );
+}
+
+// Whether the records behind a figure can be listed. A failed, unsupported or
+// unconfigured figure has none to list. Neither has one hidden from the reader,
+// because listing or counting its records would rebuild what is hidden.
+type FigureState = "records" | "zero" | "unavailable";
+const UNLISTABLE: ReadonlySet<string> = new Set([
+  "failed",
+  "unsupported",
+  "unavailable",
+  "not_configured",
+]);
+function figureState(
+  coverage: ReportingCoverage | undefined,
+  value: number | null | undefined,
+): FigureState {
+  if (!coverage) return "records";
+  if (UNLISTABLE.has(coverage.status)) return "unavailable";
+  if (coverage.withheld && value == null) return "unavailable";
+  if (coverage.status === "no_data" || value === 0) return "zero";
+  return "records";
+}
+
+function FigureUnavailable({ withheld }: Readonly<{ withheld: boolean }>) {
+  const t = useT();
+  const client = useQueryClient();
+  if (withheld) return <p>{t("reporting.evidenceWithheld")}</p>;
+  return (
+    <ErrorLine
+      standing
+      actions={
+        <Button onClick={() => reloadReportingFigures(client)}>
+          {t("common.retry")}
+        </Button>
+      }
+    >
+      {t("reporting.evidenceUnavailable")}
+    </ErrorLine>
   );
 }
 
@@ -318,7 +177,7 @@ function evidenceSelection(
             point.evidence.through === reference.through,
         )),
   );
-  const point =
+  const named =
     reference.group_key || reference.through
       ? chart?.points.find(
           (point) =>
@@ -326,8 +185,19 @@ function evidenceSelection(
             point.evidence?.through === reference.through,
         )
       : undefined;
+  // A cohort's outcome count names its own members inside a point.
+  const counted = reference.group_key
+    ? chart?.points
+        .flatMap((point) =>
+          (point.outcomes ?? []).map((count) => ({ point, count })),
+        )
+        .find(({ count }) => count.evidence?.group_key === reference.group_key)
+    : undefined;
+  const point = named ?? counted?.point;
+  const outcome = counted?.count;
+  // An outcome's count is drawn beside its name, not as the point's value.
   const selectedValue =
-    point?.value ??
+    (outcome ? undefined : point?.value) ??
     (!reference.group_key &&
     !reference.through &&
     metric?.evidence.context_id === reference.context_id
@@ -335,30 +205,78 @@ function evidenceSelection(
       : undefined);
   const interval =
     chart?.interval ??
+    (reference.context_id.startsWith("forecast_")
+      ? evaluation.context.close_interval
+      : undefined) ??
     (reference.context_id === "target"
       ? evaluation.context.target_interval
       : reference.context_id === "state"
         ? undefined
         : evaluation.context.interval);
-  return { metric, point, interval, selectedValue };
+  return {
+    metric,
+    point,
+    outcome,
+    interval,
+    selectedValue,
+    coverage: selectedCoverage(reference, metric, chart),
+  };
 }
 
-function MetricDefinition({
-  definition,
+// A point of a chart answers to its chart's coverage; the figure, to its own.
+function selectedCoverage(
+  reference: ReportingEvidenceRef,
+  metric: ReportingEvaluation["metrics"][number] | undefined,
+  chart: ReportingEvaluation["charts"][number] | undefined,
+): ReportingCoverage | undefined {
+  if (reference.group_key || reference.through) return chart?.coverage;
+  if (metric?.evidence.context_id === reference.context_id)
+    return metric.coverage;
+  return chart?.coverage ?? metric?.coverage;
+}
+
+function EvidenceDefinition({
+  editionId,
   version,
-  frozen,
+  definition,
 }: Readonly<{
-  definition?: { version: string; definition: string };
-  version?: string;
-  frozen: boolean;
+  editionId: string | undefined;
+  version: string | undefined;
+  definition: components["schemas"]["ReportingMetricDefinition"] | undefined;
 }>) {
   const t = useT();
-  const changed = frozen && definition && version !== definition.version;
+  if (editionId && definition && version !== definition.version)
+    return <p>{t("reporting.earlierDefinition")}</p>;
   return (
-    <Popover onHover label={t("reporting.definition")}>
-      <p>
-        {changed ? t("reporting.earlierDefinition") : definition?.definition}
-      </p>
-    </Popover>
+    <Disclosure summary={t("reporting.definitions")}>
+      <p>{definition?.definition}</p>
+    </Disclosure>
   );
+}
+
+function evidenceHeading(
+  evaluation: ReportingEvaluation,
+  reference: ReportingEvidenceRef,
+  name: ReturnType<typeof useMetricNames>,
+  t: ReturnType<typeof useT>,
+) {
+  const action = evaluation.overview_actions?.find(
+    (action) =>
+      action.evidence.metric === reference.metric &&
+      action.evidence.context_id === reference.context_id &&
+      action.evidence.group_key === reference.group_key &&
+      action.evidence.through === reference.through,
+  );
+  const period = reference.context_id === "forecast_period_deals";
+  return {
+    title: period
+      ? t("analytics.outlook.periodPipeline")
+      : (action?.label ?? name(reference.metric)),
+    total:
+      action?.count ??
+      (period
+        ? evaluation.metrics.find((metric) => metric.id === reference.metric)
+            ?.forecast_basis?.open_count
+        : undefined),
+  };
 }

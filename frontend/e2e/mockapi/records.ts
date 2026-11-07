@@ -10,6 +10,7 @@ import {
 import {
   anna,
   brandt,
+  busyStageDeals,
   deals,
   MEETING_ACTIVITY,
   seats,
@@ -85,11 +86,31 @@ export const createCompany: Handler = ({ route, json }) => {
       id: "o-new",
       display_name: String(body.display_name),
       industry: body.industry ?? null,
+      domains: body.domains ?? [],
       captured_by: "human:u1",
       source: "manual",
     },
     201,
   );
+};
+
+// Contacts on the new company's domain that are not linked to it yet.
+export const newCompanyCandidates = {
+  data: [
+    {
+      contact_id: "p-anja",
+      full_name: "Anja Petersen",
+      title: "Head of Procurement",
+      email: "anja.petersen@nordlicht-logistik.example",
+    },
+    {
+      contact_id: "p-jonas",
+      full_name: "Jonas Weber",
+      email: "j.weber@nordlicht-logistik.example",
+      employer: { company_id: "o-brandt", company_name: brandt.display_name },
+    },
+  ],
+  truncated: false,
 };
 
 export const newCompany = {
@@ -194,14 +215,13 @@ export const meetingBrief: Handler = ({ json }, { options }) => {
   switch (options.meetingBrief) {
     case "empty":
       return json(briefEmpty);
-    case "failed":
+    case "withheld":
       return json(
         {
           type: "about:blank",
           title: "Not found",
           status: 404,
           code: "not_found",
-          detail: "That meeting is filed under a different engagement.",
         },
         404,
       );
@@ -330,9 +350,25 @@ export const pipelines = page([
   },
 ]);
 
-// The board reads the list, so the list shows the writes the detail shows.
-export const listDeals: Handler = ({ json }, { dealPatches }) =>
-  json(page(deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] }))));
+// The board reads the list, so the list shows the writes the detail shows. A
+// board column asks for one stage, and the server answers only that stage. The
+// cursor is the offset of the next page, as a keyset server's is opaque.
+export const listDeals: Handler = ({ json, url }, { dealPatches, options }) => {
+  const stageId = url.searchParams.get("stage_id");
+  const current = [...deals, ...(options.busyStage ? busyStageDeals : [])].map(
+    (deal) => ({ ...deal, ...dealPatches[deal.id] }),
+  );
+  const rows = stageId
+    ? current.filter((deal) => deal.stage_id === stageId)
+    : current;
+  const from = Number(url.searchParams.get("cursor") ?? 0);
+  const limit = Number(url.searchParams.get("limit") ?? rows.length);
+  const more = from + limit < rows.length;
+  return json({
+    data: rows.slice(from, from + limit),
+    page: { next_cursor: more ? String(from + limit) : null, has_more: more },
+  });
+};
 
 const winEvidenceRequired = {
   title: "Unprocessable",

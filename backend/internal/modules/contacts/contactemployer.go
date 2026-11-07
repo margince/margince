@@ -79,21 +79,24 @@ func currentEmployerFrom(
 // joined to its company as `company`, is this caller's to see. Shared by every
 // read that names an employer, so the three gates are asked in one place.
 func employerScope(ctx context.Context, relAlias string, arg func(any) int) (clause string, visible bool, err error) {
-	edgeBound, err := auth.EdgeReadScope(ctx, relAlias, arg)
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return "", false, nil
+	// Both object gates are asked before any clause binds an argument: a
+	// refusal after one would leave a placeholder no statement uses.
+	for _, gate := range []func() error{
+		func() error { return auth.EdgeReadAdmitted(ctx) },
+		func() error { return auth.Require(ctx, companyEntity, principal.ActionRead) },
+	} {
+		if err := gate(); errors.Is(err, apperrors.ErrPermissionDenied) {
+			return "", false, nil
+		} else if err != nil {
+			return "", false, err
+		}
 	}
+	edgeBound, err := auth.EdgeReadScope(ctx, relAlias, arg)
 	if err != nil {
 		return "", false, err
 	}
 	if edgeBound == "" {
 		edgeBound = scopeAllRows
-	}
-	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return "", false, nil
-		}
-		return "", false, err
 	}
 	companyScope, err := auth.ScopeClauseFor(ctx, companyEntity, "company", arg)
 	if err != nil {
@@ -131,10 +134,21 @@ func (s *Store) CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (ma
 	var out map[ids.UUID]crmcontracts.ContactEmployer
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readContactEmployers(ctx, tx, contactIDs)
+		out, err = CurrentEmployersTx(ctx, tx, contactIDs)
 		return err
 	})
 	return out, err
+}
+
+// CurrentEmployersTx reads the same employer facts inside an existing transaction.
+func CurrentEmployersTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	return readContactEmployers(ctx, tx, contactIDs)
 }
 
 // readContactEmployers is the one read behind every employer a contact

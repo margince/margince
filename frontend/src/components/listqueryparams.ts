@@ -22,6 +22,30 @@ export type ListQuery = {
   perPage: number;
 };
 
+/** The order and filters a screen opens its list on. */
+export type ListOpening = Readonly<{
+  initialSort?: string;
+  initialFilters?: Readonly<Record<string, string>>;
+}>;
+
+/**
+ * Whether the reader has narrowed the list from how it opens: what Save view
+ * offers to keep. The page size is how much shows, not which rows.
+ */
+export function isNarrowed(
+  query: ListQuery,
+  opening: ListOpening = {},
+): boolean {
+  const opened = opening.initialFilters ?? {};
+  const keys = new Set([...Object.keys(query.filters), ...Object.keys(opened)]);
+  return (
+    Boolean(query.q) ||
+    query.sort !== (opening.initialSort ?? "") ||
+    query.includeArchived ||
+    [...keys].some((key) => (query.filters[key] ?? "") !== (opened[key] ?? ""))
+  );
+}
+
 /** The page sizes the footer offers; the first is the default. */
 export const LIST_PAGE_SIZES = [25, 50, 100] as const;
 
@@ -257,12 +281,16 @@ export function mergeScreenDials(
  */
 const CLEARED_OPENING_FILTER = "all";
 
+export function isClearedFilterMarker(value: string): boolean {
+  return value === CLEARED_OPENING_FILTER;
+}
+
 function isClearedOpening(
   key: string,
   value: string,
   opening: ListQuery,
 ): boolean {
-  return value === CLEARED_OPENING_FILTER && key in opening.filters;
+  return isClearedFilterMarker(value) && key in opening.filters;
 }
 
 /**

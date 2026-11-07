@@ -1,9 +1,16 @@
-import { type ReactNode, useEffect, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useNarrowViewport } from "../lib/viewport";
 import { OverflowMenu } from "./atoms";
+import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
 import {
   type ListChip,
   type ListView,
@@ -12,16 +19,14 @@ import {
   type SortOption,
   sortDirection,
 } from "./listsurface.dials";
+import { ArchivedSwitch, Toolbar, VIEW_MENU } from "./listtoolbar";
+import type { ViewRow, ViewToggle } from "./listviewmenu";
 import "./listtable.css";
 import { Heading } from "./heading";
 import { useTruncationTooltip } from "./tooltip";
 
-// The list surface's shell: the header (view tabs, count, primary action),
-// the caption and the toolbar (search, filter chips, an archived toggle and
-// whatever presentation dials the caller owns). It knows nothing about
-// columns, density, paging or rows, which belong to ListTable. The pipeline
-// board reuses this same shell, as a contact list and a lead list do. The
-// dials belong to the surface, not to what fills it.
+// The list surface's shell: header, caption and toolbar. It knows nothing of
+// columns, density, paging or rows, so the pipeline board reuses it too.
 //
 // A view tab reports only its index. What a view MEANS — a sort, a set of
 // filters, a stage — is the caller's to decide, which is what lets the board
@@ -29,6 +34,9 @@ import { useTruncationTooltip } from "./tooltip";
 // report a PRESS with, since it names a tab in the array just rendered; it is
 // not an identity, which is why a tab carries its own `id` for the caller that
 // has to remember which view is lit across a rename or an insertion.
+
+export { Menu, useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
+export type { ViewRow, ViewToggle } from "./listviewmenu";
 
 // The dials' vocabulary is declared in the leaf beside this file; a caller that
 // has always imported it from here goes on doing so.
@@ -41,12 +49,9 @@ export {
   sortDirection,
 };
 
-import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
-import { ArchivedSwitch, Toolbar } from "./listtoolbar";
-
-export { Menu, useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
-
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
+const NO_ROWS: readonly ViewRow[] = [];
+const NO_TOGGLES: readonly ViewToggle[] = [];
 
 export function ListSurface({
   title,
@@ -55,6 +60,7 @@ export function ListSurface({
   activeView = 0,
   onViewChange,
   count,
+  holdCount = false,
   action,
   caption,
   search,
@@ -64,9 +70,14 @@ export function ListSurface({
   chosen = EMPTY_FILTERS,
   onChipChange,
   archived,
+  layout,
+  viewRows = NO_ROWS,
+  displayRows = NO_ROWS,
+  displayToggles = NO_TOGGLES,
+  changed = false,
   tools,
-  displayMenu,
   saveView,
+  notice,
   children,
   footer,
 }: Readonly<{
@@ -92,8 +103,16 @@ export function ListSurface({
   views?: readonly ListView[];
   activeView?: number;
   onViewChange?: (index: number) => void;
-  /** The reader's-eye summary line — the table's range, the board's deal count. */
+  /**
+   * The reader's-eye summary line: the table's range, the board's deal count.
+   * Omitted when the list has nothing to say, and then no line is drawn.
+   */
   count?: ReactNode;
+  /**
+   * The count line keeps its height, blank, while a count may be refilled: a
+   * count is loading, or a narrowed list has no rows yet.
+   */
+  holdCount?: boolean;
   /** The one primary action for this surface, e.g. "New contact". */
   action?: ReactNode;
   /**
@@ -119,32 +138,28 @@ export function ListSurface({
    */
   sortOptions?: readonly SortOption[];
   archived?: { checked: boolean; onChange: (next: boolean) => void };
+  /** How the body is drawn (Table or Board), at the top of the View panel. */
+  layout?: ReactNode;
+  /** The screen's own dials, as the View panel's first rows (a pipeline). */
+  viewRows?: readonly ViewRow[];
+  /** The body's presentation dials, as the View panel's last rows. */
+  displayRows?: readonly ViewRow[];
+  /** The body's two-state dials, after Show archived in the panel's end group. */
+  displayToggles?: readonly ViewToggle[];
+  /** The list departs from every view it offers; View carries a dot. */
+  changed?: boolean;
   /**
-   * Controls that change HOW the body is shown rather than what is in it, kept
-   * to the right: the table's Display menu, the board/table switch, the
-   * pipeline being looked at.
+   * A verb that is not a dial (a company's Coverage explorer), at the end of
+   * the toolbar row.
    */
   tools?: ReactNode;
-  /**
-   * A popover the BODY brings to the row — the table's Display menu — drawn
-   * between the sort dial and `tools`.
-   *
-   * A render prop, and that is the whole of why it exists: ONE MENU OPEN AT A
-   * TIME IS A PROPERTY OF THE ROW, not of any dial standing on it, so the state
-   * belongs where the row does. The body held its own `open` beside this one
-   * and the two agreed about nothing — Sort and Display stood open side by
-   * side, and Escape reached only whichever had spelled its own handler.
-   */
-  displayMenu?: (
-    menu: Readonly<{ open: boolean; onToggle: () => void }>,
-  ) => ReactNode;
-  /**
-   * Saving what the dials currently say, and it is a slot of its own so that
-   * "last on the row" is a fact about this component rather than a habit each
-   * screen keeps. It was the final node of every caller's `tools` fragment,
-   * which held only while every one of them remembered to put it there.
-   */
+  /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
+  /**
+   * A line of its own under the search, for what the dials depend on and
+   * could not get: a failed saved-views read, with its Retry.
+   */
+  notice?: ReactNode;
   /** The body: a scrolling table, a Kanban board, whatever this surface holds. */
   children: ReactNode;
   /** Under the body — the table's pager, or nothing at all. */
@@ -152,14 +167,50 @@ export function ListSurface({
 }>) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   useCloseOnOutsideClick(() => setOpenMenu(null));
-  useCloseOnEscape(openMenu, () => setOpenMenu(null));
+  // The View panel and its phone sheet close on Escape and hand focus back
+  // themselves. A second handler here would land focus inside the sheet.
+  useCloseOnEscape(openMenu === VIEW_MENU ? null : openMenu, () =>
+    setOpenMenu(null),
+  );
+  // A list can turn short under an open panel. It keeps its toolbar until the
+  // panel closes, so the panel never vanishes under the reader.
+  const chromeless = bare && openMenu === null;
+  const root = useRef<HTMLDivElement>(null);
+  const focused = useRef<Element | null>(null);
+  useEffect(() => {
+    const element = root.current;
+    const remember = (event: FocusEvent) => {
+      focused.current = event.target instanceof Element ? event.target : null;
+    };
+    element?.addEventListener("focusin", remember);
+    return () => element?.removeEventListener("focusin", remember);
+  }, []);
+  // The toolbar and the bare switch swap whole, so focus taken with one goes
+  // to the other's control for the same dials.
+  useEffect(() => {
+    const lost = focused.current;
+    if (
+      lost === null ||
+      lost.isConnected ||
+      document.activeElement !== document.body
+    ) {
+      return;
+    }
+    root.current
+      ?.querySelector<HTMLElement>(
+        chromeless ? ".lt-tools .lt-vtoggle" : ".lt-tools .lt-vtrigger",
+      )
+      ?.focus();
+  }, [chromeless]);
 
   return (
-    <div className="lt">
-      {(!bare || title || views.length > 0 || action) && (
+    <div className="lt" ref={root}>
+      {(!chromeless || title || views.length > 0 || action) && (
         <div className="lt-head">
           {title && (
-            <Heading size="xlarge" className="lt-title t-display">
+            // Out of the tab order; a press that takes its own button away
+            // hands focus here (listfocus.ts).
+            <Heading size="xlarge" className="lt-title t-display" tabIndex={-1}>
               {title}
             </Heading>
           )}
@@ -179,7 +230,7 @@ export function ListSurface({
             </div>
           )}
           <div className="lt-head-end">
-            {!bare && <HeadCount>{count}</HeadCount>}
+            {!chromeless && <HeadCount hold={holdCount}>{count}</HeadCount>}
             <HeadActions>{action}</HeadActions>
           </div>
         </div>
@@ -187,7 +238,7 @@ export function ListSurface({
 
       {caption && <p className="lt-caption">{caption}</p>}
 
-      {!bare && (
+      {!chromeless && (
         <Toolbar
           search={search}
           sort={sort}
@@ -196,14 +247,19 @@ export function ListSurface({
           chosen={chosen}
           onChipChange={onChipChange}
           archived={archived}
+          layout={layout}
+          viewRows={viewRows}
+          displayRows={displayRows}
+          displayToggles={displayToggles}
+          changed={changed}
           tools={tools}
-          displayMenu={displayMenu}
           saveView={saveView}
+          notice={notice}
           openMenu={openMenu}
           setOpenMenu={setOpenMenu}
         />
       )}
-      {bare && archived && (
+      {chromeless && archived && (
         <div className="lt-tools">
           <ArchivedSwitch archived={archived} />
         </div>
@@ -254,16 +310,44 @@ function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
  * tabs and verbs are what a reader presses (listtable.css `.lt-head-end`). It
  * arrives as a node, so the truncation tip reads the words the node rendered.
  */
-function HeadCount({ children }: Readonly<{ children: ReactNode }>) {
+function HeadCount({
+  hold,
+  children,
+}: Readonly<{ hold: boolean; children: ReactNode }>) {
+  const says =
+    children !== undefined && children !== null && children !== false;
+  // A first load holds the line, since most lists have rows to count.
+  const [held, setHeld] = useState(true);
+  if (!hold && held !== says) {
+    setHeld(says);
+  }
   const [text, setText] = useState("");
   const tip = useTruncationTooltip<HTMLSpanElement>(text);
   useEffect(() => setText(tip.ref.current?.textContent ?? ""));
+  if (!says && !(hold && held)) {
+    return null;
+  }
   return (
     <span className="lt-count" ref={tip.ref} {...tip.trigger}>
       {children}
       {tip.tip}
     </span>
   );
+}
+
+/** The table's range line, or none while it is pending or has nothing to say. */
+export function rangeLine(
+  pending: boolean,
+  line: ComponentProps<typeof CountLine>,
+): ReactNode {
+  return !pending && countSays(line.total, line.sortedBy) ? (
+    <CountLine {...line} />
+  ) : undefined;
+}
+
+/** Whether `CountLine` has words: rows to count, or an order to name. */
+export function countSays(total: number, sortedBy?: string): boolean {
+  return total > 0 || Boolean(sortedBy);
 }
 
 /**
@@ -277,6 +361,7 @@ export function CountLine({
   last,
   total,
   more = false,
+  scope,
   sortedBy,
 }: Readonly<{
   unit: string;
@@ -290,10 +375,15 @@ export function CountLine({
    * report a total the client cannot know.
    */
   more?: boolean;
+  /** What the counted rows belong to, when the list reads one part of a set (a pipeline). */
+  scope?: string;
   sortedBy?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  if (!countSays(total, sortedBy)) {
+    return null;
+  }
   // All three figures are magnitudes in ONE sentence ("1–25 of 1,234 rows"), so
   // they group together or the line reads as two notations at once.
   const range = {
@@ -304,12 +394,9 @@ export function CountLine({
   };
   // An empty list says why in its body: none yet, none matching, a failed read.
   // A zero here would only repeat that sentence or contradict it.
-  const counted =
-    total === 0
-      ? ""
-      : more
-        ? t("table.rangeLoaded", range)
-        : t("table.range", range);
+  const ranged = more ? t("table.rangeLoaded", range) : t("table.range", range);
+  const scoped = scope ? t("table.rangeIn", { range: ranged, scope }) : ranged;
+  const counted = total === 0 ? "" : scoped;
   const order = sortedBy
     ? t("table.sortedBy", { column: sortedBy })
     : undefined;

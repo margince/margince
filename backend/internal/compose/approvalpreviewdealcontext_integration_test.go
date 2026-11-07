@@ -35,6 +35,8 @@ func TestStageDecisionCarriesAuthorizedCommercialContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewApprovalsService(e.DB())
+	// The preview is built as the agent, from its human's stored grants.
+	e.GrantRole(t, e.Rep1, "admin")
 	agent := e.AgentCtxWithPassport(e.SeedPassport(t, integration.OwnerConn(t), "decision context"))
 	actor, ok := principal.Actor(agent)
 	if !ok {
@@ -68,13 +70,14 @@ func TestStageDecisionCarriesAuthorizedCommercialContext(t *testing.T) {
 	if masked == nil || masked.State != previewIncompleteState || masked.Details != nil || len(masked.Changes) != 0 {
 		t.Fatalf("masked closure must withhold the decision: %+v", masked)
 	}
-	assertMagicDecisionPreview(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), t, e, svc, id, previewIncompleteState)
+	// The agent's proposal names the deal's company, which this reader cannot open.
+	assertMagicDecisionPreview(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), t, e, svc, id, approvals.PreviewNeedsWiderSight)
 	perms.FieldMasks = nil
 	limited, err := newApprovalPreviewReader(e.DB()).read(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), proposal)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertMagicDecisionPreview(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), t, e, svc, id, previewReadyState)
+	assertMagicDecisionPreview(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), t, e, svc, id, approvals.PreviewNeedsWiderSight)
 	visible := decisionDetails(t, limited)
 	if _, exposed := visible["company_id"]; exposed {
 		t.Fatalf("unreadable company context leaked: %+v", visible)

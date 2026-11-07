@@ -7,6 +7,7 @@ import {
   createdColumn,
   mineEmptyNote,
   ownerColumn,
+  sharedWithMeView,
   standardViews,
 } from "./recordlist";
 
@@ -66,6 +67,12 @@ describe("one record list, three record types", () => {
       { label: "list.viewMine", sort: "" },
       { label: "list.viewAll", sort: "" },
     ]);
+  });
+});
+
+describe("the Shared with me view", () => {
+  it("narrows by the reader's grants and names no owner", () => {
+    expect(sharedWithMeView().filters).toEqual({ shared_with_me: "true" });
   });
 });
 

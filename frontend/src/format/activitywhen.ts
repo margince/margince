@@ -223,10 +223,36 @@ export function activityHasHappened(
     : activityHasBegun(at, precision, now, record);
 }
 
+// The server refuses `held` for a start its own clock has not passed, and that
+// clock may run behind the browser's.
+const HELD_CLOCK_LEAD_MS = 60_000;
+
+/** The latest start a meeting filed as held can carry at `now`. */
+export function latestHeldMoment(now: Date): Date {
+  return new Date(now.getTime() - HELD_CLOCK_LEAD_MS);
+}
+
+/**
+ * Mirrors Go occurredday.MeetingTookPlace for the date box; the server still
+ * refuses a later date (422 in_future). A `day` meeting ends the day before.
+ */
+export function latestHeldDay(
+  precision: OccurredPrecision,
+  now: Date,
+  zone: string,
+): string {
+  const today = calendarDay(latestHeldMoment(now), zone);
+  if (precision !== "day") return today;
+  return calendarDay(
+    new Date(Date.parse(startOfDayInZone(today, zone)) - 1),
+    zone,
+  );
+}
+
 /**
  * The start an activity moved to `day` is sent with. A `day` entry names the
- * date alone. An instant keeps its time of day in `zone`, capped at `now`.
- * Throws a RangeError for a day `zone` skipped.
+ * date alone. An instant keeps its time of day in `zone`, capped at the latest
+ * held start. Throws a RangeError for a day `zone` skipped.
  */
 export function movedActivityStart(
   { at, precision }: ActivityMoment,
@@ -236,7 +262,9 @@ export function movedActivityStart(
 ): ActivityMoment {
   if (precision === "day") return { at: dayOccurredAt(day), precision };
   const moved = sameWallClockOnDay(at, day, zone);
-  const capped = Date.parse(moved) > now.getTime() ? now.toISOString() : moved;
+  const latest = latestHeldMoment(now);
+  const capped =
+    Date.parse(moved) > latest.getTime() ? latest.toISOString() : moved;
   return { at: capped, precision };
 }
 

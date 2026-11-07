@@ -17,7 +17,6 @@ import (
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -175,22 +174,8 @@ func ownedByReader(row ranked, reader principal.Principal) bool {
 	return owner != nil && owner.Id != nil && !reader.UserID.IsZero() && ids.UUID(*owner.Id) == reader.UserID
 }
 
-// keepReadersOwn drops the rows belonging to somebody else.
-//
-// It runs over the CANDIDATES, before the page is cut, so a reader asking for
-// twenty-five of their own rows gets twenty-five where they exist. Narrowing
-// after the cut returned a short page while the reader's own work sat just
-// past it.
-//
-// It fails CLOSED. A call with no human behind it has no "own work" to answer
-// for, and a queue that handed such a caller every row it had read would be
-// widening a scope named `mine` — the opposite of what it says. An agent that
-// needs the day reads it under a scope it can actually hold.
-//
-// The narrowing itself is a display cut, not the security boundary: the lanes
-// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
-// by default rather than what any store was asked. Pushing the filter into
-// each producer is the better shape and needs each to take an owner.
+// Producers scope candidates before their bounds; this final cut also checks
+// personal lanes whose attribution comes from the assembled row.
 func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
@@ -376,6 +361,9 @@ func (s *Service) keepTeams(ctx context.Context, rows []ranked) ([]ranked, scope
 
 // formerTeammates is the bound reader's answer, or nobody when none is bound.
 func (s *Service) formerTeammates(ctx context.Context) ([]ids.UUID, error) {
+	if s.teamRoster != nil {
+		return s.teamRoster.former, nil
+	}
 	if s.former == nil {
 		return nil, nil
 	}
@@ -386,10 +374,7 @@ func (s *Service) formerTeammates(ctx context.Context) ([]ids.UUID, error) {
 // whose work stays in the team's view until somebody takes it over.
 func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ranked {
 	team := make(map[ids.UUID]bool, len(roster)+len(former))
-	for _, member := range roster {
-		team[member.UserID] = true
-	}
-	for _, id := range former {
+	for _, id := range teamSeats(roster, former) {
 		team[id] = true
 	}
 	kept := make([]ranked, 0, len(rows))
@@ -405,6 +390,16 @@ func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ran
 	return kept
 }
 
+// teamSeats lists the seats whose work a team view keeps: the live roster and
+// the former teammates. The row filter and the narrowed reads share it.
+func teamSeats(roster []TeamMember, former []ids.UUID) []ids.UUID {
+	seats := make([]ids.UUID, 0, len(roster)+len(former))
+	for _, member := range roster {
+		seats = append(seats, member.UserID)
+	}
+	return append(seats, former...)
+}
+
 // answersTo resolves only named responsibility, using the card's owner resolver.
 // A deal attached for display cannot replace the source lane's attribution.
 func answersTo(row ranked) (ids.UUID, bool) {
@@ -413,21 +408,6 @@ func answersTo(row ranked) (ids.UUID, bool) {
 		return ids.Nil, false
 	}
 	return ids.UUID(*owner.Id), true
-}
-
-// teamWeekFor answers which teams' frozen weeks this reader may open, on the
-// predicate the week is served on. Not a scope: the `team` scope is the team's
-// live work and follows row scope, while the week is a lead's verdict on named
-// colleagues, which a read-only seat reaching every row does not get.
-func teamWeekFor(ctx context.Context) crmcontracts.WorklistTeamWeek {
-	switch auth.TeamWeekReachOf(ctx) {
-	case auth.ReachesEveryTeam:
-		return crmcontracts.WorklistTeamWeekEveryTeam
-	case auth.ReachesTeamsLed:
-		return crmcontracts.WorklistTeamWeekTeamsLed
-	default:
-		return crmcontracts.WorklistTeamWeekNone
-	}
 }
 
 // scopeOptions puts the resolver's answer on the wire.
@@ -453,7 +433,11 @@ func (s *Service) forNoticeTeam(ctx context.Context) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	narrowed.teamRoster = &rosterRead{members: roster, cut: cut}
+	former, err := s.formerTeammates(ctx)
+	if err != nil {
+		return nil, err
+	}
+	narrowed.teamRoster = &rosterRead{members: roster, former: former, cut: cut}
 	for _, member := range roster {
 		narrowed.noticeOwners = append(narrowed.noticeOwners, member.UserID)
 	}

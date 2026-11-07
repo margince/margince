@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -24,7 +25,7 @@ import (
 // gives. The caller acts on the answer inside this transaction.
 func lockCorrespondence(ctx context.Context, tx pgx.Tx, email string) error {
 	return storekit.LockWriteIdentity(ctx, tx,
-		correspondence.LockEntity, correspondence.LockIdentity(email))
+		correspondence.LockEntity, mailidentity.CorrespondenceLockKey(email))
 }
 
 // WorkspaceCorrespondsTx reports whether the workspace has written to the
@@ -90,7 +91,7 @@ func MarkedContactsWithMailTx(ctx context.Context, tx pgx.Tx, setBy string, afte
 		                WHERE sent.counterparty_email = lower(pe.email)
 		                  AND sent.counterparty_outbound_attested
 		                  AND sent.occurred_at > p.created_at -- occurred_at raw: attested mail is captured at its instant, never a day
-		                  AND `+auth.ActivityAvailableClause("sent")+`)
+		                  AND `+auth.ActivityExternalEvidenceClause("sent")+`)
 		 ORDER BY p.id, pe.email
 		 LIMIT $3`, setBy, after, limit)
 	if err != nil {

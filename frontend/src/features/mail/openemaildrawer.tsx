@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { CommitmentReview } from "../../design-system/commitmentreview";
@@ -12,6 +13,10 @@ import {
 } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
+import { useCanWrite } from "../../lib/capability";
+import { contactQuery } from "../../lib/contact.queries";
+import { navigate } from "../../lib/router";
+import { useViewerId } from "../../lib/session";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
 import { ComposeModal } from "./compose";
 import { RelinkModal } from "./composerelink";
@@ -72,6 +77,7 @@ export function OpenEmailDrawer({
   const { locale } = useLocale();
   const formatWhen: ActivityWhenFormatter = (at, precision) =>
     formatActivityWhen(at, precision, locale, zone);
+  const viewerUserId = useViewerId();
   // What the reader started from the drawer: a reply or a forward, in the
   // docked composer. The drawer steps aside while it is open, so the page and
   // the composer are both in view, and comes back when it closes.
@@ -98,6 +104,7 @@ export function OpenEmailDrawer({
         open={activityId !== null && writing === null}
         onClose={onClose}
         formatWhen={formatWhen}
+        viewerUserId={viewerUserId}
         notice={replied === shown ? t("email.thread.replied") : undefined}
         renderRelated={() => (
           <SourceCommitmentReview
@@ -118,11 +125,12 @@ export function OpenEmailDrawer({
           <EmailRecordLinks presentation={presentation} />
         )}
         renderActions={(presentation) => (
-          <EmailDrawerActions
+          <DrawerActions
             presentation={presentation}
             onReply={() => setWriting({ kind: "reply", presentation })}
             onForward={() => setWriting({ kind: "forward", presentation })}
             onRelink={() => setRelinking(presentation)}
+            onClose={onClose}
           />
         )}
       />
@@ -146,6 +154,50 @@ export function OpenEmailDrawer({
         />
       )}
     </>
+  );
+}
+
+function DrawerActions({
+  presentation,
+  onReply,
+  onForward,
+  onRelink,
+  onClose,
+}: Readonly<{
+  presentation: EmailPresentation;
+  onReply: () => void;
+  onForward: () => void;
+  onRelink: () => void;
+  onClose: () => void;
+}>) {
+  const contactId =
+    presentation.summary.direction === "inbound" &&
+    presentation.from.length === 1
+      ? (presentation.from[0]?.contact_id ?? undefined)
+      : undefined;
+  const contact = useQuery(contactQuery(contactId));
+  const canBook =
+    useCanWrite("activity", "create") &&
+    !contact.isError &&
+    contact.data?.attachable === true;
+  return (
+    <EmailDrawerActions
+      presentation={presentation}
+      onReply={onReply}
+      onForward={onForward}
+      onRelink={onRelink}
+      onBook={
+        canBook && contactId
+          ? () => {
+              onClose();
+              navigate(
+                { screen: "book", id: `contact-${contactId}` },
+                new Map([["activity", presentation.id]]),
+              );
+            }
+          : undefined
+      }
+    />
   );
 }
 

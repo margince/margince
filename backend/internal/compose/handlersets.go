@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
+	"github.com/margince/margince/backend/internal/compose/readerrendering"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -43,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -100,6 +102,7 @@ type (
 	forecastHandlers        = forecasting.Handlers
 	assuranceHandlers       = assurance.Handlers
 	introductionHandlers    = introductions.Handlers
+	initiativeHandlers      = initiatives.Handlers
 	assignmentHandlers      = assignments.Handlers
 )
 
@@ -108,7 +111,8 @@ type (
 // Its own function so the composition root reads as a list of what is wired
 // rather than how each piece is built.
 func (s *Server) wireContact360(pool *pgxpool.Pool) {
-	s.contact360Svc = contact360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), ai.NewFeedbackStore(InstallationDB(pool)), time.Now).WithMailCoverage(mailCaptureCoverageReader(InstallationDB(pool)))
+	s.contact360Svc = contact360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), ai.NewFeedbackStore(InstallationDB(pool)), time.Now).WithMailCoverage(mailCaptureCoverageReader(InstallationDB(pool))).
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
 	s.contact360Handlers = contact360.NewHandlers(s.contact360Svc)
 	// The relationship brief is assembled from the SAME composite read the page
 	// serves, so the two cannot disagree about what this caller may see. The
@@ -140,6 +144,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
 	s.roomBriefSvc = newRoomBriefService(pool)
 	s.roomBriefHandlers = roombrief.NewHandlers(s.roomBriefSvc)
+	s.readerRenderingHandlers = readerrendering.NewHandlers(newReaderRenderingService(pool))
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
 	// (ADR-0096 D4). Connecting one later is a provider implementation.

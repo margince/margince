@@ -4,10 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { OpenEmailDrawer } from "./openemaildrawer";
@@ -52,6 +53,8 @@ export default meta;
 export const RecordDrawer: StoryObj = {
   render: () => {
     installFetchStub({
+      // The reader, which decides whether a relay send reads "for you".
+      "GET /me": meRoute({}),
       [`GET /activities/${BASE.activity_id}`]: () =>
         jsonResponse({
           id: BASE.activity_id,
@@ -115,7 +118,7 @@ export const RecordDrawer: StoryObj = {
         {/* The reader's own zone: format/zone-by-purpose forbids naming one. */}
         <OpenEmailDrawer
           activityId={BASE.activity_id}
-          zone={viewerZone()}
+          zone={browserZone()}
           onClose={() => {}}
         />
       </StoryProviders>
@@ -131,6 +134,8 @@ export const RecordDrawer: StoryObj = {
 export const RecordDrawerHeld: StoryObj = {
   render: () => {
     installFetchStub({
+      // The reader, which decides whether a relay send reads "for you".
+      "GET /me": meRoute({}),
       [`GET /activities/${BASE.activity_id}`]: () =>
         jsonResponse({
           id: BASE.activity_id,
@@ -186,7 +191,7 @@ export const RecordDrawerHeld: StoryObj = {
       <StoryProviders>
         <OpenEmailDrawer
           activityId={BASE.activity_id}
-          zone={viewerZone()}
+          zone={browserZone()}
           onClose={() => {}}
         />
       </StoryProviders>

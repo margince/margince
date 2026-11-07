@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search -->
+<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search -->
 # What Margince is
 
 Margince is a CRM. It is one place for the contacts you sell to, the companies
@@ -125,7 +125,11 @@ To search Margince, click the search field **Search or ask Margince** in the top
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 
-Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed. If there is none, it opens a record whose whole name you typed, and if there is none, the **Search results** page. So Enter on part of a name shows the results instead of opening the first one.
+With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
+
+With an empty box, Enter opens the newest recent item once the list has been checked.
+
+For a typed search, Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed. If there is none, it opens a record whose whole name you typed, and if there is none, the **Search results** page. So Enter on part of a name shows the results instead of opening the first one.
 
 If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed**, and the screen commands still work.
 Also called: find, look up, global search.

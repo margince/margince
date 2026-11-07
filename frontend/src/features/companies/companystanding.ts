@@ -36,16 +36,22 @@ export function companyVerdict({
   dimensions,
   withheld,
   moment,
+  unrated,
 }: Readonly<{
   dimensions: readonly RatedDimension[];
   // The health section was not shown to this reader, which is not the same
   // fact as nothing rated yet.
   withheld: boolean;
   moment?: Pick<Moment, "rule" | "why_now">;
+  // The account's activity, read when nobody has rated it.
+  unrated?: CompanyVerdict;
 }>): CompanyVerdict {
   const { overall } = worstOf(dimensions);
   const owed =
     moment && moment.rule !== "nothing_needed" ? moment.why_now : undefined;
+  if (!overall && !withheld && unrated) {
+    return unrated;
+  }
   if (!overall) {
     return {
       word: withheld ? "record.notShown" : "standing.notAssessed",

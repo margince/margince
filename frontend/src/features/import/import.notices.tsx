@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../../design-system/applink";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
@@ -139,9 +140,9 @@ export function ImportRefusal({
       title={tooLong ? t("import.upload.tooManyRowsTitle") : title}
       actions={
         busyRun ? (
-          <a className="link-button" href={runHref(busyRun)}>
+          <AppLink className="link-button" href={runHref(busyRun)}>
             {t("import.sourceBusyOpen")}
-          </a>
+          </AppLink>
         ) : undefined
       }
     >

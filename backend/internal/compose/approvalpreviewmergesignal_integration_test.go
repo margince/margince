@@ -51,7 +51,7 @@ func TestMergePreviewNamesEveryCarriedSignal(t *testing.T) {
 			if !errors.Is(err, apperrors.ErrInvalidArgument) || partial.Signals != nil {
 				t.Fatalf("unwired preview=%+v error=%v", partial, err)
 			}
-			e.Contacts.WithMergeSignalReader(signals.PreviewSignalCarryTx)
+			e.Contacts.WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords))
 			if kind == "contact" {
 				_, err = e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), &preview.SourceVersion)
 			} else {

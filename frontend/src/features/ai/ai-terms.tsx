@@ -7,8 +7,8 @@ import { Badge } from "../../design-system/atoms";
 import { KeyedName } from "../../design-system/keyedname";
 import { Popover } from "../../design-system/popover";
 import { useT } from "../../i18n";
+import { providerName } from "../../lib/ai-provider-names";
 import { tierLabel, tierRank } from "./ai-decision-labels";
-import { providerName } from "./ai-provider-names";
 import "./ai-settings.css";
 
 // The three words this settings area is built from, each with one mark wherever

@@ -13,8 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -48,11 +46,7 @@ func applyHomeRepairBatch(ctx context.Context, tx pgx.Tx, pool *pgxpool.Pool, in
 	if in.Activation == nil {
 		return datatask.BatchOut{}, apperrors.ErrPermissionDenied
 	}
-	human, ok := principal.HumanUserID(in.Activation.Operator)
-	if !ok {
-		return datatask.BatchOut{}, apperrors.ErrPermissionDenied
-	}
-	actor, err := (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, migration.StoredActor{Type: principal.PrincipalHuman, UserID: human})
+	actor, err := activationActor(ctx, pool, *in.Activation)
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -119,16 +113,22 @@ func applyHomeRepairTask(ctx context.Context, tx pgx.Tx, store *activities.Store
 		return false, err
 	}
 	decision, err := homeRepairTaskDecisionTx(ctx, tx, task, activation.AsOf, true)
+	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrConflict) {
+		return false, recordHomeRepairSkip(ctx, tx, expected, "changed_since_review", activation.RuleVersion, runID)
+	}
 	if err != nil {
 		return false, err
 	}
 	if task.Version != expected.Version || decision.Action != expected.Action || decision.Reason != expected.Reason {
 		return false, recordHomeRepairSkip(ctx, tx, expected, "changed_since_review", activation.RuleVersion, runID)
 	}
-	if decision.Action != repairArchiveReminder {
+	if decision.Action != repairArchiveReminder && decision.Action != repairNormalizeTask {
 		return false, recordHomeRepairSkip(ctx, tx, expected, decision.Reason, activation.RuleVersion, runID)
 	}
 	err = pgx.BeginFunc(ctx, tx, func(savepoint pgx.Tx) error {
+		if decision.Action == repairNormalizeTask {
+			return store.RepairAutomaticTaskTx(ctx, savepoint, task, activation.AsOf, activation.RuleVersion)
+		}
 		return store.ArchiveActivityTx(ctx, savepoint, task.ID, &expected.Version, activities.OnlyPristineAutomaticTask(), activities.WithArchiveReason(decision.Reason, activation.RuleVersion))
 	})
 	if errors.Is(err, apperrors.ErrConflict) || errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrRetentionHold) || errors.Is(err, apperrors.ErrNotFound) {

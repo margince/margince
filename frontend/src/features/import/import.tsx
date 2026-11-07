@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Fragment, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -10,7 +11,6 @@ import { QueryStates } from "../../design-system/querystates";
 import { RecordBack } from "../../design-system/recordview";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useMemberNames } from "../../lib/membernames";
@@ -22,6 +22,7 @@ import {
   IMPORT_TEMPLATE_SUBPAGE,
   settingsHref,
 } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ImportDropzone } from "./import.files";
 import { ImportRefusal, UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
@@ -127,12 +128,19 @@ function ImportHub() {
             }
             control={
               <span className="import-hub__verbs">
-                <a className="link-button" href={routeHash(IMPORT_TEMPLATE)}>
+                <AppLink
+                  className="link-button"
+                  href={routeHash(IMPORT_TEMPLATE)}
+                >
                   {t("import.hub.preview")}
-                </a>
-                <a className="link-button" href={IMPORT_TEMPLATE_HREF} download>
+                </AppLink>
+                <AppLink
+                  className="link-button"
+                  href={IMPORT_TEMPLATE_HREF}
+                  download
+                >
                   {t("import.template.download")}
-                </a>
+                </AppLink>
               </span>
             }
           />
@@ -188,6 +196,7 @@ function starterOf(run: ImportRun): string | undefined {
 // The runs made so far, newest first. Undo is offered on a complete run only:
 // every other state either is still moving or has nothing left to reverse.
 function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -242,7 +251,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
             {
               key: "date",
               header: t("import.recent.col.date"),
-              render: (one) => formatDate(one.created_at, locale, viewerZone()),
+              render: (one) => formatDate(one.created_at, locale, readerZone),
             },
             {
               key: "file",
@@ -259,21 +268,21 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                 const by = starter && names.get(starter);
                 return (
                   <>
-                    <a className="cell-link" href={runHref(one.id)}>
+                    <AppLink className="cell-link" href={runHref(one.id)}>
                       {one.file_name || one.source_name || one.id}
-                    </a>
+                    </AppLink>
                     <div className="t-caption">
                       {by
                         ? t("import.recent.filesBy", { files, name: by })
                         : files}
                     </div>
                     {one.superseded_by ? (
-                      <a
+                      <AppLink
                         className="t-caption"
                         href={runHref(one.superseded_by)}
                       >
                         {t("import.superseded")}
-                      </a>
+                      </AppLink>
                     ) : null}
                   </>
                 );
@@ -303,9 +312,9 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                 if (one.status === "pending") {
                   return (
                     <div className="cell-actions">
-                      <a className="link-button" href={runHref(one.id)}>
+                      <AppLink className="link-button" href={runHref(one.id)}>
                         {t("import.draft.continue")}
-                      </a>
+                      </AppLink>
                       <Button
                         variant="ghost"
                         pending={

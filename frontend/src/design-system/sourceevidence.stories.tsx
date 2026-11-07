@@ -83,7 +83,7 @@ export const Email: StoryObj = {
     });
     return (
       <StoryProviders>
-        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+        <SourceEvidence activityId={ACTIVITY} openerFor={() => () => {}} />
       </StoryProviders>
     );
   },
@@ -97,7 +97,7 @@ export const Transcript: StoryObj = {
     });
     return (
       <StoryProviders>
-        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+        <SourceEvidence activityId={ACTIVITY} openerFor={() => () => {}} />
       </StoryProviders>
     );
   },
@@ -112,7 +112,7 @@ export const DateOnlyTranscript: StoryObj = {
     });
     return (
       <StoryProviders>
-        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+        <SourceEvidence activityId={ACTIVITY} openerFor={() => () => {}} />
       </StoryProviders>
     );
   },
@@ -131,7 +131,7 @@ export const Failed: StoryObj = {
     });
     return (
       <StoryProviders>
-        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+        <SourceEvidence activityId={ACTIVITY} openerFor={() => () => {}} />
       </StoryProviders>
     );
   },
@@ -148,7 +148,7 @@ export const Withheld: StoryObj = {
     });
     return (
       <StoryProviders>
-        <SourceEvidence activityId={ACTIVITY} onOpenTranscript={() => {}} />
+        <SourceEvidence activityId={ACTIVITY} openerFor={() => () => {}} />
       </StoryProviders>
     );
   },

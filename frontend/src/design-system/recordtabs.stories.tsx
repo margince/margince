@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
@@ -128,4 +128,35 @@ export const WithTrailingControl: Story = {
       trailing={<Button aria-pressed={false}>Details</Button>}
     />
   ),
+};
+
+// Analytics' own tabs at 390px: more than the phone holds. The far end fades
+// over the cut tab to say more follow. The start has nothing scrolled past it
+// yet, so it does not fade.
+export const ScrollsAtPhoneWidth: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <RecordTabs
+      label="Analytics"
+      options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+      value="performance"
+      onChange={() => undefined}
+      labels={{
+        performance: "Performance",
+        outcomes: "My outcomes",
+        delivery: "Delivery",
+        pipeline: "Pipeline",
+        team: "Team",
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = canvasElement.querySelector(".recordtabs-strip");
+    if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    await expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth);
+    await waitFor(() => expect(strip).toHaveClass("is-clipped-end"));
+    await expect(strip).not.toHaveClass("is-clipped-start");
+  },
 };

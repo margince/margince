@@ -65,6 +65,7 @@ type senderMail struct {
 func seedSenderMail(t *testing.T, trustDomain bool) senderMail {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	// Two colleagues of one name make the promiser ambiguous.
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya' WHERE id = $1`, e.Rep2)
 	if trustDomain {
@@ -283,7 +284,7 @@ func TestTheSenderAcceptsTheirOwnPromiseFromAnotherMembersPrivateMail(t *testing
 	if summary := e.WsScalar(t, `SELECT proposed_change->>'summary' FROM approval WHERE id = $1`, id); strings.Contains(summary, senderThreadWord) {
 		t.Errorf("the request reads %q, which carries the reply the sender cannot open", summary)
 	}
-	queue := approvalsServiceWithEffects(e.Pool)
+	queue := NewApprovalsServiceWithEffects(e.Pool)
 	shown, err := queue.GetWire(m.seat(m.sender), ids.From[ids.ApprovalKind](id))
 	if err != nil {
 		t.Fatalf("the sender cannot read their own request: %v", err)
@@ -449,7 +450,7 @@ func TestASenderWhoseCopyWasTurnedBackCannotAcceptThePromise(t *testing.T) {
 	e.WsExec(t, `DELETE FROM data_task_run WHERE step = $1`, auth.SenderStampsCheckedStep)
 	m.runSenderCheck(t)
 
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(m.seat(m.sender), ids.From[ids.ApprovalKind](id), true, nil); err == nil {
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(m.seat(m.sender), ids.From[ids.ApprovalKind](id), true, nil); err == nil {
 		t.Error("the sender accepted a promise from a copy no longer proven to be theirs")
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {

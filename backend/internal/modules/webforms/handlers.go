@@ -54,8 +54,9 @@ func (h Handlers) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 	}
 	in := CreateInput{
 		Name: req.Name, Sender: string(req.Sender), SenderSecret: req.SenderSecret, LeadOrigin: req.LeadOrigin,
-		OwnerID: uuidOf(req.OwnerId), ConsentPolicyVersion: req.ConsentPolicyVersion,
-		ConsentWording: req.ConsentWording, RedirectURL: req.RedirectUrl, SuccessMessage: req.SuccessMessage,
+		OwnerID: uuidOf(req.OwnerId), ProductID: uuidOf(req.ProductId), ConsentPolicyVersion: req.ConsentPolicyVersion,
+		ConsentWording: req.ConsentWording, PrivacyNotice: req.PrivacyNotice, PrivacyNoticeURL: req.PrivacyNoticeUrl,
+		RedirectURL: req.RedirectUrl, SuccessMessage: req.SuccessMessage,
 	}
 	if req.AllowedOrigins != nil {
 		in.AllowedOrigins = *req.AllowedOrigins
@@ -100,9 +101,10 @@ func (h Handlers) UpdateWebForm(w http.ResponseWriter, r *http.Request, id crmco
 	}
 	in := UpdateInput{
 		Name: req.Name, AllowedOrigins: req.AllowedOrigins, SenderSecret: req.SenderSecret,
-		LeadOrigin: req.LeadOrigin, OwnerID: uuidOf(req.OwnerId), FieldMap: req.FieldMap,
+		LeadOrigin: req.LeadOrigin, OwnerID: uuidOf(req.OwnerId), ProductID: uuidOf(req.ProductId), FieldMap: req.FieldMap,
 		ConsentRequired: req.ConsentRequired, ConsentPolicyVersion: req.ConsentPolicyVersion,
-		ConsentWording: req.ConsentWording, RedirectURL: req.RedirectUrl, SuccessMessage: req.SuccessMessage,
+		ConsentWording: req.ConsentWording, PrivacyNotice: req.PrivacyNotice, PrivacyNoticeURL: req.PrivacyNoticeUrl,
+		RedirectURL: req.RedirectUrl, SuccessMessage: req.SuccessMessage,
 		Clear: httperr.ClearedFields(r), IfVersion: ifVersion,
 	}
 	if req.State != nil {

@@ -4,13 +4,13 @@
 import type { components } from "../../api/schema";
 import { Popover } from "../../design-system/popover";
 import { provenanceLabel } from "../../design-system/provenance";
-import { provenanceOf } from "../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import type { DetailRow } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { CompanyOwnerControl } from "./companyheader";
 import type { Edit } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
@@ -65,7 +65,7 @@ function VisibleTo({ company }: Readonly<{ company: Company }>) {
 export function useRegistrationRows(company: Company, edit: Edit): DetailRow[] {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const profile = useCompanyProfileFields(company.id);
   return [
     {
@@ -103,12 +103,15 @@ export function useRegistrationRows(company: Company, edit: Edit): DetailRow[] {
 function CompanySource({ company }: Readonly<{ company: Company }>) {
   const t = useT();
   const viewerId = useViewerId();
-  const provenance = provenanceOf(
-    company.captured_by,
-    viewerId,
-    company.author,
-    company.source,
-    company.imported_from,
+  const provenance = withCreator(
+    provenanceOf(
+      company.captured_by,
+      viewerId,
+      company.author,
+      company.source,
+      company.imported_from,
+    ),
+    company.created_by,
   );
   const authorName = useMemberName(
     provenance.kind === "human" ? provenance.userId : undefined,

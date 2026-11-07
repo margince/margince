@@ -50,6 +50,7 @@ function serve({
   writer = "model" as "model" | "deterministic",
   reasons = ["Nobody sent the times.", "That was three weeks ago."],
   blocker = undefined as string | undefined,
+  mailCoverage = undefined as string | undefined,
 }) {
   vi.stubGlobal(
     "fetch",
@@ -71,6 +72,16 @@ function serve({
             ...(blocker === undefined
               ? {}
               : { blocker: { sentences: [{ text: blocker, evidence: [] }] } }),
+            ...(mailCoverage === undefined
+              ? {}
+              : {
+                  mail_coverage: {
+                    channel: "email",
+                    state: mailCoverage,
+                    interval_to: "2026-08-24T00:00:00Z",
+                    evaluated_at: "2026-08-24T00:00:00Z",
+                  },
+                }),
             generated_at: "2026-08-24T00:00:00Z",
             generated_by: writer,
           }),
@@ -173,7 +184,7 @@ describe("Deal360 leads with the call", () => {
   it("shows the first line of the reasoning beside the call", async () => {
     serve({ standing: "drifting" });
     renderCard();
-    expect(await screen.findByText("Drifting")).toBeInTheDocument();
+    expect(await screen.findByText("Slipping")).toBeInTheDocument();
     // The head carries ONE line. The rest is in the fold, so a reader scanning
     // gets the call and its reason without the whole briefing.
     expect(await screen.findByText("Nobody sent the times.")).toBeVisible();
@@ -182,7 +193,7 @@ describe("Deal360 leads with the call", () => {
   it("keeps the full briefing behind a closed fold", async () => {
     serve({ standing: "live" });
     renderCard();
-    await screen.findByText("Live");
+    await screen.findByText("On track");
     const fold = document.querySelector("details.deal360-fold");
     expect(fold).not.toBeNull();
     // Closed, not absent: every word is still on the page and still cited.
@@ -271,13 +282,15 @@ describe("Deal360 leads with the call", () => {
     // neutral for everything would satisfy that assertion perfectly.
     serve({ standing: "live" });
     renderCard();
-    expect(washOf(await screen.findByText("Live"))).toBe("var(--successBg)");
+    expect(washOf(await screen.findByText("On track"))).toBe(
+      "var(--successBg)",
+    );
   });
 
   it("claims Margince as the source only when a model wrote the call", async () => {
     serve({ standing: "live", writer: "deterministic" });
     renderCard();
-    await screen.findByText("Live");
+    await screen.findByText("On track");
     expect(screen.getByText(en["standing.sources.records"])).toBeVisible();
     expect(screen.queryByText(/Margince ·/)).toBeNull();
   });
@@ -421,4 +434,21 @@ it("background reads explicitly refuse model work", async () => {
     .find((url) => url.pathname.endsWith("/status"));
   expect(status?.searchParams.get("facts_only")).toBe("true");
   client.clear();
+});
+
+describe("Deal360 states no mail coverage", () => {
+  // No coverage state names a step the reader can take, so the card stays
+  // silent about it. A broken connection shows on the connection health banner.
+  it.each(["partial", "unknown", "unavailable", "withheld", undefined])(
+    "draws no notice for coverage %s",
+    async (mailCoverage) => {
+      serve({ standing: "live", mailCoverage });
+      renderCard();
+      await screen.findByText("On track");
+      expect(
+        screen.queryByRole("link", { name: "Check connections" }),
+      ).toBeNull();
+      expect(screen.queryByText(/mail history/i)).toBeNull();
+    },
+  );
 });

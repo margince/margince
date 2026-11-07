@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
 // The reader's zone is an input to every moment on this page, so it is injected
@@ -18,7 +19,7 @@ import { WorklistScreen } from "./worklist";
 const viewer = vi.hoisted(() => ({ zone: "Europe/Berlin" }));
 vi.mock("../../format/timezone", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../format/timezone")>();
-  return { ...actual, viewerZone: () => viewer.zone };
+  return { ...actual, browserZone: () => viewer.zone };
 });
 
 // The clock a row is racing, drawn.
@@ -75,7 +76,14 @@ function day(queue: WorklistItem[]): Worklist {
 function draw(queue: WorklistItem[]) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => jsonResponse(day(queue))),
+    vi.fn(async (input: RequestInfo | URL) =>
+      jsonResponse(
+        echoView(
+          String(input instanceof Request ? input.url : input),
+          day(queue),
+        ),
+      ),
+    ),
   );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -141,6 +149,7 @@ function taskDue(dueAt: string, overdue: boolean): WorklistItem {
     consequence: "task_slips",
     title: "Send the retrofit quote",
     due_at: dueAt,
+    due_has_time: true,
     overdue,
     because: [{ kind: overdue ? "overdue" : "due_today" }],
     actions: [],

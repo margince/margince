@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
+import { showLayout } from "../../testing/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
@@ -210,6 +211,9 @@ function stubBackend(opts: {
     if (method === "GET" && /\/deals\/[^/?]+(\?.*)?$/.test(url)) {
       return jsonResponse(opts.single ?? opts.deals[0]);
     }
+    if (url.includes("/commitments")) {
+      return jsonResponse({ complete: true, has_more: false, data: [] });
+    }
     if (url.includes("/deals")) {
       return jsonResponse({ data: opts.deals, page: { next_cursor: null } });
     }
@@ -219,11 +223,18 @@ function stubBackend(opts: {
 
 /** The edit form's searched company field, with the pick it names. */
 function companyPicker(): HTMLElement {
-  const picker = screen.getByLabelText("Company").closest(".recordpicker");
+  const picker = within(companyDialog())
+    .getByLabelText("Company")
+    .closest(".recordpicker");
   if (!(picker instanceof HTMLElement)) {
     throw new Error("no company picker on the edit form");
   }
   return picker;
+}
+
+/** The group editor the deal's company row opens. */
+function companyDialog(): HTMLElement {
+  return screen.getByRole("dialog", { name: "Company" });
 }
 
 /** The board card naming `name` — the whole card is one button. */
@@ -519,7 +530,7 @@ describe("the deals table's company columns", () => {
   const toTable = async () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     return user;
   };
 
@@ -624,10 +635,12 @@ describe("a deal's edit form over a withheld reference", () => {
         name: translate("en", "deal.editDetails"),
       }),
     );
-    if (!single.masked_fields?.length)
+    if (!single.masked_fields?.length) {
       await user.click(
-        await screen.findByRole("button", { name: "Change Company" }),
+        await screen.findByRole("button", { name: /^Change Company/ }),
       );
+      await screen.findByRole("dialog", { name: "Company" });
+    }
     return user;
   };
 
@@ -647,7 +660,9 @@ describe("a deal's edit form over a withheld reference", () => {
       { id: "o1", display_name: "Acme Corp" },
       { id: "o2", display_name: "Northgate Systems" },
     ]);
-    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
   });
 
@@ -688,7 +703,9 @@ describe("a deal's edit form over a withheld reference", () => {
     );
 
     expect(screen.getAllByText(/Project withheld/).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
     expect(screen.queryByRole("combobox", { name: "Project" })).toBeNull();
   });
 
@@ -714,7 +731,7 @@ describe("a deal's edit form over a withheld reference", () => {
       { o1: { id: "o1", display_name: "Acme Corp" } },
     );
 
-    await user.type(screen.getByLabelText("Company"), "North");
+    await user.type(within(companyDialog()).getByLabelText("Company"), "North");
     await user.click(
       await screen.findByRole("button", { name: "Northgate Systems" }),
     );

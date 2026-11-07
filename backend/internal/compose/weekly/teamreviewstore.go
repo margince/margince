@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -31,14 +32,15 @@ const teamReviewSelect = `
 	       commitments_due, commitments_kept,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
 	       base_currency, reps_unread, numeric_summary,
-	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, ''), coalesce(summary_language, 'en')
+	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, ''), coalesce(summary_language, 'en'), leads_withheld
 	  FROM team_weekly_review`
 
 // memberFrozenWeek is one member's frozen week as the team snapshot folds it.
 type memberFrozenWeek struct {
-	counts Counts
-	money  Money
-	help   int
+	leadsWithheld bool
+	counts        Counts
+	money         Money
+	help          int
 	// plans is the member review's commitments statement; nil where that week
 	// settled no plan or was frozen before figures carried coverage.
 	plans *crmcontracts.WeeklyFigureCoverage
@@ -56,27 +58,32 @@ func memberWeek(
 	var created, won, lost *int64
 	var currency *string
 	var numeric *crmcontracts.WeeklyNumericSummary
+	var leadsWithheld bool
 	err := tx.QueryRow(ctx, `
 		SELECT deals_won, deals_lost, deals_moved,
 		       leads_routed, leads_answered_in_target, leads_breached,
 		       meetings_held, meetings_with_next_step,
 		       commitments_due, commitments_kept,
 		       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor, base_currency,
-		       numeric_summary, proposals_accepted, proposals_rejected
+		       numeric_summary, proposals_accepted, proposals_rejected, leads_withheld
 		  FROM weekly_review WHERE user_id = $1 AND local_week_start = $2`, userID, week).
 		Scan(&c.DealsWon, &c.DealsLost, &c.DealsMoved,
 			&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 			&c.MeetingsHeld, &c.MeetingsWithNextStep,
 			&c.CommitmentsDue, &c.CommitmentsKept,
 			&created, &won, &lost, &currency, &numeric,
-			&c.ProposalsAccepted, &c.ProposalsRejected)
+			&c.ProposalsAccepted, &c.ProposalsRejected, &leadsWithheld)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return memberFrozenWeek{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return memberFrozenWeek{}, fmt.Errorf("weekly: reading a member's week: %w", err)
 	}
-	out := memberFrozenWeek{counts: c}
+	leadsWithheld = leadsWithheld || !MayReadLeads(ctx)
+	if leadsWithheld {
+		c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached = 0, 0, 0
+	}
+	out := memberFrozenWeek{counts: c, leadsWithheld: leadsWithheld}
 	if currency != nil {
 		out.money = Money{
 			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
@@ -121,14 +128,33 @@ func memberWeek(
 // yours" apart from "no such team" would let them enumerate the chart one id at
 // a time, the same reason a row-scope miss reads as 404 everywhere else.
 func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
-	switch auth.TeamWeekReachOf(ctx) {
-	case auth.ReachesEveryTeam:
-		return nil
-	case auth.ReachesTeamsLed:
-		return e.mayReadTeamLed(ctx, teamID)
-	default:
-		return apperrors.ErrPermissionDenied
+	// The request's own answer, so a refusal says why rather than only that.
+	if allowed, bound := auth.IndividualPerformanceOf(ctx); bound && !allowed {
+		return auth.IndividualPerformanceOffError{}
 	}
+	reach, err := auth.RequireTeamWeekReach(ctx)
+	if err != nil {
+		return err
+	}
+	if reach == auth.ReachesTeamsLed {
+		return e.mayReadTeamLed(ctx, teamID)
+	}
+	return nil
+}
+
+// refuseWhileIndividualOff refuses a team's week, written or served, while
+// the installation shows no individual performance. It reads the setting in
+// the transaction that writes or serves the week. A switch turned off during a
+// run stops the next week from being written or sent.
+func refuseWhileIndividualOff(ctx context.Context, tx pgx.Tx) error {
+	allowed, err := identity.IndividualPerformanceTx(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("weekly: reading whether individual performance is shown: %w", err)
+	}
+	if !allowed {
+		return auth.IndividualPerformanceOffError{}
+	}
+	return nil
 }
 
 // mayReadTeamLed asks whether a lead is on this team.
@@ -158,6 +184,9 @@ func (e *Engine) TeamReview(
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 AND local_week_start = $2`, teamID, week)
 		var err error
@@ -187,6 +216,9 @@ func (e *Engine) LatestTeamReview(
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 ORDER BY local_week_start DESC LIMIT 1`, teamID)
 		var err error
@@ -213,7 +245,7 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		&c.CommitmentsDue, &c.CommitmentsKept,
 		&created, &won, &lost, &currency, &review.RepsUnread, &review.NumericSummary,
 		&review.Quality.ProposalsAccepted, &review.Quality.ProposalsRejected,
-		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language); {
+		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language, &review.LeadsWithheld); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return TeamReview{}, apperrors.ErrNotFound
 	case err != nil:

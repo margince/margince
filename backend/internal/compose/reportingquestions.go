@@ -64,10 +64,15 @@ func unanswerable(err error) bool {
 	return errors.As(err, &refusal) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound)
 }
 
-// Capture implements reporting.Questions.
-func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope) (reporting.CapturedQuestion, error) {
-	out := reporting.CapturedQuestion{Entity: question.Entity}
-	query := questionQuery(question, scope)
+// Capture implements reporting.Questions. A sender who may not see what a
+// bound card filters on keeps no answer, as for a question they cannot ask.
+func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, scope crmcontracts.ReportingScope) (reporting.CapturedQuestion, error) {
+	out := reporting.CapturedQuestion{Entity: card.Question.Entity}
+	query, askable, err := senderQuery(ctx, tx, card, scope)
+	if err != nil || !askable {
+		out.Reason = crmcontracts.ReportingEditionQuestionReasonUnanswered
+		return out, err
+	}
 	other, err := countsOtherRecords(ctx, tx, query)
 	if err != nil {
 		return out, err
@@ -111,11 +116,18 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crm
 		}
 		out.Sources[i] = append(out.Sources[i], reporting.QuestionSource{Type: sourceType, ID: id})
 	}
-	out.Answer = crmcontracts.AnalyticsAnswer{
-		Columns: answer.Columns, Rows: answer.Rows, Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion: answer.SchemaVersion, PopulationNarrowed: populationNarrowedWire(answer.PopulationNarrowed),
-	}
+	out.Answer = keptAnalyticsAnswer(analyticsAnswerWire(answer))
 	return out, nil
+}
+
+// senderQuery is the card's question as the sender asks it. askable is false
+// when they may not, which keeps no answer rather than failing the edition.
+func senderQuery(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, scope crmcontracts.ReportingScope) (query analyticsquery.Query, askable bool, err error) {
+	query, restricted, err := resolveCard(ctx, tx, card, scope)
+	if restricted || unanswerable(err) {
+		return query, false, nil
+	}
+	return query, err == nil, err
 }
 
 // maxFilteredGroups bounds the groups a capture filters its records to. Each
@@ -149,8 +161,14 @@ func shownGroups(query analyticsquery.Query, rows []map[string]any) analyticsque
 // served row must also still be in their population and in that row's group.
 // Anything less withholds the whole answer: a part of it, read beside the
 // floor's complements, could describe the rows left out.
-func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope, kept reporting.KeptQuestion) (crmcontracts.AnalyticsAnswer, bool, error) {
-	query := questionQuery(question, scope)
+func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, scope crmcontracts.ReportingScope, kept reporting.KeptQuestion) (crmcontracts.AnalyticsAnswer, bool, error) {
+	query, restricted, err := resolveCard(ctx, tx, card, scope)
+	if restricted || unanswerable(err) {
+		return crmcontracts.AnalyticsAnswer{}, false, nil
+	}
+	if err != nil {
+		return crmcontracts.AnalyticsAnswer{}, false, err
+	}
 	only := []string{}
 	for _, records := range kept.Sources {
 		for _, record := range records {
@@ -176,7 +194,7 @@ func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmc
 			return crmcontracts.AnalyticsAnswer{}, false, nil
 		}
 	}
-	out := kept.Answer
+	out := keptAnalyticsAnswer(kept.Answer)
 	out.Labels = idLabelsWire(analyticsIDLabels(ctx, q.names, query, out.Rows))
 	return out, true, nil
 }
@@ -259,7 +277,7 @@ func analyticsSources(ctx context.Context, tx pgx.Tx, query analyticsquery.Query
 		return "", nil, err
 	}
 	var narrowed string
-	plan, err := analyticsquery.CompileSources(query, schema, analyticsScope(ctx, tx, spec, query, &narrowed), filter, maxQuestionSources+1)
+	plan, err := analyticsquery.CompileSources(query, schema, analyticsScope(ctx, tx, spec, query, &narrowed, nil), filter, maxQuestionSources+1)
 	if err != nil {
 		return "", nil, err
 	}

@@ -257,3 +257,19 @@ func TestAnEnvDefaultIsQuotedWhereTheReaderWouldChangeIt(t *testing.T) {
 		}
 	}
 }
+
+// The Type cell is where an operator learns which saved values a data reset
+// keeps, so the mark follows the store's own flag.
+func TestTheTypeCellMarksAStoredSettingADataResetKeeps(t *testing.T) {
+	for kept, want := range map[bool]string{true: "`string`, stored, kept by a reset", false: "`string`, stored"} {
+		s := config.DefineStored(config.Spec[string]{Key: "gen_config_test.name", Env: "X_ENV", Type: config.String, Doc: "d"},
+			config.Store{RBACObject: "installation_settings", AuditVerb: "update", SurvivesDataReset: kept})
+		shape, err := s.Shape()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := typeCell(setting{Any: s, shape: shape}); got != want {
+			t.Errorf("SurvivesDataReset %v: type cell %q, want %q", kept, got, want)
+		}
+	}
+}

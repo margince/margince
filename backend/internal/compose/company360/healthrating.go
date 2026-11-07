@@ -64,7 +64,7 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			quiet.At, quiet.AtPrecision = &touch.Since.At, activitywhen.PrecisionOf(*touch.Since)
 		}
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeQuiet,
-			quiet, fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
+			quiet, fmt.Sprintf("No reply from them and no meeting for %d days.", touch.Days))
 	case touch.Basis == relstrength.InTouchBooked:
 		// The stored time and its precision. The client names an instant's day in
 		// the record's zone, which this read does not hold. A day names its date.
@@ -153,11 +153,11 @@ func (a *assembly) readableMeetings() (last, next *occurredday.Moment, err error
 // meetingsAround reads the account's last meeting already held and its next
 // one booked ahead, in one round trip of two LIMIT-1 arms.
 //
-// The past arm reads relstrength.MeetingTookPlaceSQL and the future arm
-// relstrength.MeetingAheadSQL, so a canceled meeting or a no-show counts in
-// neither. Nil is "no meeting on
-// record", a fact about the reading rather than a claim that none happened:
-// the caller may hold no scope over the activity that would prove otherwise.
+// The past arm reads relstrength.MeetingInTouchSQL, so a past meeting nobody
+// called off is the last one met, outcome recorded or not. The future arm reads
+// relstrength.MeetingAheadSQL, so a canceled meeting or a no-show is in
+// neither. Nil is "no meeting on record", a fact about the reading and not a
+// claim that none happened. The caller may hold no scope over the activity.
 func (a *assembly) meetingsAround() (last, next *occurredday.Moment, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -184,7 +184,7 @@ func (a *assembly) meetingsAround() (last, next *occurredday.Moment, err error) 
 		(SELECT 'next', a.occurred_at, a.occurred_precision FROM activity a
 		  WHERE %[1]s AND %[3]s
 		  ORDER BY %[4]s, a.id LIMIT 1)`,
-		where, relstrength.MeetingTookPlaceSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
+		where, relstrength.MeetingInTouchSQL("a", now), relstrength.MeetingAheadSQL("a", now), occurredday.StartSQL("a")), args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read the account's meetings: %w", err)
 	}

@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../../design-system/select-testing";
 import { useMe } from "../../lib/session";
+import { openFilterValues, showLayout } from "../../testing/listquery.testkit";
+import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { DealsScreen } from "./deals";
 import {
@@ -23,6 +25,11 @@ afterEach(() => {
   localStorage.clear();
 });
 
+const TWO_PIPELINES = [
+  { id: "pl", name: "Sales", is_default: true, position: 0, stages },
+  { id: "pl2", name: "Renewals", is_default: false, position: 1, stages },
+];
+
 describe("DealsScreen filters", () => {
   it("switching pipeline scopes the deals fetch to that pipeline_id", async () => {
     const user = userEvent.setup();
@@ -31,30 +38,41 @@ describe("DealsScreen filters", () => {
       "fetch",
       stubBackend([deal({})], {
         onDealsUrl: (u) => urls.push(u),
-        pipelines: [
-          {
-            id: "pl",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages,
-          },
-          {
-            id: "pl2",
-            name: "Renewals",
-            is_default: false,
-            position: 1,
-            stages,
-          },
-        ],
+        pipelines: TWO_PIPELINES,
       }),
     );
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await pickOption(user, screen.getByLabelText("Pipeline"), "Renewals");
+    await user.click(
+      within(await openViewStep(user, "Pipeline")).getByRole("radio", {
+        name: "Renewals",
+      }),
+    );
     await waitFor(() =>
       expect(urls.some((u) => u.includes("pipeline_id=pl2"))).toBe(true),
     );
+  });
+
+  it("marks the Pipeline row while a pipeline other than the default shows", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { pipelines: TWO_PIPELINES }),
+    );
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    const panel = within(await openView(user));
+    expect(
+      panel.getByRole("button", { name: "Pipeline, Sales" }),
+    ).toBeInTheDocument();
+
+    const step = within(await openViewStep(user, "Pipeline"));
+    await user.click(step.getByRole("radio", { name: "Renewals" }));
+    await user.click(step.getByRole("button", { name: /^Pipeline/ }));
+
+    expect(
+      await panel.findByRole("button", { name: "Pipeline, Renewals, changed" }),
+    ).toBeInTheDocument();
   });
 
   // The board always shows one pipeline, so an unset choice would fall straight
@@ -66,46 +84,24 @@ describe("DealsScreen filters", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({})], {
-        pipelines: [
-          {
-            id: "pl",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages,
-          },
-          {
-            id: "pl2",
-            name: "Renewals",
-            is_default: false,
-            position: 1,
-            stages,
-          },
-        ],
+        pipelines: TWO_PIPELINES,
       }),
     );
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
 
-    await user.click(screen.getByLabelText("Pipeline"));
+    const pipelines = await openViewStep(user, "Pipeline");
     expect(
-      within(screen.getByRole("listbox"))
-        .getAllByRole("option")
-        .map((option) => option.textContent),
+      within(pipelines)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
     ).toEqual(["Sales", "Renewals"]);
-    await user.keyboard("{Escape}");
 
-    // Stage is a filter chip rather than a picker of its own, so its
-    // all-stages entry sits one step inside the Filter menu. It must still be
-    // there, because that entry is how a chosen stage is cleared.
-    // "Stage" also names a column header, so the attribute is picked from
-    // inside the menu that is open rather than by a plain name match.
-    await user.click(screen.getByRole("button", { name: "Table" }));
-    await user.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await user.click(within(menu).getByRole("button", { name: "Stage" }));
+    // "All stages" is how a chosen stage is cleared, so it must stay offered.
+    await showLayout(user, "Table");
+    const values = await openFilterValues(user, "Stage");
     expect(
-      within(menu).getByRole("radio", { name: "All stages" }),
+      within(values).getByRole("radio", { name: "All stages" }),
     ).toBeTruthy();
   });
 
@@ -117,20 +113,14 @@ describe("DealsScreen filters", () => {
     );
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    // The stalled filter lives on the table view, not the board.
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
-    // The Filter button's attribute step and its value step both carry the
-    // "Stalled only" label, because the chip's option shares the attribute's
-    // name. So each step is picked from inside the menu that is open at that
-    // moment, rather than by a plain (ambiguous) name match.
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Stalled only" }),
-    );
-    await userEvent.click(
-      within(menu).getByRole("radio", { name: "Stalled only" }),
+    // The attribute and its one value share the label "Stalled only", so the
+    // value is picked from inside the step that lists it.
+    const values = await openFilterValues(user, "Stalled only");
+    await user.click(
+      within(values).getByRole("radio", { name: "Stalled only" }),
     );
 
     await waitFor(() =>
@@ -138,10 +128,9 @@ describe("DealsScreen filters", () => {
     );
   });
 
-  // The forecast's buckets, as a dial. Five tiles on the analytics page
-  // partition the pipeline into named buckets, and each needs a door to its
-  // deals. "Which deals are in commit" is the first question asked of one.
-  it("the forecast filter narrows the deals query to one bucket", async () => {
+  // The forecast's probability bands, as a dial. Each band tile on the
+  // analytics page needs a door to its deals.
+  it("the probability filter narrows the deals query to one band", async () => {
     const urls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -149,19 +138,20 @@ describe("DealsScreen filters", () => {
     );
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Forecast" }),
-    );
-    await userEvent.click(within(menu).getByRole("radio", { name: "Commit" }));
+    const values = await openFilterValues(user, "Probability");
+    await user.click(within(values).getByRole("radio", { name: "60 to 89%" }));
 
     await waitFor(() =>
-      expect(urls.some((u) => u.includes("forecast_category=commit"))).toBe(
-        true,
-      ),
+      expect(
+        urls.some(
+          (u) =>
+            u.includes("win_probability_min=60") &&
+            u.includes("win_probability_max=89"),
+        ),
+      ).toBe(true),
     );
   });
 });
@@ -187,16 +177,13 @@ describe("the partner filter", () => {
 
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Partner" }),
-    );
+    const values = await openFilterValues(user, "Partner");
     // The option is the company's name, resolved from the company list. It is
     // never the bare id, which names nothing to a reader.
-    await userEvent.click(within(menu).getByRole("radio", { name: "Acme" }));
+    await user.click(within(values).getByRole("radio", { name: "Acme" }));
 
     await waitFor(() =>
       expect(urls.some((u) => u.includes("partner_company_id=o1"))).toBe(true),
@@ -225,13 +212,11 @@ describe("the partner filter", () => {
 
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
     // The partner dial itself is the subject, so it is pressed, not addressed.
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Partner" }),
-    );
-    await userEvent.click(within(menu).getByRole("radio", { name: "Acme" }));
+    const values = await openFilterValues(user, "Partner");
+    await user.click(within(values).getByRole("radio", { name: "Acme" }));
 
     await waitFor(() =>
       expect(
@@ -257,11 +242,11 @@ describe("the partner filter", () => {
 
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
     // A picker with nothing in it asks a question that has no answers.
-    const menu = screen.getByRole("group", { name: "Filter" });
+    const menu = await openViewStep(user, "Filters");
     expect(within(menu).queryByRole("button", { name: "Partner" })).toBeNull();
   });
 });
@@ -320,11 +305,8 @@ describe("DealsScreen range dials the reader cannot use", () => {
     return useMe().data ? children : null;
   }
 
-  async function openFilterMenu() {
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Filter" }),
-    );
-    return screen.getByRole("group", { name: "Filter" });
+  function openFilterMenu(user: UserEvent) {
+    return openViewStep(user, "Filters");
   }
 
   const ADDRESS = "#/deals?value=..5000000&country=DE";
@@ -364,7 +346,8 @@ describe("DealsScreen range dials the reader cannot use", () => {
     expect(urls.some((url) => url.includes("value_max"))).toBe(false);
   });
 
-  it("holds back a country the server refuses a reader who cannot read companies", async () => {
+  it("names a country the role refuses, and asks for no wider list", async () => {
+    const user = userEvent.setup();
     const urls: string[] = [];
     window.location.hash = ADDRESS;
     vi.stubGlobal(
@@ -381,15 +364,77 @@ describe("DealsScreen range dials the reader cannot use", () => {
         <DealsScreen />
       </SignedIn>,
     );
-    await waitFor(() =>
-      expect(urls.some((url) => url.includes("value_max=5000000"))).toBe(true),
+    expect(
+      await screen.findByText("Your role cannot narrow deals by Country.", {
+        exact: false,
+      }),
+    ).toBeTruthy();
+    const dealLists = () =>
+      urls.filter((url) => new URL(url).pathname === "/v1/deals");
+    expect(dealLists()).toEqual([]);
+    expect(screen.queryByText("Fleet retrofit")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Remove Country" }));
+    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
+    expect(dealLists().length).toBeGreaterThan(0);
+    expect(dealLists().some((url) => url.includes("country="))).toBe(false);
+  });
+
+  it("looks up no company a seat without company read cannot open", async () => {
+    const urls: string[] = [];
+    window.location.hash = "#/deals?view=table&company_id=o1";
+    vi.stubGlobal(
+      "fetch",
+      backend({ baseCurrency: "EUR", readsCompanies: false, urls }),
     );
-    expect(urls.some((url) => url.includes("country="))).toBe(false);
+    render(
+      <SignedIn>
+        <DealsScreen />
+      </SignedIn>,
+    );
+    expect(
+      await screen.findByText("Your role cannot narrow deals by Company.", {
+        exact: false,
+      }),
+    ).toBeTruthy();
+    expect(
+      urls.filter((url) => new URL(url).pathname.startsWith("/v1/companies")),
+    ).toEqual([]);
+  });
+
+  it("leaves a refused dial no chip names to the list's own refusal", async () => {
+    window.location.hash = "#/deals?view=table&owner_team_id=t-9";
+    vi.stubGlobal(
+      "fetch",
+      backend({
+        baseCurrency: "EUR",
+        refused: ["owner_team_id"],
+        urls: [],
+        answerDeals: (url) =>
+          url.includes("owner_team_id=t-9")
+            ? Promise.resolve(
+                jsonResponse({ status: 403, title: "Forbidden" }, 403),
+              )
+            : undefined,
+      }),
+    );
+    render(
+      <SignedIn>
+        <DealsScreen />
+      </SignedIn>,
+    );
+    expect(
+      await screen.findByText("Could not load this view. Reload the page."),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Your role cannot narrow deals by", { exact: false }),
+    ).toBeNull();
   });
 
   // The role's refusal is known before any deal loads, so the menu never
   // offers a dial it then takes back.
   it("never offers a dial the role is refused, while the list is still loading", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backend({
@@ -404,7 +449,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
         <DealsScreen />
       </SignedIn>,
     );
-    const menu = await openFilterMenu();
+    const menu = await openFilterMenu(user);
     expect(within(menu).queryByRole("button", { name: "Value" })).toBeNull();
     expect(within(menu).queryByRole("button", { name: "Currency" })).toBeNull();
     expect(within(menu).getByRole("button", { name: "Country" })).toBeTruthy();
@@ -413,6 +458,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
   // A private company masks company_id on its own deal only. The list still
   // narrows by country, so the dial stays.
   it("keeps the country dial when one loaded deal's company is masked", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       backend({
@@ -427,7 +473,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
       </SignedIn>,
     );
     await screen.findByText("Fleet retrofit");
-    const menu = await openFilterMenu();
+    const menu = await openFilterMenu(user);
     expect(within(menu).getByRole("button", { name: "Country" })).toBeTruthy();
   });
 
@@ -469,9 +515,9 @@ describe("DealsScreen range dials the reader cannot use", () => {
       </SignedIn>,
     );
     expect(
-      await screen.findByText(
-        "Your role cannot narrow deals by Value. Remove that filter to see the list.",
-      ),
+      await screen.findByText("Your role cannot narrow deals by Value.", {
+        exact: false,
+      }),
     ).toBeTruthy();
     expect(screen.queryByText("Something went wrong.")).toBeNull();
     await waitFor(() =>
@@ -482,6 +528,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
   });
 
   it("offers no company dial and asks for no companies without company.read", async () => {
+    const user = userEvent.setup();
     const urls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -498,7 +545,7 @@ describe("DealsScreen range dials the reader cannot use", () => {
       </SignedIn>,
     );
     await screen.findByText("Fleet retrofit");
-    const menu = await openFilterMenu();
+    const menu = await openFilterMenu(user);
     expect(within(menu).queryByRole("button", { name: "Company" })).toBeNull();
     expect(
       urls.filter((url) => /\/(companies|partners)(\?|$)/.test(url)),

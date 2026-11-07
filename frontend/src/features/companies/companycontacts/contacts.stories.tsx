@@ -12,6 +12,7 @@ import {
   StoryProviders,
 } from "../../../testing/story-utils";
 import { CompanyContactsList } from "./contacts";
+import { domainCandidates } from "./domaincontacts.fixtures";
 
 // The company's contacts as the rep meets them: ranked, so whoever is waiting on
 // a reply comes first rather than whoever the database happened to return first.
@@ -175,4 +176,36 @@ export const DayEntry: Story = {
     await expect(touch.textContent).toMatch(/30/);
     await expect(touch.textContent).not.toMatch(/\d:\d\d/);
   },
+};
+
+/** Contacts on the company’s domain that nobody has linked to it yet. */
+export const DomainContactsUnlinked: Story = {
+  args: { companyId: "o-1" },
+  decorators: [
+    (Story) => {
+      installFetchStub({
+        "GET /me": meRoute({
+          company: ["read"],
+          contact: ["read", "update"],
+          relationship: ["read", "create"],
+        }),
+        "GET /companies/o-1/contacts": () =>
+          jsonResponse({ data: MIXED, page }),
+        "GET /companies/o-1/link-candidates": () =>
+          jsonResponse({ data: domainCandidates, truncated: false }),
+      });
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
+  ],
+};
+
+export const DomainContactsUnlinkedPhone: Story = {
+  ...DomainContactsUnlinked,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

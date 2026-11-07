@@ -12,14 +12,14 @@ import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import {
   editionLabel,
-  metricLabel,
   type ReportingEdition,
   type ReportingEvidenceRef,
   reportingAmount,
 } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 
 export function ReportingComparison({
   editions,
@@ -160,6 +160,7 @@ function ComparisonMetrics({
   onEvidence: (selection: EvidenceSelection) => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const rows = comparison.left.evaluation.metrics.flatMap((before) => {
     const after = comparison.right.evaluation.metrics.find(
@@ -192,7 +193,7 @@ function ComparisonMetrics({
         {
           key: "metric",
           header: t("reporting.metrics"),
-          render: (row) => metricLabel(row.before.id, t),
+          render: (row) => metricName(row.before.id),
         },
         {
           key: "before",

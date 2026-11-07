@@ -22,8 +22,8 @@ describe("a dimension value in the reader's words", () => {
     expect(valueLabel(t, "activities-by-kind", "kind", "meeting")).toBe(
       "Meeting",
     );
-    expect(valueLabel(t, "forecast", "forecast_category", "best_case")).toBe(
-      "Best case",
+    expect(valueLabel(t, "forecast", "win_probability_band", "30_59")).toBe(
+      translate("en", "deal.winProbability.band.30_59"),
     );
     expect(valueLabel(t, "deals-by-stage", "status", "open")).toBe("Open");
     expect(
@@ -34,6 +34,21 @@ describe("a dimension value in the reader's words", () => {
     );
     expect(valueLabel(t, "leads-by-status", "source", "webform")).toBe(
       "Web form",
+    );
+  });
+
+  it("names a built-in loss reason and how a loss reason was set", () => {
+    expect(valueLabel(t, "win-loss", "loss_reason", "competitor")).toBe(
+      "Chose a competitor",
+    );
+    expect(
+      valueLabel(t, "win-loss", "loss_reason", "our_own_reason"),
+    ).toBeNull();
+    expect(valueLabel(t, "win-loss", "loss_reason_state", "unmapped")).toBe(
+      "Note not mapped",
+    );
+    expect(valueLabel(t, "win-loss", "loss_reason_state", "missing")).toBe(
+      "No reason",
     );
   });
 

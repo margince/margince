@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -97,7 +98,7 @@ func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUI
 // proposePass runs one reconciler pass and reports how many offers it staged.
 func proposePass(t *testing.T, e *integration.Env) int {
 	t.Helper()
-	proposer := NewSignalProposer(e.Pool, approvalsServiceWithEffects(e.Pool),
+	proposer := NewSignalProposer(e.Pool, NewApprovalsServiceWithEffects(e.Pool),
 		slog.New(slog.DiscardHandler))
 	staged, err := proposer.RunWorkspace(e.As(e.AdminUser, nil, integration.AdminWithSignals))
 	if err != nil {
@@ -161,7 +162,7 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 		t.Fatalf("the account moved to %q before anyone decided", stage)
 	}
 
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
@@ -177,6 +178,54 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 	}
 }
 
+// An account in set-up or live is one we deliver for, so a mail ending its
+// contract asks the same question a customer's would.
+func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
+	for _, stage := range []string{"onboarding", "live"} {
+		t.Run(stage, func(t *testing.T) {
+			e := integration.Setup(t)
+			company := seedAccountAtStage(t, e, stage)
+			seedOpenContractEnded(t, e, company)
+
+			if staged := proposePass(t, e); staged != 1 {
+				t.Fatalf("the pass staged %d offers on a %s account, want 1", staged, stage)
+			}
+			if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
+				e.As(e.Rep1, nil, integration.AdminWithSignals),
+				ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
+				t.Fatalf("accepting the offer: %v", err)
+			}
+			if got := accountStage(t, e, company); got != "former_customer" {
+				t.Errorf("the account reads %q after the accept, want former_customer", got)
+			}
+		})
+	}
+}
+
+// A decider who edits the offer to live still cannot set it. The effect runs as
+// the system, and only a signed-in user may say the first scope is in use.
+func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedAccountAtStage(t, e, "onboarding")
+	seedOpenContractEnded(t, e, company)
+	proposePass(t, e)
+	offer := stagedOffer(t, e, company)
+	edited := e.WsScalar(t, `
+		SELECT jsonb_set(proposed_change, '{proposed_lifecycle}', '"live"')::text
+		  FROM approval WHERE id = $1`, offer)
+
+	_, err := NewApprovalsServiceWithEffects(e.Pool).DecideEdited(
+		e.As(e.Rep1, nil, integration.AdminWithSignals),
+		ids.From[ids.ApprovalKind](offer), []byte(edited))
+	var refusal *httperr.DetailedError
+	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "lifecycle_live_needs_a_human" {
+		t.Fatalf("an offer edited to live: want the live refusal, got %v", err)
+	}
+	if got := accountStage(t, e, company); got != "onboarding" {
+		t.Errorf("the account reads %q after the edited accept, want onboarding", got)
+	}
+}
+
 // Saying no means the reader judged the record right and the reading wrong.
 // The signal that produced the offer stays open forever, so without a durable
 // memory of the refusal the same question comes back every hour.
@@ -186,7 +235,7 @@ func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 	signal := seedOpenContractEnded(t, e, company)
 
 	proposePass(t, e)
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), false, nil); err != nil {
 		t.Fatalf("declining the offer: %v", err)
@@ -253,7 +302,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](approvalID), true, nil)
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
@@ -289,7 +338,7 @@ func TestAcceptingSettlesOnlyTheCitedContradiction(t *testing.T) {
 	cited := e.WsScalar(t, `SELECT proposed_change->>'signal_id' FROM approval WHERE target_entity_id=$1`, company)
 	later := seedScopedContractEndedAt(t, e, company, "company", "We ended all business earlier.",
 		time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC), time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC))
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
@@ -332,7 +381,7 @@ func TestHiddenContradictionBlocksAccountLifecycleDecision(t *testing.T) {
 	proposePass(t, e)
 	theirs := seedOpenContractEndedOnContact(t, e, company, seedCapturePrivateContactOf(t, e, e.Rep3))
 
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, teamScopedDecider),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
@@ -408,7 +457,7 @@ func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
 	if proposePass(t, e) != 1 {
 		t.Fatal("normalized source words failed to stage")
 	}
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -430,7 +479,7 @@ func TestLifecycleProposalKeepsSourceWordsBehindTheSourceReader(t *testing.T) {
 	if strings.Contains(stored, quote) || strings.Contains(stored, "Atlas support") || strings.Contains(stored, `"occurred_at"`) {
 		t.Fatal("proposal copied source words outside source authorization")
 	}
-	view, err := approvalsServiceWithEffects(e.Pool).GetWire(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)))
+	view, err := NewApprovalsServiceWithEffects(e.Pool).GetWire(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)))
 	if err != nil {
 		t.Fatal(err)
 	}

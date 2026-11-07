@@ -3,17 +3,19 @@
 
 // The one move this page recommends, and the evidence behind it.
 //
-// The page's ONLY accent panel. Accent means "this is the move", so a second
-// tinted panel would make the reader choose which recommendation to believe.
-// The indigo AI treatment is a different thing entirely and never appears
-// here: nothing on this panel is machine-authored.
+// A plain pane with one soft evidence side. The move reads by its place at
+// the top and its one button, not by a tinted band. Nothing here is
+// machine-authored, so the indigo AI treatment never appears.
 
 import type { components } from "../../../api/schema";
+import { SeatAvatar } from "../../../components/seatavatar";
 import { Avatar, Badge, Button } from "../../../design-system/atoms";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Panel } from "../../../design-system/panel";
+import { relayMemberFor } from "../../../design-system/provenanceof";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
+import { useViewerId } from "../../../lib/session";
 import { BAND_BADGE } from "../companygraph";
 import {
   evidenceSentence,
@@ -66,7 +68,6 @@ export function LeadPanel({
   const mine = useOwnRoute()(route);
   return (
     <Panel
-      tone="accent"
       title={verdict(route, mine, t)}
       titleAction={
         // The route's own band, in the map's words. The lead is the best-ranked
@@ -84,26 +85,27 @@ export function LeadPanel({
     >
       <div className="pn-verdict">
         <div className="pn-verdict-main">
-          {/* The chain, drawn left to right: who asks, through whom, to whom.
-              A reader checks the shape of a route before they read its
-              counts. */}
-          <div className="pn-hero">
-            <Avatar
-              name={route.via_display_name}
-              identity={route.via_user_id}
-              size="md"
-            />
+          {/* The chain as a path: who asks, then the tie, then whom. The
+              line's weight is the route's band, so a strong tie reads strong. */}
+          <div
+            className="pn-hero"
+            data-strength={route.strength_bucket ?? undefined}
+          >
             <div className="pn-hero-who">
+              <SeatAvatar
+                id={route.via_user_id}
+                name={route.via_display_name}
+                size="lg"
+              />
               <strong>
                 {mine ? t("contact.intro.heroYou") : route.via_display_name}
               </strong>
-              <p>{heroLine(route, mine, t)}</p>
             </div>
-            <span className="pn-hero-arrow" aria-hidden="true">
-              →
-            </span>
-            <Avatar name={targetName} identity={targetId} size="md" />
+            <p className="pn-hero-link t-caption">
+              <span>{heroLine(route, mine, t)}</span>
+            </p>
             <div className="pn-hero-who">
+              <Avatar name={targetName} identity={targetId} size="lg" />
               <strong>{targetName}</strong>
             </div>
           </div>
@@ -221,6 +223,7 @@ function EvidencePlate({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const viewerId = useViewerId();
   const ev = route.evidence;
   const receipts = route.receipts ?? [];
   return (
@@ -252,7 +255,11 @@ function EvidencePlate({
               count: formatNumber(receipts.length, locale),
             })}
           </Eyebrow>
-          <ReceiptList receipts={receipts} onOpenEmail={onOpenEmail} />
+          <ReceiptList
+            receipts={receipts}
+            relayMember={relayMemberFor(route.via_user_id, viewerId)}
+            onOpenEmail={onOpenEmail}
+          />
         </div>
       ) : (
         <p className="pn-counts t-sub">{t("contact.graph.countsOnly")}</p>

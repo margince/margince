@@ -391,6 +391,10 @@ a model call.
 - **One formula, three users.** The price math over the four parts is written once, as `PriceCall`.
   `/ai/usage` reports **actuals** through `RateStore.CostReport`. That is SQL that mirrors the same math,
   row for row, to price a whole window in one query.
+- `/ai/usage/summary` gives the month's total for the agent rail. `Meter.MonthSpend` reads the same
+  priced lines as the report (`Meter.pricedDays`) and adds up the cost each line shows
+  (`lineCostMinor`). It does not price the whole month at once, because that can round to a different
+  figure than the lines a reader sees.
 - The backfill preview and the certification record both call `PriceCall` directly, for an **estimate
   before the run** and a cost stamp per run. With one formula, the numbers cannot drift.
 - **The estimate before the run (`compose/costestimate`).** The same estimate told as one story from

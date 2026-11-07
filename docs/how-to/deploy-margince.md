@@ -1,23 +1,18 @@
 <!-- prose:plain -->
 # Deploy Margince on your own servers
 
-Margince ships container materials that suit any container platform (Kubernetes, Nomad, Docker
-Compose, a plain host). This repo carries only the **generic** pieces. A concrete deployment (its
-domain, secrets, platform manifests) is yours to own, so keep those in your own infra repo.
-
-Why a deployment is shaped this way (two database roles, one host, one release for every role) is
-in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting is in
-[reference/configuration.md](../reference/configuration.md).
+Keep deployment domains, secrets and platform manifests in the repository that holds your deployment.
+For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md).
+See [self-hosting](../explanation/self-hosting.md) for the role layout and
+[configuration](../reference/configuration.md) for settings.
 
 ## The least production needs
 
 - `MARGINCE_DSN` and `MARGINCE_OWNER_DSN`: the app role and the owner role of one database.
-- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (or `license.token`).
+- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (the setting `license.token`) or
+  `license.token_file`.
 - For the first boot, `MARGINCE_CONFIG` names a `margince.yaml` with `workspace` and
   `bootstrap_admin`, and `MARGINCE_ADMIN_PASSWORD` holds the first admin's password.
-
-What each other feature needs is in
-[What each feature needs](../reference/what-each-feature-needs.md).
 
 ## What ships in this repo
 
@@ -30,6 +25,14 @@ What each other feature needs is in
 | `scripts/deploy/worker-entrypoint.sh` | start the worker as app (no owner credential) |
 | `scripts/deploy/db-bootstrap.sql` | one-time DB role + database + extension setup |
 | `frontend/nginx.conf` | SPA static serving (listens on 8080, non-root) |
+| `scripts/deploy/server/` | the systemd units and nginx files of a server bundle |
+
+## Pull a release
+
+Each `v*` release pushes `ghcr.io/margince/api:<tag>`, `ghcr.io/margince/worker:<tag>` and
+`ghcr.io/margince/web:<tag>`, for `linux/amd64` and `linux/arm64`. Pull each by the hash that `images.txt` on
+the release page names, so all three roles come from one release. The release page gives the `cosign verify`
+command that checks each one.
 
 ## Build the images
 
@@ -107,7 +110,8 @@ reports `margince_license_posture{state="valid"} 1`. What each posture does at b
 ## Set the environment
 
 The images bake in **no** instance configuration. All settings come from the runtime environment,
-and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at least the
+and every setting has a variable, while only some have a flag. Most variables start with
+`MARGINCE_`, and the AI provider keys keep their vendor names, such as `ANTHROPIC_API_KEY`. Set at least the
 [least production needs](#the-least-production-needs). The entrypoint reads the two DSNs and the admin
 password itself; see
 [What the image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).
@@ -220,7 +224,7 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 
 | path | service |
 | --- | --- |
-| `/v1`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/feature-settings.md#securitytxt) is set | api |
+| `/v1`, `/setup/status`, `/setup/claim`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/feature-settings.md#securitytxt) is set | api |
 | `/webhooks/gmail`, `/webhooks/graph` | api (present only where that receiver's own token is set, a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
@@ -293,8 +297,16 @@ Do not leave api replicas from two releases running. The recorded release is las
 ([why](../explanation/self-hosting.md#every-role-runs-at-one-release)). If that happened, restart the
 api at the intended release to restore the record.
 
-To read the release a role carries, see
-[Where the release can be read](../explanation/self-hosting.md#where-the-release-can-be-read).
+### Change mail thread locks
+
+Before changing the thread locks, set `MARGINCE_CAPTURE_HISTORY_HOLD=true` on the api and worker.
+Let running pages finish, then stop every api and worker that can write mail or its metadata.
+Start every writer at the same release before clearing the hold. Mail sent by a user and privacy
+writes still run while history is held. Older writers do not share every lock used when many threads join.
+
+Keep queued runs, cursors and pending jobs. Resume one history run at a time while measuring load.
+A rollback also stops and restarts all writers; keep additive schema and finish derived work
+with a release that can read it. The [capture settings](../reference/configuration.md) list the controls.
 
 ## After the first boot
 

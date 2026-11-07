@@ -38,6 +38,8 @@ import (
 // installation, and no subject's mailbox grant is involved.
 type ControllerRelay interface {
 	SendControllerMail(ctx context.Context, msg ControllerMessage) error
+	// SenderAddress is the From the relay sends with, "" when it names none.
+	SenderAddress() string
 }
 
 // ControllerMessage is one rendered controller mail, link already substituted.
@@ -47,6 +49,8 @@ type ControllerMessage struct {
 	TextBody  string
 	HTMLBody  string
 	MessageID string
+	// Inline is the company logo HTMLBody's letterhead shows, when it shows one.
+	Inline []connector.InlineImage
 }
 
 // PayloadVault holds the one-time material a controller message carries, so the
@@ -82,6 +86,10 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 	if err != nil {
 		return sendSeam{}, err
 	}
+	inline, err := d.letterheadFor(ctx, del)
+	if err != nil {
+		return sendSeam{}, err
+	}
 
 	return sendSeam{
 		// No granted scopes and no carriage: a controller message carries no
@@ -96,14 +104,15 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 				To:        to,
 				Subject:   del.Subject,
 				TextBody:  bodies.text,
-				HTMLBody:  bodies.html,
+				HTMLBody:  letterheadMarkupFor(del, bodies.html, inline),
 				MessageID: del.MessageID,
+				Inline:    inline,
 			}); err != nil {
 				return connector.SendReceipt{}, err
 			}
 			// The row's own message id, echoed back. A relay does not rewrite
 			// the identity it was handed, so nothing is owed a re-key.
-			return connector.SendReceipt{RFC822MessageID: del.MessageID}, nil
+			return connector.SendReceipt{RFC822MessageID: del.MessageID, FromAddress: d.relay.SenderAddress()}, nil
 		},
 	}, nil
 }

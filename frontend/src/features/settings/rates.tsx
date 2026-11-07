@@ -21,15 +21,16 @@ import {
   QueryStates,
   WriteRefused,
 } from "../../design-system/querystates";
-import { today } from "../../format/calendarday";
+import { todayIn } from "../../format/calendarday";
 import { forReader } from "../../format/collate";
 import { formatDate, formatUsdPerMTok } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { providerName } from "../../lib/ai-provider-names";
 import { useCan, useCanUpsert } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { providerName } from "../ai/ai-provider-names";
+import { useViewerZone } from "../../lib/viewerzone";
 import { isPricedProvider } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
@@ -50,7 +51,7 @@ function trimDecimal(value: string): string {
 
 // Withheld, not absent: a vanished sheet reads as "no rates here", not "not
 // yours to see". Callers skip the query, since fetching the 403 shows a Retry.
-function WithheldRateCard({
+export function WithheldRateCard({
   title,
   reason,
 }: Readonly<{ title: string; reason: string }>) {
@@ -195,9 +196,12 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const qc = useQueryClient();
   const labelId = useId();
   const formId = useId();
+  // The FX sheet counts its days in the installation's zone, so the form
+  // opens on the day the server will read as today.
+  const zone = useCompanyZone();
   const [from, setFrom] = useState("");
   const [rate, setRate] = useState("");
-  const [effectiveDate, setEffectiveDate] = useState(today());
+  const [effectiveDate, setEffectiveDate] = useState(() => todayIn(zone));
   const [error, setError] = useState<string | null>(null);
 
   const save = useMutation({
@@ -323,6 +327,7 @@ export function ModelPriceSheet() {
 function ModelPriceGroups({
   rows,
 }: Readonly<{ rows: readonly AiModelRate[] }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const groups = new Map<string, AiModelRate[]>();
@@ -368,7 +373,7 @@ function ModelPriceGroups({
     {
       key: "effective",
       header: t("settings.rates.colEffective"),
-      render: (row) => formatDate(row.effective_date, locale, viewerZone()),
+      render: (row) => formatDate(row.effective_date, locale, readerZone),
     },
   ];
   // Multi-open: a reader compares one provider's prices with another's.

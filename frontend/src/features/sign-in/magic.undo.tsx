@@ -11,9 +11,9 @@
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
+import { magicUndoReasonKey } from "../../lib/magickeys";
 import { useReceiptUndo } from "../../lib/receiptundo";
 import { isRestoreKind } from "../../lib/recordrestore";
-import { magicUndoReasonKey } from "./magic.keys";
 
 type MagicUndo = components["schemas"]["MagicUndo"];
 

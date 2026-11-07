@@ -57,6 +57,7 @@ func senderOwesAnAbsentColleaguesWork(
 // languages the product reads mail in. A sentence holding one has the writer
 // acting, whoever else it names. An object such as "me" does not count:
 // "Robin will send me the pricing" is Robin's promise.
+// Apart from claims.writerSubjects: this scans every word of a mail sentence, so it holds single words.
 var writerSubjectWords = map[string]bool{
 	"i": true, "i'll": true, "i'm": true, "i've": true, "i'd": true, "let's": true,
 	"we": true, "we'll": true, "we're": true, "we've": true, "we'd": true,

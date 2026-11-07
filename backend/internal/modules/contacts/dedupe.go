@@ -6,11 +6,13 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"strings"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -167,12 +169,12 @@ type ContactResolution struct {
 // "one dedupe implementation, not two". It reads; it never writes and
 // never merges. Callers map the decision onto their own policy.
 func DedupeContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactResolution, error) {
-	lanes, err := exactLanes(ctx, tx, c)
+	match, exact, err := dedupeExactContact(ctx, tx, c)
 	if err != nil {
 		return ContactResolution{}, err
 	}
-	if res, routed := routeExact(lanes); routed {
-		return res, nil
+	if exact {
+		return match, nil
 	}
 	return reviewContact(ctx, tx, c)
 }
@@ -190,63 +192,9 @@ type contactCandidateRow struct {
 	mailDomains   []string
 }
 
-// fuzzyContact is PO-F-1 tier 2. The candidate set is restricted to
-// contacts sharing a name trigram or the candidate's employer — the
-// formula's own bound, so scoring stays inside the create budget instead
-// of walking the workspace.
-// WHY THE CANDIDATE QUERY HAS THREE ARMS. The trigram arm and the employer arm
-// both narrow a set for a SCORE, and being approximate is fine there: a row they
-// miss was never going to win. The name-collision lane is not a score — it
-// decides on NormalizeContactName equality — so a prefilter that is merely
-// approximate could hide a row that would have been exactly equal, and the
-// employer arm cannot rescue it because a manual create carries no employer at
-// all.
-//
-// The third arm folds BOTH sides with SQL's own functions, exactly as the
-// trigram arm does. Computing one side in Go would move the divergence rather
-// than close it: SQL's lower+unaccent and Go's Unicode full folding are two
-// different normalizations, and the point is to stop relying on either being a
-// superset of the other. It is exactNameKeySQL, which spells the two
-// properties NormalizeContactName has and a bare SQL comparison does not: the
-// trim, and the internal-whitespace collapse. Both are real divergences —
-// "  Lucy Vo  " and "Lucy Vo" are Go-equal, and so are "Éva  Ő" and "Éva Ő",
-// and a name reflowed across a line break is how the second one arrives.
-//
-// NO KNOWN PAIR NEEDS THAT ARM. Every case that could be constructed — case,
-// accents, ß, a trailing space — is already admitted by the trigram arm, and
-// TestEveryNameGoCallsEqualReachesTheNameLane says so by passing without it. It
-// is a GUARANTEE rather than a bug fix: the trigram operator is a similarity
-// threshold, and this lane's correctness should not rest on one approximate
-// predicate happening to cover another normalization's output.
-//
-//nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
+// fuzzyContact scores the shared candidate read, keeping the best employer evidence per contact.
 func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactResolution, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.full_name, r.company_id, od.domain,
-		       -- EVERY live address, not an unordered LIMIT 1: a contact with a
-		       -- work and a personal address has two primaries as far as this
-		       -- query is concerned, and picking either at random would make
-		       -- the employer term depend on the plan Postgres chose. Archived
-		       -- addresses are excluded — an address somebody stopped using is
-		       -- not evidence of where they work now.
-		       (SELECT array_agg(DISTINCT split_part(pe.email, '@', 2))
-		          FROM contact_email pe
-		         WHERE pe.contact_id = p.id AND pe.archived_at IS NULL)
-		  FROM contact p
-		  LEFT JOIN relationship r
-		    ON r.contact_id = p.id AND r.kind = 'employment'
-		   AND `+employment.CurrentPrimarySQL("r")+` AND r.archived_at IS NULL
-		  LEFT JOIN company_domain od
-		    ON od.company_id = r.company_id AND od.archived_at IS NULL
-		 WHERE p.archived_at IS NULL
-		   AND ($3::uuid IS NULL OR p.id <> $3)
-		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower($1))
-		        OR ($2::uuid IS NOT NULL AND r.company_id = $2)
-		        OR `+exactNameKeySQL("p.full_name")+` = `+exactNameKeySQL("$1")+`
-		        OR `+exactDigraphNameKeySQL("p.full_name")+` = `+exactDigraphNameKeySQL("$1")+`)
-		 ORDER BY similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower($1))) DESC, p.id
-		 LIMIT $4`,
-		c.FullName, c.CurrentPrimaryCompanyID, c.ExcludeID, dedupeCandidateRows)
+	rows, err := tx.Query(ctx, contactCandidateQuery, contactCandidateArgs(c))
 	if err != nil {
 		return ContactResolution{}, fmt.Errorf("dedupe contact candidate set: %w", err)
 	}
@@ -257,9 +205,11 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 	scored := map[ids.ContactID]ReviewMatch{}
 	for rows.Next() {
 		var row contactCandidateRow
-		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &row.mailDomains); err != nil {
+		var addresses []string
+		if err := rows.Scan(&row.id, &row.fullName, &row.companyID, &row.companyDomain, &addresses); err != nil {
 			return ContactResolution{}, fmt.Errorf("scan contact candidate: %w", err)
 		}
+		row.mailDomains = mailDomainsOf(addresses)
 		match := ReviewMatch{ContactID: row.id, Confidence: contactConfidence(c, row)}
 		switch {
 		case match.Confidence >= dedupeReviewThreshold:
@@ -283,6 +233,67 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 		return ContactResolution{}, fmt.Errorf("drain contact candidates: %w", err)
 	}
 	return resolutionOf(rankedReviews(scored)), nil
+}
+
+// Score-one rows sort first by contact ID; employer ties cannot displace that prefix.
+// Fence its key seek before similarity rechecks; hash collisions reopen the complete fallback.
+var contactCandidateQuery = `
+		WITH perfect AS MATERIALIZED ( -- Reuse the bounded prefix before deciding whether broader scans are needed.
+		  SELECT p.id FROM (
+		    SELECT id, full_name FROM contact
+		     WHERE archived_at IS NULL
+		     AND hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), 0)
+		         = hash_array_extended(show_trgm(f_fold_apostrophes(lower(@name))), 0)
+		     AND (@exclude::uuid IS NULL OR id <> @exclude)
+		     ORDER BY id LIMIT @limit OFFSET 0
+		  ) p
+		   WHERE similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower(@name))) = 1
+		     AND f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower(@name))
+		   ORDER BY p.id LIMIT @limit
+		), candidate AS (
+		  SELECT id FROM perfect
+		  UNION
+		  SELECT id FROM (
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower(@name))
+		  UNION
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND ` + exactNameKeySQL("p.full_name") + ` = ` + exactNameKeySQL("@name") + `
+		  UNION
+		  SELECT p.id FROM contact p
+		   WHERE p.archived_at IS NULL AND ` + exactDigraphNameKeySQL("p.full_name") + ` = ` + exactDigraphNameKeySQL("@name") + `
+		  UNION
+		  SELECT r.contact_id FROM relationship r
+		   WHERE @employer::uuid IS NOT NULL AND r.company_id = @employer AND r.kind = 'employment'
+		     AND ` + employment.CurrentPrimarySQL("r") + ` AND r.archived_at IS NULL
+		  ) broader WHERE (SELECT count(*) FROM perfect) < @limit)
+		SELECT p.id, p.full_name, r.company_id, od.domain,
+		       ` + storekit.RequestAddressesSQL("p.id") + `
+		  FROM candidate
+		  -- A point read keeps the bounded prefix from becoming a full contact scan.
+		  CROSS JOIN LATERAL (
+		    SELECT id, full_name, archived_at FROM contact
+		     WHERE id = candidate.id OFFSET 0
+		  ) p
+		  LEFT JOIN relationship r
+		    ON r.contact_id = p.id AND r.kind = 'employment'
+		   AND ` + employment.CurrentPrimarySQL("r") + ` AND r.archived_at IS NULL
+		  LEFT JOIN company_domain od
+		    ON od.company_id = r.company_id AND od.archived_at IS NULL
+		 WHERE p.archived_at IS NULL
+		   AND (@exclude::uuid IS NULL OR p.id <> @exclude)
+		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower(@name))
+		        OR (@employer::uuid IS NOT NULL AND r.company_id = @employer)
+		        OR ` + exactNameKeySQL("p.full_name") + ` = ` + exactNameKeySQL("@name") + `
+		        OR ` + exactDigraphNameKeySQL("p.full_name") + ` = ` + exactDigraphNameKeySQL("@name") + `)
+		 ORDER BY similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower(@name))) DESC, p.id, r.id NULLS LAST, od.domain NULLS LAST
+		 LIMIT @limit`
+
+func contactCandidateArgs(c ContactCandidate) pgx.NamedArgs {
+	return pgx.NamedArgs{
+		"name": c.FullName, "employer": c.CurrentPrimaryCompanyID,
+		"exclude": c.ExcludeID, "limit": dedupeCandidateRows,
+	}
 }
 
 // contactConfidence is the PO-F-1 score: weights sum to 1.0, so the
@@ -366,17 +377,26 @@ func candidateSharesDomain(c ContactCandidate, domain string) bool {
 // path lowercases on write, so the exact tier compares like for like.
 func normalizeEmail(e string) string { return correspondence.Fold(e) }
 
-// normalizeDomain matches company_domain's storage contract:
-// lowercase only — never unaccent, or münich.example would collide with
-// a different company's munich.example.
-func normalizeDomain(d string) string { return strings.ToLower(strings.TrimSpace(d)) }
+// normalizeDomain matches company_domain's storage contract, through the fold
+// the rest of the tree uses. A domain in unicode and the same domain in
+// punycode are one domain.
+//
+// Still never unaccented. `münich.example` folds to its punycode, not to a
+// different company's `munich.example`.
+func normalizeDomain(d string) string { return owndomain.Fold(d) }
 
 // emailDomain returns the lowercased host of an address, or "" when the
 // input carries no host to compare.
-func emailDomain(e string) string {
-	at := strings.LastIndex(normalizeEmail(e), "@")
-	if at < 0 {
-		return ""
+func emailDomain(e string) string { return owndomain.OfAddress(normalizeEmail(e)) }
+
+// mailDomainsOf is the distinct folded domains of a contact's addresses, in
+// the order they were read.
+func mailDomainsOf(addresses []string) []string {
+	var domains []string
+	for _, address := range addresses {
+		if domain := emailDomain(address); domain != "" && !slices.Contains(domains, domain) {
+			domains = append(domains, domain)
+		}
 	}
-	return normalizeEmail(e)[at+1:]
+	return domains
 }

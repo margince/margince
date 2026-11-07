@@ -70,6 +70,8 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"status_changed": true,
 		// A lead's first-response deadline passed unanswered (formulas §18.2).
 		"sla_breached": true,
+		// A reading of how a project is going was appended to its history.
+		"health_assessed": true,
 		// A record joined or left a Shortlist.
 		"member_added": true, "member_removed": true,
 		// A Live List's scheduled check saw records join or leave it.
@@ -146,6 +148,9 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// as the message being settled for everybody; "marked" says it is one
 		// reader's mark.
 		"marked_handled": true,
+		// One attendee's readiness for a meeting; "recorded" alone would not say
+		// what was recorded on a stream that also carries edits.
+		"readiness_recorded": true,
 		// Same shape and the same reason: "requested" alone would not say what
 		// was asked for, and a weekly plan's stream also carries its ordinary
 		// updates — the distinction is the point of the type, because this is
@@ -253,7 +258,8 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The audience-change corrector: an activity.updated carrying an
 		// audience narrows the derived signals citing the message and drops
 		// the thread's scan watermark.
-		"cg:audience-rescope": {"gw:events:crm:activity"},
+		"cg:audience-rescope":   {"gw:events:crm:activity"},
+		"cg:voice-copy-recheck": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// The LinkedIn ghost matcher (ADR-0078 §8b): a contact appearing is a
 		// chance to attach a ghost, and so is an account appearing — employer
 		// resolution is what most unmatched ghosts are waiting on.
@@ -261,6 +267,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The captured-cohort repair: a contact's earlier mail is linked when the
 		// contact appears or gains an address. Its own group so a slow enrichment
 		// cannot delay a record becoming complete.
+		"cg:deal-refile":         {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal", "gw:events:crm:lead"},
 		"cg:cohort-promote":      {"gw:events:crm:contact"},
 		"cg:contact-auto-enrich": {"gw:events:crm:contact"},
 		// The prompt half of captured-company auto-enrich: an
@@ -286,6 +293,9 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.
 		"cg:commissions": {"gw:events:crm:deal"},
+		// Activating a partner on its first sourced win; apart from the accrual
+		// so neither waits on the other.
+		"cg:partner-activation": {"gw:events:crm:deal"},
 		// Both streams: contract.* and deal_room.* ride the deal one,
 		// activity.captured its own.
 		"cg:stage-evidence": {"gw:events:crm:activity", "gw:events:crm:deal"},
@@ -305,7 +315,13 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
 		"cg:deal-room-timeline": {"gw:events:crm:deal"},
-		"cg:commitment-settle":  {"gw:events:crm:activity", "gw:events:crm:contact"},
+		// The input check's reading marked out of date by what it read: deals,
+		// forecast calls, activities, buying signals and their companies.
+		"cg:assurance-freshness": {
+			"gw:events:crm:activity", "gw:events:crm:capture", "gw:events:crm:company",
+			"gw:events:crm:deal", "gw:events:crm:identity",
+		},
+		"cg:commitment-settle": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to
 		// stall a consumer that spends money or moves a record.
@@ -321,8 +337,8 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// How each proposed stage move was received. The APPROVAL stream: a
 		// verdict rides there, including the `expired` one the sweep writes
 		// when nobody answers a card.
-		"cg:stage-progression-outcome": {"gw:events:crm:approval"},
-		"cg:approval-notice-retract":   {"gw:events:crm:approval"},
+		"cg:approval-notice-retract": {"gw:events:crm:approval"},
+		"cg:scheduled-send-stop":     {"gw:events:crm:contact"},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The same stream as the ledger above and a group of
 		// its own: that one counts what has already happened to a card, this
@@ -332,7 +348,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, and the approval-pending fan-out", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the voice-copy recheck, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, the approval-pending fan-out, and the assurance freshness marker", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

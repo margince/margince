@@ -66,7 +66,7 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 		return extension.Result{}, err
 	}
 	land := crmLanding{
-		contacts:   contacts.NewStore(db),
+		contacts:   newContactsStore(db),
 		deals:      deals.NewStore(db, DealsInstallation()),
 		activities: activities.NewStore(db),
 		system:     r.sourceSystem(rec.System),

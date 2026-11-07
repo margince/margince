@@ -68,11 +68,9 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
-	// Human-only in the STORE as well as the router table. The route is
-	// declared human-only today, but a store that relies on the routing
-	// declaration alone is one x-mcp-tool away from being agent-reachable
-	// without anybody revisiting this function.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Checked in the STORE as well as the router table. The user or their agent
+	// records a promise; passportless work never does.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -342,7 +340,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 	// DISTINCT ON needs its key first in ORDER BY, and the id breaks the tie
 	// so two equally urgent commitments do not swap places between two reads
 	// of the same page.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT DISTINCT ON (l.project_id)
 		       l.project_id, c.body, coalesce(pr.full_name, ''), c.due_at,
 		       c.source_activity_id, (%[4]s) AS contact_visible
@@ -356,7 +354,8 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 		 ORDER BY l.project_id,
 		          (c.due_at IS NOT NULL AND c.due_at < $%[2]d) DESC,
 		          c.created_at DESC, c.id`,
-		projectsPos, nowPos, activityScope, contactScope), args...)
+		projectsPos, nowPos, activityScope, contactScope)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
 	}

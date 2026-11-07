@@ -156,7 +156,7 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 func readContactMergeState(ctx context.Context, tx pgx.Tx, id ids.ContactID) (crmcontracts.Contact, *ids.UUID, error) {
 	// A merge-state read feeds the resolution decision, never the wire —
 	// core columns suffice.
-	p, err := readContact(ctx, tx, id, storekit.IncludeArchived, nil)
+	p, err := readContactRow(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
