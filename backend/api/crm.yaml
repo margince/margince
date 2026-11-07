@@ -8458,7 +8458,8 @@ paths:
         audit id). It keeps the applied values;
         acceptance is an audited review decision, not another application of the change.
         Requires the displayed deal version. A reversed or superseded change is refused.
-      x-mcp-tool: { verb: accept_applied_deal_change, router: change_attention, action: accept_applied_change, tier: auto_execute, scope: write, served_by: route }
+        Accepting is final: after it, the change has no Undo.
+      x-mcp-tool: { verb: accept_applied_deal_change, router: change_attention, action: accept_applied_change, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       parameters:
         - name: If-Match
           in: header
@@ -18961,7 +18962,7 @@ paths:
 
         Your own mailbox only. A sender is personal to the colleague who knows them: one rep's family
         member is another rep's customer.
-      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       requestBody:
         required: true
