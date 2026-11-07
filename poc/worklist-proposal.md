@@ -1,6 +1,6 @@
 # Worklist: a stronger base
 
-A proposal for discussion: no issue and no PR yet. The baseline is `main`
+A proposal for discussion, tracked in #10779; the reference PR is #10780. The baseline is `main`
 (`9e610a09`, 7 November 2026), and every claim here was checked against it
 again on that day (1.6); the work is on branch `poc/worklist-feed`, which
 carries `main` plus the changes measured here. Every figure comes from the
