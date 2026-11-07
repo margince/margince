@@ -6211,7 +6211,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "assignments.who": "Wer",
   "assignments.findColleague": "Teammitglied suchen",
   "assignments.noColleagueFound":
-    "Kein aktives Teammitglied gefunden. Frage einen Admin nach einer Einladung. Danach muss sich das Teammitglied anmelden.",
+    "Kein aktives Teammitglied gefunden. Prüfe die Schreibweise. Stimmt der Name, frag einen Admin nach einer Einladung oder lass das Konto prüfen.",
   "assignments.findTeam": "Team suchen",
   "assignments.role": "Rolle",
   "assignments.rolePlaceholder": "Rolle wählen",

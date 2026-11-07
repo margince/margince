@@ -200,7 +200,7 @@ it("says who can be assigned when no colleague matches", async () => {
   await search("Find a colleague", "zz");
   expect(
     await screen.findByText(
-      "No active colleague found. Ask an admin to invite them, then ask them to sign in.",
+      "No active colleague found. Check the spelling. If the name is right, ask an admin to invite them or to check their account.",
     ),
   ).toBeTruthy();
 });

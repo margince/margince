@@ -17,11 +17,20 @@ import (
 
 func newTestServer(t *testing.T, count int) *httptest.Server {
 	t.Helper()
+	return serve(t, testMailboxes(count))
+}
+
+func testMailboxes(count int) *server {
 	s := &server{byOwner: map[string]int{}, connected: map[string]bool{}, now: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)}
 	for i, owner := range []string{"a@demo.test", "b@demo.test"} {
 		s.boxes = append(s.boxes, mailbox{owner: owner, count: count, seed: uint64(i + 7)})
 		s.byOwner[owner] = i
 	}
+	return s
+}
+
+func serve(t *testing.T, s *server) *httptest.Server {
+	t.Helper()
 	srv := httptest.NewServer(s.routes())
 	t.Cleanup(srv.Close)
 	return srv
@@ -250,7 +259,7 @@ func TestTheConsentPageRefusesARedirectOffThisMachine(t *testing.T) {
 			t.Errorf("redirect_uri %q: status %d, want 400", target, resp.StatusCode)
 		}
 	}
-	for _, target := range []string{"http://127.0.0.1:8080/cb", "http://[::1]:8080/cb", "http://app.localhost:5173/cb"} {
+	for _, target := range []string{"http://127.0.0.1:8080/cb", "http://[::1]:8080/cb", "http://app.localhost:5173/cb", "http://LOCALHOST:5173/cb", "http://localhost.:5173/cb"} {
 		resp, err := client.Get(srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {target}}.Encode())
 		if err != nil {
 			t.Fatal(err)
@@ -258,6 +267,30 @@ func TestTheConsentPageRefusesARedirectOffThisMachine(t *testing.T) {
 		closeBody(t, resp)
 		if resp.StatusCode != http.StatusFound {
 			t.Errorf("redirect_uri %q: status %d, want 302", target, resp.StatusCode)
+		}
+	}
+}
+
+// An origin the operator names is admitted beside loopback, and no other.
+func TestTheConsentPageAdmitsTheNamedCallbackOrigin(t *testing.T) {
+	s := testMailboxes(1)
+	s.callbackOrigin = "https://app.test"
+	srv := serve(t, s)
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	for target, want := range map[string]int{
+		"https://app.test/cb":      http.StatusFound,
+		"https://APP.test/cb":      http.StatusFound,
+		"http://app.test/cb":       http.StatusBadRequest,
+		"https://app.test.evil/cb": http.StatusBadRequest,
+		"http://localhost:5173/cb": http.StatusFound,
+	} {
+		resp, err := client.Get(srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {target}}.Encode())
+		if err != nil {
+			t.Fatal(err)
+		}
+		closeBody(t, resp)
+		if resp.StatusCode != want {
+			t.Errorf("redirect_uri %q: status %d, want %d", target, resp.StatusCode, want)
 		}
 	}
 }
