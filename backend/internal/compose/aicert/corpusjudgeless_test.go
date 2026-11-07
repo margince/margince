@@ -144,7 +144,7 @@ func judgelessProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for _, set := range []map[string]judgelessProof{
 		verdictProofs(), confidentialityProofs(), counterpartyProofs(), agentLoopProofs(), gradingProofs(),
-		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(),
+		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(), settlementProofs(),
 	} {
 		maps.Copy(proofs, set)
 	}
