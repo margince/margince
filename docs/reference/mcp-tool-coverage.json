@@ -29,14 +29,13 @@
     {
       "model": "gpt-5.6-sol@codex-cli",
       "cases_with_a_committed_run": 70,
-      "cases_that_reached_their_bar": 66,
-      "cases_below_their_bar": 4,
+      "cases_that_reached_their_bar": 67,
+      "cases_below_their_bar": 3,
       "runs": 153,
       "passed": 140,
       "reliability": 0.9150326797385621,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
-        "case10_finish_the_import",
         "case41_close_the_project",
         "case86_tell_her_what_we_hold"
       ],
@@ -151,10 +150,10 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 0,
+          "runs": 3,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic"
         }
@@ -819,8 +818,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -854,7 +853,7 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -3817,12 +3816,10 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 2,
-          "reliability": 0.5,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "runs": 5,
+          "passed": 4,
+          "reliability": 0.8,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -4255,9 +4252,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 9,
-          "reliability": 1,
+          "runs": 8,
+          "passed": 7,
+          "reliability": 0.875,
           "cases_below_their_bar": []
         }
       }
@@ -4461,9 +4458,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 9,
-          "reliability": 1,
+          "runs": 8,
+          "passed": 7,
+          "reliability": 0.875,
           "cases_below_their_bar": []
         }
       }
@@ -4606,12 +4603,10 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -4637,12 +4632,10 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     }

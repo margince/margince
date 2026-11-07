@@ -18,7 +18,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 70 of 70 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Put it in the board pack. |
-| `gpt-5.6-sol` | Codex CLI | 70 of 70 | 🟡 Mostly | Reliable on 66 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,; Finish the import; Close the project out; The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it. |
+| `gpt-5.6-sol` | Codex CLI | 70 of 70 | 🟡 Mostly | Reliable on 67 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,; Close the project out; The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -38,7 +38,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | ✅ | ✅ |
 | Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | ✅ | ✅ |
 | Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | ✅ | ✅ |
-| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅ | ❌ |
+| Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅ | ✅ |
 | Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ❌ | ✅ |
 | Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | ✅ | ✅ |
 | Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | ✅ | ✅ |
@@ -142,11 +142,11 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 70 of 70 | 69 | 1 | 139/144 | 97% |
-| `gpt-5.6-sol@codex-cli` | 70 of 70 | 66 | 4 | 140/153 | 92% |
+| `gpt-5.6-sol@codex-cli` | 70 of 70 | 67 | 3 | 140/153 | 92% |
 
 > `claude-sonnet-5-5@claude-cli` below its bar on: case20_put_it_in_the_board_pack
 
-> `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case10_finish_the_import, case41_close_the_project, case86_tell_her_what_we_hold
+> `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case41_close_the_project, case86_tell_her_what_we_hold
 
 ## The two surfaces
 
@@ -197,7 +197,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **8** Promises come back as suggestions | `change_activities`, `create_record` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **8** Promises come back as suggestions | `change_activities`, `create_record` |
 | [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
-| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 0/2 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
+| [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The voice is the user's own | `change_my_settings` |
 | [case102_shorter_in_my_voice](../../e2e/llm/scenarios/case102-shorter-in-my-voice.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The voice is the user's own | `change_my_settings` |
 | [case103_stop_telling_me](../../e2e/llm/scenarios/case103-stop-telling-me.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** What reaches the user stays theirs | - |
@@ -237,9 +237,9 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
 | [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
 | [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `change_tags`, `read_tags` |
-| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `change_tags`, `read_tags` |
+| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `change_tags`, `read_tags` |
 | [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `change_tags`, `read_tags` |
-| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `change_tags`, `read_tags` |
+| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `change_tags`, `read_tags` |
 | [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The surviving word is chosen by what carries it<br>**2** A fold that went through is reported as done<br>**3** The surviving word is given its meaning | `change_tags`, `read_tags` |
 | [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The surviving word is chosen by what carries it<br>**2** A fold that went through is reported as done<br>**3** The surviving word is given its meaning | `change_tags`, `read_tags` |
 | [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived<br>**3** The account is handed to a named colleague | `archive_record`, `read_workspace`, `resolve_duplicates`, `update_record` |
@@ -522,13 +522,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
-| `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 5 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
-| `read_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 | `list_documents` | 1.00 | 2 | `case74_read_the_file_back` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
@@ -556,14 +554,16 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `find_records` | 0.80 | 8/10 | - | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_activities` | 0.93 | 14/15 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `change_state` | 0.73 | 8/11 | `case41_close_the_project` | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
-| `preview_import` | 0.50 | 2/4 | `case10_finish_the_import` | `case10_finish_the_import`, `case3_spreadsheet` |
+| `preview_import` | 0.80 | 4/5 | - | `case10_finish_the_import`, `case3_spreadsheet` |
 | `create_record` | 0.78 | 7/9 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
+| `change_tags` | 0.88 | 7/8 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
+| `read_tags` | 0.88 | 7/8 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `read_project` | 0.00 | 0/2 | `case41_close_the_project` | `case41_close_the_project` |
-| `commit_import` | 0.00 | 0/2 | `case10_finish_the_import` | `case10_finish_the_import` |
-| `read_import` | 0.00 | 0/2 | `case10_finish_the_import` | `case10_finish_the_import` |
+| `commit_import` | 0.67 | 2/3 | - | `case10_finish_the_import` |
+| `read_import` | 0.67 | 2/3 | - | `case10_finish_the_import` |
 
 ## Who judged it, and how well
 
