@@ -15,29 +15,29 @@
   "models": [
     {
       "model": "claude-sonnet-5-5@claude-cli",
-      "cases_with_a_committed_run": 65,
-      "cases_that_reached_their_bar": 65,
-      "cases_below_their_bar": 0,
-      "runs": 133,
-      "passed": 131,
-      "reliability": 0.9849624060150376,
-      "cases_below_their_bar_named": [],
+      "cases_with_a_committed_run": 70,
+      "cases_that_reached_their_bar": 69,
+      "cases_below_their_bar": 1,
+      "runs": 144,
+      "passed": 139,
+      "reliability": 0.9652777777777778,
+      "cases_below_their_bar_named": [
+        "case20_put_it_in_the_board_pack"
+      ],
       "route": "Claude Code CLI"
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
-      "cases_with_a_committed_run": 64,
-      "cases_that_reached_their_bar": 59,
-      "cases_below_their_bar": 5,
-      "runs": 143,
-      "passed": 128,
-      "reliability": 0.8951048951048951,
+      "cases_with_a_committed_run": 70,
+      "cases_that_reached_their_bar": 67,
+      "cases_below_their_bar": 3,
+      "runs": 153,
+      "passed": 140,
+      "reliability": 0.9150326797385621,
       "cases_below_their_bar_named": [
-        "case103_stop_telling_me",
         "case107_tidy_up_the_room",
-        "case10_finish_the_import",
         "case41_close_the_project",
-        "case75_sofia_is_leaving"
+        "case86_tell_her_what_we_hold"
       ],
       "route": "Codex CLI"
     }
@@ -150,10 +150,10 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 0,
+          "runs": 3,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic"
         }
@@ -213,9 +213,9 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic"
         }
@@ -315,6 +315,15 @@
           "held": true,
           "driver": "claude:cli",
           "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
         }
       ]
     },
@@ -397,7 +406,26 @@
         "change_my_settings"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case110_write_greta_a_thank_you",
@@ -448,7 +476,26 @@
         "read_workspace"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case112_my_plan_and_the_dossier",
@@ -461,7 +508,26 @@
         "read_details"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case113_after_the_sales_review",
@@ -508,7 +574,26 @@
         "change_access"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case115_my_hours_and_my_language",
@@ -522,7 +607,26 @@
         "change_my_settings"
       ],
       "requires_one_of": [],
-      "by_model": null
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 2,
+          "passed": 2,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
     },
     {
       "name": "case116_the_rate_and_the_logo",
@@ -573,9 +677,9 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 1,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "claude:cli",
           "search": "semantic"
         },
@@ -714,8 +818,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -749,7 +853,7 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -853,7 +957,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1630,8 +1734,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -1790,7 +1894,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1834,10 +1938,10 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic"
         }
@@ -2087,9 +2191,9 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 2,
+          "passed": 0,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "gpt:cli",
           "search": "semantic"
         }
@@ -2118,7 +2222,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -3366,14 +3470,14 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 5,
+          "runs": 7,
+          "passed": 7,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -3404,15 +3508,15 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
+          "runs": 4,
+          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -3499,9 +3603,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
+          "runs": 10,
           "passed": 8,
-          "reliability": 0.8888888888888888,
+          "reliability": 0.8,
           "cases_below_their_bar": []
         }
       }
@@ -3530,9 +3634,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 14,
+          "runs": 15,
           "passed": 14,
-          "reliability": 1,
+          "reliability": 0.9333333333333333,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
@@ -3712,12 +3816,10 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 2,
-          "reliability": 0.5,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "runs": 5,
+          "passed": 4,
+          "reliability": 0.8,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -3775,9 +3877,11 @@
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 1,
+          "reliability": 0.3333333333333333,
+          "cases_below_their_bar": [
+            "case20_put_it_in_the_board_pack"
+          ]
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 2,
@@ -3970,7 +4074,20 @@
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
     },
     {
       "name": "change_offers",
@@ -4098,14 +4215,14 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4135,9 +4252,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 9,
-          "reliability": 1,
+          "runs": 8,
+          "passed": 7,
+          "reliability": 0.875,
           "cases_below_their_bar": []
         }
       }
@@ -4341,9 +4458,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 9,
-          "reliability": 1,
+          "runs": 8,
+          "passed": 7,
+          "reliability": 0.875,
           "cases_below_their_bar": []
         }
       }
@@ -4394,9 +4511,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
-          "reliability": 1,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
@@ -4486,12 +4603,10 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -4517,12 +4632,10 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case10_finish_the_import"
-          ]
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
         }
       }
     }

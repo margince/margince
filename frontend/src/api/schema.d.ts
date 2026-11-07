@@ -15999,7 +15999,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Disclosure duties this installation owes, soonest deadline first.
+         * Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
          * @description Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
          *     when it falls due.
          *
@@ -16042,7 +16042,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One disclosure duty.
+         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
          * @description The same case the queue lists, read on its own, for a surface that opens one duty rather
          *     than working a page of them.
          *
@@ -16077,7 +16077,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a disclosure duty an owner.
+         * Give a privacy notice already owed (from notice_cases) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -16136,7 +16136,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Disclosure duties this installation owes, soonest deadline first.
+         * Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
          * @description Acquisition-source reviews and notice duties, under privacy-request read authority.
          *     Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
          *     when their acquisition date is unknown, the deadline is labelled as a latest possible bound.
@@ -16161,7 +16161,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One disclosure duty.
+         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
          * @description The administrative record for a source review or notice duty. Human privacy-request read
          *     authority covers the record; contact names remain limited by ordinary contact visibility.
          */
@@ -16186,7 +16186,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a disclosure duty an owner.
+         * Give a contact's privacy-notice case (from notice_case_reviews) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -16214,7 +16214,7 @@ export interface paths {
         /** Read accessible evidence for a contact source assessment. */
         get: operations["getNoticeSourceEvidence"];
         put?: never;
-        /** Confirm the source of an unassessed contact. */
+        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first. */
         post: operations["assessNoticeSource"];
         delete?: never;
         options?: never;
@@ -16233,7 +16233,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Preview the source assessment without changing the case. */
+        /** Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them. */
         post: operations["previewNoticeSource"];
         delete?: never;
         options?: never;
@@ -21958,7 +21958,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The notification centre — every notice addressed to the acting contact, newest first.
+         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
          * @description The acting human's own notifications, newest first, read and unread; another seat's are
          *     not an error, they are absent.
          *

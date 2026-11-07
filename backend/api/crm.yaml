@@ -23718,7 +23718,7 @@ paths:
       operationId: listNoticeCases
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_cases, router: read_workspace, action: notice_cases, tier: auto_execute, scope: read, served_by: route }
-      summary: Disclosure duties this installation owes, soonest deadline first.
+      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
       description: |
         Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
         when it falls due.
@@ -23787,7 +23787,7 @@ paths:
       operationId: getNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case, router: read_details, action: notice_case, tier: auto_execute, scope: read, served_by: route }
-      summary: One disclosure duty.
+      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
       description: |
         The same case the queue lists, read on its own, for a surface that opens one duty rather
         than working a page of them.
@@ -23819,7 +23819,7 @@ paths:
       operationId: assignNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case, router: change_compliance, action: assign_notice_case, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a disclosure duty an owner.
+      summary: Give a privacy notice already owed (from notice_cases) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -23889,7 +23889,7 @@ paths:
       operationId: listNoticeCaseReviews
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_case_reviews, router: read_workspace, action: notice_case_reviews, tier: auto_execute, scope: read, served_by: route }
-      summary: Disclosure duties this installation owes, soonest deadline first.
+      summary: Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
       description: |
         Acquisition-source reviews and notice duties, under privacy-request read authority.
         Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
@@ -23940,7 +23940,7 @@ paths:
       operationId: getNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case_review, router: read_details, action: notice_case_review, tier: auto_execute, scope: read, served_by: route }
-      summary: One disclosure duty.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
       description: |
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -23962,7 +23962,7 @@ paths:
       operationId: assignNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case_review, router: change_compliance, action: assign_notice_case_review, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a disclosure duty an owner.
+      summary: Give a contact's privacy-notice case (from notice_case_reviews) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -24012,7 +24012,7 @@ paths:
       operationId: assessNoticeSource
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: confirm_notice_source, router: change_compliance, action: confirm_notice_source, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Confirm the source of an unassessed contact.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
       requestBody:
         required: true
         content:
@@ -24036,7 +24036,7 @@ paths:
       operationId: previewNoticeSource
       x-mcp-tool: { verb: preview_notice_source, router: read_details, action: notice_source_preview, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Preview the source assessment without changing the case.
+      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
       requestBody:
         required: true
         content:
@@ -32390,7 +32390,7 @@ paths:
       operationId: listNotices
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notices, router: read_details, action: notices, tier: auto_execute, scope: read, served_by: route }
-      summary: The notification centre — every notice addressed to the acting contact, newest first.
+      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
       description: |
         The acting human's own notifications, newest first, read and unread; another seat's are
         not an error, they are absent.
