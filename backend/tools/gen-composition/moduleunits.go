@@ -38,10 +38,11 @@ var majorVersionSuffix = regexp.MustCompile(`^v[0-9]+$`)
 
 // unitSource is one extension the instance requires, and where its code is.
 type unitSource struct {
-	name       string
-	modulePath string
-	version    string
-	dir        string
+	developmentOnly bool
+	name            string
+	modulePath      string
+	version         string
+	dir             string
 	// download is the module@version fetched for it: the requirement itself,
 	// or what the instance's replace points it at.
 	download string
@@ -82,6 +83,9 @@ func instanceUnits(root string) ([]unitSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := validateDevelopmentMarkers(mod); err != nil {
+		return nil, fmt.Errorf("%s: %w", goModPath, err)
+	}
 	replaces := map[string]*modfile.Replace{}
 	for _, r := range mod.Replace {
 		replaces[r.Old.Path+"@"+r.Old.Version] = r
@@ -97,7 +101,13 @@ func instanceUnits(root string) ([]unitSource, error) {
 			return nil, fmt.Errorf("%s: %s and %s are both the unit %q; one name, one unit", goModPath, other, r.Mod.Path, name)
 		}
 		seen[name] = r.Mod.Path
-		units = append(units, resolveUnit(root, goModPath, name, r.Mod, replaces))
+		unit := resolveUnit(root, goModPath, name, r.Mod, replaces)
+		for _, comment := range r.Syntax.Suffix {
+			if strings.TrimSpace(strings.TrimPrefix(comment.Token, "//")) == developmentOnlyMarker {
+				unit.developmentOnly = true
+			}
+		}
+		units = append(units, unit)
 	}
 	return units, nil
 }
@@ -134,7 +144,7 @@ func fetchUnits(root string) error {
 	if err := os.RemoveAll(outDir); err != nil {
 		return err
 	}
-	units, err := instanceUnits(root)
+	units, err := selectedInstanceUnits(root)
 	if err != nil {
 		return err
 	}

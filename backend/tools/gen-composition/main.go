@@ -22,7 +22,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -34,11 +33,12 @@ import (
 )
 
 var (
-	rootPath     = flag.String("root", "..", "repository root (the directory holding extensions/ and build/)")
-	verify       = flag.Bool("verify", false, "regenerate in memory and compare against composition.json and the files on disk; write nothing")
-	verifyInputs = flag.Bool("verify-inputs", false, "recompute input digests only and compare against composition.json; write nothing")
-	instancePath = flag.String("instance", "", "an instance outside this repository (the directory holding its go.mod): put together the core tree it requires in -tree, then compose that tree; -root is ignored")
-	treePath     = flag.String("tree", ".margince/core", "with -instance: where the core tree goes, relative to the instance")
+	includeDevelopment = flag.Bool("include-development", false, "include instance requirements marked margince:development-only")
+	rootPath           = flag.String("root", "..", "repository root (the directory holding extensions/ and build/)")
+	verify             = flag.Bool("verify", false, "regenerate in memory and compare against composition.json and the files on disk; write nothing")
+	verifyInputs       = flag.Bool("verify-inputs", false, "recompute input digests only and compare against composition.json; write nothing")
+	instancePath       = flag.String("instance", "", "an instance outside this repository (the directory holding its go.mod): put together the core tree it requires in -tree, then compose that tree; -root is ignored")
+	treePath           = flag.String("tree", ".margince/core", "with -instance: where the core tree goes, relative to the instance")
 )
 
 // genMode is the tool's three mutually exclusive operations; when both
@@ -90,9 +90,10 @@ type manifest struct {
 }
 
 type manifestInputs struct {
-	Core          string                    `json:"core"`
-	ApprovalsLock string                    `json:"approvals_lock"`
-	Extensions    map[string]manifestExtRow `json:"extensions"`
+	IncludeDevelopment bool                      `json:"include_development"`
+	Core               string                    `json:"core"`
+	ApprovalsLock      string                    `json:"approvals_lock"`
+	Extensions         map[string]manifestExtRow `json:"extensions"`
 }
 
 // manifestExtRow pins one unit's identity: the source-tree digest
@@ -460,33 +461,6 @@ func readManifest(root string) (manifest, error) {
 		return manifest{}, fmt.Errorf("composition.json unreadable: %w", err)
 	}
 	return m, nil
-}
-
-func compareInputs(recorded, current manifestInputs) error {
-	if recorded.Core != current.Core {
-		return errors.New("core inputs changed since generation")
-	}
-	if recorded.ApprovalsLock != current.ApprovalsLock {
-		return errors.New("extensions/approvals.lock changed since generation")
-	}
-	for name, row := range current.Extensions {
-		rec, ok := recorded.Extensions[name]
-		if !ok {
-			return fmt.Errorf("extension %s added since generation", name)
-		}
-		if rec.Tree != row.Tree {
-			return fmt.Errorf("extension %s changed since generation", name)
-		}
-		if rec.Manifest != row.Manifest {
-			return fmt.Errorf("extension %s manifest changed since generation", name)
-		}
-	}
-	for name := range recorded.Extensions {
-		if _, ok := current.Extensions[name]; !ok {
-			return fmt.Errorf("extension %s removed since generation", name)
-		}
-	}
-	return nil
 }
 
 func encodeManifest(m manifest) ([]byte, error) {
