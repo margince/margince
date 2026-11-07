@@ -47,8 +47,8 @@ func partyWasWrittenToTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 	// Any two proven sends decide, and so does a lone one, so the read takes the
 	// first two it proves and stops. Proving every candidate first, then sorting,
 	// read a busy correspondent's whole history on each message. A participant
-	// row is a candidate only as a recipient: a proof is outbound mail, and an
-	// inbound sender's own rows were most of what a newsletter's read touched.
+	// row is a candidate only as a recipient, because a proof is outbound mail.
+	// An inbound sender's own rows were most of what a newsletter's read touched.
 	query := `WITH candidates AS (
  SELECT ps.activity_id FROM capture_party_source ps WHERE ps.sent_by_owner AND NOT ps.admission_blocked AND ps.recipients @> ARRAY[` + address + `]
  UNION ALL SELECT p.activity_id FROM activity_participant p WHERE lower(p.address)=` + address + ` AND p.role IN ('to','cc','bcc')

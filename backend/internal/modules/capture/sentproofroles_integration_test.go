@@ -6,8 +6,8 @@
 package capture
 
 // A mail sent from Margince proves a send to every address it carried, the
-// copied ones too. Those reach the proof only through their participant rows,
-// so the read keeps the recipient roles while it drops the sender rows a busy
+// copied ones too. Those reach the proof only through their participant rows.
+// So the read keeps the recipient roles, and drops the sender rows a busy
 // inbound address has thousands of.
 
 import (
