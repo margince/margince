@@ -21,8 +21,8 @@ func TestArchivedSubjectsCannotFileOrReopenDuplicatePairs(t *testing.T) {
 		t.Run(map[bool]string{false: "new", true: "refile"}[existing], func(t *testing.T) {
 			e := setupDedupe(t)
 			ctx := asArchiver(e)
-			left := e.plainContact(ctx, t, "Erased Person", "erased@dedupe.test")
-			right := e.plainContact(ctx, t, "Other Person", "other@dedupe.test")
+			left := e.plainContact(ctx, t, "Erased Contact", "erased@dedupe.test")
+			right := e.plainContact(ctx, t, "Other Contact", "other@dedupe.test")
 			var pair ids.UUID
 			if existing {
 				pair = e.fileOldRulePair(ctx, t, entityContact, left, right, 0.9)
@@ -37,7 +37,7 @@ func TestArchivedSubjectsCannotFileOrReopenDuplicatePairs(t *testing.T) {
 					}
 				}
 				filed, err := recordDedupeCandidate(ctx, tx, entityContact, left, right, 0.9,
-					[]map[string]any{{evidenceFieldKey: fieldFullName, evidenceLeftKey: "Erased Person"}}, "manual", "human:"+e.rep.String())
+					[]map[string]any{{evidenceFieldKey: fieldFullName, evidenceLeftKey: "Erased Contact"}}, "manual", "human:"+e.rep.String())
 				if err != nil {
 					return err
 				}
@@ -63,8 +63,8 @@ func TestArchivedSubjectsCannotFileOrReopenDuplicatePairs(t *testing.T) {
 func TestUndoCannotReopenAPairWithAnArchivedSubject(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
-	left := e.plainContact(ctx, t, "Left Person", "left@undo-erased.test")
-	right := e.plainContact(ctx, t, "Right Person", "right@undo-erased.test")
+	left := e.plainContact(ctx, t, "Left Contact", "left@undo-erased.test")
+	right := e.plainContact(ctx, t, "Right Contact", "right@undo-erased.test")
 	pair := e.fileOldRulePair(ctx, t, entityContact, left, right, 0.9)
 	if _, err := e.store.DisposeDedupeCandidate(ctx, pair, "not_a_duplicate", nil); err != nil {
 		t.Fatal(err)
@@ -87,8 +87,8 @@ func TestUndoCannotReopenAPairWithAnArchivedSubject(t *testing.T) {
 func TestFilingHoldsBothSubjectsAgainstConcurrentErasure(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	left := e.plainContact(ctx, t, "Left Person", "left@lock-dedupe.test")
-	right := e.plainContact(ctx, t, "Right Person", "right@lock-dedupe.test")
+	left := e.plainContact(ctx, t, "Left Contact", "left@lock-dedupe.test")
+	right := e.plainContact(ctx, t, "Right Contact", "right@lock-dedupe.test")
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		filed, err := recordDedupeCandidate(ctx, tx, entityContact, left, right, 0.9,
 			[]map[string]any{{evidenceFieldKey: fieldFullName}}, "manual", "human:"+e.rep.String())

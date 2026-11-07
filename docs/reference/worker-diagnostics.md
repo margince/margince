@@ -170,9 +170,8 @@ before changing how many imports run together.
 ## Mail import queue
 
 `capture.history_concurrency` bounds running history imports across the installation, with a default
-of two, the size of the `mail_history` worker queue. Google limits each mailbox's quota on its
-own, so two mailboxes importing together each run at their own limit. Every process must use the
-same value. Requests beyond that budget stay `queued` and read no
+of one. Each running import adds its own database and worker memory load, so the default lets
+one mailbox import at a time. Every process must use the same value. Requests beyond that budget stay `queued` and read no
 mail. `capture.history_hold` accepts requests but starts no new page. Both keys are listed in
 [configuration](configuration.md).
 
