@@ -1,7 +1,8 @@
 # Worklist: a stronger base
 
 A proposal for discussion: no issue and no PR yet. The baseline is `main`
-(`9e610a09`, 7 November 2026); the work is on branch `poc/worklist-feed`, which
+(`9e610a09`, 7 November 2026), and every claim here was checked against it
+again on that day (1.6); the work is on branch `poc/worklist-feed`, which
 carries `main` plus the changes measured here. Every figure comes from the
 daily bench data on test servers described in 1.2. The figures show direction,
 not the speed of any running install.
@@ -30,6 +31,10 @@ The answer, from the tests in Part 1 and the benchmarks in Part 3:
   memory kills of a pool of 16 (3.4).
 - The new base is `main` with nine rules a test can hold (2.3). The fixes
   measured so far take the worst-case p90 from 15.2 s to 7.6 s (3.3).
+- Checked again on `main` `9e610a09` (1.6): every finding still holds. New:
+  planning is 53% of a Home read's database time on `main` and 11% with
+  whole-read plan reuse, for the same run time. After planning, the largest
+  cost is last touch: about 0.6 s of every page, half the run time left.
 
 ```
  Home read, 8 years of mail, 3 ms         normal day (2 CPUs, warm)   worst case (credits spent, cold)
@@ -41,7 +46,8 @@ The answer, from the tests in Part 1 and the benchmarks in Part 3:
 ```
 
 What to do first (4.12): one connection per read with a Worklist gate (B8),
-#9950 (B1), then the seat's mail by address and time with kept plans (B2, B4).
+#9950 (B1), then the seat's mail by address and time with kept plans (B2, B4),
+then whole-read plan reuse and last touch by contact and time (B4, B2).
 
 Not proven yet: the round-trip budget (B3) is designed, not measured; the
 morning burst is one test; synthetic history copies one year of mail.
@@ -163,6 +169,65 @@ them. So the date a reader crosses 10 s follows the signals, not the calendar:
 - the cold p90 of the manager's team view;
 - connections held and private memory per connection during a burst.
 
+### 1.6 Validation on `main` `9e610a09`
+
+Each finding the new base rests on, run again on `main` at `9e610a09` with the
+same data and server (2 CPUs, warm, 8 years of mail, open cases):
+
+```
+ finding                                  on main 9e610a09                          holds
+ a read takes a second connection (B8)    a pool of one connection still hangs,     yes
+                                          at the installation lookup (4.1)
+ a seat's mail list reads its whole       72,632 rows, 38–78 ms; address + time:   yes
+   history (B2)                           1,033 rows, 10 ms
+ one captured mail ends every kept        +1 per captured mail; everyday edits 0,   yes
+   Home answer (B6)                       an archive +1 (4.7)
+ the new base answers as main does        268 of 268 against main's own recording  yes
+ #9950 is open                            open, priority high, owner assigned       yes
+ planning is a large part of a read (B4)  53% of the database time (below)          more than
+                                                                                    we said
+```
+
+Where a read's database time goes, every Home read of the bench (30 pages),
+from Postgres's own statement statistics (`pg_stat_statements` with
+`track_planning`), on one data set:
+
+```
+                                 main            main + whole-read plan reuse
+                                                 + seat mail by address + time
+ planning                        31.8 s  (53%)    3.7 s  (11%)
+ running                         28.5 s           28.8 s
+ whole read p50 / p90 / max      2.0 / 4.6 / 5.5 s   1.4 / 3.4 / 3.7 s
+```
+
+Running costs the same both ways; the difference is planning. The statements
+that `main` plans on every call, worst first (4.5):
+
+```
+ statement                                calls   plan / call   run / call
+ the waiting statements (140–250 KB)        35    137–264 ms    28–89 ms
+ activity list statements (40–50 KB)       110     48–71 ms     0.1–0.3 ms
+ a case's members, per open case (#9950)  2,500     4.1 ms       0.1 ms
+```
+
+What is left after planning is running, and half of it is last touch:
+`contact360.LastTouchFor` collects every message of the page's contacts,
+checks access on each, then keeps the newest. Its two calls per page take
+about 0.32 s and 0.27 s, 54% of the read's database run time on the new base.
+It already reuses its plan, so only reading from the contact and the time
+bounds it (B2, 4.4).
+
+One new fault, found because the ground-truth check stopped matching `main`
+with itself: the email badge on a waiting card (`needs reply`) is judged at
+the server's clock, not at the read's own time. `EmailSummariesByID`
+(`modules/activities/emailsummarybatch.go`) passes `s.now()`; the waiting lane
+reaches it through `emailSummariesReusingPlans` in
+`compose/attentionwaitingseam.go`. When the clock crossed a message's 30-day
+waiting horizon, three answers changed between two runs with the same pinned
+time. A walk's page 2 and a kept Home answer can show the same mix. The rule:
+a read judges everything at its own `as_of`. The fix passes the read's time
+down; the check now records `main` twice, apart in time, before it compares.
+
 ---
 
 ## Part 2. The new base
@@ -171,15 +236,18 @@ them. So the date a reader crosses 10 s follows the signals, not the calendar:
 
 The Worklist is one ranked list of everything waiting on a member: customers to
 answer, tasks due, deals at risk, meetings to prepare, approvals, duplicates to
-check, broken mailboxes, privacy deadlines, and more. Home shows it as Today,
-beside Decisions and System. It answers four scopes: mine, team (managers),
-unassigned and all (admins).
+check, broken mailboxes, privacy deadlines, and more. Home shows its `today`
+view as brief and to-do cards; the Worklist screen shows the other views,
+decisions and system among them. It answers four scopes: mine, team
+(managers), unassigned and all (admins).
 
 ```
  GET /worklist?view=today&scope=mine&relationships=omit&limit=100
    open one snapshot (REPEATABLE READ, one pooled connection)
-   read ~27 lanes one after another, each its own SQL with the reader's access rules,
-     each in a savepoint with a 4 s budget; a failed lane is named on the page
+   read ~27 lanes one after another, each its own SQL with the reader's access rules;
+     the optional lanes each in a savepoint with a 4 s budget, a failed one named
+     on the page; four required lanes (this_morning, needs_you, planned,
+     done_for_you) fail the whole page
    rank in memory → cut the page → read the scroll tail when the lanes ran short
    freeze the walk for pages 2, 3, … → name the rows → answer
  Home keeps the answer for 5 minutes behind an access fence (homecache)
@@ -193,8 +261,10 @@ unassigned and all (admins).
    to show one count (#9950)
  a seat's mail list reads the seat's whole      281,449 rows for 1,033 kept at 30×   B2
    history                                      history (4.4)
- the waiting statements are planned on every    336 ms planning, 7.5 ms running       B4
-   call (110–200 KB of SQL)                     per call (4.5)
+ most statements are planned on every call;     53% of the read's database time      B4
+   the waiting ones are 140–250 KB of SQL       is planning (1.6, 4.5)
+ last touch reads every message of the page's   ~0.6 s a page, half the run time      B2
+   contacts                                     left after planning (1.6)
  round trips                                    294 per read at the median            B3
  a read takes a second connection while         concurrent reads wait on each other   B8
    holding its first
@@ -235,7 +305,9 @@ test holds, for every kind of work at once.
  seat mail by address + time           B2     tested; column, index,         bounded at any history
                                               data task to build
  kept plans for the waiting statements B4     tested, reverted               planning removed
- whole-read plan reuse                 B4     test switch; census to build   planning removed
+ whole-read plan reuse                 B4     test switch; census on the     planning 53% → 11% of
+                                              bench (1.6); memory to measure   database time
+ last touch by contact + time          B2     measured, not built            ~0.6 s a page
  round-trip budget                     B3     designed                       not measured
  Home cache: fence per reader          B6     designed                       more hits
  tail stage metrics                    B5     built on the branch            visibility
@@ -404,6 +476,10 @@ read today does not hold it on every path.
   the snapshot ends. Joining it to the snapshot was tried and refused: two
   reads by one reader then fail with "could not serialize access".
 - The paths found and the measurements are with the owners.
+- On `main` `9e610a09` the test still hangs, at the installation lookup
+  (`modules/identity/installation.go`, `InstallationWorkspace`). It keeps its
+  answer once found, so only the first read after a process starts takes a
+  second connection; a burst right after a deploy is that case.
 
 Tested in a temporary patch: the walk freeze runs inside the snapshot under
 its own savepoint (`degradable`), so a failed freeze still costs only the next
@@ -429,7 +505,7 @@ credit balance by itself.
 A read costs what it shows, not what exists. Each lane reads the rows its
 page can show (a lane's page is 10) and takes its figure from a count query.
 Today the duplicate lane reads up to 200 cases to show one count (#9950), and
-that one rule is what crosses 10 s in 1.6. Test: every lane runs a fixed
+that one rule is what crosses 10 s in 3.6. Test: every lane runs a fixed
 number of statements at N and at 10N rows, like
 `TestCompany360CostDoesNotGrowWithTheAccount`.
 
@@ -479,7 +555,8 @@ never the history behind it:
  last touch, decay    contact             activity time   missing (A.3, shape A)
  tasks                assignee            due date        idx_activity_tasks
  meetings             host                start           idx_activity_meeting_host
- deals at risk        owner               expected close  to check
+ deals at risk        owner               expected close  idx_deal_close, idx_deal_owner;
+                                                          none on both
  decisions            owner, open         created         to check
 ```
 
@@ -541,7 +618,9 @@ That copy put 30 years of mail on the same contacts, which no real team has,
 so its figures overstate the effect; 1.4 and A.3 measure two realistic shapes on a
 4 GB server. What holds: lanes that look for a contact's last touch grow with
 each contact's history, so they need an index that starts from the contact
-and the time. Measured, not built.
+and the time. On `main` `9e610a09` with shape B, `contact360.LastTouchFor`
+is the largest run time left once planning is gone: about 0.6 s of every page
+(1.6). Measured, not built.
 
 What a product change needs:
 
@@ -565,10 +644,17 @@ planning.
 
 Plan reuse for the whole read:
 
+`main` already reuses plans lane by lane: `database.ReuseGenericPlans` in
+`platform/database/planreuse.go` wraps the task, deal-move, awaiting and
+last-touch lanes and the waiting lane's email rows. Every other statement is
+planned on every call, and on the bench that is 53% of a read's database time
+(1.6). What the new base adds is one switch for the whole read, and kept plans
+for the waiting statements.
+
 The concept:
 
 ```
- custom plan (today, most statements):   [plan ███ run █]  [plan ███ run █]  [plan ███ run █]
+ custom plan (today, not opted in):      [plan ███ run █]  [plan ███ run █]  [plan ███ run █]
  generic plan (new):                     [plan ███ run █]  [run █]  [run █]  ...
 ```
 
@@ -594,9 +680,12 @@ The mechanism: one setting, local to the read's transaction.
   every lane.
 - **The exception.** A generic plan cannot see values, so it cannot use an
   index that only applies to some values. The waiting-customer scan depends on
-  that to stop early. It declares this with `database.PlanEachBind(ctx, fn)`,
-  which switches to custom plans around it and puts the mode back after. Both
-  helpers share one function in `backend/internal/platform/database/planreuse.go`.
+  that to stop early. On the branch it declares this with
+  `database.PlanEachBind(ctx, fn)`, which switches to custom plans around it and
+  puts the mode back after; both helpers share one function in
+  `backend/internal/platform/database/planreuse.go`. On `main` the scan gets the
+  same effect by running unnamed (`planEachBind` in
+  `modules/activities/waitingsql.go`).
 - The scan must finish reading its rows inside the wrapper, because the switch
   back runs on the same connection. All five call sites do.
 - The known risk: on much larger data, a statement that was fast with a custom
@@ -712,8 +801,8 @@ How the cache serves Home on `main`, after #10008:
   to its sender after the capture transaction commits (`capture/sinkensure.go`),
   so the mail is unlinked for a moment, and its first link moves the shared
   fence (`home_read_fence_first_link`). A PoC test
-  (`homefence_actions_poc_test.go`) runs the real link step on a seeded mail:
-  each one moves the fence by one.
+  (`compose/integration/homefence_actions_poc_test.go`) runs the real link step
+  on a seeded mail: each one moves the fence by one, on `main` `9e610a09` too.
 - On the bench data, mail arrives at 11.5 inbound mails per working hour for
   15 members. A copy is then still served when Home is opened again after 1
   minute 83% of the time, after 2 minutes 68%, after 5 minutes 38%; the rate
@@ -728,7 +817,9 @@ How the cache serves Home on `main`, after #10008:
 Ways to raise the hit rate, none built:
 
 1. Link a captured mail in the capture transaction, so no reader ever sees it
-   unlinked; then linking narrows nothing and needs no fence.
+   unlinked; then linking narrows nothing and needs no fence. The trigger
+   already allows it: it fires only for a mail created before the linking
+   transaction (`a.created_at < now()`).
 2. A fence per reader for this case: only the readers who could see the
    unlinked mail lose their copy.
 3. Count hits and misses on `/metrics`, so the rate is measured, not modelled.
@@ -795,8 +886,10 @@ The change, one for every kind:
   read, not inside it.
 - The Worklist reads the base currency without the decision lock. It only
   converts money to rank rows; it freezes nothing. `BaseCurrencyOf` takes the
-  lock for every caller, because its other callers freeze rates, so this needs
-  a read-only way to ask beside it.
+  lock for every caller, because its other callers freeze rates. The read-only
+  way to ask exists: `identity.BaseCurrencyAppliedTx`, for a read that only
+  orders by the base. `compose/attentionfxseam.go` calls `BaseCurrencyOf`
+  instead; the fix is that one call.
 - The walk freeze already runs in its own transaction and may fail without
   harm; it stays.
 
@@ -823,7 +916,7 @@ How it flows:
 ```
  backend/api/worklist-kinds.yaml        extensions/<unit>/api/worklist-kinds.yaml
           └──────────────┬──────────────────────┘   (adds ext_<unit>.<kind>; merge is next)
-                         ▼  tools/gen-worklist: load, check, generate
+                         ▼  backend/tools/gen-worklist: load, check, generate
           ┌──────────────┴──────────────────────────────┐
           ▼                                             ▼
  internal/compose/attention/kinds_gen.go     frontend/src/lib/worklistkinds.gen.ts
@@ -835,7 +928,11 @@ How it flows:
 - **No defaults.** A missing field, an unknown field, or a value outside its
   list is refused when the file loads.
 - **Today's rules move, they do not change.** The catalog holds what
-  today's five maps hold (checked: 29 kinds × 5 fields, 0 differences).
+  today's code decides per kind: `categoryOfSource` (`attention/reach.go`),
+  `DestinationOfSource` (`destination.go`), `systemRowOwner`
+  (`classifydelivery.go`), `offersDone` (`done.go`) and the personal rule.
+  Checked on `main` `9e610a09`: 30 kinds × 5 fields, 0 differences
+  (`booking_health`, from #10474, is the thirtieth).
 - **Extensions.** A unit declares `ext_<unit>.<kind>` with a `max_level`
   ceiling, so it can never claim "a customer is waiting" or a pin. Its rows are
   read by a provider that runs as the member, inside the request, with its own
@@ -851,9 +948,9 @@ The frontend already takes its types from the API contract
 (`frontend/src/api/schema.d.ts`, generated from `backend/api/crm.yaml`), and the
 server already sends each row's category, screen and actions. What it still
 kept by hand was the list of kinds it can name: `KNOWN_SOURCES` in
-`frontend/src/lib/worklistcopy.ts`, 29 entries typed one by one.
+`frontend/src/lib/worklistcopy.ts`, typed one by one.
 
-Now `tools/gen-worklist` writes that list from the catalog:
+Now `backend/tools/gen-worklist` writes that list from the catalog:
 
 ```ts
 // frontend/src/lib/worklistkinds.gen.ts  (generated, do not edit)
@@ -871,7 +968,7 @@ export const WORKLIST_KINDS = {
 ```
 
 ```
- worklistcopy.ts     KNOWN_SOURCES = WORKLIST_KINDS      (was a hand-typed list of 29)
+ worklistcopy.ts     KNOWN_SOURCES = WORKLIST_KINDS      (was a hand-typed list)
  en.ts · de.ts · vi.ts   every titleKey must exist, or generation fails
  Category            typed from the API contract, so a category the API
                      does not know does not compile
@@ -887,7 +984,7 @@ export const WORKLIST_KINDS = {
   does (its screen, rank, counts and actions) still comes on the row from the
   API, as the contract requires. The few rules written for one kind
   (`customer_waiting`'s eyebrow, a Done rule) stay as code.
-- **Checks.** `tools/gen-worklist`'s own test fails if the generated file is
+- **Checks.** `backend/tools/gen-worklist`'s own test fails if the generated file is
   stale (run it with `-count=1`: the file lives outside the backend module, so
   Go's test cache does not see it change). The gate
   `backend/gates/frontendattentionsources_test.go` now reads the generated
@@ -910,7 +1007,10 @@ export const WORKLIST_KINDS = {
 - It compares the whole JSON answer. The walk id and the cursor are left out
   because they are new on every read; page 2 is compared by what it shows.
 - Replaying `main` against itself matches every answer, so the check is
-  deterministic.
+  deterministic, as long as every part of the read uses the pinned time. The
+  email badge does not (1.6): a replay after its clock crossed a waiting
+  horizon differed on 3 of 268 answers. Until that is fixed the check records
+  `main` again right before it compares.
 - A source that failed is never recorded as the truth. At full scale the
   manager's `all` read takes 5.5 to 6.2 s, and once its waiting lane ran past
   its 4 s budget: the recorded page had no waiting customers, and every replay
@@ -929,7 +1029,8 @@ independent reviews (A.6).
     behind a Worklist gate         freeze in its own savepoint); then a gate of 3–4
                                    reads; availability before speed
  2  #9950 contact cases (B1)       crosses 10 s on any server size; owner assigned
- 3  identity check once            small, answers proven identical; ship alone
+ 3  identity check once; the       small, answers proven identical; ship alone;
+    email badge at the read's time the badge is a fault, not speed (1.6)
  4  tail stage metrics, the        three lines each; the production stage metrics and
     bench's home_worklist row,     the bench then tell the truth; a round-trip counter
     a round-trip counter           makes B3 measurable
@@ -939,11 +1040,12 @@ independent reviews (A.6).
                                    data task, drift gate
  6  Home cache: trigger census,    guards code already shipped; then the capture link
     hit/miss counters (B6)         or a fence per reader
- 7  whole-read plan reuse (B4)     after the census of every statement and the memory
-                                   figures; behind a setting
+ 7  whole-read plan reuse (B4)     census on the bench: planning 53% → 11% (1.6);
+                                   memory figures and full scale next; behind a setting
  8  round-trip budget (B3)         the plumbing fold first; batching after one batched
                                    lane is measured
- 9  last touch by contact + time   shape A in A.3
+ 9  last touch by contact + time   the largest run time left after 7 (1.6);
+    (B2)                           shape A in A.3
 10  a read that only reads         small parts (base currency, brief opened) when near
 11  kind catalog                   loader, generator and gate, without the push vocabulary
 ```
@@ -1290,7 +1392,8 @@ each one fits with the system above.
 | #10074 (merged) | Drops a per-row thread check from every activity read, which made a plain scan of activity about 20 times slower | Back to the scan's own cost | On this bench data the matrix moved within noise (A.1) |
 | #10092 (merged) | The team board narrows the waiting scan to its team before the scan's bound | Right counts for a team's waits | The manager's team view, the read left near 10 s (3.6) |
 | #10742, #10747 (merged) | The waiting horizon is measured every six hours, over a fixed sample of the year's mail | Less work per waiting read | Part of why `main` at `9e610a09` reads faster than at `8f5671cf` (A.1) |
-| #10268 (merged) | Home is redesigned around to-do task cards | A new page; the same Worklist question (`mine`, `today`, 100 rows) | The benchmarks still time Home's read |
+| #10268 (merged) | Home is redesigned around to-do task cards; it no longer shows Today, Decisions and System | A new page; the same Worklist question (`mine`, `today`, 100 rows) | The benchmarks still time Home's read |
+| #10474 (merged) | A paused booking page that was used shows its host one notice on Home | A new kind, `booking_health`, and its lane | One more lane per read; the kind catalog takes it with no other change (4.10) |
 
 ### A.6 Reviews
 
@@ -1308,12 +1411,21 @@ findings, all taken in:
 - Some figures sat inside the noise (4 to 5% between two identical runs) or
   rested on one call; they are marked so in 3.1.
 - The `home_worklist` bench row is not Home's request (4.7).
-- The 30× history copy reused the same contacts; 1.6 now brackets real history
-  with two shapes.
+- The 30× history copy reused the same contacts; 1.2 and A.3 now bracket real
+  history with two shapes.
 - Whole-read plan reuse needs a census of every statement of a full read, and
   memory figures for kept plans per connection, before it ships (4.12).
 - The address + time column needs a writer rule and a drift gate, because a
   missed `occurred_at` update would drop mail silently.
+
+A third review checked every code claim against `main` `9e610a09`, and most
+held. Its corrections are taken in:
+
+- what Home shows, and the four required lanes (2.1);
+- plan reuse that `main` already has (4.5), and the installation lookup (4.1);
+- the read-only base currency call (4.9);
+- the catalog's 30 kinds and the functions it mirrors (4.10);
+- the indexes for deals at risk (4.4).
 
 ### A.7 Known limits
 
@@ -1338,6 +1450,7 @@ findings, all taken in:
 - Not built yet: that index and the waiting statements' kept plan, the backend side of the catalog
   generator (the engine's maps reading a generated table), and the merge of
   extension catalog fragments.
+- The planning census (1.6) is one run of 30 pages on one data set.
 - The bench database never ran the worker's data tasks; corrections that
   `main` hands to them stay pending in every run here, `main` and new base
   alike.
@@ -1503,7 +1616,8 @@ A reader feels two kinds of waiting, and they need different fixes:
   changes touch different files and add up.
 - **The card's follow-up reads.** After the Worklist answers, a task card reads
   the task and then its contact, one after the other
-  (`frontend/src/features/brief/brief.focus.tsx`, `useTaskContact`), to offer
+  (`frontend/src/features/brief/brief.focus.tsx`, then `TaskNextSteps` through
+  `useTaskContact` in `frontend/src/lib/taskcontact.ts`), to offer
   Email and Call. The row's `contact` field (`WorklistContactFacts`) holds the
   contact's id, name, last touch and employer, but no email or phone. Carrying
   what the verbs need on the row would remove both round trips. That changes
