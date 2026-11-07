@@ -64,6 +64,7 @@ func writeError(w http.ResponseWriter, status int, reason string) {
 	}
 }
 
+//craft:ignore naked-any each endpoint answers its own Google wire shape, built as a map
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {

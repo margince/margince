@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Command fakegmail serves demo mailboxes over the part of the Gmail API and
-// Google OAuth that the Gmail connector calls, so several history imports can
-// run through a real worker on one machine. docs/how-to/measure-mail-import.md
+// Google OAuth that the Gmail connector calls. Several history imports can then
+// run through a real worker on one machine; docs/how-to/measure-mail-import.md
 // shows how to point a dev stack at it.
 //
 //	go run ./tools/fakegmail -owners admin@demo.test,rep@demo.test -messages 20000 -big

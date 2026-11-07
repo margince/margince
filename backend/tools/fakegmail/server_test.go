@@ -34,6 +34,7 @@ func closeBody(t *testing.T, resp *http.Response) {
 	}
 }
 
+//craft:ignore naked-any each call decodes a different Google wire shape
 func getJSON(t *testing.T, srv *httptest.Server, path, token string, out any) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+path, nil)
