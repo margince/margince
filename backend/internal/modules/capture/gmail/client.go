@@ -48,6 +48,10 @@ const (
 	gmailAPIBase   = "https://gmail.googleapis.com/gmail/v1/users/me"
 )
 
+// googleEndpoints is where the client calls Google. Only a binary built with
+// the loadrig tag can point it elsewhere (endpoints_loadrig.go).
+var googleEndpoints = struct{ auth, token, api string }{googleAuthURL, googleTokenURL, gmailAPIBase}
+
 // The package sentinels wrap the shared connector vocabulary (ADR-0063) so
 // the registry classifies failures without knowing this provider: auth parks
 // the connection, a rate limit honors Retry-After, unreachable backs off.
@@ -180,10 +184,10 @@ type OAuthConfig struct {
 //nolint:ireturn // returns the OAuth seam by design — the connector holds it as an interface so tests substitute a stub
 func NewOAuth(cfg OAuthConfig) OAuth {
 	if cfg.AuthURL == "" {
-		cfg.AuthURL = googleAuthURL
+		cfg.AuthURL = googleEndpoints.auth
 	}
 	if cfg.TokenURL == "" {
-		cfg.TokenURL = googleTokenURL
+		cfg.TokenURL = googleEndpoints.token
 	}
 	return oauthflow.New(oauthflow.Config{
 		Provider:     "gmail",
@@ -228,7 +232,7 @@ func NewAPIWithQuota(client *http.Client, base string, mailbox, project int) API
 		client = boundedHTTPClient()
 	}
 	if base == "" {
-		base = gmailAPIBase
+		base = googleEndpoints.api
 	}
 	return &httpAPI{client: client, base: base, quota: newQuotaPacing(mailbox, project)}
 }

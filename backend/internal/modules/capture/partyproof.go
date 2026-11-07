@@ -48,10 +48,11 @@ func partyWasWrittenToTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
  SELECT ps.activity_id FROM capture_party_source ps WHERE ps.sent_by_owner AND NOT ps.admission_blocked AND ps.recipients @> ARRAY[` + address + `]
  UNION SELECT p.activity_id FROM activity_participant p WHERE lower(p.address)=` + address + `
  UNION SELECT a.id FROM activity a WHERE a.counterparty_email=` + address + `), visible_activities AS MATERIALIZED (
- SELECT a.id,a.occurred_at,a.subject,a.body,a.archived_at,a.counterparty_outbound_attested,a.captured_by,a.counterparty_email
- FROM activity a JOIN candidates c ON c.activity_id=a.id WHERE ` + visible + `)
- SELECT a.occurred_at, coalesce(a.subject,''), coalesce(a.body,'') FROM visible_activities a
- WHERE a.archived_at IS NULL AND ` + partySendProofSQL("a", address) + ` ORDER BY a.occurred_at,a.id LIMIT 2`
+ SELECT a.id,a.occurred_at,a.counterparty_outbound_attested,a.captured_by,a.counterparty_email
+ FROM activity a JOIN candidates c ON c.activity_id=a.id
+ WHERE a.counterparty_outbound_attested AND a.archived_at IS NULL AND ` + visible + `), proven AS (
+ SELECT a.id, a.occurred_at FROM visible_activities a WHERE ` + partySendProofSQL("a", address) + ` ORDER BY a.occurred_at,a.id LIMIT 2)
+ SELECT p.occurred_at, coalesce(a.subject,''), coalesce(a.body,'') FROM proven p JOIN activity a ON a.id=p.id ORDER BY p.occurred_at,p.id`
 	sent := []outboundMail{}
 	err = database.ReuseGenericPlansTx(ctx, tx, func() error {
 		rows, err := tx.Query(ctx, query, args...)
