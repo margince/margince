@@ -106,7 +106,10 @@ func TestRunnerBindsTheSessionBudgetAndResumesWaitingWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	runner, err := NewJobRunner(pool, quiet, JobRunnerConfig{Embedder: embedder, Blobstore: o.blob, TestOnly: true})
+	// Catalog pacing must not set this fixture's completion time.
+	runner, err := NewJobRunner(pool, quiet, JobRunnerConfig{
+		Embedder: embedder, Blobstore: o.blob, TestOnly: true, DataTasksPace: time.Millisecond,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

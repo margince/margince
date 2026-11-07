@@ -12,7 +12,8 @@ import {
 } from "../features/settings/settingspages.fixtures";
 import { companyContextCapabilitiesOptions } from "../lib/companycontextreach";
 import { pipelinesOptions } from "../lib/pipelines.queries";
-import { sessionOptions } from "../lib/session";
+import { SESSION_STALE_MS, sessionOptions } from "../lib/session";
+import { readPreparedAnalyticsSession } from "../lib/session.read";
 import { installationSettingsOptions } from "../lib/uploadlimit";
 import { meFixture } from "../testing/mefixture";
 import {
@@ -87,7 +88,7 @@ function open() {
       throw new Error(`Unexpected read: ${url.pathname}`);
     return Response.json(answers[url.pathname]);
   });
-  return { client, requested };
+  return { client, requested, answers };
 }
 it("opens from the optional session data without repeating its reads", async () => {
   const { client, requested } = open();
@@ -146,4 +147,75 @@ it("keeps newer cache data and does not make an old session snapshot fresh", asy
   expect(
     client.getQueryState(installationSettingsOptions.queryKey)?.dataUpdatedAt,
   ).toBe(now);
+});
+
+it("preserves the receipt time when deferred JavaScript delivers a prepared session", async () => {
+  const { client, requested } = open();
+  const receivedAt = Date.now();
+  const snapshot = await readPreparedAnalyticsSession();
+  expect(snapshot.dataUpdatedAt).toBe(receivedAt);
+  vi.setSystemTime(receivedAt + 60_000);
+  await prefetchAnalytics(client, async () => snapshot);
+  expect(client.getQueryState(sessionOptions.queryKey)?.dataUpdatedAt).toBe(
+    receivedAt,
+  );
+  expect(requested.filter((url) => url.pathname === "/v1/me")).toHaveLength(1);
+  expect(
+    requested.some((url) => url.pathname === "/v1/analytics/metrics"),
+  ).toBe(true);
+  expect(
+    client.getQueryState(reportingCatalogOptions.queryKey)?.dataUpdatedAt,
+  ).toBe(Date.now());
+});
+
+it("refreshes a prepared session that expired while its JavaScript loaded", async () => {
+  const { client, requested, answers } = open();
+  const receivedAt = Date.now();
+  answers["/v1/me"] = {
+    ...me,
+    user: { ...me.user, display_name: "Old snapshot" },
+  };
+  const snapshot = await readPreparedAnalyticsSession();
+  answers["/v1/me"] = me;
+  vi.setSystemTime(receivedAt + SESSION_STALE_MS + 1);
+  await prefetchAnalytics(client, async () => snapshot);
+  expect(requested.map((url) => url.pathname)).toEqual(["/v1/me", "/v1/me"]);
+  expect(client.getQueryData(sessionOptions.queryKey)?.user.display_name).toBe(
+    me.user.display_name,
+  );
+  expect(client.getQueryState(sessionOptions.queryKey)?.dataUpdatedAt).toBe(
+    Date.now(),
+  );
+});
+
+it("keeps a newer session update made while the prepared response is published", async () => {
+  const { client } = open();
+  const snapshot = await readPreparedAnalyticsSession();
+  vi.setSystemTime(Date.now() + 1_000);
+  const updatedAt = Date.now();
+  const unsubscribe = client.getQueryCache().subscribe((event) => {
+    if (
+      event.type === "updated" &&
+      event.query.queryKey[0] === "me" &&
+      event.action.type === "success" &&
+      !event.action.manual
+    ) {
+      client.setQueryData(
+        sessionOptions.queryKey,
+        { ...me, user: { ...me.user, display_name: "Newer session" } },
+        { updatedAt },
+      );
+    }
+  });
+  try {
+    await prefetchAnalytics(client, async () => snapshot);
+  } finally {
+    unsubscribe();
+  }
+  expect(client.getQueryData(sessionOptions.queryKey)?.user.display_name).toBe(
+    "Newer session",
+  );
+  expect(client.getQueryState(sessionOptions.queryKey)?.dataUpdatedAt).toBe(
+    updatedAt,
+  );
 });

@@ -11,15 +11,16 @@ import { companyContextCapabilitiesOptions } from "../lib/companycontextreach";
 import { companyOptions, sessionHasCompany } from "../lib/installationcompany";
 import { pipelinesOptions } from "../lib/pipelines.queries";
 import { parseHash } from "../lib/router";
-import { readSession, sessionOptions } from "../lib/session";
+import { SESSION_STALE_MS, sessionOptions } from "../lib/session";
+import { readPreparedAnalyticsSession } from "../lib/session.read";
 import { installationSettingsOptions } from "../lib/uploadlimit";
 import { currentParams } from "../lib/urlstate";
 
-export async function prefetchAnalytics(client: QueryClient): Promise<void> {
-  await client.prefetchQuery({
-    ...sessionOptions,
-    queryFn: ({ signal }) => readSession(signal, "analytics"),
-  });
+export async function prefetchAnalytics(
+  client: QueryClient,
+  readPrepared = readPreparedAnalyticsSession,
+): Promise<void> {
+  await prefetchSession(client, readPrepared);
   const me = client.getQueryData(sessionOptions.queryKey);
   if (!me || parseHash(location.hash).screen !== "analytics") return;
   const startup = me.analytics_startup;
@@ -62,4 +63,38 @@ export async function prefetchAnalytics(client: QueryClient): Promise<void> {
       : Promise.resolve();
   };
   await Promise.all(requests.map((request) => request.then(prepare)));
+}
+
+async function prefetchSession(
+  client: QueryClient,
+  readPrepared: typeof readPreparedAnalyticsSession,
+): Promise<void> {
+  const prepared: {
+    freshness?: { updatedAt: number; updatesBeforePublish: number };
+  } = {};
+  await client.prefetchQuery({
+    ...sessionOptions,
+    queryFn: async ({ signal }) => {
+      let snapshot = await readPrepared(signal);
+      if (Date.now() - snapshot.dataUpdatedAt >= SESSION_STALE_MS)
+        snapshot = await readPreparedAnalyticsSession(signal);
+      prepared.freshness = {
+        updatedAt: snapshot.dataUpdatedAt,
+        updatesBeforePublish:
+          client.getQueryState(sessionOptions.queryKey)?.dataUpdateCount ?? 0,
+      };
+      return snapshot.data;
+    },
+  });
+  const sessionState = client.getQueryState(sessionOptions.queryKey);
+  const freshness = prepared.freshness;
+  // A concurrent session update must keep its own receipt time.
+  if (
+    freshness &&
+    sessionState?.dataUpdateCount === freshness.updatesBeforePublish + 1
+  ) {
+    client.setQueryData(sessionOptions.queryKey, sessionState.data, {
+      updatedAt: freshness.updatedAt,
+    });
+  }
 }

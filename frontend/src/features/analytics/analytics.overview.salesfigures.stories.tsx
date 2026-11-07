@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
+import { SalesHeader } from "./analytics.overview.salesheader";
 import {
   isSetup,
   OVERVIEW_SCENARIOS,
@@ -11,6 +12,7 @@ import { installOverviewServer } from "./analytics.overview.server.fixtures";
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/Sales figures",
+  subcomponents: { SalesHeader },
   parameters: { layout: "padded" },
   beforeEach: () => {
     const previous = location.hash;

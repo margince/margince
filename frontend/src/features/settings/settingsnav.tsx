@@ -1,3 +1,4 @@
+import { CardBoundary } from "../../design-system/cardboundary";
 // The settings catalog, its addresses, and who may open each entry.
 //
 // Split from the screen so `src/app/**` can ask those three questions without
@@ -11,7 +12,9 @@
 // it is the property settings-imports.test.ts holds.
 
 import { House } from "lucide-react";
+import { Suspense } from "react";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../../app/nav";
+import { lazy } from "../../i18n/lazy";
 import { unitsForSecretScope } from "../../lib/extensions";
 import type { Route } from "../../lib/router";
 import { useMe } from "../../lib/session";
@@ -28,7 +31,14 @@ import {
 } from "../../lib/settingscatalog";
 import { settingsRouteTarget } from "../../lib/settingsrouting";
 import { PAGE_ICONS } from "./settingsnavicons";
-import { SettingsSearchBox } from "./settingssearchbox";
+
+const SettingsSearchBox = lazy(
+  async () => ({
+    default: (await import("./settingssearchbox")).SettingsSearchBox,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 // The entry register: one section nav entry per settings SUBJECT. Only surfaces
 // this app actually renders get one — the mockup's Booking / Flow /
@@ -292,10 +302,18 @@ export function useSettingsSection(route: Route): NavSection {
     // page this reader may open, including the ones the rail leaves out because
     // they cannot change them. Narrowing it to the rail's own list would make a
     // readable page unfindable by the one affordance built to find it.
-    lead: <SettingsSearchBox pages={openable} />,
+    lead: (
+      <Suspense fallback={null}>
+        <SettingsSearchBox pages={openable} />
+      </Suspense>
+    ),
     // The same box for the phone drawer, which has to dismiss itself once the
     // box has moved the reader — see NavSection.leadFor.
-    leadFor: (onPick) => <SettingsSearchBox pages={openable} onPick={onPick} />,
+    leadFor: (onPick) => (
+      <Suspense fallback={null}>
+        <SettingsSearchBox pages={openable} onPick={onPick} />
+      </Suspense>
+    ),
     // No row is current on a route that is not one of the tabs. An extension
     // unit's page keeps this level in the sidebar — it is reached from here and
     // its trail says so — but it is not a settings tab, and `settingsRouteTab`

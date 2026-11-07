@@ -8,6 +8,10 @@ export function initialEntries(root: string) {
   return {
     bootstrap: [join(root, "src/bootstrap.ts")],
     startup: [join(root, "src/main.tsx")],
+    analyticsPreparation: [
+      join(root, "src/app/analytics-prefetch.ts"),
+      join(root, "src/app/queryclient.instance.ts"),
+    ],
     analytics: [join(root, "src/App.analytics.tsx")],
   };
 }

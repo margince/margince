@@ -6,6 +6,10 @@
 package integration
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"io"
 	"net/http"
 	"reflect"
 	"testing"
@@ -116,5 +120,65 @@ func TestAnalyticsStartupUsesEachSeatsLiveReportGrants(t *testing.T) {
 	}
 	if allowed == 0 || allowed+denied != len(roles) {
 		t.Fatalf("role coverage = %d allowed, %d denied out of %d", allowed, denied, len(roles))
+	}
+}
+
+func TestPreparedSessionNegotiatesCompressionWithoutLosingIdentityOrMetadata(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	var plain crmcontracts.MeResponse
+	mustCall(t, e, http.MethodGet, "/v1/me", nil, http.StatusOK, &plain)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.TS.URL+"/v1/me?prepare=analytics", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Accept-Encoding", "gzip")
+	res, err := e.Client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := res.Body.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	if res.StatusCode != http.StatusOK || res.Header.Get("Content-Encoding") != "gzip" {
+		t.Fatalf("prepared session = %d, encoding %q", res.StatusCode, res.Header.Get("Content-Encoding"))
+	}
+	if res.Header.Get("Cache-Control") != "private, no-store" {
+		t.Fatal("compressed session permits caching")
+	}
+	encoded, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(encoded))
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := reader.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if len(encoded) >= len(decoded) {
+		t.Fatal("prepared metadata did not shrink on the wire")
+	}
+	var prepared crmcontracts.MeResponse
+	if err := json.Unmarshal(decoded, &prepared); err != nil {
+		t.Fatal(err)
+	}
+	if prepared.User.Id != plain.User.Id || prepared.User.Email != plain.User.Email {
+		t.Fatal("compression changed the signed-in identity")
+	}
+	if prepared.AnalyticsStartup == nil {
+		t.Fatal("compressed session lost its prepared metadata")
+	}
+	var catalog crmcontracts.ReportingCatalog
+	mustCall(t, e, http.MethodGet, "/v1/analytics/metrics", nil, http.StatusOK, &catalog)
+	if !reflect.DeepEqual(prepared.AnalyticsStartup.Catalog, catalog) {
+		t.Fatal("compressed metadata differs from its authorized individual read")
 	}
 }

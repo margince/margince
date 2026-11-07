@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -124,14 +124,19 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.
   Retry clears the failed catalog request before reading it again.
 
-  The `Analytics` route starts with the messages reached by its static imports.
-  `frontend/scripts/gen-essential-copy.mjs` derives that copy from the same entry paths as the
-  bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
+  The `Analytics` route starts with the messages reached by its static imports and deferred
+  components that request essential copy through `frontend/src/i18n/lazy.tsx`.
+  `frontend/scripts/gen-essential-copy.mjs` follows those imports from the same entry paths as
+  the bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
   complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
   A language change also loads the complete catalog.
 
-  `frontend/src/app/analytics-prefetch.ts` starts the session read while the app loads.
-  Once the session grants are known, it starts `Analytics` reads in the shared query cache.
+  `frontend/src/bootstrap.ts` starts the session read through `frontend/src/lib/session.read.ts`
+  while the app loads. The main entry waits for `frontend/src/app/startup-session.ts` to
+  register the prepared query before mounting. `frontend/src/app/analytics-prefetch.ts` keeps
+  the response time when
+  filling the shared query cache. Expired responses are read again.
+  Once the session grants are known, it starts `Analytics` reads in that cache.
   The opening page and the rendered views use the same functions in
   `frontend/src/features/analytics/analytics.overview.questions.ts`.
   Sign-in forms, closed drawers and other `Analytics` sections load when opened.

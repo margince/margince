@@ -19,8 +19,6 @@ reach features/ai/aiscope.test.tsx features/companies/companies.tsx
 reach features/ai/aiscope.test.tsx features/companies/company360.tsx
 reach features/analytics/analytics.delivery.tsx features/projects/projects.form.ts
 reach features/analytics/analytics.questions.builder.tsx features/lists/filtervalue.tsx
-reach features/analytics/analytics.questions.values.ts features/leads/leadpresentation.tsx
-reach features/analytics/analytics.questions.values.ts features/projects/projects.form.ts
 reach features/automations/agent-token-settings.tsx features/sign-in/installation-settings.tsx
 reach features/automations/agentallowances.tsx features/sign-in/installation-settings.tsx
 reach features/automations/agentusage.tsx features/settings/settings-agents.css
@@ -342,14 +340,12 @@ reach features/records/recordroles.tsx features/leads/leadvocab.rows.tsx
 reach features/records/recordtab.ts features/worklist/worklist.return.tsx
 reach features/records/timelineactions.tsx features/lists/audiencemembers.tsx
 reach features/records/timelineactions.tsx features/mail/compose.tsx
-reach features/settings/account-settings.tsx app/account.tsx
 reach features/settings/account-settings.tsx features/sign-in/mfacard.tsx
 reach features/settings/account-settings.tsx features/sign-in/passwordcard.tsx
 reach features/settings/acquisitionsources.tsx features/leads/leadvocab.rows.tsx
 reach features/settings/embedreindex.tsx features/ai/aiusage.tsx
 reach features/settings/financesource.tsx features/contacts/contactemployers.tsx
 reach features/settings/followupsettings.tsx features/worklist/worklist.queries.ts
-reach features/settings/notifications.queries.ts features/worklist/worklist.queries.ts
 reach features/settings/operationsettings.tsx features/sign-in/installation-settings.tsx
 reach features/settings/preferences.tsx features/privacy/publicpage.tsx
 reach features/settings/rate-manual.tsx features/ai/ai-routing-fields.tsx

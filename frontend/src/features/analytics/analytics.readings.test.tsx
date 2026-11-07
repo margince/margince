@@ -7,8 +7,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatAnalyticsMoney } from "../../format/format";
 import { en } from "../../i18n/en";
-import { AnalyticsScreen, ForecastTile } from "./analytics";
-import { ForecastStrip } from "./analytics.pipeline";
+import { AnalyticsScreen } from "./analytics";
+import { ForecastStrip, ForecastTile } from "./analytics.pipeline";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 // What a reading says when it has no figure to say.
