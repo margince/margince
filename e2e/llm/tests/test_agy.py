@@ -89,6 +89,10 @@ class FromAgyTest(unittest.TestCase):
         lines = before_answer(sample(), tool_step(9, "search_web", state="ERROR", query="margince"))
         self.assertEqual(convert(lines)[0], 3)
 
+    def test_a_failed_call_that_names_no_server_reached_nothing(self):
+        lines = before_answer(sample(), tool_step(9, "call_mcp_tool", state="ERROR", ToolName="echo"))
+        self.assertEqual(convert(lines)[0], 0)
+
     def test_another_servers_tool_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "call_mcp_tool", ServerName="github", ToolName="search"))
         self.assertEqual(convert(lines)[0], 3)
@@ -254,8 +258,14 @@ class RunAgyTest(unittest.TestCase):
         self.assertEqual(list(seen["agents"]), ["margince-e2e-llm.md"])
 
     def test_an_agy_killed_at_the_wall_clock_is_a_harness_fault_even_with_a_complete_stream(self):
-        with unittest.mock.patch.object(self.drive, "AGY_GRACE", 0.5):
-            code, _out, _seen = self.run_agy(timeout=0, FAKE_AGY_HANG="5")
+        import candidates
+        out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        # Only the exit is asserted: under load the fake can be killed before it
+        # writes what it saw, and the kill is what this test is about.
+        with unittest.mock.patch.object(self.drive, "AGY_GRACE", 0.5), \
+                unittest.mock.patch.dict(os.environ, dict(self.env, FAKE_AGY_HANG="5")):
+            code = self.drive.run_agy(candidates.resolve("gemini", "cli"), self.mcp.url,
+                                      "MARGINCE_E2E_TOKEN", "Echo pelican.", out, timeout=0)
         self.assertEqual(code, self.drive.HARNESS)
 
     def test_an_effort_the_model_id_does_not_carry_is_refused_before_agy_runs(self):

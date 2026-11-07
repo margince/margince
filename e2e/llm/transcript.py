@@ -243,6 +243,10 @@ def _agy_tool(out, step, conversation, workspace=""):
         return ""
     if name in _AGY_RESOURCE_HELPERS and params.get("ServerName") == SERVER:
         return ""
+    # A call that names no server, or another, and ended in an error reached
+    # nothing; a successful one would have brought data from outside.
+    if name == "call_mcp_tool" and params.get("ServerName") != SERVER and step.get("state") == "ERROR":
+        return ""
     if name == "call_mcp_tool" and params.get("ServerName") == SERVER:
         call_id = f"agy_{step.get('step_index')}"
         arguments = params.get("Arguments")
