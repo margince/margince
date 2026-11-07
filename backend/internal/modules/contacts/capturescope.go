@@ -58,6 +58,23 @@ func promoteIfWorkspaceScoped(ctx context.Context, tx pgx.Tx, id ids.ContactID, 
 	return err
 }
 
+// AwaitsAnAnswerTx reports whether PromoteOnReplyTx could move the contact: it
+// is its owner's only because nobody had answered. The reply evidence costs a
+// read over the address's whole history, so a caller asks this first.
+func (s *Store) AwaitsAnAnswerTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (bool, error) {
+	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
+		return false, err
+	}
+	var awaits bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM contact
+		 WHERE id = $1 AND visibility = $2 AND archived_at IS NULL AND narrowing_reason = $3)`,
+		id, visibilityOwner, string(NarrowedOutboundNoAnswer)).Scan(&awaits); err != nil {
+		return false, fmt.Errorf("contacts: reading whether a contact awaits an answer: %w", err)
+	}
+	return awaits, nil
+}
+
 // PromoteOnReplyTx moves an owner-scoped contact to the workspace because the
 // address has answered mail somebody here sent, and reports whether it moved.
 //

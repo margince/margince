@@ -559,3 +559,37 @@ func narrowingReasonOf(t *testing.T, e *integration.Env, email string) *string {
 	}
 	return reason
 }
+
+// The reply evidence is asked only of a contact a reply could publish: one its
+// owner holds because nobody had answered. Once the reply published it, there
+// is nothing left to ask.
+func TestOnlyAContactNobodyHadAnsweredAwaitsAnAnswer(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@awaits.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-awaits"))
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+	awaits := func() bool {
+		t.Helper()
+		var got bool
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			var id ids.ContactID
+			if err := tx.QueryRow(context.Background(),
+				`SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id); err != nil {
+				return err
+			}
+			var err error
+			got, err = contacts.NewStore(e.DB()).AwaitsAnAnswerTx(e.Admin(), tx, id)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return got
+	}
+	if !awaits() {
+		t.Fatal("a contact kept only because nobody had answered does not await an answer")
+	}
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-awaits", email, "thr-awaits")
+	if awaits() {
+		t.Fatal("a published contact still awaits an answer")
+	}
+}
