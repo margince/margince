@@ -20,8 +20,8 @@ import (
 // AcceptOfferLineItem flips a staged (AI-proposed) line to accepted, at
 // which point it starts counting toward the offer totals (E03.21a). The
 // contract does not expose proposal_state yet, so this is the store seam
-// the future drafting surface confirms through; accepting an already
-// accepted line is a no-op because the desired end-state already holds.
+// the future drafting surface confirms through. Accepting an already
+// accepted line is a no-op, because the desired end-state already holds.
 func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, lineID ids.UUID) (crmcontracts.Offer, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, err
