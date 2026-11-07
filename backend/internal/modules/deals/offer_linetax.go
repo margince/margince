@@ -262,7 +262,7 @@ func (s *Store) retaxForEntity(ctx context.Context, tx pgx.Tx, offerID ids.Offer
 	return retaxOffer(ctx, tx, offerID, s.draftTaxBasis(ctx, tx, entity))
 }
 
-// auditHeaderEdit audits a draft's header edit. An edit that names a legal
+// auditHeaderEdit audits and announces a draft's header edit. An edit that names a legal
 // entity first moves the category lines to that entity's rates, as of today.
 func (s *Store) auditHeaderEdit(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer, p *storekit.Patch, entity *ids.LegalEntityID) error {
 	id := ids.From[ids.OfferKind](ids.UUID(current.Id))
