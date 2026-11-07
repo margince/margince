@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
+<!-- describes: backend/internal/compose/strength_handlers.go backend/internal/modules/contacts/strength.go backend/internal/modules/contacts/strengthaccount.go backend/api/crm.yaml backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It
@@ -301,6 +301,19 @@ Two gates guard every edge read, and both are needed:
 - **The live-member join.** `app_user.status = 'active' AND archived_at IS NULL`. Both parts count.
   Deactivation sets `status` and leaves `archived_at` NULL. So a filter on `archived_at` alone keeps
   offering a team member who left as a way in. The surface exists to name someone who can *act*.
+
+## Strength reads for integrations
+
+The public API keeps `GET /contacts/{id}/strength` and `GET /companies/{id}/strength`
+for integrations. The shared readers are `contacts.Store.ContactStrength` and
+`contacts.Store.CompanyStrength`.
+
+The contact read gives the score's `factors` and `contributing_activity_ids`.
+`receiptHandlers` adds names only for activities the caller can read.
+
+The company read gives the top score of its current contacts that the caller can read,
+with that contact's `factors` and counts. Its activity receipt lists are empty.
+It also asks for `relationship:read`; without `contact:read` it gives `none`.
 
 ## Deal coverage and its risk rules
 
