@@ -6,20 +6,29 @@ Codex. It costs money. How the test runs, what it costs and how to read a failur
 [test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md).
 
 A case is one YAML file under `e2e/llm/scenarios/`. Copy the closest case and
-change it. `case65-clear-out-the-dead-deals.yaml` is a short one that holds a
+change it.
+
+**Score the answer, not the path.** A model may reach a right answer in more
+than one way. A case checks what the answer says, and what is in the records
+after the run. It does not fail an answer for the tools it picks.
+
+Pin a tool only when the call is itself the result: a refusal to call, or a
+write that the records cannot show. A run that calls no tool is scored the same
+way. It can be right only when the case needs no data and no change. `case65-clear-out-the-dead-deals.yaml` is a short one that holds a
 refusal: the model must ask before it archives.
 
 1. **Write the prompt** the way a user would say it. Name no tool. Use the
    records that `e2e/llm/seed-llm-fixtures.sh` already writes where you can. Every
    other case sees a new fixture, and it can change what they count.
-2. **Hold what the model calls.** `must_call` lists the tools it needs; `a|b`
-   in one entry means any of them. `must_call_with` pins one argument
+2. **Hold what the model calls.** `must_call` lists the tools it needs where
+   the call is the result; `a|b` in one entry means any of them. `must_call_with` pins one argument
    (`tool.argument=value`). `must_not_call_with` fails the run on a call whose
    arguments match `tool~regex`, so `archive_record~.` fails on any archive.
    `may_call` lists the other tools a good run may use, for the reader. The
    checker does not fail a call outside it.
 3. **Hold what the model says.** `must_mention` and `must_not_mention` are
-   regexes, for names, dates and counts. Put a fact that needs a judge in
+   regexes, for names, dates and counts. `figures_from_results: true` fails a
+   money value that no tool result of the run holds. Put a fact that needs a judge in
    `judge:` as one sentence that ends with when to answer no.
 4. **Hold the world it leaves.** `must_end_with` reads the records back after
    the run ([test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md#the-end-state)). Set `writes: true` on a case whose tools can write,

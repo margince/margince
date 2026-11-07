@@ -631,6 +631,7 @@ done
 
 PASSED=0
 FAILED=0
+SWEEP_CALLS=0
 # The runs the lane INTENDED, summed as it goes. The sweep total's denominator
 # cannot come from the transcripts it is counting: a run that wrote none would
 # then be missing from both halves and the total would report itself complete.
@@ -787,6 +788,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # broken use cases: every remaining run would be unscorable the same way,
     # each costs a fresh stack, and the answer is the same after eighteen of
     # them as after one.
+    # A run that called nothing is scored on its answer like any other. Only a
+    # sweep in which no run reached the server says the server never attached.
+    if grep -qE '"name": ?"mcp__'"$MCP_SERVER"'__' "$transcript"; then
+      SWEEP_CALLS=$((SWEEP_CALLS + 1))
+    fi
     scored=0
     python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1 || scored=$?
     case "$scored" in
@@ -811,6 +817,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     esac
   done
 
+  if [[ "$SWEEP_CALLS" -eq 0 ]]; then
+    echo
+    echo "HARNESS: no run of this sweep so far called the lane's server, so it may never have attached."
+    echo "  This is not a use-case failure. Nothing was recorded for $name."
+    exit 2
+  fi
   if [[ "$ok" -ge "$pass_at" ]]; then
     PASSED=$((PASSED + 1))
     echo "  $name: PASS ($ok/$made)" | tee -a "$REPORT"
