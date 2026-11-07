@@ -226,7 +226,7 @@ function SalesReviewBody({
               emptyLabel=""
             />
             <Suspense fallback={<PendingBody label={t("common.loading")} />}>
-              <DecisionsPanel />
+              <DecisionsPanel review={selection} />
             </Suspense>
           </>
         }
