@@ -210,6 +210,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [what-each-feature-needs.md](reference/what-each-feature-needs.md): the settings each feature needs,
   and what you see while one is missing.
 - [programs.md](reference/programs.md): what each program reads that is not a setting.
+- [Watch an installation](operations/observability.md): how to watch work, check a problem and show that it is fixed.
 - [operator-endpoints.md](reference/operator-endpoints.md) and [job-surfaces.md](reference/job-surfaces.md):
   the checks and numbers the api and the worker serve.
 - [worker-diagnostics.md](reference/worker-diagnostics.md): profile the worker, read one site, stop it.
