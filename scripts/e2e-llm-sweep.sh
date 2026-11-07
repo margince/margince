@@ -80,7 +80,7 @@ while :; do
   fi
   still=0
   for name in "${left[@]}"; do finished "$name" || still=$((still + 1)); done
-  if [[ $still -lt ${#left[@]} || ${#run[@]} -lt ${#left[@]} ]]; then
+  if [[ $still -lt ${#left[@]} ]]; then
     stalled=0
     continue
   fi
