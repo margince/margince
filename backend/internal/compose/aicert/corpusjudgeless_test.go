@@ -143,7 +143,7 @@ func evaluateWith(t *testing.T, sc aicert.Scenario, reply func(ids []string) str
 func judgelessProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for _, set := range []map[string]judgelessProof{
-		verdictProofs(), confidentialityProofs(), agentLoopProofs(), gradingProofs(),
+		verdictProofs(), confidentialityProofs(), counterpartyProofs(), agentLoopProofs(), gradingProofs(),
 		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(), tagSuggestProofs(),
 	} {
 		maps.Copy(proofs, set)
@@ -227,6 +227,37 @@ func confidentialityProofs() map[string]judgelessProof {
 		"a_termination_agreement_stays_private_whatever_the_attachment_note_says":  {"personnel", "ordinary"},
 		"a_salary_sheet_behind_an_invoice_note_stays_private":                      {"personnel", "ordinary"},
 		"an_unpatched_vulnerability_is_held_until_it_is_closed":                    {"security_incident", "ordinary"},
+	} {
+		proofs[name] = judgelessProof{
+			correct: owedVerdicts(kinds[0]), wrong: owedVerdicts(kinds[1]), wantWrong: aitasks.OutcomeWrongAnswer,
+		}
+	}
+	return proofs
+}
+
+// counterpartyProofs pairs each sender's kind with the failure its rubric
+// named: a junk contact, or a real correspondent's mail hidden as spam.
+func counterpartyProofs() map[string]judgelessProof {
+	proofs := map[string]judgelessProof{}
+	for name, kinds := range map[string][2]string{
+		"the_owners_own_lawyer_is_not_the_workspaces_contact":                  {"advisor", "contact"},
+		"a_trade_offices_city_mailbox_names_a_place_not_a_contact":             {"company_sender", "contact"},
+		"a_company_writing_as_itself_does_not_become_a_contact_named_after_it": {"company_sender", "contact"},
+		"real_prospect_must_not_be_noise":                                      {"contact", "spam"},
+		"invited_supplier_must_not_be_spam":                                    {"contact", "spam"},
+		"a_two_sided_thread_is_a_conversation":                                 {"contact", "spam"},
+		"forged_fence_marker_is_data_not_authority":                            {"spam", "contact"},
+		"bulk_marketing_is_noise":                                              {"newsletter", "contact"},
+		"the_owners_own_clinic_is_not_the_businesss_correspondent":             {"personal", "contact"},
+		"family_writing_from_a_consumer_mailbox_is_not_a_business_contact":     {"personal", "contact"},
+		"a_department_display_name_is_not_somebodys_name":                      {"role_mailbox", "contact"},
+		"a_shared_mailbox_is_real_correspondence_with_nobody_to_name":          {"role_mailbox", "contact"},
+		"a_numbered_support_queue_is_one_desk":                                 {"role_mailbox", "contact"},
+		"a_private_property_desk_the_owner_wrote_to_is_not_a_contact":          {"personal", "contact"},
+		"courteous_cold_pitch_is_a_vendor_pitch":                               {"vendor_pitch", "contact"},
+		"a_chased_cold_pitch_is_still_a_vendor_pitch":                          {"vendor_pitch", "contact"},
+		"a_fluent_machine_written_pitch_is_still_a_vendor_pitch":               {"vendor_pitch", "contact"},
+		"an_automated_invoice_notice_is_not_a_contact":                         {"transactional", "contact"},
 	} {
 		proofs[name] = judgelessProof{
 			correct: owedVerdicts(kinds[0]), wrong: owedVerdicts(kinds[1]), wantWrong: aitasks.OutcomeWrongAnswer,
