@@ -27,6 +27,13 @@ func newTestServer(t *testing.T, count int) *httptest.Server {
 	return srv
 }
 
+func closeBody(t *testing.T, resp *http.Response) {
+	t.Helper()
+	if err := resp.Body.Close(); err != nil {
+		t.Error(err)
+	}
+}
+
 func getJSON(t *testing.T, srv *httptest.Server, path, token string, out any) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+path, nil)
@@ -38,7 +45,7 @@ func getJSON(t *testing.T, srv *httptest.Server, path, token string, out any) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer closeBody(t, resp)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET %s: status %d", path, resp.StatusCode)
 	}
@@ -55,7 +62,7 @@ func TestTheConsentFlowConnectsTheHintedMailbox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp.Body.Close()
+	closeBody(t, resp)
 	back, err := url.Parse(resp.Header.Get("Location"))
 	if err != nil || back.Query().Get("state") != "s1" {
 		t.Fatalf("redirect %q does not return the state", resp.Header.Get("Location"))
@@ -64,7 +71,7 @@ func TestTheConsentFlowConnectsTheHintedMailbox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer closeBody(t, resp)
 	var grant struct {
 		AccessToken string `json:"access_token"`
 	}
@@ -110,7 +117,7 @@ func TestEveryListedMessageIsServedAndRepliesNameAMessageOfTheMailbox(t *testing
 			t.Fatal(err)
 		}
 		head, _, _ := strings.Cut(string(raw), "\r\n\r\n")
-		for _, line := range strings.Split(head, "\r\n") {
+		for line := range strings.SplitSeq(head, "\r\n") {
 			name, value, _ := strings.Cut(line, ": ")
 			switch name {
 			case "Message-ID":

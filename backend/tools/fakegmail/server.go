@@ -55,6 +55,15 @@ func (s *server) count(op string) {
 	}
 }
 
+// writeError answers in Google's error shape, which the connector reads.
+func writeError(w http.ResponseWriter, status int, reason string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(map[string]any{"error": map[string]any{"code": status, "status": reason}}); err != nil {
+		log.Printf("fakegmail: writing an error: %v", err)
+	}
+}
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {
@@ -74,7 +83,7 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 	}
 	back, err := url.Parse(q.Get("redirect_uri"))
 	if err != nil {
-		http.Error(w, "redirect_uri is not a URL", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "redirect_uri is not a URL")
 		return
 	}
 	v := back.Query()
@@ -82,6 +91,7 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 	v.Set("state", q.Get("state"))
 	v.Set("scope", q.Get("scope"))
 	back.RawQuery = v.Encode()
+	//nolint:gosec // G710: sending the browser back to the caller's redirect_uri is what a consent screen does; this one serves local load tests only
 	http.Redirect(w, r, back.String(), http.StatusFound)
 }
 
@@ -90,7 +100,7 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 func (s *server) token(w http.ResponseWriter, r *http.Request) {
 	s.count("token")
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "the form could not be read", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "the form could not be read")
 		return
 	}
 	owner := strings.TrimPrefix(r.PostForm.Get("code"), "code-")
@@ -107,7 +117,7 @@ func (s *server) token(w http.ResponseWriter, r *http.Request) {
 func (s *server) mailboxOf(w http.ResponseWriter, r *http.Request) (int, bool) {
 	box, ok := s.byOwner[strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer at-")]
 	if !ok {
-		http.Error(w, `{"error":{"code":401,"status":"UNAUTHENTICATED"}}`, http.StatusUnauthorized)
+		writeError(w, http.StatusUnauthorized, "UNAUTHENTICATED")
 	}
 	return box, ok
 }

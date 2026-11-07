@@ -47,6 +47,7 @@ var (
 func messageID(box, n int) string { return fmt.Sprintf("%x%06x", box+1, n) }
 
 func (s *server) rng(box, n int) *rand.Rand {
+	//nolint:gosec // G404: seeded on purpose, so a mailbox is the same on every run
 	return rand.New(rand.NewPCG(s.boxes[box].seed, uint64(n)))
 }
 
