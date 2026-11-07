@@ -76,8 +76,20 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
+  x-api-deprecation-policy:
+    window_months: 3
+    patch_removals: false
+    announcement: release-publication
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |
+    Deprecated APIs stay supported for at least 3 calendar months from the
+    release announcing deprecation. Patch releases never remove an API. A
+    `deprecated: true` operation announces the policy in a `Link` header.
+    `x-deprecation` records the announcing `release`, its RFC3339 `announced_at`
+    publication time, and an optional RFC3339 `sunset_at`. Published notices
+    supply `Deprecation` and scheduled retirement supplies `Sunset` headers.
+    An operation without a published notice cannot be removed.
+
     The V1 core CRM contract: contacts, companies, deals, pipelines, activities
     and leads, with the agent and AI surface beside them.
 
