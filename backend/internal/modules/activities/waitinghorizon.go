@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // waitingHorizonSpread is what the derivation measures: how long this
@@ -184,11 +185,28 @@ func (s *Store) refreshWaitingHorizonTx(ctx context.Context, tx pgx.Tx, asOf tim
 // measureWaitingHorizon takes the response spread and derives the horizon
 // from it: the year-long percentile only the worker pass pays for.
 func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	spread, err := s.waitingHorizonSpreadTx(ctx, tx, asOf, waitingHorizonSample)
+	if err != nil {
+		return 0, err
+	}
+	return derivedWaitingHorizonDays(spread), nil
+}
+
+// waitingHorizonSample is how many of the window's inbound messages the
+// measurement judges. Each one costs a read of the mail that could have
+// answered it, so a year of a busy mailbox outgrew the pass's budget. A sample
+// this size fixes the high percentile well inside the days the horizon keeps.
+const waitingHorizonSample = 3000
+
+// waitingHorizonSpreadTx measures the spread over at most sample inbound
+// messages of the window. The sample orders by a hash of the id, so it is the
+// same set on every pass over unchanged mail.
+func (s *Store) waitingHorizonSpreadTx(ctx context.Context, tx pgx.Tx, asOf time.Time, sample int) (waitingHorizonSpread, error) {
 	args := []any{asOf.AddDate(0, 0, -waitingHorizonWindowDays), asOf}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	ownDomains, err := s.ownDomainList(ctx, tx)
 	if err != nil {
-		return 0, err
+		return waitingHorizonSpread{}, err
 	}
 	var spread waitingHorizonSpread
 	var slowMinutes int64
@@ -197,12 +215,26 @@ func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", arg(ownDomains)),
-		slowPercentile)
+		slowPercentile,
+		sampledMessages(arg(sample)))
 	if err := tx.QueryRow(ctx, query, args...).Scan(&spread.Answered, &slowMinutes); err != nil {
-		return 0, fmt.Errorf("activities: measuring the response spread the horizon follows: %w", err)
+		return waitingHorizonSpread{}, fmt.Errorf("activities: measuring the response spread the horizon follows: %w", err)
 	}
 	spread.Slow = time.Duration(slowMinutes) * time.Minute
-	return derivedWaitingHorizonDays(spread), nil
+	return spread, nil
+}
+
+// sampledMessages limits firstResponseSQL to the sample, with $1 and $2 its
+// window and limit the placeholder of the sample size.
+func sampledMessages(limit int) string {
+	return fmt.Sprintf(`AND inbound.id IN (
+	     SELECT sample.id FROM activity sample
+	      WHERE sample.kind IN ('email', 'message')
+	        AND sample.direction = 'inbound'
+	        AND sample.archived_at IS NULL
+	        AND `+occurredday.WithinSQL("sample", "$1", "$2")+`
+	      ORDER BY md5(sample.id::text)
+	      LIMIT $%d)`, limit)
 }
 
 // horizonOrDefault reads an unmeasured horizon as the compiled one.

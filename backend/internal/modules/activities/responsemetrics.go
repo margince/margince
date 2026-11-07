@@ -51,6 +51,9 @@ type ResponseMetrics struct {
 	DisposedNotSales int
 }
 
+// everyMessage is the sample clause that judges every message in the window.
+const everyMessage = ""
+
 // firstResponseSQL measures the wait on messages that WERE answered.
 //
 // The answer is the first one firstAnswerAtSQL finds: our reply on the thread,
@@ -97,6 +100,7 @@ var firstResponseSQL = `
 	   -- the queue applies, an internal thread nobody replies to would drag the
 	   -- rate down over work the queue never showed anybody.
 	   AND NOT %[4]s
+	   %[6]s
 	   -- A SALES thread, by the same four arms waitingRepliesSQL qualifies on.
 	   -- Restated rather than shared because this query has no wl join to hang
 	   -- them off; what must not drift is the DEFINITION, and a test feeding
@@ -230,7 +234,7 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),
 			ownDomainSenderSQL("inbound", arg(ownDomains)),
-			medianPercentile)
+			medianPercentile, everyMessage)
 		if err := tx.QueryRow(ctx, query, args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}

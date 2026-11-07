@@ -122,3 +122,32 @@ func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
 		t.Fatalf("after a failed pass a read answered %d, want the previous 21", got)
 	}
 }
+
+// The measurement judges a bounded, repeatable sample of the year's mail: no
+// more answers than the sample holds, and the same reading on a second pass.
+func TestTheHorizonMeasurementJudgesABoundedRepeatableSample(t *testing.T) {
+	ctx, tx, store := storedHorizonTx(t)
+	asOf := store.now()
+	whole, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, waitingHorizonSample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const small = 40
+	if whole.Answered <= small {
+		t.Fatalf("the seeded mailbox has %d answers, too few to tell a sample of %d from all of them", whole.Answered, small)
+	}
+	first, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, small)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Answered == 0 || first.Answered > small {
+		t.Fatalf("a sample of %d judged %d answers", small, first.Answered)
+	}
+	again, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, small)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again != first {
+		t.Fatalf("a second pass over the same mail read %+v, the first %+v", again, first)
+	}
+}
