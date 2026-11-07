@@ -4,7 +4,7 @@
 package deals
 
 // ProductCurrencyMismatchError maps to 422: a line snapshots its price
-// from a product priced in another currency — converting silently would
+// from a product priced in another currency. Converting it silently would
 // fabricate a number.
 type ProductCurrencyMismatchError struct{ Product, Offer string }
 
