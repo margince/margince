@@ -221,19 +221,20 @@ func TestFieldResolvesExactlyRoutableLeadFields(t *testing.T) {
 	}
 }
 
-// A stored rule on a field routing no longer reads, such as the old `source`,
-// never applies. Its empty value must not match every lead. It is named so the
-// log can say why a lead went to round-robin.
-func TestARuleOnAFieldRoutingNoLongerReadsNeverApplies(t *testing.T) {
+func TestAStaleRoutingRuleStopsTheWholeConfiguration(t *testing.T) {
 	owners, active := routingPool(2)
-	cfg := RoutingConfig{Owners: owners[:1], Rules: []RoutingRule{{Field: "source", Equals: "", OwnerID: owners[1]}}}
-
-	chosen, reason, ok := chooseOwner(cfg, leadRoutingFacts{Origin: "web"}, map[ids.UserID]int{}, active)
-	if !ok || reason != "round_robin" || chosen != owners[0] {
-		t.Fatalf("picked %v by %q (ok=%v), want the round-robin pool member, not the rule's owner", chosen, reason, ok)
-	}
-	if got := cfg.staleRuleFields(); len(got) != 1 || got[0] != "source" {
-		t.Errorf("stale rule fields = %v, want [source]", got)
+	for _, value := range []string{"", "web"} {
+		cfg := RoutingConfig{Owners: owners[:1], Rules: []RoutingRule{
+			{Field: "origin", Equals: "web", OwnerID: owners[0]},
+			{Field: "source", Equals: value, OwnerID: owners[1]},
+		}}
+		chosen, reason, ok := chooseOwner(cfg, leadRoutingFacts{Origin: "web"}, map[ids.UserID]int{}, active)
+		if ok || reason != "stale_rules" || !chosen.IsZero() {
+			t.Fatalf("stale rule with value %q picked %v by %q (ok=%v)", value, chosen, reason, ok)
+		}
+		if got := cfg.staleRuleFields(); len(got) != 1 || got[0] != "source" {
+			t.Errorf("stale rule fields = %v, want [source]", got)
+		}
 	}
 	live := RoutingConfig{Rules: []RoutingRule{{Field: "origin", Equals: "web", OwnerID: owners[1]}}}
 	if got := live.staleRuleFields(); len(got) != 0 {

@@ -203,6 +203,9 @@ func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 		Summary:         receipt.Summary,
 		SummaryParts:    receipt.SummaryParts,
 		OccurredAt:      receipt.OccurredAt,
+		Headline:        optionalText(receipt.Headline),
+		Reason:          optionalText(receipt.Reason),
+		CustomerQuote:   optionalText(receipt.CustomerQuote),
 	}
 	// The record it was about, where the act named one. Not every approval is
 	// about a record, and an absent subject is a real state — the client draws
@@ -225,4 +228,12 @@ func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 		}
 	}
 	return out
+}
+
+// optionalText is an empty string as an absent field.
+func optionalText(text string) *string {
+	if text == "" {
+		return nil
+	}
+	return &text
 }

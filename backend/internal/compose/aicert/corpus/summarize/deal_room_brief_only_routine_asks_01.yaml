@@ -1,0 +1,63 @@
+name: deal_room_brief_only_routine_asks
+task: summarize
+site: deal_room_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The counterexample to the blocker case: a room where nothing is blocked.
+# Two buyers are waiting on small asks and no comment sets a condition, so a
+# brief that announces a blocker has invented one.
+fixture:
+  title: Seat expansion for support team
+  state: live
+  buyers:
+    - label: priya
+      name: Priya Raman
+      signed_in: true
+      last_seen_on: "2026-10-23"
+      downloaded: [Order form]
+  documents:
+    - label: order_form
+      title: Order form
+      group: commercial
+  # Three threads wait, so the floor quotes the two newest and the oldest is
+  # the model's contribution. All three are asks: none refuses, conditions or
+  # withholds anything.
+  threads:
+    - label: seats
+      document_label: order_form
+      comments:
+        - speaker: buyer
+          author: Priya Raman
+          "on": "2026-10-23"
+          body: Can you add a line for ten more support seats before we sign?
+    - label: invoice
+      comments:
+        - speaker: buyer
+          author: Priya Raman
+          "on": "2026-10-22"
+          body: Does the invoice go to accounts payable or to me?
+    - label: handbook
+      comments:
+        - speaker: buyer
+          author: Priya Raman
+          "on": "2026-10-20"
+          body: Is there an onboarding handbook we can send the support team?
+expect:
+  outcome: accepted
+  answer:
+    cites_label: handbook
+    names_token: handbook
+    # No comment here refuses, conditions or withholds anything.
+    avoids: [blocked, blocker, condition, "will not sign", "won't sign"]
+  bands:
+    # The floor quotes both waiting threads and is nearly the whole answer, so
+    # the bar is not inventing a blocker rather than reading one.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief reports the three routine asks waiting on the
+    seller and nothing more. Penalise any claim that the deal is blocked, that a
+    condition is unmet, or that the buyer refused to proceed, because no
+    comment in this room says any of those. Penalise any date the summary did
+    not supply.

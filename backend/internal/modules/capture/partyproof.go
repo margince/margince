@@ -44,14 +44,19 @@ func partyWasWrittenToTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 	if err != nil {
 		return false, err
 	}
+	// Any two proven sends decide, and so does a lone one, so the read takes the
+	// first two it proves and stops. Proving every candidate first, then sorting,
+	// read a busy correspondent's whole history on each message. A participant
+	// row is a candidate only as a recipient, because a proof is outbound mail.
+	// An inbound sender's own rows were most of what a newsletter's read touched.
 	query := `WITH candidates AS (
  SELECT ps.activity_id FROM capture_party_source ps WHERE ps.sent_by_owner AND NOT ps.admission_blocked AND ps.recipients @> ARRAY[` + address + `]
- UNION SELECT p.activity_id FROM activity_participant p WHERE lower(p.address)=` + address + `
- UNION SELECT a.id FROM activity a WHERE a.counterparty_email=` + address + `), visible_activities AS MATERIALIZED (
- SELECT a.id,a.occurred_at,a.subject,a.body,a.archived_at,a.counterparty_outbound_attested,a.captured_by,a.counterparty_email
- FROM activity a JOIN candidates c ON c.activity_id=a.id WHERE ` + visible + `)
- SELECT a.occurred_at, coalesce(a.subject,''), coalesce(a.body,'') FROM visible_activities a
- WHERE a.archived_at IS NULL AND ` + partySendProofSQL("a", address) + ` ORDER BY a.occurred_at,a.id LIMIT 2`
+ UNION ALL SELECT p.activity_id FROM activity_participant p WHERE lower(p.address)=` + address + ` AND p.role IN ('to','cc','bcc')
+ UNION ALL SELECT a.id FROM activity a WHERE a.counterparty_email=` + address + `)
+ SELECT a.occurred_at, coalesce(a.subject,''), coalesce(a.body,'') FROM activity a
+ WHERE a.id IN (SELECT activity_id FROM candidates)
+   AND a.counterparty_outbound_attested AND a.archived_at IS NULL AND ` + visible + `
+   AND ` + partySendProofSQL("a", address) + ` LIMIT 2`
 	sent := []outboundMail{}
 	err = database.ReuseGenericPlansTx(ctx, tx, func() error {
 		rows, err := tx.Query(ctx, query, args...)

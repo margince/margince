@@ -166,8 +166,8 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
   );
 }
 
-// A grouped change keeps the verbs its receipt has on its own. A reviewed deal
-// change offers Accept or Keep date beside Undo; any other offers its restore.
+// A grouped change keeps the verbs its receipt has on its own: Mark reviewed
+// and Undo on a deal change, its restore on any other.
 function RecordActions({ record }: Readonly<{ record: MagicLineRecord }>) {
   const reviewed = useReviewedReceipt(record.receipt_id);
   if (reviewed) {

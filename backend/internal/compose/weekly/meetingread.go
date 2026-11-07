@@ -5,7 +5,6 @@ package weekly
 
 import (
 	"context"
-	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,12 +45,6 @@ func withholdTeamMeetings(review *TeamReview) {
 	for i := range review.Reps {
 		rep := &review.Reps[i]
 		rep.MeetingsHeld = 0
-		rep.Patterns = slices.DeleteFunc(slices.Clone(rep.Patterns), func(p Pattern) bool {
-			return p.Kind == FocusMeetingsWithoutNextStep
-		})
-		if len(rep.Patterns) == 0 {
-			rep.Patterns = []Pattern{{Kind: FocusQuietWeek, Label: said.Say(patternWords.Quiet)}}
-		}
-		rep.FocusKind, rep.FocusLabel = rep.Patterns[0].Kind, rep.Patterns[0].Label
+		removeTeamPattern(rep, FocusMeetingsWithoutNextStep, said)
 	}
 }

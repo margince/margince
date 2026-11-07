@@ -68,7 +68,10 @@ export function WeeklyRail({
         {constraints}
       </>
     );
-  const numeric = weeklyNumericStatus(review.numeric_summary);
+  const numeric = weeklyNumericStatus(
+    review.numeric_summary,
+    review.leads_withheld,
+  );
   return (
     <>
       <Panel className="brief-weekly-summary">

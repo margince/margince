@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 227.3 KB |
+| Tool catalog | 227.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59601 |
+| Approx. wire tokens | 59619 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.7 KB | 23% | Yes, every step |
-| Input schemas | 111.2 KB | 48% | Yes, every step |
+| Input schemas | 111.3 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **164.9 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **165.0 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 638 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2674 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2687 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
@@ -1763,9 +1763,9 @@ change_tags to tag a record. (Runs immediately; the user's yes is needed for the
 add_consumer_mail_domain, add_workspace_email_domain, archive_corpus, disconnect_channel,
 disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
 remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture,
-share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so tell them what the
-call will change and get it before calling, unless they asked for this call themselves; requires
-passport scope "write".)
+set_sender_decision, share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so
+tell them what the call will change and get it before calling, unless they asked for this call
+themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -11573,7 +11573,8 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "boolean"
     },
     "include_invited": {
-      "description": "colleagues only: Also list invited seats that have not signed in yet",
+      "deprecated": true,
+      "description": "colleagues only: Deprecated compatibility option. Also list invited seats that have not signed in yet",
       "type": "boolean"
     },
     "kind": {
