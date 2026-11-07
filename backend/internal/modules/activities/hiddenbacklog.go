@@ -350,8 +350,9 @@ func (s *Store) countWaiting(
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a
 	// count(*) pushed inside would report groups before the cap.
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (`+inner+`) waiting`,
-		planEachBind(args)...).Scan(&count); err != nil {
+	if err := perBind(ctx, true, func(ctx context.Context) error {
+		return tx.QueryRow(ctx, `SELECT count(*) FROM (`+inner+`) waiting`, planEachBind(args)...).Scan(&count)
+	}); err != nil {
 		return 0, err
 	}
 	return count, nil

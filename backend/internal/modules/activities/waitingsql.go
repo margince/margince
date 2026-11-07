@@ -16,10 +16,12 @@ package activities
 // waiting.go holds what READS it; this holds what it says.
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -380,6 +382,16 @@ var waitingRepliesSQL = waitingSelectSQL + `
 // stopping at the cap.
 func planEachBind(args []any) []any {
 	return append([]any{pgx.QueryExecModeDescribeExec}, args...)
+}
+
+// perBind runs a statement that carries waitingRepliesSQL planned for its
+// bound values even inside a read that reuses generic plans as a whole: the
+// mode is the transaction's, and DescribeExec alone does not override it.
+func perBind(ctx context.Context, carries bool, fn func(context.Context) error) error {
+	if !carries {
+		return fn(ctx)
+	}
+	return database.PlanEachBind(ctx, fn)
 }
 
 // waitingListArgs is planEachBind for the activity list, which carries the walk

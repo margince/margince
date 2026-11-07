@@ -214,6 +214,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.onlyID != nil {
 		where = append(where, sprintf("a.id = $%d", arg(*in.onlyID)))
 	}
+	if in.AmongIDs != nil {
+		where = append(where, sprintf("a.id = ANY($%d)", arg(in.AmongIDs)))
+	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)
 	}

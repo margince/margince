@@ -111,6 +111,7 @@ func (s *Service) withTail(
 	if from == nil || more {
 		return shown, from, nil
 	}
+	defer timeStage(ctx, "tail")()
 	above := s.aboveTheTail(ranking)
 	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
@@ -170,6 +171,8 @@ func (s *Service) readTail(
 	if read == nil {
 		return tailBatch{}, errors.New("no reader is bound for this backlog source")
 	}
+	// source is a key of tailSources, so the stage is one of a fixed few.
+	defer timeStage(ctx, "tail_"+string(source))()
 	var batch tailBatch
 	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
