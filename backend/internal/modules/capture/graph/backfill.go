@@ -147,12 +147,12 @@ func (c *Connector) backfillOne(ctx context.Context, raw []byte, fetchErr error,
 }
 
 // backfillWalk fetches a few messages of a page at once and captures them in
-// the page's order. Microsoft allows four concurrent requests per mailbox, and
-// three leave one for live sync. A fetch reserves twice the MIME cap, since
+// the page's order. Microsoft allows four concurrent requests per mailbox. Two
+// leave one for live sync and one for a send. A fetch reserves twice the MIME cap, since
 // reading grows its buffer past what it keeps, from a budget every walk in the
 // process shares.
 var backfillWalk = orderedfetch.Walk[[]byte]{
-	Workers: 3, Lookahead: 6,
+	Workers: 2, Lookahead: 4,
 	Budget: semaphore.NewWeighted(8 * 2 * maxMIMELen), Reserve: 2 * maxMIMELen,
 	Retained: func(raw []byte) int64 { return int64(cap(raw)) },
 	// Every fetch error but a refused message ends the page (backfillOne).

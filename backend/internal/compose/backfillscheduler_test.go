@@ -8,13 +8,12 @@ import (
 	"time"
 )
 
+// now is the database's transaction time, the clock that stamped due.
 func TestAPageDueNowStartsWhenItsInsertCommits(t *testing.T) {
 	now := time.Date(2026, 11, 7, 9, 0, 0, 0, time.UTC)
 	for name, due := range map[string]time.Time{
-		"due now":                         now,
-		"due in the past":                 now.Add(-time.Minute),
-		"database clock slightly ahead":   now.Add(500 * time.Millisecond),
-		"database clock exactly at slack": now.Add(immediateSuccessorSlack),
+		"due at the transaction's time": now,
+		"due in the past":               now.Add(-time.Minute),
 	} {
 		if got := successorStart(due, now); !got.IsZero() {
 			t.Errorf("%s: ScheduledAt = %v, want zero so River makes the job available at commit", name, got)
@@ -22,10 +21,12 @@ func TestAPageDueNowStartsWhenItsInsertCommits(t *testing.T) {
 	}
 }
 
-func TestABackoffWaitsForItsTime(t *testing.T) {
+func TestADelayWaitsForItsTime(t *testing.T) {
 	now := time.Date(2026, 11, 7, 9, 0, 0, 0, time.UTC)
-	due := now.Add(10 * time.Second)
-	if got := successorStart(due, now); !got.Equal(due) {
-		t.Fatalf("ScheduledAt = %v, want the backoff's %v", got, due)
+	for _, delay := range []time.Duration{time.Second, 10 * time.Second} {
+		due := now.Add(delay)
+		if got := successorStart(due, now); !got.Equal(due) {
+			t.Errorf("a %s delay: ScheduledAt = %v, want %v", delay, got, due)
+		}
 	}
 }

@@ -9,11 +9,11 @@ Counting what another tool covers, it is 86.8%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1041 | 841 | 80.7% |
-| Operations a signed-in user reaches | 1001 | 841 | 84.0% |
+| Every operation in the contract | 1042 | 842 | 80.8% |
+| Operations a signed-in user reaches | 1002 | 842 | 84.0% |
 | Operations the web app calls for a signed-in user | 858 | 730 | 85.0% |
 
-The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 111 of those are open, so an agent can do them.
+The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 112 of those are open, so an agent can do them.
 
 | Of the operations the web app calls | Count |
 |---|---:|
@@ -46,7 +46,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 
 | Group | Passport area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| [Business operations](#business-operations) | Sales work | 567 | 528 | 41 | 0 | 17 | 22 | 475 | 94.3% | 93.1% |
+| [Business operations](#business-operations) | Sales work | 568 | 529 | 41 | 0 | 17 | 22 | 475 | 94.3% | 93.1% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 62 | 46 | 20 | 0 | 16 | 0 | 47 | 74.4% | 74.1% |
 | [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 49 | 40 | 9 | 0 | 9 | 0 | 48 | 81.2% | 81.6% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 84 | 67 | 4 | 0 | 12 | 5 | 67 | 85.0% | 79.7% |
@@ -83,7 +83,7 @@ Passport area: Sales work.
 | Lists and saved views | 22 | 21 | 2 | 0 | 0 | 1 | 22 | 95.4% | 95.4% |
 | Tags | 14 | 13 | 0 | 0 | 0 | 1 | 14 | 92.8% | 92.8% |
 | Bulk changes | 5 | 5 | 0 | 0 | 0 | 0 | 4 | 100.0% | 100.0% |
-| Search and record context | 11 | 10 | 0 | 0 | 0 | 1 | 1 | 100.0% | 90.9% |
+| Search and record context | 12 | 11 | 0 | 0 | 0 | 1 | 1 | 100.0% | 91.6% |
 | Brief, worklist, weekly plan and notices | 40 | 39 | 0 | 0 | 0 | 1 | 35 | 100.0% | 97.5% |
 | Signals | 8 | 8 | 1 | 0 | 0 | 0 | 2 | 100.0% | 100.0% |
 | Documents | 15 | 13 | 1 | 0 | 0 | 2 | 14 | 85.7% | 86.6% |
@@ -675,6 +675,7 @@ An operation an agent can call, by the passport area that admits it. A passport 
 | `setProjectStakeholder` | `PUT /projects/{id}/stakeholders` | `change_record_parts` |
 | `removeProjectStakeholder` | `DELETE /projects/{id}/stakeholders/{contact_id}` | `change_record_parts` |
 | `describeQueryVocabulary` | `GET /query-vocabulary` | `describe_query_vocabulary` |
+| `describeReadViews` | `GET /read-views` | `describe_views` |
 | `describeRecordFields` | `GET /record-fields` | `describe_record_fields` |
 | `createRecordGrant` | `POST /record-grants` | `share_record` |
 | `revokeRecordGrant` | `DELETE /record-grants/{id}` | `revoke_record_share` |

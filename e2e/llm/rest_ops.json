@@ -374,6 +374,7 @@
     "GET /v1/projects/{id}/stakeholders": "read_view",
     "GET /v1/provider-connections": "list_provider_connections",
     "GET /v1/query-vocabulary": "describe_query_vocabulary",
+    "GET /v1/read-views": "describe_views",
     "GET /v1/record-fields": "describe_record_fields",
     "GET /v1/record-roles": "read_view",
     "GET /v1/records/{entity_type}/{entity_id}/lists": "read_view",

@@ -56730,6 +56730,24 @@ type RbacObjectGrant struct {
 	Update bool `json:"update"`
 }
 
+// ReadViewsCatalog What `describe_views` answers.
+type ReadViewsCatalog struct {
+	Views struct {
+		Version string `json:"version"`
+		Views   []struct {
+			Path  []string `json:"path"`
+			Query []struct {
+				Enum     *[]string `json:"enum,omitempty"`
+				Format   *string   `json:"format,omitempty"`
+				Name     string    `json:"name"`
+				Required *bool     `json:"required,omitempty"`
+				Type     string    `json:"type"`
+			} `json:"query"`
+			View string `json:"view"`
+		} `json:"views"`
+	} `json:"views"`
+}
+
 // ReaderCalendar Whether the reader's own calendar connections feed the meetings this product holds.
 //
 // `not_connected` — the reader has no live calendar connection: none was made, or every
@@ -68763,6 +68781,11 @@ type ExportReportingEvaluationParams struct {
 	CloseWindow       *ExportReportingEvaluationParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
 	Metrics           *[]ReportingMetricID                        `form:"metrics,omitempty" json:"metrics,omitempty"`
 	Blocks            *[]ReportingBlockKind                       `form:"blocks,omitempty" json:"blocks,omitempty"`
+	ProductId         *ReportingProductId                         `form:"product_id,omitempty" json:"product_id,omitempty"`
+	InitiativeId      *ReportingInitiativeId                      `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	Country           *ReportingCountry                           `form:"country,omitempty" json:"country,omitempty"`
+	Industry          *ReportingIndustry                          `form:"industry,omitempty" json:"industry,omitempty"`
+	ValueBasis        *ReportingValueBasis                        `form:"value_basis,omitempty" json:"value_basis,omitempty"`
 }
 
 // ExportReportingEvaluationParamsScopeKind defines parameters for ExportReportingEvaluation.
@@ -92562,6 +92585,9 @@ type ServerInterface interface {
 	// Everything a workspace query plan may say, for this caller.
 	// (GET /query-vocabulary)
 	DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request)
+	// The views the read_view agent tool reads, and the arguments each takes.
+	// (GET /read-views)
+	DescribeReadViews(w http.ResponseWriter, r *http.Request)
 	// The fields a record create or update may write, for each record type.
 	// (GET /record-fields)
 	DescribeRecordFields(w http.ResponseWriter, r *http.Request)
@@ -98211,6 +98237,12 @@ func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Reque
 // Everything a workspace query plan may say, for this caller.
 // (GET /query-vocabulary)
 func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The views the read_view agent tool reads, and the arguments each takes.
+// (GET /read-views)
+func (_ Unimplemented) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103961,6 +103993,71 @@ func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWrit
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "initiative_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "initiative_id", r.URL.Query(), &params.InitiativeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "initiative_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "initiative_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_basis", r.URL.Query(), &params.ValueBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_basis", Err: err})
 		}
 		return
 	}
@@ -136055,6 +136152,28 @@ func (siw *ServerInterfaceWrapper) DescribeQueryVocabulary(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// DescribeReadViews operation middleware
+func (siw *ServerInterfaceWrapper) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeReadViews(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeRecordFields operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 
@@ -147593,6 +147712,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/query-vocabulary", wrapper.DescribeQueryVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/read-views", wrapper.DescribeReadViews)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-fields", wrapper.DescribeRecordFields)

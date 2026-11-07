@@ -89,7 +89,9 @@ func (w Walk[T]) InOrder(
 			return err
 		}
 	}
-	return nil
+	// A halting fetch ends the walk with its error even when every item was
+	// queued before it and the consumer let it pass.
+	return halt.cause()
 }
 
 // work fetches what the queue hands it into each item's slot. An item handed

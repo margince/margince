@@ -833,6 +833,9 @@
     "describe_router_actions": {
       "checks": []
     },
+    "describe_views": {
+      "checks": []
+    },
     "direct_communication_send": {
       "checks": [
         "activity.create",

@@ -716,6 +716,7 @@
         "system_health": "read_system_health",
         "tax_rates": "list_tax_rates",
         "user_handover": "get_user_handover",
+        "views": "describe_views",
         "voice_build": "get_voice_build",
         "voice_corpus_sources": "list_voice_corpus_sources",
         "voice_learning_summary": "get_voice_learning_summary",
