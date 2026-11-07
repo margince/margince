@@ -209,6 +209,18 @@ func (r *Registry) ChannelCarriage() map[string]connector.Carriage {
 // Completion must still match the connection generation, sync revision and starting cursor.
 // A newer pull or changed grant supersedes this snapshot.
 func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
+	lease, held, err := r.db.TryWorkLease(ctx, "capture:sync", connectionID, slog.Default())
+	if err != nil {
+		return err
+	}
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
+	return r.syncConnection(ctx, connectionID)
+}
+
+func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) error {
 	var (
 		name          string
 		grantedBy     ids.UserID

@@ -42,7 +42,7 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	}
 	digests := &captureDigestWorker{registry: cfg.GmailRegistry, pool: pool, log: log}
 	addDeclaredWorker[CaptureDigestArgs](reg, digests)
-	addDeclaredWorker[GmailSyncArgs](reg, &gmailSyncWorker{registry: cfg.GmailRegistry, log: log})
+	addDeclaredWorker[GmailSyncArgs](reg, &gmailSyncWorker{pool: pool, registry: cfg.GmailRegistry, log: log})
 	// The sync dispatcher scans every registered connector, so a Google
 	// Calendar connection (the same Google OAuth app) syncs on the identical
 	// per-connection path a mailbox does — there is no gcal-specific job.
@@ -230,10 +230,9 @@ func (GmailSyncArgs) Kind() string { return "gmail_sync" }
 func (GmailSyncArgs) FleetWide() {}
 
 // gmailSyncWorker is the dispatcher: due-scan, then one insert per
-// connection. Uniqueness on the connection id means a still-running or
-// already-queued sync is not double-enqueued; only a fleet-enumeration
-// failure is returned (so River retries the tick).
+// connection. Waiting jobs coalesce, and the connection lease prevents concurrent pulls.
 type gmailSyncWorker struct {
+	pool     *pgxpool.Pool
 	registry *capture.Registry
 	log      *slog.Logger
 }
@@ -246,7 +245,7 @@ func (w *gmailSyncWorker) Work(ctx context.Context, _ *river.Job[GmailSyncArgs])
 			enumErr = errors.Join(enumErr, err)
 		}
 		for _, d := range due {
-			if err := dispatchOne(ctx, CaptureSyncArgs{
+			if err := dispatchOne(ctx, w.pool, CaptureSyncArgs{
 				Workspace:    d.Workspace.UUID,
 				ConnectionID: d.ID.String(),
 				Provider:     desc.Name,
@@ -261,9 +260,7 @@ func (w *gmailSyncWorker) Work(ctx context.Context, _ *river.Job[GmailSyncArgs])
 	return jobs.FaultContext(ctx, enumErr)
 }
 
-// CaptureSyncArgs syncs ONE connection. Unique by args while incomplete, so
-// the dispatcher and the (future) push webhook can both enqueue without
-// double-running a mailbox.
+// CaptureSyncArgs names one connection whose registry owns the execution lease.
 type CaptureSyncArgs struct {
 	Workspace    ids.UUID `json:"workspace_id"`
 	ConnectionID string   `json:"connection_id"`
@@ -273,34 +270,14 @@ type CaptureSyncArgs struct {
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureSyncArgs) Kind() string { return "capture_sync" }
 
+func (CaptureSyncArgs) SessionLocked() {}
+
 // WorkspaceID binds this connection's sync to its tenant (jobs.WorkspaceScoped).
 func (a CaptureSyncArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// pushSyncOpts is what a PROVIDER PUSH enqueues one connection's sync with —
-// one helper for both push lanes, because the two carried the same literal and
-// the same paragraph explaining it, which is two writers of one rule.
-//
-// It is not oneOffChildOpts: that helper drops active-state uniqueness because
-// its event's whole claim is that new rows landed and a running pass may have
-// read the mailbox before they did. A push says the same thing, but a mailbox
-// sync is a full incremental pull whose cursor advances only at the end, so a
-// second one racing the first re-fetches the same mail rather than reaching
-// anything the first missed — the running pass will see it.
-//
-// river's default uniqueness window includes completed jobs; activeSweepStates
-// deliberately excludes them, so this must stay exactly as-is — dropping
-// ByState would suppress a legitimate re-sync any time the prior one had
-// finished.
-//
-// The attempt cap comes off the declaration rather than being written here, so
-// api/jobs.yaml's number is the one a push actually runs at: capture_sync
-// publishes River's own 25 with the reason it is right there — the worker
-// records its own failure and returns nil, so the ladder is walked only for a
-// fault the sidecar's backoff does not own.
+// Push and scheduled syncs use the same connection lease inside SyncOnce.
 func pushSyncOpts() *river.InsertOpts {
-	opts := oneOffChildOpts(CaptureSyncArgs{}.Kind())
-	opts.UniqueOpts = river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}
-	return opts
+	return jobs.QueuedAs[CaptureSyncArgs](oneOffChildOpts(CaptureSyncArgs{}.Kind()))
 }
 
 // captureSyncWorker runs one SyncOnce under the connection's workspace. A
@@ -321,6 +298,9 @@ func (w *captureSyncWorker) Work(ctx context.Context, job *river.Job[CaptureSync
 		return jobs.FaultContext(ctx, err)
 	}
 	if err := w.registry.SyncOnce(wsCtx, conn); err != nil {
+		if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
+			return jobs.FaultContext(ctx, err)
+		}
 		// A member whose role cannot capture is a setting an admin chose, not
 		// a fault, and it repeats on every tick until they change it.
 		if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {

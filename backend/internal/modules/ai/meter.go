@@ -58,6 +58,8 @@ func NewMeter(db *database.DB) *Meter {
 }
 
 func (m *Meter) Record(ctx context.Context, u Usage) error {
+	// A provider response has already spent these tokens, even if its job lost ownership.
+	ctx = database.WithoutTransactionGuard(ctx)
 	day := m.now().UTC().Format("2006-01-02")
 	cachedHit := 0
 	if u.Cached {

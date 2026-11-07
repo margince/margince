@@ -39,6 +39,7 @@ func (fanOutProbeArgs) Kind() string { return "fan_out_probe" }
 // refused insert as a failed assertion rather than a timeout, and the return
 // is what keeps a failed dispatch out of River's completed set.
 type fanOutProbeWorker struct {
+	pool *pgxpool.Pool
 	river.WorkerDefaults[fanOutProbeArgs]
 	fleet []ids.UUID
 	child CaptureSyncArgs
@@ -49,7 +50,7 @@ func (w *fanOutProbeWorker) Work(ctx context.Context, _ *river.Job[fanOutProbeAr
 	err := dispatchWith(ctx, w.fleet, clientInsertMany(ctx),
 		workspaceSweepOpts(GmailWatchRenewArgs{}.Kind()), gmailWatchRenewArgsFor)
 	if err == nil {
-		err = dispatchOne(ctx, w.child, nil)
+		err = dispatchOne(ctx, w.pool, w.child, nil)
 	}
 	w.done <- err
 	return err
@@ -74,7 +75,7 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 		ConnectionID: ids.NewV7().String(),
 		Provider:     "gmail",
 	}
-	probe := &fanOutProbeWorker{
+	probe := &fanOutProbeWorker{pool: e.Pool,
 		fleet: []ids.UUID{fleetChild},
 		child: loopChild,
 		done:  make(chan error, 1),
