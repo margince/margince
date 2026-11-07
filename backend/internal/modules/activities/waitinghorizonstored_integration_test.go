@@ -11,6 +11,7 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -124,7 +125,9 @@ func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
 }
 
 // The measurement judges a bounded, repeatable sample of the year's mail: no
-// more answers than the sample holds, and the same reading on a second pass.
+// more answers than the sample holds, the same reading on every pass, and the
+// answer read run for the sampled messages only, under the generic plan a
+// worker reuses.
 func TestTheHorizonMeasurementJudgesABoundedRepeatableSample(t *testing.T) {
 	ctx, tx, store := storedHorizonTx(t)
 	asOf := store.now()
@@ -143,11 +146,49 @@ func TestTheHorizonMeasurementJudgesABoundedRepeatableSample(t *testing.T) {
 	if first.Answered == 0 || first.Answered > small {
 		t.Fatalf("a sample of %d judged %d answers", small, first.Answered)
 	}
-	again, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, small)
+	for pass := range 4 {
+		again, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, small)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if again != first {
+			t.Fatalf("pass %d over the same mail read %+v, the first %+v", pass+2, again, first)
+		}
+	}
+	if loops := answerReadLoops(ctx, t, tx, store, small); loops > small {
+		t.Fatalf("the answer read ran %v times for a sample of %d", loops, small)
+	}
+}
+
+// answerReadLoops is how many times the measurement ran its answer read, by
+// EXPLAIN ANALYZE of the statement under a forced generic plan.
+func answerReadLoops(ctx context.Context, t *testing.T, tx pgx.Tx, store *Store, sample int) float64 {
+	t.Helper()
+	query, args, err := store.waitingHorizonStatement(ctx, tx, store.now(), sample)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again != first {
-		t.Fatalf("a second pass over the same mail read %+v, the first %+v", again, first)
+	if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode = force_generic_plan`); err != nil {
+		t.Fatal(err)
 	}
+	var raw string
+	if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+query, args...).Scan(&raw); err != nil {
+		t.Fatalf("explaining the measurement: %v", err)
+	}
+	var plans []struct {
+		Plan planNode `json:"Plan"` //nolint:tagliatelle // fixed by the server's plan format
+	}
+	if err := json.Unmarshal([]byte(raw), &plans); err != nil || len(plans) != 1 {
+		t.Fatalf("reading the plan: %v (%d plans)", err, len(plans))
+	}
+	loops := -1.0
+	plans[0].Plan.walk(func(n planNode) {
+		if n.Alias == "reply" {
+			loops = max(loops, n.ActualLoops)
+		}
+	})
+	if loops < 0 {
+		t.Fatal("the plan has no answer read named reply")
+	}
+	return loops
 }
