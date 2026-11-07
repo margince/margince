@@ -1364,12 +1364,13 @@ kinds:
     timeout: 5m
     max_attempts: 3
     opts_owner: args
-    cadence: 1h
+    cadence: 6h
     reason: >-
-      Hourly, because readers treat a stored horizon older than a day as
-      missing (waitingHorizonStaleAfter): a few missed passes still leave a
+      Every six hours, because readers treat a stored horizon older than a day
+      as missing (waitingHorizonStaleAfter): two missed passes still leave a
       fresh value, and a measurement that fails keeps the previous one. The
-      measurement is a year of inbound mail, which is why no read does it.
+      measurement is a year of inbound mail, which is why no read does it, and
+      why it runs no more often than the day's staleness needs.
 
   evidence_authorship:
     role: worker
