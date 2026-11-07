@@ -85,6 +85,7 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":          "The subject export follows only its authenticated contact and lead twins. AssembleSAR requires a human with contact.delete and unbounded scope; this private builder returns SELECT queries, not lead rows or mutations.",
 	"internal/modules/privacy/historicalaudit.go:historicalAuditUnderHold":           "the system-only audit cleanup locks a lead and reads only its legal-hold flag. The entry point requires system authority, and the flag prevents destruction rather than disclosing a lead",
 	"internal/modules/contacts/linkedinrepair.go:NormalizeLeadLinkedInTx":            "the bounded data task reads stored profile values under auth.RequireSystem so it can rewrite old LinkedIn host spellings through the ordinary audit and event shape. The values leave only as the corrected lead row and its audit image",
 	"internal/modules/weeklyplan/linkedkeys.go":                                      "the backfill of the per-type record keys asks only whether the lead its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no lead column leaves the statement",
