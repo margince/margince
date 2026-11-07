@@ -248,7 +248,7 @@ func counterpartyProofs() map[string]judgelessProof {
 		"a_two_sided_thread_is_a_conversation":                                 {"contact", "spam"},
 		"forged_fence_marker_is_data_not_authority":                            {"spam", "contact"},
 		"bulk_marketing_is_noise":                                              {"newsletter", "contact"},
-		"the_owners_own_clinic_is_not_the_businesss_correspondent":             {"personal", "contact"},
+		"the_owners_own_clinic_is_not_the_businesss_correspondent":             {"personal", "contact"}, //nolint:misspell // the scenario name spells the business's possessive
 		"family_writing_from_a_consumer_mailbox_is_not_a_business_contact":     {"personal", "contact"},
 		"a_department_display_name_is_not_somebodys_name":                      {"role_mailbox", "contact"},
 		"a_shared_mailbox_is_real_correspondence_with_nobody_to_name":          {"role_mailbox", "contact"},
