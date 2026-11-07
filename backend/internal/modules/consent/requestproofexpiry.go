@@ -19,6 +19,8 @@ import (
 )
 
 // proofExpiryCause is the evidence both expiry audit rows carry.
+const privacyEvidenceCause = "cause"
+
 const proofExpiryCause = "privacy_request_proof_expired"
 
 // ExpireRequestProofs deletes up to limit proofs due by now, and answers how
@@ -91,7 +93,7 @@ func expireRequestProof(ctx context.Context, tx pgx.Tx, proof expiredProof, reti
 		return err
 	}
 	certificate, err := storekit.AuditWithEvidence(ctx, tx, "expire", proofEntity, proof.id, nil, nil,
-		map[string]any{"cause": proofExpiryCause, "request_id": proof.requestID})
+		map[string]any{privacyEvidenceCause: proofExpiryCause, "request_id": proof.requestID})
 	if err != nil {
 		return err
 	}
@@ -106,7 +108,7 @@ func expireRequestProof(ctx context.Context, tx pgx.Tx, proof expiredProof, reti
 		return fmt.Errorf("consent: the request %s behind an expired proof changed while it was locked", proof.requestID)
 	}
 	certificate, err = storekit.AuditWithEvidence(ctx, tx, "anonymize", "data_subject_request", proof.requestID, nil, nil,
-		map[string]any{"cause": proofExpiryCause})
+		map[string]any{privacyEvidenceCause: proofExpiryCause})
 	if err != nil {
 		return err
 	}

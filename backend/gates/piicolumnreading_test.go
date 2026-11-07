@@ -6,11 +6,12 @@
 package gates
 
 import (
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // Which way the PII census fails when it cannot read a statement.

@@ -6,7 +6,9 @@ package privacy
 // SQL mirrors these codes because its audit trigger cannot call Go.
 // TestFixedPrivacyReasonsMatchTheDatabase holds both directions of the mirror.
 func fixedPrivacyReasons() []string {
-	return []string{"retention", "test", "dsr_request", restrictionExpiredCause,
+	return []string{
+		"retention", "test", "dsr_request", restrictionExpiredCause,
 		untoldLeadReason, subjectRedactionReason, aLegalHoldEnded.collateralReason,
-		theClockRanOut.collateralReason, aControllerDecided.collateralReason, aNoiseVerdictHid.collateralReason}
+		theClockRanOut.collateralReason, aControllerDecided.collateralReason, aNoiseVerdictHid.collateralReason,
+	}
 }

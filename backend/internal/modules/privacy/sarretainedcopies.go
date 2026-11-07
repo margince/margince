@@ -10,17 +10,19 @@ import (
 
 func sarRetainedCopySections(pkg *SARPackage, subject ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	subjects := []any{subject}
-	records := append(subjects, leads)
+	records := []any{subject, leads}
 	addresses := []any{loweredAddresses(emails)}
 	subjectArg, leadArg, addressArg := len(subjects), len(records), len(addresses)
 	return []sarSection{
 		{&pkg.AuditHistory, storekit.SQLf(`SELECT action, entity_type, entity_id, before, after, evidence, occurred_at
 		 FROM audit_log WHERE (entity_type='contact' AND entity_id=$%[1]d)
 		 OR (entity_type='lead' AND entity_id=ANY($%[2]d::uuid[]))`, subjectArg, leadArg), records},
-		{&pkg.RetainedEvents, storekit.SQLf(`SELECT envelope->>'type' AS type, envelope->'payload' AS payload, created_at, published_at
+		{
+			&pkg.RetainedEvents, storekit.SQLf(`SELECT envelope->>'type' AS type, envelope->'payload' AS payload, created_at, published_at
 		 FROM event_outbox WHERE (envelope->'entity'->>'type'='contact' AND envelope->'entity'->>'id'=$%[1]d::uuid::text)
 		 OR (envelope->'entity'->>'type'='lead' AND envelope->'entity'->>'id'=ANY(ARRAY(SELECT id::text FROM unnest($%[2]d::uuid[]) id)))`, subjectArg, leadArg),
-			records},
+			records,
+		},
 		{&pkg.RoomParticipants, storekit.SQLf(`SELECT id, room_id, full_name, email, capability, created_at, revoked_at
 		 FROM deal_room_participant WHERE lower(email)=ANY($%[1]d::text[])`, addressArg), addresses},
 		{&pkg.RoomComments, storekit.SQLf(`SELECT c.id, c.room_id, c.thread_id, c.body, c.created_at

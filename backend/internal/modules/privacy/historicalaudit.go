@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
+// HistoricalAuditPage counts changes and the inspected keys for cursor progress.
 type HistoricalAuditPage struct {
 	Scanned []ids.UUID
 	Changed int
@@ -105,13 +106,14 @@ func redactHistoricalRecord(ctx context.Context, tx pgx.Tx, original ids.UUID, k
 func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID, kind string, entity ids.UUID, floor FloorPolicy) (bool, error) {
 	var held bool
 	var err error
+	entityArgs := pgx.StrictNamedArgs{"entity": entity}
 	switch kind {
-	case "contact":
-		err = tx.QueryRow(ctx, `SELECT legal_hold FROM contact WHERE id=@entity FOR UPDATE`, pgx.StrictNamedArgs{"entity": entity}).Scan(&held)
+	case contactObject:
+		err = tx.QueryRow(ctx, `SELECT legal_hold FROM contact WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "lead":
-		err = tx.QueryRow(ctx, `SELECT legal_hold FROM lead WHERE id=@entity FOR UPDATE`, pgx.StrictNamedArgs{"entity": entity}).Scan(&held)
+		err = tx.QueryRow(ctx, `SELECT legal_hold FROM lead WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "data_subject_request":
-		err = tx.QueryRow(ctx, `SELECT dispute_open FROM data_subject_request WHERE id=@entity FOR UPDATE`, pgx.StrictNamedArgs{"entity": entity}).Scan(&held)
+		err = tx.QueryRow(ctx, `SELECT dispute_open FROM data_subject_request WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "privacy_request_proof":
 		err = tx.QueryRow(ctx, `SELECT d.dispute_open FROM data_subject_request d
    JOIN audit_log certificate ON certificate.evidence->>'request_id'=d.id::text
@@ -129,8 +131,9 @@ func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID,
 	return held, err
 }
 
+// CountHistoricalAuditRows bounds planning work at one row past the estimate cap.
 func CountHistoricalAuditRows(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM audit_log LIMIT @limit) bounded`, pgx.StrictNamedArgs{"limit": maximum + 1}).Scan(&count)
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM audit_log LIMIT @maximum) bounded`, pgx.StrictNamedArgs{"maximum": maximum + 1}).Scan(&count)
 	return count, err
 }
