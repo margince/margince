@@ -36,11 +36,11 @@ ONLY="${SCENARIO:-}"
 # consumer app defaults to — because a pass rate that moves when a CLI changes
 # its default cannot be read as the product moving.
 #
-#   E2E_LLM_CANDIDATE  claude | gpt | mistral                    (default claude)
+#   E2E_LLM_CANDIDATE  claude | gpt | gemini | mistral           (default claude)
 #   E2E_LLM_VIA        api | openrouter — e2e/llm/drive.py, the neutral bridge:
 #                      every vendor offered the same tools under the server's own
 #                      instructions. The comparable route, filed under the model.
-#                      cli — `claude -p` or `codex exec`, each with its own system
+#                      cli — `claude -p`, `codex exec` or `agy -p`, each with its own system
 #                      prompt and tools, filed apart under <model>@<cli>.
 #                                                                (default api)
 #   E2E_LLM_MODEL      a different model, or
@@ -119,6 +119,9 @@ if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
 fi
 if [[ "$WIRE" = codex-cli ]]; then
   command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }
+fi
+if [[ "$WIRE" = agy-cli ]]; then
+  command -v agy >/dev/null || { echo "the agy (Antigravity) CLI is not on PATH" >&2; exit 1; }
 fi
 
 # E2E_LLM_STACK_PRESET binds the lane's own stack to a committed preset before

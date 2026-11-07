@@ -7,6 +7,7 @@ tests/test_transcript.py fails on one.
 """
 
 import json
+import re
 
 SERVER = "margince_e2e_llm"
 
@@ -208,4 +209,105 @@ def from_codex(lines, path, model, driver, offered):
                              "attached cannot be told from its stream", 0)
             return 3
         out.finish(False, answer, 1)
+        return 0
+
+
+# What an agy run may do besides call this lane's server. agy offers MCP tools
+# lazily: the prompt names each tool, and the model reads its schema from a file
+# agy keeps under its own home, then calls it through call_mcp_tool. Any other
+# tool stops the run, so a Gemini verdict never rests on a file or web read.
+_AGY_RESOURCE_HELPERS = {"list_resources", "read_resource"}
+_AGY_SCHEMA_DIR = f"/mcp/{SERVER}/"
+# A long tool result is not put in the model's context: agy writes it to this
+# file of the conversation and the model reads it back.
+_AGY_SPILL = re.compile(r"/brain/[^/]+/\.system_generated/steps/(\d+)/[a-z0-9_]+\.txt$")
+
+
+def _agy_tool(out, step, lane_steps):
+    """Write one finished agy tool step; return why the run must stop, or ""."""
+    name = step.get("tool_name")
+    info = step.get("tool_info") or {}
+    params = info.get("parameters") or {}
+    path = str(params.get("Path") or "")
+    if name == "read_file" and _AGY_SCHEMA_DIR in path:
+        return ""
+    spill = _AGY_SPILL.search(path)
+    if name == "read_file" and spill and int(spill.group(1)) in lane_steps:
+        return ""
+    if name in _AGY_RESOURCE_HELPERS and params.get("ServerName") == SERVER:
+        lane_steps.add(step.get("step_index"))
+        return ""
+    if name == "call_mcp_tool" and params.get("ServerName") == SERVER:
+        lane_steps.add(step.get("step_index"))
+        call_id = f"agy_{step.get('step_index')}"
+        arguments = params.get("Arguments")
+        out.assistant("", [(call_id, params.get("ToolName") or "", arguments if isinstance(arguments, dict) else {})])
+        if step.get("state") == "ERROR":
+            text, is_error = str((info.get("error") or {}).get("message") or "the call failed"), True
+        else:
+            text, is_error = str(info.get("output") or ""), False
+        out.tool_results([(call_id, text, is_error)])
+        return ""
+    target = params.get("ServerName") or params.get("Path") or ""
+    return f"agy used a tool outside the lane's MCP server: {name} {target}".strip()
+
+
+def _agy_usage(usage):
+    if "input_tokens" not in usage or "output_tokens" not in usage:
+        return None
+    # agy counts cached input apart from input_tokens, unlike codex; thinking is
+    # billed as output, so it is counted as output.
+    return {
+        "input": usage["input_tokens"],
+        "output": usage["output_tokens"] + (usage.get("thinking_tokens") or 0),
+        "cache_read": usage.get("cache_read_tokens") or 0, "cache_write": 0, "cost": None,
+    }
+
+
+def from_agy(lines, path, model, driver, offered):
+    """Write an `agy -p --output-format stream-json` run as a transcript: 0 when it ran, 3 when not.
+
+    agy's init lists its whole tool registry, not what the model was offered, so
+    `offered` is the lane's own tools/list over the same passport.
+    """
+    texts, lane_steps, result = {}, set(), None
+    with Transcript(path) as out:
+        out.init(model, driver, "cli-default", "listed-by-lane", offered)
+        for line in lines:
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if event.get("event") == "result":
+                result = event.get("result") or {}
+                continue
+            step = event.get("step_update") or {}
+            kind, state = step.get("step_type"), step.get("state")
+            if kind == "agent_response":
+                texts[step.get("step_index")] = texts.get(step.get("step_index"), "") + (step.get("text_delta") or "")
+                # A step with no text is the model thinking before a tool call;
+                # the call itself is written as its own turn.
+                if state == "DONE" and texts.get(step.get("step_index")):
+                    out.assistant(texts.pop(step.get("step_index")))
+            elif step.get("tool_name") and state in ("DONE", "ERROR"):
+                stop = _agy_tool(out, step, lane_steps)
+                if stop:
+                    out.finish(True, f"HARNESS: {stop}", 0)
+                    return 3
+        if result is None:
+            out.finish(True, "HARNESS: agy stopped before its turn completed", 0)
+            return 3
+        # A refused call measures agy's permission setting, not the model.
+        if result.get("denied_actions"):
+            out.finish(True, f"HARNESS: agy refused {result['denied_actions']}", 0)
+            return 3
+        if result.get("status") != "SUCCESS":
+            out.finish(True, f"HARNESS: agy: {result.get('error') or result.get('status')}", 0)
+            return 3
+        if not lane_steps:
+            out.finish(True, "HARNESS: agy made no call to the lane's server; whether it was "
+                             "attached cannot be told from its stream", 0)
+            return 3
+        out.add_usage(_agy_usage(result.get("usage") or {}))
+        out.finish(False, result.get("response") or "", result.get("num_turns") or 1)
         return 0
