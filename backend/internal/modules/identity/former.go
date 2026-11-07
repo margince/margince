@@ -154,16 +154,24 @@ func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in 
 func mergedFormerSurvivor(ctx context.Context, tx pgx.Tx, email string) (ids.UserID, bool, error) {
 	var survivor ids.UserID
 	var found bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user WHERE lower(email)=lower(@email) AND merged_into_user_id IS NOT NULL)`, pgx.StrictNamedArgs{memberEmailField: email}).Scan(&found); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user s
+		 WHERE `+storekit.SeatLoginIsSQL("s", "@"+memberEmailField, "@"+memberDomainField)+`
+		   AND s.merged_into_user_id IS NOT NULL)`, memberLoginArgs(email)).Scan(&found); err != nil {
 		return survivor, false, err
 	}
 	if !found {
 		return survivor, false, nil
 	}
+	// The seed can hold a seat per domain spelling, so the lineage can reach
+	// two live roots. `typed` rides the recursion to say which spelling the
+	// caller used, and the root spelled that way is the one answered.
 	err := tx.QueryRow(ctx, `WITH RECURSIVE lineage AS (
- SELECT id,merged_into_user_id,removed_at,archived_at FROM app_user WHERE lower(email)=lower(@email)
- UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
- ) SELECT id FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL`, pgx.StrictNamedArgs{memberEmailField: email}).Scan(&survivor)
+ SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at,
+        (lower(s.email) = @`+memberEmailField+`) AS typed FROM app_user s
+   WHERE `+storekit.SeatLoginIsSQL("s", "@"+memberEmailField, "@"+memberDomainField)+`
+ UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at,l.typed FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
+ ) SELECT id FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL
+   ORDER BY typed DESC, id LIMIT 1`, memberLoginArgs(email)).Scan(&survivor)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return survivor, false, errRemovedEmail
 	}
