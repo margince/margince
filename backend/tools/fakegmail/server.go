@@ -206,4 +206,3 @@ func (s *server) stats(w http.ResponseWriter, _ *http.Request) {
 	})
 	writeJSON(w, out)
 }
-
