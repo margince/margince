@@ -92,3 +92,19 @@ func TestAHaltingFetchStopsTheFetchesBehindIt(t *testing.T) {
 		t.Fatalf("%d fetches, want the walk to stop right after the halting one", fetched)
 	}
 }
+
+func TestAHaltAfterEverythingWasQueuedStillEndsTheWalkWithItsError(t *testing.T) {
+	limited := errors.New("rate limited")
+	walk := Walk[int]{Workers: 1, Lookahead: 10, Halts: func(err error) bool { return errors.Is(err, limited) }}
+	err := walk.InOrder(t.Context(), 3,
+		func(_ context.Context, i int) (int, error) {
+			if i == 2 {
+				return 0, limited
+			}
+			return i, nil
+		},
+		func(int, int, error) error { return nil })
+	if !errors.Is(err, limited) {
+		t.Fatalf("err = %v, want the halting fetch's error although the consumer let it pass", err)
+	}
+}
