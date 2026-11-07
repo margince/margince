@@ -171,7 +171,10 @@ func (t readView) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 	}
 	idx := slices.IndexFunc(t.views, func(v ReadView) bool { return v.Name == name })
 	if idx < 0 {
-		return nil, &BadArgsError{Field: viewArg, Cause: fmt.Errorf("%q is not a view; the views are %s", name, strings.Join(viewNames(t.views), ", "))}
+		return nil, &BadArgsError{
+			Field: viewArg, Cause: fmt.Errorf("%q is not a view", name),
+			Guidance: "the views are " + strings.Join(viewNames(t.views), ", "),
+		}
 	}
 	view := t.views[idx]
 	path := map[string]string{}

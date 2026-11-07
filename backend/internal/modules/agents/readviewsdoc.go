@@ -50,30 +50,21 @@ func (ReadViewsResource) Resources(context.Context) []mcp.Resource {
 		MIMEType:      mimeApplicationJSON,
 		Description: "Every view read_view reads, with the path arguments it needs and the " +
 			"query arguments it takes: each one's JSON type, and whether it is required, with " +
-			"its allowed words or format. Every view also takes cursor and limit.",
+			"its allowed words or format. A view that pages also takes cursor and limit.",
 	}}
 }
 
 // ReadResource composes the document. An unknown URI answers ErrNotFound,
 // matching every other read on this surface.
-func (r ReadViewsResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
+func (r ReadViewsResource) ReadResource(_ context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != ReadViewsURI {
 		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
 	}
-	body, err := r.ReadViewsDocument(ctx)
-	if err != nil {
-		return mcp.ResourceContents{}, err
-	}
-	return mcp.ResourceContents{URI: uri, MIMEType: mimeApplicationJSON, Text: string(body)}, nil
-}
-
-// ReadViewsDocument is the rendering the resource and describe_views serve.
-func (r ReadViewsResource) ReadViewsDocument(context.Context) (json.RawMessage, error) {
 	body, err := json.Marshal(readViewsDocument(r.views))
 	if err != nil {
-		return nil, fmt.Errorf("agents: rendering the read_view catalog: %w", err)
+		return mcp.ResourceContents{}, fmt.Errorf("agents: rendering the read_view catalog: %w", err)
 	}
-	return body, nil
+	return mcp.ResourceContents{URI: uri, MIMEType: mimeApplicationJSON, Text: string(body)}, nil
 }
 
 var _ mcp.ResourceProvider = ReadViewsResource{}
@@ -84,7 +75,8 @@ type readViewsDoc struct {
 }
 
 // readViewEntry is one view as a caller names it. Path arguments are required,
-// a query argument says whether it is, and every view also takes cursor and limit.
+// a query argument says whether it is, and a view that pages also takes cursor
+// and limit.
 type readViewEntry struct {
 	View  string      `json:"view"`
 	Path  []string    `json:"path"`

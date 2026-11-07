@@ -35940,7 +35940,18 @@ export interface components {
         /** @description What `describe_views` answers. */
         ReadViewsCatalog: {
             views: {
-                [key: string]: unknown;
+                version: string;
+                views: {
+                    view: string;
+                    path: string[];
+                    query: {
+                        name: string;
+                        type: string;
+                        required?: boolean;
+                        enum?: string[];
+                        format?: string;
+                    }[];
+                }[];
             };
         };
         /** @description What `describe_report_vocabulary` answers. */

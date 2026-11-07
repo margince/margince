@@ -15,23 +15,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// DescribeViewsResult carries the published catalog verbatim.
+// DescribeViewsResult carries the published catalog.
 type DescribeViewsResult struct {
-	Views json.RawMessage `json:"views"`
-}
-
-// ReadViewsReader answers the read_view catalog. ReadViewsResource satisfies it.
-type ReadViewsReader interface {
-	ReadViewsDocument(ctx context.Context) (json.RawMessage, error)
+	Views readViewsDoc `json:"views"`
 }
 
 // RegisterReadViewsTool adds describe_views. Unconditional, like read_view.
-func RegisterReadViewsTool(r *Registry, read ReadViewsReader) {
+func RegisterReadViewsTool(r *Registry, read ReadViewsResource) {
 	r.Register(describeViews{read: read})
 }
 
 type describeViews struct {
-	read ReadViewsReader
+	read ReadViewsResource
 }
 
 func (t describeViews) Spec() mcp.ToolSpec {
@@ -47,15 +42,9 @@ func (t describeViews) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t describeViews) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+func (t describeViews) Handle(_ context.Context, in json.RawMessage) (json.RawMessage, error) {
 	if err := decodeNoArguments(in); err != nil {
 		return nil, err
 	}
-	body, err := t.read.ReadViewsDocument(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(DescribeViewsResult{Views: body})
+	return json.Marshal(DescribeViewsResult{Views: readViewsDocument(t.read.views)})
 }
-
-var _ ReadViewsReader = ReadViewsResource{}

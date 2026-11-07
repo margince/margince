@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -57,10 +58,10 @@ func TestAnUnknownViewIsRefusedWithEveryViewThereIs(t *testing.T) {
 // A caller learns what a view needs from the document, not from a refusal.
 func TestTheDocumentSaysWhichQueryArgumentsAViewNeeds(t *testing.T) {
 	t.Parallel()
-	body, err := NewReadViewsResource([]ReadView{{Name: "custom_fields", Query: []ViewQuery{
+	contents, err := NewReadViewsResource([]ReadView{{Name: "custom_fields", Query: []ViewQuery{
 		{Name: "object", Type: "string", Required: true, Enum: []string{"deal", "lead"}},
 		{Name: "since", Type: "string", Format: "date-time"},
-	}}}).ReadViewsDocument(context.Background())
+	}}}).ReadResource(context.Background(), ReadViewsURI)
 	if err != nil {
 		t.Fatalf("rendering the document: %v", err)
 	}
@@ -68,29 +69,49 @@ func TestTheDocumentSaysWhichQueryArgumentsAViewNeeds(t *testing.T) {
 		`{"name":"object","type":"string","required":true,"enum":["deal","lead"]}`,
 		`{"name":"since","type":"string","format":"date-time"}`,
 	} {
-		if !strings.Contains(string(body), want) {
-			t.Errorf("the document reads %s, want %s", body, want)
+		if !strings.Contains(contents.Text, want) {
+			t.Errorf("the document reads %s, want %s", contents.Text, want)
 		}
 	}
 }
 
-// describe_views answers the document verbatim.
-func TestDescribeViewsPassesTheDocumentThroughUnchanged(t *testing.T) {
+// describe_views answers the document the resource publishes.
+func TestDescribeViewsAnswersTheDocumentTheResourcePublishes(t *testing.T) {
 	t.Parallel()
 	resource := NewReadViewsResource(viewsOfTwoShapes)
-	want, err := resource.ReadViewsDocument(context.Background())
+	want, err := resource.ReadResource(context.Background(), ReadViewsURI)
 	if err != nil {
-		t.Fatalf("rendering the document: %v", err)
+		t.Fatalf("reading the document: %v", err)
 	}
 	answer, err := describeViews{read: resource}.Handle(context.Background(), json.RawMessage(`{}`))
 	if err != nil {
 		t.Fatalf("describe_views: %v", err)
 	}
-	var got DescribeViewsResult
+	var got struct {
+		Views json.RawMessage `json:"views"`
+	}
 	if err := json.Unmarshal(answer, &got); err != nil {
 		t.Fatalf("the answer does not decode: %v", err)
 	}
-	if string(got.Views) != string(want) {
-		t.Errorf("describe_views answered %s, want the document %s", got.Views, want)
+	if string(got.Views) != want.Text {
+		t.Errorf("describe_views answered %s, want the document %s", got.Views, want.Text)
+	}
+}
+
+// The list a refusal teaches survives a long unknown name, which the bound on
+// what the caller sent would otherwise cut it off with.
+func TestARefusalNamesEveryViewWhateverTheCallerSent(t *testing.T) {
+	t.Parallel()
+	views := make([]ReadView, 0, 60)
+	for i := range 60 {
+		views = append(views, ReadView{Name: fmt.Sprintf("some_long_view_name_%02d", i)})
+	}
+	unknown := strings.Repeat("x", 500)
+	_, err := readView{views: views}.Handle(context.Background(), json.RawMessage(`{"view":"`+unknown+`"}`))
+	if err == nil {
+		t.Fatal("an unknown view was accepted")
+	}
+	if !strings.Contains(err.Error(), "some_long_view_name_59") {
+		t.Errorf("the refusal reads %q, want the last view named", err.Error())
 	}
 }

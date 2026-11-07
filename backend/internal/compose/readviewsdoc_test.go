@@ -16,16 +16,16 @@ import (
 func TestTheViewsDocumentNamesEveryPolicyView(t *testing.T) {
 	t.Parallel()
 	views := readViews(agentPolicies)
-	body, err := agents.NewReadViewsResource(views).ReadViewsDocument(context.Background())
+	contents, err := agents.NewReadViewsResource(views).ReadResource(context.Background(), agents.ReadViewsURI)
 	if err != nil {
-		t.Fatalf("rendering the document: %v", err)
+		t.Fatalf("reading the document: %v", err)
 	}
 	var doc struct {
 		Views []struct {
 			View string `json:"view"`
 		} `json:"views"`
 	}
-	if err := json.Unmarshal(body, &doc); err != nil {
+	if err := json.Unmarshal([]byte(contents.Text), &doc); err != nil {
 		t.Fatalf("the document does not decode: %v", err)
 	}
 	listed := make([]string, 0, len(doc.Views))

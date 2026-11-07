@@ -11,8 +11,8 @@
     "tools": 48,
     "resources": 14,
     "tool_catalog_bytes": 232785,
-    "resource_catalog_bytes": 5615,
-    "approx_wire_tokens_total": 59600,
+    "resource_catalog_bytes": 5622,
+    "approx_wire_tokens_total": 59601,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
@@ -11947,7 +11947,7 @@
         "uri": "margince://schema/reports"
       },
       {
-        "description": "Every view read_view reads, with the path arguments it needs and the query arguments it takes: each one's JSON type, and whether it is required, with its allowed words or format. Every view also takes cursor and limit.",
+        "description": "Every view read_view reads, with the path arguments it needs and the query arguments it takes: each one's JSON type, and whether it is required, with its allowed words or format. A view that pages also takes cursor and limit.",
         "mimeType": "application/json",
         "name": "read_view_views",
         "title": "Views read_view reads",

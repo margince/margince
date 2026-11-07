@@ -5365,7 +5365,68 @@
         "type": "object",
         "properties": {
           "views": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              },
+              "views": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "query": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "enum": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "format": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "required": {
+                            "type": "boolean"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type"
+                        ]
+                      }
+                    },
+                    "view": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "query",
+                    "view"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "version",
+              "views"
+            ]
           }
         },
         "required": [

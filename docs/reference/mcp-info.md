@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 227.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59600 |
+| Approx. wire tokens | 59601 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -175,8 +175,8 @@ say. read_reports with kind=run names this document instead of carrying it.
 
 ```text
 Every view read_view reads, with the path arguments it needs and the query arguments it takes: each
-one's JSON type, and whether it is required, with its allowed words or format. Every view also takes
-cursor and limit.
+one's JSON type, and whether it is required, with its allowed words or format. A view that pages
+also takes cursor and limit.
 ```
 
 ### report_blocks

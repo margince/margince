@@ -56732,7 +56732,20 @@ type RbacObjectGrant struct {
 
 // ReadViewsCatalog What `describe_views` answers.
 type ReadViewsCatalog struct {
-	Views map[string]interface{} `json:"views"`
+	Views struct {
+		Version string `json:"version"`
+		Views   []struct {
+			Path  []string `json:"path"`
+			Query []struct {
+				Enum     *[]string `json:"enum,omitempty"`
+				Format   *string   `json:"format,omitempty"`
+				Name     string    `json:"name"`
+				Required *bool     `json:"required,omitempty"`
+				Type     string    `json:"type"`
+			} `json:"query"`
+			View string `json:"view"`
+		} `json:"views"`
+	} `json:"views"`
 }
 
 // ReaderCalendar Whether the reader's own calendar connections feed the meetings this product holds.
