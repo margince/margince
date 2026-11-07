@@ -12,7 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
-// The published document names exactly the views the policy table serves.
+// The published document names the views the policy table serves, and no others.
 func TestTheViewsDocumentNamesEveryPolicyView(t *testing.T) {
 	t.Parallel()
 	views := readViews(agentPolicies)

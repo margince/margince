@@ -306,8 +306,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// is the shape of nothing else on this surface — `update_tag` answers a
 		// `Tag` — so a waiver here leaves the one answer where `0` and absent
 		// are the same JSON unproven against a live handler.
-		{"merge_tags", `{"tag_id":"` + foldable.String() +
-			`","into_tag_id":"` + tag.String() + `"}`},
+		{"merge_tags", `{"tag_id":"` + foldable.String() + `","into_tag_id":"` + tag.String() + `"}`},
 		// The forecast: what a period is expected to close, the difference
 		// between two frozen states of it, what the inputs were checked
 		// against, what they still need, and how current the sources are. Each

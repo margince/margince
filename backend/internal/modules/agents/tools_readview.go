@@ -33,8 +33,8 @@ type ReadView struct {
 	Query      []ViewQuery
 }
 
-// viewNameSchema names where the catalog lives, with one view as an example so
-// a caller, and the role sweep's filler, has a real name to start from.
+// viewNameSchema names where the catalog lives. One view stands as an example,
+// so a caller and the role sweep's filler have a real name to start from.
 func viewNameSchema(views []ReadView) string {
 	schema := `{"type":"string","description":"a view named in ` + ReadViewsURI + ` or describe_views"`
 	if names := viewNames(views); len(names) > 0 {

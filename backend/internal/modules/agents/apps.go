@@ -294,9 +294,9 @@ func resourceUIMeta(resource mcp.Resource) *resourceUIWire {
 
 // closedList normalizes a list so the wire carries `[]` and never `null`.
 //
-// The two look alike in Go and say opposite things to a reader: `[]` is a
-// closed list holding nothing, `null` is a list that was not stated — an
-// omission, and an omission is where a permissive default lives.
+// The two look alike in Go and say opposite things to a reader. `[]` is a closed
+// list holding nothing. `null` is a list that was not stated: an omission, and
+// an omission is where a permissive default lives.
 func closedList[T any](items []T) []T {
 	if items == nil {
 		return []T{}
