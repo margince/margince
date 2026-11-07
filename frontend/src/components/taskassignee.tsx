@@ -51,9 +51,12 @@ export function taskLine(parts: readonly ReactNode[]): ReactNode {
   if (said.length === 0) {
     return undefined;
   }
-  return said.reduce((line, part) => (
-    <>
-      {line} · {part}
-    </>
-  ));
+  return said.slice(1).reduce(
+    (line, part) => (
+      <>
+        {line} · {part}
+      </>
+    ),
+    said[0],
+  );
 }
