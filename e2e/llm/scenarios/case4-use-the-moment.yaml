@@ -52,17 +52,12 @@ may_call:
 must_mention:
   - "Dom Digital|Rheinufer|Vorort Systeme"
   - "Sofia Meier|Lena Fischer|Phạm Hương Giang"
-  # CRITERION 6 is the ADVICE, not the fact. Naming the owner satisfied the old
-  # alternation, so "all three are owned by Sofia Meier" — knowing the owner and
-  # saying nothing about what to do — scored the criterion that exists to stop a
-  # rep walking into a colleague's account. "message" made it looser still: "I
-  # will draft a message" matched. Anchored to telling the reader to go via the
-  # owner first. "Ask Sofia before visiting" is that advice by first name, so
-  # the owner may be named either way; "call before dropping in" names nobody
-  # to go through and still fails. "Sofia owns all three. Check with her before
-  # you go" names her in one sentence and advises by pronoun in the next, so a
-  # pronoun counts when it follows the owner's name within two short sentences.
-  - "(?:\bask|check|speak|talk|clear it|confirm|coordinate|touch base|abstimmen|Bescheid)[^.]{0,60}(?:with|to|mit)?[^.]{0,20}(?:owner|Sofia|Lena|Ph\u1ea1m|colleague|whoever owns|rep who owns)|(?:owner|Sofia|Lena|Ph\u1ea1m)[^.]{0,60}(?:before (?:you|visiting|going|dropping in|turning up|showing up)|first|should know|would want|ask them|let them know|not your|not yours|not you\b|nicht dein)|(?:owner|Sofia|Lena|Ph\u1ea1m)[^\n]{0,120}?\b(?:ask|check|speak|talk|confirm|coordinate|touch base)\s+(?:in\s+)?with\s+(?:her|him)\b"
+
+# CRITERION 6 is the ADVICE, not the fact: "all three are owned by Sofia Meier"
+# knows the owner and says nothing about what to do. Advice has more wordings
+# than a pattern can list, so a judge reads it.
+judge:
+  - "Criterion 6. The answer tells the reader to go through the account's owner before visiting: to ask, check with or tell the owner first, or that the visit is the owner's call. Naming the owner by first name, full name or a pronoun that follows the name all count. Answer no if it only names who owns each company without saying what that means for the visit, or if it advises calling or checking first without naming whom to go through."
 
 # Run 1 of the real scenario failed exactly here: correct companies, and it
 # never said whose they were, because the row carried a bare uuid.

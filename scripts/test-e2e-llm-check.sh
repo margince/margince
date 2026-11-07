@@ -984,10 +984,11 @@ judges "$c44" case44 drafts-another-thread-by-hand 1 "never called draft_outboun
 # pattern must take it by name or by pronoun after the name, and refuse an
 # answer that names the owner and advises nobody.
 c4="case4-use-the-moment.yaml"
-c4_advice="never said anything matching"
-judges "$c4" case4 asks-the-owner-by-name 0 "!$c4_advice"
-judges "$c4" case4 checks-with-her-in-the-next-sentence 0 "!$c4_advice"
-judges "$c4" case4 checks-with-her-before-showing-up 0 "!$c4_advice"
+c4_advice="the judge says NO to: Criterion 6."
+judges "$c4" case4 asks-the-owner-by-name 0 "!the judge says NO"
+judges "$c4" case4 checks-with-her-in-the-next-sentence 0 "!the judge says NO"
+judges "$c4" case4 checks-with-her-before-showing-up 0 "!the judge says NO"
+judges "$c4" case4 leaves-the-visit-to-her 0 "!the judge says NO"
 judges "$c4" case4 names-the-owner-and-stops 1 "$c4_advice"
 judges "$c4" case4 advises-nobody-by-name 1 "$c4_advice"
 c45="case45-move-the-deal-on.yaml"
