@@ -46,11 +46,14 @@
 }
 
 /* A verb among the words starts on the caption's edge: a stretched link
- * centred its label, and the link's own 4px inset would push it right. */
-.service-row-main > :is(.btn, .link-button) {
+ * centred its label, and the link's own 4px inset would push it right.
+ * `.btn-shell` is `display: contents`, so its button is the flex item. */
+.service-row-main > :is(.btn, .link-button, .btn-with-reason),
+.service-row-main > .btn-shell > .btn {
   align-self: flex-start;
 }
-.service-row-main > :is(.btn.btn-link, .link-button) {
+.service-row-main > :is(.btn.btn-link, .link-button),
+.service-row-main > :is(.btn-shell, .btn-with-reason) > .btn.btn-link {
   margin-inline-start: -4px;
 }
 
