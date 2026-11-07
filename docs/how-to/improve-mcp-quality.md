@@ -6,30 +6,31 @@ MCP surface of Margince, and add to the set of tools these jobs prove. The loop 
 Sweep, and read why each failure failed. Fix the layer that caused it, and prove the fix for free.
 Then run the lane that costs money again, and publish.
 
-The two targets are the assistants that users connect in real work:
+The three targets are the assistants that users connect in real work:
 
 | Target | `E2E_LLM_CANDIDATE` | `E2E_LLM_VIA` | Verdict folder |
 |---|---|---|---|
 | Claude (the default model of its CLI) | `claude` | `cli` | `claude-sonnet-5-5@claude-cli` |
 | GPT through Codex | `gpt` | `cli` | `gpt-5.6-sol@codex-cli` |
+| Gemini through Antigravity | `gemini` | `cli` | `gemini-3.8-flash-medium@agy-cli` |
 
 Mistral through OpenRouter, and the bridge (`E2E_LLM_VIA=api|openrouter`)
 that compares providers on equal terms, are good to have. Run them once a fix holds
-on both targets.
+on every target.
 
 [test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md) covers how to run the lane,
 how it ends, and the stops of its harness. This page takes that as read. The results go to
 [reference/mcp-tool-coverage.md](../reference/mcp-tool-coverage.md).
 
 ```
-  sweep both targets ──► triage each red case ──► fix the layer that caused it
+  sweep every target ──► triage each red case ──► fix the layer that caused it
           ▲                (sections 2–3)            (section 4)
           │                                               │
    publish verdicts ◄── paid re-run: reds + controls ◄── free checks
      (section 7)          (section 6)                  (section 5)
 ```
 
-## 1. Sweep both targets, and keep the transcripts separate
+## 1. Sweep every target, and keep the transcripts separate
 
 Run the full sweep for each target, one after the other, as
 [the run guide plans it](test-the-mcp-surface-end-to-end.md#4-plan-a-full-sweep-and-know-its-cost).
@@ -59,6 +60,7 @@ Decide which one from the transcript (section 3) before you change a thing.
 | **Harness** | `HARNESS:` stop; every run "called nothing"; degraded search | the lane; see the harness table in the run guide |
 | **Grader** | the final answer is right, but a check said no. A `not` guard reaches back over an earlier part of the sentence. A check knows the key of a field, and the model wrote its label. A pattern has `\\b` for `\b`: `check.py` drops the quotes and reads the rest as written | `e2e/llm/scenarios/*.yaml`, `criteria.yaml` |
 | **Case** | the prompt asks the model to prefer one tool when another gives a right answer too | the prompt of the case; keep its checks |
+| **Path pin** | the answer is right and true, and the run failed only because it used another tool than `must_call` names | the case: drop the pin and check the answer, with `figures_from_results` or `must_end_with` ([add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md)) |
 | **Product: copy** | the model followed a wrong path that looked right, and a tool description or the server instructions pointed it there. Or the copy is false: it says a link moves a record when it adds one, or that a tool only offers when it applies and stores nothing. Or the key sentence sits on a tool the passport hides | `backend/internal/modules/agents/toolcopy_*.go`, `shared/ports/mcp/mcp.go` |
 | **Product: result shape** | the answer needed a fact that no tool result carried: a uuid where it needed a name, or a list of meetings with no sign that no calendar is connected | the result type of the tool, or `backend/api/crm.yaml` |
 | **Chance** | a long case with many steps fails once, and the transcript shows no cause | nothing yet: run it once more before you act |
@@ -151,7 +153,7 @@ YAML change, so that you know the new test checks the guard.
 
 ## 6. Run again what changed, plus controls
 
-Run again only the scenarios that a fix should change, on both targets, plus controls.
+Run again only the scenarios that a fix should change, on every target, plus controls.
 Never run only the red case: a copy fix for one case has turned a case close by red.
 Every case gets every tool description in `tools/list`, so pick the set by the tools whose words moved:
 
@@ -159,10 +161,10 @@ Every case gets every tool description in `tools/list`, so pick the set by the t
 - every case that requires or allows a tool whose copy you changed. A
   rule about documents that applies only when needed must still leave plain number questions
   on `run_report`.
-- one case that already passed on both targets, to catch a harness that does not work.
+- one case that already passed on every target, to catch a harness that does not work.
 
 ```bash
-for c in claude gpt; do
+for c in claude gpt gemini; do
   for s in case20_put_it_in_the_board_pack case49_who_can_introduce_us; do
     MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=$c E2E_LLM_VIA=cli \
       E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \

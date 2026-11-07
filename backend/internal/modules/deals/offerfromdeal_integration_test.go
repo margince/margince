@@ -6,6 +6,7 @@
 package deals
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -60,6 +61,27 @@ func TestAnOfferCopiesTheDealsLinesAtOneRevision(t *testing.T) {
 	}
 	if *refreshed.NetMinor != 30_000 || *refreshed.SourceCommercialRevision != 2 || *refreshed.OfferNumber != *offer.OfferNumber {
 		t.Fatalf("the refreshed draft is %d at revision %d, number %s", *refreshed.NetMinor, *refreshed.SourceCommercialRevision, *refreshed.OfferNumber)
+	}
+	// A refresh replaces the draft's lines, so it announces like any draft edit.
+	var announced int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM event_outbox
+		 WHERE envelope->>'type' = 'offer.updated' AND envelope->'payload'->>'offer_id' = $1`,
+		refreshed.Id.String()).Scan(&announced); err != nil {
+		t.Fatalf("reading the outbox: %v", err)
+	}
+	if announced != 1 {
+		t.Errorf("the refresh staged %d offer.updated events, want 1", announced)
+	}
+	var named bool
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT envelope->'payload'->'changed_fields' ? 'source_commercial_revision' FROM event_outbox
+		 WHERE envelope->>'type' = 'offer.updated' AND envelope->'payload'->>'offer_id' = $1`,
+		refreshed.Id.String()).Scan(&named); err != nil {
+		t.Fatalf("reading the outbox: %v", err)
+	}
+	if !named {
+		t.Error("the refresh moved the draft's source revision without naming it")
 	}
 }
 
