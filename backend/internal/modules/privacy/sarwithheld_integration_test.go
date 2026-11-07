@@ -24,6 +24,7 @@ package privacy
 
 import (
 	"context"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"os"
 	"regexp"
 	"slices"
@@ -122,7 +123,10 @@ func TestNoWithheldColumnReachesTheAssembledExport(t *testing.T) {
 	}
 
 	var pkg SARPackage
-	sections := sarSections(&pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var probed int
 	for _, section := range sections {

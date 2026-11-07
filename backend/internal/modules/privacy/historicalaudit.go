@@ -80,11 +80,7 @@ func redactHistoricalRecord(ctx context.Context, tx pgx.Tx, original ids.UUID, k
 	 WHERE certificate.id = @original AND history.entity_type = certificate.entity_type
 	 AND history.entity_id = certificate.entity_id
 	 AND (history.occurred_at, history.id) <= (certificate.occurred_at, certificate.id)
-	 AND (history.before IS DISTINCT FROM audit_redacted_image(history.entity_type, history.before)
- OR history.after IS DISTINCT FROM audit_redacted_image(history.entity_type, history.after)
-	      OR history.evidence IS DISTINCT FROM audit_redacted_evidence(
-          history.action IN ('erase','anonymize','expire','release','pin','restrict')
-          AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)))
+	 AND `+storekit.AuditRedactionNeededSQL+`)
 	 OR EXISTS (SELECT 1 FROM event_outbox retained, audit_log certificate
 	 WHERE certificate.id = @original AND retained.created_at <= certificate.occurred_at
 	 AND retained.envelope->'entity'->>'type' = certificate.entity_type

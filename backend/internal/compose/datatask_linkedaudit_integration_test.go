@@ -22,19 +22,21 @@ import (
 
 func legacyRequestAuditCopies(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
+	contact := repairContact(t, e, "Erased Subject")
 	request := ids.NewV7()
 	e.WsExec(t, `INSERT INTO data_subject_request(id,kind,subject_ref,status,resolution,received_at,due_at,channel,receipt_reference)
  VALUES(@id,'access','erased+'||@id::uuid::text,'fulfilled','erased',now(),now()+interval '30 days','phone',@receipt)`, pgx.StrictNamedArgs{"id": request, "receipt": "RCPT-" + request.String()})
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		// These images predate the older eraser's domain-only case retirement.
-		image := map[string]any{"subject_ref": "private@example.test", "status": "fulfilled"}
+		image := map[string]any{"subject_ref": contact.String(), "email": "private@example.test", "status": "fulfilled"}
 		if _, err := storekit.AuditWithEvidence(e.Admin(), tx, "create", "data_subject_request", request, nil, image, nil); err != nil {
 			return err
 		}
 		if _, err := storekit.AuditWithEvidence(e.Admin(), tx, "update", "data_subject_request", request, map[string]any{"status": "in_progress"}, image, nil); err != nil {
 			return err
 		}
-		return nil
+		_, err := storekit.AuditWithEvidence(e.Admin(), tx, "erase", "contact", contact.UUID, nil, nil, map[string]any{"cause": "contact_erasure"})
+		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +88,7 @@ func TestLinkedAuditTaskRollsBackPayloadsAndStopsBeforeIdentityRemoval(t *testin
 		return out, errors.New("interrupt after linked payload correction")
 	}
 	runMachineAddressTask(ctx, t, e, task)
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=@request AND after->>'subject_ref'='private@example.test'`, pgx.StrictNamedArgs{"request": request}); n != 2 {
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=@request AND after->>'email'='private@example.test'`, pgx.StrictNamedArgs{"request": request}); n != 2 {
 		t.Fatalf("rollback kept %d of two original images", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='audit_log' AND evidence->>'legacy_erased_record'='true'`); n != 0 {

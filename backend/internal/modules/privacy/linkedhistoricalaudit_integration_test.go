@@ -87,12 +87,14 @@ func TestARestrictionDoesNotCertifyPhysicalAuditErasure(t *testing.T) {
 	assertLegacyAuditImage(ctx, t, tx, original, true)
 }
 
-func legacyContactProof(ctx context.Context, t *testing.T, tx pgx.Tx, subject ids.UUID) {
+func legacyContactProof(ctx context.Context, t *testing.T, tx pgx.Tx, subject ids.UUID) ids.UUID {
 	t.Helper()
 	// Upgrade fixtures retain the old images because earlier erasures wrote only a certificate.
-	if _, err := storekit.AuditWithEvidence(ctx, tx, "erase", "contact", subject, nil, nil, map[string]any{"cause": "contact_erasure"}); err != nil {
+	proof, err := storekit.AuditWithEvidence(ctx, tx, "erase", "contact", subject, nil, nil, map[string]any{"cause": "contact_erasure"})
+	if err != nil {
 		t.Fatal(err)
 	}
+	return proof
 }
 
 func assertLegacyAuditImage(ctx context.Context, t *testing.T, tx pgx.Tx, id ids.UUID, kept bool) {

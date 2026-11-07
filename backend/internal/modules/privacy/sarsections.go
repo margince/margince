@@ -10,6 +10,7 @@ package privacy
 // or dropping a source here changes what the export owes the data subject.
 
 import (
+	"context"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -19,9 +20,13 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored []ids.UUID) []sarSection {
+func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored []ids.UUID) ([]sarSection, error) {
 	sections := sarIdentitySections(pkg)
-	sections = append(sections, sarRetainedCopySections(pkg, contactID, emails, leads)...)
+	retained, err := sarRetainedCopySections(ctx, pkg, contactID, emails, leads)
+	if err != nil {
+		return nil, err
+	}
+	sections = append(sections, retained...)
 	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
@@ -30,7 +35,7 @@ func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, lead
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
 	sections = append(sections, sarJudgementSections(pkg, authored)...)
-	return append(sections, sarProvenanceSections(pkg)...)
+	return append(sections, sarProvenanceSections(pkg)...), nil
 }
 
 // sarIdentitySections gather how the subject is identified and where they are

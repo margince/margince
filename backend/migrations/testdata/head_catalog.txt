@@ -1646,6 +1646,9 @@ public.attachment_extraction.status_detail text gen=- def=-
 public.attachment_extraction_pkey CREATE UNIQUE INDEX attachment_extraction_pkey ON public.attachment_extraction USING btree (id)
 public.attachment_pkey CREATE UNIQUE INDEX attachment_pkey ON public.attachment USING btree (id)
 public.attachment_supersedes_ix CREATE INDEX attachment_supersedes_ix ON public.attachment USING btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)
+public.audit_evidence_after_erasure(verb text, before_image jsonb, after_image jsonb, payload jsonb) secdef=false cfg=- acl=- SELECT audit_redacted_evidence(
+ (verb=ANY(audit_redaction_actions()) OR verb IN ('pin','restrict'))
+ AND before_image IS NULL AND after_image IS NULL,payload,verb)
 public.audit_log acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
@@ -1674,8 +1677,7 @@ BEGIN
   IF TG_OP = 'UPDATE'
      AND NEW.before IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.before)
      AND NEW.after IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.after)
-     AND NEW.evidence = audit_redacted_evidence(
-       OLD.action IN ('erase','anonymize','expire','release','pin','restrict') AND OLD.before IS NULL AND OLD.after IS NULL, OLD.evidence, OLD.action)
+     AND NEW.evidence = audit_evidence_after_erasure(OLD.action,OLD.before,OLD.after,OLD.evidence)
      AND (to_jsonb(NEW) - ARRAY['before','after','evidence']) =
          (to_jsonb(OLD) - ARRAY['before','after','evidence'])
      AND EXISTS (
@@ -1687,7 +1689,12 @@ BEGIN
                AND certificate.action=ANY(audit_redaction_actions()))
            OR (certificate.action = 'update' AND certificate.entity_type = 'audit_log'
                AND certificate.entity_id = OLD.id
-               AND certificate.evidence = '{"payload_redaction":true,"legacy_erased_record":true}'::jsonb)
+               AND EXISTS(SELECT 1 FROM audit_log boundary
+                WHERE boundary.id=audit_redaction_boundary(certificate.evidence)
+                AND certificate.evidence=jsonb_build_object('payload_redaction',true,'legacy_erased_record',true,'boundary',boundary.id::text)
+                AND boundary.action=ANY(audit_redaction_actions()) AND boundary.before IS NULL AND boundary.after IS NULL
+                AND (boundary.evidence ? 'cause' OR boundary.evidence ? 'retention_action' OR boundary.evidence ? 'emails_suppressed')
+                AND (OLD.occurred_at,OLD.id)<=(boundary.occurred_at,boundary.id)))
            OR (certificate.action = 'update' AND certificate.entity_type = 'audit_log'
                AND certificate.evidence = '{"payload_redaction":true}'::jsonb
                AND EXISTS (
@@ -1777,6 +1784,9 @@ BEGIN
 END;
 
 public.audit_redaction_actions() secdef=false cfg=- acl=- SELECT ARRAY['erase','anonymize','expire','release']::text[]
+public.audit_redaction_boundary(payload jsonb) secdef=false cfg=- acl=- SELECT CASE WHEN jsonb_typeof(payload->'boundary')='string'
+ AND payload->>'boundary' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+ THEN (payload->>'boundary')::uuid END
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
 public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))

@@ -41,11 +41,7 @@ func RedactAuditHistoryThrough(ctx context.Context, tx pgx.Tx, certificate, thro
 		  AND history.entity_type = boundary.entity_type
 		  AND history.entity_id = boundary.entity_id
 		  `+auditHistoryThroughBoundary+`
-		  AND (history.before IS DISTINCT FROM audit_redacted_image(history.entity_type, history.before)
- OR history.after IS DISTINCT FROM audit_redacted_image(history.entity_type, history.after)
-		       OR history.evidence IS DISTINCT FROM audit_redacted_evidence(
-               history.action IN ('erase','anonymize','expire','release','pin','restrict')
-               AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action))`, args); err != nil {
+		  AND `+AuditRedactionNeededSQL+``, args); err != nil {
 		return fmt.Errorf("store: redacting certified audit payloads: %w", err)
 	}
 	return cancelRedactedEvents(ctx, tx, args)
@@ -89,10 +85,13 @@ const auditHistoryThroughBoundary = `AND (boundary.id = certificate.id
  OR (history.occurred_at, history.id) <= (boundary.occurred_at, boundary.id))`
 
 const redactedAuditAssignment = `before = audit_redacted_image(history.entity_type, history.before),
-        after = audit_redacted_image(history.entity_type, history.after), evidence = audit_redacted_evidence(
-          history.action IN ('erase','anonymize','expire','release','pin','restrict')
-          AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)`
+        after = audit_redacted_image(history.entity_type, history.after), evidence = audit_evidence_after_erasure(history.action,history.before,history.after,history.evidence)`
 
 // AuditRedactionActions mirrors the database authorization vocabulary.
 // TestPhysicalAuditActionsMatchTheDatabase holds the language boundary.
 func AuditRedactionActions() []string { return []string{"erase", "anonymize", "expire", "release"} }
+
+// AuditRedactionNeededSQL compares the history alias with the database projection.
+const AuditRedactionNeededSQL = `(history.before IS DISTINCT FROM audit_redacted_image(history.entity_type,history.before)
+ OR history.after IS DISTINCT FROM audit_redacted_image(history.entity_type,history.after)
+ OR history.evidence IS DISTINCT FROM audit_evidence_after_erasure(history.action,history.before,history.after,history.evidence))`

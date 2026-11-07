@@ -19,6 +19,8 @@ package privacy
 // only thing that knows what the export will actually run.
 
 import (
+	"context"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"os"
 	"regexp"
 	"strings"
@@ -43,7 +45,10 @@ var fromJoin = regexp.MustCompile(`(?is)\b(?:from|join)\s+([a-z_][a-z0-9_]*)`)
 func tablesTheExportReaches(t *testing.T) map[string]bool {
 	t.Helper()
 	var pkg SARPackage
-	sections := sarSections(&pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// A floor, for the reason the schema check beside this one carries one: an
 	// empty gather list reads exactly like a complete one, and every assertion
@@ -114,7 +119,10 @@ func TestEveryPromisedTableIsActuallyAssembled(t *testing.T) {
 // first and could fail this.
 func TestTheConfirmLinkSectionCarriesNoCredential(t *testing.T) {
 	var pkg SARPackage
-	sections := sarSections(&pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var probed int
 	for _, section := range sections {

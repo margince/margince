@@ -27,7 +27,11 @@ func TestDuplicateEvidenceExportsOnlyTheSubjectsSide(t *testing.T) {
  'future_detail','Other Private Value')) WHERE id=ANY(@pairs)`,
 		pgx.StrictNamedArgs{"contact": subject.contact, "lead": subject.lead, "pairs": []ids.UUID{contactPair, leadPair}})
 	var pkg SARPackage
-	for _, section := range sarRetainedCopySections(&pkg, subject.contact, subject.emails, []ids.UUID{subject.lead}) {
+	sections, err := sarRetainedCopySections(ctx, &pkg, subject.contact, subject.emails, []ids.UUID{subject.lead})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, section := range sections {
 		if section.dest != &pkg.DuplicateEvidence {
 			continue
 		}
@@ -98,7 +102,11 @@ func TestIntroductionsExportOnlyRequestsAboutTheSubject(t *testing.T) {
 			pgx.StrictNamedArgs{"target": target, "through": through, "requester": requester, "introducer": introducer, "note": note})
 	}
 	var pkg SARPackage
-	for _, section := range sarRetainedCopySections(&pkg, subject.contact, subject.emails, nil) {
+	sections, err := sarRetainedCopySections(ctx, &pkg, subject.contact, subject.emails, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, section := range sections {
 		if section.dest != &pkg.Introductions {
 			continue
 		}
@@ -108,6 +116,37 @@ func TestIntroductionsExportOnlyRequestsAboutTheSubject(t *testing.T) {
 		}
 		if len(rows) != 1 || rows[0]["forwardable_note"] != "Subject Note" {
 			t.Fatalf("exported someone else's introduction: %+v", rows)
+		}
+	}
+}
+
+func TestDuplicateEvidenceKeepsWorkspaceReadableCustomerIdentity(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject, _, _ := seedDedupePairs(ctx, t, tx)
+	mustExec(ctx, t, tx, `UPDATE contact SET owner_id=split_part(captured_by,':',2)::uuid WHERE id=@contact`, pgx.StrictNamedArgs{"contact": subject.contact})
+	mustExec(ctx, t, tx, `UPDATE lead SET owner_id=(SELECT owner_id FROM contact WHERE id=@contact) WHERE id=@lead`, pgx.StrictNamedArgs{"contact": subject.contact, "lead": subject.lead})
+
+	user := ids.NewV7()
+	reader := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn},
+	})
+	var pkg SARPackage
+	sections, err := sarRetainedCopySections(reader, &pkg, subject.contact, subject.emails, []ids.UUID{subject.lead})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, section := range sections {
+		if section.dest != &pkg.DuplicateEvidence {
+			continue
+		}
+		rows, err := rowMaps(reader, tx, section.query, section.args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != 2 {
+			t.Fatalf("a workspace reader received %d subject pairs, want two", len(rows))
 		}
 	}
 }

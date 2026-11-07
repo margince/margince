@@ -34,4 +34,6 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION audit_evidence_after_erasure(text,jsonb,jsonb,jsonb);
+DROP FUNCTION audit_redaction_boundary(jsonb);
 DROP FUNCTION audit_redaction_actions();

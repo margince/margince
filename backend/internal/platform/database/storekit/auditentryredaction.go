@@ -18,11 +18,15 @@ func RedactHistoricalAuditEntry(ctx context.Context, tx pgx.Tx, certificate ids.
 	var original ids.UUID
 	err := tx.QueryRow(ctx, `UPDATE audit_log history
  SET `+redactedAuditAssignment+`
- FROM audit_log certificate
+ FROM audit_log certificate,audit_log boundary
  WHERE certificate.id=@certificate AND certificate.entity_type='audit_log'
  AND certificate.action='update' AND certificate.before IS NULL AND certificate.after IS NULL
  AND certificate.source_xid=pg_current_xact_id()
- AND certificate.evidence='{"payload_redaction":true,"legacy_erased_record":true}'::jsonb
+ AND boundary.id=audit_redaction_boundary(certificate.evidence)
+ AND certificate.evidence=jsonb_build_object('payload_redaction',true,'legacy_erased_record',true,'boundary',boundary.id::text)
+ AND boundary.action=ANY(audit_redaction_actions()) AND boundary.before IS NULL AND boundary.after IS NULL
+ AND (boundary.evidence ? 'cause' OR boundary.evidence ? 'retention_action' OR boundary.evidence ? 'emails_suppressed')
+ AND (history.occurred_at,history.id)<=(boundary.occurred_at,boundary.id)
  AND history.id=certificate.entity_id RETURNING history.id`,
 		pgx.StrictNamedArgs{"certificate": certificate}).Scan(&original)
 	if err != nil {

@@ -276,7 +276,10 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
+		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored)
+		if err != nil {
+			return err
+		}
 
 		subject, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 		if err != nil {

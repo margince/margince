@@ -70,9 +70,7 @@ func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, l
  AND NOT EXISTS(SELECT 1 FROM audit_log own WHERE own.entity_type=history.entity_type AND own.entity_id=history.entity_id
   AND own.action=ANY(@verbs) AND own.before IS NULL AND own.after IS NULL
   AND (own.evidence ? 'cause' OR own.evidence ? 'retention_action' OR own.evidence ? 'emails_suppressed')) AND (
- history.before IS DISTINCT FROM audit_redacted_image(history.entity_type,history.before)
- OR history.after IS DISTINCT FROM audit_redacted_image(history.entity_type,history.after)
- OR history.evidence IS DISTINCT FROM audit_redacted_evidence(false,history.evidence,history.action)
+ `+storekit.AuditRedactionNeededSQL+`
  OR EXISTS(SELECT 1 FROM event_outbox retained WHERE retained.envelope->'trace'->>'audit_log_id'=history.id::text))
  FROM audit_log history WHERE history.id>@after AND history.id<@until ORDER BY history.id LIMIT @limit`,
 		pgx.StrictNamedArgs{"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, "limit": limit})
@@ -87,34 +85,38 @@ func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, l
 }
 
 func redactLinkedHistoricalEntry(ctx context.Context, tx pgx.Tx, entry legacyAuditEntry, floor FloorPolicy) (bool, error) {
-	kind, entity, found, err := legacyAuditSubject(ctx, tx, entry)
+	match, found, err := legacyAuditSubject(ctx, tx, entry)
 	if err != nil || !found {
 		return false, err
 	}
-	held, err := historicalAuditUnderHold(ctx, tx, entry.id, kind, entity, floor)
+	held, err := historicalAuditUnderHold(ctx, tx, entry.id, match.kind, match.entity, floor)
 	if err != nil || held {
 		return false, err
 	}
 	proof, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "audit_log", entry.id, nil,
-		map[string]any{"payload_redaction": true, "legacy_erased_record": true})
+		map[string]any{"payload_redaction": true, "legacy_erased_record": true, "boundary": match.certificate.String()})
 	if err != nil {
 		return false, err
 	}
 	return true, storekit.RedactHistoricalAuditEntry(ctx, tx, proof)
 }
 
-func legacyAuditSubject(ctx context.Context, tx pgx.Tx, entry legacyAuditEntry) (string, ids.UUID, bool, error) {
+type legacyAuditMatch struct {
+	kind                string
+	entity, certificate ids.UUID
+}
+
+func legacyAuditSubject(ctx context.Context, tx pgx.Tx, entry legacyAuditEntry) (legacyAuditMatch, bool, error) {
 	query, args := legacyAuditSubjectQuery(entry)
 	if query == "" {
-		return "", ids.UUID{}, false, nil
+		return legacyAuditMatch{}, false, nil
 	}
-	var kind string
-	var entity ids.UUID
-	err := tx.QueryRow(ctx, query, args).Scan(&kind, &entity)
+	var match legacyAuditMatch
+	err := tx.QueryRow(ctx, query, args).Scan(&match.kind, &match.entity, &match.certificate)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", ids.UUID{}, false, nil
+		return legacyAuditMatch{}, false, nil
 	}
-	return kind, entity, err == nil, err
+	return match, err == nil, err
 }
 
 const legacyPrivacyBoundary = `erasure.action=ANY(@verbs) AND erasure.before IS NULL AND erasure.after IS NULL

@@ -89,22 +89,28 @@ func TestRequestIdentityIsKeptUntilOlderLinkedImagesAreCorrected(t *testing.T) {
 func TestLinkedCorrectionKeepsDisputedRequestCopies(t *testing.T) {
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
+	subject, _, _ := seedDedupePairs(ctx, t, tx)
 	request := ids.NewV7()
 	mustExec(ctx, t, tx, `INSERT INTO data_subject_request(id,kind,subject_ref,status,resolution,received_at,due_at,channel,receipt_reference,dispute_open)
  VALUES(@id,'access','erased+'||@id::uuid::text,'fulfilled','erased',now(),now()+interval '30 days','phone',@receipt,true)`, pgx.StrictNamedArgs{"id": request, "receipt": "RCPT-" + request.String()})
-	original := seedPersonalAudit(ctx, t, tx, "data_subject_request", request)
-	page, err := RedactLinkedHistoricalAuditPageTx(ctx, tx, ids.UUID{}, ids.NewV7(), 100, nil)
+	original, err := storekit.AuditWithEvidence(ctx, tx, "create", "data_subject_request", request, nil, map[string]any{"subject_ref": subject.contact.String(), "full_name": "Private Contact"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if page.Changed != 0 {
-		t.Fatalf("changed %d disputed request entries", page.Changed)
-	}
-	if _, err := RedactLinkedHistoricalIdentitiesPageTx(ctx, tx, ids.UUID{}, ids.NewV7(), 100, nil); err != nil {
-		t.Fatal(err)
+	legacyContactProof(ctx, t, tx, subject.contact.UUID)
+	for _, step := range []auditPageForTest{RedactLinkedHistoricalAuditPageTx, RedactLinkedHistoricalIdentitiesPageTx} {
+		page, err := step(ctx, tx, ids.UUID{}, ids.NewV7(), 100, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if page.Changed != 0 {
+			t.Fatalf("changed %d disputed request entries", page.Changed)
+		}
 	}
 	assertLegacyAuditImage(ctx, t, tx, original, true)
 }
+
+type auditPageForTest func(context.Context, pgx.Tx, ids.UUID, ids.UUID, int, CountryReader) (HistoricalAuditPage, error)
 
 func TestHistoricalEntryProofCannotRedactAnotherEntryOnTheSameRecord(t *testing.T) {
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
@@ -112,7 +118,8 @@ func TestHistoricalEntryProofCannotRedactAnotherEntryOnTheSameRecord(t *testing.
 	record := ids.NewV7()
 	original := seedPersonalAudit(ctx, t, tx, "intro_request", record)
 	other := seedPersonalAudit(ctx, t, tx, "intro_request", record)
-	proof, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "audit_log", original, nil, map[string]any{"payload_redaction": true, "legacy_erased_record": true})
+	boundary := legacyContactProof(ctx, t, tx, ids.NewV7())
+	proof, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "audit_log", original, nil, map[string]any{"payload_redaction": true, "legacy_erased_record": true, "boundary": boundary.String()})
 	if err != nil {
 		t.Fatal(err)
 	}
