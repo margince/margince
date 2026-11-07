@@ -110,7 +110,7 @@ The **task** names come from the contract (`backend/api/ai-tasks.yaml`). Only a 
 like any other task. Read the list from the build: `make ai-probe ARGS='list'` prints every site we
 ship, from the same census the report reads. Leave out `TASK=` to run the whole corpus.
 
-A `planned` task (`nl_search`, `transcript`) has no scenarios, so a run that names it fails with
+A `planned` task (`transcript`) has no scenarios, so a run that names it fails with
 `task "…" has no scenarios under corpus`. A scenario for a prompt that we do not ship would score a
 copy, and `aicert/corpus_test.go` holds the rule both ways.
 
