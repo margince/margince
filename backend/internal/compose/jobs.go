@@ -319,16 +319,11 @@ type JobRunnerConfig struct {
 	// Zero leaves the job's own timeout, which production runs under.
 	ImportTestReadBudget time.Duration
 	// Embedder is the retrieval embed lane (ModelPath.Embedder) both embed
-	// passes re-embed under, and it is the one field whose two kinds take
-	// OPPOSITE postures — for a reason that is about who enqueues them.
-	//
-	// The REINDEX workers register even with a nil embedder, DeepReadBrain's
-	// posture: a human's confirm at the transport is what enqueues a reindex,
-	// so a row can already be waiting, and it should fail clearly
-	// (jobs_embedreindex.go) rather than sit queued behind a job no one works.
-	// The DRIFT sweep registers nothing, because nothing but its own tick ever
-	// enqueues it: there is no queued row to fail loudly on, and a tick that
-	// could only ever enqueue failures is noise rather than a signal.
+	// passes re-embed under. The REINDEX workers register even when it is nil.
+	// A human's confirm enqueues a reindex, so a waiting row should fail
+	// clearly (jobs_embedreindex.go) instead of sitting queued. The DRIFT sweep
+	// registers nothing, because only its own tick enqueues it, and a tick that
+	// could only enqueue failures is noise.
 	Embedder search.Embedder
 	// VoiceBrain is the voice-build model lane (the worker's
 	// modelPath.VoiceBuild). May be nil: the build worker still registers,
