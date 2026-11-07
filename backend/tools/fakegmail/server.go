@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -19,14 +20,15 @@ import (
 const apiPrefix = "/gmail/v1/users/me"
 
 type server struct {
-	boxes     []mailbox
-	byOwner   map[string]int
-	mu        sync.Mutex
-	connected map[string]bool
-	calls     sync.Map
-	rawBytes  atomic.Int64
-	now       time.Time
-	big       bool
+	boxes      []mailbox
+	byOwner    map[string]int
+	mu         sync.Mutex
+	connected  map[string]bool
+	calls      sync.Map
+	rawBytes   atomic.Int64
+	now        time.Time
+	big        bool
+	generation int
 }
 
 func (s *server) routes() *http.ServeMux {
@@ -168,7 +170,7 @@ func (s *server) list(w http.ResponseWriter, r *http.Request) {
 	end := min(start+size, s.boxes[box].count)
 	ids := make([]map[string]string, 0, max(0, end-start))
 	for n := start; n < end; n++ {
-		ids = append(ids, map[string]string{"id": messageID(box, n)})
+		ids = append(ids, map[string]string{"id": s.messageID(box, n)})
 	}
 	out := map[string]any{"messages": ids, "resultSizeEstimate": s.boxes[box].count}
 	if end < s.boxes[box].count {
@@ -205,6 +207,13 @@ func (s *server) message(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) parseID(id string) (box, n int, ok bool) {
+	if s.generation != 0 {
+		rest, current := strings.CutPrefix(id, fmt.Sprintf("g%d-", s.generation))
+		if !current {
+			return 0, 0, false
+		}
+		id = rest
+	}
 	if len(id) != 7 {
 		return 0, 0, false
 	}

@@ -14,6 +14,7 @@ import (
 
 const leadObject = "lead"
 
+// MayReadLeads reports whether the caller may read lead figures.
 func MayReadLeads(ctx context.Context) bool {
 	return auth.Allows(ctx, leadObject, principal.ActionRead)
 }

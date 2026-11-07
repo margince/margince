@@ -91,7 +91,6 @@ func TestAWeekRemembersWhetherItsLeadsWereMeasuredWithAuthority(t *testing.T) {
 			if readableAtFreeze && restoredTeam.Counts.LeadsRouted != 1 {
 				t.Fatal("team redaction overwrote its stored count")
 			}
-
 		})
 	}
 }
