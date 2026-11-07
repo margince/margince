@@ -24,7 +24,7 @@ func (s *Sink) ReplayMeeting(ctx context.Context, rec connector.NormalizedRecord
 	if err := admitCalendarVerb(ctx, rec.NaturalKey, "replay"); err != nil {
 		return err
 	}
-	_, err := s.upsert(ctx, rec, true)
+	_, err := s.captureRecord(ctx, rec, true)
 	return err
 }
 
@@ -63,8 +63,8 @@ func (s *Sink) meetingForSeat(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	var own ids.ActivityID
 	var live bool
 	err = tx.QueryRow(ctx, `SELECT id,kind='meeting' AND archived_at IS NULL AND restricted_at IS NULL
- FROM activity WHERE source_system=@source AND source_id=@key FOR UPDATE`, pgx.StrictNamedArgs{
-		"source": rec.NaturalKey.SourceSystem, "key": rec.NaturalKey.SourceID,
+ FROM activity WHERE source_system=@source_system AND source_id=@key FOR UPDATE`, pgx.StrictNamedArgs{
+		fieldSourceSystem: rec.NaturalKey.SourceSystem, "key": rec.NaturalKey.SourceID,
 	}).Scan(&own, &live)
 	if err == nil {
 		if !live {

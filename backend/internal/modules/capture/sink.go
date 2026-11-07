@@ -221,10 +221,10 @@ var (
 // key. Replays return the existing row and write nothing new, so an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
-	return s.upsert(ctx, rec, rec.CalendarAnswer != nil && rec.CalendarAnswer.Response == connector.ResponseDeclined)
+	return s.captureRecord(ctx, rec, rec.CalendarAnswer != nil && rec.CalendarAnswer.Response == connector.ResponseDeclined)
 }
 
-func (s *Sink) upsert(ctx context.Context, rec connector.NormalizedRecord, existingOnly bool) (datasource.EntityRef, error) {
+func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord, existingOnly bool) (datasource.EntityRef, error) {
 	noteDelivered(ctx, rec)
 	rec = maskCapturedCredentials(rec)
 	actor, err := admitRecord(ctx, rec)

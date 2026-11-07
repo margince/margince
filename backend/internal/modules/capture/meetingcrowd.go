@@ -132,15 +132,15 @@ func settleAnswers(
 	ownerAddress, ownerResponse := "", ""
 	if roster.Current && actorUserID(ctx) == roster.Seat && roster.OwnerAnswer != nil {
 		ownerResponse = roster.OwnerAnswer.Response
-		address := strings.ToLower(strings.TrimSpace(roster.OwnerAnswer.Address))
-		if ownerResponse != "" && address != "" {
-			alone, err := ownAddressHeldAloneTx(ctx, tx, roster.Seat, address)
-			if err != nil {
-				return 0, err
-			}
-			if alone {
-				ownerAddress = address
-			}
+		ownerAddress = strings.ToLower(strings.TrimSpace(roster.OwnerAnswer.Address))
+	}
+	if ownerResponse != "" && ownerAddress != "" {
+		alone, err := ownAddressHeldAloneTx(ctx, tx, roster.Seat, ownerAddress)
+		if err != nil {
+			return 0, err
+		}
+		if !alone {
+			ownerAddress = ""
 		}
 	}
 
@@ -161,7 +161,7 @@ func settleAnswers(
  AND (ap.response IS DISTINCT FROM CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END
   OR (`+ownAnswer+` AND ap.roster_seat IS DISTINCT FROM @seat))
  AND (@current OR ap.response IS NULL)`, pgx.StrictNamedArgs{
-		"activity": activityID, "seat": roster.Seat, "addresses": addresses, "responses": responses, "current": roster.Current,
+		capturedActivityObject: activityID, "seat": roster.Seat, "addresses": addresses, "responses": responses, "current": roster.Current,
 		"owner_address": ownerAddress, "owner_response": ownerResponse,
 	})
 	if err != nil {

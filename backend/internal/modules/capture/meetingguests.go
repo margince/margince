@@ -214,7 +214,7 @@ func retireOffTheRoster(
  OR (NOT @left AND ap.roster_seat=@seat AND ap.address IS NOT NULL
  AND ap.user_id IS DISTINCT FROM @seat AND ap.user_id IS DISTINCT FROM a.host_user_id
  AND ((ap.user_id IS NOT NULL AND ap.address=ANY(@declined)) OR (@complete AND NOT ap.address=ANY(@addresses)))))`, pgx.StrictNamedArgs{
-		"activity": activityID, "seat": roster.Seat, "left": roster.Left, "declined": declined, "complete": roster.Complete, "addresses": addresses,
+		capturedActivityObject: activityID, "seat": roster.Seat, "left": roster.Left, "declined": declined, "complete": roster.Complete, "addresses": addresses,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: retiring the guests a calendar no longer lists: %w", err)

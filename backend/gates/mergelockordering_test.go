@@ -25,7 +25,7 @@ const (
 	captureJoin     = "internal/modules/capture/threadjoin.go"
 	captureLockFile = "internal/modules/capture/capturebeforethewrite.go"
 	lockTakerName   = "takeMergeLockFirst"
-	captureEntryFn  = "upsert"
+	captureEntryFn  = "captureRecord"
 	// Upsert takes the merge lock before landing. The landing step resolves
 	// mailbox aliases before capture, which can lock existing activity rows.
 	mailReadFile    = "internal/modules/capture/threadboundary.go"
@@ -53,7 +53,7 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 		{captureEntry, "Upsert"},
 		{"internal/modules/capture/sinkmeetingreplay.go", "ReplayMeeting"},
 	} {
-		if offsetOfCall(functionNamed(t, gatekit.ModuleRoot(t), caller.file, caller.name), "upsert") < 0 {
+		if offsetOfCall(functionNamed(t, gatekit.ModuleRoot(t), caller.file, caller.name), "captureRecord") < 0 {
 			t.Fatalf("%s must use the shared capture transaction", caller.name)
 		}
 	}
