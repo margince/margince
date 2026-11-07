@@ -30,16 +30,16 @@ import (
 // Narrate writes or corrects the week's sentence. Empty prose still records
 // that narration ran, so an unstamped week remains eligible for a retry.
 func (e *Engine) Narrate(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time) error {
-	return e.narrate(ctx, reviewID, sentence, now, true)
+	return e.writeNarration(ctx, reviewID, sentence, now, true)
 }
 
 // RecordNarrationFallback stamps an unmeasured week without replacing prose
 // that a reader's current permissions may have hidden.
 func (e *Engine) RecordNarrationFallback(ctx context.Context, reviewID ids.UUID, now time.Time) error {
-	return e.narrate(ctx, reviewID, "", now, false)
+	return e.writeNarration(ctx, reviewID, "", now, false)
 }
 
-func (e *Engine) narrate(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time, replace bool) error {
+func (e *Engine) writeNarration(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time, replace bool) error {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return err
 	}

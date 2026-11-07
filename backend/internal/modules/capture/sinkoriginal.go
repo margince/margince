@@ -141,7 +141,7 @@ func (s *Sink) storeSlimOriginalTx(
 	if err != nil {
 		return ids.Nil, err
 	}
-	return insertRawCaptureTx(ctx, tx, original.NaturalKey, payload, outcomeSlimmed)
+	return insertOriginalRowTx(ctx, tx, original.NaturalKey, payload, outcomeSlimmed)
 }
 
 // filesThisCaptureStoredTx pairs each file this capture staged with the

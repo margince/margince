@@ -62,13 +62,13 @@ func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 	// rule above means the second delivery of one message stores nothing — and
 	// its activity still has to name the original the FIRST delivery stored,
 	// or the row that keeps the bytes is the one nothing points at.
-	return insertRawCaptureTx(ctx, tx, rec.NaturalKey, payload, "")
+	return insertOriginalRowTx(ctx, tx, rec.NaturalKey, payload, "")
 }
 
-// insertRawCaptureTx is the one insert of a stored original. A non-empty
+// insertOriginalRowTx is the one insert of a stored original. A non-empty
 // slimmed outcome stamps the row as the part sweep would. The sweep then never
 // reads an original that names its files instead of carrying them.
-func insertRawCaptureTx(
+func insertOriginalRowTx(
 	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, payload []byte, slimmed partSlimOutcome,
 ) (ids.UUID, error) {
 	var id ids.UUID
