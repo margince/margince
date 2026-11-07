@@ -127,12 +127,18 @@ func jobNames(t *testing.T, job *rivertype.JobRow, id string, attempt int) bool 
 }
 
 func TestAnOverBudgetTestRunReturnsToDraft(t *testing.T) {
-	e := setupImportApp(t)
+	e, store := setupImportAppWithStore(t)
 	queued := queueLeadTest(t, e, leadFile(12_000))
 
-	// Reading 12,000 rows twice takes seconds, so this deadline ends the job
-	// mid-read. It is wide enough that a loaded runner has claimed the run first.
-	results := importjobtest.WorkQueuedBy(t, e, e.ImportJobs(), compose.ImportValidateArgs{}.Kind(), time.Second)
+	// The worker starts its read budget once it has claimed the run. This one is
+	// spent before the first row, so no runner speed changes the order.
+	workers, err := compose.ImportJobWorkersForTest(e.Pool, compose.JobRunnerConfig{
+		Blobstore: store, ImportUploadCap: 32 << 20, ImportTestReadBudget: time.Nanosecond,
+	})
+	if err != nil {
+		t.Fatalf("building the workers of a role with a spent read budget: %v", err)
+	}
+	results := importjobtest.WorkQueuedBy(t, e, workers, compose.ImportValidateArgs{}.Kind(), 0)
 	if len(results) != 1 || results[0].EventKind != river.EventKindJobCompleted {
 		t.Fatalf("the timed-out test ended %+v, want its job completed, not snoozed or retried", results)
 	}
