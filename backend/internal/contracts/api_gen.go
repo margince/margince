@@ -38326,7 +38326,7 @@ type Company360NextMeeting struct {
 	Participants []Company360MeetingParticipant `json:"participants"`
 
 	// ParticipantsMore How many more attendees there are than the eight named. Absent when every attendee is named.
-	ParticipantsMore *int      `json:"participants_more,omitempty"`
+	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
 	StartsAt         time.Time `json:"starts_at"`
 	Subject          string    `json:"subject"`
 }
@@ -41423,7 +41423,7 @@ type Contact360NextMeeting struct {
 	} `json:"participants,omitempty"`
 
 	// ParticipantsMore How many more attendees there are than the eight named. Absent when every attendee is named.
-	ParticipantsMore *int      `json:"participants_more,omitempty"`
+	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
 	StartsAt         time.Time `json:"starts_at"`
 	Subject          *string   `json:"subject,omitempty"`
 }
