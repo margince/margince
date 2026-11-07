@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer provides forecast figures before (EUR 17,900) and after (EUR 30,400 weighted) the move, and attributes the change to the deal's stage (closed as Won) and amount (EUR 12,500 now fully booked), which are factors a forecast reading supports.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer gives forecast figures — before and after the move, or the reading as it stands — and any reason it offers for the change is one a forecast reading supports, such as the deal's stage probability and amount. Answer no if it gives no forecast figure, says the forecast was unaffected without a figure, or names causes a forecast reading does not hold (a re-score, a slipped date, a definition change, other deals moving). Answer yes even if it offers no reason, and never answer no because the answer does not show its readings: you see only the answer, and its figures are checked against the readings elsewhere.",
+  "answer": "Done — the Rheinufer Netzmodernisierung deal is closed as Won. The forecast went from EUR 17,900 to EUR 30,400 weighted since the full EUR 12,500 now counts as booked."
+}
