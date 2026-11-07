@@ -14,7 +14,10 @@ import (
 	"errors"
 	"time"
 
+	"golang.org/x/sync/semaphore"
+
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/modules/capture/orderedfetch"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -73,22 +76,35 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	// far, because a page that dies mid-walk is retried from its committed
 	// token. Mail outside the synced folders is not counted, as in the estimate.
 	progress := connector.BackfillProgressFrom(ctx)
+	var walked []MessageRef
 	for _, msg := range msgs {
-		folder, synced := folders[msg.ParentFolderID]
-		if !synced {
-			continue
+		if _, synced := folders[msg.ParentFolderID]; synced {
+			walked = append(walked, msg)
 		}
-		captured, err := c.backfillOne(ctx, access, msg, sink, st.Owner, folder == folderSent)
-		if err != nil {
-			return connector.BackfillPageResult{}, err
-		}
-		res.Scanned++
-		if captured {
-			res.Captured++
-		} else {
-			res.Skipped++
-		}
-		progress.Observed(ctx, res.Scanned, res.Captured, res.Skipped)
+	}
+	err = backfillWalk.InOrder(ctx, len(walked),
+		func(ctx context.Context, i int) ([]byte, error) {
+			// Through the folder the listing found it in, so a message moved to
+			// Junk Email since is refused by Graph instead of read.
+			return c.api.GetMIME(ctx, access, walked[i].ParentFolderID, walked[i].ID)
+		},
+		func(i int, raw []byte, err error) error {
+			msg := walked[i]
+			captured, err := c.backfillOne(ctx, raw, err, msg, sink, st.Owner, folders[msg.ParentFolderID] == folderSent)
+			if err != nil {
+				return err
+			}
+			res.Scanned++
+			if captured {
+				res.Captured++
+			} else {
+				res.Skipped++
+			}
+			progress.Observed(ctx, res.Scanned, res.Captured, res.Skipped)
+			return nil
+		})
+	if err != nil {
+		return connector.BackfillPageResult{}, err
 	}
 	return res, nil
 }
@@ -106,14 +122,11 @@ func (c *Connector) syncedFolderIDs(ctx context.Context, access string) (map[str
 	return out, nil
 }
 
-// backfillOne walks ONE listed message: fetch its MIME, then capture it. Its
-// bool is the page's tally decision — captured, or skipped for any of the
-// ordinary reasons a message yields no row.
-func (c *Connector) backfillOne(ctx context.Context, access string, msg MessageRef, sink connector.Sink, owner string, sentByOwner bool) (bool, error) {
-	// Through the folder the listing found it in, so a message moved to Junk
-	// Email since is refused by Graph instead of read.
-	raw, err := c.api.GetMIME(ctx, access, msg.ParentFolderID, msg.ID)
-	if errors.Is(err, connector.ErrSkip) {
+// backfillOne settles one listed message from its fetched MIME. Its bool is the
+// page's tally: captured, or skipped for an ordinary reason a message yields no
+// row.
+func (c *Connector) backfillOne(ctx context.Context, raw []byte, fetchErr error, msg MessageRef, sink connector.Sink, owner string, sentByOwner bool) (bool, error) {
+	if errors.Is(fetchErr, connector.ErrSkip) {
 		// A message the provider refuses to hand over: deleted between the
 		// listing and the fetch, or an oversized MIME blob that truncated
 		// would not be honest evidence. Both are per-message drops, counted
@@ -123,12 +136,26 @@ func (c *Connector) backfillOne(ctx context.Context, access string, msg MessageR
 		// message, forever.
 		return false, nil
 	}
-	if err != nil {
+	if fetchErr != nil {
 		// Stop the page without advancing, so a retry resumes from the
 		// committed token. Whether there IS a retry is the engine's call on
 		// the class this error carries: a rate limit or an unreachable
 		// provider is waited out, anything else ends the run.
-		return false, err
+		return false, fetchErr
 	}
 	return captureOne(ctx, raw, sink, c.bounces, owner, msg.ParentFolderID, sentByOwner, msg.ReceivedAt)
+}
+
+// backfillWalk fetches a few messages of a page at once and captures them in
+// the page's order. Microsoft allows four concurrent requests per mailbox. Two
+// leave one for live sync and one for a send. A fetch reserves twice the MIME cap, since
+// reading grows its buffer past what it keeps, from a budget every walk in the
+// process shares.
+var backfillWalk = orderedfetch.Walk[[]byte]{
+	Workers: 2, Lookahead: 4,
+	Budget: semaphore.NewWeighted(8 * 2 * maxMIMELen), Reserve: 2 * maxMIMELen,
+	Retained: func(raw []byte) int64 { return int64(cap(raw)) },
+	// Every fetch error but a refused message ends the page (backfillOne).
+	// So none is worth the rest of the look-ahead, a rate limit least of all.
+	Halts: func(err error) bool { return !errors.Is(err, connector.ErrSkip) },
 }

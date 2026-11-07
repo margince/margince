@@ -192,8 +192,12 @@ func (s *Sink) decidePartyTx(ctx context.Context, tx pgx.Tx, activity ids.Activi
 	return err
 }
 
-func (s *Sink) admitCapturedParties(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
-	if ref.Type != datasource.EntityActivity {
+// admitCapturedParties admits the parties a capture's proof names.
+// nothingToAdmit marks a new message whose stored evidence awaits no admission.
+// Mail the seat only received names no other party, so the reads are skipped.
+// A replay still runs, as the retry of an admission that failed before.
+func (s *Sink) admitCapturedParties(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, nothingToAdmit bool) {
+	if ref.Type != datasource.EntityActivity || nothingToAdmit {
 		return
 	}
 	if err := s.AdmitActivityParties(ctx, ids.From[ids.ActivityKind](ref.ID)); err != nil {

@@ -31,7 +31,7 @@ func TestAMeteredQueryCountsOneStatementAndItsTime(t *testing.T) {
 	traced := tracer.TraceQueryStart(ctx, nil, pgx.TraceQueryStartData{SQL: "SELECT 1"})
 	tracer.TraceQueryEnd(traced, nil, pgx.TraceQueryEndData{})
 
-	if got := meter.Cost(); got != (StatementCost{Statements: 1, DBTime: 5 * time.Millisecond}) {
+	if got := meter.Cost(); got != (StatementCost{Statements: 1, Exchanges: 1, DBTime: 5 * time.Millisecond}) {
 		t.Fatalf("cost = %+v, want one statement of 5ms", got)
 	}
 }
@@ -68,8 +68,23 @@ func TestABatchCountsEachQueryPgxReadAndEachThatFailed(t *testing.T) {
 	tracer.TraceBatchQuery(traced, nil, pgx.TraceBatchQueryData{Err: failed})
 	tracer.TraceBatchEnd(traced, nil, pgx.TraceBatchEndData{Err: failed})
 
-	if got := meter.Cost(); got != (StatementCost{Statements: 2, Failed: 1, DBTime: 2 * time.Millisecond}) {
+	if got := meter.Cost(); got != (StatementCost{Statements: 2, Exchanges: 1, Failed: 1, DBTime: 2 * time.Millisecond}) {
 		t.Fatalf("cost = %+v, want the two queries read, one failure, one round trip of 2ms", got)
+	}
+}
+
+func TestABeginCountsATransactionAndASavepointDoesNot(t *testing.T) {
+	t.Parallel()
+	tracer := statementTracer{now: steppedClock(time.Millisecond)}
+	ctx, meter := WithStatementMeter(context.Background())
+
+	for _, sql := range []string{"begin", "BEGIN ISOLATION LEVEL REPEATABLE READ", "savepoint sp_1", "SELECT 'begin'", "beginning"} {
+		traced := tracer.TraceQueryStart(ctx, nil, pgx.TraceQueryStartData{SQL: sql})
+		tracer.TraceQueryEnd(traced, nil, pgx.TraceQueryEndData{})
+	}
+
+	if got := meter.Cost(); got.Transactions != 2 || got.Exchanges != 5 {
+		t.Fatalf("cost = %+v, want the two begins as transactions out of five exchanges", got)
 	}
 }
 
@@ -114,7 +129,7 @@ func TestACopyFromCountsOneStatement(t *testing.T) {
 	traced := tracer.TraceCopyFromStart(ctx, nil, pgx.TraceCopyFromStartData{})
 	tracer.TraceCopyFromEnd(traced, nil, pgx.TraceCopyFromEndData{})
 
-	if got := meter.Cost(); got != (StatementCost{Statements: 1, DBTime: 4 * time.Millisecond}) {
+	if got := meter.Cost(); got != (StatementCost{Statements: 1, Exchanges: 1, DBTime: 4 * time.Millisecond}) {
 		t.Fatalf("cost = %+v, want one statement of 4ms", got)
 	}
 }

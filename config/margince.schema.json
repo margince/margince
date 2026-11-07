@@ -570,7 +570,7 @@
             "integer",
             "null"
           ],
-          "default": 1
+          "default": 2
         },
         "history_hold": {
           "description": "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",

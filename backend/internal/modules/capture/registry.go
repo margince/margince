@@ -61,6 +61,9 @@ type Registry struct {
 	// setting (MailSyncIntervalSeconds), read when the sync records itself.
 	now            func() time.Time
 	progressPacing time.Duration
+	// ownershipWatch is how often a running page checks it still owns its
+	// execution (backfillwatch.go).
+	ownershipWatch time.Duration
 
 	// digestProjects answers the morning digest's projects section
 	// (digestprojects.go); nil builds a digest without one.
@@ -84,6 +87,7 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 		vault:          vault,
 		now:            time.Now,
 		progressPacing: defaultProgressPacing,
+		ownershipWatch: time.Second,
 		backfillLimit:  1,
 	}
 }
@@ -105,6 +109,17 @@ func (r *Registry) SetClock(now func() time.Time) *Registry {
 // sensible when the pages are short enough that the volume is not the point.
 func (r *Registry) WithProgressPacing(d time.Duration) *Registry {
 	r.progressPacing = d
+	return r
+}
+
+// WithOwnershipWatch overrides how often a running page checks that it still
+// owns its execution. Each check is a transaction. A test that counts a page's
+// statements sets it past the page's length. The transaction fence still
+// refuses a stale page's writes.
+func (r *Registry) WithOwnershipWatch(d time.Duration) *Registry {
+	if d > 0 {
+		r.ownershipWatch = d
+	}
 	return r
 }
 

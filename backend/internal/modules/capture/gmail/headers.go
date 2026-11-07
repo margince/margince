@@ -47,7 +47,7 @@ func (a *httpAPI) GetHeaders(ctx context.Context, accessToken, msgID string) (Me
 			}] `json:"headers"`
 		} `json:"payload"`
 	}
-	q := url.Values{"format": {"metadata"}}
+	q := url.Values{paramFormat: {formatMetadata}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxJSONResponseBytes)
 	if status == http.StatusNotFound {
 		return Message{}, ErrMessageGone

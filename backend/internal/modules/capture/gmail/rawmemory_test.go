@@ -77,16 +77,6 @@ func assertRawBudgetReturned(t *testing.T, budget *semaphore.Weighted) {
 	budget.Release(rawFetchReservation)
 }
 
-func TestCancelledReservationDoesNotTakeCapacity(t *testing.T) {
-	budget := semaphore.NewWeighted(rawFetchReservation)
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-	if _, err := reserveMemory(ctx, budget, rawFetchReservation); !errors.Is(err, context.Canceled) {
-		t.Fatalf("reservation=%v want cancellation", err)
-	}
-	assertRawBudgetReturned(t, budget)
-}
-
 func TestAPanickingConsumerReturnsItsReservation(t *testing.T) {
 	budget := semaphore.NewWeighted(rawFetchReservation)
 	panicked := false

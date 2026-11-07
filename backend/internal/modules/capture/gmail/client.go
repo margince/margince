@@ -335,7 +335,7 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 		LabelIDs     messageLabels `json:"labelIds"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 		InternalDate string        `json:"internalDate"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	}
-	q := url.Values{"format": {"RAW"}}
+	q := url.Values{paramFormat: {formatRaw}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxRawMessageBytes)
 	if status == http.StatusNotFound {
 		// Enumerated a moment ago, gone now — nothing to fetch. Skip it and
