@@ -6180,7 +6180,7 @@ export const en = {
   "assignments.who": "Who",
   "assignments.findColleague": "Find a colleague",
   "assignments.noColleagueFound":
-    "No active colleague found. Ask an admin to invite them, then ask them to sign in.",
+    "No active colleague found. Check the spelling. If the name is right, ask an admin to invite them or to check their account.",
   "assignments.findTeam": "Find a team",
   "assignments.role": "Role",
   "assignments.rolePlaceholder": "Pick a role",
