@@ -40,10 +40,8 @@ expect:
     date should move to it. The price in the offer is the deal's amount
     already, so no amount change is due.
     Score high for one set_close_date to 2027-01-29 citing the customer's
-    mail. Score in the middle for the right date with an added probability
-    change: "the offer works for us" may read as a firmer chance, but the
-    signing is still weeks off. Score at the floor for no date change, or a
-    date the mail does not name.
+    mail. Score at the floor for no date change, or a date the mail does not
+    name.
   bands:
     certified_min: 70
     degraded_min: 50

@@ -1,10 +1,10 @@
-name: sales_assessment_names_the_largest_open_deal
+name: sales_assessment_names_the_deal_no_decision_covers
 task: report_interpret
 site: sales_assessment
 source: hand_authored
 sanitized_by: hand_authored/claude-fable-5
-# A quarter behind its target with one large open deal. The assessment reads
-# the gap off the cells and names that deal.
+# Two open deals, and an earlier review already left an open decision on one.
+# The assessment reads the figures and names the deal no decision covers.
 fixture:
   frame:
     scope: Whole company
@@ -20,7 +20,11 @@ fixture:
   candidate_deals:
     - {label: linden, name: "Linden press line", amount: "250000 EUR"}
     - {label: tern, name: "Tern customer portal", amount: "120000 EUR"}
-  decisions: []
+  decisions:
+    - deal: tern
+      text: "Agree the portal scope with the buyer's IT lead"
+      review_on: "2026-11-10"
+      status: open
 expect:
   outcome: accepted
   answer:
@@ -32,9 +36,8 @@ expect:
     floor: 40
   rubric: >
     Score whether the assessment reads the figures as given and names the deal
-    that matters. It must cite sales won and the open pipeline, and it must
-    not invent a figure the cells do not carry: a percentage gap or a
-    "remaining to target" number no cell holds fails the scenario. The next
-    decision must name the Linden press line, the larger open deal, with one
-    concrete thing to decide. A decision on the smaller deal scores low; no
-    decision at all fails.
+    that matters. It must cite sales won and the open pipeline, and acknowledge
+    the decision still open on the Tern customer portal. The next decision must
+    name the Linden press line, the one open deal no decision covers yet, with
+    one concrete thing to decide. Recommending again on Tern, which the open
+    decision already covers, scores low; no decision at all fails.
