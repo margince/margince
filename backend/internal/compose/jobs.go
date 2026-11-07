@@ -313,6 +313,9 @@ type JobRunnerConfig struct {
 	// ImportUploadCap is the deployment's ceiling for an import upload, so a
 	// commit reads a stored ZIP under the limits its upload was accepted with.
 	ImportUploadCap int64
+	// ImportTestReadBudget caps one test run's read, counted from its claim.
+	// Zero leaves the job's own timeout, which production runs under.
+	ImportTestReadBudget time.Duration
 	// Embedder is the retrieval embed lane (ModelPath.Embedder) both embed
 	// passes re-embed under, and it is the one field whose two kinds take
 	// OPPOSITE postures — for a reason that is about who enqueues them.
