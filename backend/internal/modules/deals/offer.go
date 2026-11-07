@@ -422,7 +422,7 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
 			return fmt.Errorf("apply offer patch: %w", err)
 		}
-		if err := s.auditHeaderEdit(ctx, tx, id, p, in.LegalEntityID); err != nil {
+		if err := s.auditHeaderEdit(ctx, tx, current, p, in.LegalEntityID); err != nil {
 			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err != nil {
