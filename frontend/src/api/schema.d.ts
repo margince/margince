@@ -40229,7 +40229,27 @@ export interface components {
         ActivityListResponse: {
             data: components["schemas"]["Activity"][];
             page: components["schemas"]["PageInfo"];
+            /**
+             * @description Whether the reader's own calendar feeds the meetings this list holds. Present when
+             *     the list can be read as the reader's diary: narrowed to `kind=meeting`, or to an
+             *     `occurred_after`/`occurred_before` window with no `kind`. Absent on any other list,
+             *     and when the reader may not read their own connections.
+             *
+             *     A meeting missing from the list is evidence that it is not in the diary only when
+             *     this is `connected`. Under either other answer the list is the meetings somebody
+             *     recorded in this CRM, and a client must not draw an empty day as a free one.
+             */
+            calendar?: components["schemas"]["ReaderCalendar"];
         };
+        /**
+         * @description Whether the reader's own calendar connections feed the meetings this product holds.
+         *
+         *     `not_connected` — the reader has no live calendar connection: none was made, or every
+         *     one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+         *     reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+         * @enum {string}
+         */
+        ReaderCalendar: "connected" | "not_connected" | "unreadable";
         /**
          * @description A sparse patch. An absent field is untouched; `title` and `supersedes_id` accept
          *     null to clear, because clearing either is an edit a human makes deliberately.
@@ -55469,10 +55489,6 @@ export interface components {
              * @description Whether the reader's own calendar feeds the meetings this read counts. Present only
              *     for scope `mine`; a wider scope has no single calendar to answer for.
              *
-             *     `not_connected` — the reader has no live calendar connection: none was made, or every
-             *     one is parked or disconnected. `unreadable` — a calendar connection exists but needs
-             *     reauthorisation, has errored, or its sync is failing. `connected` otherwise.
-             *
              *     A zero `meetings` count is a measurement only when this is `connected`. Under either
              *     other answer it says nothing about the day, and a client must not draw it as "no
              *     meetings".
@@ -55480,9 +55496,8 @@ export interface components {
              *     Absent under scope `mine` when the read could not answer. A read that failed is
              *     named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
              *     reader is refused is absent and named nowhere.
-             * @enum {string}
              */
-            calendar?: "connected" | "not_connected" | "unreadable";
+            calendar?: components["schemas"]["ReaderCalendar"];
             /**
              * @description The reader's next booked customer meeting — linked to a contact, lead or company the
              *     reader may see — within the next 30 days. Present only when the meetings lane
