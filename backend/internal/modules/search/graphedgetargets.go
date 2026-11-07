@@ -31,6 +31,15 @@ type edgeTargets struct {
 // addActivities includes prior pairs when a change could have displaced evidence.
 // Captures name current participants, without unrelated colleague edges.
 func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, includePrior bool) error {
+	if !includePrior {
+		// Nothing was displaced, so an activity that does not count adds no
+		// evidence. Opening it to the workspace later is folded as an update.
+		counting, err := countingActivities(ctx, tx, activityIDs)
+		if err != nil {
+			return err
+		}
+		activityIDs = counting
+	}
 	if len(activityIDs) == 0 {
 		return nil
 	}
@@ -45,6 +54,18 @@ func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs 
 	t.contactPairs = append(t.contactPairs, contactPairs...)
 	t.pairs = append(t.pairs, pairs...)
 	return nil
+}
+
+// countingActivities keeps the activities that count towards an edge now.
+func countingActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]ids.UUID, error) {
+	if len(activityIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id = ANY($1) AND `+graphActivityCounts, activityIDs)
+	if err != nil {
+		return nil, fmt.Errorf("search: reading which arrivals count towards an edge: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
 // addContact names every edge touching one contact. Reads only.

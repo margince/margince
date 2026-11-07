@@ -194,8 +194,7 @@ func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		       AND `+liveContactSQL("pp.contact_id")+`
 		      JOIN activity a
-		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
+		        ON a.id = up.activity_id AND `+graphActivityCounts+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		),
 		folded AS (
 		    SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, `+graphFoldColumns(window)+`
@@ -245,8 +244,7 @@ func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
 		       SELECT 1
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
-		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
+		         JOIN activity a ON a.id = up.activity_id AND `+graphActivityCounts+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		          AND `+liveContactSQL("pp.contact_id")+`)`,
@@ -386,6 +384,10 @@ var graphInteractionUnit = relstrength.InteractionUnitSQL("a")
 // not happened yet. The nightly rebuild counts it once its time has passed.
 var graphCountedActivity = relstrength.InteractionCountsAtSQL("a", "now()")
 
+// graphActivityCounts is whether activity a counts towards any edge now. Every
+// fold reads it, and so does countingActivities.
+var graphActivityCounts = `a.archived_at IS NULL` + audienceWorkspaceOnly + ` AND ` + graphCountedActivity
+
 // graphWeWrote is relstrength's outbound side; the inbound side also needs the
 // contact as sender, so a colleague's reply on the thread is not theirs.
 var graphWeWrote = relstrength.WeWroteSQL("a")
@@ -446,8 +448,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		    SELECT up.user_id AS edge_user, pp.contact_id AS edge_contact, `+relstrength.FoldColumnsSQL("a")+`, `+graphMet+` AS met, `+graphMemberSent+` AS sent
 		      FROM activity_participant up
 		      JOIN activity_participant pp ON pp.activity_id = up.activity_id
-		      JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		       AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
+		      JOIN activity a ON a.id = up.activity_id AND `+graphActivityCounts+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		     WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		       AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
 		       AND `+liveContactSQL("pp.contact_id")+`
@@ -484,8 +485,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		  FROM activity_participant pa
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id
-		  JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
+		  JOIN activity a ON a.id = pa.activity_id AND `+graphActivityCounts+`
 		 WHERE pa.contact_id IS NOT NULL AND pa.role IN `+interactionRoles+`
 		   AND pb.role IN `+interactionRoles+`
 		   AND `+liveContactSQL("pa.contact_id")+` AND `+liveContactSQL("pb.contact_id")+`
