@@ -131,12 +131,29 @@ func settleAnswers(
 	if len(addresses) == 0 {
 		return 0, nil
 	}
+	var owned []string
+	if roster.Current && actorUserID(ctx) == roster.Seat {
+		self, err := ownerIdentitiesTx(ctx, tx)
+		if err != nil {
+			return 0, err
+		}
+		for _, address := range addresses {
+			if self.CoversAddressExactly(address) {
+				owned = append(owned, address)
+			}
+		}
+	}
+	ownAnswer := `(@current AND (ap.user_id=@seat OR (ap.user_id IS NULL AND ap.address=ANY(@owned::text[]))))`
 	tag, err := tx.Exec(ctx, `
-		UPDATE activity_participant ap SET response = inp.response
-		  FROM unnest($3::text[], $4::text[]) AS inp(address, response)
-		 WHERE ap.activity_id = $1 AND ap.roster_seat = $2 AND ap.address = inp.address
-		   AND ap.response IS DISTINCT FROM inp.response AND ($5 OR ap.response IS NULL)`,
-		activityID, roster.Seat, addresses, responses, roster.Current)
+  UPDATE activity_participant ap SET response=inp.response,
+   roster_seat=CASE WHEN `+ownAnswer+` THEN @seat ELSE ap.roster_seat END
+  FROM unnest(@addresses::text[],@responses::text[]) AS inp(address,response)
+  WHERE ap.activity_id=@activity AND ap.address=inp.address
+   AND (ap.roster_seat=@seat OR `+ownAnswer+`)
+   AND (ap.response IS DISTINCT FROM inp.response OR (`+ownAnswer+` AND ap.roster_seat IS DISTINCT FROM @seat))
+   AND (@current OR ap.response IS NULL)`, pgx.StrictNamedArgs{
+		"activity": activityID, "seat": roster.Seat, "addresses": addresses, "responses": responses, "current": roster.Current, "owned": owned,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: recording the answers a calendar lists: %w", err)
 	}

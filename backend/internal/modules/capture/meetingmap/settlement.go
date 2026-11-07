@@ -21,8 +21,7 @@ type Settlement int
 const (
 	// SettleCapture writes the meeting.
 	SettleCapture Settlement = iota
-	// SettleCancel means the meeting is off — the organizer called it off, or
-	// the connected account declined it. A meeting captured while it was live
+	// SettleCancel means the organizer called the meeting off. A meeting captured while it was live
 	// must be marked cancelled rather than left standing; one never captured
 	// has nothing to mark, and the writer's own upsert answers that.
 	SettleCancel
@@ -36,10 +35,9 @@ type Reason string
 
 // The reasons Settle gives. The text is what a skip error and a test read.
 const (
-	ReasonNoEventID     Reason = "no event id"
-	ReasonCancelled     Reason = "cancelled"
-	ReasonOwnerDeclined Reason = "declined by the calendar owner"
-	ReasonNoOtherParty  Reason = "no party besides the owner"
+	ReasonNoEventID    Reason = "no event id"
+	ReasonCancelled    Reason = "cancelled"
+	ReasonNoOtherParty Reason = "no party besides the owner"
 )
 
 // Label is the reason as a metric label value: the text in snake case.
@@ -58,25 +56,8 @@ func (m Meeting) SkipReason() (string, bool) {
 
 // Settle decides what happens to this event, and why.
 //
-// A CANCELLED or DECLINED event is not simply dropped. Dropping is right for one
-// that was never captured, and wrong for one that was: the meeting is already on
-// the timeline and on the reader's schedule, and no later pull ever mentions it
-// again — the row stands as booked forever. So the two answers are told apart,
-// and the writer marks what it already has.
-//
-// The order matters. Cancellation is asked FIRST, before the party rules below,
-// because those rules answer "is this worth capturing" and a meeting already
-// captured has had that question answered in the affirmative once. Asking them
-// first would drop the cancellation of a meeting whose attendee list changed
-// after it was booked, and leave exactly the stale row this exists to clear.
-//
-// A RECURRING meeting cancels one occurrence at a time, and that falls out of
-// how both connectors pull rather than from anything here: Google lists with
-// singleEvents=true and Microsoft walks calendarView, so each occurrence arrives
-// as its own event carrying its own id. Declining next Tuesday therefore closes
-// next Tuesday's meeting and leaves the rest of the series booked, which is what
-// the calendar means. A connector that pulled series masters instead would hand
-// this one id for every occurrence, and one decline would close them all.
+// An organizer cancellation precedes the party checks because it may retire
+// a meeting whose guests changed. Attendee responses belong to the roster.
 //
 // Whose side the parties are on is not asked here. Only the capture writer can
 // read the workspace's own domains and consumer list. So the record states
@@ -89,9 +70,6 @@ func (m Meeting) Settle() (Reason, Settlement) {
 	}
 	if m.cancelled {
 		return ReasonCancelled, SettleCancel
-	}
-	if m.ownerDeclined {
-		return ReasonOwnerDeclined, SettleCancel
 	}
 	// An event naming nobody but the owner is a block in their own calendar —
 	// focus time, a reminder, a flight. Nobody was met, so there is no

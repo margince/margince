@@ -33,12 +33,11 @@ func (c *Connector) listIsStale(listedAt time.Time) bool {
 // beyondHorizon reports that one raw event starts after the capture edge and is
 // not captured on this pull.
 //
-// A cancellation or a declined invitation is never held back: it may close a
-// meeting captured before this bound existed, and it writes no new row. An
-// event that will not decode is left to CaptureOne, which already skips it.
+// A cancellation may close an existing meeting beyond the edge. A declined
+// invitation remains subject to the capture window, like every other RSVP.
 func beyondHorizon(raw []byte, owner string, edge time.Time) bool {
 	ev, err := decodeEvent(raw, owner)
-	if err != nil || ev.Cancelled || ev.OwnerDeclined {
+	if err != nil || ev.Cancelled {
 		return false
 	}
 	return ev.StartsAt.After(edge)

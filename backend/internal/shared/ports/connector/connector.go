@@ -154,6 +154,12 @@ type Sink interface {
 	Upsert(ctx context.Context, rec NormalizedRecord) (datasource.EntityRef, error)
 }
 
+// MeetingReplayer updates an existing calendar meeting through the capture
+// writer while leaving an uncaptured event outside the capture window.
+type MeetingReplayer interface {
+	ReplayMeeting(ctx context.Context, rec NormalizedRecord) error
+}
+
 // MeetingCanceller is the Sink's second calendar verb: a meeting already
 // captured is called off. It is separate from Sink rather than a method on it
 // because cancelling is a calendar-only act — the mail and channel connectors

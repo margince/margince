@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // rsvpEventJSON builds a confirmed event whose attendees carry RSVPs. Each
@@ -123,16 +124,26 @@ func TestTheOwnersDeclineIsReadOffTheAttendeeList(t *testing.T) {
 			if err != nil {
 				t.Fatalf("decodeEvent: %v", err)
 			}
-			if ev.OwnerDeclined != tc.want {
-				t.Fatalf("OwnerDeclined = %v, want %v", ev.OwnerDeclined, tc.want)
+			if (ev.OwnerResponse == connector.ResponseDeclined) != tc.want {
+				t.Fatalf("OwnerResponse = %v, want %v", ev.OwnerResponse, tc.want)
+			}
+			if ev.OwnerResponse != "" {
+				found := false
+				for _, party := range meetingmap.Classify(ev, rsvpOwner).Participants().Participants {
+					if party.Email == rsvpOwner && party.Response == ev.OwnerResponse {
+						found = true
+					}
+				}
+				if !found {
+					t.Fatal("the connected calendar's own answer was not carried to its participant row")
+				}
 			}
 		})
 	}
 }
 
-// The whole point, end to end through this vendor's decode: a declined meeting
-// settles as a cancellation, so the row already captured gets closed.
-func TestADeclinedInvitationSettlesAsACancellation(t *testing.T) {
+// An attendee answer changes the roster and leaves the shared meeting booked.
+func TestADeclinedInvitationKeepsTheSharedMeetingBooked(t *testing.T) {
 	t.Parallel()
 	raw := rsvpEventJSON(t, []map[string]any{
 		{"email": rsvpOwner, "responseStatus": "declined", "self": true},
@@ -142,8 +153,8 @@ func TestADeclinedInvitationSettlesAsACancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeEvent: %v", err)
 	}
-	if _, got := meetingmap.Classify(ev, rsvpOwner).Settle(); got != meetingmap.SettleCancel {
-		t.Fatalf("Settle() = %v, want the declined meeting closed", got)
+	if _, got := meetingmap.Classify(ev, rsvpOwner).Settle(); got != meetingmap.SettleCapture {
+		t.Fatalf("Settle() = %v, want the shared meeting kept booked", got)
 	}
 }
 

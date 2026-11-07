@@ -19,10 +19,9 @@ type Event struct {
 	// provider states none: a made-up identity would join unrelated meetings.
 	ICalUID   string
 	Cancelled bool
-	// OwnerDeclined says the connected account declined this invitation. The
-	// organizer's event is still alive, but for this seat it means the same as
-	// Cancelled, so Settlement folds the two together.
-	OwnerDeclined bool
+	// OwnerResponse is the connected calendar's answer. Participant rows carry
+	// it; only Cancelled cancels the shared meeting.
+	OwnerResponse string
 	Subject       string
 	Description   string
 	// StartsAt is the event's start as an instant. Zero is an unreadable start,

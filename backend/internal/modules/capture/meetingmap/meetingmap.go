@@ -63,7 +63,6 @@ type Meeting struct {
 	durationSeconds *int
 	private         bool
 	cancelled       bool
-	ownerDeclined   bool
 	hasExternal     bool // any party outside the OWNER's own domain; the sink judges the rest
 	partiesHidden   bool
 	ownerDomain     string
@@ -94,7 +93,6 @@ func Classify(ev Event, owner string) Meeting {
 		durationSeconds: eventDuration(ev),
 		private:         ev.Private,
 		cancelled:       ev.Cancelled,
-		ownerDeclined:   ev.OwnerDeclined,
 		// The organizer counts as a party: an externally-organized meeting is a
 		// customer touch even when the owner is the only listed attendee.
 		//
@@ -106,7 +104,7 @@ func Classify(ev Event, owner string) Meeting {
 		partiesHidden: ev.PartiesHidden,
 		ownerDomain:   ownerDom,
 		addresses:     eventAddresses(ev, owner),
-		participants:  meetingParties(ev),
+		participants:  meetingParties(ev, owner),
 		notes:         NotesDocuments(ev, owner),
 	}
 }
@@ -128,7 +126,7 @@ func (m Meeting) Participants() connector.Parties { return m.participants }
 // Organizer wins over attendee when the same address holds both, which is the
 // common case for a meeting somebody scheduled and then attended: organizing is
 // the stronger statement about their part in it.
-func meetingParties(ev Event) connector.Parties {
+func meetingParties(ev Event, owner string) connector.Parties {
 	seen := map[string]int{}
 
 	var out []connector.MessageParticipant
@@ -155,6 +153,14 @@ func meetingParties(ev Event) connector.Parties {
 			continue
 		}
 		add(a, connector.ParticipantRoleAttendee)
+	}
+
+	if address := strings.ToLower(strings.TrimSpace(owner)); address != "" && ev.OwnerResponse != "" {
+		if at, listed := seen[address]; listed {
+			out[at].Response = ev.OwnerResponse
+		} else {
+			add(Actor{Email: address, Response: ev.OwnerResponse}, connector.ParticipantRoleAttendee)
+		}
 	}
 
 	return connector.CapParticipants(out)
@@ -331,7 +337,7 @@ type Decode func(raw []byte, owner string) (Event, error)
 // Sink write fault returns an error, which stops the pull. A package function
 // rather than a method, so a pull holds no shared state.
 //
-// A cancelled or declined event reaches the sink as a CANCELLATION rather than
+// An organizer cancellation reaches the sink as a CANCELLATION rather than
 // as nothing. The event was capturable once — that is exactly the case where a
 // meeting is sitting on somebody's schedule — and this is the only pull that
 // will ever mention it again, because the provider stops listing an event once

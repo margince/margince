@@ -163,7 +163,7 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		Private:       ev.Visibility != "" && ev.Visibility != "default" && ev.Visibility != "public",
 		ICalUID:       strings.TrimSpace(ev.ICalUID),
 		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled),
-		OwnerDeclined: ownerDeclined(ev.Attendees, owner),
+		OwnerResponse: ownerResponse(ev.Attendees, owner),
 		Subject:       ev.Summary,
 		Description:   ev.Description,
 		StartsAt:      parseStart(ev.Start),
@@ -191,29 +191,13 @@ func guestResponse(status string) string {
 	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
 }
 
-// ownerDeclined reports that the connected account answered NO to this
-// invitation.
-//
-// Google's `self` flag is the authority and the address is the FALLBACK, in
-// that order and never as a pair of equals. The flag is the account's own answer
-// to which attendee it is, so it holds when the invitation went to an alias or
-// reached the account through a group — cases where matching the owner's address
-// finds nobody at all. The address answers only for a payload carrying no flag.
-//
-// Asking them as one condition would let either say yes, which is a different
-// rule and a wrong one: an event where the `self` attendee ACCEPTED and some
-// other attendee on the owner's address declined would read as declined, and a
-// meeting the account is going to would leave the schedule. Whichever entry is
-// the owner's, exactly one answer is theirs.
-//
-// Only "declined" counts. A tentative answer is an attendance somebody may yet
-// make, and "needsAction" is an invitation nobody has read; taking either off
-// the schedule would hide a meeting that is still going to happen.
-func ownerDeclined(attendees []eventActor, owner string) bool {
+// ownerResponse prefers Google's self entry, so aliases and group invitations
+// use the connected calendar's answer rather than an address match's answer.
+func ownerResponse(attendees []eventActor, owner string) string {
 	if self, ok := ownerAttendee(attendees, owner); ok {
-		return strings.EqualFold(strings.TrimSpace(self.ResponseStatus), "declined")
+		return guestResponse(self.ResponseStatus)
 	}
-	return false
+	return ""
 }
 
 // ownerAttendee picks the attendee entry belonging to the connected account:

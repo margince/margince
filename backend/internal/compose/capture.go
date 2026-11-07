@@ -325,10 +325,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// The opening score and its history point, from the module that owns
 		// `lead`, so a captured lead scores as a hand-created one does.
 		WithLeadScorer(contacts.ScoreCapturedLead).
-		// Closing a meeting the calendar says is off — called off by its
-		// organizer, or declined by the seat whose calendar it is. From the
-		// module that owns `activity` and its status history, for the reason
-		// every seam above travels this way.
+		// The activity module owns organizer cancellations and their history.
 		//
 		// Without it a cancelled meeting stays on the timeline as booked: the
 		// provider stops listing an event once it is off, so the pull that

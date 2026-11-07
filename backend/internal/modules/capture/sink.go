@@ -69,9 +69,8 @@ type Sink struct {
 	nameParticipants ParticipantNamer
 	// scoreLead scores a lead the sink created. Nil keeps the column default.
 	scoreLead LeadScorer
-	// cancelMeeting closes a captured meeting the calendar says is off — called
-	// off by its organizer, or declined by the seat whose calendar it is. Nil
-	// captures meetings and cancels none.
+	// cancelMeeting closes a meeting cancelled by its organizer.
+	// Nil captures meetings and cancels none.
 	cancelMeeting MeetingCloser
 	// cancelMeetingByID closes the meeting a cancelled event's cross-door
 	// identity resolved to, when nothing was captured under its natural key.
@@ -222,6 +221,10 @@ var (
 // key. Replays return the existing row and write nothing new, so an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
+	return s.upsert(ctx, rec, false)
+}
+
+func (s *Sink) upsert(ctx context.Context, rec connector.NormalizedRecord, existingOnly bool) (datasource.EntityRef, error) {
 	noteDelivered(ctx, rec)
 	rec = maskCapturedCredentials(rec)
 	actor, err := admitRecord(ctx, rec)
@@ -254,10 +257,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
-				if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
-					return err
-				}
-				attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
+				attempt.activityLanding, err = s.landActivityForReplay(ctx, tx, rec, fields, actor.UserID, existingOnly)
 				return err
 			case LeadFields:
 				if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {

@@ -6,7 +6,7 @@ package compose
 // Closing meetings captured before the calendar's RSVP was read.
 //
 // Live capture now closes a meeting the calendar says is off — cancelled by its
-// organizer, or declined by the seat whose calendar it is. Every meeting
+// organizer. Every meeting
 // captured before that carries `meeting_status` NULL, which every surface reads
 // as booked, and no later sync will correct it: a provider stops listing an
 // event once it is off, so the pull that would have carried the news has long
