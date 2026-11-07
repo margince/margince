@@ -6177,9 +6177,8 @@ export const en = {
   "assignments.kindTeam": "Team",
   "assignments.who": "Who",
   "assignments.findColleague": "Find a colleague",
-  "assignments.invited": "Invited, not signed in yet",
   "assignments.noColleagueFound":
-    "No colleague found. Only colleagues with a Margince account can be assigned. Ask an admin to invite them.",
+    "No active colleague found. Ask an admin to invite them, then ask them to sign in.",
   "assignments.findTeam": "Find a team",
   "assignments.role": "Role",
   "assignments.rolePlaceholder": "Pick a role",

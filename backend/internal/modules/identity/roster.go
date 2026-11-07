@@ -43,9 +43,7 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for any member. The
-	// responsibility picker asks for it, because an invited colleague may be
-	// given work before their first sign-in. Each row carries its status.
+	// IncludeInvited retains the deprecated roster option for older clients.
 	IncludeInvited bool
 	// Actor is the human asking, when one is. The management view carries each
 	// member's allowed actions for a human caller only, because every member
