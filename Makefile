@@ -1331,6 +1331,7 @@ test-make-target-parity:
 ## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
 CHECK_BASE_REF ?= origin/main
 contract-breaking-check:
+	@bash scripts/check-contract-breaking.test.sh
 	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.

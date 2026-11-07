@@ -3,16 +3,77 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
+  x-api-deprecation-policy:
+    window_months: 3
+    patch_removals: false
+    announcement: release-publication
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |-
-    The V1 core CRM contract: contacts, companies, deals, pipelines, activities
-    and leads, with the agent and AI surface beside them.
+    Deprecated APIs stay supported for at least 3 calendar months from the
+    release announcing deprecation. Patch releases never remove an API. A
+    `deprecated: true` operation announces the policy in a `Link` header.
+    `x-deprecation` records the announcing `release`, its RFC3339 `announced_at`
+    publication time, and an optional RFC3339 `sunset_at`. Published notices
+    supply `Deprecation` and scheduled retirement supplies `Sunset` headers.
+    An operation without a published notice cannot be removed.
   license:
     name: BUSL-1.1
     identifier: BUSL-1.1
   contact:
     name: Gradion
     email: lars@gradion.com
+  x-api-deprecation-notices:
+    DELETE /v1/lead-sources/{id}:
+      release: ""
+      announced_at: ""
+    GET /v1/companies/{id}/brief:
+      release: ""
+      announced_at: ""
+    GET /v1/deals/{id}/viability:
+      release: ""
+      announced_at: ""
+    GET /v1/forecast/assurance/enforcement:
+      release: ""
+      announced_at: ""
+    GET /v1/lead-sources:
+      release: ""
+      announced_at: ""
+    GET /v1/stage-automation/policies/{id}:
+      release: ""
+      announced_at: ""
+    GET /v1/stage-automation/report:
+      release: ""
+      announced_at: ""
+    PATCH /v1/lead-sources/{id}:
+      release: ""
+      announced_at: ""
+    POST /v1/ai-model-rates/propose-refresh:
+      release: ""
+      announced_at: ""
+    POST /v1/companies/{id}/brief:
+      release: ""
+      announced_at: ""
+    POST /v1/deals/{id}/stage-progressions/{approvalId}/revert:
+      release: ""
+      announced_at: ""
+    POST /v1/forecast/assurance/exceptions/{id}/close-lost:
+      release: ""
+      announced_at: ""
+    POST /v1/forecast/assurance/exceptions/{id}/wait:
+      release: ""
+      announced_at: ""
+    POST /v1/lead-sources:
+      release: ""
+      announced_at: ""
+    POST /v1/stage-automation/policies/{id}/resume:
+      release: ""
+      announced_at: ""
+    PUT /v1/forecast/assurance/enforcement:
+      release: ""
+      announced_at: ""
+    PUT /v1/stage-automation/policies/{id}:
+      release: ""
+      announced_at: ""
 security:
   - bearerAuth: []
 tags:

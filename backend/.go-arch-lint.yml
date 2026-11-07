@@ -27,6 +27,7 @@ vendors:
   redis:  { in: github.com/redis/** }
   xcrypto: { in: golang.org/x/crypto/** }
   xterm:   { in: golang.org/x/term }
+  xmod:    { in: golang.org/x/mod/** }
   xsemaphore: { in: golang.org/x/sync/semaphore }
   yaml:   { in: gopkg.in/** }
   emersion: { in: github.com/emersion/** }
@@ -143,9 +144,10 @@ deps:
     # module, and the compression it is published in.
     # pdfium + gopool: pdftext reads a PDF's text layer through a sandboxed
     # pdfium; fpdf is its TESTS building the fixtures they then read.
+    # xmod: the API policy uses the standard semantic-version parser.
     # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
     # characters the word is made of — a Unicode normal form the stdlib lacks.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext]
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
