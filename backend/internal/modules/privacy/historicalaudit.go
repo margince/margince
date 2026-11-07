@@ -81,8 +81,8 @@ func redactHistoricalRecord(ctx context.Context, tx pgx.Tx, original ids.UUID, k
 	 AND (history.occurred_at, history.id) <= (certificate.occurred_at, certificate.id)
 	 AND (history.before IS NOT NULL OR history.after IS NOT NULL
 	      OR history.evidence IS DISTINCT FROM audit_redacted_evidence(
-          history.action IN ('erase','anonymize','expire','release')
-          AND history.before IS NULL AND history.after IS NULL, history.evidence)))
+          history.action IN ('erase','anonymize','expire','release','pin','restrict')
+          AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)))
 	 OR EXISTS (SELECT 1 FROM event_outbox retained, audit_log certificate
 	 WHERE certificate.id = @original AND retained.created_at <= certificate.occurred_at
 	 AND retained.envelope->'entity'->>'type' = certificate.entity_type
@@ -107,20 +107,21 @@ func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID,
 	var err error
 	switch kind {
 	case "contact":
-		err = tx.QueryRow(ctx, `SELECT legal_hold FROM contact WHERE id=$1 FOR UPDATE`, entity).Scan(&held)
+		err = tx.QueryRow(ctx, `SELECT legal_hold FROM contact WHERE id=@entity FOR UPDATE`, pgx.StrictNamedArgs{"entity": entity}).Scan(&held)
 	case "lead":
-		err = tx.QueryRow(ctx, `SELECT legal_hold FROM lead WHERE id=$1 FOR UPDATE`, entity).Scan(&held)
+		err = tx.QueryRow(ctx, `SELECT legal_hold FROM lead WHERE id=@entity FOR UPDATE`, pgx.StrictNamedArgs{"entity": entity}).Scan(&held)
 	case "data_subject_request":
-		err = tx.QueryRow(ctx, `SELECT dispute_open FROM data_subject_request WHERE id=$1 FOR UPDATE`, entity).Scan(&held)
+		err = tx.QueryRow(ctx, `SELECT dispute_open FROM data_subject_request WHERE id=@entity FOR UPDATE`, pgx.StrictNamedArgs{"entity": entity}).Scan(&held)
 	case "privacy_request_proof":
 		err = tx.QueryRow(ctx, `SELECT d.dispute_open FROM data_subject_request d
    JOIN audit_log certificate ON certificate.evidence->>'request_id'=d.id::text
-   WHERE certificate.id=$1 FOR UPDATE OF d`, original).Scan(&held)
+   WHERE certificate.id=@original FOR UPDATE OF d`, pgx.StrictNamedArgs{"original": original}).Scan(&held)
 	case "activity":
 		current, carried := floor.sqlArgs()
-		err = tx.QueryRow(ctx, `SELECT a.legal_hold OR a.restricted_at IS NOT NULL OR `+
-			retentionscope.HeldThroughAnyLink("a.id")+` OR (`+handelsbriefShielded(2, 3)+`)
-			 FROM activity a WHERE a.id=$1 FOR UPDATE`, entity, current, carried).Scan(&held)
+		args := []any{entity, current, carried}
+		err = tx.QueryRow(ctx, `SELECT a.restricted_at IS NOT NULL OR `+
+			retentionscope.HeldThroughAnyLink("a.id")+` OR (`+handelsbriefShielded(len(args)-1, len(args))+`)
+			 FROM activity a WHERE a.id=`+storekit.SQLf("$%d", len(args)-2)+` FOR UPDATE`, args...).Scan(&held)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -130,6 +131,6 @@ func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID,
 
 func CountHistoricalAuditRows(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM audit_log LIMIT $1) bounded`, maximum+1).Scan(&count)
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM audit_log LIMIT @limit) bounded`, pgx.StrictNamedArgs{"limit": maximum + 1}).Scan(&count)
 	return count, err
 }

@@ -27,7 +27,7 @@ func RedactAuditHistoryThrough(ctx context.Context, tx pgx.Tx, certificate, thro
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log certificate, audit_log boundary
 		WHERE `+auditRedactionScope+`
 		  AND certificate.before IS NULL AND certificate.after IS NULL
-		  AND certificate.xmin::text = pg_current_xact_id()::text)`, args).Scan(&certified); err != nil {
+		  AND certificate.source_xid = pg_current_xact_id())`, args).Scan(&certified); err != nil {
 		return fmt.Errorf("store: checking the privacy certificate: %w", err)
 	}
 	if !certified {
@@ -35,18 +35,18 @@ func RedactAuditHistoryThrough(ctx context.Context, tx pgx.Tx, certificate, thro
 	}
 	if _, err := tx.Exec(ctx, `UPDATE audit_log history
 		SET before = NULL, after = NULL, evidence = audit_redacted_evidence(
-          history.action IN ('erase','anonymize','expire','release')
-          AND history.before IS NULL AND history.after IS NULL, history.evidence)
+          history.action IN ('erase','anonymize','expire','release','pin','restrict')
+          AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)
 		FROM audit_log certificate, audit_log boundary
 		WHERE `+auditRedactionScope+`
-		  AND certificate.xmin::text = pg_current_xact_id()::text
+		  AND certificate.source_xid = pg_current_xact_id()
 		  AND history.entity_type = boundary.entity_type
 		  AND history.entity_id = boundary.entity_id
 		  `+auditHistoryThroughBoundary+`
 		  AND (history.before IS NOT NULL OR history.after IS NOT NULL
 		       OR history.evidence IS DISTINCT FROM audit_redacted_evidence(
-               history.action IN ('erase','anonymize','expire','release')
-               AND history.before IS NULL AND history.after IS NULL, history.evidence))`, args); err != nil {
+               history.action IN ('erase','anonymize','expire','release','pin','restrict')
+               AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action))`, args); err != nil {
 		return fmt.Errorf("store: redacting certified audit payloads: %w", err)
 	}
 	return cancelRedactedEvents(ctx, tx, args)
@@ -66,11 +66,12 @@ func cancelRedactedEvents(ctx context.Context, tx pgx.Tx, args pgx.StrictNamedAr
 	_, err := tx.Exec(ctx, `DELETE FROM event_outbox retained
 		USING audit_log certificate, audit_log boundary
 		WHERE `+auditRedactionScope+`
-		  AND certificate.xmin::text = pg_current_xact_id()::text
+		  AND certificate.source_xid = pg_current_xact_id()
 		  AND retained.envelope->'entity'->>'type' = boundary.entity_type
 		  AND retained.envelope->'entity'->>'id' = boundary.entity_id::text
 		  AND retained.envelope->'trace'->>'audit_log_id' <> certificate.id::text
-		  AND (boundary.id = certificate.id OR retained.created_at <= boundary.occurred_at)`, args)
+		  AND (boundary.id = certificate.id OR retained.created_at <= boundary.occurred_at) -- occurred_at raw: an audit timestamp bounds historical payloads
+`, args)
 	if err != nil {
 		return fmt.Errorf("store: cancelling certified event payloads: %w", err)
 	}

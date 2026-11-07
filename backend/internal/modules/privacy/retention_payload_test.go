@@ -127,7 +127,7 @@ func TestRetentionAppliedPayload_WithReason(t *testing.T) {
 }
 
 func TestRetentionEventsDoNotCopyFreeTextReasons(t *testing.T) {
-	reason := "erase Private Person at private@example.test"
+	reason := "erase Private Contact at private@example.test"
 	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason)
 	if payload.Reason != nil {
 		t.Fatalf("event kept a personal reason: %q", *payload.Reason)

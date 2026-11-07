@@ -191,6 +191,9 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 	if err := auditDSRUpdate(ctx, tx, current, out); err != nil {
 		return dsrRow{}, err
 	}
+	if current.DisputeOpen {
+		return out, nil
+	}
 	certificate, err := storekit.AuditWithEvidence(ctx, tx, "anonymize", "data_subject_request", id, nil, nil,
 		map[string]any{"cause": "contact_erasure"})
 	if err != nil {

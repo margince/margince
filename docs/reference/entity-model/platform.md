@@ -172,6 +172,8 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `event_outbox_assurance_unread`: `btree (((envelope ->> 'type'))) WHERE (NOT assurance_inputs_read)`
+- `event_outbox_audit_record`: `btree ((((envelope -> 'trace') ->> 'audit_log_id')))`
+- `event_outbox_entity_record`: `btree ((((envelope -> 'entity') ->> 'type')), (((envelope -> 'entity') ->> 'id')))`
 - `event_outbox_event_id`: `btree (((envelope ->> 'event_id')))`
 - `event_outbox_pkey`: `unique, btree (id)`
 - `idx_event_outbox_unpublished`: `btree (seq) WHERE (published_at IS NULL)`

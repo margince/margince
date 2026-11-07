@@ -1,6 +1,9 @@
 SET LOCAL lock_timeout = '3s';
 
-CREATE FUNCTION audit_redacted_evidence(certificate boolean, payload jsonb) RETURNS jsonb
+CREATE FUNCTION audit_privacy_reason_codes() RETURNS text[] LANGUAGE sql IMMUTABLE
+AS $$SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased']::text[]$$;
+
+CREATE FUNCTION audit_redacted_evidence(certificate boolean, payload jsonb, verb text DEFAULT '') RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE AS $$DECLARE
   kept jsonb := '{"redacted":true}'::jsonb;
   field text;
@@ -25,11 +28,14 @@ BEGIN
                     'activities_redacted','activities_restricted','channel_identities_suppressed','retain_days')
           AND jsonb_typeof(held) = 'number' THEN
       kept := kept || jsonb_build_object(field, held);
-    ELSIF field IN ('cause','class','basis','retention_action','purge_reason','policy','request_id')
+    ELSIF field IN ('cause','class','basis','retention_action','purge_reason','policy','request_id','restricted_until')
           AND jsonb_typeof(held) = 'string' THEN
       kept := kept || jsonb_build_object(field, held);
-    ELSIF field = 'reason' AND (held #>> '{}') ~ '^dsr:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-          AND (held #>> '{}') <> 'dsr:00000000-0000-0000-0000-000000000000' THEN
+    ELSIF field IN ('reason','decided_by_name') AND verb IN ('release','pin','restrict') THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF field = 'reason' AND ((held #>> '{}') = ANY(audit_privacy_reason_codes())
+      OR ((held #>> '{}') ~ '^dsr:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          AND (held #>> '{}') <> 'dsr:00000000-0000-0000-0000-000000000000')) THEN
       kept := kept || jsonb_build_object(field, held);
     END IF;
   END LOOP;
@@ -43,13 +49,13 @@ BEGIN
   IF TG_OP = 'UPDATE'
      AND NEW.before IS NULL AND NEW.after IS NULL
      AND NEW.evidence = audit_redacted_evidence(
-       OLD.action IN ('erase','anonymize','expire','release') AND OLD.before IS NULL AND OLD.after IS NULL, OLD.evidence)
+       OLD.action IN ('erase','anonymize','expire','release','pin','restrict') AND OLD.before IS NULL AND OLD.after IS NULL, OLD.evidence, OLD.action)
      AND (to_jsonb(NEW) - ARRAY['before','after','evidence']) =
          (to_jsonb(OLD) - ARRAY['before','after','evidence'])
      AND EXISTS (
        SELECT 1 FROM audit_log certificate
        WHERE certificate.before IS NULL AND certificate.after IS NULL
-         AND certificate.xmin::text = pg_current_xact_id()::text
+         AND certificate.source_xid = pg_current_xact_id()
          AND ((certificate.entity_type = OLD.entity_type
                AND certificate.entity_id = OLD.entity_id
                AND certificate.action IN ('erase','anonymize','expire','release'))

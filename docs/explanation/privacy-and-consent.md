@@ -7,9 +7,6 @@ outbound message may go, and keeps a record of why. The **privacy engines** (era
 access, retention) do the work a granted request asks for. The product refuses to fill records by
 scraping in the first place.
 
-Two modules work together: `consent` owns the engine and the case queue, and `privacy` owns the
-code that does the work. They are connected at the composition root, never by a sibling import.
-
 ## The authorization engine (`consent`)
 
 `consent` owns two things a reader can take for one. **Consent** is a subject's answer to a question
@@ -334,21 +331,22 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place, and deletes raw capture, embeddings and attachment bytes. It clears stored audit payloads and cancels retained outbox copies of the erased records.
-  Audit IDs, actors, actions and times stay fixed. A certificate in the same transaction permits
-  payload removal, and an audit marker records that removal. All of this runs in **one transaction
+  place, and deletes raw capture, embeddings and attachment bytes. It clears stored audit payloads and cancels kept outbox copies of the erased records.
+  Audit IDs, actors, actions and times stay fixed. A proof in the same transaction allows
+  payload erasure, and an audit marker records that erasure. All of this runs in **one transaction
   per record**. It refuses a subject under `legal_hold`.
+
   A background data task clears payloads left by earlier erasures. It stops at each earlier
-  certificate, keeps later edits and skips current holds. Restrictions retain their data until
-  the existing release or expiry path erases it.
+  proof, keeps later edits and skips current holds. Held records keep their data until the hold ends.
 - **The suppression list** holds a hash of each erased address and handle. No later capture, import
   or typed create can store one again. A booking on the public booking page still can, because a
   refusal there would show which addresses were erased.
 - **Article 15 subject access** (`AssembleSAR`) is one read that needs more rights. It needs the
-  `contact.delete` grant **and** a row scope with no limit. It puts everything held about a contact
-  into one export package: channels, deals, leads, activities, attachments, consent and its proof log,
-  raw capture, field sources and retained audit payloads. It also includes the subject’s linked
-  room comments, introduction notes and other kept copies. Private mailbox content stays withheld.
+  `contact.delete` grant **and** a row scope with no limit. It puts the contact’s records into one export package. That includes channels, deals, leads,
+  activities, attachments, consent, raw capture, field sources and kept audit payloads. It also includes the subject’s linked
+  room comments, introduction notes and other kept copies.
+
+  Private mailbox content stays hidden.
   The export is itself audited (`action=export`).
 - **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
   workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it, by default every `24h`. It
@@ -376,13 +374,9 @@ into consent's handlers.
 
 ## The single-transaction cross-store exception
 
-`privacy` owns one table (`erasure_suppression`), yet erasure and retention **write tables they do
-not own**. The list: `contact`, `contact_email`/`_phone`/`_social`, `contact_channel_identity`,
-`lead`, `activity`, `activity_participant`, `graph_interaction_edge`, `linkedin_connection`,
-`comms_outbound`, `deal`, `attachment`, `embedding`, `raw_capture`, `field_provenance`,
-`preference_token`, `capture_pending_counterparty`, `voice_learning_signal`, `ai_call` and
-`ai_call_payload`. The agreed list is the cross-writer map `crossStoreWrites` in
-`backend/gates/tableownershipwaivers_test.go`, and `backend/gates/tableownership_test.go` gates it. That file, not this page, is the authority.
+`privacy` writes tables it does not own when a transaction must erase a subject.
+The allowed writes and their reasons are in `crossStoreWrites` in
+`backend/gates/tableownershipwaivers_test.go`. The table ownership gate holds each one.
 
 Four of those show *why* nothing else can reach them:
 
@@ -621,6 +615,6 @@ Later mail capture and data tasks keep a user's confirmed source decision.
 | Duties to tell | `internal/modules/consent/noticecase.go` (`privacy_notice_case`) |
 | A website lead's notice | `internal/modules/consent/leadnotice.go` (`lead_privacy_notice`), `internal/compose/siteleadnotice.go`, `internal/modules/privacy/erasure_untoldlead.go` |
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
-| The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
+| The engine-and-gate report | `internal/modules/consent/allowedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
 | Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |

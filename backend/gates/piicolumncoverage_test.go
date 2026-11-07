@@ -799,7 +799,7 @@ func assignsColumn(statement, column string) bool {
 			if !assigned {
 				continue
 			}
-			for _, target := range strings.Split(strings.Trim(strings.TrimSpace(left), "()"), ",") {
+			for target := range strings.SplitSeq(strings.Trim(strings.TrimSpace(left), "()"), ",") {
 				target = strings.TrimSpace(target)
 				if dot := strings.LastIndex(target, "."); dot >= 0 {
 					target = target[dot+1:]

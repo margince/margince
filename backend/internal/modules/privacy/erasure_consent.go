@@ -311,7 +311,7 @@ func retireRightsCases(ctx context.Context, tx pgx.Tx, contactID ids.UUID, fulfi
 	cleared, err := tombstoneRightsCases(ctx, tx, `
 		id IN (SELECT id FROM data_subject_request
 		        WHERE (contact_id = $1 OR subject_ref = $1::text)
-		          AND id IS DISTINCT FROM $2
+		          AND id IS DISTINCT FROM $2 AND NOT dispute_open
 		        FOR UPDATE)`, contactID, fulfilling)
 	if err != nil {
 		return fmt.Errorf("privacy: retiring the subject's rights cases: %w", err)
@@ -344,7 +344,7 @@ func tombstoneRightsCases(ctx context.Context, tx pgx.Tx, predicate string, args
 		       -- case nothing will resolve it again, so the link goes.
 		       contact_id = CASE WHEN status IN ('open', 'in_progress')
 		                         THEN contact_id ELSE NULL END
-		 WHERE `+predicate+` RETURNING id`, args...)
+		 WHERE (`+predicate+`) AND NOT dispute_open RETURNING id`, args...)
 }
 
 // fulfillingCase answers which rights case this erasure is being run to fulfil,

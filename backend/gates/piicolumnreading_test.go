@@ -165,6 +165,7 @@ func sqlForwardersIn(functions []*ast.FuncDecl) map[string]int {
 }
 
 func TestTheColumnCensusFollowsSQLThroughHelperArguments(t *testing.T) {
+	t.Parallel()
 	source := `package fixture
 func second(ctx C, tx T, statement string) { first(ctx, tx, statement) }
 func first(ctx C, tx T, statement string) { tx.Query(ctx, statement) }
@@ -206,6 +207,7 @@ func write(ctx C, tx T) {
 }
 
 func TestTheColumnCensusDoesNotCountConditionsOrQuotedAssignmentsAsWrites(t *testing.T) {
+	t.Parallel()
 	for _, statement := range []string{
 		`UPDATE intro_request SET internal_reason=CASE WHEN origin='recorded' THEN NULL ELSE '' END`,
 		`UPDATE intro_request SET internal_reason='example, origin=recorded'`,

@@ -123,17 +123,17 @@ Set up in `backend/migrations/core/0001_baseline.up.sql`; later migrations only 
 | `occurred_at` | `timestamptz DEFAULT now()` |
 
 The row's ID, actor, action and time cannot change. The app role cannot delete an audit row.
-It can update only `before`, `after` and `evidence`, and the trigger permits only a fixed redaction.
-The trigger and column grants are in [the redaction migration](../../backend/migrations/core/1794066141_privacy_certificates_allow_payload_redaction.up.sql).
+It can update only `before`, `after` and `evidence`, and the trigger allows only a fixed change.
+The trigger and column grants are in [the audit change](../../backend/migrations/core/1794066141_privacy_certificates_allow_payload_redaction.up.sql).
 
-`storekit.RedactAuditHistory` needs a privacy certificate written in the same transaction.
-It clears the field images and keeps a redaction marker. On a certificate it also keeps typed
-counts, retention metadata and a valid request reference. Free-text reasons and copied names go.
-It cancels retained outbox copies, including those whose audit entry names the erased record
+`storekit.RedactAuditHistory` needs a privacy proof written in the same transaction.
+It clears the field images and keeps a mark of erasure. On a proof it also keeps typed
+counts, retention metadata and a valid request reference. Contact erasure reasons cannot copy names or addresses. Hold and release decisions keep the reason and name of the one who decided.
+It cancels kept outbox copies, including those whose audit entry names the erased record
 while their event names a parent record.
 
-The background correction uses each earlier certificate as its cutoff. Its new audit entry records
-payload removal on that certificate, so later authorized edits keep their values and history.
+The background task uses each earlier proof as its last entry to erase. Its new audit entry records
+payload erasure on that proof, so later allowed edits keep their values and history.
 
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.

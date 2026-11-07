@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -34,7 +35,7 @@ func TestPrivacyCertificatesPhysicallyRedactHistoryAndCancelRetainedEvents(t *te
 					VALUES ('gw:events:crm:contact', jsonb_build_object(
 					'entity', jsonb_build_object('type', @kind::text, 'id', @id::text),
 					'trace', jsonb_build_object('audit_log_id', @audit::text),
-					'payload', jsonb_build_object('name', 'Private Person')),
+					'payload', jsonb_build_object('name', 'Private Contact')),
 					CASE WHEN @published THEN now() ELSE NULL END)`,
 					pgx.StrictNamedArgs{"kind": kind, "id": subject, "audit": old, "published": published})
 			}
@@ -50,7 +51,7 @@ func TestPrivacyCertificatesPhysicallyRedactHistoryAndCancelRetainedEvents(t *te
 				AND evidence = '{"redacted":true}'::jsonb FROM audit_log WHERE id = $1`, old).Scan(&redacted); err != nil {
 				t.Fatal(err)
 			}
-			if err := tx.QueryRow(ctx, `SELECT after->>'full_name' = 'Private Person'
+			if err := tx.QueryRow(ctx, `SELECT after->>'full_name' = 'Private Contact'
 				FROM audit_log WHERE id = $1`, unrelated).Scan(&untouched); err != nil {
 				t.Fatal(err)
 			}
@@ -93,7 +94,7 @@ func TestErasureProofRedactionKeepsReplayReferencesAndTypedCounts(t *testing.T) 
 	certificate, err := storekit.AuditWithEvidence(ctx, tx, "erase", "contact", subject, nil, nil, map[string]any{
 		"reason": reason, "emails_suppressed": 2,
 		"rows": map[string]int64{"contact.updated": 1}, "uncounted": []string{"attachment_object"},
-		"decided_by_name": "Private Person", "future_private_detail": "private@example.test",
+		"decided_by_name": "Private Contact", "future_private_detail": "private@example.test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -118,10 +119,10 @@ func TestPrivacyReasonProjectionMatchesEvents(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	id := ids.NewV7().String()
-	for _, reason := range []string{
-		"erase Private Person at private@example.test", "dsr:" + id, "dsr:invalid", "", "dsr:{" + id + "}",
+	for _, reason := range append(fixedPrivacyReasons(), []string{
+		"erase Private Contact at private@example.test", "dsr:" + id, "dsr:invalid", "", "dsr:{" + id + "}",
 		"dsr:00000000-0000-0000-0000-000000000000",
-	} {
+	}...) {
 		var stored *string
 		if err := tx.QueryRow(ctx, `SELECT audit_redacted_evidence(true,
 		 jsonb_build_object('reason', $1::text))->>'reason'`, reason).Scan(&stored); err != nil {
@@ -137,7 +138,7 @@ func TestPrivacyReasonProjectionMatchesEvents(t *testing.T) {
 func seedPersonalAudit(ctx context.Context, t *testing.T, tx pgx.Tx, kind string, subject ids.UUID) ids.UUID {
 	t.Helper()
 	id, err := storekit.AuditWithEvidence(ctx, tx, "create", kind, subject, nil,
-		map[string]string{"full_name": "Private Person"}, map[string]any{"email": "private@example.test"})
+		map[string]string{"full_name": "Private Contact"}, map[string]any{"email": "private@example.test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,4 +153,131 @@ func auditMetadata(ctx context.Context, t *testing.T, tx pgx.Tx, id ids.UUID) []
 		t.Fatal(err)
 	}
 	return metadata
+}
+
+func TestFixedPrivacyReasonsMatchTheDatabase(t *testing.T) {
+	ctx := context.Background()
+	tx := subjectColumnsTx(ctx, t)
+	var stored []string
+	if err := tx.QueryRow(ctx, `SELECT audit_privacy_reason_codes()`).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	expected := fixedPrivacyReasons()
+	slices.Sort(stored)
+	slices.Sort(expected)
+	if !slices.Equal(stored, expected) {
+		t.Fatalf("database reasons=%q event reasons=%q", stored, expected)
+	}
+}
+
+func TestPrivacyCertificatesWorkInsideSavepoints(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject := ids.NewV7()
+	original := seedPersonalAudit(ctx, t, tx, "contact", subject)
+	mustExec(ctx, t, tx, `SET LOCAL ROLE margince_app`)
+	nested, err := tx.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificate, err := storekit.AuditWithEvidence(ctx, nested, "erase", "contact", subject, nil, nil, map[string]any{"reason": "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RedactAuditHistory(ctx, nested, certificate); err != nil {
+		t.Fatal(err)
+	}
+	if err := nested.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var cleared bool
+	if err := tx.QueryRow(ctx, `SELECT before IS NULL AND after IS NULL AND evidence='{"redacted":true}'::jsonb
+ FROM audit_log WHERE id=@original`, pgx.StrictNamedArgs{"original": original}).Scan(&cleared); err != nil {
+		t.Fatal(err)
+	}
+	if !cleared {
+		t.Fatal("personal audit payload survived a savepoint erasure")
+	}
+}
+
+func TestErasureKeepsControllerHoldAndReleaseDecisions(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject := ids.NewV7()
+	decisions := make([]ids.UUID, 0, 3)
+	for _, action := range []string{"pin", "restrict", "release"} {
+		id, err := storekit.AuditWithEvidence(ctx, tx, action, "activity", subject, nil, nil,
+			map[string]any{"reason": "keep the signed contract", "decided_by_name": "Controller", "restricted_until": "2030-01-01"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		decisions = append(decisions, id)
+	}
+	certificate, err := storekit.AuditWithEvidence(ctx, tx, "erase", "activity", subject, nil, nil, map[string]any{"reason": "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RedactAuditHistory(ctx, tx, certificate); err != nil {
+		t.Fatal(err)
+	}
+	var kept int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE id=ANY(@decisions)
+ AND evidence->>'reason'='keep the signed contract' AND evidence->>'decided_by_name'='Controller'
+ AND evidence->>'restricted_until'='2030-01-01'`, pgx.StrictNamedArgs{"decisions": decisions}).Scan(&kept); err != nil {
+		t.Fatal(err)
+	}
+	if kept != len(decisions) {
+		t.Fatalf("kept %d controller decisions, want %d", kept, len(decisions))
+	}
+}
+
+func TestHistoricalAuditCorrectionKeepsHeldActivityAndRequestHistory(t *testing.T) {
+	for _, protection := range []string{"legal_hold", "restriction", "floor", "dispute"} {
+		t.Run(protection, func(t *testing.T) {
+			ctx := principal.SystemActing(context.Background(), "privacy_test")
+			tx := subjectColumnsTx(ctx, t)
+			subject, kind := ids.NewV7(), "activity"
+			if protection == "dispute" {
+				kind = "data_subject_request"
+				mustExec(ctx, t, tx, `INSERT INTO data_subject_request(id,kind,subject_ref,status,resolution,received_at,due_at,channel,receipt_reference,dispute_open)
+     VALUES (@subject,'access','Private Subject','rejected','Private appeal',now(),now()+interval '30 days','phone',@receipt,true)`,
+					pgx.StrictNamedArgs{"subject": subject, "receipt": "RCPT-" + subject.String()})
+			} else {
+				mustExec(ctx, t, tx, `INSERT INTO activity(id,kind,subject,occurred_at,source,captured_by,restricted_at,archived_at,restricted_reason,restricted_until,retention_class,retention_class_at)
+     VALUES (@subject,'email','Private Subject',now(),'manual','system:privacy_test',
+      CASE WHEN @restricted THEN now() ELSE NULL END,
+ CASE WHEN @restricted THEN now() ELSE NULL END,
+ CASE WHEN @restricted THEN 'controller_hold' ELSE NULL END,
+ CASE WHEN @restricted THEN now()+interval '100 years' ELSE NULL END,
+ CASE WHEN @floor OR @restricted THEN 'commercial_correspondence' ELSE NULL END,
+ CASE WHEN @floor OR @restricted THEN now() ELSE NULL END)`,
+					pgx.StrictNamedArgs{"subject": subject, "restricted": protection == "restriction", "floor": protection == "floor"})
+			}
+			if protection == "legal_hold" {
+				contact := ids.NewV7()
+				mustExec(ctx, t, tx, `INSERT INTO contact(id,full_name,source,captured_by,legal_hold)
+     VALUES (@contact,'Held Contact','manual','system:privacy_test',true)`, pgx.StrictNamedArgs{"contact": contact})
+				mustExec(ctx, t, tx, `INSERT INTO activity_link(activity_id,entity_type,contact_id) VALUES (@activity,'contact',@contact)`,
+					pgx.StrictNamedArgs{"activity": subject, "contact": contact})
+			}
+			original := seedPersonalAudit(ctx, t, tx, kind, subject)
+			if _, err := storekit.AuditWithEvidence(ctx, tx, "erase", kind, subject, nil, nil, map[string]any{"cause": "contact_erasure"}); err != nil {
+				t.Fatal(err)
+			}
+			page, err := RedactHistoricalAuditPageTx(ctx, tx, ids.UUID{}, ids.NewV7(), 100, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if page.Changed != 0 {
+				t.Fatalf("changed %d held histories", page.Changed)
+			}
+			var kept bool
+			if err := tx.QueryRow(ctx, `SELECT after IS NOT NULL FROM audit_log WHERE id=@original`, pgx.StrictNamedArgs{"original": original}).Scan(&kept); err != nil {
+				t.Fatal(err)
+			}
+			if !kept {
+				t.Fatal("historical correction erased held history")
+			}
+		})
+	}
 }

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -75,7 +76,7 @@ func retentionAppliedPayload(
 	}
 	if reason != nil {
 		request := fulfillingCase(*reason)
-		if request != (ids.UUID{}) && *reason == "dsr:"+request.String() {
+		if (request != (ids.UUID{}) && *reason == "dsr:"+request.String()) || slices.Contains(fixedPrivacyReasons(), *reason) {
 			payload.Reason = reason
 		}
 	}

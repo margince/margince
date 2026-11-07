@@ -136,14 +136,8 @@ func ScrubNewerThanRowSQL(typeExpr, idExpr, rowAlias, verbsPlaceholder string) s
 // scrubverbs_test.go holds every verb this module writes against this list.
 func ScrubVerbs() []string { return fieldHistoryScrubActions }
 
-// scanAuditEntry reads one ledger line and applies what the row itself says a
-// caller may see of it.
-//
-// Two withholdings, one treatment. An activity outside the caller's audience
-// carries content they may not read; a record scrubbed after this row was
-// written can carry legacy data an erasure certified gone. Either way the ROW stays: a
-// compliance log answers who did what and when, and a write that happened is not
-// a fact an erasure undoes.
+// Audit metadata stays visible when restricted content or legacy erased values
+// are hidden, so the log still answers who acted and when.
 func scanAuditEntry(rows pgx.Rows) (AuditEntry, error) {
 	var e AuditEntry
 	// The nullable envelope ids scan through untyped locals, then widen to their
