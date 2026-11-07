@@ -144,7 +144,7 @@ func judgelessProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for _, set := range []map[string]judgelessProof{
 		verdictProofs(), confidentialityProofs(), counterpartyProofs(), agentLoopProofs(), gradingProofs(),
-		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(), tagSuggestProofs(),
+		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(),
 	} {
 		maps.Copy(proofs, set)
 	}
@@ -485,6 +485,43 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		// "Still on our list" read as a firmer chance of winning.
 		"a_friendly_check_in_changes_nothing": {
 			correct: literal(`{"actions":[]}`), wrong: probabilityChange(40), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+	}
+}
+
+// documentReading answers every field a document question asks, stating only
+// the ones given, each quoting its own value.
+func documentReading(fields []string, stated map[string]string) func([]string) string {
+	out := make([]map[string]any, len(fields))
+	for i, field := range fields {
+		out[i] = map[string]any{"field": field, "stated": "not_stated", "value": "", "source_quote": "", "page_or_section": "", "confidence": 0.9}
+		if value, ok := stated[field]; ok {
+			out[i]["stated"], out[i]["value"], out[i]["source_quote"], out[i]["page_or_section"] = "stated", value, value, "page 1"
+		}
+	}
+	return literal(mustJSON(map[string]any{"fields": out}))
+}
+
+// blankPageProofs covers the readings of a page that holds nothing asked for,
+// each against the most plausible thing to invent from it.
+func blankPageProofs() map[string]judgelessProof {
+	dealFacts := []string{"name", "amount", "currency", "expected_close_date"}
+	chat := []string{"chat_text", "counterparty_name", "counterparty_phone"}
+	return map[string]judgelessProof{
+		"attached_document_states_none_of_them": {
+			correct:   documentReading(dealFacts, nil),
+			wrong:     documentReading(dealFacts, map[string]string{"name": "Packaging line 3 — revision C"}),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"picture_with_no_chat": {
+			correct:   documentReading(chat, nil),
+			wrong:     documentReading(chat, map[string]string{"chat_text": "See you at nine tomorrow."}),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"photo_with_no_business_card": {
+			correct:   literal(`{"cards":[]}`),
+			wrong:     literal(mustJSON(map[string]any{"cards": []map[string]any{{"full_name": "Erik Sand", "confidence": 0.9}}})),
+			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}
 }
