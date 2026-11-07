@@ -130,6 +130,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":       "Builds subject-bound SELECT queries for AssembleSAR, which requires a human with contact.delete and unbounded row scope. The public notice path uses only its selected read sections under system authority. This builder executes no queries and returns no unrelated contact data.",
 	"internal/modules/privacy/historicalaudit.go:historicalAuditUnderHold":        "the system-only audit cleanup locks the contact and reads only its legal-hold flag. RedactHistoricalAuditPageTx requires system authority; this guard returns a keep decision, never a contact field to an outward caller",
 	"internal/modules/contacts/signaturework.go:QueueSignatureEventTx":            "System-only maintenance locks live contact identities before recording pending signature work. It returns a changed flag, never contact fields or identities to a caller.",
 	"internal/modules/contacts/mergeprimaryrepair.go:restoreMergeDroppedPrimary":  "the merge-dropped-primary data task re-reads one contact under its employment lock as the system principal, after ReconcileMergeDroppedPrimariesTx asked contact update. Only the heir edge id and version leave the read, for the audited promotion",

@@ -119,12 +119,12 @@ func TestAllDayEventIsAnchoredAtNoon(t *testing.T) {
 // A delta round reports a deletion as a tombstone carrying little but the id.
 // It is a cancellation to a calendar, and the shared rules CLOSE the meeting
 // captured under that id rather than discarding the news of it.
-func TestARemovedEventCancelsTheCapturedMeeting(t *testing.T) {
+func TestARemovedEventRetiresOnlyItsCalendarCopy(t *testing.T) {
 	raw := eventJSONWith(t, map[string]any{
 		"id": "evt-gone", "@removed": map[string]string{"reason": "deleted"},
 	})
 	reason, settlement := mustParse(t, raw).Settle()
-	if settlement != meetingmap.SettleCancel || reason != "cancelled" {
+	if settlement != meetingmap.SettleRemove || reason != "cancelled" {
 		t.Fatalf("a removed event: got (%q, %v), want it cancelled", reason, settlement)
 	}
 }
