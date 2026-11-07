@@ -125,16 +125,17 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   Retry clears the failed catalog request before reading it again.
 
   The `Analytics` route starts with the messages reached by its static imports and deferred
-  components that request essential copy through `frontend/src/i18n/lazy.tsx`.
+  components that request the copy their first screen needs through `frontend/src/i18n/lazy.tsx`.
   `frontend/scripts/gen-essential-copy.mjs` follows those imports from the same entry paths as
   the bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
   complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
   A language change also loads the complete catalog.
 
   `frontend/src/bootstrap.ts` starts the session read through `frontend/src/lib/session.read.ts`
-  while the app loads. The main entry waits for `frontend/src/app/startup-session.ts` to
-  register the prepared query before mounting. `frontend/src/app/analytics-prefetch.ts` keeps
-  the response time when
+  while the app loads. `frontend/src/main.tsx` waits for `frontend/src/app/startup-session.ts` to
+  register the prepared query before it renders the app.
+
+  `frontend/src/app/analytics-prefetch.ts` keeps the response time when
   filling the shared query cache. Expired responses are read again.
   Once the session grants are known, it starts `Analytics` reads in that cache.
   The opening page and the rendered views use the same functions in

@@ -164,9 +164,8 @@ func extensionTools(dir string) ([]unitTool, error) {
 	return tools, nil
 }
 
-// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with,
-// keyed by what a scenario's `passport:` line says: absent for the default, and
-// "wide" for the one that adds the draft and send scopes.
+// lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with.
+// The key is a scenario's `passport:` line: absent, "wide" (draft and send) or "research" (enrich).
 //
 // It is the LANE'S OWN CHOICE, restated here because the page's central claim is
 // about the surface a passport is served, and a claim about a caller must name
@@ -182,6 +181,11 @@ var lanePassportScopes = map[string]map[principal.Scope]bool{
 		principal.ScopeWrite: true,
 		principal.ScopeDraft: true,
 		principal.ScopeSend:  true,
+	},
+	"research": {
+		principal.ScopeRead:   true,
+		principal.ScopeWrite:  true,
+		principal.ScopeEnrich: true,
 	},
 }
 

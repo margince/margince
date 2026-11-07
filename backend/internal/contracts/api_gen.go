@@ -18787,6 +18787,27 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	}
 }
 
+// Defines values for ReaderCalendar.
+const (
+	ReaderCalendarConnected    ReaderCalendar = "connected"
+	ReaderCalendarNotConnected ReaderCalendar = "not_connected"
+	ReaderCalendarUnreadable   ReaderCalendar = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the ReaderCalendar enum.
+func (e ReaderCalendar) Valid() bool {
+	switch e {
+	case ReaderCalendarConnected:
+		return true
+	case ReaderCalendarNotConnected:
+		return true
+	case ReaderCalendarUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReceiptActorType.
 const (
 	ReceiptActorTypeReceiptActorAgent     ReceiptActorType = "agent"
@@ -25522,27 +25543,6 @@ func (e WorkArea) Valid() bool {
 	}
 }
 
-// Defines values for WorklistCalendar.
-const (
-	WorklistCalendarConnected    WorklistCalendar = "connected"
-	WorklistCalendarNotConnected WorklistCalendar = "not_connected"
-	WorklistCalendarUnreadable   WorklistCalendar = "unreadable"
-)
-
-// Valid indicates whether the value is a known member of the WorklistCalendar enum.
-func (e WorklistCalendar) Valid() bool {
-	switch e {
-	case WorklistCalendarConnected:
-		return true
-	case WorklistCalendarNotConnected:
-		return true
-	case WorklistCalendarUnreadable:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for WorklistFilter.
 const (
 	WorklistFilterAll               WorklistFilter = "all"
@@ -30825,8 +30825,17 @@ type ActivityLinkInputEntityType string
 
 // ActivityListResponse defines model for ActivityListResponse.
 type ActivityListResponse struct {
-	Data []Activity `json:"data"`
-	Page PageInfo   `json:"page"`
+	// Calendar Whether the reader's own calendar feeds the meetings this list holds. Present when
+	// the list can be read as the reader's diary: narrowed to `kind=meeting`, or to an
+	// `occurred_after`/`occurred_before` window with no `kind`. Absent on any other list,
+	// and when the reader may not read their own connections.
+	//
+	// A meeting missing from the list is evidence that it is not in the diary only when
+	// this is `connected`. Under either other answer the list is the meetings somebody
+	// recorded in this CRM, and a client must not draw an empty day as a free one.
+	Calendar *ReaderCalendar `json:"calendar,omitempty"`
+	Data     []Activity      `json:"data"`
+	Page     PageInfo        `json:"page"`
 }
 
 // ActivityReaderRendering One activity's text in one reader's language, written for this reader and stored
@@ -56697,6 +56706,13 @@ type RbacObjectGrant struct {
 	Update bool `json:"update"`
 }
 
+// ReaderCalendar Whether the reader's own calendar connections feed the meetings this product holds.
+//
+// `not_connected` — the reader has no live calendar connection: none was made, or every
+// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+type ReaderCalendar string
+
 // Receipt One completed act, and the record it was about.
 //
 // `subject` is present only where the act named a record. Not every approval is
@@ -66188,21 +66204,12 @@ type Worklist struct {
 	// labelled in ranked order — a client draws a heading where the band changes.
 	Bands *[]WorklistBand `json:"bands,omitempty"`
 
-	// Calendar Whether the reader's own calendar feeds the meetings this read counts. Present only
-	// for scope `mine`; a wider scope has no single calendar to answer for.
+	// Calendar Whether the reader's own calendar connections feed the meetings this product holds.
 	//
 	// `not_connected` — the reader has no live calendar connection: none was made, or every
 	// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
 	// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
-	//
-	// A zero `meetings` count is a measurement only when this is `connected`. Under either
-	// other answer it says nothing about the day, and a client must not draw it as "no
-	// meetings".
-	//
-	// Absent under scope `mine` when the read could not answer. A read that failed is
-	// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
-	// reader is refused is absent and named nowhere.
-	Calendar *WorklistCalendar `json:"calendar,omitempty"`
+	Calendar *ReaderCalendar `json:"calendar,omitempty"`
 
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
 	// pill counts, and what lets the page say how much it is not showing. Counted
@@ -66372,22 +66379,6 @@ type Worklist struct {
 	// `changed_since_snapshot` explains why the count moved. Neither is an error.
 	Walk *WorklistWalk `json:"walk,omitempty"`
 }
-
-// WorklistCalendar Whether the reader's own calendar feeds the meetings this read counts. Present only
-// for scope `mine`; a wider scope has no single calendar to answer for.
-//
-// `not_connected` — the reader has no live calendar connection: none was made, or every
-// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
-// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
-//
-// A zero `meetings` count is a measurement only when this is `connected`. Under either
-// other answer it says nothing about the day, and a client must not draw it as "no
-// meetings".
-//
-// Absent under scope `mine` when the read could not answer. A read that failed is
-// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
-// reader is refused is absent and named nowhere.
-type WorklistCalendar string
 
 // WorklistFilter The narrowing this read applied. The same vocabulary the query parameter takes.
 type WorklistFilter string

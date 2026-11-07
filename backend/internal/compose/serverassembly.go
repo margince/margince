@@ -87,6 +87,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// answer one question one way: whether a window was read off the host's
 		// own diary or derived from this CRM's records.
 		WithCalendarConnected(activities.CalendarConnected(calendarBackingResolver(pool))).
+		WithListCalendar(activityListCalendar(captureHealthRegistry(InstallationDB(pool)))).
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
