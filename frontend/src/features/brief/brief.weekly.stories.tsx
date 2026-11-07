@@ -33,8 +33,8 @@ import { weeklyNumericStatus } from "./brief.numeric";
 import { OutlookPanel } from "./brief.waterfall";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { FiguresTable } from "./brief.weekly.figures";
-import { WeeklyRail } from "./brief.weekly.rail";
 import { LearningsPanel } from "./brief.weekly.learnings";
+import { WeeklyRail } from "./brief.weekly.rail";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
 

@@ -61310,7 +61310,8 @@ type SettingOriginSource string
 // Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
 // The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
 type SettingsAvailability struct {
-	// CompanyContext True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it.
+	// CompanyContext Deprecated. Still required and returned for compatibility throughout the API notice window. New clients read `read_enabled` from `GET /company/context/capabilities` instead. This field continues to report whether the company-context rollout has typed reads active. It does not gate the installation's Company settings page.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompanyContext bool `json:"company_context"`
 
 	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
@@ -66562,7 +66563,7 @@ type WorklistBuckets struct {
 	// Planned The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.
 	Planned int `json:"planned" minimum:"0"`
 
-	// Review Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.
+	// Review Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count.
 	Review int `json:"review" minimum:"0"`
 
 	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
@@ -67063,7 +67064,9 @@ type WorklistItem struct {
 	// `today` is work a seller executes. `review` is a judgement somebody must make
 	// before work continues — an approval, a duplicate pair, an introduction.
 	// `system_health` is a source or automation an administrator must restore.
-	// `receipt` is completed work, reported so the reader can see it happened.
+	// `receipt` is deprecated and retained only for published-client compatibility
+	// through the API notice window. The work queue never emits it. Completed-work
+	// receipts are served by `GET /worklist/handled` and have their own presentation.
 	//
 	// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
 	// `source` that a browser could recompute: two rows of one source can differ,
@@ -67346,7 +67349,9 @@ type WorklistItemConsequence string
 // `today` is work a seller executes. `review` is a judgement somebody must make
 // before work continues — an approval, a duplicate pair, an introduction.
 // `system_health` is a source or automation an administrator must restore.
-// `receipt` is completed work, reported so the reader can see it happened.
+// `receipt` is deprecated and retained only for published-client compatibility
+// through the API notice window. The work queue never emits it. Completed-work
+// receipts are served by `GET /worklist/handled` and have their own presentation.
 //
 // A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
 // `source` that a browser could recompute: two rows of one source can differ,
