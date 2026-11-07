@@ -151,6 +151,10 @@ type counterpartyCreated struct {
 func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.Store,
 	filer *connectorTagFiler, in counterpartyCreation,
 ) (counterpartyCreated, error) {
+	ctx, err := capture.BackfillContextForDispositionTx(ctx, tx, in.DispositionID)
+	if err != nil {
+		return counterpartyCreated{}, err
+	}
 	res, err := store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
 		Email:            in.Email,
 		DisplayName:      in.DisplayName,

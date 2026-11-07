@@ -14,7 +14,7 @@
 # is one those readings support — the stage's probability against the deal's
 # amount — never causes it has no data for.
 name: case45_move_the_deal_on
-criteria: [1, 2, 3]
+criteria: [1, 2, 3, 4]
 
 # WRITES: the author's own statement that this case changes the world. It is not
 # what decides the reset — the runner rebuilds whenever the LAST run dirtied the
@@ -32,6 +32,7 @@ must_call:
   - progress_deal
 must_not_call_with:
   - change_offers~.
+  - change_settings~.
 
 may_call:
   - read_workspace

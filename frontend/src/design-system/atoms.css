@@ -430,6 +430,12 @@
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
 }
+/* A drawer that reads short ends with its content; a long one still stops at
+   the glass and scrolls its body. */
+.modal-drawer-fit {
+  height: auto;
+  align-self: start;
+}
 /* A banded drawer scrolls only its body, so head and foot stay put. Not
    `hidden`: it would make the drawer a second scroll container. */
 .modal-drawer:has(> .drawer-head) {

@@ -396,6 +396,7 @@
     "getMyWorkingHours": "own_account",
     "getNoticeCase": "compliance",
     "getNoticeCaseReview": "compliance",
+    "getNoticeSourceEvidence": "compliance",
     "getOffer": "business",
     "getOfferTemplate": "workspace_settings",
     "getOnboardingCompanyProposal": "workspace_settings",
@@ -464,6 +465,7 @@
     "keepDomainAsVendor": "capture",
     "keepDomainQuestion": "capture",
     "launchSalesInitiative": "business",
+    "liftLeadSuppression": "compliance",
     "liftSuppression": "compliance",
     "linkCompanyContacts": "business",
     "linkFinanceSourceCustomer": "capture",
@@ -548,6 +550,7 @@
     "listLeadManualSignals": "business",
     "listLeadOrigins": "workspace_settings",
     "listLeadSources": "workspace_settings",
+    "listLeadStops": "compliance",
     "listLeads": "business",
     "listLegacyLossReasons": "admin_settings",
     "listLegalEntities": "workspace_settings",
@@ -655,6 +658,7 @@
     "previewLeadPromotion": "business",
     "previewMailDealRepair": "operator",
     "previewMemberRetirement": "admin_settings",
+    "previewNoticeSource": "compliance",
     "previewSendAuthorization": "business",
     "previewVoiceCorpusSource": "business",
     "progressDeal": "business",
@@ -1662,6 +1666,9 @@
     "get_notice_case_review": [
       "compliance"
     ],
+    "get_notice_source_evidence": [
+      "compliance"
+    ],
     "get_ownership_offer": [
       "business"
     ],
@@ -1787,6 +1794,9 @@
     ],
     "lift_counterparty_hold": [
       "capture"
+    ],
+    "lift_lead_suppression": [
+      "compliance"
     ],
     "link_company_contacts": [
       "business"
@@ -1928,6 +1938,9 @@
     ],
     "list_lead_manual_signals": [
       "business"
+    ],
+    "list_lead_stops": [
+      "compliance"
     ],
     "list_legacy_loss_reasons": [
       "admin_settings"
@@ -2157,6 +2170,9 @@
     ],
     "preview_member_retirement": [
       "admin_settings"
+    ],
+    "preview_notice_source": [
+      "compliance"
     ],
     "preview_send_authorization": [
       "business"

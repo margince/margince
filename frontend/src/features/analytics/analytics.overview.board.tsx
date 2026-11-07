@@ -5,7 +5,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
-import { ChartPanel } from "./reporting.charts";
+import { ChartPanel } from "./reporting.chartpanel";
 import type {
   ReportingBlockKind,
   ReportingChart,

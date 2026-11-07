@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
@@ -14,27 +11,16 @@ import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
-import { unwrap } from "../../lib/problem";
 import { useUrlParams } from "../../lib/urlstate";
 import { useAnalyticsContext } from "./analytics.context";
+import { InitiativeDrawer } from "./analytics.drawers";
 import { OVERVIEW_DIAL } from "./analytics.overview.choice";
-import { InitiativeDrawer } from "./reporting.initiativedrawer";
+import {
+  type SalesInitiative,
+  useSalesInitiatives,
+} from "./reporting.initiatives.queries";
 import { reportingAmount } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
-
-export type SalesInitiative = components["schemas"]["SalesInitiative"];
-
-export const INITIATIVES_KEY = "sales-initiatives";
-
-/** The initiatives a reader may open, drafts and live ones, newest first. */
-export function useSalesInitiatives(enabled = true) {
-  return useQuery({
-    queryKey: [INITIATIVES_KEY],
-    queryFn: async () => unwrap(await api.GET("/analytics/initiatives")).data,
-    enabled,
-    staleTime: 30_000,
-  });
-}
 
 /**
  * Sales initiatives: one entry per effort, each opening Sales review narrowed

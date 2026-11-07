@@ -163,7 +163,9 @@ func (r *heldContactReleaser) releaseThread(ctx context.Context, threadKey strin
 // releaseOne runs releaseHeldContactTx on its own transaction.
 func (r *heldContactReleaser) releaseOne(ctx context.Context, id ids.ContactID) (heldContactRelease, error) {
 	var out heldContactRelease
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := withRetryingWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+		out = releaseKept
+
 		var err error
 		out, err = releaseHeldContactTx(ctx, tx, r.contacts, id)
 		return err

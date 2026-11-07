@@ -61,8 +61,10 @@ export function WeekActivity({
     (day, index) => index < WORKDAYS || dayTotal(day) > 0,
   );
   const most = Math.max(1, ...shown.map(dayTotal));
-  const busiest = shown.reduce((top, day) =>
-    dayTotal(day) > dayTotal(top) ? day : top,
+  const busiest = shown.reduce<(typeof shown)[number] | undefined>(
+    (top, day) =>
+      top === undefined || dayTotal(day) > dayTotal(top) ? day : top,
+    undefined,
   );
   return (
     <PanelBody>
@@ -114,7 +116,7 @@ export function WeekActivity({
           ))}
         </ul>
       </div>
-      {dayTotal(busiest) > 0 && (
+      {busiest !== undefined && dayTotal(busiest) > 0 && (
         <p className="t-caption">
           {t("brief.weekly.activity.busiest", {
             day: formatDayLong(busiest.day, locale, zone),

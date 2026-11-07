@@ -30,6 +30,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+func (p *preflightEnv) scheduledCreation(t *testing.T, id ids.UUID) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(t.Context(), "SELECT created_at FROM scheduled_send WHERE id = @id", pgx.NamedArgs{"id": id}).Scan(&at)
+	}); err != nil {
+		t.Fatalf("reading the scheduled creation: %v", err)
+	}
+	return at
+}
+
 // scheduleClaiming schedules a send through the reply door with the reason
 // the rep claimed, and returns the scheduled record's id.
 func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {

@@ -641,8 +641,17 @@ const (
 	// website lead holds, for the privacy page. It reads presence flags only,
 	// for the lead the link resolved, and returns no reference.
 	//
-	// 155: contacts.holdCohortActivities locks the activities a cohort repair
+	// 155: ai.eraseSamplesTx finds every voice profile holding a sample copied
+	// from erased mail or naming an erased contact. An erasure must reach every
+	// owner's profile, so no row scope applies. Each id is only locked, and the
+	// call returns nothing but an error.
+	// 156–162: derived-work maintenance adds seven contact references:
+	// signature retry/release selectors (two), the misattribution repair's
+	// ordered locks (one), and interaction retry/release/lock/queue selectors
+	// (four). Their system-only callers consume these keys inside maintenance;
+	// none enters a response. Human graph reads retain their object and row gates.
+	// 163: contacts.holdCohortActivities locks the activities a cohort repair
 	// may write before it locks the contact. The ids bound that repair's writes
 	// inside its transaction, and none is returned to a caller.
-	modulesTierUnscopedCeiling = 155
+	modulesTierUnscopedCeiling = 163
 )

@@ -4,7 +4,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
-import { THEME_LABEL_KEYS } from "../../app/account";
 import {
   Avatar,
   Badge,
@@ -36,6 +35,7 @@ import { useLogout, useMe } from "../../lib/session";
 import {
   setThemeChoice,
   THEME_CHOICES,
+  THEME_LABEL_KEYS,
   type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";

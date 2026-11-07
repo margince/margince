@@ -337,15 +337,15 @@ func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
 // The owner leaves, or loses the deal grant, after Margince bound itself as
 // their agent. The write binds them again and refuses.
 func TestAnOwnerWhoLeavesBeforeTheWriteGetsNoChange(t *testing.T) {
-	for name, revoke := range map[string]string{
-		"deactivated":  `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
-		"role removed": `DELETE FROM role_assignment WHERE user_id = $1`,
+	for name, c := range map[string]struct{ revoke, outcome string }{
+		"deactivated":  {`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, droppedNoOwner},
+		"role removed": {`DELETE FROM role_assignment WHERE user_id = $1`, deals.VerdictDroppedOwnerCannotEdit},
 	} {
-		t.Run(name, func(t *testing.T) { verdictAfterTheOwnerLeft(t, revoke) })
+		t.Run(name, func(t *testing.T) { verdictAfterTheOwnerLeft(t, c.revoke, c.outcome) })
 	}
 }
 
-func verdictAfterTheOwnerLeft(t *testing.T, revoke string) {
+func verdictAfterTheOwnerLeft(t *testing.T, revoke, wantOutcome string) {
 	t.Helper()
 	v := setupDealVerdict(t)
 	ctx := principal.SystemActing(v.Admin(), closeDateSweepActor)
@@ -358,17 +358,17 @@ func verdictAfterTheOwnerLeft(t *testing.T, revoke string) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	owner, err := ownersAgent(ctx, v.pass.users, v.Rep1, marginceActorID)
-	if err != nil {
-		t.Fatal(err)
-	}
 	v.WsExec(t, revoke, v.Rep1)
 	amount := deals.VerdictChange{
 		Correction: deals.VerdictAmountCorrection, AmountMinor: 4_500_000,
 		Evidence: map[string]any{"cited_activity_ids": []string{v.note}},
 	}
-	if _, _, err := v.pass.applyAs(owner, c, read, []deals.VerdictChange{amount}); err != nil {
+	outcomes, _, err := v.pass.applyAsOwner(ctx, c, read, []deals.VerdictChange{amount})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(outcomes) != 1 || outcomes[0] != wantOutcome {
+		t.Errorf("outcomes = %v, want [%s]", outcomes, wantOutcome)
 	}
 	if got := v.field(t, "amount_minor") + "/" + v.field(t, "win_probability_override"); got != "4000000/" {
 		t.Fatalf("amount/probability = %s, want nothing written for an owner who left or lost the grant", got)

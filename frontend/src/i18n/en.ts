@@ -148,6 +148,20 @@ export const en = {
   "users.work.projects": "Projects",
   "users.work.alerts": "Open alerts",
   "users.work.tasks": "Tasks",
+  "users.work.lists": "Lists",
+  "privacy.proofReference": "Request reference",
+  "privacy.proofAnswered": "Answered on",
+  "privacy.proofKeptUntil": "Proof kept until",
+  "privacy.proofCompletedBy": "Completed by",
+  "privacy.proofAutomated": "Automated process",
+  "privacy.proofErasureChanges": "Recorded erasure changes",
+  "privacy.proofPartialCounts":
+    "Some erasure work cannot be counted. The access export includes the recorded breakdown.",
+  "privacy.proofExportCounts":
+    "The access export includes the recorded breakdown.",
+  "privacy.proofUnknown": "Not recorded",
+  "analytics.q.conversionFrame":
+    "Base currency: {currency}. Rates as of {date}.",
 
   "homeRepair.taskPermission":
     "Activity archive permission is required to archive reviewed tasks.",
@@ -1272,6 +1286,7 @@ export const en = {
   "reporting.objective": "Primary objective",
   "reporting.targetValue": "Target",
   "reporting.targetHint": "Leave empty for tracking only.",
+  "reporting.initiativeOwner": "Owner",
   "reporting.deadline": "Deadline",
   "reporting.setup.suggestReport": "Suggest filters and charts",
   "reporting.setup.suggestInitiative": "Suggest the goal",
@@ -1318,6 +1333,7 @@ export const en = {
   "reporting.addRecord": "Add",
   "reporting.searchRecords": "Search records",
   "reporting.noMatchingRecords": "No matching records",
+  "reporting.typeToFindRecord": "Type a name to find one",
   "reporting.pickExplains":
     "Picking a deal does not enroll every contact at its company. A lead keeps its promotion history.",
   "reporting.memberCounts":
@@ -2557,6 +2573,8 @@ export const en = {
   "history.field.meeting_documents_added":
     "Meeting notes linked from the calendar",
   "history.field.guests_retired": "Guests removed by the calendar",
+  "history.field.meeting_guests_removed":
+    "Guests returned to the meeting they came from",
   "history.field.guest_answers_changed":
     "Guest answers updated from the calendar",
   "history.field.guests_left_out": "Guests not listed",
@@ -2643,6 +2661,7 @@ export const en = {
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
+  "history.field.product_id": "Product",
   "history.field.about_deal": "Deal it was about",
   "history.field.qualifying_event": "Qualifying event",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
@@ -4254,6 +4273,8 @@ export const en = {
   "deal.products.remove": "Remove {name}",
   "deal.products.add": "Add a product",
   "deal.products.alreadyListed": "Already listed",
+  "deal.products.changedWhileEditing":
+    "Someone saved this deal’s products while you edited them. The list now shows their version; make your change again and save.",
   "deal.products.fromOffer": "From the offer",
   "deal.products.setByHand": "Set by hand",
   "deal.lines.empty":
@@ -4730,6 +4751,56 @@ export const en = {
   "compose.reason.verdict": "Held by classification",
   "compose.reason.counterparty": "Held: counterparty mail",
   "compose.reason.explicitlyConfidential": "Marked confidential",
+  "internalMail.authorizeHistory":
+    "Authorize a separate internal history import for this source",
+  "internalMail.historySince": "Historical mail received on or after (UTC)",
+  "internalMail.historyApprovalNote":
+    "This approval does not start an import. The mailbox owner must preview the scope and explicitly include internal history when starting an import.",
+  "internalMail.needHistoryDate":
+    "Choose an earliest received date for each authorized internal history source.",
+  "internalMail.reauthorizeSource":
+    "This mailbox authorization changed. Save to enroll it again. Internal capture remains stopped until then.",
+  "internalMail.historyTitle": "Internal history authorization",
+  "internalMail.historyAfter": "Authorized internal mail received after {date}",
+  "internalMail.historyFolders": "Internal source folders",
+  "internalMail.historyImportNote":
+    "Starting with this option creates a new import. The provider estimate covers the whole mailbox window. Internal mail is added only within the approved source and date range, through the time the import starts. Ordinary exclusions and participant access remain in place.",
+  "internalMail.includeHistory":
+    "Include authorized internal mail in a new history import",
+  "internalMail.title": "Internal operational mail",
+  "internalMail.scope":
+    "Store selected operational email between colleagues. Only participants can read it initially. A participant may share one message with named colleagues. Links and thread sharing never widen access.",
+  "internalMail.authorization":
+    "Confirm organizational authorization and employee notice before enabling capture. Selecting a source uses its existing mailbox permissions and grants no new provider access.",
+  "internalMail.enable": "Enable internal operational mail capture",
+  "internalMail.sources": "Operational mail connections",
+  "internalMail.noSources":
+    "Connect a mailbox before selecting an operational source.",
+  "internalMail.unavailableSource": "Unavailable mail connection",
+  "internalMail.needSource":
+    "Select at least one operational mail connection before enabling capture.",
+  "internalMail.disable":
+    "Disabling capture or removing a source stops new internal mail. Stored messages retain their reader restrictions and privacy lifecycle.",
+  "internalMail.future":
+    "Capture starts with future mail. Internal history stays excluded unless an administrator approves a date range and the mailbox owner explicitly includes it in a separate import.",
+  "internalMail.allFolders": "All permitted folders",
+  "internalMail.selectedFolders": "Selected folders only",
+  "internalMail.chooseFolders": "Choose folders",
+  "internalMail.folders": "Folders for this connection",
+  "internalMail.loadingFolders": "Loading mailbox folders",
+  "internalMail.foldersUnsupported":
+    "This provider cannot list folders. You can select the whole connection with ordinary exclusions.",
+  "internalMail.unavailableFolder": "Unavailable folder",
+  "internalMail.removeFolder": "Remove folder",
+  "internalMail.searchFolders": "Find a folder",
+  "internalMail.noFolders": "No matching folders",
+  "internalMail.done": "Done",
+  "internalMail.partialFolders":
+    "The provider returned part of its folder list. Existing selections remain in place.",
+  "internalMail.shareNote":
+    "This changes the named readers of this message only. Participants retain access. Saving a new selection replaces the previous named readers.",
+  "compose.reason.internalOperational":
+    "Internal operational mail: participants and named colleagues",
   "compose.reason.membersOnly": "Held: mail between colleagues",
   "compose.reason.noCounterparty": "Held: no counterparty",
   "compose.audience": "Change visibility",
@@ -5493,6 +5564,12 @@ export const en = {
   "lead.rail.deal.empty": "No deal yet. Qualifying this lead can open one.",
   "lead.rail.project.title": "Project",
   "lead.rail.project.empty": "No project yet.",
+  "lead.product": "Product",
+  "lead.product.attach": "Name the product",
+  "lead.product.change": "Change product",
+  "lead.product.clear": "Clear the product",
+  "lead.product.search": "Search products",
+  "lead.product.loading": "Reading the product…",
   "lead.rail.project.attach": "Attach project",
   "lead.rail.project.change": "Change project",
   "lead.terminalReadOnly": "This lead is closed and cannot be changed.",
@@ -6361,6 +6438,7 @@ export const en = {
   "worklist.bulk.doneCount_other": "Marked {count} items done for you.",
 
   "deal.pendingApprovals": "Awaiting approval",
+  "deal.approval.open": "Open",
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
   "deal.offerNeedsCurrency":
@@ -7705,6 +7783,8 @@ export const en = {
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send email",
   "compose.threadLeave": "New email",
+  "compose.channelDraftUnavailable":
+    "AI drafting is not available for this channel. Write your reply below.",
   "compose.draftKept": "Your edits were kept. Draft again when ready.",
   "compose.threadFailed":
     "The message could not be loaded. Select Retry in the thread.",
@@ -8128,6 +8208,8 @@ export const en = {
   "analytics.emptyTeamBody": "No deal is owned by anyone in {scope}.",
   "analytics.deliveryCoversAll":
     "These numbers cover every project you can read.",
+  "analytics.wholeScopeForecast":
+    "Forecast figures and non-deal checks cover the whole selected population, regardless of product, country or industry filters.",
   "analytics.attention": "Needs your attention",
   "analytics.board.rail": "Outlook and next steps",
   "analytics.attentionNoOwner": "No owner",
@@ -8448,7 +8530,7 @@ export const en = {
   "review.outOfDateRefresh":
     "Choose Check again to read the changes now, or wait for the next nightly run.",
   "review.freshnessUnknown":
-    "It is not known whether the records changed since this check: no check that read every source has run since Margince started tracking changes. Choose Check again to run one.",
+    "Margince has not yet confirmed whether the records changed since this check. Wait for an update, or choose Check again to read them now.",
   "review.allSourcesRead": "All sources checked.",
   // The sources a run reads, named for the reader rather than by the server's
   // own vocabulary. The unread line printed the wire keys verbatim, so a German
@@ -10444,6 +10526,22 @@ export const en = {
     "The acquisition date is unknown; this duty may already be due.",
   "noticeDuty.observedOn": "Observed on",
   "notice.source.more": "More source reviews remain for this contact.",
+  "notice.source.evidenceOnFile": "Evidence on file",
+  "notice.source.original": "Original source record",
+  "notice.source.originalUnknown": "This record does not identify the source.",
+  "notice.source.happenedOn": "On {date}",
+  "notice.source.recordedOn": "Recorded {date}",
+  "notice.source.describeEvidence": "Describe other evidence",
+  "notice.source.openRecord": "View record",
+  "notice.source.moreEvidence": "Show more evidence",
+  "notice.source.preview": "Before you confirm",
+  "notice.source.previewNone":
+    "No separate notice duty follows from this source.",
+  "notice.source.previewOwed": "A notice is still owed by {date}.",
+  "notice.source.previewLatest":
+    "A notice is owed by {date} at the latest. The collection date is not confirmed.",
+  "notice.source.selectedHint":
+    "The selected record is kept as evidence. Add context if needed.",
   "notice.source.title": "Review source",
   "notice.source.explanation":
     "The source is unconfirmed. No privacy notice duty or legal deadline has been established. Review how the contact was obtained before sending a notice.",
@@ -10467,6 +10565,8 @@ export const en = {
     "For example: their first email, or who introduced you.",
   "notice.source.effect":
     "Saving records where their details came from. If that source means a privacy notice is owed, the notice duty opens with its deadline. Saving sends no email and does not change whether you may email them.",
+  "notice.source.metEffect":
+    "Saving records the meeting. It lets you send them personal follow-up mail, never marketing or a newsletter. No privacy notice is owed: they learned at the meeting who you are. Saving sends no email. Give the day you met.",
   "notice.source.whyUnknown":
     "Nothing on record says where this contact’s details came from.",
   "notice.source.whyUnconfirmed":
@@ -14403,6 +14503,8 @@ export const en = {
   "users.handover.tasks_other": "{count} open tasks",
   "users.handover.webhooks_one": "{count} webhook",
   "users.handover.webhooks_other": "{count} webhooks",
+  "users.handover.lists_one": "{count} list",
+  "users.handover.lists_other": "{count} lists",
   "users.removeMfa": "Remove two-step sign-in",
   "users.removeMfaConfirmTitle": "Remove two-step sign-in for {name}?",
   "users.removeMfaConfirmBody":
@@ -16070,7 +16172,7 @@ export const en = {
   "captureExclusions.removeRule": "Remove rule",
   "ownDomains.title": "Own email domains",
   "ownDomains.sub":
-    "Domains that belong to this company. Messages between colleagues are not stored for anyone, including you.",
+    "Domains that belong to this company. Messages between colleagues are skipped unless their source is enrolled under Internal operational mail.",
   "ownDomains.curatedTitle": "Managed here",
   "ownDomains.irreversible":
     "Adding a domain applies from the next message; removing it resumes capture from then on. Mail skipped while registered is never offered again by any mailbox. Captured mail stays.",
@@ -16216,6 +16318,11 @@ export const en = {
     "The https address of your privacy policy. The notice links to it.",
   "webForms.field.privacyNoticeUrlPlaceholder":
     "https://www.example.com/privacy",
+  "webForms.field.product": "Product",
+  "webForms.field.productHint":
+    "Every new lead this form captures asks about this product, and product reports count it there. A lead that already exists keeps its own product. Leave it empty when the form is not about one product.",
+  "webForms.field.productClear": "Capture leads with no product",
+  "webForms.field.productLoading": "Reading the product…",
   "webForms.field.owner": "Owner of new leads",
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",
@@ -17830,7 +17937,6 @@ export const en = {
   "filters.field.classification": "Classification",
   "filters.field.company_country": "Company country",
   "filters.field.company_industry": "Company industry",
-  "filters.field.product_id": "Product",
   "filters.field.company_lifecycle": "Company lifecycle",
   "filters.field.company_size_band": "Employees",
   "filters.field.country": "Country code",
@@ -18597,6 +18703,9 @@ export const en = {
   "worklist.pane.noneAccessible": "None you can open",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
+  "worklist.pane.conversation": "Thread",
+  "worklist.pane.openEmail": "Open email",
+  "worklist.pane.deal": "Deal",
   "worklist.why.title": "Why this needs attention",
   "worklist.why.reasons": "Reasons",
   "worklist.why.consequence": "If nothing is done",

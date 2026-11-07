@@ -133,7 +133,7 @@ const interactionRoles = relstrength.InteractionRolesSQL
 // introduction they can no longer make.
 func RecomputeEdgesForActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
 	var t edgeTargets
-	if err := t.addActivities(ctx, tx, activityIDs); err != nil {
+	if err := t.addActivities(ctx, tx, activityIDs, true); err != nil {
 		return err
 	}
 	return t.apply(ctx, tx)
@@ -160,7 +160,7 @@ func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) err
 	return t.apply(ctx, tx)
 }
 
-// recomputePairs re-folds the named pairs from the base tables in one
+// foldPairs re-folds the named pairs from the base tables in one
 // statement, and deletes the ones that no longer qualify.
 //
 // Written as one INSERT … ON CONFLICT DO UPDATE plus one DELETE rather than a
@@ -172,19 +172,14 @@ func DropEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) err
 // batch can name thousands of pairs, and two batches for the same colleague
 // name mostly the same ones; taking the row locks in one global order is what
 // makes the second batch wait for the first instead of deadlocking with it.
-func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
+func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
 	if len(pairs) == 0 {
-		return nil
+		return nil, nil
 	}
-	users := make([]ids.UUID, 0, len(pairs))
-	contacts := make([]ids.UUID, 0, len(pairs))
-	for _, p := range pairs {
-		users = append(users, p.user)
-		contacts = append(contacts, p.contact)
-	}
+	users, contacts := interactionPairKeys(pairs)
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 
-	if _, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		WITH target AS (
 		    SELECT DISTINCT user_id, contact_id
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
@@ -209,9 +204,9 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		)
 		INSERT INTO graph_interaction_edge AS e
 		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
-		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at)
+		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at, read_snapshot)
 		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
-		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now()
+		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now(), pg_current_snapshot()
 		  FROM folded f
 		 ORDER BY f.user_id, f.contact_id
 		ON CONFLICT (user_id, contact_id) DO UPDATE SET
@@ -226,9 +221,17 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		    late_count_90d     = EXCLUDED.late_count_90d,
 		    late_out_count_90d = EXCLUDED.late_out_count_90d,
 		    count_total      = EXCLUDED.count_total,
-		    computed_at      = EXCLUDED.computed_at`,
-		users, contacts); err != nil {
-		return fmt.Errorf("search: recomputing interaction edges: %w", err)
+		    computed_at      = EXCLUDED.computed_at,
+            read_snapshot = EXCLUDED.read_snapshot
+        RETURNING e.user_id, e.contact_id`,
+		users, contacts)
+	if err != nil {
+		return nil, fmt.Errorf("search: recomputing interaction edges: %w", err)
+	}
+	written, err := scanPairs(rows)
+	rows.Close()
+	if err != nil {
+		return nil, err
 	}
 
 	// The pairs that no longer have a single qualifying interaction lose their
@@ -248,9 +251,9 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		          AND `+liveContactSQL("pp.contact_id")+`)`,
 		users, contacts); err != nil {
-		return fmt.Errorf("search: pruning interaction edges that lost their evidence: %w", err)
+		return nil, fmt.Errorf("search: pruning interaction edges that lost their evidence: %w", err)
 	}
-	return nil
+	return written, nil
 }
 
 // audienceWorkspaceOnly is the projection's audience rule, spelled once for
@@ -451,9 +454,9 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		)
 		INSERT INTO graph_interaction_edge
 		    (user_id, contact_id, last_at, last_inbound_at, last_outbound_at, last_met_at,
-		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at)
+		     count_90d, in_count_90d, out_count_90d, sent_count_90d, late_count_90d, late_out_count_90d, count_total, computed_at, read_snapshot)
 		SELECT f.user_id, f.contact_id, f.last_at, f.last_inbound_at, f.last_outbound_at, f.last_met_at,
-		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now()
+		       f.count_90d, f.in_90d, f.out_90d, f.sent_90d, f.late_90d, f.late_out_90d, f.count_total, now(), pg_current_snapshot()
 		  FROM (SELECT a.edge_user AS user_id, a.edge_contact AS contact_id, `+graphFoldColumns(window)+`
 		          FROM (`+graphEngagedRows+`) a
 		         GROUP BY a.edge_user, a.edge_contact) f`); err != nil {
@@ -472,12 +475,12 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO graph_contact_edge
-		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at)
+		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at, read_snapshot)
 		SELECT pa.contact_id, pb.contact_id,
 		       max(a.occurred_at),
 		       count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`),
 		       count(DISTINCT `+graphInteractionUnit+`),
-		       now()
+		       now(), pg_current_snapshot()
 		  FROM activity_participant pa
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id

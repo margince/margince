@@ -68,6 +68,7 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/entityfloor.go:activityRecordOwnersSQL":                 "the owner_id, a USER id, of the contacts a message is filed under, so the retention floor follows that user's legal entity. Nothing of the contact leaves the statement; it only picks which floor keeps the message",
 	"internal/modules/search/graphedgetargets.go:liveContactSQL":                      "whether the contact an edge names is archived, so an edge fold skips it. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only fold more edges for readers already gated on the graph",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx":          "An existence-only uniqueness check suppresses already registered addresses from a content-authorized suggestion. No contact identity or field leaves it, including when a different owner holds the existing contact.",
 	"internal/modules/contacts/companyreferrers.go:refuseIfNamedBy":                   "the owner of each contact employed at a company, compared with the company's own owner, inside a count that only ever KEEPS the company from an owner's archive. No contact identity or field is returned",
@@ -129,6 +130,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/signaturework.go:QueueSignatureEventTx":            "System-only maintenance locks live contact identities before recording pending signature work. It returns a changed flag, never contact fields or identities to a caller.",
 	"internal/modules/contacts/mergeprimaryrepair.go:restoreMergeDroppedPrimary":  "the merge-dropped-primary data task re-reads one contact under its employment lock as the system principal, after ReconcileMergeDroppedPrimariesTx asked contact update. Only the heir edge id and version leave the read, for the audited promotion",
 	"internal/modules/contacts/signatureorphanphones.go:retractUnsupportedPhones": "the system-only signature repair locks contacts before their phone rows, matching the signature writer's lock order. No contact fields leave the repair; its output is an audited count",
 
@@ -176,7 +178,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/contactprivate.go:RetractCaptureOnlyContactTx":       "the retraction itself, in that same pass",
 	"internal/modules/contacts/creatededupe.go:record":                              "the near-match scan a contact write owes its review queue. Its callers are writes, and what it produces is a review row inside the caller's transaction",
 	"internal/modules/contacts/ensurerecords.go:fileCaptureReview":                  "the same review row on the CAPTURE path, inside the ensure's own transaction and reached only after that ensure has created the contact. The one column it reads is the incumbent's full_name, and it is read to be WRITTEN into the pair's evidence as the detection-time snapshot a reviewer compares against — never returned to a caller and never rendered to whoever's mail triggered the capture. The queue that later shows it carries its own gate",
-	"internal/modules/contacts/dedupe.go:fuzzyContact":                              "the fuzzy arm of that same scan, behind Resolve on the capture path",
+	"internal/modules/contacts/dedupe.go:contactCandidateQuery":                     "the fuzzy candidate read behind Resolve on the capture path, including its bounded maximum-similarity arm",
 	"internal/modules/contacts/dedupeaddressvariant.go:addressVariantQuery":         "the address-variant arm of that same scan: the contact holding an address that differs only by a plus tag or a Gmail spelling. addressVariantContacts runs it, reached only from callers that create and opt into review lanes, and its id becomes a review row or a possible-duplicate answer whose own visibility check names it",
 	"internal/modules/contacts/dedupelinkedin.go:fileLinkedInTwins":                 "the LinkedIn arm of that same scan: the contacts holding the LinkedIn profile a contact write just set. Reached from the social-handle writers inside the write, and from fileDuplicates in the rename re-check and the duplicate scan. Each id becomes a review row whose queue carries its own gate, and nothing is returned to a caller",
 	"internal/modules/contacts/signaturedisplay.go:followSignatureDisplay":          "reads the name columns and display of the contact a signature was just applied to, inside the write that applied it, only to decide whether the display follows the printed name; applySignature asked auth.Require first and nothing is returned to a caller",
@@ -217,6 +219,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/consent/suppress.go:anonymizedAddressHashes":                  "the hashes an anonymize kept on a contact, read only by suppressAdmittedTx after auth.EnsureWritable admitted the caller to that contact. They never leave the transaction; the stop rows written from them do, under the same gate",
 	"internal/modules/contacts/technicaladdressrepair.go:technicalCandidatePage":    "one page of contact ids, versions and live addresses for the technical-address correction, never returned to a reader. Its one caller is RetireTechnicalAddressContactsTx, which asks auth.RequireSystem and auth.Require(ctx, \"contact\", delete) first",
 	"internal/modules/activities/meetingresource.go:calendarResourceParticipantSQL": "a resource-address predicate that returns no contact fields. Its callers pass contact scope: MeetingCounterparties gates its joined contact, outsidePartyClause supplies readableContactScope, and HeldMeetingCounterparties is the system's company walk",
 

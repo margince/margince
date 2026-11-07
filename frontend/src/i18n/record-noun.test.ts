@@ -298,6 +298,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   vi: [
+    // These messages name actual readers and participants, not contact records.
+    "internalMail.historyImportNote",
+    "internalMail.scope",
+    "internalMail.disable",
+    "internalMail.shareNote",
+    "compose.reason.internalOperational",
     "analytics.team.eventCredit",
     "analytics.team.qualificationBasis",
     "analytics.team.arrivalCredit",
@@ -704,6 +710,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "dealSuggestion.field.owner",
     "systemJob.assign_owner_release",
     "history.field.owner_id",
+    "reporting.initiativeOwner",
     "share.access.writeNote",
     "worklist.owner.left",
     "list.owner",

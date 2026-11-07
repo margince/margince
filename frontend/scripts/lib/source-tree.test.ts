@@ -310,6 +310,7 @@ describe("the one resolver the import-graph gates share", () => {
       "./f",
       "./g",
     ]);
+    expect(moduleSpecifiers(source, "static")).toEqual(["./b", "./d", "./f"]);
     // `{ type B }` still loads its module under verbatimModuleSyntax.
     expect(moduleSpecifiers(source, "values")).toEqual([
       "./b",

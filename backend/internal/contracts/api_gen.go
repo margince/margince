@@ -17122,6 +17122,84 @@ func (e NoticeKind) Valid() bool {
 	}
 }
 
+// Defines values for NoticeSourceEvidenceKind.
+const (
+	NoticeSourceEvidenceKindAcquisition NoticeSourceEvidenceKind = "acquisition"
+	NoticeSourceEvidenceKindEmail       NoticeSourceEvidenceKind = "email"
+	NoticeSourceEvidenceKindMeeting     NoticeSourceEvidenceKind = "meeting"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceKind enum.
+func (e NoticeSourceEvidenceKind) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceKindAcquisition:
+		return true
+	case NoticeSourceEvidenceKindEmail:
+		return true
+	case NoticeSourceEvidenceKindMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourceEvidenceRecordType.
+const (
+	NoticeSourceEvidenceRecordTypeActivity NoticeSourceEvidenceRecordType = "activity"
+	NoticeSourceEvidenceRecordTypeContact  NoticeSourceEvidenceRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceRecordType enum.
+func (e NoticeSourceEvidenceRecordType) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceRecordTypeActivity:
+		return true
+	case NoticeSourceEvidenceRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourceEvidenceReferenceKind.
+const (
+	NoticeSourceEvidenceReferenceKindAcquisition NoticeSourceEvidenceReferenceKind = "acquisition"
+	NoticeSourceEvidenceReferenceKindActivity    NoticeSourceEvidenceReferenceKind = "activity"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceReferenceKind enum.
+func (e NoticeSourceEvidenceReferenceKind) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceReferenceKindAcquisition:
+		return true
+	case NoticeSourceEvidenceReferenceKindActivity:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourcePreviewRule.
+const (
+	NoticeSourcePreviewRuleArt13 NoticeSourcePreviewRule = "art13"
+	NoticeSourcePreviewRuleArt14 NoticeSourcePreviewRule = "art14"
+	NoticeSourcePreviewRuleNone  NoticeSourcePreviewRule = "none"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourcePreviewRule enum.
+func (e NoticeSourcePreviewRule) Valid() bool {
+	switch e {
+	case NoticeSourcePreviewRuleArt13:
+		return true
+	case NoticeSourcePreviewRuleArt14:
+		return true
+	case NoticeSourcePreviewRuleNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NotificationClass.
 const (
 	NotificationClassApprovalPending NotificationClass = "approval_pending"
@@ -18703,6 +18781,27 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	case QualifyingEventRecordKindMeeting:
 		return true
 	case QualifyingEventRecordKindRequestedBySubject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReaderCalendar.
+const (
+	ReaderCalendarConnected    ReaderCalendar = "connected"
+	ReaderCalendarNotConnected ReaderCalendar = "not_connected"
+	ReaderCalendarUnreadable   ReaderCalendar = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the ReaderCalendar enum.
+func (e ReaderCalendar) Valid() bool {
+	switch e {
+	case ReaderCalendarConnected:
+		return true
+	case ReaderCalendarNotConnected:
+		return true
+	case ReaderCalendarUnreadable:
 		return true
 	default:
 		return false
@@ -25444,27 +25543,6 @@ func (e WorkArea) Valid() bool {
 	}
 }
 
-// Defines values for WorklistCalendar.
-const (
-	WorklistCalendarConnected    WorklistCalendar = "connected"
-	WorklistCalendarNotConnected WorklistCalendar = "not_connected"
-	WorklistCalendarUnreadable   WorklistCalendar = "unreadable"
-)
-
-// Valid indicates whether the value is a known member of the WorklistCalendar enum.
-func (e WorklistCalendar) Valid() bool {
-	switch e {
-	case WorklistCalendarConnected:
-		return true
-	case WorklistCalendarNotConnected:
-		return true
-	case WorklistCalendarUnreadable:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for WorklistFilter.
 const (
 	WorklistFilterAll               WorklistFilter = "all"
@@ -27160,6 +27238,30 @@ func (e ListSalesDecisionsParamsStatus) Valid() bool {
 	case ListSalesDecisionsParamsStatusDone:
 		return true
 	case ListSalesDecisionsParamsStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSalesDecisionsParamsScopeKind.
+const (
+	ListSalesDecisionsParamsScopeKindManagedTeams ListSalesDecisionsParamsScopeKind = "managed_teams"
+	ListSalesDecisionsParamsScopeKindOwner        ListSalesDecisionsParamsScopeKind = "owner"
+	ListSalesDecisionsParamsScopeKindTeam         ListSalesDecisionsParamsScopeKind = "team"
+	ListSalesDecisionsParamsScopeKindWorkspace    ListSalesDecisionsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSalesDecisionsParamsScopeKind enum.
+func (e ListSalesDecisionsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListSalesDecisionsParamsScopeKindManagedTeams:
+		return true
+	case ListSalesDecisionsParamsScopeKindOwner:
+		return true
+	case ListSalesDecisionsParamsScopeKindTeam:
+		return true
+	case ListSalesDecisionsParamsScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -29323,6 +29425,21 @@ func (e ListListsParamsSharing) Valid() bool {
 	}
 }
 
+// Defines values for GetCurrentPrincipalParamsPrepare.
+const (
+	GetCurrentPrincipalParamsPrepareAnalytics GetCurrentPrincipalParamsPrepare = "analytics"
+)
+
+// Valid indicates whether the value is a known member of the GetCurrentPrincipalParamsPrepare enum.
+func (e GetCurrentPrincipalParamsPrepare) Valid() bool {
+	switch e {
+	case GetCurrentPrincipalParamsPrepareAnalytics:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrepForMeetingParamsRecordType.
 const (
 	PrepForMeetingParamsRecordTypeActivity PrepForMeetingParamsRecordType = "activity"
@@ -30466,6 +30583,9 @@ type Activity struct {
 	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
 
+	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+	CanShareInternal *bool `json:"can_share_internal,omitempty"`
+
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
@@ -30729,8 +30849,17 @@ type ActivityLinkInputEntityType string
 
 // ActivityListResponse defines model for ActivityListResponse.
 type ActivityListResponse struct {
-	Data []Activity `json:"data"`
-	Page PageInfo   `json:"page"`
+	// Calendar Whether the reader's own calendar feeds the meetings this list holds. Present when
+	// the list can be read as the reader's diary: narrowed to `kind=meeting`, or to an
+	// `occurred_after`/`occurred_before` window with no `kind`. Absent on any other list,
+	// and when the reader may not read their own connections.
+	//
+	// A meeting missing from the list is evidence that it is not in the diary only when
+	// this is `connected`. Under either other answer the list is the meetings somebody
+	// recorded in this CRM, and a client must not draw an empty day as a free one.
+	Calendar *ReaderCalendar `json:"calendar,omitempty"`
+	Data     []Activity      `json:"data"`
+	Page     PageInfo        `json:"page"`
 }
 
 // ActivityReaderRendering One activity's text in one reader's language, written for this reader and stored
@@ -32823,14 +32952,23 @@ type AiUsageSummary struct {
 
 // AnalyticsAnswer defines model for AnalyticsAnswer.
 type AnalyticsAnswer struct {
+	// BaseCurrency Base currency used by this answer.
+	BaseCurrency *string `json:"base_currency,omitempty"`
+
 	// Columns What each value in a row means, in order.
 	Columns []string `json:"columns"`
+
+	// ExcludedByPermission Visible records excluded by field masks. Absent when no mask applies.
+	ExcludedByPermission *int `json:"excluded_by_permission,omitempty" minimum:"0"`
 
 	// Labels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
 	Labels *AnalyticsIdLabels `json:"labels,omitempty"`
 
 	// PopulationNarrowed Why this answer covers fewer rows than the report's population, or absent when it covers all of them. A drill-through or explanation carries the same value as the answer it explains, and its records are narrowed the same way. `owners_you_may_measure`: the report measures every record the caller may read, the question broke it down by owner, and only the owners the caller may measure are counted — themselves, the members of the teams they manage, and rows nobody owns. An all-scope seat is never narrowed. It names a reason and never a count, because how many rows were left out would describe them.
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
+
+	// RateDate Reference instant used to select conversion rates for this answer.
+	RateDate *time.Time `json:"rate_date,omitempty"`
 
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
@@ -33082,6 +33220,21 @@ type AnalyticsScope struct {
 
 // AnalyticsScopeKind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
 type AnalyticsScopeKind string
+
+// AnalyticsStartup Optional data for opening Analytics, read through the same authorization and readers as the individual routes.
+type AnalyticsStartup struct {
+	Catalog        ReportingCatalog           `json:"catalog"`
+	CompanyContext CompanyContextCapabilities `json:"company_context"`
+
+	// Context The frame every analytics answer for this caller is placed in.
+	Context   AnalyticsContext   `json:"context"`
+	Framework ReportingFramework `json:"framework"`
+
+	// InstallationSettings The installation's identity and reporting basis (ADR-0090). Read by every role,
+	// changed only by admin/ops.
+	InstallationSettings InstallationSettings `json:"installation_settings"`
+	Pipelines            *[]Pipeline          `json:"pipelines,omitempty"`
+}
 
 // AnalyticsVocabulary What `describe_analytics_vocabulary` answers.
 type AnalyticsVocabulary struct {
@@ -33487,9 +33640,18 @@ type ApproveRequest struct {
 
 // AssessNoticeSource defines model for AssessNoticeSource.
 type AssessNoticeSource struct {
-	Kind       AssessNoticeSourceKind `json:"kind"`
-	Note       string                 `json:"note"`
-	ObtainedAt *time.Time             `json:"obtained_at,omitempty"`
+	Kind AssessNoticeSourceKind `json:"kind"`
+
+	// MetInPerson The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.
+	MetInPerson *bool `json:"met_in_person,omitempty"`
+
+	// Note Evidence in the officer's words. Required when no existing evidence is selected.
+	Note       string     `json:"note"`
+	ObtainedAt *time.Time `json:"obtained_at,omitempty"`
+
+	// PreviewToken When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.
+	PreviewToken     *string                        `json:"preview_token,omitempty"`
+	SelectedEvidence *NoticeSourceEvidenceReference `json:"selected_evidence,omitempty"`
 
 	// Timezone IANA timezone used for the acquisition calendar and its monthly deadline.
 	Timezone *string `json:"timezone,omitempty"`
@@ -33652,14 +33814,14 @@ type AssuranceFreshness struct {
 	// ChangedSince The oldest change the check has not read. Absent when there is none.
 	ChangedSince *time.Time `json:"changed_since,omitempty"`
 
-	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
 	State AssuranceFreshnessState `json:"state"`
 
 	// WorkspaceChanged A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check.
 	WorkspaceChanged bool `json:"workspace_changed"`
 }
 
-// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no complete check recorded its inputs, or when a committed input change is still waiting to be read. A complete check can read these changes before the background consumer catches up.
 type AssuranceFreshnessState string
 
 // AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
@@ -35490,8 +35652,11 @@ type BackfillPreview struct {
 	EstimatedCostMinor *int `json:"estimated_cost_minor,omitempty"`
 
 	// EstimatedMessages Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number.
-	EstimatedMessages int                   `json:"estimated_messages"`
-	Window            BackfillPreviewWindow `json:"window"`
+	EstimatedMessages int `json:"estimated_messages"`
+
+	// InternalMail A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
+	InternalMail *InternalMailHistoryPreview `json:"internal_mail,omitempty"`
+	Window       BackfillPreviewWindow       `json:"window"`
 }
 
 // BackfillPreviewEstimateQuality observed = priced from this workspace's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
@@ -36891,6 +37056,9 @@ type CaptureSettings struct {
 	// Default 40.
 	ConfidentialityPassCap int `json:"confidentiality_pass_cap" maximum:"200" minimum:"1"`
 
+	// InternalMail Administrator-only internal operational mail policy. Disabling stops new capture and preserves existing message restrictions. Employee notice and organizational authorization remain rollout responsibilities.
+	InternalMail *InternalMailSettings `json:"internal_mail,omitempty"`
+
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
@@ -37781,7 +37949,7 @@ type Company360 struct {
 	// be a claim about the account rather than about what was readable.
 	Health *Company360Health `json:"health,omitempty"`
 
-	// LastContact The newest exchange with the account in either direction, over the same walk: an email, a call, a chat message, or a meeting that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws.
+	// LastContact The newest exchange with the account in either direction, over the same walk: an email, a call that reached somebody, a chat message, or a meeting whose time has passed and that was neither canceled nor a no-show. A note is not contact. Absent when there was none, or when the caller has no activity grant (then `sections_omitted` names `last_touch`). The "Last contact" tile reads this, and the timeline applies the same rule to the rows it draws.
 	LastContact *Company360LastContact `json:"last_contact,omitempty"`
 
 	// LastInboundAt When one of the account's current contacts last wrote to us: the newest of their own last_inbound_at, over the activities the timeline walks. Mail a colleague sent, and activity filed on the account alone, does not move it. Null means none of them ever wrote, which is a fact about the account, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
@@ -42357,7 +42525,8 @@ type ContactStop struct {
 	// it on a link in a mail or Margince recorded it, for example for a bounce.
 	RecordedByColleague bool `json:"recorded_by_colleague"`
 
-	// RecordedByName The colleague's current name, the user an agent acted for included. Null when no colleague recorded it, or their seat is gone.
+	// RecordedByName The colleague's current name, the user an agent acted for included. Null when no colleague
+	// recorded it, their seat is gone, or the stop is a merge's copy whose original was deleted.
 	RecordedByName *string `json:"recorded_by_name,omitempty"`
 }
 
@@ -43369,7 +43538,10 @@ type CreateLeadRequest struct {
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
-	Phone     *string             `json:"phone,omitempty"`
+	Phone *string `json:"phone,omitempty"`
+
+	// ProductId The product the lead is interested in. Omit it when nobody knows yet.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
 	// Source How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.
@@ -43894,7 +44066,10 @@ type CreateWebFormRequest struct {
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
 	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
 	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
-	RedirectUrl          *string             `json:"redirect_url,omitempty"`
+
+	// ProductId The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.
+	ProductId   *openapi_types.UUID `json:"product_id,omitempty"`
+	RedirectUrl *string             `json:"redirect_url,omitempty"`
 
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
 	// allowed website, with spam checks. `server`: a server signing with this form's secret.
@@ -44075,11 +44250,15 @@ type DataSubjectRequest struct {
 	// DueRule The rule set the deadline came from: `gdpr` (one calendar month, Art. 12(3)) or
 	// `<jurisdiction> v<version>` for a pack's own deadline. Null on a request filed before
 	// deadlines were computed, whose date was typed by hand.
-	DueRule    *string                  `json:"due_rule,omitempty"`
-	Id         openapi_types.UUID       `json:"id"`
-	Kind       DataSubjectRequestKind   `json:"kind"`
-	Resolution *string                  `json:"resolution,omitempty"`
-	Status     DataSubjectRequestStatus `json:"status"`
+	DueRule *string            `json:"due_rule,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// IdentityVerified The request arrived through the subject's own confirmation link.
+	IdentityVerified *bool                    `json:"identity_verified,omitempty"`
+	Kind             DataSubjectRequestKind   `json:"kind"`
+	Proof            *DataSubjectRequestProof `json:"proof,omitempty"`
+	Resolution       *string                  `json:"resolution,omitempty"`
+	Status           DataSubjectRequestStatus `json:"status"`
 
 	// SubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
 	// external identifier, an erased subject, or one the caller may not read.
@@ -44103,6 +44282,23 @@ type DataSubjectRequestStatus string
 // DataSubjectRequestSubjectKind Which kind of record `subject_label` was read from. Null when nothing resolved: an
 // external identifier, an erased subject, or one the caller may not read.
 type DataSubjectRequestSubjectKind string
+
+// DataSubjectRequestProof defines model for DataSubjectRequestProof.
+type DataSubjectRequestProof struct {
+	AnsweredAt        time.Time      `json:"answered_at"`
+	CompletedById     *string        `json:"completed_by_id,omitempty"`
+	CompletedByType   *string        `json:"completed_by_type,omitempty"`
+	ErasedCounts      map[string]int `json:"erased_counts"`
+	ErasedCountsKnown bool           `json:"erased_counts_known"`
+	ErasedUncounted   []string       `json:"erased_uncounted"`
+	IdentityCheck     string         `json:"identity_check"`
+	KeepUntil         time.Time      `json:"keep_until"`
+	ReceivedAt        time.Time      `json:"received_at"`
+	RequestKind       string         `json:"request_kind"`
+	RequestNumber     string         `json:"request_number"`
+	RequesterEmail    *string        `json:"requester_email,omitempty"`
+	Result            string         `json:"result"`
+}
 
 // DataTaskControl defines model for DataTaskControl.
 type DataTaskControl struct {
@@ -44928,6 +45124,9 @@ type DealProductInput struct {
 // DealProductListResponse defines model for DealProductListResponse.
 type DealProductListResponse struct {
 	Data []DealProduct `json:"data"`
+
+	// Tag Names this set of allocations. It changes whenever any of them is written; send it back as `expected_tag` to set the products by hand.
+	Tag string `json:"tag"`
 }
 
 // DealRevisionRequest defines model for DealRevisionRequest.
@@ -46006,6 +46205,9 @@ type DraftSteering struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
@@ -47847,6 +48049,9 @@ type HandoverCounts struct {
 	Contact int `json:"contact" minimum:"0"`
 	Deal    int `json:"deal" minimum:"0"`
 	Lead    int `json:"lead" minimum:"0"`
+
+	// List Live lists owned by the member.
+	List    int `json:"list" minimum:"0"`
 	Project int `json:"project" minimum:"0"`
 
 	// Task Open tasks assigned to the member.
@@ -49712,6 +49917,55 @@ type IntegrationsSettings struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
+// InternalMailHistoryPreview A separate internal-mail import is allowed only within this administrator-authorized scope and only after the mailbox owner explicitly selects it when starting.
+type InternalMailHistoryPreview struct {
+	// Folders Selected provider folder names. Empty means the whole connection, subject to ordinary exclusions.
+	Folders       []string  `json:"folders"`
+	PreviewToken  string    `json:"preview_token"`
+	ReceivedAfter time.Time `json:"received_after"`
+}
+
+// InternalMailSelection defines model for InternalMailSelection.
+type InternalMailSelection struct {
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+
+	// Containers Exact provider-qualified folder identifiers. An empty list selects the whole connection, subject to ordinary exclusions.
+	Containers []string `json:"containers" unique:"items"`
+
+	// HistorySince Optional administrator authorization for a separate history import, starting at midnight UTC on this day. Omission keeps future capture only. The mailbox owner must still preview and explicitly start the import.
+	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
+}
+
+// InternalMailSettings Administrator-only internal operational mail policy. Disabling stops new capture and preserves existing message restrictions. Employee notice and organizational authorization remain rollout responsibilities.
+type InternalMailSettings struct {
+	AvailableSources []InternalMailSourceOption `json:"available_sources"`
+	Enabled          bool                       `json:"enabled"`
+	Since            *time.Time                 `json:"since,omitempty"`
+	Sources          []InternalMailSource       `json:"sources"`
+}
+
+// InternalMailSource defines model for InternalMailSource.
+type InternalMailSource struct {
+	ConnectionId openapi_types.UUID  `json:"connection_id"`
+	Containers   []string            `json:"containers"`
+	EnrolledAt   time.Time           `json:"enrolled_at"`
+	EnrolledBy   string              `json:"enrolled_by"`
+	Generation   int                 `json:"generation"`
+	HistorySince *openapi_types.Date `json:"history_since,omitempty"`
+	OwnerUserId  openapi_types.UUID  `json:"owner_user_id"`
+	Provider     string              `json:"provider"`
+}
+
+// InternalMailSourceOption defines model for InternalMailSourceOption.
+type InternalMailSourceOption struct {
+	AccountLabel string             `json:"account_label"`
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+	Generation   int                `json:"generation"`
+	OwnerName    string             `json:"owner_name"`
+	OwnerUserId  openapi_types.UUID `json:"owner_user_id"`
+	Provider     string             `json:"provider"`
+}
+
 // IntroFallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
 type IntroFallbackPolicy string
 
@@ -49950,6 +50204,9 @@ type InviteUserRequest struct {
 
 	// GreetingName The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
 	GreetingName *string `json:"greeting_name,omitempty"`
+
+	// LegalEntityId The legal entity the member works for, from `listLegalEntities`, written in the same transaction as the seat. Omitted, the member works for the default entity. Naming one needs the grants `assignLegalEntityMember` needs: `legal_entity` update and `user_admin` update. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
 
 	// Role A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out.
 	Role string `json:"role"`
@@ -50608,6 +50865,9 @@ type Lead struct {
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
+
+	// ProductId The product the lead is interested in, set by hand or by the web form that captured it. Product reports count the lead under it.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// ProjectId The body of work this lead belongs to; a lead has at most one. NO same-company guard exists on this arm: a lead's company_id is an optional link a human confirms, so the deal_project_same_company trigger has no lead twin. Promotion is where a mismatch becomes visible.
 	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
@@ -52345,6 +52605,9 @@ type MailDraft struct {
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 	CreatedAt            time.Time             `json:"created_at"`
 
+	// EditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+	EditorState *MailDraftEditorState `json:"editor_state,omitempty"`
+
 	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
 	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
 	HtmlBody  *string            `json:"html_body,omitempty"`
@@ -52365,6 +52628,19 @@ type MailDraft struct {
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
 // record a new conversation starts from.
 type MailDraftAnchorType string
+
+// MailDraftEditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+type MailDraftEditorState struct {
+	AiDisclosure *string `json:"ai_disclosure,omitempty"`
+	AiGenerated  *bool   `json:"ai_generated,omitempty"`
+
+	// ContentFingerprint Server binding to the saved words, used only to retire stale editor state.
+	ContentFingerprint  *string `json:"content_fingerprint,omitempty"`
+	Intent              *string `json:"intent,omitempty"`
+	ServedBody          *string `json:"served_body,omitempty"`
+	VoiceDegraded       *bool   `json:"voice_degraded,omitempty"`
+	VoiceProfileVersion *int    `json:"voice_profile_version,omitempty" minimum:"1"`
+}
 
 // MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
 type MailDraftGround struct {
@@ -52399,6 +52675,9 @@ type MailDraftInput struct {
 	// CommunicationContext The reason for contact the rep chose, checked as the send checks it: a category
 	// reserved for the installation's own notices is refused 422. Omit it for none.
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
+	// EditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+	EditorState *MailDraftEditorState `json:"editor_state,omitempty"`
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
 	HtmlBody *string `json:"html_body,omitempty"`
@@ -52491,6 +52770,9 @@ type MarginceChangeSummary struct {
 type MeResponse struct {
 	// AdminPasswordLink Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1).
 	AdminPasswordLink bool `json:"admin_password_link"`
+
+	// AnalyticsStartup Optional data for opening Analytics, read through the same authorization and readers as the individual routes.
+	AnalyticsStartup *AnalyticsStartup `json:"analytics_startup,omitempty"`
 
 	// Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
 	// Two independent axes, both of which must permit an action: the licensing seat ceiling (ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
@@ -53788,6 +54070,59 @@ type NoticeOrigin struct {
 		ToName   *string `json:"to_name,omitempty"`
 	} `json:"stage_change,omitempty"`
 }
+
+// NoticeSourceEvidence defines model for NoticeSourceEvidence.
+type NoticeSourceEvidence struct {
+	CapturedBy     *string                  `json:"captured_by,omitempty"`
+	CapturedByName *string                  `json:"captured_by_name,omitempty"`
+	Kind           NoticeSourceEvidenceKind `json:"kind"`
+	OccurredAt     *time.Time               `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	OccurredPrecision OccurredPrecision              `json:"occurred_precision"`
+	RecordId          openapi_types.UUID             `json:"record_id"`
+	RecordType        NoticeSourceEvidenceRecordType `json:"record_type"`
+	RecordedAt        time.Time                      `json:"recorded_at"`
+	Reference         NoticeSourceEvidenceReference  `json:"reference"`
+	Title             *string                        `json:"title,omitempty"`
+}
+
+// NoticeSourceEvidenceKind defines model for NoticeSourceEvidence.Kind.
+type NoticeSourceEvidenceKind string
+
+// NoticeSourceEvidenceRecordType defines model for NoticeSourceEvidence.RecordType.
+type NoticeSourceEvidenceRecordType string
+
+// NoticeSourceEvidencePage defines model for NoticeSourceEvidencePage.
+type NoticeSourceEvidencePage struct {
+	Items            []NoticeSourceEvidence         `json:"items"`
+	NextCursor       *string                        `json:"next_cursor,omitempty"`
+	Original         *NoticeSourceEvidence          `json:"original,omitempty"`
+	OriginalActivity *NoticeSourceEvidence          `json:"original_activity,omitempty"`
+	SelectedEvidence *NoticeSourceEvidenceReference `json:"selected_evidence,omitempty"`
+}
+
+// NoticeSourceEvidenceReference defines model for NoticeSourceEvidenceReference.
+type NoticeSourceEvidenceReference struct {
+	Id   openapi_types.UUID                `json:"id"`
+	Kind NoticeSourceEvidenceReferenceKind `json:"kind"`
+}
+
+// NoticeSourceEvidenceReferenceKind defines model for NoticeSourceEvidenceReference.Kind.
+type NoticeSourceEvidenceReferenceKind string
+
+// NoticeSourcePreview defines model for NoticeSourcePreview.
+type NoticeSourcePreview struct {
+	DeadlineIsUpperBound bool                    `json:"deadline_is_upper_bound"`
+	DueAt                *time.Time              `json:"due_at,omitempty"`
+	NoticeRequired       bool                    `json:"notice_required"`
+	PreviewToken         string                  `json:"preview_token"`
+	Rule                 NoticeSourcePreviewRule `json:"rule"`
+	Timezone             string                  `json:"timezone"`
+}
+
+// NoticeSourcePreviewRule defines model for NoticeSourcePreview.Rule.
+type NoticeSourcePreviewRule string
 
 // NotificationClass A class of notification a seat decides delivery about. Closed, and deliberately coarser
 // than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
@@ -56395,6 +56730,13 @@ type RbacObjectGrant struct {
 	Update bool `json:"update"`
 }
 
+// ReaderCalendar Whether the reader's own calendar connections feed the meetings this product holds.
+//
+// `not_connected` — the reader has no live calendar connection: none was made, or every
+// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
+// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
+type ReaderCalendar string
+
 // Receipt One completed act, and the record it was about.
 //
 // `subject` is present only where the act named a record. Not every approval is
@@ -56638,8 +56980,12 @@ type RecordClaimRecordType string
 
 // RecordCommunicationContextRequest One rep's statement about one contact, answering one refusal.
 type RecordCommunicationContextRequest struct {
-	// Kind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-	// contact asking us to write to them by phone or across a counter.
+	// Kind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+	// included; `requested_by_subject` is the contact asking us to write to them by phone or
+	// across a counter. `in_person` supports personal one-to-one follow-up mail, never
+	// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+	// settles the contact's open source reviews as information given at the meeting, as a
+	// source review answered "met face to face" does; for anyone else they stay open.
 	Kind RecordCommunicationContextRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence there is.
@@ -56654,8 +57000,12 @@ type RecordCommunicationContextRequest struct {
 	SubjectId openapi_types.UUID `json:"subject_id"`
 }
 
-// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-// contact asking us to write to them by phone or across a counter.
+// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+// included; `requested_by_subject` is the contact asking us to write to them by phone or
+// across a counter. `in_person` supports personal one-to-one follow-up mail, never
+// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+// settles the contact's open source reviews as information given at the meeting, as a
+// source review answered "met face to face" does; for anyone else they stay open.
 type RecordCommunicationContextRequestKind string
 
 // RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.
@@ -57311,7 +57661,9 @@ type ReplaceChannelTokenRequest struct {
 
 // ReplaceDealProductsRequest defines model for ReplaceDealProductsRequest.
 type ReplaceDealProductsRequest struct {
-	Products []DealProductInput `json:"products"`
+	// ExpectedTag The `tag` of the product set the caller read.
+	ExpectedTag string             `json:"expected_tag"`
+	Products    []DealProductInput `json:"products"`
 }
 
 // ReplyRecipient Who a reply to a message is addressed to: one contact, resolved from the
@@ -61685,6 +62037,9 @@ type StageTransitionRecord struct {
 
 // StartBackfillRequest defines model for StartBackfillRequest.
 type StartBackfillRequest struct {
+	// InternalMailPreviewToken Explicitly include internal operational history within the administrator's authorized source and date range. Must match this window's current preview. Omit to exclude internal history.
+	InternalMailPreviewToken *string `json:"internal_mail_preview_token,omitempty"`
+
 	// StartOver Read the window again from the newest message even where the last run ended on an error and could be continued (BackfillStatus.resumable). Omitted or false continues that run, with its counts, when its window covers this one.
 	StartOver *bool `json:"start_over,omitempty"`
 
@@ -62913,6 +63268,9 @@ type UpdateCaptureSettingsRequest struct {
 	// ConfidentialityPassCap Set how many held mail threads one confidentiality pass judges.
 	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty" maximum:"200" minimum:"1"`
 
+	// InternalMail Only a human administrator may change source authorization. This authorizes future capture only, never a historical import.
+	InternalMail *UpdateInternalMailRequest `json:"internal_mail,omitempty"`
+
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
@@ -63659,6 +64017,12 @@ type UpdateIntegrationsSettingsRequest struct {
 	AutomaticLookup *bool `json:"automatic_lookup,omitempty"`
 }
 
+// UpdateInternalMailRequest Only a human administrator may change source authorization. This authorizes future capture only, never a historical import.
+type UpdateInternalMailRequest struct {
+	Enabled bool                    `json:"enabled"`
+	Sources []InternalMailSelection `json:"sources"`
+}
+
 // UpdateLeadDisqualifyReasonRequest defines model for UpdateLeadDisqualifyReasonRequest.
 type UpdateLeadDisqualifyReasonRequest struct {
 	Active    *bool   `json:"active,omitempty"`
@@ -63713,6 +64077,9 @@ type UpdateLeadRequest struct {
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
+
+	// ProductId The product the lead is interested in. Send null to clear it.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
@@ -63824,6 +64191,9 @@ type UpdateMemberRequest struct {
 	// Email May change only before the account has been used to sign in.
 	Email             openapi_types.Email `json:"email"`
 	ExpectedUpdatedAt time.Time           `json:"expected_updated_at"`
+
+	// LegalEntityId Moves the member to this legal entity, from `listLegalEntities`, in the same transaction as the rest of the edit. Omit to keep their entity. Naming one needs the grants `assignLegalEntityMember` needs: `legal_entity` update and `user_admin` update. An unknown or archived entity is refused as 422 `unknown_legal_entity`.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
 
 	// Role Omit to keep the current roles.
 	Role    *string               `json:"role,omitempty"`
@@ -64134,20 +64504,23 @@ type UpdateVoiceProfileRequest struct {
 
 // UpdateWebFormRequest defines model for UpdateWebFormRequest.
 type UpdateWebFormRequest struct {
-	AllowedOrigins       *[]string                  `json:"allowed_origins,omitempty"`
-	ConsentPolicyVersion *string                    `json:"consent_policy_version,omitempty"`
-	ConsentRequired      *bool                      `json:"consent_required,omitempty"`
-	ConsentWording       *string                    `json:"consent_wording,omitempty"`
-	FieldMap             *map[string]string         `json:"field_map,omitempty"`
-	LeadOrigin           *string                    `json:"lead_origin,omitempty"`
-	Name                 *string                    `json:"name,omitempty"`
-	OwnerId              *openapi_types.UUID        `json:"owner_id,omitempty"`
-	PrivacyNotice        *string                    `json:"privacy_notice,omitempty"`
-	PrivacyNoticeUrl     *string                    `json:"privacy_notice_url,omitempty"`
-	RedirectUrl          *string                    `json:"redirect_url,omitempty"`
-	SenderSecret         *string                    `json:"sender_secret,omitempty"`
-	State                *UpdateWebFormRequestState `json:"state,omitempty"`
-	SuccessMessage       *string                    `json:"success_message,omitempty"`
+	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool               `json:"consent_required,omitempty"`
+	ConsentWording       *string             `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string  `json:"field_map,omitempty"`
+	LeadOrigin           *string             `json:"lead_origin,omitempty"`
+	Name                 *string             `json:"name,omitempty"`
+	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
+	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
+
+	// ProductId The product every lead this form creates is interested in. Send null to stop naming one.
+	ProductId      *openapi_types.UUID        `json:"product_id,omitempty"`
+	RedirectUrl    *string                    `json:"redirect_url,omitempty"`
+	SenderSecret   *string                    `json:"sender_secret,omitempty"`
+	State          *UpdateWebFormRequestState `json:"state,omitempty"`
+	SuccessMessage *string                    `json:"success_message,omitempty"`
 }
 
 // UpdateWebFormRequestState defines model for UpdateWebFormRequest.State.
@@ -64763,6 +65136,9 @@ type WebForm struct {
 	// PrivacyNoticeUrl The https address of the privacy policy the notice links to.
 	PrivacyNoticeUrl *string `json:"privacy_notice_url,omitempty"`
 
+	// ProductId The product every lead this form creates is interested in; null captures leads with no product.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
+
 	// RedirectUrl Where a plain HTML post is sent after a submission.
 	RedirectUrl      *string `json:"redirect_url,omitempty"`
 	SecretConfigured bool    `json:"secret_configured"`
@@ -64839,6 +65215,9 @@ type WebFormCreated struct {
 
 	// PrivacyNoticeUrl The https address of the privacy policy the notice links to.
 	PrivacyNoticeUrl *string `json:"privacy_notice_url,omitempty"`
+
+	// ProductId The product every lead this form creates is interested in; null captures leads with no product.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// RedirectUrl Where a plain HTML post is sent after a submission.
 	RedirectUrl      *string `json:"redirect_url,omitempty"`
@@ -65849,21 +66228,12 @@ type Worklist struct {
 	// labelled in ranked order — a client draws a heading where the band changes.
 	Bands *[]WorklistBand `json:"bands,omitempty"`
 
-	// Calendar Whether the reader's own calendar feeds the meetings this read counts. Present only
-	// for scope `mine`; a wider scope has no single calendar to answer for.
+	// Calendar Whether the reader's own calendar connections feed the meetings this product holds.
 	//
 	// `not_connected` — the reader has no live calendar connection: none was made, or every
 	// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
 	// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
-	//
-	// A zero `meetings` count is a measurement only when this is `connected`. Under either
-	// other answer it says nothing about the day, and a client must not draw it as "no
-	// meetings".
-	//
-	// Absent under scope `mine` when the read could not answer. A read that failed is
-	// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
-	// reader is refused is absent and named nowhere.
-	Calendar *WorklistCalendar `json:"calendar,omitempty"`
+	Calendar *ReaderCalendar `json:"calendar,omitempty"`
 
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
 	// pill counts, and what lets the page say how much it is not showing. Counted
@@ -66033,22 +66403,6 @@ type Worklist struct {
 	// `changed_since_snapshot` explains why the count moved. Neither is an error.
 	Walk *WorklistWalk `json:"walk,omitempty"`
 }
-
-// WorklistCalendar Whether the reader's own calendar feeds the meetings this read counts. Present only
-// for scope `mine`; a wider scope has no single calendar to answer for.
-//
-// `not_connected` — the reader has no live calendar connection: none was made, or every
-// one is parked or disconnected. `unreadable` — a calendar connection exists but needs
-// reauthorisation, has errored, or its sync is failing. `connected` otherwise.
-//
-// A zero `meetings` count is a measurement only when this is `connected`. Under either
-// other answer it says nothing about the day, and a client must not draw it as "no
-// meetings".
-//
-// Absent under scope `mine` when the read could not answer. A read that failed is
-// named in `sources_unavailable` as source `calendar`, category `meetings`; a read the
-// reader is refused is absent and named nowhere.
-type WorklistCalendar string
 
 // WorklistFilter The narrowing this read applied. The same vocabulary the query parameter takes.
 type WorklistFilter string
@@ -68304,12 +68658,24 @@ type GetAccountCoverageParamsView string
 
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
-	DealId *openapi_types.UUID             `form:"deal_id,omitempty" json:"deal_id,omitempty"`
-	Status *ListSalesDecisionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	DealId    *openapi_types.UUID                `form:"deal_id,omitempty" json:"deal_id,omitempty"`
+	Status    *ListSalesDecisionsParamsStatus    `form:"status,omitempty" json:"status,omitempty"`
+	ScopeKind *ListSalesDecisionsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId      *openapi_types.UUID    `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId   *openapi_types.UUID    `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	ProductId    *ReportingProductId    `form:"product_id,omitempty" json:"product_id,omitempty"`
+	InitiativeId *ReportingInitiativeId `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	Country      *ReportingCountry      `form:"country,omitempty" json:"country,omitempty"`
+	Industry     *ReportingIndustry     `form:"industry,omitempty" json:"industry,omitempty"`
 }
 
 // ListSalesDecisionsParamsStatus defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParamsStatus string
+
+// ListSalesDecisionsParamsScopeKind defines parameters for ListSalesDecisions.
+type ListSalesDecisionsParamsScopeKind string
 
 // RecordSalesDecisionParams defines parameters for RecordSalesDecision.
 type RecordSalesDecisionParams struct {
@@ -69644,6 +70010,9 @@ type DraftCompanyEmailJSONBody struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // CreateCompanyFactParams defines parameters for CreateCompanyFact.
@@ -70192,6 +70561,12 @@ type ConnectorOAuthCallbackParams struct {
 	Error *string `form:"error,omitempty" json:"error,omitempty"`
 }
 
+// ListConnectorContainersParams defines parameters for ListConnectorContainers.
+type ListConnectorContainersParams struct {
+	// ConnectionId Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+	ConnectionId *openapi_types.UUID `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
 // ListContactsParams defines parameters for ListContacts.
 type ListContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -70573,6 +70948,9 @@ type DraftContactEmailJSONBody struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // LinkContactEmployerParams defines parameters for LinkContactEmployer.
@@ -71346,6 +71724,12 @@ type CreateDealParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListAtRiskRelationshipsParams defines parameters for ListAtRiskRelationships.
+type ListAtRiskRelationshipsParams struct {
+	// OwnerId Narrow to deals owned by this member within the caller's read scope.
+	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+}
+
 // DraftDealFollowUpsParams defines parameters for DraftDealFollowUps.
 type DraftDealFollowUpsParams struct {
 	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
@@ -71364,6 +71748,9 @@ type DraftDealFollowUpsParams struct {
 
 // ListSlippingDealsParams defines parameters for ListSlippingDeals.
 type ListSlippingDealsParams struct {
+	// OwnerId Narrow to deals owned by this member within the caller's read scope.
+	OwnerId *openapi_types.UUID `form:"owner_id,omitempty" json:"owner_id,omitempty"`
+
 	// QuietDays Days without recorded activity after which an open deal counts as gone quiet.
 	QuietDays *int `form:"quiet_days,omitempty" json:"quiet_days,omitempty" maximum:"365" minimum:"1"`
 
@@ -71762,6 +72149,15 @@ type ListInputChecksParams struct {
 
 	// ScopeId The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// ProductId Narrows deal findings to this product. Other findings cover the selected population.
+	ProductId *openapi_types.UUID `form:"product_id,omitempty" json:"product_id,omitempty"`
+
+	// Country Narrows deal findings by the readable company's country.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
+
+	// Industry Narrows deal findings by the readable company's industry.
+	Industry *string `form:"industry,omitempty" json:"industry,omitempty"`
 }
 
 // ListInputChecksParamsScopeKind defines parameters for ListInputChecks.
@@ -72324,6 +72720,12 @@ type UpdateLeadParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// LiftLeadSuppressionJSONBody defines parameters for LiftLeadSuppression.
+type LiftLeadSuppressionJSONBody struct {
+	// Reason Why the stop is being taken back. Required.
+	Reason string `json:"reason"`
+}
+
 // DemoteLeadParams defines parameters for DemoteLead.
 type DemoteLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -72707,6 +73109,15 @@ type SaveMailDraftParams struct {
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
+
+// GetCurrentPrincipalParams defines parameters for GetCurrentPrincipal.
+type GetCurrentPrincipalParams struct {
+	// Prepare Include optional caller-filtered data for opening Analytics. Other reads remain available when preparation is unavailable.
+	Prepare *GetCurrentPrincipalParamsPrepare `form:"prepare,omitempty" json:"prepare,omitempty"`
+}
+
+// GetCurrentPrincipalParamsPrepare defines parameters for GetCurrentPrincipal.
+type GetCurrentPrincipalParamsPrepare string
 
 // GetMyAiActivityParams defines parameters for GetMyAiActivity.
 type GetMyAiActivityParams struct {
@@ -73302,6 +73713,11 @@ type ListNoticeCaseReviewsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's queue time and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetNoticeSourceEvidenceParams defines parameters for GetNoticeSourceEvidence.
+type GetNoticeSourceEvidenceParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
@@ -76415,6 +76831,9 @@ type DisqualifyLeadJSONRequestBody = DisqualifyLeadRequest
 // UpdateLeadJSONRequestBody defines body for UpdateLead for application/json ContentType.
 type UpdateLeadJSONRequestBody = UpdateLeadRequest
 
+// LiftLeadSuppressionJSONRequestBody defines body for LiftLeadSuppression for application/json ContentType.
+type LiftLeadSuppressionJSONRequestBody LiftLeadSuppressionJSONBody
+
 // DemoteLeadJSONRequestBody defines body for DemoteLead for application/json ContentType.
 type DemoteLeadJSONRequestBody = DemoteLeadRequest
 
@@ -76588,6 +77007,9 @@ type AssignNoticeCaseReviewJSONRequestBody = AssignNoticeCase
 
 // AssessNoticeSourceJSONRequestBody defines body for AssessNoticeSource for application/json ContentType.
 type AssessNoticeSourceJSONRequestBody = AssessNoticeSource
+
+// PreviewNoticeSourceJSONRequestBody defines body for PreviewNoticeSource for application/json ContentType.
+type PreviewNoticeSourceJSONRequestBody = AssessNoticeSource
 
 // AssignNoticeCaseJSONRequestBody defines body for AssignNoticeCase for application/json ContentType.
 type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
@@ -77048,6 +77470,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'call_outcome': %w", err)
 		}
 		delete(object, "call_outcome")
+	}
+
+	if raw, found := object["can_share_internal"]; found {
+		err = json.Unmarshal(raw, &a.CanShareInternal)
+		if err != nil {
+			return fmt.Errorf("error reading 'can_share_internal': %w", err)
+		}
+		delete(object, "can_share_internal")
 	}
 
 	if raw, found := object["capture_label"]; found {
@@ -77516,6 +77946,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["call_outcome"], err = json.Marshal(a.CallOutcome)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
+	if a.CanShareInternal != nil {
+		object["can_share_internal"], err = json.Marshal(a.CanShareInternal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'can_share_internal': %w", err)
 		}
 	}
 
@@ -81648,6 +82085,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phone")
 	}
 
+	if raw, found := object["product_id"]; found {
+		err = json.Unmarshal(raw, &a.ProductId)
+		if err != nil {
+			return fmt.Errorf("error reading 'product_id': %w", err)
+		}
+		delete(object, "product_id")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -81812,6 +82257,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["phone"], err = json.Marshal(a.Phone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
+		}
+	}
+
+	if a.ProductId != nil {
+		object["product_id"], err = json.Marshal(a.ProductId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'product_id': %w", err)
 		}
 	}
 
@@ -84906,6 +85358,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "phone")
 	}
 
+	if raw, found := object["product_id"]; found {
+		err = json.Unmarshal(raw, &a.ProductId)
+		if err != nil {
+			return fmt.Errorf("error reading 'product_id': %w", err)
+		}
+		delete(object, "product_id")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -85361,6 +85821,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["phone"], err = json.Marshal(a.Phone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
+		}
+	}
+
+	if a.ProductId != nil {
+		object["product_id"], err = json.Marshal(a.ProductId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'product_id': %w", err)
 		}
 	}
 
@@ -88591,6 +89058,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phone")
 	}
 
+	if raw, found := object["product_id"]; found {
+		err = json.Unmarshal(raw, &a.ProductId)
+		if err != nil {
+			return fmt.Errorf("error reading 'product_id': %w", err)
+		}
+		delete(object, "product_id")
+	}
+
 	if raw, found := object["project_id"]; found {
 		err = json.Unmarshal(raw, &a.ProjectId)
 		if err != nil {
@@ -88725,6 +89200,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["phone"], err = json.Marshal(a.Phone)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
+		}
+	}
+
+	if a.ProductId != nil {
+		object["product_id"], err = json.Marshal(a.ProductId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'product_id': %w", err)
 		}
 	}
 
@@ -90606,7 +91088,7 @@ type ServerInterface interface {
 	ConnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// The folders or labels this mailbox has, to pick one to keep out of capture.
 	// (GET /connectors/{provider}/containers)
-	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ListConnectorContainersParams)
 	// Set the word this connector files what it captures under.
 	// (PUT /connectors/{provider}/context-tag)
 	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
@@ -90951,7 +91433,7 @@ type ServerInterface interface {
 	CreateDeal(w http.ResponseWriter, r *http.Request, params CreateDealParams)
 	// The open deals whose relationships are going cold, and why.
 	// (GET /deals/at-risk)
-	ListAtRiskRelationships(w http.ResponseWriter, r *http.Request)
+	ListAtRiskRelationships(w http.ResponseWriter, r *http.Request, params ListAtRiskRelationshipsParams)
 	// Draft a follow-up on each slipping deal, worst first. Nothing is sent.
 	// (POST /deals/follow-up-drafts)
 	DraftDealFollowUps(w http.ResponseWriter, r *http.Request, params DraftDealFollowUpsParams)
@@ -91465,6 +91947,12 @@ type ServerInterface interface {
 	// Update a lead (partial).
 	// (PATCH /leads/{id})
 	UpdateLead(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadParams)
+	// List the stops that stand on this lead, and which ones you may take back.
+	// (GET /leads/{id}/consent/stops)
+	ListLeadStops(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a stop on a lead, if you outrank the level that set it.
+	// (POST /leads/{id}/consent/suppress/{suppressionId}/lift)
+	LiftLeadSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
 	// Recipients copied on inbound correspondence who have no contact or live lead.
 	// (GET /leads/{id}/conversation-suggestions)
 	ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
@@ -91629,7 +92117,7 @@ type ServerInterface interface {
 	DiscardMailDraft(w http.ResponseWriter, r *http.Request, id Id)
 	// Get the signed-in human's own profile, roles and settings.
 	// (GET /me)
-	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
+	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request, params GetCurrentPrincipalParams)
 	// The calling rep's own standing answers, one per scheduled agent.
 	// (GET /me/agent-grants)
 	ListMyAgentGrants(w http.ResponseWriter, r *http.Request)
@@ -91870,9 +92358,15 @@ type ServerInterface interface {
 	// Give a disclosure duty an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Read accessible evidence for a contact source assessment.
+	// (GET /privacy/notice-case-reviews/{id}/source)
+	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
 	// Confirm the source of an unassessed contact.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Preview the source assessment without changing the case.
+	// (POST /privacy/notice-case-reviews/{id}/source/preview)
+	PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Disclosure duties this installation owes, soonest deadline first.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
@@ -94770,7 +95264,7 @@ func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, 
 
 // The folders or labels this mailbox has, to pick one to keep out of capture.
 // (GET /connectors/{provider}/containers)
-func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ListConnectorContainersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95460,7 +95954,7 @@ func (_ Unimplemented) CreateDeal(w http.ResponseWriter, r *http.Request, params
 
 // The open deals whose relationships are going cold, and why.
 // (GET /deals/at-risk)
-func (_ Unimplemented) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request, params ListAtRiskRelationshipsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96490,6 +96984,18 @@ func (_ Unimplemented) UpdateLead(w http.ResponseWriter, r *http.Request, id Id,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the stops that stand on this lead, and which ones you may take back.
+// (GET /leads/{id}/consent/stops)
+func (_ Unimplemented) ListLeadStops(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a stop on a lead, if you outrank the level that set it.
+// (POST /leads/{id}/consent/suppress/{suppressionId}/lift)
+func (_ Unimplemented) LiftLeadSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Recipients copied on inbound correspondence who have no contact or live lead.
 // (GET /leads/{id}/conversation-suggestions)
 func (_ Unimplemented) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id) {
@@ -96816,7 +97322,7 @@ func (_ Unimplemented) DiscardMailDraft(w http.ResponseWriter, r *http.Request, 
 
 // Get the signed-in human's own profile, roles and settings.
 // (GET /me)
-func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request, params GetCurrentPrincipalParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -97300,9 +97806,21 @@ func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read accessible evidence for a contact source assessment.
+// (GET /privacy/notice-case-reviews/{id}/source)
+func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Confirm the source of an unassessed contact.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview the source assessment without changing the case.
+// (POST /privacy/notice-case-reviews/{id}/source/preview)
+func (_ Unimplemented) PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102612,6 +103130,97 @@ func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "pipeline_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "pipeline_id", r.URL.Query(), &params.PipelineId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "pipeline_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pipeline_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "initiative_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "initiative_id", r.URL.Query(), &params.InitiativeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "initiative_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "initiative_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
 		}
 		return
 	}
@@ -114490,8 +115099,24 @@ func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConnectorContainersParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListConnectorContainers(w, r, provider)
+		siw.Handler.ListConnectorContainers(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120134,6 +120759,9 @@ func (siw *ServerInterfaceWrapper) CreateDeal(w http.ResponseWriter, r *http.Req
 // ListAtRiskRelationships operation middleware
 func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
@@ -120142,8 +120770,24 @@ func (siw *ServerInterfaceWrapper) ListAtRiskRelationships(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListAtRiskRelationshipsParams
+
+	// ------------- Optional query parameter "owner_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListAtRiskRelationships(w, r)
+		siw.Handler.ListAtRiskRelationships(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120237,6 +120881,19 @@ func (siw *ServerInterfaceWrapper) ListSlippingDeals(w http.ResponseWriter, r *h
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListSlippingDealsParams
+
+	// ------------- Optional query parameter "owner_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "owner_id", r.URL.Query(), &params.OwnerId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "quiet_days" -------------
 
@@ -123582,6 +124239,45 @@ func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListInputChecks(w, r, params)
 	}))
@@ -126704,6 +127400,83 @@ func (siw *ServerInterfaceWrapper) UpdateLead(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListLeadStops operation middleware
+func (siw *ServerInterfaceWrapper) ListLeadStops(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLeadStops(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LiftLeadSuppression operation middleware
+func (siw *ServerInterfaceWrapper) LiftLeadSuppression(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "suppressionId" -------------
+	var suppressionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "suppressionId", chi.URLParam(r, "suppressionId"), &suppressionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "suppressionId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LiftLeadSuppression(w, r, id, suppressionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLeadConversationSuggestions operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request) {
 
@@ -129154,14 +129927,33 @@ func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *ht
 // GetCurrentPrincipal operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCurrentPrincipalParams
+
+	// ------------- Optional query parameter "prepare" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "prepare", r.URL.Query(), &params.Prepare, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "prepare"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "prepare", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCurrentPrincipal(w, r)
+		siw.Handler.GetCurrentPrincipal(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132230,6 +133022,56 @@ func (siw *ServerInterfaceWrapper) AssignNoticeCaseReview(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// GetNoticeSourceEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetNoticeSourceEvidenceParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNoticeSourceEvidence(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AssessNoticeSource operation middleware
 func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *http.Request) {
 
@@ -132255,6 +133097,40 @@ func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AssessNoticeSource(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewNoticeSource operation middleware
+func (siw *ServerInterfaceWrapper) PreviewNoticeSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewNoticeSource(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -146104,6 +146980,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/leads/{id}", wrapper.UpdateLead)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/leads/{id}/consent/stops", wrapper.ListLeadStops)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftLeadSuppression)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/conversation-suggestions", wrapper.ListLeadConversationSuggestions)
 	})
 	r.Group(func(r chi.Router) {
@@ -146509,7 +147391,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/assign", wrapper.AssignNoticeCaseReview)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/notice-case-reviews/{id}/source", wrapper.GetNoticeSourceEvidence)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/source", wrapper.AssessNoticeSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/source/preview", wrapper.PreviewNoticeSource)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)

@@ -105,6 +105,9 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// listCalendar says whether a meeting list is the reader's diary
+	// (listcalendar.go). Nil says nothing.
+	listCalendar ActivityListCalendar
 	// changeWords describes what a write changed (changewords.go). Nil
 	// answers no changes.
 	changeWords ChangeWords

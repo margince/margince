@@ -3090,6 +3090,28 @@
               ]
             }
           },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "blocks_approval": {
+                  "type": "boolean"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "blocks_approval",
+                "kind",
+                "summary"
+              ]
+            }
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -3191,6 +3213,227 @@
           "expires_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "byte_size": {
+                  "type": "integer"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "byte_size",
+                "content_type",
+                "filename",
+                "id"
+              ]
+            }
+          },
+          "import_rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "after": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      },
+                      "before": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "after",
+                      "before",
+                      "field",
+                      "label"
+                    ]
+                  }
+                },
+                "details": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "field",
+                      "label",
+                      "value"
+                    ]
+                  }
+                },
+                "effects": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "effect": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "effect",
+                      "label"
+                    ]
+                  }
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "object": {
+                  "type": "string"
+                },
+                "object_label": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string"
+                },
+                "outcome_label": {
+                  "type": "string"
+                },
+                "source_key": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "entity_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "entity_type": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "text"
+                  ]
+                }
+              },
+              "required": [
+                "changes",
+                "details",
+                "effects",
+                "line",
+                "object",
+                "object_label",
+                "outcome",
+                "outcome_label",
+                "source_key"
+              ]
+            }
           },
           "kind": {
             "type": "string"
@@ -3456,6 +3699,28 @@
                     ]
                   }
                 },
+                "conflicts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "blocks_approval": {
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "blocks_approval",
+                      "kind",
+                      "summary"
+                    ]
+                  }
+                },
                 "created_at": {
                   "type": "string",
                   "format": "date-time"
@@ -3557,6 +3822,227 @@
                 "expires_at": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "byte_size": {
+                        "type": "integer"
+                      },
+                      "content_type": {
+                        "type": "string"
+                      },
+                      "filename": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "byte_size",
+                      "content_type",
+                      "filename",
+                      "id"
+                    ]
+                  }
+                },
+                "import_rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "changes": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "after": {
+                              "type": "object",
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ]
+                            },
+                            "before": {
+                              "type": "object",
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ]
+                            },
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "after",
+                            "before",
+                            "field",
+                            "label"
+                          ]
+                        }
+                      },
+                      "details": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "object",
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "label",
+                            "value"
+                          ]
+                        }
+                      },
+                      "effects": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "effect": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "effect",
+                            "label"
+                          ]
+                        }
+                      },
+                      "line": {
+                        "type": "integer"
+                      },
+                      "object": {
+                        "type": "string"
+                      },
+                      "object_label": {
+                        "type": "string"
+                      },
+                      "outcome": {
+                        "type": "string"
+                      },
+                      "outcome_label": {
+                        "type": "string"
+                      },
+                      "source_key": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "changes",
+                      "details",
+                      "effects",
+                      "line",
+                      "object",
+                      "object_label",
+                      "outcome",
+                      "outcome_label",
+                      "source_key"
+                    ]
+                  }
                 },
                 "kind": {
                   "type": "string"
@@ -7036,6 +7522,28 @@
                     ]
                   }
                 },
+                "conflicts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "blocks_approval": {
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "blocks_approval",
+                      "kind",
+                      "summary"
+                    ]
+                  }
+                },
                 "created_at": {
                   "type": "string",
                   "format": "date-time"
@@ -7137,6 +7645,227 @@
                 "expires_at": {
                   "type": "string",
                   "format": "date-time"
+                },
+                "files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "byte_size": {
+                        "type": "integer"
+                      },
+                      "content_type": {
+                        "type": "string"
+                      },
+                      "filename": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "byte_size",
+                      "content_type",
+                      "filename",
+                      "id"
+                    ]
+                  }
+                },
+                "import_rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "changes": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "after": {
+                              "type": "object",
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ]
+                            },
+                            "before": {
+                              "type": "object",
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ]
+                            },
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "after",
+                            "before",
+                            "field",
+                            "label"
+                          ]
+                        }
+                      },
+                      "details": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "object",
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "label",
+                            "value"
+                          ]
+                        }
+                      },
+                      "effects": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "effect": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "effect",
+                            "label"
+                          ]
+                        }
+                      },
+                      "line": {
+                        "type": "integer"
+                      },
+                      "object": {
+                        "type": "string"
+                      },
+                      "object_label": {
+                        "type": "string"
+                      },
+                      "outcome": {
+                        "type": "string"
+                      },
+                      "outcome_label": {
+                        "type": "string"
+                      },
+                      "source_key": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "changes",
+                      "details",
+                      "effects",
+                      "line",
+                      "object",
+                      "object_label",
+                      "outcome",
+                      "outcome_label",
+                      "source_key"
+                    ]
+                  }
                 },
                 "kind": {
                   "type": "string"
@@ -8202,6 +8931,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "calendar": {
+            "type": "string"
+          },
           "next_cursor": {
             "type": "string"
           },
@@ -10606,6 +11338,10 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "list": {
+                "type": "integer",
+                "minimum": 0
+              },
               "project": {
                 "type": "integer",
                 "minimum": 0
@@ -10624,6 +11360,7 @@
               "contact",
               "deal",
               "lead",
+              "list",
               "project",
               "task",
               "webhook"
@@ -11424,6 +12161,28 @@
               ]
             }
           },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "blocks_approval": {
+                  "type": "boolean"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "blocks_approval",
+                "kind",
+                "summary"
+              ]
+            }
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -11525,6 +12284,227 @@
           "expires_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "byte_size": {
+                  "type": "integer"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "byte_size",
+                "content_type",
+                "filename",
+                "id"
+              ]
+            }
+          },
+          "import_rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "after": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      },
+                      "before": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      },
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "after",
+                      "before",
+                      "field",
+                      "label"
+                    ]
+                  }
+                },
+                "details": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "field",
+                      "label",
+                      "value"
+                    ]
+                  }
+                },
+                "effects": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "effect": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "effect",
+                      "label"
+                    ]
+                  }
+                },
+                "line": {
+                  "type": "integer"
+                },
+                "object": {
+                  "type": "string"
+                },
+                "object_label": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string"
+                },
+                "outcome_label": {
+                  "type": "string"
+                },
+                "source_key": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "object",
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "entity_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "entity_type": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "text"
+                  ]
+                }
+              },
+              "required": [
+                "changes",
+                "details",
+                "effects",
+                "line",
+                "object",
+                "object_label",
+                "outcome",
+                "outcome_label",
+                "source_key"
+              ]
+            }
           },
           "kind": {
             "type": "string"
@@ -16163,14 +17143,24 @@
       "data": {
         "type": "object",
         "properties": {
+          "base_currency": {
+            "type": "string"
+          },
           "columns": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
+          "excluded_by_permission": {
+            "type": "integer"
+          },
           "population_narrowed": {
             "type": "string"
+          },
+          "rate_date": {
+            "type": "string",
+            "format": "date-time"
           },
           "rows": {
             "type": "array",

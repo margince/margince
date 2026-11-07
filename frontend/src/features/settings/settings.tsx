@@ -57,6 +57,7 @@ import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
+import { InternalMailCaptureCard } from "./internalmailsettings";
 import { LegalEntitiesCard } from "./legalentities";
 import { LicenseCard } from "./license";
 import { LegacyLossReasonsCard, LossReasonsCard } from "./lossreasons";
@@ -238,6 +239,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
           <MailSharingCard />
           <OwnDomainsCard />
           <CaptureSettingsCard />
+          <InternalMailCaptureCard />
           <ConsumerMailDomainsCard />
           <BlockedDomainsCard />
         </>

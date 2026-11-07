@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -75,9 +74,7 @@ func TestADealWithNoNextStepIsUnsupported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if done, err := v.Activities.CompleteTask(v.Admin(), ids.From[ids.ActivityKind](step), clocktest.Now(t)); err != nil || !done {
-		t.Fatalf("completing the next step: done=%v err=%v", done, err)
-	}
+	completeCreatedTask(t, v.Env, ids.From[ids.ActivityKind](step))
 
 	// Twice: the first pass files the "no next step" finding's own task, and
 	// that task must not pass for the next step on the second.

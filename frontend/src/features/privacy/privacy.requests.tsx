@@ -42,6 +42,7 @@ import {
   nextStatuses,
 } from "../../lib/privacy.logic";
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
+import { RequestProof } from "./privacy.proofreading";
 import "./privacy.css";
 import { isUuid } from "../../lib/uuid";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -224,11 +225,7 @@ export function DsrDetail({
   const t = useT();
   const queryClient = useQueryClient();
   const canWork = useCanWrite("privacy_request", "update");
-  const [closing, setClosing] = useState<DsrClosing>({
-    resolution: dsr.resolution ?? "",
-    identityCheck: "",
-    requesterEmail: "",
-  });
+  const [closing, setClosing] = useState<DsrClosing>(() => requestClosing(dsr));
 
   const patch = useMutation({
     mutationFn: async (vars: {
@@ -303,6 +300,7 @@ export function DsrDetail({
             </ErrorLine>
           )}
           {isTerminal(dsr.status) && <p>{t("privacy.closed")}</p>}
+          {dsr.proof && <RequestProof proof={dsr.proof} />}
           {isTerminal(dsr.status) && dsr.dispute_open && (
             <p>{t("privacy.disputeOpen")}</p>
           )}
@@ -486,4 +484,12 @@ function DsrTransitions({
       ))}
     </div>
   );
+}
+
+function requestClosing(dsr: DataSubjectRequest): DsrClosing {
+  return {
+    resolution: dsr.resolution ?? "",
+    identityCheck: dsr.identity_verified ? "confirm_link" : "",
+    requesterEmail: "",
+  };
 }

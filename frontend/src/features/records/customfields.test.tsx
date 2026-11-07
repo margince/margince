@@ -558,7 +558,9 @@ describe("CustomFieldsAdmin", () => {
         );
       }
       // The dialog says it before the action, in the toast's own words.
-      const permanence = catalog["cf.archived"].split(". ").pop() ?? "";
+      const archived = catalog["cf.archived"];
+      if (!archived) throw new Error("The locale catalog was not loaded");
+      const permanence = archived.split(". ").pop() ?? "";
       expect(catalog["cf.retire.body"], locale).toContain(permanence);
     },
   );

@@ -175,7 +175,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	if !opts.AsOf.IsZero() {
 		asOf = fmt.Sprintf("$%d::timestamptz", arg(opts.AsOf))
 	}
-	humanClock := relstrength.LastActivityCountsSQL("a", asOf) + " AND " + relstrength.WrittenByHumanSQL("a")
+	humanClock := relstrength.ExternalActivityCountsSQL("a", asOf) + " AND " + relstrength.WrittenByHumanSQL("a")
 	inbound := relstrength.TheyWroteSQL("c.id", "a") + " AND " + humanClock
 	outbound := relstrength.WeWroteSQL("a") + " AND " + humanClock
 	exchange := relstrength.ContactExchangeSQL("a", "c.id", asOf)

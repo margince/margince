@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -48,10 +48,45 @@ To see who can read an email in Margince, open the message from a timeline. The 
 - **Shared**: "Everyone in the company can read this."
 - **Team**: "Everyone who can open the records this is filed against can read it."
 - **Participants**: only those on the message can read it.
-- **Selected**: only the colleagues and teams named under it.
+- **Selected**: the named colleagues and teams. Internal mail about work names colleagues only, and the participants on that message keep access.
 - **Withheld**: you are not one of them, so the text is hidden from you.
 
 Also called: email privacy, who can read my mail, email permissions.
+
+## Mail between colleagues
+
+Mail between colleagues is not kept by default. An admin can turn on
+**Internal operational mail** in **Settings → Capture rules**. Choose the
+mail connections, then **Choose folders** where a source needs a smaller set.
+Use **Save** to apply the choices. The mailbox still needs its own grant from
+its mail service. The admin must arrange the right approval and staff notice;
+the switch does not check those for them.
+
+New mail from those sources starts with **Participants** access. A participant
+can open one message, choose **Selected**, and name the colleagues who may read
+it. The participants on the message keep access. The choice replaces the named
+readers of that message.
+
+It does not share a thread or give a team access.
+Other members see no message or count. A link to a company, deal or project
+does not change that. This mail adds no contact and is not proof of a client
+reply or a reason to write to a client.
+
+Capture starts with mail received after the source was chosen. To approve an
+older range, select the option to allow a separate internal history import.
+Then set the first date in the field below it.
+That choice starts no import. The mailbox owner opens **Import older email**,
+reads the scope, and chooses **Include authorized internal mail in a new history
+import** before **Start import**. An ordinary history import still leaves
+internal mail out.
+
+The usual import windows and mail rules still apply.
+
+Turning capture off or removing a source stops new internal mail. Stored mail
+keeps its reader limits and the usual privacy rules for files, removal and
+retention. A changed mailbox grant needs a new **Save** before capture starts
+again. **Junk**, **Deleted** and **Drafts** stay out. Meetings keep their usual
+rules.
 
 ## The audience marks
 

@@ -227,23 +227,40 @@ func LockIdentityHolders(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (Ide
 
 // identityHoldersSQL matches each key against both sides. A lead holds an
 // address or a profile URL on its own row. A contact holds them on its live
-// contact_email rows and its LinkedIn contact_social row.
+// contact_email rows and its LinkedIn contact_social row. OFFSET 0 keeps the
+// lateral reads from being flattened into whole-table joins before key filtering.
 const identityHoldersSQL = `
 	WITH emails AS (SELECT DISTINCT lower(btrim(e)) AS key FROM unnest($1::text[]) e WHERE btrim(e) <> ''),
 	     urls AS (SELECT DISTINCT u AS key FROM unnest($2::text[]) u WHERE u <> '')
-	SELECT 'lead', 'email', l.id, l.email, l.created_at FROM lead l
-	 WHERE l.email IN (SELECT key FROM emails) AND l.archived_at IS NULL
+	SELECT 'lead', 'email', l.id, l.email, l.created_at FROM emails e
+	 CROSS JOIN LATERAL (
+	   SELECT id, email, created_at FROM lead
+	    WHERE email=e.key AND archived_at IS NULL OFFSET 0
+	 ) l
 	UNION ALL
-	SELECT 'lead', 'linkedin', l.id, l.linkedin_url, l.created_at FROM lead l
-	 WHERE l.linkedin_url IN (SELECT key FROM urls) AND l.archived_at IS NULL
+	SELECT 'lead', 'linkedin', l.id, l.linkedin_url, l.created_at FROM urls u
+	 CROSS JOIN LATERAL (
+	   SELECT id, linkedin_url, created_at FROM lead
+	    WHERE linkedin_url=u.key AND archived_at IS NULL OFFSET 0
+	 ) l
 	UNION ALL
-	SELECT 'contact', 'email', c.id, ce.email, c.created_at FROM contact c
-	  JOIN contact_email ce ON ce.contact_id = c.id AND ce.archived_at IS NULL
-	 WHERE ce.email IN (SELECT key FROM emails) AND c.archived_at IS NULL
+	SELECT 'contact', 'email', c.id, ce.email, c.created_at FROM emails e
+	 CROSS JOIN LATERAL (
+	   SELECT contact_id, email FROM contact_email
+	    WHERE email=e.key AND archived_at IS NULL OFFSET 0
+	 ) ce
+	 CROSS JOIN LATERAL (
+	   SELECT id, created_at, archived_at FROM contact WHERE id=ce.contact_id OFFSET 0
+	 ) c WHERE c.archived_at IS NULL
 	UNION ALL
-	SELECT 'contact', 'linkedin', c.id, cs.handle, c.created_at FROM contact c
-	  JOIN contact_social cs ON cs.contact_id = c.id AND cs.platform = 'linkedin'
-	 WHERE cs.handle IN (SELECT key FROM urls) AND c.archived_at IS NULL
+	SELECT 'contact', 'linkedin', c.id, cs.handle, c.created_at FROM urls u
+	 CROSS JOIN LATERAL (
+	   SELECT contact_id, handle FROM contact_social
+	    WHERE platform='linkedin' AND handle=u.key OFFSET 0
+	 ) cs
+	 CROSS JOIN LATERAL (
+	   SELECT id, created_at, archived_at FROM contact WHERE id=cs.contact_id OFFSET 0
+	 ) c WHERE c.archived_at IS NULL
 	ORDER BY 5, 3`
 
 // IdentityHoldersOf is the same question without the locks, for a writer that

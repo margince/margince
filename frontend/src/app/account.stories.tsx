@@ -11,6 +11,8 @@ import {
 } from "../testing/accountmenu-story";
 import { PORTRAIT, WHITE_PORTRAIT } from "../testing/seatphotos";
 import { AccountMenu } from "./account";
+import { AccountPanel } from "./accountpanel";
+import { ThemeSubmenu } from "./accounttheme";
 
 /**
  * The seat's chip at the end of the top bar, and the menu it opens.
@@ -20,6 +22,7 @@ import { AccountMenu } from "./account";
 const meta: Meta<typeof AccountMenu> = {
   title: "Shell/Account block",
   component: AccountMenu,
+  subcomponents: { AccountPanel, ThemeSubmenu },
   parameters: { layout: "fullscreen" },
 };
 export default meta;

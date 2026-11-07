@@ -107,11 +107,11 @@ func TestEachUserFacesCustomersAsTheirOwnEntity(t *testing.T) {
 		t.Errorf("the admin's booking page shows %q (%v), want the default entity's", homeName, err)
 	}
 
-	repSignature, err := e.Contacts.SignatureFor(rep, e.Rep1)
+	repSignature, err := e.Contacts.SignatureFor(rep, e.Rep1, ids.Nil)
 	if err != nil || repSignature.LogoKey != "logos/wien.png" || !strings.Contains(repSignature.Imprint, "FN 123456 a") {
 		t.Errorf("the rep signs with logo %q and imprint %q (%v), want Vienna's", repSignature.LogoKey, repSignature.Imprint, err)
 	}
-	homeSignature, err := e.Contacts.SignatureFor(desk, e.AdminUser)
+	homeSignature, err := e.Contacts.SignatureFor(desk, e.AdminUser, ids.Nil)
 	if err != nil || homeSignature.LogoKey == "logos/wien.png" || homeSignature.Imprint != "" {
 		t.Errorf("the admin signs with logo %q and imprint %q (%v), want nothing of Vienna's", homeSignature.LogoKey, homeSignature.Imprint, err)
 	}

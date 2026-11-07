@@ -22,8 +22,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -435,6 +438,34 @@ func TestAnExplanationCannotOutSeeTheNumberItExplains(t *testing.T) {
 	answer, err := e.askAnalytics(masked, t, q)
 	if err != nil {
 		t.Fatalf("the masked reader's question was refused: %v", err)
+	}
+	if answer.ExcludedByPermission == nil || *answer.ExcludedByPermission != 6 {
+		t.Fatalf("permission exclusions = %v, want the six deals in the reader’s population", answer.ExcludedByPermission)
+	}
+	var kept reporting.CapturedQuestion
+	err = database.WithWorkspaceTx(masked, e.Pool, func(tx pgx.Tx) error {
+		var captureErr error
+		card := reporting.QuestionCard{Question: crmcontracts.ReportingCardQuestion{Entity: q.Entity, Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count", As: new("n")}}}}
+		kept, captureErr = (reportingQuestions{}).Capture(masked, tx, card, crmcontracts.ReportingScope{})
+		if captureErr != nil {
+			return captureErr
+		}
+		kept.Answer.ExcludedByPermission = new(99)
+		revealed, allowed, revealErr := (reportingQuestions{}).Reveal(masked, tx, card, crmcontracts.ReportingScope{}, kept.KeptQuestion)
+		if revealErr != nil {
+			return revealErr
+		}
+		if !allowed || revealed.ExcludedByPermission != nil {
+			t.Fatalf("kept answer exposed an untracked count: %+v", revealed)
+		}
+		kept.Answer.ExcludedByPermission = nil
+		return captureErr
+	})
+	if err != nil || kept.Reason != "" || kept.Answer.BaseCurrency == nil {
+		t.Fatalf("kept masked answer: %+v, %v", kept, err)
+	}
+	if kept.Answer.ExcludedByPermission != nil {
+		t.Fatal("kept edition retained a sender’s untracked exclusion count")
 	}
 	explanation, err := e.explainCell(masked, t, analyticsquery.Explain{Query: q})
 	if err != nil {

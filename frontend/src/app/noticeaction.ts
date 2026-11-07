@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { approvalHref } from "../features/automations/approvalhref";
 import {
   healthSectionForSource,
   settingsHealthHref,
 } from "../features/settings/systemhealthnavigation";
 import type { MessageKey } from "../i18n/en";
+import { approvalHref } from "../lib/approvalhref";
 import { type EntityKind, isEntityKind, recordRoute } from "../lib/entity";
 import { routeHash } from "../lib/router";
 

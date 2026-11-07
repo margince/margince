@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import {
   type MouseEvent,
   type RefObject,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -63,7 +64,12 @@ import "./agentrail.css";
 // a row whose read is pending, or that this seat may not make, is absent
 // instead. Nothing here can be put into a state by hand: the section reaches a
 // state because something was read, or it does not reach it at all.
-import { AgentPanel } from "./agentpanel";
+import { lazy } from "../i18n/lazy";
+
+const AgentPanel = lazy(async () => ({
+  default: (await import("./agentpanel")).AgentPanel,
+}));
+
 import { looseStyle, usePanelFrame } from "./agentpanelframe";
 import { barLine, causeLine, derive } from "./agentreading";
 
@@ -351,18 +357,20 @@ export function AgentRail({
             data-core-state={state}
             style={looseStyle(frame)}
           >
-            <AgentPanel
-              state={state}
-              signals={signals}
-              model={model}
-              panel={panel}
-              frame={frame}
-              line={line}
-              running={server.running}
-              unnamed={server.unnamed}
-              settled={server.answered ? server.recent : undefined}
-              spend={spend}
-            />
+            <Suspense fallback={null}>
+              <AgentPanel
+                state={state}
+                signals={signals}
+                model={model}
+                panel={panel}
+                frame={frame}
+                line={line}
+                running={server.running}
+                unnamed={server.unnamed}
+                settled={server.answered ? server.recent : undefined}
+                spend={spend}
+              />
+            </Suspense>
           </div>,
           document.body,
         )}

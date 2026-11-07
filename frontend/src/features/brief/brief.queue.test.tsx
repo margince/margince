@@ -259,6 +259,41 @@ it("opens a deal row on why it needs attention", async () => {
   window.location.hash = "#/home";
   stubApi({
     "GET /worklist": () => jsonResponse(readingsDay({}, [failedApprovalRow()])),
+    "GET /deals/deal-nordwind": () =>
+      jsonResponse({
+        id: "deal-nordwind",
+        name: "Nordwind renewal",
+        amount_minor: 4_200_000,
+        currency: "EUR",
+        pipeline_id: "pl",
+        stage_id: "s-proposal",
+        status: "open",
+        source: "manual",
+        created_at: "2026-07-06T08:00:00Z",
+        updated_at: "2026-07-06T08:00:00Z",
+      }),
+    "GET /pipelines": () =>
+      jsonResponse({
+        data: [
+          {
+            id: "pl",
+            name: "Sales",
+            is_default: true,
+            position: 0,
+            stages: [
+              {
+                id: "s-proposal",
+                pipeline_id: "pl",
+                name: "Proposal",
+                position: 2,
+                semantic: "open",
+                win_probability: 40,
+              },
+            ],
+          },
+        ],
+        page: { next_cursor: null },
+      }),
   });
   render(<BriefScreen />);
   await user.click(
@@ -273,6 +308,81 @@ it("opens a deal row on why it needs attention", async () => {
   ).toBeTruthy();
   expect(
     within(details).getByText(en["worklist.consequence.task_slips"]),
+  ).toBeTruthy();
+  // The deal it is about: worth, and where it stands.
+  expect(await within(details).findByText("€42,000")).toBeTruthy();
+  expect(await within(details).findByText("Proposal")).toBeTruthy();
+});
+
+// A follow-up opens on the messages themselves, not on a restatement of why.
+it("opens a follow-up on the conversation it waits on", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  const followUp = {
+    ...failedApprovalRow(),
+    id: "msg-quote",
+    source: "awaiting_reply",
+    title: "Re: phase 2 pricing",
+    subject: undefined,
+    because: [{ kind: "you_wrote_last" }],
+    consequence: "none",
+    actions: ["open"],
+    email_summary: {
+      activity_id: "msg-quote",
+      occurred_at: "2026-09-01T09:00:00Z",
+      occurred_precision: "instant",
+      version: 1,
+      subject: "Re: phase 2 pricing",
+      preview: "Attached is the quote for both phases.",
+      direction: "outbound",
+      display_status: "team",
+      move: "waiting_for_them",
+      attachment_count: 0,
+    },
+  } satisfies components["schemas"]["WorklistItem"];
+  stubApi({
+    "GET /worklist": () => jsonResponse(readingsDay({}, [followUp])),
+    "GET /activities/msg-quote/email-presentation": () =>
+      jsonResponse({
+        id: "msg-quote",
+        lifecycle: "delivered",
+        occurred_at: "2026-09-01T09:00:00Z",
+        summary: followUp.email_summary,
+        body: "Attached is the quote for both phases.",
+        from: [{ address: "rep@demo.test", display_name: "Rep" }],
+        to: [],
+        cc: [],
+        bcc: [],
+        bcc_withheld: false,
+        attachments: [],
+        links: [],
+        thread: { members: [], next_cursor: null },
+        access: {
+          content_state: "available",
+          audience: "workspace",
+          selected_members: [],
+          display_status: "team",
+          can_change: false,
+          change_mode: "message",
+          held_by_others: false,
+        },
+        can_reply: true,
+        can_relink: false,
+        version: 1,
+      }),
+  });
+  render(<BriefScreen />);
+  await user.click(
+    await screen.findByRole("button", { name: en["brief.focus.context"] }),
+  );
+  const details = await screen.findByRole("dialog", {
+    name: en["brief.focus.context"],
+  });
+  expect(
+    within(details).getByText(en["worklist.pane.conversation"]),
+  ).toBeTruthy();
+  expect(
+    await within(details).findByText("Attached is the quote for both phases."),
   ).toBeTruthy();
 });
 

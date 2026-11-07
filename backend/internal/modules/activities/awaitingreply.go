@@ -235,7 +235,7 @@ func (s *Store) queryAwaitingReplies(
 	sentBy := sentByReaderSQL(fmt.Sprintf("$%d", reader), fmt.Sprintf("$%d", addresses))
 	parts := []any{
 		instant, g.content, g.links, addresses, window,
-		AwaitingReplyLookbackDays, g.later, relstrength.InteractionCountsSQL("later"),
+		AwaitingReplyLookbackDays, g.later, relstrength.InteractionCountsSQL("later", at),
 		reader, messageSnoozeLiftedSQL(at, g.back),
 		g.customer, AwaitingReplyScanCap,
 	}

@@ -67,6 +67,7 @@ type orphanIngest struct {
 	embedder *gatedEmbedder
 	doc      ids.UUID
 	passages int
+	blob     blobstore.Store
 }
 
 func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
@@ -80,7 +81,8 @@ func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 		},
 		RowScope: principal.RowScopeAll,
 	})
-	worker := newKnowledgeIngestWorker(e.Pool, blobstore.NewMemory(), embedder, slog.Default())
+	blob := blobstore.NewMemory()
+	worker := newKnowledgeIngestWorker(e.Pool, blob, embedder, slog.Default())
 	corpus, err := worker.store.CreateCorpus(uploader, knowledge.NewCorpus{Name: "How-to", TopicStatement: "How this product is operated."})
 	if err != nil {
 		t.Fatalf("create corpus: %v", err)
@@ -95,7 +97,7 @@ func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 	if err != nil {
 		t.Fatalf("upload: %v", err)
 	}
-	return &orphanIngest{e: e, worker: worker, embedder: embedder, doc: ids.UUID(doc.Id), passages: len(knowledge.ChunkText(body))}
+	return &orphanIngest{e: e, worker: worker, embedder: embedder, doc: ids.UUID(doc.Id), passages: len(knowledge.ChunkText(body)), blob: blob}
 }
 
 func (o *orphanIngest) work(t *testing.T) error {

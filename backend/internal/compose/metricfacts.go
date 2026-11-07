@@ -49,19 +49,9 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 		spec.value = strings.ReplaceAll(spec.value, "@"+name, placeholder)
 		spec.where = strings.ReplaceAll(spec.where, "@"+name, placeholder)
 	}
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), spec.owner, b.arg, unownedIsExcluded)
+	population, withheld, err := reportingDealPopulationSQL(ctx, tx, frame, spec.owner, reportingDealFields(metric), &b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if population == "" {
-		population = sqlUnnarrowed
-	}
-	rowScope, err := auth.ScopeClauseFor(ctx, string(recordTypeDeal), "t", b.arg)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if rowScope == "" {
-		rowScope = sqlUnnarrowed
 	}
 	value, err := reportingFactValue(ctx, frame, spec, &b)
 	if err != nil {
@@ -71,16 +61,7 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 	if strings.Contains(from, "@revision") {
 		from = strings.ReplaceAll(from, "@revision", b.add(spec.revision))
 	}
-	fieldScope, withheld, err := reportingFieldScope(ctx, string(recordTypeDeal), "t", reportingDealFields(metric), &b)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	dimensions, err := dealDimensionSQL(ctx, frame, &b, "t")
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	where := spec.where + " AND " + population + " AND " + rowScope + " AND " + fieldScope
-	where += reportingFactFilters(frame, metric, spec, &b) + dimensions + initiativeMemberSQL(ctx, &b, "t", string(recordTypeDeal))
+	where := spec.where + " AND " + population + reportingFactFilters(frame, metric, spec, &b)
 	position := spec.stagePosition
 	if position == "" {
 		position = "0"

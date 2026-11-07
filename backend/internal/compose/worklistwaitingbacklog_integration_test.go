@@ -50,12 +50,7 @@ func seedWaitingBacklog(t *testing.T) waitingBacklog {
 	// The plain requests are the newest, so the lane's first scan page is all
 	// cards and its read is cut. The other cases sit below them.
 	plain := func(seat ids.UUID, count int) []ids.UUID {
-		var sent []ids.UUID
-		for i := range count {
-			at := r.now.Add(-time.Duration(i+1) * 20 * time.Minute)
-			sent = append(sent, w.mail(t, seat, "dana@buyer.example", fmt.Sprintf("Question %d", i), "", at, true))
-		}
-		return sent
+		return w.plainRequests(t, seat, count)
 	}
 	rep1 := plain(r.e.Rep1, waitsPastTheCap)
 	plain(r.e.Rep2, 10)
@@ -90,6 +85,31 @@ func seedWaitingBacklog(t *testing.T) waitingBacklog {
 	w.takeRequest(t, taken)
 	w.expectFold(t)
 	return w
+}
+
+// plainRequests logs count confirmed requests to seat, each twenty minutes older
+// than the last, and answers their ids newest first. The first goes through the
+// mail and owed-verdict writers. The rest copy its rows, with their own subject,
+// thread and time.
+func (w *waitingBacklog) plainRequests(t *testing.T, seat ids.UUID, count int) []ids.UUID {
+	t.Helper()
+	r := w.r
+	first := w.mail(t, seat, "dana@buyer.example", "Question 0", "", r.now.Add(-20*time.Minute), true)
+	copies := r.e.CloneActivity(t, ids.From[ids.ActivityKind](first), count-1, map[string]string{
+		"source_id":    "r.source_id || '-' || n.ord",
+		"identity_key": "r.identity_key || '-' || n.ord",
+	})
+	subjects, threads, times := []string{}, []string{}, []time.Time{}
+	for i, id := range copies {
+		subject := fmt.Sprintf("Question %d", i+1)
+		subjects, threads = append(subjects, subject), append(threads, "thread-"+subject+"-"+seat.String())
+		times = append(times, r.now.Add(-time.Duration(i+2)*20*time.Minute))
+		w.cards[seat][id.String()] = true
+	}
+	r.e.WsExec(t, `UPDATE activity a SET subject = v.subject, thread_key = v.thread, occurred_at = v.at
+		FROM unnest($1::uuid[], $2::text[], $3::text[], $4::timestamptz[]) AS v(id, subject, thread, at) WHERE a.id = v.id`,
+		copies, subjects, threads, times)
+	return append([]ids.UUID{first}, copies...)
 }
 
 // older is where the cases below the plain requests start.

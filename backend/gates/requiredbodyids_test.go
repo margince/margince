@@ -70,6 +70,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"DraftIntroNoteJSONBody":            true,
 	"SetProjectCompanyRequest":          true,
 	"CreateRecordGrantRequest":          true,
+	"ShareCompanyContactsRequest":       true,
 	"CreateRecordAssignmentRequest":     true,
 	"MergeContactJSONBody":              true,
 	"LinkFinanceSourceCustomerRequest":  true,
@@ -98,7 +99,6 @@ var probedRequiredIDBodies = map[string]bool{
 var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	"DeclareExistingCustomerNoticeRequest": "DeclareNoticeInput.validate refuses a zero legal_entity_id as a 422 naming the field, before any lookup",
 	"SetTransitionPolicyRequest":           "the route is retired and answers 501 without reading its body",
-	"ShareCompanyContactsRequest":          "ValidateRecordGrantFields refuses a zero subject_id as a 422 naming the field, before any lookup",
 	// Not a request body at all: the GDPR data-subject-request ENTITY, whose `id`
 	// is its own primary key rather than a caller-supplied reference. Waived
 	// because the name heuristic above cannot tell the two apart, and narrowing

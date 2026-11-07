@@ -29,7 +29,7 @@ func TestEveryGovernedKindHasReviewContextOrIsNotCurrentlyStageable(t *testing.T
 	for _, kind := range automation.StageableKinds() {
 		active[kind] = true
 	}
-	for _, kind := range approvalsServiceWithEffects(nil).EffectKinds() {
+	for _, kind := range NewApprovalsServiceWithEffects(nil).EffectKinds() {
 		active[kind] = true
 	}
 	for _, policy := range agentPolicies {

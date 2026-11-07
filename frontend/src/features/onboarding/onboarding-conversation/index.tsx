@@ -13,8 +13,9 @@ import {
 } from "../../../lib/installationcompany";
 import { throwProblem } from "../../../lib/problem";
 import { navigate, navigateReplacing, useRoute } from "../../../lib/router";
-import { EMPTY_DRAFT, loadWizardState, pickBuiltVersion } from "../onboarding";
+import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
+import { loadWizardState } from "../onboarding-progress";
 import { BasisAct } from "./basis-act";
 import { CompanyAct } from "./company-act";
 import { ConnectAct } from "./connect-act";

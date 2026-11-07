@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -111,9 +112,32 @@ func ResolveIdentity(ctx context.Context, tx pgx.Tx, kind, key string) (ids.Acti
 //
 // Already claimed by THIS activity reports true, because a replay re-states
 // what it stated before.
+//
+// A meeting claim also retires the other keys this activity holds in the same
+// series (retireSupersededOccurrences), whether the claim wins or loses.
 func ClaimIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind, key, attestedBy string) (bool, error) {
+	held, _, err := claimAndRetireIdentity(ctx, tx, activityID, kind, key, attestedBy)
+	return held, err
+}
+
+// RekeyMeetingIdentity claims key for a meeting and retires the keys it
+// supersedes, and reports whether what the meeting is known by changed.
+func RekeyMeetingIdentity(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, key, attestedBy string) (bool, error) {
+	_, changed, err := claimAndRetireIdentity(ctx, tx, meeting, IdentityKindMeeting, key, attestedBy)
+	return changed, err
+}
+
+func claimAndRetireIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind, key, attestedBy string) (held, changed bool, err error) {
 	if key == "" {
-		return false, nil
+		return false, false, nil
+	}
+	if kind == IdentityKindMail {
+		if _, err := storekit.LockActivityThreadTx(ctx, tx, activityID.UUID); err != nil {
+			return false, false, err
+		}
+		if err := storekit.LockThreadKeysTx(ctx, tx, key); err != nil {
+			return false, false, err
+		}
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
@@ -121,16 +145,45 @@ func ClaimIdentity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, ki
 		ON CONFLICT (identity_kind, identity_key) DO NOTHING`,
 		kind, key, activityID, attestedBy)
 	if err != nil {
-		return false, fmt.Errorf("activities: claiming a message identity: %w", err)
+		return false, false, fmt.Errorf("activities: claiming a message identity: %w", err)
 	}
-	if tag.RowsAffected() > 0 {
-		return true, nil
+	inserted := tag.RowsAffected() > 0
+	retired, err := retireSupersededOccurrences(ctx, tx, activityID, kind, key)
+	if err != nil {
+		return false, false, err
+	}
+	if inserted {
+		return true, true, nil
 	}
 	holder, found, err := ResolveIdentity(ctx, tx, kind, key)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
-	return found && holder == activityID, nil
+	return found && holder == activityID, retired, nil
+}
+
+// retireSupersededOccurrences drops every other key a meeting holds in the
+// series of key. One meeting row is one occurrence, so an older key names an
+// occurrence this row no longer is. That is its start before the series slot
+// keyed it, or an all-day noon anchor. Left in place, it resolves another occurrence
+// of the series onto this row. Only this row's own keys are touched.
+// Erasure (privacy.retireActivityIdentities) answers another question: it
+// drops every key of an erased row, where this keeps the row and its newest key.
+func retireSupersededOccurrences(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, kind, key string) (bool, error) {
+	cut := strings.LastIndex(key, "/")
+	if kind != IdentityKindMeeting || cut < 0 {
+		return false, nil
+	}
+	tag, err := tx.Exec(ctx, `
+		DELETE FROM activity_identity
+		 WHERE identity_kind = $1 AND activity_id = $2 AND identity_key <> $3
+		   AND left(identity_key, length($4)) = $4
+		   AND strpos(substr(identity_key, length($4) + 1), '/') = 0`,
+		kind, meeting, key, key[:cut+1])
+	if err != nil {
+		return false, fmt.Errorf("activities: retiring a meeting's superseded identity: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // TransferIdentities moves every identity from one activity to another.

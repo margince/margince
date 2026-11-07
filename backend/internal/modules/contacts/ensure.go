@@ -457,11 +457,11 @@ func resolveCapturedContact(ctx context.Context, tx pgx.Tx, candidate ContactCan
 	if err != nil {
 		return ContactResolution{}, ids.LeadID{}, err
 	}
-	match, err := DedupeContact(ctx, tx, candidate)
+	match, exact, err := dedupeExactContact(ctx, tx, candidate)
 	if err != nil {
 		return ContactResolution{}, ids.LeadID{}, err
 	}
-	if match.Decision == DecisionExactCollision {
+	if exact {
 		return match, ids.LeadID{}, nil
 	}
 	if !lead.IsZero() {

@@ -60,3 +60,18 @@ export function StaleThreadNotice({ stale }: Readonly<{ stale: boolean }>) {
     </Callout>
   );
 }
+
+export function ChannelDraftNotice({
+  requested,
+  channel,
+}: Readonly<{ requested?: boolean; channel: boolean }>) {
+  const t = useT();
+  if (!requested || !channel) return null;
+  return (
+    <Callout
+      tone="warning"
+      kind="outcome"
+      title={t("compose.channelDraftUnavailable")}
+    />
+  );
+}

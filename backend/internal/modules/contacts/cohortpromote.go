@@ -165,7 +165,7 @@ func (s *Store) promoteCohortTx(
 	// before-image to judge — the subject is the contact whose cohort moved, not
 	// any one of the messages.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityContact, canonical.UUID,
-		map[string]any{"cohort_linked": len(linked), "cohort_promoted": len(promoted)})
+		map[string]any{cohortLinkedKey: len(linked), cohortPromotedKey: len(promoted)})
 	if err != nil {
 		return CohortPromotion{}, fmt.Errorf("contacts: auditing a cohort repair: %w", err)
 	}
@@ -225,13 +225,9 @@ const capturedCohortMailSQL = `a.captured_by LIKE 'connector:%'
 	   AND NOT EXISTS (
 	       SELECT 1 FROM activity_link l
 	        WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL)
-	   -- The same ceiling its sibling arm applies, and for the same reason.
-	   -- This arm guarded only on "no contact link exists", so a message
-	   -- already filed under twenty-five companies, deals or projects
-	   -- took a twenty-sixth here: which ceiling held depended on which arm
-	   -- ran. The trigger now refuses the row either way; this keeps the
-	   -- sweep SKIPPING an over-full message rather than aborting its batch
-	   -- on one.
+	   -- The same ceiling its sibling arm applies. The trigger refuses a link
+	   -- past it either way; this keeps the sweep skipping an over-full
+	   -- message rather than aborting its batch on one.
 	   AND (SELECT count(*) FROM activity_link cap
 	         WHERE cap.activity_id = a.id) < @ceiling`
 
@@ -491,4 +487,14 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		return 0, err
 	}
 	return planted, nil
+}
+
+const (
+	cohortLinkedKey   = "cohort_linked"
+	cohortPromotedKey = "cohort_promoted"
+)
+
+// CohortAuditSQL identifies the additive address-to-contact repair by its immutable audit payload.
+func CohortAuditSQL(alias string) string {
+	return `COALESCE((` + alias + `.entity_type='contact' AND ` + alias + `.action='update' AND ` + alias + `.after ? '` + cohortLinkedKey + `' AND ` + alias + `.after ? '` + cohortPromotedKey + `'),false)`
 }

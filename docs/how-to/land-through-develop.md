@@ -1,4 +1,4 @@
-<!-- describes: .github/workflows/ci.yml -->
+<!-- describes: .github/workflows/ci.yml Makefile -->
 # Land a change through `develop`
 
 `develop` is a second branch, where a pull request lands after a shorter CI run. Each night a scheduled
@@ -34,7 +34,8 @@ CodeRabbit review; the nightly `develop` into `main` pull request does.
 ```sh
 git switch -c <type>/<slug> origin/develop
 # work, then the smallest lane, then:
-make check
+make check CHECK_BASE_REF=origin/develop
+FE_UAT_BASE_REF=origin/develop make fe-uat # for a frontend change
 git push -u origin <type>/<slug>
 gh pr create --base develop
 gh pr merge <n> --squash

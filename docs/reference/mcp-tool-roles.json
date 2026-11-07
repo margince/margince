@@ -2117,6 +2117,25 @@
     },
     {
       "tool": "change_compliance",
+      "action": "lift_lead_suppression",
+      "verb": "lift_lead_suppression",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ],
+      "colleague_record": {
+        "manager": "refused",
+        "rep": "refused"
+      }
+    },
+    {
+      "tool": "change_compliance",
       "action": "lift_suppression",
       "verb": "lift_contact_suppression",
       "allowed_for": [
@@ -6520,6 +6539,24 @@
     },
     {
       "tool": "read_details",
+      "action": "lead_stops",
+      "verb": "list_lead_stops",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
+    },
+    {
+      "tool": "read_details",
       "action": "legal_entity_logo",
       "verb": "get_legal_entity_logo",
       "allowed_for": [
@@ -6704,6 +6741,36 @@
       "tool": "read_details",
       "action": "notice_case_review",
       "verb": "get_notice_case_review",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "notice_source_evidence",
+      "verb": "get_notice_source_evidence",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "notice_source_preview",
+      "verb": "preview_notice_source",
       "allowed_for": [
         "admin"
       ],

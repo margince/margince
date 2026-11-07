@@ -148,9 +148,10 @@ the provider's own ID for the message, so a second copy writes nothing.
 Steps, in order:
 
 1. **Erase check.** If the message names an account that was erased, reject it.
-2. **Internal-only check.** If *every* address on the message belongs to the company's own mail
-   domains, this is colleagues writing to each other. Write a short log row and drop the message.
-   This runs **before** step 3, so a message between colleagues alone is never stored at all.
+2. **Internal-only check.** Are all addresses on the company's own mail domains?
+   If so, drop the message unless its source has current internal-mail authorization. That authorization is off by default. Authorized mail stays with its
+   participants and creates no contact or automatic record links. See
+   [Capture](../handbook/capture.md) for the admin and mailbox-owner choices.
 3. **Store the raw payload.** It is written once and never written over, so the original stays
    available.
 4. **Write the activity row**, plus links, files, the parties, an `audit_log` row and an
@@ -419,10 +420,10 @@ never becomes an address in the first place.
 |---|---|---|---|
 | Connector skipped it (a like on a message, a bot) | no | no | Nothing. It never reaches the core |
 | Connector could not build a correct record | no | no | The unit's own log row and a `record_dropped` event |
-| **Internal-only** (section 2, step 2) | **no** | **no** | One `system_log` row: `capture_internal_dropped`, reason `internal_only`, plus the message's provider ID. **No address, subject or body** |
+| **Internal-only, without source authorization** (section 2, step 2) | **no** | **no** | One `system_log` row: `capture_internal_dropped`, reason `internal_only`, plus the message's provider ID. **No address, subject or body** |
 | T2 / T4 / `noise` verdict | **kept** | kept | The message, plus a decision row and a log row that says why no contact was made |
 
-The internal-only check is the only one that drops message content. It runs before the raw payload
+The internal-only check drops message content when the source has no authorization. It runs before the raw payload
 is stored, so no copy exists at all. Storing an address in the log would expose what dropping the
 message was there to keep out.
 
@@ -435,7 +436,7 @@ path that later deletes content, and only after the undo window.
 
 | Setting | Where | Controls |
 |---|---|---|
-| Own mail domains | Capture settings (admins write, every user reads) | Which messages count as internal, and so are dropped |
+| Own mail domains | Capture settings (admins write, every user reads) | Which messages count as internal; sources without authorization are dropped |
 | Personal mail domains | `POST /v1/capture/consumer-mail-domains`: added domains and exceptions on top of a built-in list of ~8,700 domains | T3: no company, and the contact waits for the verdict engine |
 | `auto_enrich` | `PATCH /v1/capture/settings` | Whether new companies get more data on their own |
 | Approved sender domains | Contacts settings | Lets an admin approve a domain a verdict blocked |
@@ -530,8 +531,8 @@ Say `acme.com` is a registered own domain, and the client is `dana@client.io`.
 
 | Case | What happens |
 |---|---|
-| A colleague messages you | **Dropped** at section 2, step 2 (internal-only). Only a log row is written |
-| A colleague sends you notes on a client meeting, and the client is not on the message | **Also dropped.** Every party on the message is internal. Notes *about* a client are not mail *with* one |
+| A colleague messages you | **Dropped** unless the source has internal-mail authorization. Authorized mail stays with its participants |
+| A colleague sends you notes on a client meeting, and the client is not on the message | The same internal-mail rule applies. It counts as no customer correspondence or automatic record link |
 | A colleague emails the client and copies you | **Kept.** T0 switches to `dana@client.io` and decides about the client |
 | The client replies, and we have emailed them before | **T1**: contact created at once |
 | Someone new writes for the first time | Message kept, **T4**: no contact until the verdict engine answers |

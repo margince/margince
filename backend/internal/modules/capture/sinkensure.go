@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -420,6 +421,9 @@ func (s *Sink) decideCounterpartyGuarded(ctx context.Context, tx pgx.Tx, rec con
 			// Without a clean rollback the outer transaction stays poisoned,
 			// so there is no committing anything — report the original fault.
 			return counterpartyDecision{}, errors.Join(gateErr, rbErr)
+		}
+		if storekit.IsLockCycle(gateErr) {
+			return counterpartyDecision{}, gateErr
 		}
 		if err := s.logBreadcrumbTx(ctx, tx, "capture_ensure_fault", rec, gateErr.Error()); err != nil {
 			return counterpartyDecision{}, err

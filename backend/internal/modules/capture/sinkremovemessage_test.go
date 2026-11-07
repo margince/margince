@@ -8,6 +8,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -47,7 +49,7 @@ func TestARemovalPurgesUnderTheSeatOnTheContext(t *testing.T) {
 	var gotSystem, gotID string
 	calls := 0
 	sink := capture.NewSink(nil).WithMessagePurger(
-		func(_ context.Context, s ids.UUID, sourceSystem, sourceID string) error {
+		func(_ context.Context, _ func(context.Context, pgx.Tx) error, s ids.UUID, sourceSystem, sourceID string) error {
 			calls++
 			gotSeat, gotSystem, gotID = s, sourceSystem, sourceID
 			return nil
@@ -82,7 +84,7 @@ func TestARemovalWithNoSeatRefusesRatherThanPurging(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			purged := false
 			sink := capture.NewSink(nil).WithMessagePurger(
-				func(context.Context, ids.UUID, string, string) error {
+				func(context.Context, func(context.Context, pgx.Tx) error, ids.UUID, string, string) error {
 					purged = true
 					return nil
 				})
@@ -113,7 +115,7 @@ func TestARemovalWithoutABothPartNaturalKeyRefuses(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			purged := false
 			sink := capture.NewSink(nil).WithMessagePurger(
-				func(context.Context, ids.UUID, string, string) error {
+				func(context.Context, func(context.Context, pgx.Tx) error, ids.UUID, string, string) error {
 					purged = true
 					return nil
 				})
@@ -134,7 +136,9 @@ func TestARemovalWithoutABothPartNaturalKeyRefuses(t *testing.T) {
 func TestAFailedPurgeReachesTheConnector(t *testing.T) {
 	wanted := errors.New("privacy: the copy is held by a legal duty")
 	sink := capture.NewSink(nil).WithMessagePurger(
-		func(context.Context, ids.UUID, string, string) error { return wanted })
+		func(context.Context, func(context.Context, pgx.Tx) error, ids.UUID, string, string) error {
+			return wanted
+		})
 
 	err := sink.RemoveMessage(seatContext(ids.NewV7()), aKey())
 
@@ -149,7 +153,7 @@ func TestAFailedPurgeReachesTheConnector(t *testing.T) {
 func TestWithMessagePurgerLeavesTheOriginalUnarmed(t *testing.T) {
 	base := capture.NewSink(nil)
 	armed := base.WithMessagePurger(
-		func(context.Context, ids.UUID, string, string) error {
+		func(context.Context, func(context.Context, pgx.Tx) error, ids.UUID, string, string) error {
 			t.Error("the base Sink's removal reached the copy's purger")
 			return nil
 		})

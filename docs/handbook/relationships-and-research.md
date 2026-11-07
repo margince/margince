@@ -38,6 +38,10 @@ Relationship strength in Margince comes from one rule, worked out from captured 
 
 Mail that nobody wrote by hand does not count: calendar invitations, notices from sending systems, newsletters and mail Margince sent itself. It stays on the timeline with a label such as "Sent to a mailing list".
 
+A meeting counts once its time has passed, unless it was canceled or marked a no-show. Nobody has to mark it **Held** first, so a meeting straight from your calendar counts too. A meeting still to come does not count yet. A call counts only if it reached somebody.
+
+Reports of meetings held, and the proof on a deal, ask for more: they count a meeting only once someone marks it **Held**.
+
 A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
 
 A recent contact can still score **Weak**. The contact page then names what holds the score down:

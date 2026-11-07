@@ -306,6 +306,10 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, 1 to 200, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
+| `capture.gmail_mailbox_quota` | `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` | — | `int` | `6000` | api, worker | Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google. |
+| `capture.gmail_project_quota` | `MARGINCE_CAPTURE_GMAIL_PROJECT_QUOTA` | — | `int` | `1200000` | api, worker | Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process. |
+| `capture.history_concurrency` | `MARGINCE_CAPTURE_HISTORY_CONCURRENCY` | — | `int` | `1` | api, worker | Limit on history imports running at once across the installation. Use the same value in every process. |
+| `capture.history_hold` | `MARGINCE_CAPTURE_HISTORY_HOLD` | — | `bool` | `false` | api, worker | Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol. |
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
 | `capture.mail_sync_interval_seconds` | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | — | `int`, 30 to 3600, stored | `120` | api, worker | Seconds a working mailbox connection waits between polls. |
 | `capture.max_backfill_months` | `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | — | `int` | `0` | api, worker | How far back a mailbox import may reach, for the whole installation; 0 is no cap. |
@@ -347,6 +351,13 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `data_tasks.pace` | `MARGINCE_DATA_TASKS_PACE` | `--data-tasks-pace` | `duration` | `1s` | worker | Delay between saved batches of data tasks. |
+
+### `database`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `database.worker_max_connections` | `MARGINCE_WORKER_MAX_CONNECTIONS` | `--worker-max-connections` | `int` | `12` | worker | Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation. |
+| `database.worker_statement_cache_capacity` | `MARGINCE_WORKER_STATEMENT_CACHE_CAPACITY` | `--worker-statement-cache-capacity` | `int` | `256` | worker | Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN `default_query_exec_mode`. |
 
 ### `deals`
 

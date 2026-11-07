@@ -79,7 +79,7 @@ func (s *Store) SendMeetingReminder(ctx context.Context, id ids.UUID, gate Conse
 	if err != nil {
 		return errors.Join(err, s.markMeetingReminderUnavailable(ctx, row))
 	}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
 		current, err := readInvitation(ctx, tx, id, true)
 		if err != nil {
 			return err

@@ -22,8 +22,13 @@ import {
   type RecordPickerCandidate,
 } from "../../../design-system/recordpicker";
 import { formatMoneyOrAbsent, formatNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
-import { problemMessageOf, problemStatus, unwrap } from "../../../lib/problem";
+import { type Translator, useLocale, useT } from "../../../i18n";
+import {
+  isVersionSkewOf,
+  problemMessageOf,
+  problemStatus,
+  unwrap,
+} from "../../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
 import { searchProductCandidates } from "../products";
 import {
@@ -34,6 +39,7 @@ import {
 } from "./deallines";
 
 type DealProduct = components["schemas"]["DealProduct"];
+type DealProductList = components["schemas"]["DealProductListResponse"];
 
 /** One product the editor holds, with the amount in the deal's currency. */
 type Allocation = {
@@ -44,6 +50,21 @@ type Allocation = {
 
 export const dealProductsKey = (dealId: string) =>
   ["deal-products", dealId] as const;
+
+// The card and the editor read the set the same way. So the tag a save sends
+// is the tag of the rows the editor shows.
+function dealProductsQuery(dealId: string, t: Translator) {
+  return {
+    queryKey: dealProductsKey(dealId),
+    queryFn: async (): Promise<DealProductList> =>
+      unwrap(
+        await api.GET("/deals/{id}/products", {
+          params: { path: { id: dealId } },
+        }),
+        t,
+      ),
+  };
+}
 
 /**
  * The products a deal sells. A deal priced from its own lines shows them, with
@@ -68,16 +89,7 @@ export function DealProductsCard({
 }>) {
   const t = useT();
   const [editing, setEditing] = useState<"split" | "lines" | null>(null);
-  const query = useQuery({
-    queryKey: dealProductsKey(dealId),
-    queryFn: async (): Promise<DealProduct[]> =>
-      unwrap(
-        await api.GET("/deals/{id}/products", {
-          params: { path: { id: dealId } },
-        }),
-        t,
-      ).data,
-  });
+  const query = useQuery(dealProductsQuery(dealId, t));
   const lines = useDealLines(dealId);
   const title = t("deal.products.title");
   if (query.isError) {
@@ -113,7 +125,9 @@ export function DealProductsCard({
       >
         {state && linesMode
           ? state.lines.length > 0 && <DealLineRows state={state} />
-          : query.data.length > 0 && <AllocationRows rows={query.data} />}
+          : query.data.data.length > 0 && (
+              <AllocationRows rows={query.data.data} />
+            )}
       </OverviewCard>
       {/* Beside the card, not inside it: the card draws its empty words only
           while it holds no body. */}
@@ -236,6 +250,14 @@ function AllocationRows({ rows }: Readonly<{ rows: readonly DealProduct[] }>) {
   );
 }
 
+function allocationsOf(set: DealProductList): Allocation[] {
+  return set.data.map((row) => ({
+    productId: row.product_id,
+    name: row.product_name,
+    amountMinor: row.amount_minor ?? null,
+  }));
+}
+
 /** Replaces the deal's products with the list the writer builds here. */
 export function DealProductsEditor({
   dealId,
@@ -245,40 +267,54 @@ export function DealProductsEditor({
 }: Readonly<{
   dealId: string;
   currency: string | null;
-  current: readonly DealProduct[];
+  current: DealProductList;
   onClose: () => void;
 }>) {
   const t = useT();
   const client = useQueryClient();
-  const [list, setList] = useState<Allocation[]>(() =>
-    current.map((row) => ({
-      productId: row.product_id,
-      name: row.product_name,
-      amountMinor: row.amount_minor ?? null,
-    })),
-  );
+  // The set the list was seeded from. Its tag is the save's precondition, and
+  // it moves only when the editor reseeds, never when the card rerenders.
+  const [read, setRead] = useState(current);
+  const [list, setList] = useState<Allocation[]>(() => allocationsOf(current));
+  const [reseeded, setReseeded] = useState(false);
   const replace = useMutation({
-    mutationFn: async (next: readonly Allocation[]) =>
+    mutationFn: async (next: {
+      allocations: readonly Allocation[];
+      expectedTag: string;
+    }) =>
       unwrap(
         await api.PUT("/deals/{id}/products", {
           params: { path: { id: dealId } },
           body: {
-            products: next.map((row) => ({
+            expected_tag: next.expectedTag,
+            products: next.allocations.map((row) => ({
               product_id: row.productId,
               amount_minor: currency ? row.amountMinor : null,
             })),
           },
         }),
         t,
-      ).data,
+      ),
     onSuccess: (saved) => {
       client.setQueryData(dealProductsKey(dealId), saved);
       // The commercial mix and product bookings read these allocations.
       void client.invalidateQueries({ queryKey: REPORTING_EVALUATION_KEY });
       onClose();
     },
+    onError: async (error) => {
+      if (!isVersionSkewOf(error)) return;
+      // Somebody saved the set since it was read: show theirs, so the next
+      // save starts from it. A failed reload leaves the skew's own message up.
+      const fresh = await client
+        .fetchQuery({ ...dealProductsQuery(dealId, t), staleTime: 0 })
+        .catch(() => null);
+      if (!fresh) return;
+      setRead(fresh);
+      setList(allocationsOf(fresh));
+      setReseeded(true);
+    },
   });
-  const fromOffer = current.some((row) => row.source === "offer");
+  const fromOffer = read.data.some((row) => row.source === "offer");
   const listed = new Set(list.map((row) => row.productId));
   const add = (candidate: RecordPickerCandidate) =>
     setList((rows) => [
@@ -301,9 +337,19 @@ export function DealProductsEditor({
       title={t("deal.products.editTitle")}
       confirmLabel={t("deal.products.save")}
       pending={replace.isPending}
-      error={replace.error ? problemMessageOf(replace.error, t) : null}
-      onConfirm={() => replace.mutate(list)}
+      error={
+        replace.error && !reseeded ? problemMessageOf(replace.error, t) : null
+      }
+      onConfirm={() => {
+        setReseeded(false);
+        replace.mutate({ allocations: list, expectedTag: read.tag });
+      }}
     >
+      {reseeded && (
+        <p className="t-caption" role="status">
+          {t("deal.products.changedWhileEditing")}
+        </p>
+      )}
       <p className="t-body">
         {fromOffer
           ? t("deal.products.replacesOffer")

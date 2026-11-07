@@ -171,6 +171,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.work.projects": "Dự án",
   "users.work.alerts": "Cảnh báo đang mở",
   "users.work.tasks": "Nhiệm vụ",
+  "users.work.lists": "Danh sách",
+  "privacy.proofReference": "Mã yêu cầu",
+  "privacy.proofAnswered": "Ngày trả lời",
+  "privacy.proofKeptUntil": "Giữ bằng chứng đến",
+  "privacy.proofCompletedBy": "Hoàn tất bởi",
+  "privacy.proofAutomated": "Quy trình tự động",
+  "privacy.proofErasureChanges": "Thay đổi xóa đã ghi nhận",
+  "privacy.proofPartialCounts":
+    "Một phần công việc xóa không thể đếm được. Bản xuất dữ liệu có bảng phân tích đã ghi nhận.",
+  "privacy.proofExportCounts":
+    "Bản xuất dữ liệu có bảng phân tích đã ghi nhận.",
+  "privacy.proofUnknown": "Chưa ghi nhận",
+  "analytics.q.conversionFrame":
+    "Tiền tệ cơ sở: {currency}. Tỷ giá tại ngày {date}.",
 
   "homeRepair.taskPermission":
     "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",
@@ -1300,6 +1314,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.objective": "Mục tiêu chính",
   "reporting.targetValue": "Chỉ tiêu",
   "reporting.targetHint": "Để trống nếu chỉ theo dõi.",
+  "reporting.initiativeOwner": "Người chịu trách nhiệm",
   "reporting.deadline": "Hạn",
   "reporting.setup.suggestReport": "Gợi ý bộ lọc và biểu đồ",
   "reporting.setup.suggestInitiative": "Gợi ý mục tiêu",
@@ -1346,6 +1361,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.addRecord": "Thêm",
   "reporting.searchRecords": "Tìm bản ghi",
   "reporting.noMatchingRecords": "Không có bản ghi khớp",
+  "reporting.typeToFindRecord": "Nhập tên để tìm",
   "reporting.pickExplains":
     "Chọn một deal không ghi danh mọi liên hệ ở công ty đó. Lead giữ nguyên lịch sử chuyển đổi.",
   "reporting.memberCounts":
@@ -2580,6 +2596,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.meeting_documents_added":
     "Ghi chú cuộc họp được liên kết từ lịch",
   "history.field.guests_retired": "Khách bị lịch xóa",
+  "history.field.meeting_guests_removed": "Khách được trả về cuộc họp của họ",
   "history.field.guest_answers_changed":
     "Phản hồi của khách được cập nhật từ lịch",
   "history.field.guests_left_out": "Khách không được liệt kê",
@@ -2666,6 +2683,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_attribution": "Ghi công đối tác",
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
+  "history.field.product_id": "Sản phẩm",
   "history.field.about_deal": "Giao dịch liên quan",
   "history.field.qualifying_event": "Sự kiện đủ điều kiện",
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
@@ -4176,6 +4194,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.products.remove": "Xóa {name}",
   "deal.products.add": "Thêm sản phẩm",
   "deal.products.alreadyListed": "Đã có trong danh sách",
+  "deal.products.changedWhileEditing":
+    "Ai đó đã lưu sản phẩm của giao dịch này trong lúc bạn chỉnh sửa. Danh sách giờ hiển thị phiên bản của họ; hãy thực hiện lại thay đổi của bạn rồi lưu.",
   "deal.products.fromOffer": "Từ báo giá",
   "deal.products.setByHand": "Tự đặt",
   "deal.lines.empty":
@@ -4655,6 +4675,55 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.reason.verdict": "Giữ lại theo phân loại",
   "compose.reason.counterparty": "Giữ lại: thư với bên ngoài",
   "compose.reason.explicitlyConfidential": "Đã đánh dấu bảo mật",
+  "internalMail.authorizeHistory":
+    "Cho phép nhập lịch sử thư nội bộ riêng cho nguồn này",
+  "internalMail.historySince": "Thư lịch sử nhận từ ngày (UTC)",
+  "internalMail.historyApprovalNote":
+    "Việc cho phép này không bắt đầu nhập. Chủ hộp thư phải xem trước phạm vi và chủ động chọn nhập lịch sử thư nội bộ khi bắt đầu.",
+  "internalMail.needHistoryDate":
+    "Chọn ngày nhận sớm nhất cho từng nguồn được phép nhập lịch sử thư nội bộ.",
+  "internalMail.reauthorizeSource":
+    "Quyền hộp thư đã thay đổi. Lưu để đăng ký lại. Việc thu thập thư nội bộ vẫn dừng cho đến lúc đó.",
+  "internalMail.historyTitle": "Cho phép nhập lịch sử thư nội bộ",
+  "internalMail.historyAfter": "Thư nội bộ được phép nhận sau {date}",
+  "internalMail.historyFolders": "Thư mục nguồn nội bộ",
+  "internalMail.historyImportNote":
+    "Bắt đầu với tùy chọn này sẽ tạo một lần nhập mới. Ước tính của nhà cung cấp bao gồm toàn bộ cửa sổ hộp thư. Chỉ bổ sung thư nội bộ trong nguồn và khoảng ngày được phép, đến thời điểm bắt đầu nhập. Quy tắc loại trừ và quyền đọc cho người tham gia vẫn giữ nguyên.",
+  "internalMail.includeHistory":
+    "Bao gồm thư nội bộ được phép trong lần nhập lịch sử mới",
+  "internalMail.title": "Thư vận hành nội bộ",
+  "internalMail.scope":
+    "Lưu thư vận hành được chọn giữa đồng nghiệp. Ban đầu chỉ người tham gia được đọc. Người tham gia có thể chia sẻ từng thư với đồng nghiệp được chỉ định. Liên kết và việc chia sẻ chuỗi thư không mở rộng quyền đọc.",
+  "internalMail.authorization":
+    "Xác nhận quyền của tổ chức và thông báo cho nhân viên trước khi bật. Việc chọn nguồn chỉ dùng quyền hộp thư hiện có, không cấp thêm quyền tại nhà cung cấp.",
+  "internalMail.enable": "Bật thu thập thư vận hành nội bộ",
+  "internalMail.sources": "Kết nối hộp thư vận hành",
+  "internalMail.noSources": "Kết nối hộp thư trước khi chọn nguồn vận hành.",
+  "internalMail.unavailableSource": "Kết nối hộp thư không khả dụng",
+  "internalMail.needSource":
+    "Chọn ít nhất một kết nối hộp thư vận hành trước khi bật.",
+  "internalMail.disable":
+    "Tắt hoặc gỡ nguồn sẽ dừng thu thập thư nội bộ mới. Thư đã lưu vẫn giữ giới hạn người đọc và quy trình bảo vệ dữ liệu.",
+  "internalMail.future":
+    "Bắt đầu thu thập từ thư mới. Lịch sử thư nội bộ vẫn bị loại trừ trừ khi quản trị viên cho phép phạm vi ngày và chủ hộp thư chủ động chọn trong lần nhập riêng.",
+  "internalMail.allFolders": "Tất cả thư mục được phép",
+  "internalMail.selectedFolders": "Chỉ thư mục đã chọn",
+  "internalMail.chooseFolders": "Chọn thư mục",
+  "internalMail.folders": "Thư mục của kết nối này",
+  "internalMail.loadingFolders": "Đang tải thư mục hộp thư",
+  "internalMail.foldersUnsupported":
+    "Nhà cung cấp này không thể liệt kê thư mục. Bạn có thể chọn cả hộp thư theo các điều kiện loại trừ đã đặt.",
+  "internalMail.unavailableFolder": "Thư mục không khả dụng",
+  "internalMail.removeFolder": "Gỡ thư mục",
+  "internalMail.searchFolders": "Tìm thư mục",
+  "internalMail.noFolders": "Không có thư mục phù hợp",
+  "internalMail.done": "Xong",
+  "internalMail.partialFolders":
+    "Nhà cung cấp chỉ trả về một phần danh sách thư mục. Các lựa chọn hiện có vẫn được giữ.",
+  "internalMail.shareNote":
+    "Chỉ thay đổi người đọc được chỉ định cho thư này. Người tham gia vẫn có quyền đọc. Lưu lựa chọn mới sẽ thay thế danh sách người đọc được chỉ định trước đó.",
+  "compose.reason.internalOperational":
+    "Thư nội bộ: người tham gia và đồng nghiệp được chọn",
   "compose.reason.membersOnly": "Giữ lại: thư giữa đồng nghiệp",
   "compose.reason.noCounterparty": "Giữ lại: không có bên đối tác",
   "compose.audience": "Đổi phạm vi hiển thị",
@@ -5405,6 +5474,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có deal. Khi xác nhận lead này đủ điều kiện, có thể mở một deal.",
   "lead.rail.project.title": "Dự án",
   "lead.rail.project.empty": "Chưa có dự án.",
+  "lead.product": "Sản phẩm",
+  "lead.product.attach": "Chọn sản phẩm",
+  "lead.product.change": "Đổi sản phẩm",
+  "lead.product.clear": "Bỏ sản phẩm",
+  "lead.product.search": "Tìm sản phẩm",
+  "lead.product.loading": "Đang đọc sản phẩm…",
   "lead.rail.project.attach": "Gắn dự án",
   "lead.rail.project.change": "Đổi dự án",
   "lead.terminalReadOnly": "Lead này đã đóng và không thể thay đổi.",
@@ -6242,6 +6317,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bulk.doneCount_other": "Đã đánh dấu xong {count} việc cho bạn.",
 
   "deal.pendingApprovals": "Chờ duyệt",
+  "deal.approval.open": "Mở",
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
   "deal.offerNeedsCurrency":
@@ -7520,6 +7596,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email",
   "compose.threadLeave": "Email mới",
+  "compose.channelDraftUnavailable":
+    "Kênh này chưa hỗ trợ soạn bằng AI. Hãy viết câu trả lời bên dưới.",
   "compose.draftKept": "Đã giữ các chỉnh sửa. Soạn lại khi sẵn sàng.",
   "compose.threadFailed":
     "Không thể tải tin nhắn. Chọn Thử lại trong chuỗi thư.",
@@ -7932,6 +8010,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.emptyTeamBody": "Không ai trong {scope} sở hữu deal nào.",
   "analytics.deliveryCoversAll":
     "Các số liệu này bao gồm mọi dự án bạn đọc được.",
+  "analytics.wholeScopeForecast":
+    "Dự báo và kiểm tra không thuộc giao dịch áp dụng cho toàn bộ nhóm đã chọn, không phụ thuộc bộ lọc sản phẩm, quốc gia hay ngành.",
   "analytics.attention": "Cần chú ý",
   "analytics.board.rail": "Triển vọng và bước tiếp theo",
   "analytics.attentionNoOwner": "Chưa giao",
@@ -8257,7 +8337,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateRefresh":
     "Chọn Kiểm tra lại để đọc các thay đổi ngay, hoặc chờ lần chạy hằng đêm tiếp theo.",
   "review.freshnessUnknown":
-    "Chưa biết dữ liệu có thay đổi kể từ lần kiểm tra này hay không: từ khi Margince bắt đầu theo dõi thay đổi, chưa có lần kiểm tra nào đọc được mọi nguồn. Chọn Kiểm tra lại để chạy một lần.",
+    "Margince chưa xác nhận liệu dữ liệu có thay đổi kể từ lần kiểm tra này hay không. Chờ cập nhật hoặc chọn Kiểm tra lại để đọc dữ liệu hiện tại.",
   "review.allSourcesRead": "Đã kiểm tra mọi nguồn.",
   "review.source.mail": "hộp thư",
   "review.source.calendar": "lịch",
@@ -10171,6 +10251,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa rõ ngày nhận thông tin; nghĩa vụ có thể đã đến hạn.",
   "noticeDuty.observedOn": "Ghi nhận vào",
   "notice.source.more": "Liên hệ này còn nguồn khác cần xác minh.",
+  "notice.source.evidenceOnFile": "Bằng chứng đã có",
+  "notice.source.original": "Bản ghi nguồn ban đầu",
+  "notice.source.originalUnknown": "Bản ghi này chưa nêu rõ nguồn.",
+  "notice.source.happenedOn": "Ngày {date}",
+  "notice.source.recordedOn": "Ghi nhận ngày {date}",
+  "notice.source.describeEvidence": "Mô tả bằng chứng khác",
+  "notice.source.openRecord": "Xem bản ghi",
+  "notice.source.moreEvidence": "Xem thêm bằng chứng",
+  "notice.source.preview": "Trước khi xác nhận",
+  "notice.source.previewNone": "Nguồn này không tạo nghĩa vụ thông báo riêng.",
+  "notice.source.previewOwed": "Vẫn phải thông báo chậm nhất ngày {date}.",
+  "notice.source.previewLatest":
+    "Hạn thông báo muộn nhất là {date}. Chưa xác nhận ngày nhận thông tin.",
+  "notice.source.selectedHint":
+    "Bản ghi đã chọn được giữ làm bằng chứng. Có thể thêm lời giải thích nếu cần.",
   "notice.source.title": "Xem nguồn",
   "notice.source.explanation":
     "Nguồn chưa được xác nhận. Chưa xác định nghĩa vụ thông báo quyền riêng tư hay thời hạn pháp lý. Xác minh nguồn liên hệ trước khi gửi thông báo.",
@@ -10196,6 +10291,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ví dụ: email đầu tiên của họ, hoặc ai đã giới thiệu họ.",
   "notice.source.effect":
     "Khi lưu, hệ thống ghi lại thông tin của họ đến từ đâu. Nếu nguồn đó cần thông báo về quyền riêng tư, nghĩa vụ thông báo sẽ được mở cùng thời hạn. Việc lưu không gửi email và không thay đổi việc bạn có được gửi email cho họ hay không.",
+  "notice.source.metEffect":
+    "Khi lưu, hệ thống ghi lại cuộc gặp. Bạn được gửi email theo dõi cá nhân cho họ, nhưng không bao giờ gửi tiếp thị hay bản tin. Không cần gửi thông báo về quyền riêng tư: họ đã biết bạn là ai khi gặp mặt. Việc lưu không gửi email. Hãy nhập ngày gặp.",
   "notice.source.whyUnknown":
     "Không có ghi nhận nào cho biết thông tin của liên hệ này đến từ đâu.",
   "notice.source.whyUnconfirmed":
@@ -14090,6 +14187,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} việc cần làm đang mở",
   "users.handover.webhooks_one": "{count} đăng ký webhook",
   "users.handover.webhooks_other": "{count} đăng ký webhook",
+  "users.handover.lists_one": "{count} danh sách",
+  "users.handover.lists_other": "{count} danh sách",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
   "users.removeMfaConfirmTitle": "Gỡ đăng nhập hai bước của {name}?",
   "users.removeMfaConfirmBody":
@@ -15769,7 +15868,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.removeRule": "Gỡ quy tắc",
   "ownDomains.title": "Tên miền email của công ty",
   "ownDomains.sub":
-    "Các tên miền thuộc về công ty này. Thư giữa các đồng nghiệp không được lưu cho bất kỳ ai, kể cả bạn.",
+    "Các tên miền thuộc về công ty này. Thư giữa đồng nghiệp được bỏ qua, trừ khi nguồn thư đã được cho phép trong mục Thư nội bộ về công việc.",
   "ownDomains.curatedTitle": "Quản lý tại đây",
   "ownDomains.irreversible":
     "Thêm tên miền có hiệu lực từ thư tiếp theo; gỡ tên miền thì thu thập tiếp tục từ lúc đó. Thư đã bỏ qua trong thời gian tên miền được đăng ký sẽ không bao giờ được hộp thư nào đưa lại. Thư đã thu thập vẫn giữ nguyên.",
@@ -15913,6 +16012,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Địa chỉ https của chính sách quyền riêng tư. Thông báo liên kết tới đó.",
   "webForms.field.privacyNoticeUrlPlaceholder":
     "https://www.example.com/quyen-rieng-tu",
+  "webForms.field.product": "Sản phẩm",
+  "webForms.field.productHint":
+    "Mọi lead mới từ biểu mẫu này đều hỏi về sản phẩm này, và báo cáo sản phẩm tính lead ở đó. Lead đã có vẫn giữ nguyên sản phẩm hiện tại. Để trống nếu biểu mẫu không thuộc về một sản phẩm.",
+  "webForms.field.productClear": "Ghi nhận lead không có sản phẩm",
+  "webForms.field.productLoading": "Đang đọc sản phẩm…",
   "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
   "webForms.field.ownerHint":
     "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",
@@ -17509,7 +17613,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.classification": "Phân loại",
   "filters.field.company_country": "Quốc gia của công ty",
   "filters.field.company_industry": "Ngành của công ty",
-  "filters.field.product_id": "Sản phẩm",
   "filters.field.company_lifecycle": "Vòng đời của công ty",
   "filters.field.company_size_band": "Số nhân viên",
   "filters.field.country": "Mã quốc gia",
@@ -18313,6 +18416,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.noneAccessible": "Không có tin nhắn bạn mở được",
   "worklist.pane.company": "Công ty",
   "worklist.pane.role": "Vai trò",
+  "worklist.pane.conversation": "Chuỗi thư",
+  "worklist.pane.openEmail": "Mở email",
+  "worklist.pane.deal": "Deal",
   "worklist.why.title": "Vì sao việc này cần chú ý",
   "worklist.why.reasons": "Lý do",
   "worklist.why.consequence": "Nếu không làm gì",

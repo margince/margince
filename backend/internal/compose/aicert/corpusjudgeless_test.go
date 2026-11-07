@@ -225,6 +225,7 @@ func confidentialityProofs() map[string]judgelessProof {
 		"the_rent_on_the_owners_flat_is_not_a_supplier_relationship":               {"personal", "ordinary"},
 		"a_consumer_bank_alert_is_the_owners_own_money_not_the_companys":           {"personal", "security_incident"},
 		"a_termination_agreement_stays_private_whatever_the_attachment_note_says":  {"personnel", "ordinary"},
+		"a_salary_sheet_behind_an_invoice_note_stays_private":                      {"personnel", "ordinary"},
 		"an_unpatched_vulnerability_is_held_until_it_is_closed":                    {"security_incident", "ordinary"},
 	} {
 		proofs[name] = judgelessProof{
