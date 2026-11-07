@@ -361,26 +361,18 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 }
 
 // refuseUnreadableSource refuses a create that names a record the caller
-// cannot read.
+// cannot read. It sits at the two doors that assert the create right, because
+// capture and lead conversion share the creation path and never name a source.
 //
-// It sits at the two doors that assert the create right.
-//
-// Not in the shared creation path: a visibility probe there makes that
-// function read as this package's row resolution. Every writer through it is
-// then a write that resolved its row the wrong way.
-//
-// An activity is not an owner-scoped table, so the row half is the activity
-// content probe, the one every reader of a note or a mail passes. The live
-// probe refuses an id no row holds rather than storing a link to nothing.
-//
-// A caller without the activity read grant is refused as not found, as the
-// contract promises, so the answer never says that the record exists.
+// Both refusals are not found, as the contract promises, so neither says the
+// record exists. The row half is the activity content probe every note reader
+// passes, and the live probe refuses an id no row holds.
 func refuseUnreadableSource(ctx context.Context, tx pgx.Tx, source *ids.UUID) error {
 	if source == nil {
 		return nil
 	}
 	if !auth.ReadGranted(ctx, "activity") {
-		return auth.HideRow(ctx, "activity")
+		return apperrors.ErrNotFound
 	}
 	return auth.EnsureActivityContentVisibleLive(ctx, tx, *source)
 }

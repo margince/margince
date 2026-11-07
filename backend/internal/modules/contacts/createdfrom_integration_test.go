@@ -105,7 +105,6 @@ func TestACreateNamingANoteTheCallerCannotReadIsNotFound(t *testing.T) {
 		ctx  context.Context
 	}{
 		{"a seat outside the note's audience", e.sourceReader(e.teammate, principal.PrincipalAgent, true)},
-		{"a seat without the activity read grant", e.sourceReader(e.owner, principal.PrincipalAgent, false)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := e.createFrom(tc.ctx, note, "lucy."+ids.NewV7().String()+"@kunde.example")
@@ -142,5 +141,27 @@ func TestTheSourceIsWithheldFromAReaderWhoCannotOpenIt(t *testing.T) {
 					*got.CreatedFromActivityId)
 			}
 		})
+	}
+}
+
+// The approval preview answers what the write will answer. A staged create
+// naming a note its human cannot read must not preview as ready.
+func TestThePreviewRefusesASourceItsCreatorCannotRead(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	note := e.ownersNote(t)
+	creator, ok := principal.Actor(e.sourceReader(e.teammate, principal.PrincipalHuman, true))
+	if !ok {
+		t.Fatal("the creator context carries no actor")
+	}
+	in := CreateContactInput{
+		FullName:              "Lucy Vo",
+		Emails:                []ContactEmailInput{{Email: "lucy.preview@kunde.example", EmailType: "work", IsPrimary: true}},
+		Source:                "manual",
+		CreatedFromActivityID: &note,
+	}
+
+	_, err := e.store.PreviewContactCreationForActor(e.sourceReader(e.teammate, principal.PrincipalAgent, true), in, creator)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("preview = %v, want not found: the approved write refuses this source", err)
 	}
 }

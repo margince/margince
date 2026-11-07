@@ -10,17 +10,9 @@ import (
 )
 
 // A function rather than a var: the created-from projection is gated by the
-// reader's own activity audience, which needs the context and a placeholder.
-// The seat-name subselect was already built by a function.
-//
-// The projection is named.
-//
-// A bare subselect of `src.id` reaches the caller as a column called `id`.
-// The list's `ORDER BY "id"` is then ambiguous against the contact's own.
-//
-// The source reads null to a reader who may not open that record, rather than
-// refusing the contact. A bare id would say a record exists that the reader
-// cannot reach, which is the disclosure the audience exists to prevent.
+// reader's own activity grant and audience. Both need the context and a
+// placeholder. The projection is named: a bare `src.id` subselect reaches the
+// caller as `id`. The list's `ORDER BY "id"` is then ambiguous.
 func contactColumns(ctx context.Context, arg func(any) int) (string, error) {
 	source, err := createdFromSQL(ctx, arg)
 	if err != nil {
@@ -36,9 +28,9 @@ func contactColumns(ctx context.Context, arg func(any) int) (string, error) {
 	` + source + ` AS created_from_activity_id`, nil
 }
 
-// createdFromSQL is the source column a reader may see. The row half is the
-// reader's activity audience. The object half is the activity read grant: a
-// reader the activity reads refuse outright gets null, not the record's id.
+// createdFromSQL is the source column a reader may see. It reads null to a
+// reader without the activity read grant or outside the record's audience,
+// rather than refusing the contact. An id would say the record exists.
 func createdFromSQL(ctx context.Context, arg func(any) int) (string, error) {
 	if !auth.ReadGranted(ctx, "activity") {
 		return `NULL::uuid`, nil
