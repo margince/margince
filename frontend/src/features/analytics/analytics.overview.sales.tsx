@@ -230,7 +230,7 @@ function SalesReviewBody({
               dials={findingDials(doors)}
               emptyLabel=""
             />
-            <DecisionsPanel />
+            <DecisionsPanel review={selection} />
           </>
         }
       />

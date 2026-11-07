@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 228399,
+    "tool_catalog_bytes": 228820,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 58414,
+    "approx_wire_tokens_total": 58519,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 54940,
-      "input_schema_bytes": 113917,
+      "input_schema_bytes": 114338,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 168857
+      "description_plus_input_schema_bytes": 169278
     }
   },
   "tools": {
@@ -9205,6 +9205,10 @@
               "items": {},
               "type": "array"
             },
+            "country": {
+              "description": "sales_decisions only",
+              "type": "string"
+            },
             "cursor": {
               "description": "report_runs, sdr_handoffs, sdr_meetings, standard only",
               "type": "string"
@@ -9244,6 +9248,15 @@
             },
             "id": {
               "description": "question_card_answer, question_card_records, report_revisions, sales_initiative, sales_initiative_members, standard only",
+              "type": "string"
+            },
+            "industry": {
+              "description": "sales_decisions only",
+              "type": "string"
+            },
+            "initiative_id": {
+              "description": "sales_decisions only",
+              "format": "uuid",
               "type": "string"
             },
             "kind": {
@@ -9301,6 +9314,16 @@
                 "this_month",
                 "last_month"
               ],
+              "type": "string"
+            },
+            "pipeline_id": {
+              "description": "sales_decisions only",
+              "format": "uuid",
+              "type": "string"
+            },
+            "product_id": {
+              "description": "sales_decisions only",
+              "format": "uuid",
               "type": "string"
             },
             "query": {
@@ -9396,12 +9419,12 @@
               "type": "object"
             },
             "scope_id": {
-              "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+              "description": "company_coverage, sales_decisions, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
               "format": "uuid",
               "type": "string"
             },
             "scope_kind": {
-              "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+              "description": "company_coverage, sales_decisions, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
               "enum": [
                 "managed_teams",
                 "owner",
