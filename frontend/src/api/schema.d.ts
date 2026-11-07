@@ -33356,9 +33356,9 @@ export interface components {
             linked_deal_id?: string | null;
             /** @description The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it. */
             participants: components["schemas"]["Company360MeetingParticipant"][];
-            /** @description The attendees who are not contacts: colleagues, and addresses Margince knows no contact for. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too. */
+            /** @description The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too. */
             other_participants?: components["schemas"]["MeetingOtherParticipant"][];
-            /** @description How many more attendees there are than the eight named. Absent when every attendee is named. */
+            /** @description How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named. */
             participants_more?: number;
         };
         /** @description One attendee of the next meeting, named only when the caller may read them. */
@@ -34117,9 +34117,9 @@ export interface components {
                 contact_id: string;
                 full_name: string;
             }[];
-            /** @description The attendees who are not contacts: colleagues, and addresses Margince knows no contact for, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too. */
+            /** @description The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too. */
             other_participants?: components["schemas"]["MeetingOtherParticipant"][];
-            /** @description How many more attendees there are than the eight named. Absent when every attendee is named. */
+            /** @description How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named. */
             participants_more?: number;
         };
         /**
