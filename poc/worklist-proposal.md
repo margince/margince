@@ -176,8 +176,8 @@ same data and server (2 CPUs, warm, 8 years of mail, open cases):
 
 ```
  finding                                  on main 9e610a09                          holds
- a read takes a second connection (B8)    a pool of one connection still hangs,     yes
-                                          at the installation lookup (4.1)
+ a read takes a second connection (B8)    a pool of one connection still hangs      yes
+                                          (4.1)
  a seat's mail list reads its whole       72,632 rows, 38–78 ms; address + time:   yes
    history (B2)                           1,033 rows, 10 ms
  one captured mail ends every kept        +1 per captured mail; everyday edits 0,   yes
@@ -480,14 +480,10 @@ read today does not hold it on every path.
   the snapshot ends. Joining it to the snapshot was tried and refused: two
   reads by one reader then fail with "could not serialize access".
 - The paths found and the measurements are with the owners.
-- On `main` `9e610a09` the test still hangs, at the installation lookup
-  (`modules/identity/installation.go`, `InstallationWorkspace`). It keeps its
-  answer once found, so only the first read after a process starts takes a
-  second connection; a burst right after a deploy is that case.
 
 Tested in a temporary patch: the walk freeze runs inside the snapshot under
 its own savepoint (`degradable`), so a failed freeze still costs only the next
-page, and the installation lookup joins the snapshot. Then:
+page, and the other paths found join the snapshot. Then:
 
 ```
  every Home read, mine and team, pages 1 and 2, on a pool of one connection   all pass
@@ -1426,7 +1422,7 @@ A third review checked every code claim against `main` `9e610a09`, and most
 held. Its corrections are taken in:
 
 - what Home shows, and the four required lanes (2.1);
-- plan reuse that `main` already has (4.5), and the installation lookup (4.1);
+- plan reuse that `main` already has (4.5), and the one-connection test (4.1);
 - the read-only base currency call (4.9);
 - the catalog's 30 kinds and the functions it mirrors (4.10);
 - the indexes for deals at risk (4.4).
