@@ -40,6 +40,10 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		order = requestPriorityOrder
 	}
 
+	columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 	// Collected rather than streamed: AttachLinks runs a second query on
 	// this same transaction, and the plan mode is restored on it, so both need
 	// the cursor already closed.
@@ -50,7 +54,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var paged []pagedRow
 	err = perBind(ctx, in.WaitingReplyAsOf != nil, func(ctx context.Context) error {
 		rows, err := tx.Query(ctx,
-			`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
+			`SELECT `+columns+sorted.CursorKeySuffix()+
 				` FROM activity a WHERE `+strings.Join(where, " AND ")+
 				order+sprintf(" LIMIT %d", limit+1),
 			waitingListArgs(in, args)...)
@@ -92,14 +96,18 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		}
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
-	if err := finishActivityList(ctx, tx, in.Columns, activities, listClock(in)); err != nil {
+	if err := FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in)); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	return activities, page, nil
 }
 
-func finishActivityList(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity, asOf time.Time) error {
-	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
+// FinishActivityRows fills rows read through ActivityProjection and
+// ScanActivityRow with the rest a row off /activities carries. That is mail
+// facts, links, creators, affordances and custom-field values. A reader outside
+// this module that scans rows itself calls it, so its rows answer the same.
+func FinishActivityRows(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity, asOf time.Time) error {
+	if err := WithEmailRowFacts(ctx, tx, activities, asOf); err != nil {
 		return err
 	}
 	if err := AttachLinks(ctx, tx, activities); err != nil {

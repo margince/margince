@@ -409,6 +409,28 @@ func TestARoutedListCarriesEveryTargetsWords(t *testing.T) {
 	}
 }
 
+// A target that takes any word leaves the routed argument open, so its call is
+// not refused for a word the other target's list lacks.
+func TestARoutedArgumentIsOpenWhenOneTargetTakesAnyWord(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"provider":{"type":"string","enum":["gcal","graphcal"]}}`))
+	r.Register(shapedTarget("fake_b", `{"provider":{"type":"string"}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Type string   `json:"type"`
+			Enum []string `json:"enum"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if provider := schema.Properties["provider"]; provider.Enum != nil || provider.Type != "string" {
+		t.Errorf("provider is advertised as %+v, want any string", provider)
+	}
+}
+
 // Two targets bounding one argument differently advertise the loosest bound, so
 // a value one target takes is never refused by a client holding the schema.
 func TestARoutedArgumentCarriesTheLoosestBound(t *testing.T) {
@@ -554,9 +576,9 @@ func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testi
 	}
 }
 
-// A router names only its actions that run at once and cannot be undone. A
+// A router names only its actions that run at once and need the user's yes. A
 // client asks the user before those, and not before the others.
-func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
+func TestARouterAsksTheUserFirstOnlyForItsAskFirstActions(t *testing.T) {
 	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
 	archive := targetSpec("fake_archive", principal.ScopeWrite, mcp.TierAutoExecute)
 	archive.AskUserFirst = true
@@ -575,13 +597,13 @@ func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
 		t.Fatal("the router is not registered")
 	}
 	described := DescribeForClient(spec)
-	if !strings.Contains(described, "the action archive cannot be undone") {
+	if !strings.Contains(described, "for the action archive") {
 		t.Errorf("the router does not ask first for archive: %s", described)
 	}
 	if strings.Contains(described, "the actions ") {
 		t.Errorf("the router asks first for rename, which can be undone: %s", described)
 	}
-	if strings.Contains(described, "merge cannot be undone") {
+	if strings.Contains(described, "merge,") {
 		t.Errorf("the router asks first for merge, which a human already approves: %s", described)
 	}
 }

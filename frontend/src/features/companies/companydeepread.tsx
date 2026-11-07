@@ -17,7 +17,6 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { deferralDetail } from "../../lib/deferral-detail";
@@ -29,6 +28,7 @@ import {
   type ConfiguredStopReason,
   stopIsConfigured,
 } from "../../lib/sitereadkind";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 
@@ -174,6 +174,7 @@ function statusLabelOf(report: SiteReadReport): MessageKey {
 }
 
 function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   if (report.status !== "deferred") {
@@ -186,7 +187,7 @@ function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
         <>
           {" "}
           {t("deepread.resumesAt", {
-            when: formatDateTime(report.next_attempt_at, locale, viewerZone()),
+            when: formatDateTime(report.next_attempt_at, locale, readerZone),
           })}
         </>
       )}

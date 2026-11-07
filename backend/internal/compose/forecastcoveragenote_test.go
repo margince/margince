@@ -49,7 +49,7 @@ func coverageNoteReadings(t *testing.T, priced, unpriced int) (forecasting.Perio
 	for i := range priced + unpriced {
 		deal := forecasting.Deal{
 			ID: "d" + string(rune('a'+i)), Owner: "u1", Currency: "EUR",
-			ExpectedCloseDate: &closeOn, Category: forecasting.CategoryCommit,
+			ExpectedCloseDate: &closeOn, WinProbability: 90, Source: forecasting.SourceStage,
 			StageProbability: 50,
 		}
 		if i < priced {
@@ -58,7 +58,7 @@ func coverageNoteReadings(t *testing.T, priced, unpriced int) (forecasting.Perio
 		deals = append(deals, deal)
 	}
 
-	readings, err := forecasting.Compute(period, asOf, deals)
+	readings, err := forecasting.Compute(period, deals, forecasting.Rules{LikelyThreshold: 90})
 	if err != nil {
 		t.Fatalf("computing the readings: %v", err)
 	}

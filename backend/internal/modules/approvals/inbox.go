@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -455,7 +456,7 @@ func (s *Service) Get(ctx context.Context, id ids.ApprovalID) (row, error) {
 			return err
 		}
 		if !visible {
-			return apperrors.ErrNotFound
+			return auth.HideRow(ctx, "approval")
 		}
 		return nil
 	})

@@ -23,12 +23,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// twoDoors is one workspace with a signed-in admin and one passport. REST calls
-// present the passport as a bearer, and the MCP client calls tools with it.
+// twoDoors is apptest.TwoDoors with this package's assertions as its methods,
+// which a type declared in apptest cannot take.
 type twoDoors struct {
 	e      *apptest.AppEnv
 	bearer map[string]string
@@ -40,19 +39,10 @@ func newTwoDoors(t *testing.T, slug string, scopes ...string) *twoDoors {
 	return newTwoDoorsWith(t, slug, nil, scopes...)
 }
 
-// newTwoDoorsWith is newTwoDoors with more composition options, for a feature
-// an operator switches on.
 func newTwoDoorsWith(t *testing.T, slug string, more []compose.Option, scopes ...string) *twoDoors {
 	t.Helper()
-	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
-		return append([]compose.Option{
-			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
-			compose.WithBlobstore(blobstore.NewMemory()),
-		}, more...)
-	})
-	apptest.BootstrapWorkspaceSession(t, e, "Two Doors", slug+"@fable.test", "Admin")
-	bearer, _ := passportWithID(t, e, slug+" agent", scopes...)
-	return &twoDoors{e: e, bearer: bearer, mcp: apptest.NewMCPClient(e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))}
+	d := apptest.SetupTwoDoors(t, slug, more, scopes...)
+	return &twoDoors{e: d.E, bearer: d.Bearer, mcp: d.MCP}
 }
 
 // rest answers a route's body as the passport, failing on anything but 200.

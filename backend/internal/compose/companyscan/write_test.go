@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -214,5 +215,43 @@ func TestTheFingerprintFollowsTheInput(t *testing.T) {
 	d, _ := Fingerprint(in, "routing-2", "en")
 	if d == a {
 		t.Error("re-pointing the lane did not move the fingerprint")
+	}
+}
+
+func TestTheScanCannotAssignAColleaguesPromiseToItsReader(t *testing.T) {
+	for _, outcome := range []string{"", "promiser_not_assignable", "watched", "task_written", "proposed", "historical_without_current_deadline"} {
+		t.Run(outcome, func(t *testing.T) {
+			in, message := scanInput()
+			message.Direction, message.Text = "outbound", "Robin will run the demo next Thursday for the customer."
+			if outcome != "" {
+				message.Commitments = []crmcontracts.CommitmentAdmission{{Outcome: outcome, Summary: "Robin will run the demo"}}
+			}
+			in.Messages = []MessageIn{message}
+			raw := finding(message, message.Text)
+			raw["kind"], raw["action"] = "commitment_unmet", "add_task"
+			kept, refused, err := ParseFindings(reply(raw), ids.New[ids.CompanyKind](), in, "en")
+			if err != nil || len(kept) != 0 || len(refused) != 1 {
+				t.Fatalf("kept %+v, refused %v, err %v", kept, refused, err)
+			}
+		})
+	}
+}
+
+func TestAChaseFindingCannotAssignThePromisersWork(t *testing.T) {
+	in, message := scanInput()
+	raw := finding(message, nudgeQuote)
+	raw["action"] = "add_task"
+	kept, refused, err := ParseFindings(reply(raw), ids.New[ids.CompanyKind](), in, "en")
+	if err != nil || len(kept) != 1 || len(refused) != 0 {
+		t.Fatalf("kept %v, refused %v, err %v", kept, refused, err)
+	}
+	if kept[0].Action != nil {
+		t.Fatal("a chase about another colleague’s work creates a task for the reader")
+	}
+	by := crmcontracts.WrittenByModel
+	stored := []crmcontracts.Company360Suggestion{{WrittenBy: &by, Action: company360.NewSuggestionAction(crmcontracts.Company360SuggestionActionKindAddTask)}, {Action: company360.NewSuggestionAction(crmcontracts.Company360SuggestionActionKindAddTask)}}
+	stripModelTaskActions(stored)
+	if stored[0].Action != nil || stored[1].Action == nil {
+		t.Fatal("stored model tasks survive or canonical advice lost its action")
 	}
 }

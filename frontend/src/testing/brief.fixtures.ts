@@ -328,6 +328,24 @@ export const narratedWeek: WeeklyReview = {
   pipeline: weeklyPipeline,
   narrative: "Weber signed on Thursday; two promises slipped into this week.",
   narrated_at: "2026-07-06T06:01:00Z",
+  // Thursday is the busiest and the meetings sum to counts.meetings_held.
+  // Saturday's one email puts a weekend day on the chart.
+  daily_activity: (
+    [
+      ["2026-06-29", 14, 3, 1],
+      ["2026-06-30", 18, 4, 2],
+      ["2026-07-01", 9, 2, 0],
+      ["2026-07-02", 22, 5, 2],
+      ["2026-07-03", 11, 1, 0],
+      ["2026-07-04", 1, 0, 0],
+      ["2026-07-05", 0, 0, 0],
+    ] as const
+  ).map(([day, emails_sent, calls_logged, meetings_held]) => ({
+    day,
+    emails_sent,
+    calls_logged,
+    meetings_held,
+  })),
   prior: {
     local_week_start: PRIOR_WEEK_START,
     // Deliberately uneven against the week above: one figure up, one down and
@@ -380,8 +398,7 @@ export const weeklyOutlook: NonNullable<WeeklyReview["outlook"]> = [
     period_end: "2026-07-05",
     base_currency: "EUR",
     won_minor: 96_500_00,
-    commit_minor: 42_000_00,
-    best_case_minor: 78_000_00,
+    likely_minor: 42_000_00,
     weighted_minor: 55_400_00,
     movement: [],
   },
@@ -391,8 +408,7 @@ export const weeklyOutlook: NonNullable<WeeklyReview["outlook"]> = [
     period_end: "2026-07-31",
     base_currency: "EUR",
     won_minor: 96_500_00,
-    commit_minor: 214_000_00,
-    best_case_minor: 356_000_00,
+    likely_minor: 214_000_00,
     weighted_minor: 248_200_00,
     movement: [],
   },
@@ -402,12 +418,11 @@ export const weeklyOutlook: NonNullable<WeeklyReview["outlook"]> = [
     period_end: "2026-09-30",
     base_currency: "EUR",
     won_minor: 96_500_00,
-    commit_minor: 512_000_00,
-    best_case_minor: 940_000_00,
+    likely_minor: 512_000_00,
     weighted_minor: 604_500_00,
     opening_landing_minor: 572_000_00,
     closing_landing_minor: 604_500_00,
-    forward_measure: "commit_evidence",
+    forward_measure: "likely",
     // The bars sum to the move between the two landings, because a bridge that
     // does not reconcile draws its own warning.
     movement: [

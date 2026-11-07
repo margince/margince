@@ -53,6 +53,9 @@ type Service struct {
 	// category vocabulary from. Nil where no adapter is compiled in.
 	providers    providerDescriptors
 	mailCoverage mailcoverage.Reader
+	// activities reads the activity custom-field catalog. Nil leaves the
+	// timeline rows without their custom-field values.
+	activities *activities.Store
 }
 
 // NewService binds the composite read to its module stores. now is the
@@ -87,6 +90,22 @@ func (s *Service) WithProviders(reg providerDescriptors) *Service {
 	return s
 }
 
+// WithActivityFields lets the timeline sections carry the activities' custom
+// field values.
+func (s *Service) WithActivityFields(store *activities.Store) *Service {
+	s.activities = store
+	return s
+}
+
+// activityColumns reads the timeline's custom-field columns. The catalog opens
+// a connection of its own, so this runs before the page's transaction.
+func (s *Service) activityColumns(ctx context.Context) (activities.CustomColumns, error) {
+	if s.activities == nil {
+		return activities.CustomColumns{}, nil
+	}
+	return s.activities.ActiveActivityColumns(ctx)
+}
+
 // providerDescriptors is the slice of the adapter registry this package
 // needs. Narrowed to one method so contact360 does not depend on the
 // integrations module for a read that only wants a category list.
@@ -112,6 +131,9 @@ type AssembleOptions struct {
 	// what the page wants. A reader with its own clock, the quiet lane, passes
 	// that clock so its window and its touches agree.
 	AsOf time.Time
+	// activityColumns are the activity custom fields the timeline rows carry,
+	// read above the page's transaction.
+	activityColumns activities.CustomColumns
 }
 
 // Assemble keeps denied sections distinct from empty records.
@@ -141,6 +163,9 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 	// sections have for as long as it runs.
 	active, err := s.contacts.ActiveContactColumns(ctx)
 	if err != nil {
+		return crmcontracts.Contact360{}, err
+	}
+	if opts.activityColumns, err = s.activityColumns(ctx); err != nil {
 		return crmcontracts.Contact360{}, err
 	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {

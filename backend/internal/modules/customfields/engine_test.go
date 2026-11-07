@@ -379,3 +379,37 @@ func hasFieldError(errs []FieldError, field, code string) bool {
 	}
 	return false
 }
+
+func TestValidateNarrowsOnlyAnActivityFieldToKnownKinds(t *testing.T) {
+	cases := []struct {
+		name   string
+		object string
+		kinds  []string
+		code   string
+	}{
+		{"an activity field may name kinds", "activity", []string{"meeting", "call"}, ""},
+		{"no kinds is every kind", "deal", nil, ""},
+		{"a deal field has no kind", "deal", []string{"meeting"}, codeKindsNotActivity},
+		{"a kind outside the list", "activity", []string{"visit"}, codeUnsupportedActivityKind},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			errs := Validate(FieldSpec{Object: tc.object, Label: "Visit report", Type: TypeText, Source: "manual", ActivityKinds: tc.kinds})
+			if tc.code == "" && len(errs) != 0 {
+				t.Fatalf("want no refusal, got %+v", errs)
+			}
+			if tc.code != "" && !hasFieldError(errs, fieldKinds, tc.code) {
+				t.Fatalf("want activity_kinds/%s, got %+v", tc.code, errs)
+			}
+		})
+	}
+}
+
+func TestActivityKindsAreStoredSortedOnceAndNullForEveryKind(t *testing.T) {
+	if got := storedKinds([]string{}); got != nil {
+		t.Fatalf("no kinds must store NULL, got %v", got)
+	}
+	if got := storedKinds([]string{"meeting", "call", "meeting"}); strings.Join(got, ",") != "call,meeting" {
+		t.Fatalf("kinds must store sorted and once, got %v", got)
+	}
+}

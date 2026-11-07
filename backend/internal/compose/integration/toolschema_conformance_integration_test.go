@@ -151,9 +151,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"list_colleagues", `{"q":"nothing here matches this"}`},
 		// A record's files, read through each tab's own library: empty here, which is the
 		// answer whose list must stay an array.
-		{"list_documents", `{"entity_type":"company","entity_id":"` + company.String() + `"}`},
-		{"list_documents", `{"entity_type":"deal","entity_id":"` + deal.String() + `"}`},
-		{"list_documents", `{"entity_type":"contact","entity_id":"` + contact.String() + `","limit":5}`},
+		{"list_record_documents", `{"entity_type":"company","entity_id":"` + company.String() + `"}`},
+		{"list_record_documents", `{"entity_type":"deal","entity_id":"` + deal.String() + `"}`},
+		{"list_record_documents", `{"entity_type":"contact","entity_id":"` + contact.String() + `","limit":5}`},
 
 		// An enumeration, narrowed and unnarrowed. The narrowed one is the
 		// answer worth holding to the shape: a filter that reached no SQL still
@@ -306,8 +306,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// is the shape of nothing else on this surface — `update_tag` answers a
 		// `Tag` — so a waiver here leaves the one answer where `0` and absent
 		// are the same JSON unproven against a live handler.
-		{"merge_tags", `{"tag_id":"` + foldable.String() +
-			`","into_tag_id":"` + tag.String() + `"}`},
+		{"merge_tags", `{"tag_id":"` + foldable.String() + `","into_tag_id":"` + tag.String() + `"}`},
 		// The forecast: what a period is expected to close, the difference
 		// between two frozen states of it, what the inputs were checked
 		// against, what they still need, and how current the sources are. Each
@@ -327,13 +326,14 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// the same for a document whose blocks carry figures and one whose do
 		// not. Both tools take the read scope and neither stages anything.
 		{"describe_report_blocks", `{}`},
+		{"describe_views", `{}`},
 		{"compose_analytics_report", `{"blocks":[{"kind":"title","text":"Pipeline this quarter"}]}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
 		{"decide_approval", `{"staged_action_id":"` + waiting.String() + `","decision":"reject"}`},
 	}
-	calls = slices.Concat(calls, partsAndRetirement(ctx, t, registry, company), readinessOfABookedMeeting(ctx, t, registry))
+	calls = slices.Concat(calls, routerAnswers(), partsAndRetirement(ctx, t, registry, company), readinessOfABookedMeeting(ctx, t, registry))
 	assertEveryRegisteredToolIsAccountedFor(t, registry, calls)
 
 	for _, call := range calls {
@@ -433,7 +433,9 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt (choicecards_mcp_integration_test.go) calls it through the served registry and holds its answer to its schema, which this sweep's census cannot read from here",
 	"set_up_partner": "waits for a human even when a passport acts as its user, so it always answers with a staged approval; " +
 		"TestAnApprovedAssistantSetUpStartsAProgramWithNoTier (partnersetuptoolroutes_integration_test.go) drives it through approval and the approved retry",
-	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
+	"invite_meeting": "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
+	"check_client": "offered only to an admin's passport while an installation switch is on, and this seat is neither; " +
+		"TestEveryClientCheckAnswerKeepsItsAdvertisedSchema (mcp_client_check_integration_test.go) holds its answers to its schema over /mcp",
 	"send_email":           "needs an outbound mail provider",
 	"send_company_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",
 	"send_message":         "needs an outbound channel provider",
@@ -548,6 +550,16 @@ func stageOneProposal(ctx context.Context, t *testing.T, e *Env, deal ids.UUID) 
 // from it, and an absent tool is indistinguishable from a passing one. So the
 // census is derived from the REGISTRY — every spec is either invoked below or
 // named as unreachable with its reason, and nothing may be both.
+// routerAnswers calls a router with a view by its own name, because a client
+// checks the answer against the one result schema that router publishes.
+func routerAnswers() []struct{ tool, args string } {
+	return []struct{ tool, args string }{
+		{"describe_router_actions", `{"router":"change_access"}`},
+		{"read_forecast", `{"view":"readings","period":"quarter"}`},
+		{"read_forecast", `{"view":"readings","period":"quarter","contributions":true}`},
+	}
+}
+
 func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Registry, calls []struct{ tool, args string }) {
 	t.Helper()
 	// create_record is exercised by the fixture setup rather than by the table:
@@ -557,6 +569,12 @@ func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Regi
 	invoked := map[string]bool{"create_record": true, "create_tag": true}
 	for _, call := range calls {
 		invoked[call.tool] = true
+	}
+	// A route verb answers its route's own document, and a client only sees it
+	// through a router. A router publishes a result schema only if it has a view,
+	// and withRouteActions refuses a router with a view.
+	for _, verb := range compose.RouteVerbs() {
+		invoked[verb.Verb] = true
 	}
 	// A router answers as the target it picks, so it is held here when each of
 	// its targets is invoked or excused.

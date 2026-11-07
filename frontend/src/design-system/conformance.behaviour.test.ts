@@ -289,9 +289,9 @@ describe("focus", () => {
       // than a border, so accepting a drag does not resize the drop target.
       // One marks a refused field on the sign-in surface, which is a
       // different fact from where the keyboard is.
+      "src/components/auth-core.css: outline: 2px solid var(--danger)",
       "src/design-system/composed.css: outline: 2px dashed var(--accent)",
       "src/features/onboarding/onboarding-conversation/conversation.css: outline: 2px dashed var(--aiMed)",
-      "src/features/sign-in/auth.css: outline: 2px solid var(--danger)",
     ]);
   });
 

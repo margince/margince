@@ -20,9 +20,9 @@ import (
 // RecordReceipts stores this pass's viability answer for every deal it walked,
 // eligible ones included, replacing each deal's previous receipt.
 //
-// A deal with no assessment gets an unknown receipt rather than none. The
-// qualified forecast must tell "checked and could not judge" from "checked and
-// fine", and absence would read as neither.
+// A deal with no assessment gets an unknown receipt rather than none. Its
+// fingerprint stays empty and matches no computed one, so the freshness check
+// reads any change to its activities as moved.
 //
 // The run's own audit row covers these, as it covers the findings. A receipt
 // per deal in the audit log would bury the night's one verdict.

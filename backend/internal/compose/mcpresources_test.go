@@ -196,6 +196,7 @@ func TestARoleWithNoViewProviderComposesTheRestAndServesIt(t *testing.T) {
 		agents.RecordFieldsURI,
 		agents.CapabilitiesURI,
 		agents.ReportVocabularyURI,
+		agents.ReadViewsURI,
 		agents.ReportBlocksURI,
 		AnalyticsSchemaURI,
 	}

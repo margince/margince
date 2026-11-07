@@ -24,8 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// backfillPageSize bounds one BackfillPage call; the engine commits cursor
-// and counters between pages, so this is also the resume granularity.
+// backfillPageSize bounds one provider listing; checkpoints retain its remaining ids.
 const backfillPageSize = 100
 
 var _ connector.Backfiller = (*Connector)(nil)
@@ -45,7 +44,7 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillEstimate{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return connector.BackfillEstimate{}, err
 	}
@@ -69,28 +68,30 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillPageResult{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	gate := &rateGate{}
-	type listing struct {
-		ids  []string
-		next string
-	}
-	page, err := rateLimited(ctx, gate, func() (listing, error) {
-		ids, next, err := c.api.ListAfter(ctx, access, afterQuery(after), pageToken, backfillPageSize)
-		return listing{ids: ids, next: next}, err
-	})
+	page, err := c.listHistoryPage(ctx, access, afterQuery(after), pageToken, gate)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	w := &pageWalk{
 		c: c, ctx: ctx, access: access, owner: st.Owner, sink: sink, gate: gate,
-		ids: page.ids, progress: connector.BackfillProgressFrom(ctx),
-		res: connector.BackfillPageResult{NextToken: page.next, Scanned: len(page.ids)},
+		ids: page.IDs, settled: make(map[string]bool), progress: connector.BackfillProgressFrom(ctx),
+		res: connector.BackfillPageResult{NextToken: *page.Next, Scanned: len(page.IDs)},
+	}
+	if err := w.saveCheckpoint(ctx); err != nil {
+		return connector.BackfillPageResult{}, err
 	}
 	if err := w.walk(); err != nil {
+		if w.failedInRow == 0 {
+			err = errors.Join(err, w.saveCheckpoint(ctx))
+		}
+		return connector.BackfillPageResult{}, err
+	}
+	if err := w.saveCheckpoint(ctx); err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	return w.res, nil
@@ -105,12 +106,11 @@ type pageWalk struct {
 	sink     connector.Sink
 	gate     *rateGate
 	ids      []string
+	settled  map[string]bool
 	progress connector.BackfillReporter
 	res      connector.BackfillPageResult
-	// finished counts messages settled so far, in either pass. It is what the
-	// engine hears as scanned: a page that dies mid-walk is retried from the
-	// committed token, and reporting the whole listing up front would show
-	// progress the retry then repeats.
+
+	savedAt     int
 	finished    int
 	failedInRow int
 }
@@ -121,14 +121,14 @@ func (w *pageWalk) walk() error {
 	if judge, ok := w.sink.(connector.PreStoreJudge); ok {
 		if headers, ok := w.c.api.(HeaderFetcher); ok {
 			var err error
-			if keep, err = w.judgeHeaders(headers, judge); err != nil {
+			if keep, err = w.judgeWhereItPays(headers, judge); err != nil {
 				return err
 			}
 		}
 	}
 	return inOrder(w.ctx, len(keep),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getRaw(ctx, keep[i]) })
+			return w.getRaw(ctx, keep[i])
 		},
 		func(i int, msg Message, err error) error {
 			msgCtx, message := capturemetrics.BeginMessage(w.ctx)
@@ -142,7 +142,7 @@ func (w *pageWalk) walk() error {
 			}
 			captured, err := captureOne(msgCtx, msg, w.sink, w.c.bounces, w.owner)
 			return w.settleMessage(message, keep[i], captured, err)
-		})
+		}, w.c.rawMemory, rawFetchReservation)
 }
 
 // judgeHeaders reads every message's headers and answers the ids that still
@@ -150,14 +150,14 @@ func (w *pageWalk) walk() error {
 // spam, or kept out by the Sink's own gates — is counted here and not fetched.
 // Anything the headers cannot settle the same way the full message would is
 // downloaded in full and judged there, as before.
-func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJudge) ([]string, error) {
-	keep := make([]string, 0, len(w.ids))
-	err := inOrder(w.ctx, len(w.ids),
+func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJudge, ids []string) ([]string, error) {
+	keep := make([]string, 0, len(ids))
+	err := inOrder(w.ctx, len(ids),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getHeaders(ctx, headers, w.ids[i]) })
+			return w.getHeaders(ctx, headers, ids[i])
 		},
 		func(i int, msg Message, err error) error {
-			id := w.ids[i]
+			id := ids[i]
 			msgCtx, message := capturemetrics.BeginMessage(w.ctx)
 			if errors.Is(err, ErrMessageGone) {
 				return w.settleMessage(message, id, false, nil)
@@ -180,8 +180,39 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 				return nil //nolint:nilerr // the full path decides and reports for itself
 			}
 			return w.settleMessage(message, id, false, nil)
-		})
+		}, w.c.rawMemory, headerFetchReservation)
 	return keep, err
+}
+
+// headerSample is how many of a page's messages the header pass judges before
+// it decides whether judging the rest is worth the quota.
+const headerSample = 10
+
+// judgeWhereItPays runs the header pass on a sample of the page. It runs it on
+// the rest only when the sample dropped enough to pay for it. Each header read
+// costs quota whether or not it saves a download, and that quota bounds an
+// import. The same gates judge every message: one the header pass keeps is
+// judged in full when it is stored.
+func (w *pageWalk) judgeWhereItPays(headers HeaderFetcher, judge connector.PreStoreJudge) ([]string, error) {
+	sample := w.ids[:min(headerSample, len(w.ids))]
+	kept, err := w.judgeHeaders(headers, judge, sample)
+	if err != nil {
+		return nil, err
+	}
+	rest := w.ids[len(sample):]
+	if !headerPassPays(len(sample), len(sample)-len(kept)) {
+		return append(kept, rest...), nil
+	}
+	restKept, err := w.judgeHeaders(headers, judge, rest)
+	return append(kept, restKept...), err
+}
+
+// headerPassPays is whether reading headers for every message costs less quota
+// than the downloads its drops save, at the rate the sample dropped.
+func headerPassPays(judged, dropped int) bool {
+	header := getQuotaCost("/messages/id", url.Values{paramFormat: {formatMetadata}})
+	raw := getQuotaCost("/messages/id", url.Values{paramFormat: {formatRaw}})
+	return dropped*raw > judged*header
 }
 
 // dropFromHeaders answers whether a message can be skipped on its headers
@@ -203,6 +234,7 @@ func dropFromHeaders(ctx context.Context, fetched Message, judge connector.PreSt
 	}
 	rec := msg.AttestSentByOwner(fetched.FiledAsSent).ToRecord(connectorName, nil)
 	rec.Containers = labelContainers(fetched.Labels)
+	rec.ProviderReceivedAt = fetched.ReceivedAt
 	return judge.DropBeforeStore(ctx, rec)
 }
 
@@ -220,6 +252,11 @@ func (w *pageWalk) settle(id string, captured bool, err error) error {
 	case endsPage(w.ctx, err):
 		return err
 	default:
+		if w.failedInRow == 0 {
+			if checkpointErr := w.saveCheckpoint(w.ctx); checkpointErr != nil {
+				return checkpointErr
+			}
+		}
 		w.failedInRow++
 		if w.failedInRow >= failedInARowEndsPage {
 			return err
@@ -229,11 +266,25 @@ func (w *pageWalk) settle(id string, captured bool, err error) error {
 			"message", id, "error_class", "internal", "err", err)
 	}
 	w.finished++
+	w.settled[id] = true
+	if w.failedInRow == 0 && w.finished-w.savedAt >= checkpointEvery {
+		if err := w.saveCheckpoint(w.ctx); err != nil {
+			return err
+		}
+	}
 	// The live tally has no failed column: a failed message shows as skipped
 	// until the page commits, and the commit files it under failed.
 	w.progress.Observed(w.ctx, w.finished, w.res.Captured, w.res.Skipped+w.res.Failed)
 	return nil
 }
+
+// paramFormat names the message format a get asks for; the two this connector
+// sends are a header read and the full raw message.
+const (
+	paramFormat    = "format"
+	formatMetadata = "metadata"
+	formatRaw      = "RAW"
+)
 
 // paramMaxResults is Gmail's page-size query parameter.
 const paramMaxResults = "maxResults"
@@ -283,9 +334,9 @@ func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken, query string) 
 // ListAfter returns one page of message ids matching the query.
 func (a *httpAPI) ListAfter(ctx context.Context, accessToken, query, pageToken string, pageSize int) ([]string, string, error) {
 	var out struct {
-		Messages []struct {
+		Messages boundedJSONList[struct {
 			ID string `json:"id"`
-		} `json:"messages"`
+		}] `json:"messages"`
 		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google names this field
 	}
 	q := url.Values{"q": {query}, paramMaxResults: {strconv.Itoa(pageSize)}, includeSpamTrash: {"false"}}

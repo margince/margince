@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { formatAnalyticsMoney } from "../../format/format";
 import {
   installFetchStub,
   jsonResponse,
@@ -61,6 +62,7 @@ function renderPanel(
   view: "sales" | "prospecting" = "sales",
   supported = true,
   answer?: (body: unknown) => Response,
+  locale: "en" | "de" | "vi" = "en",
 ) {
   const onEvidence = vi.fn();
   const post = vi.fn(answer ?? (() => jsonResponse(assessment)));
@@ -78,7 +80,7 @@ function renderPanel(
     "POST /analytics/assessment": post,
   });
   render(
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <AssessmentPanel
         view={view}
         selection={reportingStoryEvaluation.selection}
@@ -93,6 +95,10 @@ function renderPanel(
 it("renders connected paragraphs without observation badges or a second summary", async () => {
   renderPanel(written);
   expect(await screen.findByText(sentence.text)).toBeVisible();
+  // The paragraphs after the first fold behind one door.
+  await userEvent
+    .setup({ delay: null })
+    .click(screen.getByText("Read the full outlook"));
   expect(screen.getByText(/^Review the relevant opportunities/)).toBeVisible();
   expect(screen.getByText("Written by Margince")).toBeVisible();
   expect(screen.queryByText("Observation")).toBeNull();
@@ -235,4 +241,107 @@ it("reloads the evaluation after a stale receipt without replaying its old POST"
   expect(receipts).toHaveLength(2);
   expect(receipts[0]).toContain('"first"');
   expect(receipts[1]).toContain('"second"');
+});
+
+it("formats raw legacy quantities in both report prose and supporting records", async () => {
+  const line = {
+    text: "Open business is 7432189.65 EUR.",
+    kind: "observation" as const,
+    cells: ["metric:open_pipeline"],
+  };
+  renderPanel({
+    ...written,
+    sentences: [line],
+    paragraphs: [[line]],
+    cells: [
+      {
+        id: "metric:open_pipeline",
+        label: "Open pipeline",
+        value: "7432189.65 EUR",
+      },
+    ],
+  });
+  expect(
+    await screen.findByText("Open business is ≈€7,432,190."),
+  ).toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("button", { name: "View supporting records" }),
+  );
+  expect(screen.getAllByText("Open business is ≈€7,432,190.")).toHaveLength(2);
+  expect(screen.queryByText(/7432189\.65/)).not.toBeInTheDocument();
+});
+
+it("omits legacy checking assurances while keeping measured actions", async () => {
+  const line = {
+    text: "I checked; no_target is recorded.",
+    kind: "observation" as const,
+    cells: ["metric:open_pipeline"],
+  };
+  renderPanel({ ...written, sentences: [line], paragraphs: [[line]] });
+  expect(
+    await screen.findByRole("button", { name: "Review open pipeline (4)" }),
+  ).toBeVisible();
+  expect(screen.queryByText(/I checked/)).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("region", { name: "Sales outlook" }),
+  ).not.toBeInTheDocument();
+});
+
+it.each(["de", "vi"] as const)(
+  "writes grouped whole amounts in %s prose and the decision with their sign",
+  async (locale) => {
+    const line = {
+      text: "Pipeline is 12.345 EUR.",
+      kind: "observation" as const,
+      cells: ["metric:open_pipeline"],
+    };
+    renderPanel(
+      {
+        ...written,
+        sentences: [line],
+        paragraphs: [[line]],
+        cells: [
+          {
+            id: "metric:open_pipeline",
+            label: "Open pipeline",
+            value: "12345 EUR",
+            display: "12.345 EUR",
+          },
+        ],
+        next_decision: {
+          deal_id: "00000000-0000-4000-8000-000000000011",
+          owner_id: "00000000-0000-4000-8000-000000000012",
+          text: "Review the 12.345 EUR pipeline.",
+        },
+      },
+      "sales",
+      true,
+      undefined,
+      locale,
+    );
+    // The money format spaces its sign with a no-break space.
+    const spaced = (text: string) => text.replace(/\s+/g, " ");
+    const amount = spaced(formatAnalyticsMoney(1_234_500, "EUR", locale));
+    expect(
+      await screen.findByText(`Pipeline is ${amount}.`, { normalizer: spaced }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(new RegExp(`Review the ${amount} pipeline`), {
+        normalizer: spaced,
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText(/EUR/)).toBeNull();
+  },
+);
+it("omits unsupported compact legacy prose", async () => {
+  const line = {
+    text: "Pipeline is €420k.",
+    kind: "observation" as const,
+    cells: ["metric:open_pipeline"],
+  };
+  renderPanel({ ...written, sentences: [line], paragraphs: [[line]] });
+  expect(
+    await screen.findByRole("button", { name: "Review open pipeline (4)" }),
+  ).toBeVisible();
+  expect(screen.queryByText(/€420k/)).toBeNull();
 });

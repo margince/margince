@@ -39,6 +39,11 @@ function stubDealBackend(
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    // The deal's products, in the list-and-tag shape the card reads. Without
+    // this the deal's own route answers it with the deal record.
+    if (/\/deals\/[^/]+\/products$/.test(new URL(url, "http://x").pathname)) {
+      return jsonResponse({ data: [], tag: "empty" });
+    }
     if (url.includes("/me")) {
       return jsonResponse(meFixture({ allow: REP_GRANTS }));
     }
@@ -403,6 +408,30 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Proposal" }));
 
     expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
+  });
+
+  it("says the probability the new stage set, in place of the bare move", async () => {
+    const d = deal({ id: "x", version: 7, stage_id: "s1" });
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([d], {
+        single: d,
+        probabilitySet: {
+          win_probability: 60,
+          stage_name: "Proposal",
+          note: "Probability set to 60% by the stage Proposal.",
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealScreen id="x" />);
+
+    await user.click(await screen.findByRole("button", { name: "Proposal" }));
+
+    expect(
+      await screen.findByText("Probability set to 60% by the stage Proposal"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Moved to Proposal")).toBeNull();
   });
 
   // The deal's tags ride in the context rail, beside the seats, the deal room

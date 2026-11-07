@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -75,7 +74,7 @@ func TestTheLedgerStatusSetMatchesItsConstraint(t *testing.T) {
 // ledgerStatusesFromCatalog reads the accepted values off the recorded CHECK.
 func ledgerStatusesFromCatalog() ([]string, error) {
 	path := filepath.Join(repoRoot, "backend", "migrations", "testdata", "head_catalog.txt")
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading the head catalog: %w", err)
 	}

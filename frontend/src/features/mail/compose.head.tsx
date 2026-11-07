@@ -5,14 +5,20 @@ import { Switch } from "../../design-system/switch";
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useThreadProject } from "../../lib/activityfiling";
 import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
 import { StaleThreadNotice } from "./compose.notices";
-import { colleagueMailboxesOf, useThreadProject } from "./composeanchor";
+import { colleagueMailboxesOf } from "./composeanchor";
 import { RelatedFiling } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { ComposeRecords } from "./composefiling";
-import { AddressBlock, SubjectRow, TransportRow } from "./composehead";
+import {
+  AddressBlock,
+  type AddressLine,
+  SubjectRow,
+  TransportRow,
+} from "./composehead";
 import { useReplyRecipient } from "./composereplyrecipient";
 import { SavedDraftNotices, type useSavedDraft } from "./composesaveddraft";
 import type { MissingField } from "./composesend";
@@ -104,6 +110,9 @@ function MailOnlyFields({
   onOpenCopies,
   recipients,
   onToEditing,
+  refused,
+  onRefuse,
+  addressEpoch,
   subject,
   onSubjectChange,
   rejectionInFlight,
@@ -125,6 +134,10 @@ function MailOnlyFields({
   recipients: readonly TokenSuggestion[];
   /** The reader has started typing a recipient, before any is committed. */
   onToEditing: () => void;
+  refused: Readonly<Record<AddressLine, readonly string[]>>;
+  onRefuse: (line: AddressLine, parts: readonly string[]) => void;
+  /** A new number each time the refusals are reset, which empties the boxes. */
+  addressEpoch: number;
   subject: string;
   onSubjectChange: (next: string) => void;
   /** The fields a pressed Send is still waiting for. Empty until it is pressed. */
@@ -140,6 +153,7 @@ function MailOnlyFields({
   return (
     <>
       <AddressBlock
+        key={addressEpoch}
         to={to}
         onToChange={onToChange}
         cc={cc}
@@ -150,6 +164,8 @@ function MailOnlyFields({
         onOpenCopies={onOpenCopies}
         suggestions={recipients}
         onToEditing={onToEditing}
+        refused={refused}
+        onRefuse={onRefuse}
         invalidTo={flagged.has("to")}
         needTo={t("compose.emptyRecipients")}
         deadRecipients={deadRecipients}
@@ -312,6 +328,9 @@ export function ComposeHead({
           onOpenCopies={fields.openCopies}
           recipients={records.recipients}
           onToEditing={onToEditing}
+          refused={fields.refusedAddresses}
+          onRefuse={fields.refuseAddresses}
+          addressEpoch={fields.addressEpoch}
           subject={fields.subject}
           onSubjectChange={fields.setSubject}
           rejectionInFlight={rejectionInFlight}

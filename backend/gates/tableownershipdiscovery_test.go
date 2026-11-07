@@ -45,7 +45,7 @@ const platformRoot = "internal/platform"
 func platformStoreDirs(t *testing.T) []string {
 	t.Helper()
 	found := map[string]bool{}
-	err := filepath.WalkDir(platformRoot, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(platformRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") ||
 			isIntegrationTagged(path) {

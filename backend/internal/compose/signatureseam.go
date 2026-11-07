@@ -18,8 +18,8 @@ type signatureReader struct {
 	store *contacts.Store
 }
 
-func (r signatureReader) SignatureFor(ctx context.Context, userID ids.UUID) (activities.SenderSignature, error) {
-	signature, err := r.store.SignatureFor(ctx, userID)
+func (r signatureReader) SignatureFor(ctx context.Context, userID, entity ids.UUID) (activities.SenderSignature, error) {
+	signature, err := r.store.SignatureFor(ctx, userID, entity)
 	if err != nil {
 		return activities.SenderSignature{}, err
 	}

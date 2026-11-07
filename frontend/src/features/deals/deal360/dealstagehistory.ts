@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import { unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import {
   type DealStandingInputs,
   type StageTime,
@@ -52,7 +52,7 @@ export function useStageTimes({
   stages,
   asOf,
 }: DealStandingInputs): ReadonlyMap<string, StageTime> | undefined {
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const page = useDealStageHistory(deal.id, true).data;
   if (!page?.data) {
     return undefined;

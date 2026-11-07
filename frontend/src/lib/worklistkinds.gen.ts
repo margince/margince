@@ -30,6 +30,10 @@ export const WORKLIST_KINDS = {
     category: "system",
     titleKey: "worklist.untitled.batch",
   },
+  booking_health: {
+    category: "system",
+    titleKey: "worklist.untitled.booking_health",
+  },
   bounce: {
     category: "system",
     titleKey: "worklist.untitled.bounce",

@@ -14,7 +14,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -36,6 +35,7 @@ var literalDirection = regexp.MustCompile(`direction\s*(=|<>|IS DISTINCT FROM|IS
 // messageStateReaders read a direction to answer a question about one message
 // or thread, not which sides of a relationship have written.
 var messageStateReaders = gatekit.Waive(map[string]string{
+	"internal/modules/capture/senderstanding.go":          "asks whether the one message a sender ledger row names was sent by the mailbox owner, as the verdict's claim does, never which side of a relationship wrote",
 	"internal/modules/capture/conversationsuggestions.go": "Selects copied recipients of one stored outbound message under its content gate. It asks about that message, never counts which side of a relationship wrote.",
 	"internal/compose/signalscan.go": "asks whether the account's newest message is ours; a colleague's reply " +
 		"at the account answers us there by design",
@@ -152,7 +152,7 @@ const (
 
 func readDirectionRegister(t *testing.T) map[string]bool {
 	t.Helper()
-	body, err := os.ReadFile(directionRegisterPath)
+	body, err := gatekit.ReadFile(directionRegisterPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", directionRegisterPath, err)
 	}

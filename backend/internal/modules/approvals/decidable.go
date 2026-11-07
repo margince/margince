@@ -8,6 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -27,7 +29,8 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 
 // decidableRows is decidable for a batch, answering by position. Each check
 // that needs the database is asked once per batch. The cited activities take
-// one statement, and each target type one more; offers and lead reversals take two.
+// one statement, and each target type one more; offers and lead reversals take
+// two. Staged archives take one more per target type.
 func decidableRows(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row) ([]bool, error) {
 	readable, err := proposalsReadable(ctx, tx, p, rows)
 	if err != nil {
@@ -69,5 +72,46 @@ func decidableRows(ctx context.Context, tx pgx.Tx, p principal.Principal, rows [
 	for j, i := range offerAt {
 		out[i] = offered[j]
 	}
+	if err := narrowToOwnArchives(ctx, tx, p, rows, out); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// narrowToOwnArchives keeps a staged archive decidable, for a decider without
+// the target's delete grant, only while the record is theirs to archive. It
+// asks the archive's own rule, once per record type. A decider holding delete
+// is not narrowed.
+func narrowToOwnArchives(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, out []bool) error {
+	targets := map[string][]ids.UUID{}
+	for i, a := range rows {
+		if narrowedAsArchive(p, a, out[i]) {
+			targets[*a.TargetType] = append(targets[*a.TargetType], *a.TargetID)
+		}
+	}
+	archivable := make(map[string]map[ids.UUID]bool, len(targets))
+	for table, rowIDs := range targets {
+		rule, ruled := auth.ArchiveRuleFor(table)
+		if !ruled {
+			continue
+		}
+		subset, err := auth.OwnedArchivableSubset(ctx, tx, rule, rowIDs)
+		if err != nil {
+			return err
+		}
+		archivable[table] = subset
+	}
+	for i, a := range rows {
+		if narrowedAsArchive(p, a, out[i]) {
+			out[i] = archivable[*a.TargetType][*a.TargetID]
+		}
+	}
+	return nil
+}
+
+// narrowedAsArchive reports whether a so far decidable row is a staged archive
+// whose decider lacks the delete grant on its target.
+func narrowedAsArchive(p principal.Principal, a row, decidable bool) bool {
+	return decidable && a.Kind == kindArchiveRecord && a.TargetType != nil && a.TargetID != nil &&
+		!p.Permissions.Allows(*a.TargetType, principal.ActionDelete)
 }

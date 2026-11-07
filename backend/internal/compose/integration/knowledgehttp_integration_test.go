@@ -29,6 +29,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -39,34 +40,6 @@ import (
 // fixture here: the ceiling's own refusal is the chassis's to produce, and a
 // suite that tripped it accidentally would be testing the wrong thing.
 const knowledgeUploadCeiling = 5_000_000
-
-func multipartDocument(t *testing.T, filename string, contentType string, data []byte) (*bytes.Buffer, string) {
-	t.Helper()
-	var buf bytes.Buffer
-	mw := multipart.NewWriter(&buf)
-	part, err := mw.CreatePart(textproto(filename, contentType))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := part.Write(data); err != nil {
-		t.Fatal(err)
-	}
-	if err := mw.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return &buf, mw.FormDataContentType()
-}
-
-// textproto builds the file part's headers by hand because the CONTENT TYPE is
-// the subject of two cases below, and multipart.CreateFormFile hard-codes
-// application/octet-stream — which would make the type gate untestable through
-// the real parse.
-func textproto(filename, contentType string) map[string][]string {
-	return map[string][]string{
-		"Content-Disposition": {`form-data; name="file"; filename="` + filename + `"`},
-		"Content-Type":        {contentType},
-	}
-}
 
 // knowledgeHTTP is the handler set under test, with the seams a composition
 // supplies: an object store, and an enqueue that records rather than queues.
@@ -159,7 +132,7 @@ func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
 	// Upload → 202, ACCEPTED FOR INGEST rather than 201 created: the document
 	// exists but is not yet answerable, and the two statuses say different
 	// things to a client deciding whether to poll.
-	body, ctype := multipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
+	body, ctype := apptest.MultipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
 	upRec := httptest.NewRecorder()
 	upReq := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
 	upReq.Header.Set("Content-Type", ctype)
@@ -218,7 +191,7 @@ func TestUploadingAPDFOverHTTPIs415NamingTheAcceptedTypes(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
 	made := httpCorpus(ctx, t, h)
 
-	body, ctype := multipartDocument(t, "handbook.pdf", "application/pdf", []byte("%PDF-1.7"))
+	body, ctype := apptest.MultipartDocument(t, "handbook.pdf", "application/pdf", []byte("%PDF-1.7"))
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
@@ -288,7 +261,7 @@ func TestUploadingWithNoObjectStoreWiredDoesNotBlameTheCaller(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	body, ctype := multipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
+	body, ctype := apptest.MultipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
@@ -314,7 +287,7 @@ func TestUploadingWithNoJobRunnerRefusesRatherThanAcceptingTheFile(t *testing.T)
 		t.Fatalf("create: %v", err)
 	}
 
-	body, ctype := multipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
+	body, ctype := apptest.MultipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)

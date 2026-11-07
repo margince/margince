@@ -7,7 +7,6 @@ package gates
 
 import (
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -127,7 +126,7 @@ func TestEveryLedgerOfExecutionsStatesItsWindow(t *testing.T) {
 // ledgerTables derives the corpus from the catalog.
 func ledgerTables(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -152,12 +151,12 @@ func windowedLedgers(t *testing.T) map[string]bool {
 	t.Helper()
 	bounded := map[string]bool{}
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") {
 				return nil //nolint:nilerr // a tree that cannot be walked is the caller's problem, not a finding
 			}
-			raw, readErr := os.ReadFile(path)
+			raw, readErr := gatekit.ReadFile(path)
 			if readErr != nil {
 				return readErr
 			}

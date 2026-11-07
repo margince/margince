@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -121,7 +122,7 @@ func TestTheWaitingHorizonReadsAHeldRequestByItsID(t *testing.T) {
 		if n.NodeType != "Bitmap Index Scan" {
 			return
 		}
-		if n.IndexName == "activity_pkey" && strings.Contains(n.IndexCond, "id = ANY") {
+		if testdb.IndexConditionReadsID(n.IndexCond) && strings.Contains(n.IndexCond, "id = ANY") {
 			heldByID++
 		}
 		if strings.Contains(n.IndexCond, "occurred_at >=") {

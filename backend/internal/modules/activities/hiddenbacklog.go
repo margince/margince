@@ -146,7 +146,7 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 		// The queue's own horizon, read once and handed to every relaxation
 		// below. Read per count, two scans could differ by cutoff rather
 		// than by the rule being relaxed.
-		measured, err := s.waitingHorizonFor(ctx, tx)
+		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}

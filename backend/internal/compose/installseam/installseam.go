@@ -14,6 +14,7 @@ package installseam
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -36,7 +37,11 @@ func Deals() deals.Installation {
 		// and the edge is injected here.
 		IssuerLegalName: contacts.ConfirmedIssuerLegalName,
 		BaseCurrency:    identity.BaseCurrencyOf,
-		Timezone:        identity.TimezoneOf,
+		Country:         installationCountry,
+		KnownCountry: func(code string) (bool, error) {
+			return contacts.IsAssignedCountry(code), nil
+		},
+		Timezone: identity.TimezoneOf,
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
 		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,
@@ -96,6 +101,13 @@ func dealsIssuerEntity(ctx context.Context, tx pgx.Tx, id *ids.LegalEntityID) (d
 		},
 		VatID: text(e.VatID), RegisterCourt: text(e.RegisterCourt), RegisterNumber: text(e.RegisterNumber),
 		BankAccountHolder: text(e.BankAccountHolder), IBAN: text(e.IBAN), BIC: text(e.BIC),
-		LogoKey: text(e.LogoObjectKey),
+		LogoKey: text(e.LogoObjectKey), DefaultLanguage: text(e.DefaultLanguage),
 	}, nil
+}
+
+// installationCountry is the installation's country in the lower-case spelling
+// a tax rate's country takes.
+func installationCountry(ctx context.Context, tx pgx.Tx) (string, error) {
+	code, err := identity.CountryOf(ctx, tx)
+	return strings.ToLower(string(code)), err
 }

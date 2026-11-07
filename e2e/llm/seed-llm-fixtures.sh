@@ -893,15 +893,13 @@ if [[ -z "$henning" ]]; then
 fi
 
 # Mid-morning on two of next week's days, so an honest answer has to work around
-# something. 201 or 409 — 409 is a re-run finding its own block already held —
-# and anything else is a seed reporting a full calendar it never wrote.
+# something. A booked meeting holds the slot with no calendar connected, which is
+# how this stack runs: POST /bookings now needs a real calendar to invite on.
 book_block() {
-  local subject="$1" days="$2" hour="$3" body code
-  body="$(printf '{"start":"%sT%02d:00:00Z","end":"%sT%02d:00:00Z","subject":"%s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
-    "$(days_ahead "$days")" "$hour" "$(days_ahead "$days")" "$((hour + 2))" "$subject" "$henning")"
-  code="$(status_of POST /bookings "$body")"
-  [[ "$code" = "201" || "$code" = "409" ]] || {
-    echo "booking \"$subject\" answered HTTP $code" >&2; exit 1; }
+  local subject="$1" days="$2" hour="$3" body
+  body="$(printf '{"kind":"meeting","meeting_status":"booked","host_user_id":"%s","occurred_at":"%sT%02d:00:00Z","duration_seconds":7200,"subject":"%s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+    "$me" "$(days_ahead "$days")" "$hour" "$subject" "$henning")"
+  create_or_die "/activities" "$body" "the booked block \"$subject\"" >/dev/null
 }
 # The first two days of the COMING week, whichever day the lane runs on. `date
 # +%u` numbers Monday 1 through Sunday 7, so 8 minus today lands on the next
@@ -1049,7 +1047,7 @@ ines="$(lead_id_by_email "Ines Waldner" "ines.waldner@stahlbau-waldner.test")"
 if [[ -z "$ines" ]]; then
   body="$(printf '{"full_name":"Ines Waldner","email":"ines.waldner@stahlbau-waldner.test","title":"Einkaufsleiterin","company_name":"Stahlbau Waldner","status":"engaged","source":"webform","owner_id":"%s"}' "$me")"
   ines="$(create_or_die "/leads" "$body" "the engaged lead")"
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Angebot Fassadenanker","body":"Ja, gerne — passt Donnerstag für ein Gespräch?","links":[{"entity_type":"lead","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Angebot Fassadenanker","body":"Ja, gerne — passt Donnerstag für ein Gespräch?","participants":{"from":"ines.waldner@stahlbau-waldner.test"},"links":[{"entity_type":"lead","entity_id":"%s"}]}' \
     "$(days_ago 6)" "$ines")"
   create_or_die "/activities" "$body" "the reply that justifies promotion" >/dev/null
 fi
@@ -1472,6 +1470,33 @@ if [[ -z "$goslar" ]]; then
   body="$(printf '{"kind":"meeting","meeting_status":"held","occurred_at":"%s","subject":"Vertragsunterzeichnung Leitstand Goslar","body":"Servicevertrag mit Katrin Albers unterzeichnet.","source":"%s","links":[{"entity_type":"contact","entity_id":"%s"},{"entity_type":"project","entity_id":"%s"}]}' \
     "$(days_ago 1)" "$FIXTURE_SOURCE" "$albers" "$goslar")"
   create_or_die "/activities" "$body" "the Leitstand Goslar signing meeting" >/dev/null
+fi
+
+# --- CASE 107: a deal room the buyer reads, with a welcome gone stale ----------
+#
+# On Weserbund Pilotphase, the deal no other case names. A room changes no
+# deal field, so the forecast cases' amounts and dates stay as they are; it
+# leaves a note on the deal's timeline, which the quiet-deal sweeps do not read.
+weserbund_deal="$(deal_id_by_name "Weserbund Pilotphase")"
+[[ -n "$weserbund_deal" ]] || { echo "the pipeline has no Weserbund Pilotphase deal" >&2; exit 1; }
+if [[ "$(api GET "/deal-rooms?deal_id=$weserbund_deal&limit=5" | python3 -c 'import json,sys
+print(len(json.load(sys.stdin).get("data", [])))')" = "0" ]]; then
+  body="$(printf '{"deal_id":"%s","title":"Weserbund Angebotsraum","welcome_message":"Willkommen! Hier finden Sie unser Angebot mit den Preisen für 2025.","source":"%s"}' \
+    "$weserbund_deal" "$FIXTURE_SOURCE")"
+  create_or_die "/deal-rooms" "$body" "the Weserbund deal room" >/dev/null
+fi
+
+# --- CASE 110: an unsent draft the user wrote themselves ----------------------
+#
+# On Greta Lindqvist, whom no case drafts to: case 60 drafts to Omar Haddad, and
+# a draft of the user's own on him would turn that case's saved draft into an
+# unsaved one. A draft is never on a timeline, so no other read sees it.
+greta="$(contact_id_by_email "Greta Lindqvist" "greta.lindqvist@lindqvist-anlagen.test")"
+[[ -n "$greta" ]] || { echo "the seed has no Greta Lindqvist to keep a draft for" >&2; exit 1; }
+if [[ "$(status_of GET "/mail-drafts?anchor_type=contact&anchor_id=$greta")" = "404" ]]; then
+  body="$(printf '{"anchor_type":"contact","anchor_id":"%s","to":["greta.lindqvist@lindqvist-anlagen.test"],"subject":"Preisworkshop in Köln","body":"Hallo Greta, hier schon einmal die Agenda für unseren Preisworkshop."}' "$greta")"
+  code="$(status_of PUT /mail-drafts "$body")"
+  [[ "$code" = "200" ]] || { echo "saving the user's own draft to Greta Lindqvist answered HTTP $code" >&2; exit 1; }
 fi
 
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------

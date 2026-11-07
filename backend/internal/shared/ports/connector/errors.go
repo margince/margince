@@ -86,6 +86,11 @@ func (e *RateLimitedError) Error() string {
 // callers classify on the sentinel and read Retry-After via errors.As.
 func (e *RateLimitedError) Is(target error) bool { return target == ErrRateLimited }
 
+// MailboxScoped identifies limits that do not require other mailboxes to stop.
+func (e *RateLimitedError) MailboxScoped() bool {
+	return e.Reason == RateLimitUser || e.Reason == RateLimitConcurrent
+}
+
 // The closed set RateLimitedError.Reason is drawn from, so a metric label and
 // a log field stay bounded. The provider-specific codes are Google's spellings;
 // RateLimitConcurrent is a per-user concurrency cap, RateLimitOther a code the

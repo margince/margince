@@ -18,7 +18,19 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
      issuing a passport). Or `auth-bootstrap` (sign-in and session code).
 
    The generator **fails** on a data-changing operation with neither, so an endpoint with no tier cannot
-   ship.
+   ship. A read with neither fails too, unless it is anonymous (`security: []`).
+
+   The refusal names a whole `x-mcp-tool` line to use, and why. It reads the operations the
+   contract already places: a record type, a routed operation on the same path, then the tag.
+   A read with none of these gets `read_view`. Change the scope to `send` or `enrich` when the act
+   delivers or fetches. The generator never writes the line, since tier and scope are yours to
+   decide.
+
+   An operation is open to agents unless security is the reason to close it. Then mark it
+   `x-agent-access: human-only` with `x-human-only-reason: security`.
+
+   An operation with `x-mcp-tool` must also pass the role sweep:
+   [prove-a-tool-in-the-role-matrix.md](prove-a-tool-in-the-role-matrix.md).
 
    Some handlers **call a model and keep the request open** for the answer (a draft, a brief, an ask).
    Mark such an operation `x-waits-on-model: always`. Use `on-miss` when it serves a stored answer and

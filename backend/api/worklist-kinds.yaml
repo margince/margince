@@ -245,6 +245,13 @@ kinds:
     personal: true
     done_in_place: true
     delivery: pull
+  booking_health:
+    category: system
+    destination: system_health
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
   ai_work_health:
     category: system
     destination: system_health

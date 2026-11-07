@@ -69,7 +69,7 @@ func ActivityDiscoverClause(ctx context.Context, alias string, arg func(any) int
 }
 
 func activityDiscoverClause(p principal.Principal, alias string, arg func(any) int) string {
-	available := ActivityAvailableClause(alias)
+	available := ActivityAvailableClause(alias) + " AND " + internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
 		return available
 	}
@@ -99,8 +99,8 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// host_user_id: that column labels whose calendar a row came off, which is
 	// ownership rather than membership, and a label is not evidence that anybody
 	// was present.
-	return fmt.Sprintf(`%[1]s AND (%[2]s OR %[3]s)`,
-		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg))
+	return fmt.Sprintf(`%[1]s AND (%[4]s.internal_mail_authorization IS NOT NULL OR %[2]s OR %[3]s)`,
+		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg), alias)
 }
 
 // activityReachArms is discovery through the row's own links or its attendance.
@@ -160,14 +160,17 @@ func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) in
 // a seat that may already read a row still reads it. This arm only decides who
 // may learn a row EXISTS through attendance rather than through its links.
 func activityAttendanceArm(p principal.Principal, alias string, arg func(any) int) string {
-	me := arg(p.UserID)
+	return activityAttendanceForMemberSQL(alias, memberIdentitySQL(arg(p.UserID)))
+}
+
+func activityAttendanceForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
-	   OR EXISTS (SELECT 1 FROM activity_participant ap
-	               WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
-	   OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
-	        WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
-	       AND %[4]s))`,
-		alias, memberIdentitySQL(me), SenderStampsCheckedStep, senderAtOwnDomain(alias))
+    OR EXISTS (SELECT 1 FROM activity_participant ap
+                WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
+    OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
+         WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
+        AND %[4]s))`,
+		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias))
 }
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
@@ -273,7 +276,7 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 		return "", err
 	}
 	if p.Type == principal.PrincipalSystem {
-		return CommitmentContentRetainedClause(alias), nil
+		return CommitmentContentRetainedClause(alias) + " AND " + internalMailAccessClause(p, alias, arg), nil
 	}
 	return activityContentAudienceArm(p, alias, arg), nil
 }
@@ -303,7 +306,7 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// The two membership arms are activityMembershipArm's, composed rather than
 	// repeated: discovery asks the same question of the same two tables, and a
 	// second copy is how one of them gains an arm the other lacks.
-	return fmt.Sprintf(`(%[1]s.audience = 'workspace'
+	ordinary := fmt.Sprintf(`(%[1]s.audience = 'workspace'
 	   OR %[5]s
 	   OR %[4]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
@@ -311,6 +314,7 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	        AND ((am.subject_type = 'user' AND am.subject_id IN (%[2]s))
 	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[3]d))))))`,
 		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg))
+	return "(" + ordinary + " AND " + internalMailAccessClause(p, alias, arg) + ")"
 }
 
 // EnsureActivityVisible is EnsureVisible for activities under the DISCOVER

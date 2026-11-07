@@ -154,7 +154,7 @@ func monthsWindow(m int) string { return windowNames[m] }
 // caller extracts the signed-in human; every backfill op is per-user.
 func (h backfillHandlers) caller(w http.ResponseWriter, r *http.Request) (ids.UserID, bool) {
 	actor, ok := principal.Actor(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnauthorized, Code: codeUnauthorized,
 			Detail: "Backfill is a signed-in human action.",
@@ -231,6 +231,11 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 		ComputedAt:        time.Now().UTC(),
 		AfterDate:         &openapi_types.Date{Time: estimate.AfterDate},
 	}
+	if estimate.InternalMail != nil {
+		preview.InternalMail = &crmcontracts.InternalMailHistoryPreview{
+			PreviewToken: estimate.InternalMail.Token, ReceivedAfter: estimate.InternalMail.ReceivedAfter, Folders: estimate.InternalMail.Folders,
+		}
+	}
 	if estimate.Floor {
 		// Sent only when it is TRUE, which is the contract's own reading of
 		// absent: a count with nothing said about it is exact.
@@ -304,7 +309,12 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	// client that skipped the preview starts with none (the bar shows counts
 	// only — honest, just less shaped).
 	var estimate connector.BackfillEstimate
-	if previewed, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months); err == nil {
+	previewed, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months)
+	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err == nil {
 		estimate = previewed.BackfillEstimate
 	}
 	ws, ok := principal.WorkspaceID(r.Context())
@@ -319,7 +329,12 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 		return
 	}
 	startOver := req.StartOver != nil && *req.StartOver
-	run, err := h.begin(r.Context(), ws, string(provider), userID, months, estimate, startOver)
+	var run capture.BackfillRun
+	if req.InternalMailPreviewToken != nil {
+		run, err = h.beginInternalHistory(r.Context(), ws, string(provider), userID, months, estimate, *req.InternalMailPreviewToken)
+	} else {
+		run, err = h.begin(r.Context(), ws, string(provider), userID, months, estimate, startOver)
+	}
 	if errors.Is(err, errBackfillEnqueue) {
 		h.log.ErrorContext(r.Context(), "backfill: enqueue", "err", err)
 		httperr.Write(w, r, &httperr.DetailedError{
@@ -421,6 +436,10 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 }
 
 func (h backfillHandlers) writeBackfillError(w http.ResponseWriter, r *http.Request, err error) {
+	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {
+		httperr.Write(w, r, err)
+		return
+	}
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound):
 		httperr.Write(w, r, &httperr.DetailedError{
@@ -446,6 +465,11 @@ func (h backfillHandlers) writeBackfillError(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity, Code: codeConnectorUnsupported,
 			Detail: "This provider cannot enumerate a mailbox backward from a date.",
+		})
+	case errors.Is(err, capture.ErrInternalMailHistoryPreviewChanged):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "internal_mail_preview_changed",
+			Detail: "Preview the internal-mail scope again. If it remains unavailable, ask an administrator to review the source.",
 		})
 	case errors.Is(err, apperrors.ErrConflict):
 		httperr.Write(w, r, &httperr.DetailedError{
