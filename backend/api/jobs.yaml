@@ -2156,12 +2156,12 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: 15m
+    cadence: 1m
     fans_out_to: voice_build
     fan_out_unit: build
     reason: >-
-      Deferrals are hours long, so a fifteen-minute scan is prompt without being
-      busywork.
+      A lost worker releases its session lock. The next minute scan re-offers
+      abandoned builds while preserving budget deferral deadlines.
 
   # One job, not a dispatcher and a child (ADR-0103 §1). It keeps the
   # dispatcher's KIND and CADENCE — the name an operator alerts on, the interval

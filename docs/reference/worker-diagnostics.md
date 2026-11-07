@@ -98,6 +98,13 @@ lock jobs. Read `margince_worker_pinned_sessions` and
 `margince_worker_session_budget_snoozes_total` with the pool wait metrics when sizing this limit.
 Those connections have no separate pool; other short work may use them too.
 
+`capture_sync`, `document_extract` and `voice_build` hold a session lock for each unit of work.
+A closed connection frees the lock at once. The next capture pass, document request or voice
+retry can then take the work. A live holder keeps its work even when another job arrives.
+The voice retry pass runs each minute and keeps the due time of a budget deferral.
+The document and voice rows check the claim's start time on writes, so an old worker cannot
+replace a newer result.
+
 The statement cache setting bounds entries, not bytes. It also bounds the `description` cache.
 A smaller cache may cause repeated `Prepare` calls. Measure with
 `TestWorkerCacheReportsHistoryPreparationCost` before reducing it. `work_mem` is per query

@@ -4,6 +4,7 @@
 package jobs
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -70,4 +71,27 @@ func TestQueuedAsRefusesAnUndeclaredKind(t *testing.T) {
 		}
 	}()
 	QueuedAsKind("a_kind_the_contract_does_not_declare", nil)
+}
+
+type lockedTestArgs struct{ queuedAsTestArgs }
+
+func (lockedTestArgs) SessionLocked() {}
+
+func TestSessionOwnershipCannotBeOverriddenByInsertionOptions(t *testing.T) {
+	caller := &river.InsertOpts{MaxAttempts: 3, UniqueOpts: river.UniqueOpts{ByArgs: true}}
+	for name, got := range map[string]*river.InsertOpts{
+		"direct":  sessionInsertOpts(lockedTestArgs{}, caller),
+		"typed":   QueuedAs[lockedTestArgs](caller),
+		"dynamic": QueuedAsArgs(lockedTestArgs{}, caller),
+	} {
+		if !reflect.DeepEqual(got.UniqueOpts, river.UniqueOpts{}) || got.MaxAttempts != 3 {
+			t.Errorf("%s changed ownership or attempt policy: %+v", name, got)
+		}
+	}
+	if !caller.UniqueOpts.ByArgs {
+		t.Fatal("caller options were mutated")
+	}
+	if got := sessionInsertOpts(queuedAsTestArgs{}, caller); !got.UniqueOpts.ByArgs {
+		t.Fatal("ordinary jobs lost uniqueness")
+	}
 }

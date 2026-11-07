@@ -141,7 +141,7 @@ func NewTxInserter(log *slog.Logger) (*Runner, error) {
 // policy rides opts (e.g. UniqueOpts.ByArgs deduplicates a re-submitted
 // job): the caller owns the policy, this method only carries it to River.
 func (r *Runner) Enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
-	if _, err := r.client.Insert(ctx, args, opts); err != nil {
+	if _, err := r.client.Insert(ctx, args, sessionInsertOpts(args, opts)); err != nil {
 		return fmt.Errorf("jobs: enqueue %s: %w", args.Kind(), err)
 	}
 	return nil
@@ -151,7 +151,7 @@ func (r *Runner) Enqueue(ctx context.Context, args river.JobArgs, opts *river.In
 // durable work request and the operational row the worker will claim must
 // either both commit or both disappear.
 func (r *Runner) EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error {
-	if _, err := r.client.InsertTx(ctx, tx, args, opts); err != nil {
+	if _, err := r.client.InsertTx(ctx, tx, args, sessionInsertOpts(args, opts)); err != nil {
 		return fmt.Errorf("jobs: enqueue %s transactionally: %w", args.Kind(), err)
 	}
 	return nil
@@ -164,7 +164,7 @@ func (r *Runner) EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, o
 // from "already running" (e.g. a confirm endpoint choosing 202 vs 409)
 // need this signal; EnqueueTx alone discards it.
 func (r *Runner) EnqueueTxUnique(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) (bool, error) {
-	res, err := r.client.InsertTx(ctx, tx, args, opts)
+	res, err := r.client.InsertTx(ctx, tx, args, sessionInsertOpts(args, opts))
 	if err != nil {
 		return false, fmt.Errorf("jobs: enqueue %s transactionally: %w", args.Kind(), err)
 	}

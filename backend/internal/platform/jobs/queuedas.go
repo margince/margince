@@ -31,16 +31,12 @@ import (
 // is a pool nobody sized for it.
 func QueuedAs[T river.JobArgs](opts *river.InsertOpts) *river.InsertOpts {
 	var args T
-	spec, declared := SpecFor(args.Kind())
-	if !declared {
-		panic("jobs: enqueuing " + args.Kind() + ", which api/jobs.yaml does not declare")
-	}
-	queued := river.InsertOpts{}
-	if opts != nil {
-		queued = *opts
-	}
-	queued.Queue = spec.Queue
-	return &queued
+	return QueuedAsArgs(args, opts)
+}
+
+// QueuedAsArgs applies the same queue and ownership policy to fan-out args.
+func QueuedAsArgs(args river.JobArgs, opts *river.InsertOpts) *river.InsertOpts {
+	return sessionInsertOpts(args, QueuedAsKind(args.Kind(), opts))
 }
 
 // QueuedAsKind is QueuedAs for a caller that knows the kind only as a string —
