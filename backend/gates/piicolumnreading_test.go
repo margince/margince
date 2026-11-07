@@ -48,6 +48,10 @@ func TestAStatementTheCensusCannotReadIsNotReadAsClean(t *testing.T) {
 		// read.
 		"the clause swallowed whole": {"UPDATE contact " + unresolved, false},
 		"nothing but the marker":     {unresolved, false},
+		// Here the value was meant to close its own quote. The rendering never
+		// closes it, so the open string runs over the next assignment. The
+		// column the second marker stands over then reads as quoted text.
+		"a quote the value closes": {"UPDATE contact SET note = '" + unresolved + ", " + unresolved + " = NULL WHERE id = $1", false},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

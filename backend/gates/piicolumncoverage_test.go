@@ -620,6 +620,12 @@ func assignmentsAreReadable(statement string) bool {
 		if !strings.Contains(clause[1], unresolved) {
 			continue
 		}
+		// A string or comment that never closes runs over every assignment
+		// after it, so nothing past its start was read.
+		assignments, closed := splitSetClause(clause[1])
+		if !closed {
+			return false
+		}
 		// WHERE the marker sits decides it. A clause is a list of `column =
 		// value` pairs, and this census counts the COLUMNS: a value the reader
 		// could not render — a window computed by a helper, an interval built
@@ -629,7 +635,7 @@ func assignmentsAreReadable(statement string) bool {
 		// On the left of the `=`, or with no `=` at all, it is another matter:
 		// there the marker could be standing over an assignment, and what it
 		// clears is exactly what nobody can see.
-		for _, assignment := range splitSetClause(clause[1]) {
+		for _, assignment := range assignments {
 			column, _, assigns := strings.Cut(assignment, "=")
 			if !assigns || strings.Contains(column, unresolved) {
 				if strings.Contains(assignment, unresolved) {
@@ -642,17 +648,20 @@ func assignmentsAreReadable(statement string) bool {
 }
 
 // splitSetClause cuts a SET clause on the commas BETWEEN assignments — the ones
-// outside any parentheses.
+// outside any parentheses. closed is false when a quoted string or comment
+// never ends, since everything after its start is then unread.
 //
 // A value carries commas of its own: `coalesce(a.x, ”)`, an ARRAY[…] of case
 // arms, a function call with three arguments. Splitting on every comma would
 // read each of those as an assignment of its own, and an assignment with no `=`
 // in it is what this reader treats as a marker standing over a column.
-func splitSetClause(clause string) []string {
+func splitSetClause(clause string) (assignments []string, closed bool) {
 	var out []string
 	depth, start := 0, 0
+	closed = true
 	for i := 0; i < len(clause); i++ {
-		if span, _ := gatekit.SQLSpanAt(clause, i); span > 0 {
+		if span, ended := gatekit.SQLSpanAt(clause, i); span > 0 {
+			closed = closed && ended
 			i += span - 1
 			continue
 		}
@@ -668,7 +677,7 @@ func splitSetClause(clause string) []string {
 			}
 		}
 	}
-	return append(out, clause[start:])
+	return append(out, clause[start:]), closed
 }
 
 // writesSomething matches the keyword of a statement that ASSIGNS, across any
@@ -794,7 +803,8 @@ func erasureRedactedColumns(t *testing.T, columns map[string]map[string]string, 
 // and quoted values do not assign the columns they mention.
 func assignsColumn(statement, column string) bool {
 	for _, clause := range setClause.FindAllStringSubmatch(statement, -1) {
-		for _, assignment := range splitSetClause(clause[1]) {
+		assignments, _ := splitSetClause(clause[1])
+		for _, assignment := range assignments {
 			left, _, assigned := strings.Cut(assignment, "=")
 			if !assigned {
 				continue

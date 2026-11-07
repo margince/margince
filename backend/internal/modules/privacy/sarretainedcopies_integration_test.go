@@ -27,7 +27,7 @@ func TestDuplicateEvidenceExportsOnlyTheSubjectsSide(t *testing.T) {
  'future_detail','Other Private Value')) WHERE id=ANY(@pairs)`,
 		pgx.StrictNamedArgs{"contact": subject.contact, "lead": subject.lead, "pairs": []ids.UUID{contactPair, leadPair}})
 	var pkg SARPackage
-	for _, section := range sarRetainedCopySections(&pkg, subject.contact, subject.emails, []ids.UUID{subject.lead}) {
+	for _, section := range sarRetainedCopySections(&pkg, []ids.UUID{subject.contact.UUID}, subject.emails, []ids.UUID{subject.lead}) {
 		if section.dest != &pkg.DuplicateEvidence {
 			continue
 		}
@@ -98,7 +98,7 @@ func TestIntroductionsExportOnlyRequestsAboutTheSubject(t *testing.T) {
 			pgx.StrictNamedArgs{"target": target, "through": through, "requester": requester, "introducer": introducer, "note": note})
 	}
 	var pkg SARPackage
-	for _, section := range sarRetainedCopySections(&pkg, subject.contact, subject.emails, nil) {
+	for _, section := range sarRetainedCopySections(&pkg, []ids.UUID{subject.contact.UUID}, subject.emails, nil) {
 		if section.dest != &pkg.Introductions {
 			continue
 		}
@@ -108,6 +108,55 @@ func TestIntroductionsExportOnlyRequestsAboutTheSubject(t *testing.T) {
 		}
 		if len(rows) != 1 || rows[0]["forwardable_note"] != "Subject Note" {
 			t.Fatalf("exported someone else's introduction: %+v", rows)
+		}
+	}
+}
+
+// The export reaches the retained history of every record it calls the
+// subject's. A contact merged into them keeps its own id. A lead holding their
+// address was never promoted. Mutation: match only the survivor's id, or reach only
+// promoted leads, and that history is left out.
+func TestRetainedHistoryReachesMergedRecordsAndAddressMatchedLeads(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject, _, _ := seedDedupePairs(ctx, t, tx)
+	predecessor, addressLead := ids.NewV7(), ids.NewV7()
+	mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by, merged_into_id)
+ VALUES (@id, 'Hedda Before', 'manual', 'system:privacy_test', @subject)`,
+		pgx.StrictNamedArgs{"id": predecessor, "subject": subject.contact})
+	mustExec(ctx, t, tx, `INSERT INTO lead (id, full_name, email, source, captured_by, archived_at)
+ VALUES (@id, 'Hedda Lead', @email, 'manual', 'system:privacy_test', now())`,
+		pgx.StrictNamedArgs{"id": addressLead, "email": subject.emails[0]})
+	want := map[string]bool{
+		seedPersonalAudit(ctx, t, tx, "contact", predecessor).String(): false,
+		seedPersonalAudit(ctx, t, tx, "lead", addressLead).String():    false,
+	}
+	emails, leads, identities, err := subjectReach(ctx, tx, subject.contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pkg SARPackage
+	for _, section := range sarRetainedCopySections(&pkg, identities, emails, leads) {
+		if section.dest != &pkg.AuditHistory {
+			continue
+		}
+		rows, err := rowMaps(ctx, tx, `SELECT a.id FROM audit_log a
+ WHERE (a.entity_type, a.entity_id, a.occurred_at) IN (SELECT entity_type, entity_id, occurred_at FROM (`+section.query+`) h)`,
+			section.args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range rows {
+			if id, ok := row["id"].(string); ok {
+				if _, seeded := want[id]; seeded {
+					want[id] = true
+				}
+			}
+		}
+	}
+	for id, found := range want {
+		if !found {
+			t.Errorf("audit row %s about the subject is missing from the export", id)
 		}
 	}
 }

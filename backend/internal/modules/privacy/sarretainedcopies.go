@@ -8,18 +8,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func sarRetainedCopySections(pkg *SARPackage, subject ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
-	subjects := []any{subject}
-	records := []any{subject, leads}
+// sarRetainedCopySections reads the copies that still name the subject.
+// identities is the survivor and every record merged into it, because a
+// predecessor's history stays keyed to its own id.
+func sarRetainedCopySections(pkg *SARPackage, identities []ids.UUID, emails []string, leads []ids.UUID) []sarSection {
+	subjects := []any{identities}
+	records := []any{identities, leads}
 	addresses := []any{loweredAddresses(emails)}
 	subjectArg, leadArg, addressArg := len(subjects), len(records), len(addresses)
 	return []sarSection{
 		{&pkg.AuditHistory, storekit.SQLf(`SELECT action, entity_type, entity_id, before, after, evidence, occurred_at
-		 FROM audit_log WHERE (entity_type='contact' AND entity_id=$%[1]d)
+		 FROM audit_log WHERE (entity_type='contact' AND entity_id=ANY($%[1]d::uuid[]))
 		 OR (entity_type='lead' AND entity_id=ANY($%[2]d::uuid[]))`, subjectArg, leadArg), records},
 		{
 			&pkg.RetainedEvents, storekit.SQLf(`SELECT envelope->>'type' AS type, envelope->'payload' AS payload, created_at, published_at
-		 FROM event_outbox WHERE (envelope->'entity'->>'type'='contact' AND envelope->'entity'->>'id'=$%[1]d::uuid::text)
+		 FROM event_outbox WHERE (envelope->'entity'->>'type'='contact' AND envelope->'entity'->>'id'=ANY(ARRAY(SELECT id::text FROM unnest($%[1]d::uuid[]) id)))
 		 OR (envelope->'entity'->>'type'='lead' AND envelope->'entity'->>'id'=ANY(ARRAY(SELECT id::text FROM unnest($%[2]d::uuid[]) id)))`, subjectArg, leadArg),
 			records,
 		},
@@ -30,16 +33,16 @@ func sarRetainedCopySections(pkg *SARPackage, subject ids.ContactID, emails []st
 		 WHERE lower(p.email)=ANY($%[1]d::text[])`, addressArg), addresses},
 		{&pkg.Introductions, storekit.SQLf(`SELECT id, contact_id, through_contact_id, forwardable_note, value_for_target,
 		 internal_reason, decision_reason, status, created_at FROM intro_request
-		 WHERE contact_id=$%[1]d`, subjectArg), subjects},
+		 WHERE contact_id=ANY($%[1]d::uuid[])`, subjectArg), subjects},
 		{&pkg.DuplicateEvidence, storekit.SQLf(`SELECT id, entity_type, confidence, disposition,
           (SELECT coalesce(jsonb_agg(jsonb_build_object('field', item->'field',
-            'left_value', CASE WHEN left_contact_id=$%[1]d OR left_lead_id=ANY($%[2]d::uuid[]) THEN item->'left_value' END,
-            'right_value', CASE WHEN right_contact_id=$%[1]d OR right_lead_id=ANY($%[2]d::uuid[]) THEN item->'right_value' END)), '[]'::jsonb)
+            'left_value', CASE WHEN left_contact_id=ANY($%[1]d::uuid[]) OR left_lead_id=ANY($%[2]d::uuid[]) THEN item->'left_value' END,
+            'right_value', CASE WHEN right_contact_id=ANY($%[1]d::uuid[]) OR right_lead_id=ANY($%[2]d::uuid[]) THEN item->'right_value' END)), '[]'::jsonb)
            FROM jsonb_array_elements(CASE WHEN jsonb_typeof(evidence)='array' THEN evidence ELSE '[]'::jsonb END) item) AS evidence
-         FROM dedupe_candidate WHERE left_contact_id=$%[1]d OR right_contact_id=$%[1]d
+         FROM dedupe_candidate WHERE left_contact_id=ANY($%[1]d::uuid[]) OR right_contact_id=ANY($%[1]d::uuid[])
 		 OR left_lead_id=ANY($%[2]d::uuid[]) OR right_lead_id=ANY($%[2]d::uuid[])`, subjectArg, leadArg), records},
 		{&pkg.PlannedCommitments, storekit.SQLf(`SELECT label, help_requested, manager_response, state
-		 FROM weekly_plan_commitment WHERE linked_record_type='contact' AND linked_record_id=$%[1]d`, subjectArg), subjects},
+		 FROM weekly_plan_commitment WHERE linked_record_type='contact' AND linked_record_id=ANY($%[1]d::uuid[])`, subjectArg), subjects},
 		{&pkg.TestMailboxMessages, storekit.SQLf(`SELECT message_id, sent_at, user_id AS withheld_from_mailbox_of
 		 FROM capture_test_mailbox_sent WHERE EXISTS (SELECT 1
 		 FROM jsonb_array_elements_text(to_addresses || cc_addresses) address
