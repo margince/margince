@@ -18,7 +18,7 @@ type webSafeRFC822 []byte
 // UnmarshalJSON decodes the field. A string with escapes, which Gmail does not
 // send, takes the ordinary string decode first.
 func (m *webSafeRFC822) UnmarshalJSON(data []byte) error {
-	encoded := data
+	var encoded []byte
 	if len(data) < 2 || data[0] != '"' || data[len(data)-1] != '"' || bytes.IndexByte(data, '\\') >= 0 {
 		var text string
 		if err := json.Unmarshal(data, &text); err != nil {

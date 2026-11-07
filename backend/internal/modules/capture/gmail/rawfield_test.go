@@ -21,7 +21,7 @@ func TestTheRawFieldDecodesTheMessageGmailSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	escaped = bytes.Replace(escaped, []byte("="), []byte(`\u003d`), -1)
+	escaped = bytes.ReplaceAll(escaped, []byte("="), []byte(`\u003d`))
 	for name, field := range map[string]string{
 		"padded":   `"` + padded + `"`,
 		"unpadded": `"` + unpadded + `"`,

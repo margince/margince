@@ -43,6 +43,7 @@ type DocumentExtractArgs struct {
 // Kind is the string River persists for this job.
 func (DocumentExtractArgs) Kind() string { return "document_extract" }
 
+// SessionLocked says the worker holds a session lease on the work for the run.
 func (DocumentExtractArgs) SessionLocked() {}
 
 // WorkspaceID declares the one tenant this job's work belongs to, and is what
