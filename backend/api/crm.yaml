@@ -18961,7 +18961,7 @@ paths:
 
         Your own mailbox only. A sender is personal to the colleague who knows them: one rep's family
         member is another rep's customer.
-      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       requestBody:
         required: true
@@ -26703,8 +26703,9 @@ paths:
           schema: { type: boolean, default: false }
           description: |
             Deprecated compatibility option. Also lists invited seats that have not signed in yet.
-            Assignment pickers use the default active roster. Resolve known colleague ids with
-            `GET /users/names`. This option remains accepted throughout the API compatibility window.
+            Assignment pickers use the default active roster and leave out rows whose `is_agent` is
+            true. Resolve known colleague ids with `GET /users/names`. This option remains accepted
+            throughout the API compatibility window.
       responses:
         '200':
           description: A page of workspace members.

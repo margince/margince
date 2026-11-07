@@ -6054,7 +6054,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "assignments.who": "Ai",
   "assignments.findColleague": "Tìm đồng nghiệp",
   "assignments.noColleagueFound":
-    "Không tìm thấy đồng nghiệp có tài khoản đang hoạt động. Liên hệ quản trị viên để gửi lời mời, rồi yêu cầu đồng nghiệp đăng nhập.",
+    "Không tìm thấy đồng nghiệp có tài khoản đang hoạt động. Hãy kiểm tra chính tả. Nếu tên đúng, liên hệ quản trị viên để gửi lời mời hoặc kiểm tra tài khoản của đồng nghiệp.",
   "assignments.findTeam": "Tìm nhóm",
   "assignments.role": "Vai trò",
   "assignments.rolePlaceholder": "Chọn vai trò",
