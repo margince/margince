@@ -118,7 +118,8 @@ func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) ([]co
 		        ON pb.activity_id = pa.activity_id
 		       AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`
 		      JOIN activity a
-		        ON a.id = pa.activity_id AND `+graphActivityCounts+`
+		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		     WHERE `+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+`
 		     GROUP BY t.contact_a, t.contact_b
 		)
@@ -155,7 +156,8 @@ func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) ([]co
 		       SELECT 1
 		         FROM activity_participant pa
 		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
-		         JOIN activity a ON a.id = pa.activity_id AND `+graphActivityCounts+`
+		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
 		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`))`,
 		first, second); err != nil {

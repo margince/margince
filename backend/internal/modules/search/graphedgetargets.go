@@ -56,12 +56,14 @@ func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs 
 	return nil
 }
 
-// countingActivities keeps the activities that count towards an edge now.
+// countingActivities keeps the activities that count towards an edge now, by
+// the join every fold makes to activity.
 func countingActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]ids.UUID, error) {
 	if len(activityIDs) == 0 {
 		return nil, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id = ANY($1) AND `+graphActivityCounts, activityIDs)
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id = ANY($1) AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity, activityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading which arrivals count towards an edge: %w", err)
 	}
