@@ -62754,9 +62754,14 @@ type TeamWeeklyReview struct {
 	// Exceptions LIVE, computed on every read and never frozen: the open input-check findings on deals
 	// the team's members own now, under the reader's own deal scope. Absent when the read
 	// did not ask.
-	Exceptions     *[]InputCheck      `json:"exceptions,omitempty"`
-	GeneratedAt    time.Time          `json:"generated_at"`
-	Id             openapi_types.UUID `json:"id"`
+	Exceptions  *[]InputCheck      `json:"exceptions,omitempty"`
+	GeneratedAt time.Time          `json:"generated_at"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld  *bool              `json:"leads_withheld,omitempty"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
 	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
@@ -65670,6 +65675,11 @@ type WeeklyReview struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
 
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld *bool `json:"leads_withheld,omitempty"`
+
 	// Learnings What the week TAUGHT, as against what it was.
 	//
 	// `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
@@ -66024,7 +66034,12 @@ type WeeklyReviewPipeline struct {
 
 // WeeklyReviewPrior The week before this one, for comparison.
 type WeeklyReviewPrior struct {
-	Counts         WeeklyReviewCounts `json:"counts"`
+	Counts WeeklyReviewCounts `json:"counts"`
+
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld  *bool              `json:"leads_withheld,omitempty"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
 	// Pipeline Absent under the same rule as the current week's.

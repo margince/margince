@@ -2014,6 +2014,8 @@ export const en = {
 
   "brief.weekly.tasksCompleted": "Tasks completed",
   "brief.weekly.noMeetings": "No meetings recorded",
+  "brief.weekly.leadsUnavailable":
+    "Lead figures are unavailable for this week.",
   "brief.weekly.noLeads": "None received",
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
