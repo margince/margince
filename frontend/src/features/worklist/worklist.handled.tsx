@@ -31,7 +31,7 @@ import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { usePendingMarginceChanges } from "../../lib/marginchanges";
 import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -42,6 +42,7 @@ import { type Receipt, useHandledForYou } from "./worklist.queries";
 
 export function HandledForYouPanel() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const handled = useHandledForYou();
@@ -102,7 +103,13 @@ export function HandledForYouPanel() {
           {pendingChanges?.bundles && pendingChanges.bundles.length > 0 && (
             <BundleUndo
               bundles={pendingChanges.bundles}
-              label={t("changes.undoAll")}
+              label={plural(
+                "changes.undoDeals",
+                pendingChanges.bundles.length,
+                {
+                  count: formatNumber(pendingChanges.bundles.length, locale),
+                },
+              )}
             />
           )}
           {receipts && (

@@ -76,8 +76,20 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
+  x-api-deprecation-policy:
+    window_months: 3
+    patch_removals: false
+    announcement: release-publication
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |
+    Deprecated APIs stay supported for at least 3 calendar months from the
+    release announcing deprecation. Patch releases never remove an API. A
+    `deprecated: true` operation announces the policy in a `Link` header.
+    `x-deprecation` records the announcing `release`, its RFC3339 `announced_at`
+    publication time, and an optional RFC3339 `sunset_at`. Published notices
+    supply `Deprecation` and scheduled retirement supplies `Sunset` headers.
+    An operation without a published notice cannot be removed.
+
     The V1 core CRM contract: contacts, companies, deals, pipelines, activities
     and leads, with the agent and AI surface beside them.
 
@@ -18949,7 +18961,7 @@ paths:
 
         Your own mailbox only. A sender is personal to the colleague who knows them: one rep's family
         member is another rep's customer.
-      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       requestBody:
         required: true
@@ -23718,7 +23730,7 @@ paths:
       operationId: listNoticeCases
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_cases, router: read_workspace, action: notice_cases, tier: auto_execute, scope: read, served_by: route }
-      summary: Disclosure duties this installation owes, soonest deadline first.
+      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
       description: |
         Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
         when it falls due.
@@ -23787,7 +23799,7 @@ paths:
       operationId: getNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case, router: read_details, action: notice_case, tier: auto_execute, scope: read, served_by: route }
-      summary: One disclosure duty.
+      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
       description: |
         The same case the queue lists, read on its own, for a surface that opens one duty rather
         than working a page of them.
@@ -23819,7 +23831,7 @@ paths:
       operationId: assignNoticeCase
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case, router: change_compliance, action: assign_notice_case, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a disclosure duty an owner.
+      summary: Give a privacy notice already owed (from notice_cases) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -23889,7 +23901,7 @@ paths:
       operationId: listNoticeCaseReviews
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notice_case_reviews, router: read_workspace, action: notice_case_reviews, tier: auto_execute, scope: read, served_by: route }
-      summary: Disclosure duties this installation owes, soonest deadline first.
+      summary: Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
       description: |
         Acquisition-source reviews and notice duties, under privacy-request read authority.
         Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
@@ -23940,7 +23952,7 @@ paths:
       operationId: getNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_notice_case_review, router: read_details, action: notice_case_review, tier: auto_execute, scope: read, served_by: route }
-      summary: One disclosure duty.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
       description: |
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -23962,7 +23974,7 @@ paths:
       operationId: assignNoticeCaseReview
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: assign_notice_case_review, router: change_compliance, action: assign_notice_case_review, tier: auto_execute, scope: write, served_by: route }
-      summary: Give a disclosure duty an owner.
+      summary: Give a contact's privacy-notice case (from notice_case_reviews) an owner.
       description: |
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -24012,7 +24024,7 @@ paths:
       operationId: assessNoticeSource
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: confirm_notice_source, router: change_compliance, action: confirm_notice_source, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      summary: Confirm the source of an unassessed contact.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
       requestBody:
         required: true
         content:
@@ -24036,7 +24048,7 @@ paths:
       operationId: previewNoticeSource
       x-mcp-tool: { verb: preview_notice_source, router: read_details, action: notice_source_preview, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Preview the source assessment without changing the case.
+      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
       requestBody:
         required: true
         content:
@@ -32390,7 +32402,7 @@ paths:
       operationId: listNotices
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_notices, router: read_details, action: notices, tier: auto_execute, scope: read, served_by: route }
-      summary: The notification centre — every notice addressed to the acting contact, newest first.
+      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
       description: |
         The acting human's own notifications, newest first, read and unread; another seat's are
         not an error, they are absent.
@@ -64290,11 +64302,13 @@ components:
       properties:
         company_context:
           type: boolean
+          deprecated: true
           description: >
-            True when the installation's company-context rollout has typed reads active — the
-            same predicate `GET /company-context/capabilities` reports as `read_enabled`, and
-            the same one its own endpoints gate on. False leaves the Company page to the
-            installation and currency settings beside it.
+            Deprecated. Still required and returned for compatibility throughout the API
+            notice window. New clients read `read_enabled` from
+            `GET /company/context/capabilities` instead. This field continues to report
+            whether the company-context rollout has typed reads active. It does not gate
+            the installation's Company settings page.
         reporting:
           type: boolean
           description: Reporting is always available. Retained for compatibility with older clients.
@@ -72469,6 +72483,12 @@ components:
       description: One team's week, as it was measured when the week closed.
       required: [id, team_id, team_name, local_week_start, generated_at, as_of, counts, reps, agenda]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         meetings_withheld:
           type: boolean
           description: |
@@ -73062,6 +73082,12 @@ components:
         which is why they are stored rather than recomputed.
       required: [id, local_week_start, generated_at, as_of, counts, deals]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         meetings_withheld:
           type: boolean
           description: |
@@ -73321,6 +73347,12 @@ components:
       description: The week before this one, for comparison.
       required: [local_week_start, counts]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         local_week_start: { type: string, format: date }
         counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
         pipeline:
@@ -75035,6 +75067,24 @@ components:
         id: { type: string, format: uuid, description: 'The completed act, as its own surface spells it.' }
         kind: { type: string, description: "The producer's own sub-type — for the label, never for authority." }
         summary: { type: string, description: 'What was done, in the words the act itself recorded.' }
+        headline:
+          type: string
+          description: >-
+            `summary` without the reason and the customer's words appended to it, for a client
+            that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt
+            whose summary carries neither, and on older responses.
+        reason:
+          type: string
+          description: >-
+            Why Margince did it, in the words recorded when it acted. Never composed when the
+            receipt is read. Absent when no reason was recorded, and when this reader may not
+            read why: only the owner the change was made for reads it.
+        customer_quote:
+          type: string
+          description: >-
+            The customer's own words the change rests on, where the act recorded them, masked
+            with the amount they state. Kept apart from `reason`, which is Margince's reading
+            and never a quote.
         summary_parts:
           allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
           description: The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
@@ -75451,7 +75501,7 @@ components:
         review:
           type: integer
           minimum: 0
-          description: 'Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.'
+          description: 'Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count.'
 
     WorklistReadings:
       type: object
@@ -75905,7 +75955,9 @@ components:
             `today` is work a seller executes. `review` is a judgement somebody must make
             before work continues — an approval, a duplicate pair, an introduction.
             `system_health` is a source or automation an administrator must restore.
-            `receipt` is completed work, reported so the reader can see it happened.
+            `receipt` is deprecated and retained only for published-client compatibility
+            through the API notice window. The work queue never emits it. Completed-work
+            receipts are served by `GET /worklist/handled` and have their own presentation.
 
             A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
             `source` that a browser could recompute: two rows of one source can differ,
@@ -76760,6 +76812,9 @@ components:
         reason:
           type: string
           enum: [accepted, already_undone, changed_since, not_found, not_permitted, version_skew, needs_confirmation]
+          description: >-
+            Why the change was kept. `accepted` is no longer sent: a change marked reviewed
+            still undoes. A client keeps reading it from an older server.
         team_notes:
           type: integer
           description: With `needs_confirmation`, the notes the team added to the opened or reopened deal.

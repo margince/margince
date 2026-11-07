@@ -3,16 +3,77 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
+  x-api-deprecation-policy:
+    window_months: 3
+    patch_removals: false
+    announcement: release-publication
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |-
-    The V1 core CRM contract: contacts, companies, deals, pipelines, activities
-    and leads, with the agent and AI surface beside them.
+    Deprecated APIs stay supported for at least 3 calendar months from the
+    release announcing deprecation. Patch releases never remove an API. A
+    `deprecated: true` operation announces the policy in a `Link` header.
+    `x-deprecation` records the announcing `release`, its RFC3339 `announced_at`
+    publication time, and an optional RFC3339 `sunset_at`. Published notices
+    supply `Deprecation` and scheduled retirement supplies `Sunset` headers.
+    An operation without a published notice cannot be removed.
   license:
     name: BUSL-1.1
     identifier: BUSL-1.1
   contact:
     name: Gradion
     email: lars@gradion.com
+  x-api-deprecation-notices:
+    DELETE /v1/lead-sources/{id}:
+      release: ""
+      announced_at: ""
+    GET /v1/companies/{id}/brief:
+      release: ""
+      announced_at: ""
+    GET /v1/deals/{id}/viability:
+      release: ""
+      announced_at: ""
+    GET /v1/forecast/assurance/enforcement:
+      release: ""
+      announced_at: ""
+    GET /v1/lead-sources:
+      release: ""
+      announced_at: ""
+    GET /v1/stage-automation/policies/{id}:
+      release: ""
+      announced_at: ""
+    GET /v1/stage-automation/report:
+      release: ""
+      announced_at: ""
+    PATCH /v1/lead-sources/{id}:
+      release: ""
+      announced_at: ""
+    POST /v1/ai-model-rates/propose-refresh:
+      release: ""
+      announced_at: ""
+    POST /v1/companies/{id}/brief:
+      release: ""
+      announced_at: ""
+    POST /v1/deals/{id}/stage-progressions/{approvalId}/revert:
+      release: ""
+      announced_at: ""
+    POST /v1/forecast/assurance/exceptions/{id}/close-lost:
+      release: ""
+      announced_at: ""
+    POST /v1/forecast/assurance/exceptions/{id}/wait:
+      release: ""
+      announced_at: ""
+    POST /v1/lead-sources:
+      release: ""
+      announced_at: ""
+    POST /v1/stage-automation/policies/{id}/resume:
+      release: ""
+      announced_at: ""
+    PUT /v1/forecast/assurance/enforcement:
+      release: ""
+      announced_at: ""
+    PUT /v1/stage-automation/policies/{id}:
+      release: ""
+      announced_at: ""
 security:
   - bearerAuth: []
 tags:
@@ -16466,7 +16527,7 @@ paths:
       tags: [Compliance]
       operationId: listNoticeCases
       security: [{bearerAuth: []}]
-      summary: Disclosure duties this installation owes, soonest deadline first.
+      summary: Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
       description: |-
         Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
         when it falls due.
@@ -16506,7 +16567,7 @@ paths:
       tags: [Compliance]
       operationId: getNoticeCase
       security: [{bearerAuth: []}]
-      summary: One disclosure duty.
+      summary: One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
       description: |-
         The same case the queue lists, read on its own, for a surface that opens one duty rather
         than working a page of them.
@@ -16527,7 +16588,7 @@ paths:
       tags: [Compliance]
       operationId: assignNoticeCase
       security: [{bearerAuth: []}]
-      summary: Give a disclosure duty an owner.
+      summary: Give a privacy notice already owed (from notice_cases) an owner.
       description: |-
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -16555,7 +16616,7 @@ paths:
       tags: [Compliance]
       operationId: listNoticeCaseReviews
       security: [{bearerAuth: []}]
-      summary: Disclosure duties this installation owes, soonest deadline first.
+      summary: Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
       description: |-
         Acquisition-source reviews and notice duties, under privacy-request read authority.
         Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
@@ -16597,7 +16658,7 @@ paths:
       tags: [Compliance]
       operationId: getNoticeCaseReview
       security: [{bearerAuth: []}]
-      summary: One disclosure duty.
+      summary: One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
       description: |-
         The administrative record for a source review or notice duty. Human privacy-request read
         authority covers the record; contact names remain limited by ordinary contact visibility.
@@ -16618,7 +16679,7 @@ paths:
       tags: [Compliance]
       operationId: assignNoticeCaseReview
       security: [{bearerAuth: []}]
-      summary: Give a disclosure duty an owner.
+      summary: Give a contact's privacy-notice case (from notice_case_reviews) an owner.
       description: |-
         Records who is working this duty, so the queue shows a claimed case rather than a pile
         nobody has taken.
@@ -16666,7 +16727,7 @@ paths:
       tags: [Compliance]
       operationId: assessNoticeSource
       security: [{bearerAuth: []}]
-      summary: Confirm the source of an unassessed contact.
+      summary: Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
       requestBody:
         required: true
         content:
@@ -16683,7 +16744,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Confirm the source of an unassessed contact.
+        Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
 
         Needs the passport permission Change records.
 
@@ -16695,7 +16756,7 @@ paths:
       tags: [Compliance]
       operationId: previewNoticeSource
       security: [{bearerAuth: []}]
-      summary: Preview the source assessment without changing the case.
+      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
       requestBody:
         required: true
         content:
@@ -16712,7 +16773,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Preview the source assessment without changing the case.
+        Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 
         Needs the passport permission Read records.
 
@@ -22839,7 +22900,7 @@ paths:
       tags: [Notices]
       operationId: listNotices
       security: [{bearerAuth: []}]
-      summary: The notification centre — every notice addressed to the acting contact, newest first.
+      summary: The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
       description: |-
         The acting human's own notifications, newest first, read and unread; another seat's are
         not an error, they are absent.
@@ -51341,6 +51402,12 @@ components:
       description: One team's week, as it was measured when the week closed.
       required: [id, team_id, team_name, local_week_start, generated_at, as_of, counts, reps, agenda]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |-
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         meetings_withheld:
           type: boolean
           description: |-
@@ -51864,6 +51931,12 @@ components:
         which is why they are stored rather than recomputed.
       required: [id, local_week_start, generated_at, as_of, counts, deals]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |-
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         meetings_withheld:
           type: boolean
           description: |-
@@ -52056,6 +52129,12 @@ components:
       description: The week before this one, for comparison.
       required: [local_week_start, counts]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |-
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         local_week_start: {type: string, format: date}
         counts: {$ref: '#/components/schemas/WeeklyReviewCounts'}
         pipeline:
@@ -52658,6 +52737,18 @@ components:
         id: {type: string, format: uuid, description: 'The completed act, as its own surface spells it.'}
         kind: {type: string, description: "The producer's own sub-type — for the label, never for authority."}
         summary: {type: string, description: 'What was done, in the words the act itself recorded.'}
+        headline:
+          type: string
+          description: >-
+            `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses.
+        reason:
+          type: string
+          description: >-
+            Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
+        customer_quote:
+          type: string
+          description: >-
+            The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote.
         summary_parts:
           allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
           description: The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
@@ -52926,7 +53017,7 @@ components:
         review:
           type: integer
           minimum: 0
-          description: 'Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.'
+          description: 'Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count.'
     WorklistReadings:
       type: object
       description: |-

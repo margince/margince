@@ -315,19 +315,24 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 	if normalizeEmail(email) == "" {
 		return false, nil
 	}
-	var threads int
+	// One thread first, then any other: both reads walk this address's own mail
+	// and stop at the first hit. A DISTINCT under LIMIT let a generic plan walk
+	// the thread index across the whole table for an address with one thread.
+	written := func(alias string) string {
+		return alias + `.counterparty_email = ANY($1::text[]) AND ` + alias + `.counterparty_outbound_attested
+		     AND ` + alias + `.thread_key <> '' AND ` + auth.ActivityExternalEvidenceClause(alias)
+	}
+	var two bool
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FROM (
-		  SELECT DISTINCT thread_key
-		    FROM activity
-		   WHERE counterparty_email = ANY($1::text[])
-		     AND counterparty_outbound_attested
-		     AND thread_key <> ''
-		     AND `+auth.ActivityExternalEvidenceClause("activity")+`
-		   LIMIT 2) AS distinct_threads`, storedSpellings(email)).Scan(&threads); err != nil {
+		WITH first_thread AS MATERIALIZED (
+		  SELECT one.thread_key FROM activity one WHERE `+written("one")+` LIMIT 1)
+		SELECT EXISTS (
+		  SELECT 1 FROM activity other, first_thread
+		   WHERE `+written("other")+` AND other.thread_key <> first_thread.thread_key)`,
+		storedSpellings(email)).Scan(&two); err != nil {
 		return false, fmt.Errorf("capture: counting the threads this workspace wrote on: %w", err)
 	}
-	return threads >= 2, nil
+	return two, nil
 }
 
 // metInPersonTx reports whether this workspace and that address share a meeting

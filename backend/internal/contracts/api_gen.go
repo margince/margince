@@ -56811,6 +56811,12 @@ type Receipt struct {
 	// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 	CloseDateChange *CloseDateChange `json:"close_date_change,omitempty"`
 
+	// CustomerQuote The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote.
+	CustomerQuote *string `json:"customer_quote,omitempty"`
+
+	// Headline `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses.
+	Headline *string `json:"headline,omitempty"`
+
 	// Id The completed act, as its own surface spells it.
 	Id openapi_types.UUID `json:"id"`
 
@@ -56819,6 +56825,9 @@ type Receipt struct {
 
 	// OccurredAt When it happened.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// Reason Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
+	Reason *string `json:"reason,omitempty"`
 
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
@@ -61342,7 +61351,8 @@ type SettingOriginSource string
 // Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
 // The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
 type SettingsAvailability struct {
-	// CompanyContext True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it.
+	// CompanyContext Deprecated. Still required and returned for compatibility throughout the API notice window. New clients read `read_enabled` from `GET /company/context/capabilities` instead. This field continues to report whether the company-context rollout has typed reads active. It does not gate the installation's Company settings page.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompanyContext bool `json:"company_context"`
 
 	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
@@ -62786,9 +62796,14 @@ type TeamWeeklyReview struct {
 	// Exceptions LIVE, computed on every read and never frozen: the open input-check findings on deals
 	// the team's members own now, under the reader's own deal scope. Absent when the read
 	// did not ask.
-	Exceptions     *[]InputCheck      `json:"exceptions,omitempty"`
-	GeneratedAt    time.Time          `json:"generated_at"`
-	Id             openapi_types.UUID `json:"id"`
+	Exceptions  *[]InputCheck      `json:"exceptions,omitempty"`
+	GeneratedAt time.Time          `json:"generated_at"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld  *bool              `json:"leads_withheld,omitempty"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
 	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
@@ -63129,7 +63144,9 @@ type UndoMarginceChangeKept struct {
 	AuditLogId openapi_types.UUID `json:"audit_log_id"`
 
 	// Kind The kind of change; absent when the change could not be read.
-	Kind   *string                      `json:"kind,omitempty"`
+	Kind *string `json:"kind,omitempty"`
+
+	// Reason Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
 	Reason UndoMarginceChangeKeptReason `json:"reason"`
 
 	// TeamNotes With `needs_confirmation`, the notes the team added to the opened or reopened deal.
@@ -63142,7 +63159,7 @@ type UndoMarginceChangeKept struct {
 	TeamWork *string `json:"team_work,omitempty"`
 }
 
-// UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.
+// UndoMarginceChangeKeptReason Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
 type UndoMarginceChangeKeptReason string
 
 // UndoMarginceChangeResult What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
@@ -65700,6 +65717,11 @@ type WeeklyReview struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
 
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld *bool `json:"leads_withheld,omitempty"`
+
 	// Learnings What the week TAUGHT, as against what it was.
 	//
 	// `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
@@ -66054,7 +66076,12 @@ type WeeklyReviewPipeline struct {
 
 // WeeklyReviewPrior The week before this one, for comparison.
 type WeeklyReviewPrior struct {
-	Counts         WeeklyReviewCounts `json:"counts"`
+	Counts WeeklyReviewCounts `json:"counts"`
+
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld  *bool              `json:"leads_withheld,omitempty"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
 	// Pipeline Absent under the same rule as the current week's.
@@ -66577,7 +66604,7 @@ type WorklistBuckets struct {
 	// Planned The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.
 	Planned int `json:"planned" minimum:"0"`
 
-	// Review Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.
+	// Review Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count.
 	Review int `json:"review" minimum:"0"`
 
 	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
@@ -67078,7 +67105,9 @@ type WorklistItem struct {
 	// `today` is work a seller executes. `review` is a judgement somebody must make
 	// before work continues — an approval, a duplicate pair, an introduction.
 	// `system_health` is a source or automation an administrator must restore.
-	// `receipt` is completed work, reported so the reader can see it happened.
+	// `receipt` is deprecated and retained only for published-client compatibility
+	// through the API notice window. The work queue never emits it. Completed-work
+	// receipts are served by `GET /worklist/handled` and have their own presentation.
 	//
 	// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
 	// `source` that a browser could recompute: two rows of one source can differ,
@@ -67361,7 +67390,9 @@ type WorklistItemConsequence string
 // `today` is work a seller executes. `review` is a judgement somebody must make
 // before work continues — an approval, a duplicate pair, an introduction.
 // `system_health` is a source or automation an administrator must restore.
-// `receipt` is completed work, reported so the reader can see it happened.
+// `receipt` is deprecated and retained only for published-client compatibility
+// through the API notice window. The work queue never emits it. Completed-work
+// receipts are served by `GET /worklist/handled` and have their own presentation.
 //
 // A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
 // `source` that a browser could recompute: two rows of one source can differ,
@@ -92272,7 +92303,7 @@ type ServerInterface interface {
 	// Get ready for a meeting about one record.
 	// (GET /meeting-prep)
 	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
-	// The notification centre — every notice addressed to the acting contact, newest first.
+	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
@@ -92413,31 +92444,31 @@ type ServerInterface interface {
 	// State who this installation is.
 	// (PUT /privacy/controller-particulars)
 	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
-	// Disclosure duties this installation owes, soonest deadline first.
+	// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
-	// One disclosure duty.
+	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
 	// (GET /privacy/notice-case-reviews/{id})
 	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a disclosure duty an owner.
+	// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm the source of an unassessed contact.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Preview the source assessment without changing the case.
+	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 	// (POST /privacy/notice-case-reviews/{id}/source/preview)
 	PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Disclosure duties this installation owes, soonest deadline first.
+	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
-	// One disclosure duty.
+	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
 	// (GET /privacy/notice-cases/{id})
 	GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a disclosure duty an owner.
+	// Give a privacy notice already owed (from notice_cases) an owner.
 	// (POST /privacy/notice-cases/{id}/assign)
 	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
@@ -97573,7 +97604,7 @@ func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The notification centre — every notice addressed to the acting contact, newest first.
+// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
 // (GET /notices)
 func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -97855,19 +97886,19 @@ func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disclosure duties this installation owes, soonest deadline first.
+// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
 // (GET /privacy/notice-case-reviews)
 func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One disclosure duty.
+// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
 // (GET /privacy/notice-case-reviews/{id})
 func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a disclosure duty an owner.
+// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
 // (POST /privacy/notice-case-reviews/{id}/assign)
 func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -97879,31 +97910,31 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm the source of an unassessed contact.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Preview the source assessment without changing the case.
+// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 // (POST /privacy/notice-case-reviews/{id}/source/preview)
 func (_ Unimplemented) PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disclosure duties this installation owes, soonest deadline first.
+// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
 // (GET /privacy/notice-cases)
 func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One disclosure duty.
+// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
 // (GET /privacy/notice-cases/{id})
 func (_ Unimplemented) GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a disclosure duty an owner.
+// Give a privacy notice already owed (from notice_cases) an owner.
 // (POST /privacy/notice-cases/{id}/assign)
 func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)

@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "62914c8f6a2f20b313dd8f1eab17182f65f2c32d6ba1e0ca29c040daddd63556"
+const JobContractHash = "f0995014cb4b395bff309c58b62de9f8eb669dc193179581b584a91fda12e249"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -1032,7 +1032,6 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 10 * time.Minute, DerivedFrom: "voiceBuildTimeout"},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"VoiceBrain"}, AbsentRegistersAnyway: true},
-		Fault:        FaultPolicy{NilAfterLogging: "the build ROW owns its state: every model failure lands on the row as deferred or failed, never as a River retry loop, and the deferred-retry sweep re-enqueues what is due."},
 		Args:         []ArgField{{Name: "BuildID"}, {Name: "ProfileID"}, {Name: "RequestedBy"}, {Name: "Workspace"}},
 	},
 	"voice_build_retry": {
@@ -1045,7 +1044,7 @@ var specs = map[string]Spec{
 		FanOutUnit: FanOutBuild,
 		FanOutTo:   "voice_build",
 		OptsOwner:  OptsCaller,
-		Cadence:    Cadence{Fixed: 15 * time.Minute},
+		Cadence:    Cadence{Fixed: 1 * time.Minute},
 	},
 	"waiting_horizon_refresh": {
 		Kind:        "waiting_horizon_refresh",

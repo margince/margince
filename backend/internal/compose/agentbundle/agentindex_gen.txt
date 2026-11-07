@@ -879,15 +879,15 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /data-subject-requests` | createDataSubjectRequest | Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure. | Change records | at once |
 | `GET /data-subject-requests/deadline` | getDataSubjectRequestDeadline | The deadline a request would get, and the rule that sets it. | Read records | at once |
 | `GET /privacy/controller-particulars` | getControllerParticulars | What this installation says about itself in the messages it sends. | Read records | at once |
-| `GET /privacy/notice-cases` | listNoticeCases | Disclosure duties this installation owes, soonest deadline first. | Read records | at once |
-| `GET /privacy/notice-cases/{id}` | getNoticeCase | One disclosure duty. | Read records | at once |
-| `POST /privacy/notice-cases/{id}/assign` | assignNoticeCase | Give a disclosure duty an owner. | Change records | at once |
-| `GET /privacy/notice-case-reviews` | listNoticeCaseReviews | Disclosure duties this installation owes, soonest deadline first. | Read records | at once |
-| `GET /privacy/notice-case-reviews/{id}` | getNoticeCaseReview | One disclosure duty. | Read records | at once |
-| `POST /privacy/notice-case-reviews/{id}/assign` | assignNoticeCaseReview | Give a disclosure duty an owner. | Change records | at once |
+| `GET /privacy/notice-cases` | listNoticeCases | Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews. | Read records | at once |
+| `GET /privacy/notice-cases/{id}` | getNoticeCase | One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id. | Read records | at once |
+| `POST /privacy/notice-cases/{id}/assign` | assignNoticeCase | Give a privacy notice already owed (from notice_cases) an owner. | Change records | at once |
+| `GET /privacy/notice-case-reviews` | listNoticeCaseReviews | Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact. | Read records | at once |
+| `GET /privacy/notice-case-reviews/{id}` | getNoticeCaseReview | One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id. | Read records | at once |
+| `POST /privacy/notice-case-reviews/{id}/assign` | assignNoticeCaseReview | Give a contact's privacy-notice case (from notice_case_reviews) an owner. | Change records | at once |
 | `GET /privacy/notice-case-reviews/{id}/source` | getNoticeSourceEvidence | Read accessible evidence for a contact source assessment. | Read records | at once |
-| `POST /privacy/notice-case-reviews/{id}/source` | assessNoticeSource | Confirm the source of an unassessed contact. | Change records | at once |
-| `POST /privacy/notice-case-reviews/{id}/source/preview` | previewNoticeSource | Preview the source assessment without changing the case. | Read records | at once |
+| `POST /privacy/notice-case-reviews/{id}/source` | assessNoticeSource | Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first. | Change records | at once |
+| `POST /privacy/notice-case-reviews/{id}/source/preview` | previewNoticeSource | Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them. | Read records | at once |
 | `PATCH /data-subject-requests/{id}` | updateDataSubjectRequest | Update a data-subject request's status / assignee / resolution. | Change records | at once |
 | `GET /confirm-submissions` | listConfirmSubmissions | List what subjects sent through their own confirm links. | Read records | at once |
 | `POST /confirm-submissions/{id}/resolve` | resolveConfirmSubmission | Accept or decline what a subject proposed. | Change records | at once |
@@ -957,7 +957,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
-| `GET /notices` | listNotices | The notification centre — every notice addressed to the acting contact, newest first. | Read records | at once |
+| `GET /notices` | listNotices | The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews. | Read records | at once |
 | `POST /notices` | raiseNotice | Raise a coaching notice for a colleague. It lands in their Worklist's notices lane. | Change records | at once |
 | `POST /notices/{id}/read` | markNoticeRead | Settle a notice — its recipient has seen it, and it leaves the Worklist's notices lane. | Change records | at once |
 | `POST /notices/read-all` | markAllNoticesRead | Settle the acting contact's whole notification centre in one act. | Change records | at once |

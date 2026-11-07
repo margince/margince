@@ -31,9 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// VoiceBuildArgs runs ONE durable voice build. Unique by args while
-// incomplete: the api enqueue and the deferred-retry sweep converge on one
-// job per build row.
+// VoiceBuildArgs names one build whose executor owns a session lease.
 type VoiceBuildArgs struct {
 	Workspace   ids.UUID `json:"workspace_id"`
 	ProfileID   string   `json:"profile_id"`
@@ -43,6 +41,9 @@ type VoiceBuildArgs struct {
 
 // Kind is the stable job identifier River persists in river_job.
 func (VoiceBuildArgs) Kind() string { return "voice_build" }
+
+// SessionLocked lets a dead worker's lease, not its River row, free the build.
+func (VoiceBuildArgs) SessionLocked() {}
 
 // WorkspaceID binds this build to its tenant (jobs.WorkspaceScoped).
 func (a VoiceBuildArgs) WorkspaceID() ids.UUID { return a.Workspace }
@@ -91,7 +92,6 @@ const (
 func voiceBuildInsertOpts() *river.InsertOpts {
 	return &river.InsertOpts{
 		MaxAttempts: rowOwnedMaxAttempts,
-		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	}
 }
 
@@ -169,6 +169,13 @@ func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildAr
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("voice_build: build id: %w", err))
 	}
+	_, err = InstallationDB(w.pool).WithWorkLease(ctx, "voice_build", buildID, w.log, func(owned context.Context) error {
+		return w.build(owned, job, profileID, buildID)
+	})
+	return jobs.FaultContext(ctx, err)
+}
+
+func (w *voiceBuildWorker) build(ctx context.Context, job *river.Job[VoiceBuildArgs], profileID, buildID ids.UUID) error {
 	input, claimed, err := w.store.ClaimBuild(ctx, profileID, buildID, w.reclaimAfter())
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("voice_build %s: claim: %w", job.Args.BuildID, err))
@@ -277,8 +284,8 @@ func (w *voiceBuildWorker) deferralDeadline(err error) time.Time {
 // advance records the next stage. A build that stopped running ends the run
 // before its next model call. Any other failure to record is logged, and the
 // run carries on: the stage is display state.
-func (w *voiceBuildWorker) advance(ctx context.Context, buildID ids.UUID, stage string) error {
-	err := w.store.SetBuildStage(ctx, buildID, stage)
+func (w *voiceBuildWorker) advance(ctx context.Context, buildID ids.UUID, claimedAt time.Time, stage string) error {
+	err := w.store.SetBuildStage(ctx, buildID, claimedAt, stage)
 	if errors.Is(err, ai.ErrVoiceBuildNotRunning) {
 		return err
 	}
@@ -295,14 +302,14 @@ func (w *voiceBuildWorker) advance(ctx context.Context, buildID ids.UUID, stage 
 // recorded — the build would sit "running" until reclaim, forever retrying.
 func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.VoiceBuildInput, said voiceCopy) error {
 	heldOut, buildSamples := splitVoiceHeldOut(input.Samples, input.Build.SourceHash)
-	if err := w.advance(ctx, buildID, "extract"); err != nil {
+	if err := w.advance(ctx, buildID, claimTime(input), "extract"); err != nil {
 		return err
 	}
 	artifact, err := ai.DeriveVoice(ctx, w.brain, input.Personality, input.Build.SourceHash, buildSamples)
 	if err != nil {
 		return err
 	}
-	if err := w.advance(ctx, buildID, "evaluate"); err != nil {
+	if err := w.advance(ctx, buildID, claimTime(input), "evaluate"); err != nil {
 		return err
 	}
 	var predecessor *ai.VoiceProfileVersion
@@ -330,7 +337,7 @@ func (w *voiceBuildWorker) run(ctx context.Context, buildID ids.UUID, input ai.V
 		}
 	}
 	corpusStats := ai.AnalyzeVoice(input.Samples)
-	if err := w.advance(ctx, buildID, "activate"); err != nil {
+	if err := w.advance(ctx, buildID, claimTime(input), "activate"); err != nil {
 		return err
 	}
 	// The completing write must outlive a job timeout that fires mid-run: a
@@ -413,9 +420,9 @@ func modelNameOrUnrecorded(name string) string {
 	return name
 }
 
-// voiceBuildRetryWorker re-enqueues every due deferred build; the per-build
-// job's uniqueness makes a double offer harmless.
+// voiceBuildRetryWorker re-offers abandoned builds and due budget deferrals.
 type voiceBuildRetryWorker struct {
+	pool  *pgxpool.Pool
 	store *ai.VoiceStore
 	log   *slog.Logger
 }
@@ -430,7 +437,7 @@ func (w *voiceBuildRetryWorker) Work(ctx context.Context, _ *river.Job[VoiceBuil
 			w.log.WarnContext(ctx, "voice build skipped: requester deleted", "build", ref.BuildID.String())
 			continue
 		}
-		if err := dispatchOne(ctx, VoiceBuildArgs{
+		if err := dispatchOne(ctx, w.pool, VoiceBuildArgs{
 			Workspace:   ref.Workspace,
 			ProfileID:   ref.ProfileID.String(),
 			BuildID:     ref.BuildID.String(),

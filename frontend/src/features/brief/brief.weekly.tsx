@@ -205,7 +205,10 @@ function reportSections(
   review: WeeklyReview,
   plan: ReactNode | undefined,
 ): readonly Section[] {
-  const numeric = weeklyNumericStatus(review.numeric_summary);
+  const numeric = weeklyNumericStatus(
+    review.numeric_summary,
+    review.leads_withheld,
+  );
   const closed = review.deals.filter((deal) => deal.outcome !== "moved");
   const moved = review.deals.filter((deal) => deal.outcome === "moved");
   const learnings = review.learnings;

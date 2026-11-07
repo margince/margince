@@ -179,6 +179,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 
 	// THE WRITE CANNOT REACH A RETIRED ROW, because of what it is rather than
 	// because of a predicate. Each says which fact makes that true.
+	"internal/modules/capture:storeDeferredOriginalTx":    "the activity was INSERTed by this same transaction before its files were stored, so there is no archived row for it to find",
 	"internal/modules/capture:limitLinkLessAudience":      "the activity was INSERTed by this same transaction a few statements earlier, so there is no archived row for it to find — the function's own check is that exactly one row moved",
 	"internal/modules/capture:AdvanceChannelPollOffsetTx": "the poller's watermark for a connection its own live selection handed it, and the statement only ever moves the offset FORWARD (`poll_offset < $3`), so a late write from a retired cycle matches nothing",
 	"internal/modules/capture:backfillWorkspace":          "a one-time relocation of credential material out of the `auth` column and into the vault. It MUST reach withdrawn connections: leaving their secrets in a column the vault was introduced to empty is the defect, and the row is claimed with `credential_ref IS NULL` so two boots relocate once",
@@ -193,7 +194,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/signals:resolveToCompany":                 "the resolver stamping the single-candidate match on a signal its own pass selected; the contact link it may write is separately consent-gated and never creates a record",
 	"internal/modules/signals:flagAmbiguous":                    "the resolver flagging a signal for review when several companies are plausible, on a row from the same pass. It links nobody and resolves nothing",
 	"internal/modules/contacts:setDedupeDispositionTx":          "disposing a duplicate-candidate row, not either record it names. `disposition = 'open'` is the guard, and a candidate is closed rather than archived",
-	"internal/modules/contacts:reopenDedupeCandidateTx":         "the undo of the same disposition, read and written under the candidate's own lock; nothing writes dedupe_candidate.archived_at",
+	"internal/modules/contacts:reopenDedupeCandidateTx":         "the disposition is read and written under the candidate lock; user undo also locks both live subjects, while failed merge compensation restores the original decision",
 	"internal/modules/contacts:rewriteFullNameTx":               "moves a display name only after its two callers locked the row and decided the display may change: the display refresh, which refuses a name anyone but capture chose and fails the both-halves check on an erased subject, and the signature apply, which holds the subject live before it writes",
 	"internal/modules/contacts:completeContactName":             "filling first and last from a confident parse, and only into columns that are both still empty. The predicate is also the concurrency guard, and an erased subject has had them nulled with the row's other identity columns",
 	"internal/modules/contacts:absorbCompanyReferences":         "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 232785,
+    "tool_catalog_bytes": 232806,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59601,
+    "approx_wire_tokens_total": 59607,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 54963,
+      "description_bytes": 54984,
       "input_schema_bytes": 113876,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 168839
+      "description_plus_input_schema_bytes": 168860
     }
   },
   "tools": {
@@ -1303,7 +1303,7 @@
           "readOnlyHint": false,
           "title": "Decide what comes into the CRM"
         },
-        "description": "Decide what comes into the CRM: keep an address or domain out, answer a sender or domain question, keep one party's mail private, declare the user's own other addresses, set a mailbox's posture, signature pass, history baseline and filing word, cancel a backfill, disconnect a mailbox or channel, define the knowledge corpora and upload a text document to one, import the user's LinkedIn connections export, and carry on, test, cancel or undo an import. import_vcards takes a vCard file or its text, and fills a contact that already matches rather than doubling it. Keep a domain out of the user's own capture with add_exclusion, scope user. Scope workspace stops capture for every colleague, so ask the user first. set_blocked_domain is a different act: it refuses the parent domain for the whole workspace, so a request about the user's own mail never reaches it. Answers change what is captured from then on. A sender's keep_out destroys mail, so the app does that one. Connecting a mailbox needs the provider's consent in a browser, and deleting a document for good stays in the app. Ask the user first where the action is marked so: a vCard writes contacts at once, and says the contact handed the card over. Use read_workspace topics capture_senders, held_threads, counterparty_holds and corpora to read first, run_research start_backfill to bring in old mail, run_research ask_corpus to ask a corpus, preview_import and commit_import to start an import, and change_tags to tag a record. (Runs immediately; the user's yes is needed for the actions add_consumer_mail_domain, add_workspace_email_domain, archive_corpus, disconnect_channel, disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture, share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Decide what comes into the CRM: keep an address or domain out, answer a sender or domain question, keep one party's mail private, declare the user's own other addresses, set a mailbox's posture, signature pass, history baseline and filing word, cancel a backfill, disconnect a mailbox or channel, define the knowledge corpora and upload a text document to one, import the user's LinkedIn connections export, and carry on, test, cancel or undo an import. import_vcards takes a vCard file or its text, and fills a contact that already matches rather than doubling it. Keep a domain out of the user's own capture with add_exclusion, scope user. Scope workspace stops capture for every colleague, so ask the user first. set_blocked_domain is a different act: it refuses the parent domain for the whole workspace, so a request about the user's own mail never reaches it. Answers change what is captured from then on. A sender's keep_out destroys mail, so the app does that one. Connecting a mailbox needs the provider's consent in a browser, and deleting a document for good stays in the app. Ask the user first where the action is marked so: a vCard writes contacts at once, and says the contact handed the card over. Use read_workspace topics capture_senders, held_threads, counterparty_holds and corpora to read first, run_research start_backfill to bring in old mail, run_research ask_corpus to ask a corpus, preview_import and commit_import to start an import, and change_tags to tag a record. (Runs immediately; the user's yes is needed for the actions add_consumer_mail_domain, add_workspace_email_domain, archive_corpus, disconnect_channel, disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture, set_sender_decision, share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
