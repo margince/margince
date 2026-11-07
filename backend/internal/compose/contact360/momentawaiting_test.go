@@ -10,11 +10,12 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Our last mail says we will wait for them, and a reminder to chase them is open.
-// An older commitment is still open but not due. The record waits on them.
+// Our last mail says we will wait for them, and our reminder to chase them is
+// open. The record waits on them.
 func TestWeWroteLastAndWaitReadsAsAwaitingTheirReply(t *testing.T) {
 	page := &crmcontracts.Contact360{
 		LastOutboundAt: new(at(2)), LastInboundAt: new(at(6)), LastLiveInboundAt: new(at(6)),
@@ -22,7 +23,6 @@ func TestWeWroteLastAndWaitReadsAsAwaitingTheirReply(t *testing.T) {
 			Id: openapi_types.UUID(ids.NewV7()), Kind: "task",
 			Subject: new("Follow up if they have not answered"), OccurredAt: at(1), DueAt: new(ahead(72)),
 		}),
-		Claims: &[]crmcontracts.ConversationClaim{ourClaim(at(10), new(ahead(240)))},
 	}
 	got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 	if got.Rule != crmcontracts.ContactMomentRuleAwaitingReply {
@@ -45,6 +45,23 @@ func TestTheWaitDoesNotHideWhatWeOweOrTheirAnswer(t *testing.T) {
 			page: &crmcontracts.Contact360{
 				LastOutboundAt: new(at(2)),
 				Claims:         &[]crmcontracts.ConversationClaim{ourClaim(at(2), new(ahead(48)))},
+			},
+			want: crmcontracts.ContactMomentRuleOpenPromise,
+		},
+		"an unrelated mail of ours leaves an older promise owed": {
+			page: &crmcontracts.Contact360{
+				LastOutboundAt: new(at(2)),
+				Claims:         &[]crmcontracts.ConversationClaim{ourClaim(at(10), new(ahead(240)))},
+			},
+			want: crmcontracts.ContactMomentRuleOpenPromise,
+		},
+		"a task written for a commitment is owed": {
+			page: &crmcontracts.Contact360{
+				LastOutboundAt: new(at(2)),
+				NextSteps: timelineOf(crmcontracts.Activity{
+					Id: openapi_types.UUID(ids.NewV7()), Kind: "task", Subject: new("Send the listing details"),
+					OccurredAt: at(3), DueAt: new(ahead(72)), SourceSystem: new(activities.CommitmentTaskSource),
+				}),
 			},
 			want: crmcontracts.ContactMomentRuleOpenPromise,
 		},
