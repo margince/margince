@@ -482,6 +482,20 @@ func emptyAnswerProofs() map[string]judgelessProof {
 			correct: noEvent, wrong: event("commitment_made", 1, "Thanks Anna, noted."),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		// "Still on our list" read as a firmer chance of winning.
+		"a_friendly_check_in_changes_nothing": {
+			correct: literal(`{"actions":[]}`), wrong: probabilityChange(40), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+	}
+}
+
+// probabilityChange proposes one set_probability citing the deal's first activity.
+func probabilityChange(probability int) func([]string) string {
+	return func(ids []string) string {
+		return mustJSON(map[string]any{"actions": []map[string]any{{
+			"kind": "set_probability", "probability": probability, "cited_activity_ids": []string{ids[0]},
+			"reason": "A planted change.", "confidence": 0.9,
+		}}})
 	}
 }
 
