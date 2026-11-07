@@ -74,8 +74,7 @@ func TestTheDocumentSaysWhichQueryArgumentsAViewNeeds(t *testing.T) {
 	}
 }
 
-// describe_views answers the document verbatim, so the tool and the resource
-// cannot disagree.
+// describe_views answers the document verbatim.
 func TestDescribeViewsPassesTheDocumentThroughUnchanged(t *testing.T) {
 	t.Parallel()
 	resource := NewReadViewsResource(viewsOfTwoShapes)
