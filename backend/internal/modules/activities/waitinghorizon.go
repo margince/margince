@@ -184,12 +184,26 @@ func (s *Store) refreshWaitingHorizonTx(ctx context.Context, tx pgx.Tx, asOf tim
 // measureWaitingHorizon takes the response spread and derives the horizon
 // from it: the year-long percentile only the worker pass pays for.
 func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
-	spread, err := s.waitingHorizonSpreadTx(ctx, tx, asOf, waitingHorizonSample)
+	spread, err := s.horizonSpreadTx(ctx, tx, asOf, waitingHorizonSample)
 	if err != nil {
 		return 0, err
 	}
 	return derivedWaitingHorizonDays(spread), nil
 }
+
+// horizonSpreadTx measures over the sample, and over the whole window when
+// the sample holds too few answers to speak. Without the second pass a mailbox
+// that answers rarely would store the compiled horizon over a learned one.
+func (s *Store) horizonSpreadTx(ctx context.Context, tx pgx.Tx, asOf time.Time, sample int) (waitingHorizonSpread, error) {
+	spread, err := s.waitingHorizonSpreadTx(ctx, tx, asOf, sample)
+	if err != nil || spread.Answered >= waitingHorizonMinSample {
+		return spread, err
+	}
+	return s.waitingHorizonSpreadTx(ctx, tx, asOf, wholeWindow)
+}
+
+// wholeWindow is the sample size that judges every message in the window.
+const wholeWindow = 0
 
 // waitingHorizonSample is how many of the window's sales messages the
 // measurement judges. Each one costs a read of the mail that could have
@@ -230,8 +244,17 @@ func (s *Store) waitingHorizonStatement(ctx context.Context, tx pgx.Tx, asOf tim
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", arg(ownDomains)),
 		slowPercentile,
-		sampledMessages(arg(sample)))
+		sampleClause(sample, arg))
 	return query, args, nil
+}
+
+// sampleClause is the sample firstResponseSQL judges: every message for
+// wholeWindow, else sampledMessages.
+func sampleClause(sample int, arg func(any) int) string {
+	if sample == wholeWindow {
+		return everyMessage
+	}
+	return sampledMessages(arg(sample))
 }
 
 // sampledMessages keeps the first messages firstResponseSQL judges by a hash of
