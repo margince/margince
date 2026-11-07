@@ -33,6 +33,16 @@ type ReadView struct {
 	Query      []ViewQuery
 }
 
+// viewNameSchema names where the catalog lives, with one view as an example so
+// a caller, and the role sweep's filler, has a real name to start from.
+func viewNameSchema(views []ReadView) string {
+	schema := `{"type":"string","description":"a view named in ` + ReadViewsURI + ` or describe_views"`
+	if names := viewNames(views); len(names) > 0 {
+		schema += `,"examples":[` + strconv.Quote(names[0]) + `]`
+	}
+	return schema + "}"
+}
+
 // ViewQuery is one query parameter of a route: what read_view binds, and what
 // the views document and a route verb tell a caller about it.
 type ViewQuery struct {
@@ -135,7 +145,7 @@ func (t readView) Spec() mcp.ToolSpec {
 		note("cursor", schemaString, v.Name)
 		note("limit", "integer", v.Name)
 	}
-	properties := []string{strconv.Quote(viewArg) + `:{"type":"string","description":"a view named in ` + ReadViewsURI + ` or describe_views"}`}
+	properties := []string{strconv.Quote(viewArg) + ":" + viewNameSchema(t.views)}
 	for _, arg := range slices.Sorted(maps.Keys(types)) {
 		properties = append(properties, strconv.Quote(arg)+":"+viewArgSchema(arg, types[arg]))
 	}
