@@ -76,8 +76,8 @@ and for dates after now. The correction test uses the real writer, task and work
 
 The tests above run the sink alone. To see what history imports cost a whole installation, run
 them through a dev stack's worker against `backend/tools/fakegmail`. It serves the Gmail calls the
-connector makes, from mailboxes it builds from a seed: threads, copies, newsletters, colleagues who
-write to each other and customers they share. `-big` adds files of a realistic size, up to 15 MiB.
+connector makes, from mailboxes it builds from a seed: threads, copies, bulk mail, colleagues who
+write to each other and customers they share. `-big` adds files of a real size, up to 15 MiB.
 
 1. Start the server from `backend/`, one mailbox per seat the demo data has:
 
@@ -85,7 +85,7 @@ write to each other and customers they share. `-big` adds files of a realistic s
    go run ./tools/fakegmail -owners admin@demo.test,rep@demo.test,rep2@demo.test -messages 20000 -big
    ```
 
-2. In the worktree's `.env.local`, set `MARGINCE_GMAIL_CLIENT_ID` and `MARGINCE_GMAIL_CLIENT_SECRET`
+2. In `.env.local` of the worktree, set `MARGINCE_GMAIL_CLIENT_ID` and `MARGINCE_GMAIL_CLIENT_SECRET`
    to any value, and `MARGINCE_CAPTURE_HISTORY_CONCURRENCY` to the number of mailboxes.
 3. Start the stack with the `loadrig` build tag, and point it at the server in the shell. The
    programs read this switch from their environment, never from `.env.local`:
@@ -103,8 +103,8 @@ write to each other and customers they share. `-big` adds files of a realistic s
      Postgres is busy with;
    - `pg_stat_database` and `pg_stat_user_tables` before and after a window give rows read per
      message, and which tables they came from;
-   - `ps -o rss=` on the stack's worker gives its memory.
+   - `ps -o rss=` on the stack's worker gives the size of the worker process.
 
-The client keeps to Google's quota, so a mailbox imports about 90 messages a minute, as in
-production. `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` raises that limit, which shows the work per
+The client keeps to the quota Google sets, so a mailbox imports about 90 messages a minute, as in
+production. A larger `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` lifts that limit, which shows the work per
 message sooner. Stop the stack with `DEV_SLUG=loadrig make dev-stop`.

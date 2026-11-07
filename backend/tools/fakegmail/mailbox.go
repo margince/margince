@@ -30,10 +30,10 @@ type message struct {
 // The correspondents are shared by every mailbox, so colleagues write to the
 // same customers, and a few customers get most of the mail.
 const (
-	companies     = 150
-	peoplePerCo   = 4
-	freemailUsers = 120
-	newsletters   = 30
+	companies           = 150
+	addressesPerCompany = 4
+	freemailUsers       = 120
+	newsletters         = 30
 )
 
 var (
@@ -51,7 +51,7 @@ func (s *server) rng(box, n int) *rand.Rand {
 	return rand.New(rand.NewPCG(s.boxes[box].seed, uint64(n)))
 }
 
-func (s *server) person(r *rand.Rand) (name, addr string) {
+func (s *server) correspondent(r *rand.Rand) (name, addr string) {
 	if r.IntN(10) == 0 {
 		i := r.IntN(freemailUsers)
 		local := firstNames[i%len(firstNames)] + "." + lastNames[(i/3)%len(lastNames)]
@@ -59,7 +59,7 @@ func (s *server) person(r *rand.Rand) (name, addr string) {
 	}
 	x := r.Float64()
 	co := min(companies-1, int(companies*x*x*x))
-	p := r.IntN(peoplePerCo)
+	p := r.IntN(addressesPerCompany)
 	first, last := firstNames[(co*7+p)%len(firstNames)], lastNames[(co+p*5)%len(lastNames)]
 	return displayName(first + " " + last), fmt.Sprintf("%s.%s@company%03d.example", first, last, co)
 }
@@ -83,7 +83,7 @@ func (s *server) build(box, n int) message {
 		root = n + 1 + r.IntN(6)
 	}
 	thread := s.rng(box, root+1_000_000)
-	peerName, peer := s.person(thread)
+	peerName, peer := s.correspondent(thread)
 	subject := subjects[thread.IntN(len(subjects))] + " " + strconv.Itoa(root%97)
 	from, to, labels := fmt.Sprintf("%s <%s>", peerName, peer), owner, []string{"INBOX"}
 	var extra [][2]string
@@ -103,7 +103,7 @@ func (s *server) build(box, n int) message {
 	}
 	headers := [][2]string{{"From", from}, {"To", to}, {"Subject", subject}, {"Date", date.Format(time.RFC1123Z)}, {"Message-ID", fmt.Sprintf("<m%d.%d@mx.demo>", box, n)}}
 	if r.IntN(4) == 0 {
-		ccName, cc := s.person(r)
+		ccName, cc := s.correspondent(r)
 		headers = append(headers, [2]string{"Cc", fmt.Sprintf("%s <%s>", ccName, cc)})
 	}
 	if root != n {
