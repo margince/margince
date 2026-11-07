@@ -45,7 +45,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 |---|---|
 | `check-q` | Quiet `make check`: full log in `.tmp/check.log`, excerpt on failure |
 | `check-go` | The Go half of the gate (`make -C backend check`) |
-| `fe-install` / `fe-typecheck` | Frontend deps install / `tsc` typecheck (scope-aware FE gates) |
+| `fe-install` / `fe-typecheck` | Frontend deps install / `tsc` typecheck (scope-aware FE gates). The install checks the root pnpm pin first. A known native binary placeholder is completed with that pinned package’s own installer, then checked again |
 
 ## Gates
 
