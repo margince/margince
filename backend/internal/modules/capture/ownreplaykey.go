@@ -95,6 +95,10 @@ func (s *Sink) fileUnderOwnReplayKey(
 	// its own — a connector that stored its own original, or a record with no raw
 	// at all — and then what it already names IS this message's own.
 	scoped.StoredOriginal = ids.Nil
+	scoped, err := releaseHeldOriginalForScopedKeyTx(ctx, tx, scoped)
+	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	own, err := storeRawCapture(ctx, tx, scoped)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err

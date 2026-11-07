@@ -181,5 +181,5 @@ func (w *capturedDealRefileSweepWorker) scheduleWorkspace(ctx context.Context, w
 	if err != nil {
 		return err
 	}
-	return dispatchOne(ctx, args, nil)
+	return dispatchOne(ctx, w.pool, args, nil)
 }

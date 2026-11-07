@@ -120,6 +120,7 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/capture:storeDeferredOriginalTx":      "names the original of an activity this same transaction inserted; no other writer can hold the row yet",
 	"internal/modules/consent:assessNoticeSourceTx":         "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the assessment reads or writes it",
 	"internal/modules/consent:ReviewUnverifiedNoticeTx":     "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the source decision is read or changed",
 	"internal/modules/contacts:refreshContactPhoneEvidence": "recheckBatch holds every candidate from lockOpenPairs FOR UPDATE OF d through the evidence refresh in the same transaction",

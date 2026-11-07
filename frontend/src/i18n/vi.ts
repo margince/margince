@@ -2047,6 +2047,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "brief.weekly.tasksCompleted": "Việc cần làm đã hoàn tất",
   "brief.weekly.noMeetings": "Chưa ghi nhận cuộc họp nào",
+  "brief.weekly.leadsUnavailable": "Số liệu lead không khả dụng cho tuần này.",
   "brief.weekly.noLeads": "Chưa nhận lead nào",
   "brief.weekly.noCommitments": "Không có cam kết đến hạn",
   "brief.weekly.basis":
@@ -2077,7 +2078,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
   "home.receipt.basis_other":
     "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
-  "brief.changes.keepDate": "Giữ ngày",
   "worklist.handled.showHistory": "Xem thay đổi gần đây",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.dateUnconfirmed":
@@ -2204,9 +2204,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
   "brief.changes.superseded":
     "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
-  "brief.changes.title": "Kiểm tra thay đổi đã áp dụng",
-  "brief.changes.accept": "Chấp nhận",
-  "brief.changes.accepted": "Đã chấp nhận",
   "brief.changes.undone": "Đã hoàn tác",
   "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
@@ -18633,30 +18630,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.undo.archived":
     "Đã lưu trữ. Margince sẽ không mở deal cho việc này nữa, trừ khi có dấu hiệu mua hàng mới.",
   "changes.kind.stage_move": "Chuyển sang giai đoạn sau",
-  "changes.summary_one":
-    "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
-  "changes.summary_other":
-    "Margince đã cập nhật {count} giao dịch của bạn: {parts}",
-  "changes.part.closed_one": "{count} đã đóng",
-  "changes.part.closed_other": "{count} đã đóng",
-  "changes.part.redated_one": "{count} đổi ngày",
-  "changes.part.redated_other": "{count} đổi ngày",
-  "changes.part.revalued_one": "{count} đổi giá trị",
-  "changes.part.revalued_other": "{count} đổi giá trị",
-  "changes.part.probabilities_one": "{count} xác suất",
-  "changes.part.probabilities_other": "{count} xác suất",
-  "changes.part.moved_one": "{count} chuyển giai đoạn",
-  "changes.part.moved_other": "{count} chuyển giai đoạn",
-  "changes.part.opened_one": "{count} mở mới",
-  "changes.part.opened_other": "{count} mở mới",
-  "changes.part.revived_one": "{count} mở lại",
-  "changes.part.revived_other": "{count} mở lại",
-  "changes.viewAll": "Xem tất cả",
-  "changes.undoAll": "Hoàn tác tất cả",
-  "changes.undoAllDone_one": "Đã hoàn tác trên {count} giao dịch.",
-  "changes.undoAllDone_other": "Đã hoàn tác trên {count} giao dịch.",
-  "changes.undoAllPartly":
-    "Đã hoàn tác trên {undone} giao dịch. {kept} giao dịch giữ một thay đổi đã được sửa sau đó.",
   "changes.partly":
     "Đã hoàn tác, trừ {field} đã được thay đổi sau khi Margince đặt.",
   "changes.refused":
@@ -20915,4 +20888,35 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
   "analytics.team.qualificationUnattributed_other":
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
+  "brief.done.title": "Margince đã làm giúp bạn",
+  "brief.done.waiting_one": "{count} giao dịch chờ bạn xem xét",
+  "brief.done.waiting_other": "{count} giao dịch chờ bạn xem xét",
+  "brief.done.reviewAll_one": "Xem xét tất cả {count} giao dịch",
+  "brief.done.reviewAll_other": "Xem xét tất cả {count} giao dịch",
+  "brief.done.drawerTitle_one": "{count} giao dịch Margince đã thay đổi",
+  "brief.done.drawerTitle_other": "{count} giao dịch Margince đã thay đổi",
+  "changes.undoDeals_one": "Hoàn tác thay đổi trên {count} giao dịch",
+  "changes.undoDeals_other": "Hoàn tác thay đổi trên {count} giao dịch",
+  "brief.done.undoChanges_one": "Hoàn tác {count} thay đổi",
+  "brief.done.undoChanges_other": "Hoàn tác {count} thay đổi",
+  "brief.done.history": "Xem lịch sử thay đổi",
+  "brief.done.dealsLabel": "Các giao dịch Margince đã thay đổi",
+  "brief.done.noReason": "Margince không ghi lại lý do nào mà bạn có thể đọc.",
+  "brief.done.customerWrote": "Khách hàng đã viết:",
+  "brief.changes.markReviewed": "Đánh dấu đã xem xét",
+  "brief.changes.reviewed": "Đã xem xét",
+  "magic.lane.doneOther": "Việc khác đã hoàn thành",
+  "changes.bulk.undone_one": "Đã hoàn tác trên {count} giao dịch.",
+  "changes.bulk.undone_other": "Đã hoàn tác trên {count} giao dịch.",
+  "changes.bulk.partly_one": "{count} giao dịch được hoàn tác một phần.",
+  "changes.bulk.partly_other": "{count} giao dịch được hoàn tác một phần.",
+  "changes.bulk.kept_one": "{count} giao dịch giữ nguyên thay đổi.",
+  "changes.bulk.kept_other": "{count} giao dịch giữ nguyên thay đổi.",
+  "changes.bulk.confirm_one":
+    "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
+  "changes.bulk.confirm_other":
+    "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
+  "changes.bulk.unsent_one": "{count} giao dịch chưa được gửi.",
+  "changes.bulk.unsent_other": "{count} giao dịch chưa được gửi.",
+  "changes.bulk.retry": "Gửi lại",
 };

@@ -24,6 +24,7 @@ func verdictReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		summary = fmt.Sprintf("Changed the win probability on %q: %s → %s", c.DealName,
 			receiptProbability(c.BeforeProbability), receiptProbability(c.AfterProbability))
 	}
+	headline := summary
 	if c.Basis != "" {
 		summary += " — " + c.Basis
 	}
@@ -32,6 +33,7 @@ func verdictReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		ID:         c.AuditLogID,
 		Kind:       c.Correction,
 		Summary:    summary,
+		Headline:   headline,
 		OccurredAt: c.AppliedAt,
 		TargetType: approvalTargetDeal,
 		TargetID:   c.DealID.UUID,
@@ -43,17 +45,21 @@ func verdictReceipt(c deals.CorrectionReceipt) attention.Receipt {
 // stageMoveReceipt renders a deal Margince moved to a later stage, with the
 // reason and the probability the deal took with the stage.
 func stageMoveReceipt(c deals.CorrectionReceipt) attention.Receipt {
-	summary := fmt.Sprintf("Moved %q from %s to %s", c.DealName, receiptStage(c.FromStage), receiptStage(c.ToStage))
+	moved := fmt.Sprintf("Moved %q from %s to %s", c.DealName, receiptStage(c.FromStage), receiptStage(c.ToStage))
+	summary, headline := moved, moved
 	if c.Basis != "" {
 		summary += ": " + c.Basis
 	}
 	if c.StageProbability != nil {
-		summary += fmt.Sprintf(". Probability now %d%%", *c.StageProbability)
+		probability := fmt.Sprintf(". Probability now %d%%", *c.StageProbability)
+		summary += probability
+		headline += probability
 	}
 	return attention.Receipt{
 		ID:         c.AuditLogID,
 		Kind:       deals.DealStageMoveKind,
 		Summary:    summary,
+		Headline:   headline,
 		OccurredAt: c.AppliedAt,
 		TargetType: approvalTargetDeal,
 		TargetID:   c.DealID.UUID,
@@ -69,6 +75,7 @@ func dealReviveReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if c.ToStage != nil {
 		summary += " in " + *c.ToStage
 	}
+	headline := summary
 	if c.Basis != "" {
 		summary += ": " + c.Basis
 	}
@@ -76,6 +83,7 @@ func dealReviveReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		ID:         c.AuditLogID,
 		Kind:       deals.DealReviveKind,
 		Summary:    summary,
+		Headline:   headline,
 		OccurredAt: c.AppliedAt,
 		TargetType: approvalTargetDeal,
 		TargetID:   c.DealID.UUID,
@@ -88,6 +96,7 @@ func dealReviveReceipt(c deals.CorrectionReceipt) attention.Receipt {
 // the buying evidence it rests on.
 func dealOpenReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	summary := fmt.Sprintf("Opened the deal %q", c.DealName)
+	headline := summary
 	if c.Basis != "" {
 		summary += ": " + c.Basis
 	}
@@ -95,6 +104,7 @@ func dealOpenReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		ID:         c.AuditLogID,
 		Kind:       deals.DealOpenKind,
 		Summary:    summary,
+		Headline:   headline,
 		OccurredAt: c.AppliedAt,
 		TargetType: approvalTargetDeal,
 		TargetID:   c.DealID.UUID,
@@ -130,13 +140,8 @@ func receiptProbability(pct *int) string {
 // amountSource names the customer's words and, for another currency, the
 // amount they named and the rate's date.
 func amountSource(evidence []byte) string {
-	var facts struct {
-		Quote    string `json:"quoted_words"`
-		Amount   string `json:"quoted_amount"`
-		Currency string `json:"quoted_currency"`
-		RateDate string `json:"rate_date"`
-	}
-	if len(evidence) == 0 || json.Unmarshal(evidence, &facts) != nil || facts.Quote == "" {
+	facts := quotedFacts(evidence)
+	if facts.Quote == "" {
 		return ""
 	}
 	out := fmt.Sprintf(". The customer wrote %q", facts.Quote)
@@ -144,4 +149,23 @@ func amountSource(evidence []byte) string {
 		out += fmt.Sprintf("; %s %s converted at the rate of %s", facts.Amount, facts.Currency, facts.RateDate)
 	}
 	return out
+}
+
+// quotedEvidence is what a change's audit evidence records of the customer's
+// own words: the words, and the amount and rate they were read at.
+type quotedEvidence struct {
+	Quote    string `json:"quoted_words"`
+	Amount   string `json:"quoted_amount"`
+	Currency string `json:"quoted_currency"`
+	RateDate string `json:"rate_date"`
+}
+
+// quotedFacts reads the customer's words out of the evidence; zero when it
+// records none or cannot be read.
+func quotedFacts(evidence []byte) quotedEvidence {
+	var facts quotedEvidence
+	if len(evidence) == 0 || json.Unmarshal(evidence, &facts) != nil {
+		return quotedEvidence{}
+	}
+	return facts
 }

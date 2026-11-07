@@ -26,16 +26,9 @@ export type TeamMarginceOwnerlessDeal =
   components["schemas"]["TeamMarginceOwnerlessDeal"];
 export type DealMarginceCheck = components["schemas"]["DealMarginceCheck"];
 
-/** How many open changed deals it takes before Home shows one summary row. */
-export const CHANGE_SUMMARY_FLOOR = 3;
-
 /** The reader's open changes, one bundle per deal. */
 export function usePendingMarginceChanges() {
-  return useQuery({
-    queryKey: [...worklistKey, "margince-changes"],
-    queryFn: async (): Promise<MarginceChangeSummary> =>
-      unwrap(await api.GET("/deal-corrections/pending")),
-  });
+  return useQuery(pendingChangesQuery());
 }
 
 /** One deal's changes, newest first, a page at a time. */
@@ -101,6 +94,18 @@ export function archiveQuestion(
 // The route takes at most this many deals per call.
 const UNDO_BATCH = 200;
 
+/**
+ * What a run of Undo batches came back with. `results` holds every deal a
+ * batch answered for. `unsent` holds the deals of the failed batch and of every
+ * batch after it. The server may have committed the failed one, so a retry
+ * reads the deals again before it sends them.
+ */
+export type BundleUndoRun = {
+  results: UndoMarginceChangeResult[];
+  unsent: MarginceChangeBundle[];
+  error?: unknown;
+};
+
 /** Undoes deal bundles and refreshes everything that shows them. */
 export function useUndoMarginceChanges() {
   const client = useQueryClient();
@@ -111,22 +116,58 @@ export function useUndoMarginceChanges() {
     }: {
       bundles: readonly MarginceChangeBundle[];
       archiveConfirmedFor?: string;
-    }): Promise<UndoMarginceChangeResult[]> => {
+    }): Promise<BundleUndoRun> => {
       const results: UndoMarginceChangeResult[] = [];
       for (let at = 0; at < bundles.length; at += UNDO_BATCH) {
-        const answer = unwrap(
-          await api.POST("/deal-corrections/undo", {
-            body: {
-              items: bundles
-                .slice(at, at + UNDO_BATCH)
-                .map((bundle) => bundleItem(bundle, archiveConfirmedFor)),
-            },
-          }),
-        );
-        results.push(...answer.results);
+        try {
+          const answer = unwrap(
+            await api.POST("/deal-corrections/undo", {
+              body: {
+                items: bundles
+                  .slice(at, at + UNDO_BATCH)
+                  .map((bundle) => bundleItem(bundle, archiveConfirmedFor)),
+              },
+            }),
+          );
+          results.push(...answer.results);
+        } catch (error) {
+          return { results, unsent: bundles.slice(at), error };
+        }
       }
-      return results;
+      return { results, unsent: [] };
     },
     onSettled: () => invalidateHandledChange(client),
   });
+}
+
+/**
+ * The deals of `unsent` to send again, at the version the server reads now.
+ * Only the changes the reader first chose go again. A change that arrived
+ * since is never taken back unseen. A deal the read left out has settled. If
+ * the read was cut short, the deal goes again as it was and the server answers
+ * for it.
+ */
+export function stillPending(
+  unsent: readonly MarginceChangeBundle[],
+  fresh: MarginceChangeSummary | undefined,
+): MarginceChangeBundle[] {
+  const fresher = new Map(
+    (fresh?.bundles ?? []).map((bundle) => [bundle.deal_id, bundle]),
+  );
+  return unsent.flatMap((bundle) => {
+    const now = fresher.get(bundle.deal_id);
+    if (!now) return fresh?.truncated ? [bundle] : [];
+    const chosen = new Set(bundle.audit_log_ids);
+    const audits = now.audit_log_ids.filter((id) => chosen.has(id));
+    return audits.length > 0 ? [{ ...now, audit_log_ids: audits }] : [];
+  });
+}
+
+/** The pending read, fetched fresh for a retry. */
+export function pendingChangesQuery() {
+  return {
+    queryKey: [...worklistKey, "margince-changes"],
+    queryFn: async (): Promise<MarginceChangeSummary> =>
+      unwrap(await api.GET("/deal-corrections/pending")),
+  };
 }

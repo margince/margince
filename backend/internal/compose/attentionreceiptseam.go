@@ -115,6 +115,16 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 // A changed date names both values; confidence-only changes must not claim
 // the date moved. The recorded basis explains why the sweep acted.
 func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
+	receipt := correctionReceiptOfKind(c)
+	receipt.Reason = c.Basis
+	receipt.CustomerQuote = quotedFacts(c.Evidence).Quote
+	if receipt.Reason == "" && receipt.CustomerQuote == "" {
+		receipt.Headline = ""
+	}
+	return receipt
+}
+
+func correctionReceiptOfKind(c deals.CorrectionReceipt) attention.Receipt {
 	if c.Correction == deals.CloseLostCorrection {
 		return closeLostReceipt(c)
 	}
@@ -137,6 +147,7 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if correctionMovedForecast(c) {
 		summary += ". Win probability also lowered"
 	}
+	headline := summary
 	if c.Basis != "" {
 		summary += " — " + c.Basis
 	}
@@ -151,6 +162,7 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		CloseDateChange: correctionValues(c),
 		Kind:            kind,
 		Summary:         summary,
+		Headline:        headline,
 		OccurredAt:      c.AppliedAt,
 		TargetType:      approvalTargetDeal,
 		TargetID:        c.DealID.UUID,
@@ -167,6 +179,7 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 // the deal; the receipt has no close-date values to show.
 func closeLostReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	summary := fmt.Sprintf("Closed %q as lost", c.DealName)
+	headline := summary
 	if c.Basis != "" {
 		summary += " — " + c.Basis
 	}
@@ -174,6 +187,7 @@ func closeLostReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		ID:         c.AuditLogID,
 		Kind:       deals.DealCloseLostKind,
 		Summary:    summary,
+		Headline:   headline,
 		OccurredAt: c.AppliedAt,
 		TargetType: approvalTargetDeal,
 		TargetID:   c.DealID.UUID,

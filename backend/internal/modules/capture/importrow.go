@@ -150,6 +150,13 @@ func (s *Sink) recordThisImport(
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
 	memberBound bool,
 ) error {
+	// The import row records which original it read, so a held-back one is
+	// stored first. On a new row it is stored already, and this does nothing.
+	released, releaseErr := releaseHeldOriginalTx(ctx, tx, rec)
+	if releaseErr != nil {
+		return releaseErr
+	}
+	rec = released
 	// actor.UserID, the same seat captured_by names and stampCaptureParticipants
 	// stamps — NOT capturePrincipal's OnBehalfOf fallback. Every connector
 	// principal sets the two equal today, so this changes nothing now; it means

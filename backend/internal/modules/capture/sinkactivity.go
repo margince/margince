@@ -244,7 +244,7 @@ func (s *Sink) finishNewActivity(
 	// before staging, because this is the last point where the bodies are
 	// still only in memory: once stageParts has run they are in the object
 	// store, and the raw original points at them rather than carrying them.
-	rec, err := s.keepParts(ctx, tx, id, rec, fields)
+	rec, err := s.keepPartsAndOriginal(ctx, tx, id, rec, fields)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}

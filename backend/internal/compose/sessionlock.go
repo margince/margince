@@ -10,11 +10,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // sessionLocked marks a job kind whose worker takes a session lock for the
 // whole run. Its insert names no uniqueness, because the lock does that work.
-type sessionLocked interface{ SessionLocked() }
+type sessionLocked = jobs.SessionLocked
 
 // holdSessionLock tries to take the session advisory lock named key and reports
 // whether it got it. A false answer means a live holder owns the work.

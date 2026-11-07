@@ -32,14 +32,15 @@ const teamReviewSelect = `
 	       commitments_due, commitments_kept,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
 	       base_currency, reps_unread, numeric_summary,
-	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, ''), coalesce(summary_language, 'en')
+	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, ''), coalesce(summary_language, 'en'), leads_withheld
 	  FROM team_weekly_review`
 
 // memberFrozenWeek is one member's frozen week as the team snapshot folds it.
 type memberFrozenWeek struct {
-	counts Counts
-	money  Money
-	help   int
+	leadsWithheld bool
+	counts        Counts
+	money         Money
+	help          int
 	// plans is the member review's commitments statement; nil where that week
 	// settled no plan or was frozen before figures carried coverage.
 	plans *crmcontracts.WeeklyFigureCoverage
@@ -57,27 +58,32 @@ func memberWeek(
 	var created, won, lost *int64
 	var currency *string
 	var numeric *crmcontracts.WeeklyNumericSummary
+	var leadsWithheld bool
 	err := tx.QueryRow(ctx, `
 		SELECT deals_won, deals_lost, deals_moved,
 		       leads_routed, leads_answered_in_target, leads_breached,
 		       meetings_held, meetings_with_next_step,
 		       commitments_due, commitments_kept,
 		       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor, base_currency,
-		       numeric_summary, proposals_accepted, proposals_rejected
+		       numeric_summary, proposals_accepted, proposals_rejected, leads_withheld
 		  FROM weekly_review WHERE user_id = $1 AND local_week_start = $2`, userID, week).
 		Scan(&c.DealsWon, &c.DealsLost, &c.DealsMoved,
 			&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 			&c.MeetingsHeld, &c.MeetingsWithNextStep,
 			&c.CommitmentsDue, &c.CommitmentsKept,
 			&created, &won, &lost, &currency, &numeric,
-			&c.ProposalsAccepted, &c.ProposalsRejected)
+			&c.ProposalsAccepted, &c.ProposalsRejected, &leadsWithheld)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return memberFrozenWeek{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return memberFrozenWeek{}, fmt.Errorf("weekly: reading a member's week: %w", err)
 	}
-	out := memberFrozenWeek{counts: c}
+	leadsWithheld = leadsWithheld || !MayReadLeads(ctx)
+	if leadsWithheld {
+		c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached = 0, 0, 0
+	}
+	out := memberFrozenWeek{counts: c, leadsWithheld: leadsWithheld}
 	if currency != nil {
 		out.money = Money{
 			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
@@ -239,7 +245,7 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		&c.CommitmentsDue, &c.CommitmentsKept,
 		&created, &won, &lost, &currency, &review.RepsUnread, &review.NumericSummary,
 		&review.Quality.ProposalsAccepted, &review.Quality.ProposalsRejected,
-		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language); {
+		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language, &review.LeadsWithheld); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return TeamReview{}, apperrors.ErrNotFound
 	case err != nil:

@@ -32,7 +32,9 @@ import {
 import { weeklyNumericStatus } from "./brief.numeric";
 import { OutlookPanel } from "./brief.waterfall";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { FiguresTable } from "./brief.weekly.figures";
 import { LearningsPanel } from "./brief.weekly.learnings";
+import { WeeklyRail } from "./brief.weekly.rail";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
 
@@ -80,14 +82,10 @@ function weekly(review: () => Response, weeks: readonly string[]): RouteMap {
   };
 }
 
-function panel(routes: RouteMap) {
+function panel(routes: RouteMap, content: ReactNode = <WeeklySection />) {
   return () => {
     installFetchStub(routes);
-    return (
-      <StoryProviders>
-        <WeeklySection />
-      </StoryProviders>
-    );
+    return <StoryProviders>{content}</StoryProviders>;
   };
 }
 
@@ -542,4 +540,60 @@ export const PartlyRecordedWeek: Story = {
       [WEEK_START],
     ),
   ),
+};
+
+const leadWithheldWeek: WeeklyReview = {
+  ...wholeWeek,
+  leads_withheld: true,
+  numeric_summary: sharedWeeklyNumbers,
+  narrative: null,
+  narrated_at: null,
+  learnings: undefined,
+  scorecard: { ...weeklyScorecard, lead: undefined },
+  counts: {
+    ...wholeWeek.counts,
+    leads_routed: 0,
+    leads_answered_in_target: 0,
+    leads_breached: 0,
+  },
+};
+
+const leadWithheldRoutes = weekly(
+  () => jsonResponse(leadWithheldWeek),
+  [WEEK_START],
+);
+
+export const LeadFiguresWithheld: Story = {
+  globals: { theme: "light" },
+  render: panel(leadWithheldRoutes),
+};
+
+export const LeadFiguresWithheldDark: Story = {
+  ...LeadFiguresWithheld,
+  globals: { theme: "dark" },
+};
+
+export const LeadFiguresTableWithheld: Story = {
+  globals: { theme: "light" },
+  render: frozen(
+    <FiguresTable
+      review={leadWithheldWeek}
+      figures={weeklyNumericStatus(sharedWeeklyNumbers, true).figures}
+    />,
+  ),
+};
+
+export const LeadFiguresTableWithheldDark: Story = {
+  ...LeadFiguresTableWithheld,
+  globals: { theme: "dark" },
+};
+
+export const LeadFiguresRailWithheld: Story = {
+  globals: { theme: "light" },
+  render: panel(leadWithheldRoutes, <WeeklyRail />),
+};
+
+export const LeadFiguresRailWithheldDark: Story = {
+  ...LeadFiguresRailWithheld,
+  globals: { theme: "dark" },
 };

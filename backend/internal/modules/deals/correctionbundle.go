@@ -135,11 +135,6 @@ func (s *Store) revertCorrectionTx(
 	if correction.Reversed() {
 		return correction, &CorrectionReversalError{Reason: alreadyTakenBack}
 	}
-	// Under the correction lock, so an Accept and an Undo of one change
-	// cannot both land, whichever route the Undo came through.
-	if correction.AcceptedAt != nil {
-		return correction, &CorrectionReversalError{Reason: AlreadyAccepted}
-	}
 	evidence = reversalEvidence(evidence, correction.ID)
 	switch correction.Correction {
 	case CloseLostCorrection:
