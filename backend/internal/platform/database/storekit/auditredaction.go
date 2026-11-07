@@ -22,7 +22,7 @@ func RedactAuditHistory(ctx context.Context, tx pgx.Tx, certificate ids.UUID) er
 // RedactAuditHistoryThrough limits an upgrade correction to the original
 // certificate. Later edits and their events remain outside that correction.
 func RedactAuditHistoryThrough(ctx context.Context, tx pgx.Tx, certificate, through ids.UUID) error {
-	args := pgx.StrictNamedArgs{"certificate": certificate, "through": through}
+	args := pgx.StrictNamedArgs{"certificate": certificate, "through": through, "erasure_actions": AuditRedactionActions()}
 	var certified bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log certificate, audit_log boundary
 		WHERE `+auditRedactionScope+`
@@ -34,10 +34,7 @@ func RedactAuditHistoryThrough(ctx context.Context, tx pgx.Tx, certificate, thro
 		return errors.New("store: payload redaction needs a privacy certificate written in this transaction")
 	}
 	if _, err := tx.Exec(ctx, `UPDATE audit_log history
-		SET before = audit_redacted_image(history.entity_type, history.before),
-        after = audit_redacted_image(history.entity_type, history.after), evidence = audit_redacted_evidence(
-          history.action IN ('erase','anonymize','expire','release','pin','restrict')
-          AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)
+		SET `+redactedAuditAssignment+`
 		FROM audit_log certificate, audit_log boundary
 		WHERE `+auditRedactionScope+`
 		  AND certificate.source_xid = pg_current_xact_id()
@@ -81,12 +78,21 @@ func cancelRedactedEvents(ctx context.Context, tx pgx.Tx, args pgx.StrictNamedAr
 }
 
 const auditRedactionScope = `certificate.id = @certificate AND boundary.id = @through
- AND ((certificate.action IN ('erase','anonymize','expire','release')
+ AND ((certificate.action = ANY(@erasure_actions)
        AND boundary.entity_type = certificate.entity_type AND boundary.entity_id = certificate.entity_id)
  OR (certificate.action = 'update' AND certificate.entity_type = 'audit_log'
      AND certificate.entity_id = boundary.id AND certificate.evidence = '{"payload_redaction":true}'::jsonb))
- AND boundary.action IN ('erase', 'anonymize', 'expire', 'release')
+ AND boundary.action = ANY(@erasure_actions)
  AND boundary.before IS NULL AND boundary.after IS NULL`
 
 const auditHistoryThroughBoundary = `AND (boundary.id = certificate.id
  OR (history.occurred_at, history.id) <= (boundary.occurred_at, boundary.id))`
+
+const redactedAuditAssignment = `before = audit_redacted_image(history.entity_type, history.before),
+        after = audit_redacted_image(history.entity_type, history.after), evidence = audit_redacted_evidence(
+          history.action IN ('erase','anonymize','expire','release','pin','restrict')
+          AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)`
+
+// AuditRedactionActions mirrors the database authorization vocabulary.
+// TestPhysicalAuditActionsMatchTheDatabase holds the language boundary.
+func AuditRedactionActions() []string { return []string{"erase", "anonymize", "expire", "release"} }

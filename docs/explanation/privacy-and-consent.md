@@ -336,8 +336,8 @@ into consent's handlers.
   payload erasure, and an audit marker records that erasure. All of this runs in **one transaction
   per record**. It refuses a subject under `legal_hold`.
 
-  A background data task clears payloads left by earlier erasures. It stops at each earlier
-  proof, keeps later edits and skips current holds. Held records keep their data until the hold ends.
+  Background tasks remove copies left by earlier erasures, using old proofs and stored links.
+  They keep later edits and skip holds. Request references go after their linked copies.
 - **The suppression list** holds a hash of each erased address and handle. No later capture, import
   or typed create can store one again. A booking on the public booking page still can, because a
   refusal there would show which addresses were erased.

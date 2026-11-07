@@ -95,5 +95,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
 		auditRedactionDataTask(),
+		linkedAuditRedactionDataTask(),
 	}
 }

@@ -33,10 +33,10 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 		return HistoricalAuditPage{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT id, entity_type, entity_id,
-	 action IN ('erase','anonymize','expire','release') AND before IS NULL AND after IS NULL
+	 action=ANY(@erasure_actions) AND before IS NULL AND after IS NULL
 	 AND (evidence ? 'cause' OR evidence ? 'retention_action' OR evidence ? 'emails_suppressed')
 	 FROM audit_log WHERE id > @after AND id < @until ORDER BY id LIMIT @limit`,
-		pgx.StrictNamedArgs{"after": after, "until": until, "limit": limit})
+		pgx.StrictNamedArgs{"after": after, "until": until, "limit": limit, "erasure_actions": storekit.AuditRedactionActions()})
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
@@ -119,6 +119,8 @@ func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID,
 		err = tx.QueryRow(ctx, `SELECT d.dispute_open FROM data_subject_request d
    JOIN audit_log certificate ON certificate.evidence->>'request_id'=d.id::text
    WHERE certificate.id=@original FOR UPDATE OF d`, pgx.StrictNamedArgs{"original": original}).Scan(&held)
+	case "deal":
+		err = tx.QueryRow(ctx, `SELECT legal_hold FROM deal WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "activity":
 		current, carried := floor.sqlArgs()
 		args := []any{entity, current, carried}

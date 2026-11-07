@@ -122,6 +122,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/historicalaudit.go:historicalAuditUnderHold":      "system-only historical cleanup locks the deal and reads its legal-hold flag. The flag prevents destruction and no commercial field leaves the transaction",
 	"internal/compose/dealverdictpass.go:dueVerdictCandidates":                  "the open, owned deals the nightly verdict may read, with their checksum. Only ids, owners and checksums leave. The close-date pass reads them under its system principal, and every change runs as the owner's agent through deals.ApplyVerdict, which asks auth.Require for deal update",
 	"internal/compose/dealverdictinput.go:readVerdictDeal":                      "one deal's name, stage, amount, close date and probability for the nightly verdict, under the close-date pass's system principal. They reach the model and the owner's own Home receipt only; the change itself runs as the owner's agent",
 	"internal/compose/dealverdictinput.go:readVerdictLaterStages":               "the open stages after one deal's own, joined through the deal for its pipeline and stage, for the nightly verdict under the close-date pass's system principal. Stage names are pipeline configuration every member reads",
