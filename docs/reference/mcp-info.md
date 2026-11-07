@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 227.2 KB |
-| Resource catalog | 5.4 KB |
-| Approx. wire tokens | 59549 |
+| Tool catalog | 227.3 KB |
+| Resource catalog | 5.5 KB |
+| Approx. wire tokens | 59600 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.7 KB | 23% | Yes, every step |
-| Input schemas | 111.1 KB | 48% | Yes, every step |
+| Input schemas | 111.2 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **164.8 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **164.9 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 616 |
+| [`read_view`](#read_view) | Read a view | yes |  | 638 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2674 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
@@ -174,8 +174,9 @@ say. read_reports with kind=run names this document instead of carrying it.
 **Views read_view reads**
 
 ```text
-Every view read_view reads, with the path arguments it needs and the query arguments it takes, each
-with its JSON type.
+Every view read_view reads, with the path arguments it needs and the query arguments it takes: each
+one's JSON type, and whether it is required, with its allowed words or format. Every view also takes
+cursor and limit.
 ```
 
 ### report_blocks
@@ -11218,6 +11219,9 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "industry": {
       "type": "string"
     },
+    "initiative_id": {
+      "type": "string"
+    },
     "kind": {
       "type": "string"
     },
@@ -11325,7 +11329,10 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
       "type": "string"
     },
     "view": {
-      "description": "a view named in margince://schema/views",
+      "description": "a view named in margince://schema/views or read_workspace with topic=views",
+      "examples": [
+        "acquisition_sources"
+      ],
       "type": "string"
     }
   },

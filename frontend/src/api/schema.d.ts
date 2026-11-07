@@ -74571,6 +74571,7 @@ export interface operations {
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
                 product_id?: components["schemas"]["ReportingProductId"];
+                initiative_id?: components["schemas"]["ReportingInitiativeId"];
                 country?: components["schemas"]["ReportingCountry"];
                 industry?: components["schemas"]["ReportingIndustry"];
                 value_basis?: components["schemas"]["ReportingValueBasis"];

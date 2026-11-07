@@ -31,8 +31,8 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39528,
-    "median_tool_tokens": 619,
+    "tokens": 39550,
+    "median_tool_tokens": 620,
     "mean_tool_tokens": 823
   },
   "agents": [
@@ -168,6 +168,10 @@
       "tokens": 678
     },
     {
+      "name": "read_view",
+      "tokens": 638
+    },
+    {
       "name": "update_record",
       "tokens": 626
     },
@@ -182,10 +186,6 @@
     {
       "name": "resolve_duplicates",
       "tokens": 618
-    },
-    {
-      "name": "read_view",
-      "tokens": 616
     },
     {
       "name": "change_my_settings",

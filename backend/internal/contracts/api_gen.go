@@ -68769,6 +68769,7 @@ type ExportReportingEvaluationParams struct {
 	Metrics           *[]ReportingMetricID                        `form:"metrics,omitempty" json:"metrics,omitempty"`
 	Blocks            *[]ReportingBlockKind                       `form:"blocks,omitempty" json:"blocks,omitempty"`
 	ProductId         *ReportingProductId                         `form:"product_id,omitempty" json:"product_id,omitempty"`
+	InitiativeId      *ReportingInitiativeId                      `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
 	Country           *ReportingCountry                           `form:"country,omitempty" json:"country,omitempty"`
 	Industry          *ReportingIndustry                          `form:"industry,omitempty" json:"industry,omitempty"`
 	ValueBasis        *ReportingValueBasis                        `form:"value_basis,omitempty" json:"value_basis,omitempty"`
@@ -103992,6 +103993,19 @@ func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWrit
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "initiative_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "initiative_id", r.URL.Query(), &params.InitiativeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "initiative_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "initiative_id", Err: err})
 		}
 		return
 	}
