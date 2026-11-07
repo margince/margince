@@ -16547,7 +16547,7 @@ export const en = {
   "webhooks.eventGroup.offers": "Offers",
   "webhooks.event.offer.updated.label": "Draft offer edited",
   "webhooks.event.offer.updated.when":
-    "A draft offer's header or lines change.",
+    "A draft offer’s header or lines change.",
   "webhooks.event.offer.created.label": "Offer revision created",
   "webhooks.event.offer.created.when":
     "An offer is created, or a sent offer is regenerated into a new draft.",
