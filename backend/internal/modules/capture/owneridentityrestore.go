@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -184,6 +185,7 @@ func reinstateTx(ctx context.Context, tx pgx.Tx, w withdrawnIdentity) (OwnerIden
 	if errors.Is(err, pgx.ErrNoRows) {
 		return OwnerIdentity{}, ErrIdentityDeclaredAgain
 	}
+	database.Forget(tx, ownerIdentitiesMemo)
 	if err != nil {
 		return OwnerIdentity{}, fmt.Errorf("capture: restoring an owner identity: %w", err)
 	}

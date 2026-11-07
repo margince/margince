@@ -237,7 +237,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		return s.db.Tx(ctx, func(tx pgx.Tx) error {
 			rec = original
 			attempt = captureAttempt{}
-			ctx, err := s.admitWriteTx(ctx, tx, rec)
+			ctx, err := s.admitWriteTx(withAdmissionNote(ctx, &attempt.admission), tx, rec)
 			if err != nil {
 				return err
 			}
@@ -298,7 +298,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// surfaced as a capture failure (the 60s p95 already delivered).
 		s.ensureCounterparty(ctx, rec, ref, attempt.decision)
 	}
-	s.admitCapturedParties(ctx, rec, ref)
+	s.admitCapturedParties(ctx, rec, ref, attempt.created && !attempt.admission.pending)
 	// The project ladder runs on the same terms as the counterparty step —
 	// after the commit, in its own transaction, never failing the capture —
 	// and on EVERY capture of the activity rather than only the first.

@@ -61,7 +61,7 @@ func (r *Registry) RunBackfillExecution(ctx context.Context, id ids.UUID, genera
 	}
 	if result.scheduled {
 		if result.err == nil && !result.done {
-			capturemetrics.ObservePacing(ctx, time.Second)
+			capturemetrics.ObservePacing(ctx, backfillPageDelay)
 		}
 		return true, result.completed, result.retryAfter, result.err
 	}
@@ -85,7 +85,9 @@ func (r *Registry) runAdmittedBackfill(ctx context.Context, id ids.UUID, generat
 	defer release()
 	pageCtx, stopMonitoring := r.monitorBackfill(pageCtx)
 	defer stopMonitoring()
-	pageCtx = storekit.WithBatch(pageCtx, id)
+	// The run marks its events as imported, so a consumer that acts only on
+	// news (workflows, introductions, stage evidence) leaves history alone.
+	pageCtx = storekit.WithImportRun(storekit.WithBatch(pageCtx, id), id)
 	result := backfillStepOutcome{}
 	result.done, result.completed, result.retryAfter, result.err = r.executeBackfillPage(pageCtx, id)
 	if errors.Is(result.err, apperrors.ErrConflict) && ctx.Err() == nil {

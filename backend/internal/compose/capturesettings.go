@@ -38,7 +38,7 @@ var (
 		Doc: "Keep each traced message's sender and a bounded subject in the 24-hour capture trace, dropped messages included.",
 	})
 	CaptureHistoryConcurrency = config.Define(config.Spec[int]{
-		Key: "capture.history_concurrency", Env: "MARGINCE_CAPTURE_HISTORY_CONCURRENCY", Type: config.Int, Default: config.Some(1), Roles: bothRoles,
+		Key: "capture.history_concurrency", Env: "MARGINCE_CAPTURE_HISTORY_CONCURRENCY", Type: config.Int, Default: config.Some(2), Roles: bothRoles,
 		Validate: func(value int) error {
 			if value < 1 || value > 64 {
 				return errors.New("must be between 1 and 64")
