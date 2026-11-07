@@ -116,6 +116,15 @@ type piiHandling struct {
 // PII-bearing, and the test then proves erasure and SAR reach it. Keep it
 // in step with the subject data in data-model §3.
 var piiTables = map[string]piiHandling{
+	"audit_log":                   {erasureWrite: true, sarRead: true},
+	"event_outbox":                {erasureWrite: true, sarRead: true},
+	"deal_room_participant":       {erasureWrite: true, sarRead: true},
+	"deal_room_comment":           {erasureWrite: true, sarRead: true},
+	"intro_request":               {erasureWrite: true, sarRead: true},
+	"dedupe_candidate":            {erasureWrite: true, sarRead: true},
+	"weekly_plan_commitment":      {erasureWrite: true, sarRead: true},
+	"capture_test_mailbox_sent":   {erasureWrite: true, sarRead: true},
+	"capture_thread_verdict":      {erasureWrite: true, sarRead: true},
 	"report_edition":              {erasureWrite: true, sarRead: true},
 	"report_edition_contribution": {erasureWrite: true, sarRead: true},
 	// A report card's kept question holds its filters, and a filter value can
@@ -514,6 +523,7 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
+	"internal/modules/privacy/sarretainedcopies.go",
 	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",

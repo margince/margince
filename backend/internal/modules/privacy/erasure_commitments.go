@@ -89,7 +89,7 @@ const erasedMention = "(erased: the contact this named exercised erasure)"
 // tableownership_test.go both, and the tidier form turns a proven write into an
 // unproven one while the gates stay green.
 func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if _, err := tx.Exec(ctx, `
+	scrubbed, err := scrubbedIDs(ctx, tx, `
 		UPDATE weekly_plan_commitment
 		   SET label = $2,
 		       help_requested = '',
@@ -98,9 +98,10 @@ func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		       responded_at = NULL,
 		       linked_record_type = NULL,
 		       linked_record_id = NULL
-		 WHERE linked_record_type = 'contact' AND linked_record_id = $1`,
-		contactID, erasedMention); err != nil {
+		 WHERE linked_record_type = 'contact' AND linked_record_id = $1 RETURNING id`,
+		contactID, erasedMention)
+	if err != nil {
 		return fmt.Errorf("privacy: redacting the weekly commitments naming the subject: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "weekly_plan_commitment", scrubbed, subjectRedactionReason, subjectRedactionCause)
 }

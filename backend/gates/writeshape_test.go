@@ -33,6 +33,7 @@ import (
 // events.md gains the missing event types, wiring storekit.Emit into
 // these mutations removes the entries.
 var auditOnlyWrites = gatekit.Waive(map[string]string{
+	"internal/modules/privacy:redactHistoricalRecord":       "removes retained infrastructure payloads under an earlier privacy certificate. The record and its erasure boundary do not change. Re-emitting a domain erasure could make consumers discard later authorized work; the audit_log update entry records the payload removal without publishing a false domain change",
 	"internal/modules/privacy:scrubDedupeEvidence":          "closing duplicate questions during subject erasure records only archive flags and the reason. The closed event catalog has no dedupe type or subscriber; the enclosing erasure records its own outcome",
 	"internal/modules/assurance:CloseRetiredReviewTx":       "a data task closing the findings of a retired review type. No assurance_exception.* verb exists, as for BundleExceptionTx; the night's own clearing of findings emits nothing either, and the task each review was delivered as completes through the activities writer, which emits its own event",
 	"internal/modules/contacts:RecordSubjectWroteTx":        "source evidence is recorded with its privacy notice decision, like RelabelHeldMailTx; the closed event catalog has no acquisition-evidence event, and contact.updated would claim a change to contact fields that did not happen",

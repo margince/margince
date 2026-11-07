@@ -125,6 +125,11 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 		if err != nil {
 			return err
 		}
+		if pol.Action != actionArchive {
+			if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+				return err
+			}
+		}
 		policyID := pol.ID
 		action, err := publishedRetentionAction(pol.Action, pol.ID)
 		if err != nil {

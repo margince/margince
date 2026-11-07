@@ -100,6 +100,7 @@ func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []st
 // privacy package: retention.go also writes subject tables, and a retention sweep
 // must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	"internal/platform/database/storekit/auditredaction.go",
 	// Capture owns the projection purge reached through privacy.RawCapturePurger.
 	"internal/modules/capture/partysourceerase.go",
 	// ai owns the voice samples copied from sent mail, emptied through the
@@ -250,6 +251,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 // failure mode a glob buys here, and it is the one with no failing assertion
 // to notice it.
 var retentionSweepFiles = []string{
+	"internal/platform/database/storekit/auditredaction.go",
 	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",

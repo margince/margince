@@ -30,6 +30,15 @@ import (
 // SARPackage is the assembled export. Sections hold raw row maps —
 // the package is a data handover, not an API shape.
 type SARPackage struct {
+	AuditHistory           []map[string]any `json:"audit_history"`
+	RetainedEvents         []map[string]any `json:"retained_events"`
+	RoomParticipants       []map[string]any `json:"room_participants"`
+	RoomComments           []map[string]any `json:"room_comments"`
+	Introductions          []map[string]any `json:"introductions"`
+	DuplicateEvidence      []map[string]any `json:"duplicate_evidence"`
+	PlannedCommitments     []map[string]any `json:"planned_commitments"`
+	TestMailboxMessages    []map[string]any `json:"test_mailbox_messages"`
+	ThreadVerdicts         []map[string]any `json:"thread_verdicts"`
 	ReportingContributions []map[string]any `json:"reporting_contributions"`
 	// ReportingQuestionAnswers are the kept question answer rows a record
 	// about the subject was counted in.

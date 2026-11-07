@@ -26,6 +26,12 @@ func (*PendingStore) PurgePartySourcesForEmailsTx(ctx context.Context, tx pgx.Tx
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return err
 	}
+	if _, err := tx.Exec(ctx, `DELETE FROM capture_test_mailbox_sent
+	 WHERE EXISTS (SELECT 1 FROM jsonb_array_elements_text(to_addresses || cc_addresses) address
+	 WHERE lower(btrim(address))=ANY(ARRAY(SELECT lower(btrim(email)) FROM unnest(@emails::text[]) email)))`,
+		pgx.StrictNamedArgs{"emails": emails}); err != nil {
+		return err
+	}
 	// Erasure removes the subject's projection while preserving other recipients and privacy holds.
 	_, err := tx.Exec(ctx, `WITH erased AS (SELECT ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address) AS addresses)
  UPDATE capture_party_source ps SET
@@ -37,6 +43,7 @@ func (*PendingStore) PurgePartySourcesForEmailsTx(ctx context.Context, tx pgx.Tx
 	}
 	_, err = tx.Exec(ctx, `WITH erased AS (SELECT ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address) AS addresses)
  UPDATE capture_thread_verdict v SET
+ disposition_reason=NULL,
  seen_addresses=ARRAY(SELECT address FROM unnest(v.seen_addresses) address WHERE NOT(lower(address)=ANY(erased.addresses)))
  FROM erased WHERE EXISTS (SELECT 1 FROM unnest(v.seen_addresses) address WHERE lower(address)=ANY(erased.addresses))`, pgx.NamedArgs{"emails": emails})
 	return err

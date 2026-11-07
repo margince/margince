@@ -70,6 +70,7 @@ func dataTaskFailureWords(p datatask.Progress) (subject, body string) {
 
 func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 	return []datatask.Task{
+		auditRedactionDataTask(),
 		heldMailDataTask(now), subjectMailDataTask(now), noticeSourceDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(), taskActivityClocksDataTask(),
 		unaskedCommitmentsDataTask(), retiredStageCardsDataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
 		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyIndustryDataTask(), contactEmployersDataTask(pool), unknownEmploymentDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),

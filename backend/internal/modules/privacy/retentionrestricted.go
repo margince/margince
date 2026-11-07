@@ -101,6 +101,9 @@ func (s *RetentionService) expireRestriction(ctx context.Context, id ids.UUID) e
 		if err != nil {
 			return err
 		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+			return err
+		}
 		reason := restrictionExpiredCause
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason))
 	})

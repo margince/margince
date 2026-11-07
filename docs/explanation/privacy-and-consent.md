@@ -334,16 +334,22 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place, and deletes raw capture, embeddings and attachment bytes. It proves the work with an **audit
-  tombstone with no PII**, all in **one transaction per record**, and that transaction *is* the
-  promise. It refuses a subject under `legal_hold`.
+  place, and deletes raw capture, embeddings and attachment bytes. It clears stored audit payloads and cancels retained outbox copies of the erased records.
+  Audit IDs, actors, actions and times stay fixed. A certificate in the same transaction permits
+  payload removal, and an audit marker records that removal. All of this runs in **one transaction
+  per record**. It refuses a subject under `legal_hold`.
+  A background data task clears payloads left by earlier erasures. It stops at each earlier
+  certificate, keeps later edits and skips current holds. Restrictions retain their data until
+  the existing release or expiry path erases it.
 - **The suppression list** holds a hash of each erased address and handle. No later capture, import
   or typed create can store one again. A booking on the public booking page still can, because a
   refusal there would show which addresses were erased.
 - **Article 15 subject access** (`AssembleSAR`) is one read that needs more rights. It needs the
   `contact.delete` grant **and** a row scope with no limit. It puts everything held about a contact
   into one export package: channels, deals, leads, activities, attachments, consent and its proof log,
-  raw capture, field sources. The export is itself audited (`action=export`).
+  raw capture, field sources and retained audit payloads. It also includes the subject’s linked
+  room comments, introduction notes and other kept copies. Private mailbox content stays withheld.
+  The export is itself audited (`action=export`).
 - **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
   workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it, by default every `24h`. It
   checks **one** workspace's live policies. It takes each policy's single action on records past

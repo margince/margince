@@ -157,6 +157,9 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 		if err != nil {
 			return err
 		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+			return err
+		}
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "activity", id,
 			retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
 	})
@@ -237,6 +240,9 @@ func (s *RetentionService) anonymiseOneContact(
 			evidenceKeyRetentionAction: actionAnonymize, "purge_reason": string(reason),
 		})
 		if err != nil {
+			return err
+		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
 			return err
 		}
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "contact", id,

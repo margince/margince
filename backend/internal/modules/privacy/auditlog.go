@@ -141,8 +141,7 @@ func ScrubVerbs() []string { return fieldHistoryScrubActions }
 //
 // Two withholdings, one treatment. An activity outside the caller's audience
 // carries content they may not read; a record scrubbed after this row was
-// written carries what an erasure certified gone, and audit_log is append-only,
-// so the read is where that is enforced or nowhere. Either way the ROW stays: a
+// written can carry legacy data an erasure certified gone. Either way the ROW stays: a
 // compliance log answers who did what and when, and a write that happened is not
 // a fact an erasure undoes.
 func scanAuditEntry(rows pgx.Rows) (AuditEntry, error) {

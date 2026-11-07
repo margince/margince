@@ -73,7 +73,12 @@ func retentionAppliedPayload(
 		policy := openapi_types.UUID(*policyID)
 		payload.Policy = &policy
 	}
-	payload.Reason = reason
+	if reason != nil {
+		request := fulfillingCase(*reason)
+		if request != (ids.UUID{}) && *reason == "dsr:"+request.String() {
+			payload.Reason = reason
+		}
+	}
 	return payload
 }
 

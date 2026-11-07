@@ -160,6 +160,9 @@ func (e *Eraser) eraseCommitmentTask(ctx context.Context, tx pgx.Tx, task ids.UU
 	if err != nil {
 		return false, err
 	}
+	if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+		return false, err
+	}
 	return true, storekit.EmitEventForEntity(ctx, tx, auditID, "activity", task, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &act.collateralReason))
 }
 

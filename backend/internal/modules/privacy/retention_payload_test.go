@@ -108,7 +108,7 @@ func TestRetentionAppliedPayload_WithPolicy(t *testing.T) {
 // TestRetentionAppliedPayload_WithReason proves the Art. 17 erasure
 // subset (erasure.go's EraseContact): action + reason, no policy.
 func TestRetentionAppliedPayload_WithReason(t *testing.T) {
-	reason := "dsr_request"
+	reason := "dsr:" + ids.NewV7().String()
 
 	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason)
 
@@ -123,6 +123,14 @@ func TestRetentionAppliedPayload_WithReason(t *testing.T) {
 	}
 	if !reflect.DeepEqual(*payload.Reason, reason) {
 		t.Errorf("got %v, want %v", *payload.Reason, reason)
+	}
+}
+
+func TestRetentionEventsDoNotCopyFreeTextReasons(t *testing.T) {
+	reason := "erase Private Person at private@example.test"
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason)
+	if payload.Reason != nil {
+		t.Fatalf("event kept a personal reason: %q", *payload.Reason)
 	}
 }
 
