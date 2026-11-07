@@ -192,3 +192,25 @@ func answerReadLoops(ctx context.Context, t *testing.T, tx pgx.Tx, store *Store,
 	}
 	return loops
 }
+
+// A sample with too few answers to speak is measured again over the whole
+// window, so a mailbox that answers rarely keeps its learned horizon.
+func TestASparseHorizonSampleIsMeasuredOverTheWholeWindow(t *testing.T) {
+	ctx, tx, store := storedHorizonTx(t)
+	asOf := store.now()
+	whole, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, wholeWindow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if whole.Answered < waitingHorizonMinSample {
+		t.Fatalf("the seeded mailbox has %d answers, too few for the derivation to speak at all", whole.Answered)
+	}
+	const sparse = 10
+	got, err := store.horizonSpreadTx(ctx, tx, asOf, sparse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != whole {
+		t.Fatalf("a sample of %d read %+v, want the whole window's %+v", sparse, got, whole)
+	}
+}
