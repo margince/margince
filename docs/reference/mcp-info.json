@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 232829,
+    "tool_catalog_bytes": 232806,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59612,
+    "approx_wire_tokens_total": 59607,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 55007,
+      "description_bytes": 54984,
       "input_schema_bytes": 113876,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 168883
+      "description_plus_input_schema_bytes": 168860
     }
   },
   "tools": {
@@ -1188,7 +1188,7 @@
           "readOnlyHint": false,
           "title": "Act on proposals, notices and the weekly plan"
         },
-        "description": "Act on what Margince puts in front of the user: accept, dismiss or restore a Deal Scout, company or tag suggestion, mark notices read, pin or unpin Worklist rows, mark them done or reopen them, snooze or dismiss a brief item, write or update the weekly plan, record, triage, resolve or archive a signal, and mark a list, company or contact as seen, which spends the user's own since-last-visit, so ask first. Each action changes what the user sees next; only accepting a suggestion changes the record it is about, because it runs what the suggestion proposes, as the app's Accept does. Use update_record or change_record_parts to change a record yourself, and change_activities to log or plan work. (Runs immediately; the user's yes is needed for the actions accept_applied_change, acknowledge_company_view, acknowledge_contact_view, archive_signal, visit_list, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Act on what Margince puts in front of the user: accept, dismiss or restore a Deal Scout, company or tag suggestion, mark notices read, pin or unpin Worklist rows, mark them done or reopen them, snooze or dismiss a brief item, write or update the weekly plan, record, triage, resolve or archive a signal, and mark a list, company or contact as seen, which spends the user's own since-last-visit, so ask first. Each action changes what the user sees next; only accepting a suggestion changes the record it is about, because it runs what the suggestion proposes, as the app's Accept does. Use update_record or change_record_parts to change a record yourself, and change_activities to log or plan work. (Runs immediately; the user's yes is needed for the actions acknowledge_company_view, acknowledge_contact_view, archive_signal, visit_list, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {

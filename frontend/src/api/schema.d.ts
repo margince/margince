@@ -5621,7 +5621,6 @@ export interface paths {
          *     audit id). It keeps the applied values;
          *     acceptance is an audited review decision, not another application of the change.
          *     Requires the displayed deal version. A reversed or superseded change is refused.
-         *     Accepting is final: after it, the change has no Undo.
          */
         post: operations["acceptAppliedDealChange"];
         delete?: never;
