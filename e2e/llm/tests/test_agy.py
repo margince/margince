@@ -92,6 +92,22 @@ class FromAgyTest(unittest.TestCase):
         lines = before_answer(sample(), tool_step(9, "call_mcp_tool", ServerName="github", ToolName="search"))
         self.assertEqual(convert(lines)[0], 3)
 
+    def test_a_look_into_the_runs_own_folder_is_allowed(self):
+        # The folder holds only the agent file; nothing in it answers a case.
+        lines = before_answer(sample(), tool_step(9, "list_dir", DirectoryPath="/tmp/e2e-llm-agy.ws"),
+                              tool_step(10, "read_file", Path="/tmp/e2e-llm-agy.ws/README.md"))
+        out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED,
+                                   workspace="/tmp/e2e-llm-agy.ws")
+        self.assertEqual(code, 0)
+
+    def test_a_look_past_the_runs_own_folder_still_stops_the_run(self):
+        lines = before_answer(sample(), tool_step(9, "read_file", Path="/tmp/e2e-llm-agy.ws/../secret.md"))
+        out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED,
+                                   workspace="/tmp/e2e-llm-agy.ws")
+        self.assertEqual(code, 3)
+
     def test_reading_a_file_outside_agys_own_tool_files_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "read_file", Path="/repo/e2e/llm/scenarios/case4.yaml"))
         code, _out, raw = convert(lines)
