@@ -612,11 +612,14 @@ func TestASecondRunIsRefusedTheResumeDirectoryTheFirstHolds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the first claim on an empty directory failed: %v", err)
 	}
-	if second, err := claimResumeDir(dir); err == nil {
+	second, err := claimResumeDir(dir)
+	if err == nil {
 		t.Error("a second run claimed the directory the first still holds")
 		if rerr := releaseResumeDir(second); rerr != nil {
 			t.Errorf("release the second claim: %v", rerr)
 		}
+	} else if !strings.Contains(err.Error(), "another certification run holds the resume directory") {
+		t.Errorf("the second claim failed for another reason than the first run's hold: %v", err)
 	}
 	if err := releaseResumeDir(first); err != nil {
 		t.Fatalf("release the first claim: %v", err)

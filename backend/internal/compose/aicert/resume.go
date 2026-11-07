@@ -331,7 +331,7 @@ func (j *runJournal) close() error {
 // `go test -timeout` runs no defer, and the kernel still releases its lock.
 func claimResumeDir(dir string) (*os.File, error) {
 	path := filepath.Join(dir, "aicert-resume.lock")
-	lock, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- see openRunJournal
+	lock, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|syscall.O_NOFOLLOW, 0o600) // #nosec G304 -- see openRunJournal
 	if err != nil {
 		return nil, fmt.Errorf("aicert: claiming resume directory %s: %w", dir, err)
 	}
