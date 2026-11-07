@@ -16241,6 +16241,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.deal.erased.label": "Đã xóa vĩnh viễn deal",
   "webhooks.event.deal.erased.when": "Một deal bị xóa vĩnh viễn.",
   "webhooks.eventGroup.offers": "Báo giá",
+  "webhooks.event.offer.updated.label": "Báo giá nháp đã sửa",
+  "webhooks.event.offer.updated.when":
+    "Phần đầu hoặc các dòng của báo giá nháp thay đổi.",
   "webhooks.event.offer.created.label": "Đã tạo phiên bản báo giá",
   "webhooks.event.offer.created.when":
     "Báo giá được tạo, hoặc báo giá đã gửi được tạo lại thành bản nháp mới.",
