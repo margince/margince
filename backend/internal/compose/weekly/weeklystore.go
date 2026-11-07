@@ -34,6 +34,7 @@ import (
 
 // Review is one rep's week, as it was measured.
 type Review struct {
+	LeadsWithheld  bool
 	NumericSummary *crmcontracts.WeeklyNumericSummary
 	ID             ids.UUID
 	UserID         ids.UUID
@@ -101,6 +102,7 @@ type Review struct {
 
 // PriorWeek is the earlier review a week is compared against.
 type PriorWeek struct {
+	LeadsWithheld    bool
 	LocalWeekStart   time.Time
 	Counts           Counts
 	Money            Money

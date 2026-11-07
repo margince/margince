@@ -2102,6 +2102,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
   "brief.weekly.noMeetings": "Keine Termine erfasst",
+  "brief.weekly.leadsUnavailable":
+    "Lead-Zahlen sind für diese Woche nicht verfügbar.",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":

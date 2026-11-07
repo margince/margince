@@ -2047,6 +2047,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "brief.weekly.tasksCompleted": "Việc cần làm đã hoàn tất",
   "brief.weekly.noMeetings": "Chưa ghi nhận cuộc họp nào",
+  "brief.weekly.leadsUnavailable": "Số liệu lead không khả dụng cho tuần này.",
   "brief.weekly.noLeads": "Chưa nhận lead nào",
   "brief.weekly.noCommitments": "Không có cam kết đến hạn",
   "brief.weekly.basis":

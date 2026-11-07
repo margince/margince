@@ -75,6 +75,10 @@ The **Weekly scorecard** is one table. Each row has a count and what the count r
 For leads and meetings it shows leads moved on and leads past the reply target, answered late or not answered.
 It also shows meetings marked held, with booked and no-show meetings beside them. A seat that cannot read activities sees no meeting figures in the review.
 
+Lead figures say **Unavailable** when your role cannot read leads or the week was measured without that access.
+They are not zeros. Other parts of the review stay available. They stay hidden if access is granted later;
+the frozen week cannot be measured again.
+
 For deals it shows stage moves on and back, and the middle value of the days a deal spent in the stage
 it left. It shows how many open deals have a next step, and how many have more than one contact. It
 shows how many have a close date that is not a guess. And it shows forecast moves up against moves

@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4344 |
+| Columns | 4346 |
 | Foreign keys | 597 |
 | Owning areas | 38 |
 
@@ -455,7 +455,7 @@ erDiagram
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 9 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
-| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 28 | 4 |
+| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 29 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |
 | [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
 | [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 15 | 0 |
@@ -479,7 +479,7 @@ erDiagram
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |
 | [`weekly_plan_commitment`](weeklyplan.md#weekly_plan_commitment) | weeklyplan | 23 | 0 |
-| [`weekly_review`](compose.md#weekly_review) | compose | 36 | 7 |
+| [`weekly_review`](compose.md#weekly_review) | compose | 37 | 7 |
 | [`weekly_review_deal`](compose.md#weekly_review_deal) | compose | 9 | 0 |
 | [`weekly_review_driver`](compose.md#weekly_review_driver) | compose | 7 | 0 |
 | [`weekly_review_learning`](compose.md#weekly_review_learning) | compose | 6 | 1 |

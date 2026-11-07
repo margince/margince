@@ -166,7 +166,9 @@ func (e *Engine) measureWeek(
 	// reader of a week wants one set of figures.
 	c := &review.Counts
 	c.LeadsRouted, c.LeadsAnsweredInTarget, c.LeadsBreached, err = countWeekLeads(ctx, tx, userID, start, end)
-	if err != nil {
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		review.LeadsWithheld = true
+	} else if err != nil {
 		return err
 	}
 	c.MeetingsHeld, c.MeetingsWithNextStep, err = countWeekMeetings(ctx, tx, userID, start, end)

@@ -18,6 +18,7 @@ package weekly
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -27,8 +28,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Scorecard is one week's judgement of one rep's work.
@@ -172,6 +175,13 @@ func scoreWeek(
 func scoreLeads(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (*LeadBlock, error) {
+	if err := auth.Require(ctx, leadObject, principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			//nolint:nilnil // A withheld funnel has no scorecard block.
+			return nil, nil
+		}
+		return nil, err
+	}
 	// Presence is asked FIRST and with its own argument list. The block query
 	// below binds the window as well, and a statement that binds a parameter it
 	// never mentions is rejected outright — so the two cannot share one list.
@@ -187,7 +197,7 @@ func scoreLeads(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
+	scope, err := auth.ScopeClauseFor(ctx, leadObject, "l", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -261,10 +271,13 @@ func scoreLeads(
 // Its own scope clause and its own argument list, because it binds only this
 // bound and a statement may not bind a parameter it does not mention.
 func hasLeads(ctx context.Context, tx pgx.Tx, userID ids.UUID, by time.Time) (bool, error) {
+	if err := auth.Require(ctx, leadObject, principal.ActionRead); err != nil {
+		return false, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	userPos, byPos := arg(userID), arg(by)
-	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
+	scope, err := auth.ScopeClauseFor(ctx, leadObject, "l", arg)
 	if err != nil {
 		return false, err
 	}

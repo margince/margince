@@ -53810,6 +53810,12 @@ export interface components {
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
             /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
+            /**
              * @description True when the reader may not read activities. A meeting is an activity, so every
              *     meeting figure in the team's counts and each member's row reads zero and says nothing,
              *     and no member carries a meetings pattern. Absent from an older server.
@@ -54302,6 +54308,12 @@ export interface components {
          */
         WeeklyReview: {
             /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
+            /**
              * @description True when the reader may not read activities. A meeting is an activity, so every
              *     meeting figure in this review, its prior week and its scorecard reads zero and says
              *     nothing, and the narrative and learnings read as not run. Absent from an older server.
@@ -54548,6 +54560,12 @@ export interface components {
         };
         /** @description The week before this one, for comparison. */
         WeeklyReviewPrior: {
+            /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
             /** Format: date */
             local_week_start: string;
             counts: components["schemas"]["WeeklyReviewCounts"];
