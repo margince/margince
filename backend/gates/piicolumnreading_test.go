@@ -5,7 +5,14 @@
 
 package gates
 
-import "testing"
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+)
 
 // Which way the PII census fails when it cannot read a statement.
 //
@@ -96,5 +103,130 @@ func TestOnlyAnAssigningWriteRegistersATableAsRedacted(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func cascadeSQLForwarders(t *testing.T) map[string]int {
+	t.Helper()
+	var functions []*ast.FuncDecl
+	for _, path := range erasureCascadeFiles {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, declaration := range file.Decls {
+			if fn, ok := declaration.(*ast.FuncDecl); ok {
+				functions = append(functions, fn)
+			}
+		}
+	}
+	return sqlForwardersIn(functions)
+}
+
+func sqlForwardersIn(functions []*ast.FuncDecl) map[string]int {
+	forwarders := map[string]int{}
+	for {
+		before := len(forwarders)
+		for _, fn := range functions {
+			parameters := map[string]int{}
+			index := 0
+			for _, field := range fn.Type.Params.List {
+				for _, name := range field.Names {
+					parameters[name.Name] = index
+					index++
+				}
+				if len(field.Names) == 0 {
+					index++
+				}
+			}
+			ast.Inspect(fn.Body, func(node ast.Node) bool {
+				argument, executes := executedSQL(node, forwarders)
+				if !executes {
+					return true
+				}
+				name, named := argument.(*ast.Ident)
+				if !named {
+					return true
+				}
+				position, parameter := parameters[name.Name]
+				if parameter {
+					if prior, exists := forwarders[fn.Name.Name]; exists && prior != position {
+						forwarders[fn.Name.Name] = -1
+					} else {
+						forwarders[fn.Name.Name] = position
+					}
+				}
+				return true
+			})
+		}
+		if len(forwarders) == before {
+			return forwarders
+		}
+	}
+}
+
+func TestTheColumnCensusFollowsSQLThroughHelperArguments(t *testing.T) {
+	t.Parallel()
+	source := `package fixture
+func second(ctx C, tx T, statement string) { first(ctx, tx, statement) }
+func first(ctx C, tx T, statement string) { tx.Query(ctx, statement) }
+func single(statement string) { tx.Query(ctx, statement) }
+func ambiguous(ctx C, tx T, first, second string) { tx.Query(ctx, first); tx.Query(ctx, second) }
+func write(ctx C, tx T) {
+ second(ctx, tx, "UPDATE contact SET full_name = ''")
+ single("UPDATE contact SET phone = NULL")
+ ambiguous(ctx, tx, "UPDATE contact SET a = NULL", "UPDATE contact SET b = NULL")
+}
+`
+	file, err := parser.ParseFile(token.NewFileSet(), "", source, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var functions []*ast.FuncDecl
+	for _, declaration := range file.Decls {
+		if fn, ok := declaration.(*ast.FuncDecl); ok {
+			functions = append(functions, fn)
+		}
+	}
+	forwarders := sqlForwardersIn(functions)
+	for name, want := range map[string]int{"first": 2, "second": 2, "single": 0, "ambiguous": -1} {
+		if got, found := forwarders[name]; !found || got != want {
+			t.Fatalf("SQL argument positions = %v; want %s at %d", forwarders, name, want)
+		}
+	}
+	found := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		argument, executes := executedSQL(node, forwarders)
+		if executes && renderSQL(argument, nil) == "UPDATE contact SET full_name = ''" {
+			found = true
+		}
+		return true
+	})
+	if !found {
+		t.Fatal("the helper's contact redaction disappeared from the column census")
+	}
+}
+
+func TestTheColumnCensusDoesNotCountConditionsOrQuotedAssignmentsAsWrites(t *testing.T) {
+	t.Parallel()
+	for _, statement := range []string{
+		`UPDATE intro_request SET internal_reason=CASE WHEN origin='recorded' THEN NULL ELSE '' END`,
+		`UPDATE intro_request SET internal_reason='example, origin=recorded'`,
+		`UPDATE intro_request SET internal_reason=coalesce(origin, '')`,
+	} {
+		if assignsColumn(statement, "origin") {
+			t.Errorf("a value counted as an origin assignment: %s", statement)
+		}
+		if !assignsColumn(statement, "internal_reason") {
+			t.Errorf("the real assignment disappeared: %s", statement)
+		}
+	}
+	for _, statement := range []string{
+		`UPDATE intro_request SET "origin" = ''`,
+		`UPDATE intro_request SET ("origin", internal_reason) = ('', '')`,
+	} {
+		if !assignsColumn(statement, "origin") {
+			t.Errorf("the real origin assignment disappeared: %s", statement)
+		}
 	}
 }

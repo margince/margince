@@ -162,27 +162,12 @@ func answerFor(current dsrRow, erased erasureaccount.Account) string {
 // can only match under that lock. A miss still answers as an illegal
 // transition, never a silent no-op.
 func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateDSRInput, current dsrRow, answer string) (dsrRow, error) {
-	// THE RESOLUTION COMES OUT, and subject_ref deliberately does NOT.
-	//
-	// The erasure has just run and took the subject out of every other case
-	// they opened. It could not take them out of THIS one: this transaction
-	// holds the row FOR UPDATE across that call, so the engine's retirement
-	// skips it rather than blocking on a lock its caller holds.
-	//
-	// The answer is the erasure's own (answerFor), from a fixed list: no prose
-	// an officer typed can name or quote the subject. The reference stays: this
-	// row is how a replayed fulfilment finds the contact to erase. Its status is
-	// already 'fulfilled', which validateDSRUpdate treats as a legal no-op.
-	// Tombstoning the reference would make that retry fail to resolve a
-	// subject it is supposed to be idempotent about.
-	//
-	// SO THE ERASURE REQUEST KEEPS THE IDENTITY IT WAS MADE WITH, alone among
-	// the subject's cases. That is a real gap and it is bounded: one row, one
-	// column, carrying what the subject themselves wrote on a form to ask for
-	// this. Closing it means making the replay resolve the contact some other
-	// way — the audit trail, or a column the tombstone does not touch — which
-	// is a change to how a fulfilment re-finds its subject rather than to what
-	// this statement writes.
+	// Keep only the contact UUID so a retry can resolve the same subject without
+	// retaining the free-text reference the requester originally supplied.
+	subject, resolved := resolveDSRSubject(current)
+	if !resolved {
+		return dsrRow{}, apperrors.ErrConflict
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	held := dsrHeldSets(in, arg)
@@ -191,9 +176,10 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 			  status = 'fulfilled',
 			  %s,
 			  resolution = $%d,
+			  subject_ref = $%d,
 			  contact_id = NULL
 			WHERE id = $%d AND status = $%d
-			RETURNING `+dsrColumns, held, arg(answer), arg(id), arg(current.Status))
+			RETURNING `+dsrColumns, held, arg(answer), arg(subject.String()), arg(id), arg(current.Status))
 	row := tx.QueryRow(ctx, query, args...)
 	out, err := scanDSR(row)
 	if err != nil {
@@ -203,6 +189,17 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 		return dsrRow{}, err
 	}
 	if err := auditDSRUpdate(ctx, tx, current, out); err != nil {
+		return dsrRow{}, err
+	}
+	if current.DisputeOpen {
+		return out, nil
+	}
+	certificate, err := storekit.AuditWithEvidence(ctx, tx, "anonymize", "data_subject_request", id, nil, nil,
+		map[string]any{privacyEvidenceCause: "contact_erasure"})
+	if err != nil {
+		return dsrRow{}, err
+	}
+	if err := storekit.RedactAuditHistory(ctx, tx, certificate); err != nil {
 		return dsrRow{}, err
 	}
 	return out, nil

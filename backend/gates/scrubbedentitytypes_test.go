@@ -66,6 +66,16 @@ var scrubTombstoneWriters = map[string]bool{
 // comment. Adding it here is a product decision about frozen weekly reviews, not
 // a test fix.
 var scrubbedEntityTypes = map[string]bool{
+	// These records have no restore endpoint. Their audit readers stop at erasure;
+	// weekly deal reconstruction reads none of their images.
+	"data_subject_request":   true,
+	"deal_room_comment":      true,
+	"dedupe_candidate":       true,
+	"intro_request":          true,
+	"weekly_plan_commitment": true,
+	// Approval verdicts remain in their row and audit verb. Erased proposal images
+	// end at this boundary; deal reconstruction never reads approval images.
+	"approval":              true,
 	"contact":               true,
 	"lead":                  true,
 	"activity":              true,

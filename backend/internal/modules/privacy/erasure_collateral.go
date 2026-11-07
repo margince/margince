@@ -52,21 +52,23 @@ func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, 
 	return redactDeliveries(ctx, tx, activities, erasedName, payloads)
 }
 
-// tombstoneCollateralScrubs stamps an erase tombstone on each record the erasure
-// scrubbed alongside the subject. Field history cuts a record's timeline at its
-// own newest erase row, so the contact's tombstone cannot bound a twin's spine.
-// Without these, old audit images (a lead's email, an activity's subject line)
-// would serve the erased PII again. The context rides evidence and the images
-// stay empty: the record-history read serves them verbatim.
-// No outbox event is paired: the contact's single retention.applied is the fact.
-// cause is the caller's, because retention reaches this path too, and
-// contact_erasure on a retention sweep's record would misstate why the data went.
+const (
+	subjectRedactionReason = "subject_data_removed"
+	subjectRedactionCause  = "subject_redaction"
+)
+
+// tombstoneCollateralScrubs certifies each erased record and physically clears
+// its retained audit and event payloads in the same transaction.
 func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID, reason, cause string) error {
 	for _, id := range records {
-		if _, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{
 			evidenceKeyReason: reason, evidenceKeyCause: cause,
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("tombstoning scrubbed %s: %w", entityType, err)
+		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+			return err
 		}
 	}
 	return nil
