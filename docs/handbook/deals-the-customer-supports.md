@@ -31,8 +31,8 @@ A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
 
 Margince closes the deal for its owner. The close shows on the owner's **Home**
-under **Handled for you**, with the reason and **Undo**. It stays there until the
-owner accepts it or undoes it. The deal's timeline gets a note about the close.
+under **Done for you**, with the reason and **Undo**. It stays there until the
+owner marks it reviewed or undoes it. The deal's timeline gets a note about the close.
 
 **Undo** puts the deal back in the stage it was closed from. Changes made to the
 deal since the close stay as they are. Undo is refused when someone moved the
@@ -111,9 +111,9 @@ shows the customer's words, the amount they named and the date of the rate.
 A close date from the customer is no longer an estimate, so Margince marks it
 as confirmed. **Undo** marks it as an estimate again.
 
-Each change shows on the owner's **Home** under **Handled for you**, with the
+Each change shows on the owner's **Home** under **Done for you**, with the
 old and new value, the reason and **Undo**. It stays there until the owner
-accepts or undoes it. The deal's timeline gets one note for the night's
+marks it reviewed or undoes it. The deal's timeline gets one note for the night's
 changes.
 
 **Undo** puts the old value back. It is refused when someone changed the field

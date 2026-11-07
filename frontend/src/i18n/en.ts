@@ -2014,6 +2014,8 @@ export const en = {
 
   "brief.weekly.tasksCompleted": "Tasks completed",
   "brief.weekly.noMeetings": "No meetings recorded",
+  "brief.weekly.leadsUnavailable":
+    "Lead figures are unavailable for this week.",
   "brief.weekly.noLeads": "None received",
   "brief.weekly.noCommitments": "None due",
   "brief.weekly.basis":
@@ -2044,7 +2046,6 @@ export const en = {
     "Estimate from {count} won deal · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
   "home.receipt.basis_other":
     "Estimate from {count} won deals · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
-  "brief.changes.keepDate": "Keep date",
   "worklist.handled.showHistory": "Show recent changes",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.dateUnconfirmed":
@@ -2171,9 +2172,6 @@ export const en = {
   "brief.reply.owed": "Customer awaiting your reply",
   "brief.changes.superseded":
     "This deal changed again. Open the deal to review its current state.",
-  "brief.changes.title": "Check applied changes",
-  "brief.changes.accept": "Accept",
-  "brief.changes.accepted": "Accepted",
   "brief.changes.undone": "Undone",
   "brief.updates.title": "Updates",
   "brief.task.undated": "No due date",
@@ -6181,9 +6179,8 @@ export const en = {
   "assignments.kindTeam": "Team",
   "assignments.who": "Who",
   "assignments.findColleague": "Find a colleague",
-  "assignments.invited": "Invited, not signed in yet",
   "assignments.noColleagueFound":
-    "No colleague found. Only colleagues with a Margince account can be assigned. Ask an admin to invite them.",
+    "No active colleague found. Check the spelling. If the name is right, ask an admin to invite them or to check their account.",
   "assignments.findTeam": "Find a team",
   "assignments.role": "Role",
   "assignments.rolePlaceholder": "Pick a role",
@@ -18920,28 +18917,6 @@ export const en = {
   "changes.undo.archived":
     "Archived. Margince will not open a deal for this again unless new buying evidence arrives.",
   "changes.kind.stage_move": "Moved to a later stage",
-  "changes.summary_one": "Margince updated {count} of your deals: {parts}",
-  "changes.summary_other": "Margince updated {count} of your deals: {parts}",
-  "changes.part.closed_one": "{count} closed",
-  "changes.part.closed_other": "{count} closed",
-  "changes.part.redated_one": "{count} re-dated",
-  "changes.part.redated_other": "{count} re-dated",
-  "changes.part.revalued_one": "{count} re-valued",
-  "changes.part.revalued_other": "{count} re-valued",
-  "changes.part.probabilities_one": "{count} probability",
-  "changes.part.probabilities_other": "{count} probabilities",
-  "changes.part.moved_one": "{count} moved",
-  "changes.part.moved_other": "{count} moved",
-  "changes.part.opened_one": "{count} opened",
-  "changes.part.opened_other": "{count} opened",
-  "changes.part.revived_one": "{count} reopened",
-  "changes.part.revived_other": "{count} reopened",
-  "changes.viewAll": "View all",
-  "changes.undoAll": "Undo all",
-  "changes.undoAllDone_one": "Undone on {count} deal.",
-  "changes.undoAllDone_other": "Undone on {count} deals.",
-  "changes.undoAllPartly":
-    "Undone on {undone} deals. {kept} kept a change that was edited since Margince made it.",
   "changes.partly":
     "Undone, except the {field}, which was changed since Margince set it.",
   "changes.refused":
@@ -21224,6 +21199,37 @@ export const en = {
     "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
   "analytics.team.qualificationUnattributed_other":
     "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
+  "brief.done.title": "Done for you",
+  "brief.done.waiting_one": "{count} deal waits for your review",
+  "brief.done.waiting_other": "{count} deals wait for your review",
+  "brief.done.reviewAll_one": "Review {count} deal",
+  "brief.done.reviewAll_other": "Review all {count} deals",
+  "brief.done.drawerTitle_one": "{count} deal Margince changed",
+  "brief.done.drawerTitle_other": "{count} deals Margince changed",
+  "changes.undoDeals_one": "Undo changes on {count} deal",
+  "changes.undoDeals_other": "Undo changes on {count} deals",
+  "brief.done.undoChanges_one": "Undo {count} change",
+  "brief.done.undoChanges_other": "Undo {count} changes",
+  "brief.done.history": "View change history",
+  "brief.done.dealsLabel": "Deals Margince changed",
+  "brief.done.noReason": "Margince recorded no reason you can read.",
+  "brief.done.customerWrote": "The customer wrote:",
+  "brief.changes.markReviewed": "Mark reviewed",
+  "brief.changes.reviewed": "Reviewed",
+  "magic.lane.doneOther": "Other finished work",
+  "changes.bulk.undone_one": "Undone on {count} deal.",
+  "changes.bulk.undone_other": "Undone on {count} deals.",
+  "changes.bulk.partly_one": "{count} deal was partly undone.",
+  "changes.bulk.partly_other": "{count} deals were partly undone.",
+  "changes.bulk.kept_one": "{count} deal kept its changes.",
+  "changes.bulk.kept_other": "{count} deals kept their changes.",
+  "changes.bulk.confirm_one":
+    "{count} deal needs your confirmation. Undo it on its own row.",
+  "changes.bulk.confirm_other":
+    "{count} deals need your confirmation. Undo each on its own row.",
+  "changes.bulk.unsent_one": "{count} deal was not sent.",
+  "changes.bulk.unsent_other": "{count} deals were not sent.",
+  "changes.bulk.retry": "Send again",
 } as const;
 
 export type MessageKey = keyof typeof en;

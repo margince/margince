@@ -94,6 +94,10 @@ func fileCaptureReview(ctx context.Context, tx pgx.Tx, review ReviewMatch, pair 
 // DH-DDL-1); the unique pair index makes a re-detection a no-op — reported
 // as recorded=false so counters stay honest.
 func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a, b ids.UUID, confidence float64, evidence []map[string]any, source, by string) (bool, error) {
+	live, err := lockLiveDedupeSubjects(ctx, tx, entityType, a, b)
+	if err != nil || !live {
+		return false, err
+	}
 	left, right := a, b
 	if right.String() < left.String() {
 		left, right = right, left

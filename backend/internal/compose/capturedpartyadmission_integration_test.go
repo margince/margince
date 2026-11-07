@@ -316,3 +316,34 @@ func activatePartySeat(t *testing.T, e *integration.Env, user ids.UUID) {
 		t.Fatal(err)
 	}
 }
+
+// Two proven sends to one address admit it whatever each says. One proven send
+// decides by its own words, however many unproven sends sit beside it.
+func TestCapturedPartiesCountsOnlyProvenSendsToTheAddress(t *testing.T) {
+	const declining, engaging = "We are not interested. Please remove us.", "Could we discuss the product requirements?"
+	proven, unproven := partyMailProof{outbound: true, sentByOwner: true}, partyMailProof{outbound: true}
+	type send struct {
+		proof partyMailProof
+		body  string
+	}
+	for _, tc := range []struct {
+		name  string
+		sends []send
+		admit bool
+	}{
+		{"two declining proven sends", []send{{proven, declining}, {proven, declining}}, true},
+		{"one declining proven send among unproven ones", []send{{unproven, engaging}, {unproven, engaging}, {proven, declining}}, false},
+		{"one engaging proven send among unproven ones", []send{{unproven, engaging}, {unproven, engaging}, {proven, engaging}}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			for _, s := range tc.sends {
+				capturePartiesMail(t, e, s.proof, "Bob Buyer <bob@buyer.test>", "", s.body)
+			}
+			admitted := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE lower(email)='bob@buyer.test' AND archived_at IS NULL`) == 1
+			if admitted != tc.admit {
+				t.Fatalf("bob@buyer.test admitted=%v, want %v", admitted, tc.admit)
+			}
+		})
+	}
+}

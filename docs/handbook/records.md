@@ -38,7 +38,7 @@ Margince asks for fewer links between records than most CRM products.
 
 **A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. A deal opened while qualifying a lead takes the contact's employer, when one exists.
 
-A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. The lead page offers **Link to** a company you can open: the one holding the lead's domain, else the only one with that name. Linking makes the company name on the lead open the company. If you later change the lead's company to another name, the link is removed unless the linked company holds the lead's domain. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact gets a job link to the linked company, or else to its email domain's company.
+A lead's company starts as text, and imports create no company. **Link to** offers a company you can open, matched by domain or the only company with that name. Linking changes only the company link; the name then opens the company. Changing the company name clears the link unless the linked company still holds the lead's domain. Qualification links the contact to that company, or its email domain's company, and stops if access or permission to make that link is missing. Archiving a company keeps its lead links; restore it or change the link before you qualify those leads.
 
 ## Contacts
 

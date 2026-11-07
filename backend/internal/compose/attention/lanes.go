@@ -216,52 +216,6 @@ type Receipts interface {
 	Recent(ctx context.Context, since time.Time, limit int) ([]Receipt, error)
 }
 
-// Receipt is one completed autonomous act, reported rather than asked about.
-type Receipt struct {
-	CloseDateChange *crmcontracts.CloseDateChange
-	Review          *crmcontracts.AppliedDealChangeReview
-	ID              ids.UUID
-	Kind            string
-	Summary         string
-	SummaryParts    *crmcontracts.ApprovalSummaryParts
-	OccurredAt      time.Time
-	// The record the decision was about, carried from the approval it came
-	// from. A reader told the system sent something on their behalf wants the
-	// account it went to, and the card offers `open` only when this names one.
-	//
-	// Empty TargetType means the decision named no record, which is a real
-	// state: not every approval is about one.
-	TargetType string
-	TargetID   ids.UUID
-	// TargetLabel is the target's name as the decision was staged.
-	TargetLabel *string
-	// Undo names the audit row the record-history restore route puts back, on
-	// a receipt for work that was APPLIED rather than approved.
-	//
-	// Absent means there is nothing to offer: an approval the system decided is
-	// already a decision somebody can revisit through the record, and a
-	// correction somebody has already reversed has no second undo in it.
-	Undo *ReceiptUndo
-	// Actor is who did it, as the audit trail spells them. A zero Type means
-	// the source could not say.
-	Actor ReceiptActor
-	// SourceActivityID is the message the act was read from; zero when it
-	// cites none.
-	SourceActivityID ids.UUID
-}
-
-// ReceiptUndo is what a receipt needs to offer a way back.
-type ReceiptUndo struct {
-	AuditLogID ids.UUID
-	// Version of the record the restore route compares against, so two contacts
-	// undoing the same change do not overwrite each other silently.
-	Version int64
-	// Reversed says somebody already put this back. The row stays and says so
-	// rather than vanishing, which would leave a reader unsure their Undo
-	// landed.
-	Reversed bool
-}
-
 // FailedEffects reads the decisions the acting rep approved whose released
 // work then failed — bounded, newest-staged first (the approvals queue's own
 // order; a failure on an old staging sorts beneath newer rows).

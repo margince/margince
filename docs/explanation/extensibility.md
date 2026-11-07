@@ -68,8 +68,8 @@ fails.
 Four rules hold the tier together:
 
 1. **A `require` is what turns it on.** A unit is enabled because the instance's `go.mod` requires it:
-   `instance/go.mod` here, or a client's own. There is no flag and no second list, and the set is the
-   module graph Go resolves and checks.
+   `instance/go.mod` here, or a client's own. The same file marks example units.
+   [Build a custom Margince](../how-to/build-a-custom-margince.md) states when they join a build.
 2. **A declaration is plain data that does nothing.** `New()` returns a plain value with no handle into
    the running server, and it registers nothing itself. Only the check and apply step at boot does
    anything, after the whole set has passed its checks. Nothing is wired through the declaration, so a

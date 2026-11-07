@@ -8776,6 +8776,7 @@ public.team_weekly_review.id uuid NOT NULL gen=- def=uuidv7()
 public.team_weekly_review.leads_answered_in_target integer NOT NULL gen=- def=0
 public.team_weekly_review.leads_breached integer NOT NULL gen=- def=0
 public.team_weekly_review.leads_routed integer NOT NULL gen=- def=0
+public.team_weekly_review.leads_withheld boolean NOT NULL gen=- def=false
 public.team_weekly_review.local_week_start date NOT NULL gen=- def=-
 public.team_weekly_review.meetings_held integer NOT NULL gen=- def=0
 public.team_weekly_review.meetings_with_next_step integer NOT NULL gen=- def=0
@@ -8980,6 +8981,9 @@ DECLARE
   reached record;
 BEGIN
   IF TG_OP = 'INSERT' THEN
+    IF NEW.contact_id IS NULL AND NEW.deal_id IS NULL AND NEW.company_id IS NULL THEN
+      RETURN NULL;
+    END IF;
     at := last_activity_of_activity(NEW.activity_id);
     IF at IS NOT NULL THEN
       FOR reached IN
@@ -9002,7 +9006,9 @@ END;
 
 public.trg_activity_link_project_last_activity() secdef=false cfg=- acl=- BEGIN
   IF TG_OP = 'INSERT' THEN
-    PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
+    IF NEW.project_id IS NOT NULL THEN
+      PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
+    END IF;
     RETURN NULL;
   END IF;
   PERFORM move_project_last_activity(OLD.project_id);
@@ -9713,6 +9719,7 @@ public.weekly_review.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review.leads_answered_in_target integer NOT NULL gen=- def=0
 public.weekly_review.leads_breached integer NOT NULL gen=- def=0
 public.weekly_review.leads_routed integer NOT NULL gen=- def=0
+public.weekly_review.leads_withheld boolean NOT NULL gen=- def=false
 public.weekly_review.learned_at timestamp with time zone gen=- def=-
 public.weekly_review.learnings_state text NOT NULL gen=- def='not_run'::text
 public.weekly_review.local_week_start date NOT NULL gen=- def=-

@@ -221,7 +221,7 @@ A responsibility role controls nothing:
 - It does not change the owner. Nothing links the owner to the **Account manager** role, so the owner may hold it, or someone else may.
 - A role you turn off stays on the records that carry it, but nobody can be given it again.
 
-You can give a responsibility to a colleague who was invited but has not signed in yet. The **Who** search marks them "Invited, not signed in yet". It finds a name with or without its marks, so "Thang" finds "Thắng". Only a colleague with a Margince account can be given a responsibility, so ask an admin to invite anyone the search does not find.
+You can give a responsibility to an active colleague. The **Who** search finds a name with or without its marks, so "Thang" finds "Thắng". An invited colleague shows in the search once they set a password through the invitation link. Ask an admin to invite anyone who needs an account, or to check the account of someone the search does not find.
 
 Margince comes with these responsibility roles: **Account manager**, **Sales engineer**, **Delivery lead**, **Project manager**, **Technical contact**, **Executive sponsor** and **Support team**. Admin and Ops can rename them and add more. **Settings → Responsibility roles** marks each one **Built-in** when it comes with Margince, or **Custom** when someone added it.
 

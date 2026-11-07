@@ -98,6 +98,13 @@ lock jobs. Read `margince_worker_pinned_sessions` and
 `margince_worker_session_budget_snoozes_total` with the pool wait metrics when sizing this limit.
 Those connections have no separate pool; other short work may use them too.
 
+`capture_sync`, `document_extract` and `voice_build` hold a session lock for each unit of work.
+A closed connection frees the lock at once. The next capture pass, document request or voice
+retry can then take the work. A live holder keeps its work even when another job starts.
+The voice retry pass runs each minute and keeps the due time of a budget deferral.
+The document and voice rows check the claim's start time on writes, so an old worker cannot
+replace a newer result.
+
 The statement cache setting bounds entries, not bytes. It also bounds the `description` cache.
 A smaller cache may cause repeated `Prepare` calls. Measure with
 `TestWorkerCacheReportsHistoryPreparationCost` before reducing it. `work_mem` is per query
@@ -170,9 +177,8 @@ before changing how many imports run together.
 ## Mail import queue
 
 `capture.history_concurrency` bounds running history imports across the installation, with a default
-of two, the size of the `mail_history` worker queue. Google limits each mailbox's quota on its
-own, so two mailboxes importing together each run at their own limit. Every process must use the
-same value. Requests beyond that budget stay `queued` and read no
+of one. Each running import adds its own database and worker memory load, so the default lets
+one mailbox import at a time. Every process must use the same value. Requests beyond that budget stay `queued` and read no
 mail. `capture.history_hold` accepts requests but starts no new page. Both keys are listed in
 [configuration](configuration.md).
 

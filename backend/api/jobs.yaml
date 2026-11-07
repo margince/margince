@@ -1364,12 +1364,13 @@ kinds:
     timeout: 5m
     max_attempts: 3
     opts_owner: args
-    cadence: 1h
+    cadence: 6h
     reason: >-
-      Hourly, because readers treat a stored horizon older than a day as
-      missing (waitingHorizonStaleAfter): a few missed passes still leave a
+      Every six hours, because readers treat a stored horizon older than a day
+      as missing (waitingHorizonStaleAfter): two missed passes still leave a
       fresh value, and a measurement that fails keeps the previous one. The
-      measurement is a year of inbound mail, which is why no read does it.
+      measurement is a year of inbound mail, which is why no read does it, and
+      why it runs no more often than the day's staleness needs.
 
   evidence_authorship:
     role: worker
@@ -2108,11 +2109,6 @@ kinds:
     timeout: {derived: voiceBuildTimeout, value: 10m}
     opts_owner: caller
     registration: {when: [VoiceBrain], absent: registers_anyway}
-    fault:
-      nil_after_logging: >-
-        the build ROW owns its state: every model failure lands on the row
-        as deferred or failed, never as a River retry loop, and the
-        deferred-retry sweep re-enqueues what is due.
     args:
       Workspace: id
       ProfileID: id
@@ -2156,12 +2152,12 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: 15m
+    cadence: 1m
     fans_out_to: voice_build
     fan_out_unit: build
     reason: >-
-      Deferrals are hours long, so a fifteen-minute scan is prompt without being
-      busywork.
+      A lost worker releases its session lock. The next minute scan re-offers
+      abandoned builds while preserving budget deferral deadlines.
 
   # One job, not a dispatcher and a child (ADR-0103 §1). It keeps the
   # dispatcher's KIND and CADENCE — the name an operator alerts on, the interval

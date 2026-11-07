@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/modules/identity/meresponse.go backend/internal/modules/identity/roster.go frontend/src/lib/settingscatalog.ts frontend/src/features/settings/settingsnav.tsx backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Authorization & access control
 
 How Margince decides who may do what, and where that decision is made. You may look for the auth check in
@@ -79,6 +79,38 @@ operation is in: [mcp-parity.md](../reference/mcp-parity.md#each-agent-operation
 
 Making and using one: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md) →
 [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md).
+
+## The public permission contract
+
+The [OpenAPI contract](../../backend/api/crm.yaml) owns the public names in
+`RbacObject` and `RbacAction`. The web client gets its types from that contract.
+`backend/gates/rbacvocabulary_test.go` checks those names against the server's
+policy and grant fields. The [role matrix](../reference/rbac-matrix.md) lists
+the built-in grants.
+
+`GET /v1/me` gives a human session an `authorization` snapshot with `seat_type`,
+`objects` and `row_scope`. The seat limit and object grants must both allow an
+action. The row scope says how far those grants reach; the server still checks
+each row. Clients use the snapshot to explain access and show controls, and
+fetch it again on window focus and after a 403. Human-only checks and any route that
+asks for the admin role still apply.
+
+The `passport` field on this response is marked `deprecated` and always null. A passport
+cannot reach this human-session endpoint. The field stays for published clients;
+an agent asks MCP `tools/list` which tools its passport may call. The server
+checks its scopes and its human's live seat and grants on every call.
+
+### Settings menus and API reads
+
+The Settings catalog gives each page its own access check. Group headings
+name subjects and add no admin-or-ops check over their pages.
+Hiding a menu entry changes the menu and grants no right to call its API.
+Every API read still runs its own checks, even when the menu shows no link.
+
+Some reads serve members outside Settings. The member roster supports owner
+and sharing pickers without `user_admin:read`. Its admin view, including
+role keys and team membership, needs that grant. Reading a roster grants no
+right to invite a member, change their role or turn off their account.
 
 ## The two layers, in detail
 

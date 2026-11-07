@@ -1,3 +1,5 @@
+include ../scripts/composition-profile.mk
+
 # Golden path: `make dev` boots everything; `make check` is the merge gate.
 
 GO        ?= go
@@ -188,11 +190,11 @@ composition: ## Materialize build/composition/ from the extensions instance/go.m
 ifdef CHECK_WRITERS_RAN
 	@echo "composition: written by make check's writers phase, so this lane only reads it"
 else
-	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS)
 endif
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
-	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition -verify
+	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS) -verify
 	@echo "OK: composition reproducible"
 
 # EXT_COVER_OUT (optional): merge every unit's -coverprofile into ONE
@@ -745,7 +747,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	else \
 		echo "gen: approval reading catalog not regenerated (no frontend toolchain); fe-drift checks it"; \
 	fi
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS)
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs

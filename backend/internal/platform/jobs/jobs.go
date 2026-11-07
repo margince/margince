@@ -89,6 +89,7 @@ type Config struct {
 // not usable — construct with New.
 type Runner struct {
 	client *river.Client[pgx.Tx]
+	pool   *pgxpool.Pool
 }
 
 // New builds a River client over the given pool. The pool must outlive the
@@ -98,7 +99,7 @@ func New(pool *pgxpool.Pool, cfg Config, log *slog.Logger) (*Runner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("jobs: new client: %w", err)
 	}
-	return &Runner{client: client}, nil
+	return FromClient(pool, client), nil
 }
 
 // riverConfig is the worker client's River configuration.
@@ -128,7 +129,7 @@ func NewInserter(pool *pgxpool.Pool, log *slog.Logger) (*Runner, error) {
 	if err != nil {
 		return nil, fmt.Errorf("jobs: new insert-only client: %w", err)
 	}
-	return &Runner{client: client}, nil
+	return FromClient(pool, client), nil
 }
 
 // NewTxInserter builds a Runner with no pool, for a caller that holds only a
@@ -137,38 +138,41 @@ func NewTxInserter(log *slog.Logger) (*Runner, error) {
 	return NewInserter(nil, log)
 }
 
-// Enqueue inserts one job for the worker role to pick up. Uniqueness
-// policy rides opts (e.g. UniqueOpts.ByArgs deduplicates a re-submitted
-// job): the caller owns the policy, this method only carries it to River.
+// Enqueue coalesces waiting session-owned jobs; running rows never block their replacements.
 func (r *Runner) Enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
+	if _, locked := args.(SessionLocked); locked {
+		if r.pool == nil {
+			return fmt.Errorf("jobs: enqueue %s requires a pool", args.Kind())
+		}
+		return pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error { return r.EnqueueTx(ctx, tx, args, opts) })
+	}
 	if _, err := r.client.Insert(ctx, args, opts); err != nil {
 		return fmt.Errorf("jobs: enqueue %s: %w", args.Kind(), err)
 	}
 	return nil
 }
 
-// EnqueueTx inserts a job through the caller's transaction. It is used when a
-// durable work request and the operational row the worker will claim must
-// either both commit or both disappear.
+// EnqueueTx commits the work request and its waiting job together.
 func (r *Runner) EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error {
-	if _, err := r.client.InsertTx(ctx, tx, args, opts); err != nil {
-		return fmt.Errorf("jobs: enqueue %s transactionally: %w", args.Kind(), err)
-	}
-	return nil
+	_, err := r.EnqueueTxUnique(ctx, tx, args, opts)
+	return err
 }
 
-// EnqueueTxUnique inserts a job through the caller's transaction like
-// EnqueueTx, but also surfaces River's dedupe outcome: inserted is false
-// when the job's UniqueOpts matched an existing job and River skipped the
-// insert rather than erroring. Callers that must tell "enqueued" apart
-// from "already running" (e.g. a confirm endpoint choosing 202 vs 409)
-// need this signal; EnqueueTx alone discards it.
+// EnqueueTxUnique reports whether a job was inserted rather than coalesced with waiting work.
 func (r *Runner) EnqueueTxUnique(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) (bool, error) {
+	if _, locked := args.(SessionLocked); locked {
+		return r.insertSessionTx(ctx, tx, args, opts)
+	}
 	res, err := r.client.InsertTx(ctx, tx, args, opts)
 	if err != nil {
 		return false, fmt.Errorf("jobs: enqueue %s transactionally: %w", args.Kind(), err)
 	}
 	return !res.UniqueSkippedAsDuplicate, nil
+}
+
+// FromClient shares the working client's insert path with dispatchers.
+func FromClient(pool *pgxpool.Pool, client *river.Client[pgx.Tx]) *Runner {
+	return &Runner{pool: pool, client: client}
 }
 
 // Start begins working the configured queues and returns once startup

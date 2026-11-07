@@ -3,16 +3,77 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
+  x-api-deprecation-policy:
+    window_months: 3
+    patch_removals: false
+    announcement: release-publication
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |-
-    The V1 core CRM contract: contacts, companies, deals, pipelines, activities
-    and leads, with the agent and AI surface beside them.
+    Deprecated APIs stay supported for at least 3 calendar months from the
+    release announcing deprecation. Patch releases never remove an API. A
+    `deprecated: true` operation announces the policy in a `Link` header.
+    `x-deprecation` records the announcing `release`, its RFC3339 `announced_at`
+    publication time, and an optional RFC3339 `sunset_at`. Published notices
+    supply `Deprecation` and scheduled retirement supplies `Sunset` headers.
+    An operation without a published notice cannot be removed.
   license:
     name: BUSL-1.1
     identifier: BUSL-1.1
   contact:
     name: Gradion
     email: lars@gradion.com
+  x-api-deprecation-notices:
+    DELETE /v1/lead-sources/{id}:
+      release: ""
+      announced_at: ""
+    GET /v1/companies/{id}/brief:
+      release: ""
+      announced_at: ""
+    GET /v1/deals/{id}/viability:
+      release: ""
+      announced_at: ""
+    GET /v1/forecast/assurance/enforcement:
+      release: ""
+      announced_at: ""
+    GET /v1/lead-sources:
+      release: ""
+      announced_at: ""
+    GET /v1/stage-automation/policies/{id}:
+      release: ""
+      announced_at: ""
+    GET /v1/stage-automation/report:
+      release: ""
+      announced_at: ""
+    PATCH /v1/lead-sources/{id}:
+      release: ""
+      announced_at: ""
+    POST /v1/ai-model-rates/propose-refresh:
+      release: ""
+      announced_at: ""
+    POST /v1/companies/{id}/brief:
+      release: ""
+      announced_at: ""
+    POST /v1/deals/{id}/stage-progressions/{approvalId}/revert:
+      release: ""
+      announced_at: ""
+    POST /v1/forecast/assurance/exceptions/{id}/close-lost:
+      release: ""
+      announced_at: ""
+    POST /v1/forecast/assurance/exceptions/{id}/wait:
+      release: ""
+      announced_at: ""
+    POST /v1/lead-sources:
+      release: ""
+      announced_at: ""
+    POST /v1/stage-automation/policies/{id}/resume:
+      release: ""
+      announced_at: ""
+    PUT /v1/forecast/assurance/enforcement:
+      release: ""
+      announced_at: ""
+    PUT /v1/stage-automation/policies/{id}:
+      release: ""
+      announced_at: ""
 security:
   - bearerAuth: []
 tags:
@@ -18531,11 +18592,13 @@ paths:
           description: Admin management view — include deactivated/suspended members. Honored only for an admin caller.
         - name: include_invited
           in: query
+          deprecated: true
           schema: {type: boolean, default: false}
           description: |-
-            Also list invited seats — members who have not signed in yet. Each row's `status` says so.
-            A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
-            Naming the colleagues a record already points at is `GET /users/names`.
+            Deprecated compatibility option. Also lists invited seats that have not signed in yet.
+            Assignment pickers use the default active roster and leave out rows whose `is_agent` is
+            true. Resolve known colleague ids with `GET /users/names`. This option remains accepted
+            throughout the API compatibility window.
       responses:
         '200':
           description: A page of workspace members.
@@ -51341,6 +51404,12 @@ components:
       description: One team's week, as it was measured when the week closed.
       required: [id, team_id, team_name, local_week_start, generated_at, as_of, counts, reps, agenda]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |-
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         meetings_withheld:
           type: boolean
           description: |-
@@ -51864,6 +51933,12 @@ components:
         which is why they are stored rather than recomputed.
       required: [id, local_week_start, generated_at, as_of, counts, deals]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |-
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         meetings_withheld:
           type: boolean
           description: |-
@@ -52056,6 +52131,12 @@ components:
       description: The week before this one, for comparison.
       required: [local_week_start, counts]
       properties:
+        leads_withheld:
+          type: boolean
+          description: |-
+            True when lead figures were not measured with lead-read authority, or the reader
+            lacks that authority now. Lead counts are redacted placeholders, never measurements
+            of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
         local_week_start: {type: string, format: date}
         counts: {$ref: '#/components/schemas/WeeklyReviewCounts'}
         pipeline:
@@ -52658,6 +52739,18 @@ components:
         id: {type: string, format: uuid, description: 'The completed act, as its own surface spells it.'}
         kind: {type: string, description: "The producer's own sub-type — for the label, never for authority."}
         summary: {type: string, description: 'What was done, in the words the act itself recorded.'}
+        headline:
+          type: string
+          description: >-
+            `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses.
+        reason:
+          type: string
+          description: >-
+            Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
+        customer_quote:
+          type: string
+          description: >-
+            The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote.
         summary_parts:
           allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
           description: The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
@@ -52926,7 +53019,7 @@ components:
         review:
           type: integer
           minimum: 0
-          description: 'Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.'
+          description: 'Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count.'
     WorklistReadings:
       type: object
       description: |-

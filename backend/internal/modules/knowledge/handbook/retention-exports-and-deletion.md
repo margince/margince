@@ -155,6 +155,8 @@ private folder names.
 
 **Anonymizing a contact** clears the names, title and address, sets the name to "Erased Subject", and clears every custom field. It deletes their email addresses, phone numbers, and their names on other sites and services. No block entry is written: the law allows the contact to come back.
 
+Anonymizing a contact or lead closes their pending duplicate matches. Saved names and values are cleared from all their matches, including matches already decided. The decisions stay.
+
 **Erasing a call transcript** clears the text and puts "Erased" in place of the subject, and deletes the files too. It keeps who the meeting was with and when: the record of the meeting stays and what was said goes.
 
 ### Writing your own retention rule

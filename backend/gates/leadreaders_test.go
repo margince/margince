@@ -181,21 +181,12 @@ var notTheLeadTable = gatekit.Waive(map[string]string{
 	"internal/modules/deals/wonstints.go:wonStints": "`extract(epoch FROM lead(h.changed_at) OVER moves - h.changed_at)` — the window function that reads the NEXT row's value, measuring how long a deal sat in each stage. The statement never names the lead table",
 })
 
-// deferredLeadReads: a DISCLOSING read that is still ungated, each naming the
-// issue that will close it.
-var deferredLeadReads = gatekit.Waive(map[string]string{
-	"internal/compose/weekly/weeklycounts.go:countWeekLeads": "the week's routed / answered-in-target / breached counts. It takes the ROW half (auth.ScopeClauseFor on lead) and never the object half, so a seat whose role grants no lead read is still answered lead figures for its own rows. Deferred rather than gated because the answer turns on what a weekly review SAYS to such a seat: failing the whole review is fail-closed and breaks a report whose other blocks are fine, and zeroed counts read as failure at work nobody asked of them — which this file's own doc names as the thing it must not print. #5466",
-	"internal/compose/weekly/weeklyscorecard.go:hasLeads":    "whether the rep carried a funnel at all, the presence question the lead block hangs off. Same row-half-only shape and the same open question as countWeekLeads beside it. #5466",
-	"internal/compose/weekly/weeklyscorecard.go:scoreLeads":  "the lead block itself. It already models the absent case — an absent block IS the answer for a rep who carried no leads — so it is the one of the three a refusal could be folded into cleanly; it is deferred with the other two because a review whose block is omitted and whose counts are not would be worse than either. #5466",
-})
-
 var leadVerdicts = []namedVerdict{
 	{"predicate", predicateLeadReads},
 	{"lifecycle", lifecycleLeadReads},
 	{"callee-gated", calleeGatedLeadReads},
 	{"not-the-table", notTheLeadTable},
 	{"ruled", ruledLeadReads},
-	{"deferred", deferredLeadReads},
 }
 
 // wantMinimumGatedLeadSites is the floor below the count of sites that satisfy
@@ -253,14 +244,13 @@ func TestEveryReaderOfTheLeadTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
 			"same as a clean tree", satisfied, wantMinimumGatedLeadSites)
 	}
-	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
+	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled",
 		satisfied, len(predicateLeadReads.Subjects()), len(lifecycleLeadReads.Subjects()),
-		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()), len(deferredLeadReads.Subjects()))
+		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()))
 
 	predicateLeadReads.AssertAllMatched(t)
 	lifecycleLeadReads.AssertAllMatched(t)
 	calleeGatedLeadReads.AssertAllMatched(t)
 	notTheLeadTable.AssertAllMatched(t)
 	ruledLeadReads.AssertAllMatched(t)
-	deferredLeadReads.AssertAllMatched(t)
 }

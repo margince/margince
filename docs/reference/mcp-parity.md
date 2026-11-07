@@ -17,8 +17,8 @@ The last count answers the question of parity with the web app, so it leads this
 
 | Of the operations the web app calls | Count |
 |---|---:|
-| Open, and the agent does not ask first | 632 |
-| Open, and the agent asks first | 98 |
+| Open, and the agent does not ask first | 631 |
+| Open, and the agent asks first | 99 |
 | Pending | 0 |
 | Covered by another tool | 15 |
 | Closed for security | 112 |
@@ -48,7 +48,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | [Business operations](#business-operations) | Sales work | 568 | 529 | 41 | 0 | 17 | 22 | 475 | 94.3% | 93.1% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 62 | 46 | 20 | 0 | 16 | 0 | 47 | 74.4% | 74.1% |
-| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 49 | 40 | 9 | 0 | 9 | 0 | 48 | 81.2% | 81.6% |
+| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 49 | 40 | 10 | 0 | 9 | 0 | 48 | 81.2% | 81.6% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 84 | 67 | 4 | 0 | 12 | 5 | 67 | 85.0% | 79.7% |
 | [Admin settings](#admin-settings) | Admin settings | 158 | 117 | 31 | 0 | 41 | 0 | 146 | 76.0% | 74.0% |
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 31 | 18 | 5 | 0 | 11 | 1 | 28 | 60.7% | 58.0% |
@@ -116,7 +116,7 @@ Passport area: Email and calendar capture.
 
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Capture review | 19 | 18 | 2 | 0 | 1 | 0 | 18 | 94.4% | 94.7% |
+| Capture review | 19 | 18 | 3 | 0 | 1 | 0 | 18 | 94.4% | 94.7% |
 | Connectors and provider connections | 23 | 16 | 5 | 0 | 7 | 0 | 23 | 69.5% | 69.5% |
 | Accounting source | 7 | 6 | 2 | 0 | 1 | 0 | 7 | 85.7% | 85.7% |
 

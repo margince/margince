@@ -222,3 +222,61 @@ func (r *requestRecorder) Complete(_ context.Context, req model.Request) (model.
 }
 
 func (*requestRecorder) PromptWindow() int { return 0 }
+
+// saysItCannotBeTakenBack is the contract's wording for a final act: data that
+// is destroyed, or a change left with no Undo. A sentence that says "not" or
+// "never" before the words is about the opposite.
+var saysItCannotBeTakenBack = regexp.MustCompile(`(?i)\b(?:is|are|gets?|be) destroyed\b|\bhas no undo\b|cannot be undone`)
+
+var negatedBefore = regexp.MustCompile(`(?i)\b(?:not|never)\b`)
+
+func callsItFinal(text string) bool {
+	for _, sentence := range regexp.MustCompile(`[.;]\s`).Split(text, -1) {
+		if at := saysItCannotBeTakenBack.FindStringIndex(sentence); at != nil && !negatedBefore.MatchString(sentence[:at[0]]) {
+			return true
+		}
+	}
+	return false
+}
+
+// The prefix census above knows an irreversible act by its verb. A tool named
+// otherwise is held by its own description. A write whose contract says it
+// destroys data or leaves no Undo must tell the client to ask first.
+func TestAWriteItsContractCallsFinalAsksTheUserFirst(t *testing.T) {
+	doc := loadContract(t)
+	words := map[string]string{}
+	for _, item := range doc.Paths.Map() {
+		for _, op := range item.Operations() {
+			words[op.OperationID] = op.Summary + ". " + op.Description
+		}
+	}
+	checked := 0
+	for _, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.Scope == scopeRead || !callsItFinal(words[pol.Op]) {
+			continue
+		}
+		checked++
+		if !pol.AskUserFirst {
+			t.Errorf("%s (%s) says in the contract that it cannot be taken back, but asks no user first; "+
+				"add ask_user_first: true to its x-mcp-tool line", pol.Op, pol.Tool)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no write tool's contract says it is final; the census reads nothing")
+	}
+}
+
+func TestOnlyAnUnnegatedFinalSentenceCounts(t *testing.T) {
+	for text, want := range map[string]bool{
+		"Mail already brought in is destroyed.":             true,
+		"After it, the change has no Undo.":                 true,
+		"It does not destroy mail. Nothing is destroyed.":   true,
+		"It does not destroy mail already captured.":        false,
+		"Not itself an irreversible act: it can be undone.": false,
+		"A deleted note can never be destroyed twice.":      false,
+	} {
+		if got := callsItFinal(text); got != want {
+			t.Errorf("callsItFinal(%q) = %v, want %v", text, got, want)
+		}
+	}
+}
