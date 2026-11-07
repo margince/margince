@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
@@ -198,7 +197,6 @@ export function SuggestRoles({
       pending={writes.suggest.isPending}
       busyLabel={t("co.contacts.board.suggesting")}
     >
-      <Sparkles aria-hidden="true" />
       {t("co.contacts.board.suggest")}
     </Button>
   );

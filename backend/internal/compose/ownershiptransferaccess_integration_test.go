@@ -72,10 +72,6 @@ func TestOnlyAColleagueWhoCannotChangeARecordMayAskForIt(t *testing.T) {
 			_, _, err := transfers.Request(readSeat, "company", owned, "")
 			return err
 		}, want: apperrors.ErrPermissionDenied},
-		"agent": {ask: func() error {
-			_, _, err := transfers.Request(e.AgentFor(t, e.Rep3, nil, handoverRepPerms()), "company", owned, "")
-			return err
-		}, want: apperrors.ErrPermissionDenied},
 		"owner-private contact": {ask: func() error {
 			_, _, err := transfers.Request(asker(e), "contact", private, "")
 			return err
@@ -179,5 +175,31 @@ func TestTheRequestRouteTellsANewRequestFromAnOpenOne(t *testing.T) {
 	}
 	if ids.UUID(made.OwnerId) != e.Rep1 {
 		t.Errorf("the request names %s, want the owner", made.OwnerId)
+	}
+}
+
+// A user's agent asks for a record as its user does, and the request names its
+// passport. Automatic work has no user behind it, so it may not ask.
+func TestAUsersAgentAsksForARecordAndAutomaticWorkMayNot(t *testing.T) {
+	e := integration.Setup(t)
+	transfers := newOwnershipTransfers(e.Pool)
+	owned := e.SeedCompany(t, "Rep1 GmbH", &e.Rep1)
+	passport := e.SeedPassportFor(t, integration.OwnerConn(t), "asking agent", e.Rep3)
+	agent := e.AgentOnPassport(t, e.Rep3, nil, handoverRepPerms(), ids.From[ids.PassportKind](passport))
+
+	automatic, ok := principal.Actor(agent)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	automatic.PassportID = ids.UUID{}
+	if _, _, err := transfers.Request(principal.WithActor(agent, automatic), "company", owned, ""); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("automatic work asking → %v, want permission denied", err)
+	}
+
+	if _, _, err := transfers.Request(agent, "company", owned, ""); err != nil {
+		t.Fatalf("the user's agent asking: %v", err)
+	}
+	if got := e.WsScalar(t, `SELECT passport_id::text FROM approval WHERE kind = $1`, ownershipTransferKind); got != passport.String() {
+		t.Errorf("the request names passport %q, want %s", got, passport)
 	}
 }

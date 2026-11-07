@@ -18,7 +18,7 @@ import (
 // covered": that outcome is a statement about the corpus.
 func TestAskingACorpusHoldsTheContractsQuestionLimits(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
-		compose.WithCorpusAsk(unaskableEmbedder{}, nil, quietAskLog()))
+		compose.WithCorpusAsk(unaskableEmbedder{}, nil, apptest.QuietAskLog()))
 	e.BootstrapWorkspace(t)
 	corpusID := createCorpusOverHTTP(t, e)
 	path := "/v1/knowledge/corpora/" + corpusID + "/ask"

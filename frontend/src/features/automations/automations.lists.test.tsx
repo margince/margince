@@ -17,10 +17,19 @@ import { Field } from "../../design-system/atoms";
 import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
 import { liveList, shortlist } from "../../testing/lists.fixtures";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import { meFixture } from "../../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationForm } from "./automations.form";
-import { ListParamSelect, RulePausedReason } from "./automations.lists";
+import {
+  ListParamSelect,
+  RulePausedReason,
+  RuleSetByAgent,
+} from "./automations.lists";
 import { paramFields } from "./automations.params";
 
 type Automation = components["schemas"]["Automation"];
@@ -97,6 +106,44 @@ describe("a rule that watches a list", () => {
       ["shortlist_id", "shortlist"],
       ["direction", "enum"],
     ]);
+  });
+
+  it("names the agent behind a rule only while one stands behind it", async () => {
+    const seat = meFixture({});
+    installFetchStub({ "GET /me": () => jsonResponse(seat) });
+    const setter = "01a0f000-0000-7000-8000-000000000099";
+    const { rerender } = render(
+      <StoryProviders>
+        <RuleSetByAgent
+          automation={{
+            ...rule,
+            setter_passport_id: setter,
+            owner_id: seat.user.id,
+          }}
+        />
+      </StoryProviders>,
+    );
+    expect(
+      await screen.findByText(en["auto.setByYourAgent"]),
+    ).toBeInTheDocument();
+    rerender(
+      <StoryProviders>
+        <RuleSetByAgent
+          automation={{
+            ...rule,
+            setter_passport_id: setter,
+            owner_id: "01a0f000-0000-7000-8000-000000000098",
+          }}
+        />
+      </StoryProviders>,
+    );
+    expect(screen.getByText(en["auto.setByAnAgent"])).toBeInTheDocument();
+    rerender(
+      <StoryProviders>
+        <RuleSetByAgent automation={{ ...rule, setter_passport_id: null }} />
+      </StoryProviders>,
+    );
+    expect(screen.queryByText(en["auto.setByAnAgent"])).toBeNull();
   });
 
   it("says why it paused itself in short, the whole reason on a press, and nothing when paused by hand", async () => {

@@ -212,15 +212,22 @@ func (s *Store) requireLeadOf(ctx context.Context, owner ids.UUID) error {
 	// A lead reads a colleague's plan; own-scope reaches only their own, which
 	// the caller-equals-owner case above already answered.
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Permissions.RowScope == principal.RowScopeOwn {
+	if !ok {
 		return apperrors.ErrNotFound
+	}
+	// An own-scope seat leads nobody, so this is the row scope's question, and
+	// is recorded as the check it is.
+	teamScope := auth.Check{RowScope: principal.RowScopeTeam}
+	auth.RecordDecision(ctx, teamScope, teamScope.HeldBy(actor))
+	if actor.Permissions.RowScope == principal.RowScopeOwn {
+		return auth.HideRow(ctx, "weekly_plan")
 	}
 	shares, err := s.teammates.SharesLiveTeamWithCaller(ctx, owner)
 	if err != nil {
 		return err
 	}
 	if !shares {
-		return apperrors.ErrNotFound
+		return auth.HideRow(ctx, "weekly_plan")
 	}
 	return nil
 }

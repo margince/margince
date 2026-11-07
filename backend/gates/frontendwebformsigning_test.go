@@ -10,12 +10,12 @@ package gates
 // intake verifies, every pasted copy signs material the server never accepts.
 
 import (
-	"os"
 	"regexp"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/webforms"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -23,7 +23,7 @@ const frontendWebFormSnippet = "../frontend/src/features/settings/webformsnippet
 
 func TestTheWebFormSnippetSignsWhatTheIntakeVerifies(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendWebFormSnippet)
+	source, err := gatekit.ReadFile(frontendWebFormSnippet)
 	if err != nil {
 		t.Fatalf("reading the web form snippet: %v", err)
 	}
@@ -49,7 +49,7 @@ const frontendWebFormKinds = "../frontend/src/features/settings/webformkinds.ts"
 // a secret never shown, or a rotation the server refuses.
 func TestTheSetupDialogMintsTheSecretsTheServerMints(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendWebFormKinds)
+	source, err := gatekit.ReadFile(frontendWebFormKinds)
 	if err != nil {
 		t.Fatalf("reading the web form kinds: %v", err)
 	}

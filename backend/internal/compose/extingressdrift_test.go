@@ -139,6 +139,9 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"InvitationFromSeat": "zero is the right answer for a unit, for the reason SentByColleague's is: the sink " +
 		"sets it from a From address it authenticated against a seat; a unit stating it would credit a " +
 		"colleague with an invitation the core never checked",
+	"MeetingDocuments": "empty is the right answer for a unit. The sink reads these notes and transcripts " +
+		"from a calendar provider's event and links them on the meeting; a unit hands over no provider " +
+		"event, so it has no attachment to name",
 	"AgendaFingerprint": "empty is the right answer for a unit. The sink stores it from a calendar provider's " +
 		"own invite description, and a unit hands over no invite. Empty gives the meeting no agenda fact, " +
 		"as for a meeting booked by hand",

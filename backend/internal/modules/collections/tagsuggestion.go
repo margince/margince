@@ -230,5 +230,5 @@ func tagSuggestionStandsClause(alias string) string {
 	                  AND tg.entity_type = 'company' AND tg.entity_id = tco.id)))
 	  AND (SELECT count(*) FROM tag_suggestion_evidence te
 	        JOIN activity ta ON ta.id = te.activity_id AND ta.archived_at IS NULL AND %[2]s
-	       WHERE te.suggestion_id = %[1]s.id) = %[1]s.evidence_count)`, alias, auth.ActivityAvailableClause("ta"))
+	       WHERE te.suggestion_id = %[1]s.id) = %[1]s.evidence_count)`, alias, auth.ActivityExternalEvidenceClause("ta"))
 }

@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, waitFor, within } from "storybook/test";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -25,7 +25,7 @@ const message: ScheduledSend = {
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   status: "scheduled",
   scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
-  scheduled_tz: viewerZone(),
+  scheduled_tz: browserZone(),
   subject: "The renewal quote",
   body: "Hi, attached is the renewal quote.",
   to: ["ceo@acme.example"],

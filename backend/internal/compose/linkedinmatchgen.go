@@ -81,7 +81,7 @@ type LinkedInMatchGen struct {
 func NewLinkedInMatchGen(pool *pgxpool.Pool, store *contacts.Store, authority authz.Resolver, log *slog.Logger) *LinkedInMatchGen {
 	return &LinkedInMatchGen{
 		store: store, pool: pool, authority: authority,
-		approvals: approvalsServiceWithEffects(pool), log: log,
+		approvals: NewApprovalsServiceWithEffects(pool), log: log,
 	}
 }
 

@@ -78,90 +78,80 @@
   }
 }
 
-/* ── The briefing ────────────────────────────────────────────────────────── */
+/* ── The briefing ──────────────────────────────────────────────────────────
+ * Small facts over a one-line greeting, the day in one sentence under it, and
+ * the view's dial at the end. Quiet, so the cards below carry the page. */
 .glance {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  align-items: end;
+  gap: var(--space-3) var(--space-6);
   padding: 0;
 }
-
-/* The heading spans both tracks, and its lead line keeps to the first. So the
-   weekly's stepper ends that line, outside the heading's text. */
+.glance-head {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.glance > :last-child:not(.glance-head) {
+  flex: none;
+}
+/* The weekly's stepper ends the title's line, outside the heading's text. */
 .glance-title {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
 }
 .glance-greeting {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  display: grid;
-  grid-template-columns: subgrid;
   min-width: 0;
   margin: 0;
+  font: var(--fontHeadingLarge);
   overflow-wrap: break-word;
   text-wrap: balance;
 }
-/* A rung under the line it leads to, and quieter in weight. It keeps its height
-   when empty, so the facts' line stands at one height in both views. */
-.glance-greeting-lead {
-  font: var(--fontHeadingMedium);
-  font-weight: var(--fontWeightRegular);
-  min-block-size: 1lh;
+.glance-greeting-lead:empty {
+  display: none;
 }
-.glance-greeting-name {
-  grid-column: 1 / -1;
-  font: var(--fontDisplayLarge);
+/* The weekly's lead is its week number, set off from the days it covers. */
+.glance-greeting-lead:has(time)::after {
+  content: "\00a0·\00a0";
+  color: var(--textSecondary);
 }
 .greeting-name {
   color: var(--accentText);
 }
-/* Held to the lead line's height, so it never pushes the title down. */
 .glance-title > .brief-report-stepper {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: start;
-  font: var(--fontHeadingMedium);
-  block-size: 1lh;
-  align-items: center;
+  font: var(--fontBody);
 }
-
-/* Baselines, not centres: the dial then stands at one height however many
-   lines the facts wrap to. */
-.glance-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-4);
-}
-/* The facts run as one line of text, so a long sentence wraps word by word
-   and a separator never starts a line. The sentence embeds user data of
-   unbounded length, so the line is clamped rather than pushing the panes down. */
+/* The day's facts on one caption line, split by a dot. */
 .glance-facts {
-  flex: 1 1 0;
-  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   margin: 0;
-  font: var(--fontBodyLarge);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  overflow: hidden;
-  text-wrap: pretty;
+  color: var(--textSecondary);
 }
 .glance-facts > p {
-  display: inline;
   margin: 0;
 }
 .glance-facts > :is(.glance-date, .glance-frozen):not(:last-child)::after {
   content: "\00a0·";
+}
+/* The sentence embeds user data of unbounded length, so it is clamped rather
+   than pushing the cards down. */
+.glance-sentence {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  margin: 0;
+  font: var(--fontBodyLarge);
   color: var(--textSecondary);
-}
-.glance-facts > * + *::before {
-  content: " ";
-}
-.glance-facts + * {
-  flex: none;
+  text-wrap: pretty;
 }
 
 /* ── The readings band ─────────────────────────────────────────────────────
@@ -226,8 +216,7 @@
 /* A section's name on this page is a quiet label over its rows, not a title:
    the greeting is the page's one headline and the card in hand its second. */
 .t-eyebrow.brief-section-label,
-.brief-morning .brief-first-head > .t-eyebrow,
-.brief-morning .brief-triage-queue-head {
+.brief-morning .brief-first-head > .t-eyebrow {
   margin: 0;
   font: var(--fontBody);
   font-weight: var(--fontWeightMedium);
@@ -248,16 +237,36 @@
 .brief-rail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-10);
+  gap: var(--space-6);
 }
-/* A reading in the rail: the name and the figure on one line, the basis and
-   the way into its lane under them. */
+/* A reading in the rail is one line: the name, its basis quiet at the end,
+   the figure, and an arrow into its lane. Context, so it stays smaller than
+   the cards it is read beside. */
 .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
-  grid-template-areas:
-    "label figure"
-    "basis foot";
-  padding-block: var(--space-4);
-  row-gap: var(--space-1);
+  grid-template-areas: "label basis figure foot";
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--space-3);
+  padding-block: var(--space-2);
+  row-gap: 0;
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-value {
+  font: var(
+    --fontHeadingSmall
+  ); /* ds:ignore the rail's one-line rows read the figure a rung down */
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-detail {
+  min-width: 0;
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
@@ -265,11 +274,20 @@
   > .stat-card-foot {
   justify-self: end;
 }
+/* The arrow alone opens the lane here; its word stays for a screen reader. */
+.brief-rail .stat-card-narrow-row .stat-card-open-word {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
   > .stat-card-label {
-  color: var(--textSecondary);
+  color: var(--textPrimary);
 }
 
 .rail-count,
@@ -531,11 +549,23 @@
   white-space: nowrap;
 }
 
+/* An opened receipt reads under its sentence, as wide as the line: auto-placed,
+   it would take a free narrow track beside the sentence. */
+.magic-line > .disclosure {
+  grid-row: 2;
+  grid-column: 2 / -1;
+}
+
 /* On a phone the controls drop under the line, so the words keep the width
    and the time keeps its column. */
 @media (max-width: 600px) {
+  /* Not `auto`: an auto track grows to a long time's one-line width before
+     the sentence gets any. */
   .magic-lines {
-    grid-template-columns: var(--space-3) minmax(0, 1fr) auto;
+    grid-template-columns:
+      var(--space-3)
+      minmax(0, 1fr)
+      fit-content(var(--space-16));
   }
 
   .magic-line-controls {
@@ -544,8 +574,17 @@
     justify-content: flex-start;
   }
 
+  .magic-line > .disclosure {
+    grid-row: 3;
+  }
+
   .magic-line-when {
     grid-column: 3;
+  }
+
+  .magic-line-since {
+    white-space: normal;
+    text-align: end;
   }
 }
 
@@ -621,42 +660,15 @@
 }
 
 /* ── Folds ────────────────────────────────────────────────────────────────
- * `PageZones` folds the columns; what folds here is the head's facts line.
- * Under 640px the German line does not fit beside the dial. So each fact takes
- * its own line, and the dial stands under them. */
-@media (max-width: 720px) {
-  .glance-facts {
-    font: var(--fontBody);
-  }
-}
+ * `PageZones` folds the columns; what folds here is the head: under 640px the
+ * dial stands under the sentence. */
 @media (max-width: 640px) {
-  .glance-row {
+  .glance {
     flex-direction: column;
-    align-items: flex-end;
+    align-items: stretch;
   }
-  /* A fact a line, so the clamp moves from the whole line to the sentence. */
-  .glance-facts {
-    flex: none;
-    align-self: stretch;
-    display: block;
-    overflow: visible;
-  }
-  .glance-facts > p {
-    display: block;
-  }
-  .glance-facts > .glance-sentence {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
-    overflow: hidden;
-  }
-  .glance-facts > .glance-sentence-pending {
-    display: flex;
-  }
-  .glance-facts > * + *::before,
-  .glance-facts > :is(.glance-date, .glance-frozen):not(:last-child)::after {
-    content: none;
+  .glance-sentence {
+    font: var(--fontBody);
   }
 }
 
@@ -686,4 +698,97 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* ── The work column ──────────────────────────────────────────────────────
+ * The cards stand on the page itself: a pane around them would be a card
+ * holding cards. The rail keeps its pane. */
+.brief-morning > .brief-main.page-pane {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+.brief-morning > .brief-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+/* Done for you: one deal per row, parted by hairlines, its changes under
+   its name. Each change reads what moved, then why, then its verbs, with no
+   card around it and no footer of its own. */
+.brief-done-deals,
+.brief-done-changes {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.brief-done-deals {
+  gap: var(--space-4);
+}
+.brief-done-deal {
+  display: grid;
+  gap: var(--space-2);
+}
+.brief-done-deal + .brief-done-deal {
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.brief-done-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.brief-done-changes {
+  gap: var(--space-3);
+}
+.brief-done-change {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: baseline;
+}
+.brief-done-what,
+.brief-done-reason {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.brief-done-when {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.brief-done-change > .brief-done-reason,
+.brief-done-change > .brief-done-quote,
+.brief-done-change > .disclosure,
+.brief-done-change > .brief-done-controls {
+  grid-column: 1 / -1;
+}
+.brief-done-change > .disclosure {
+  margin-block: 0;
+}
+.brief-done-quote {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--borderSubtle);
+}
+.brief-done-quote blockquote {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.brief-done-controls,
+.brief-done-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.brief-done-foot {
+  padding-block-start: var(--space-4);
+}
+/* The name moves to its own line whole rather than breaking after the lead. */
+.glance-greeting-name {
+  display: inline-block;
+  text-wrap: balance;
 }

@@ -10,7 +10,6 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { KeyedName } from "../../design-system/keyedname";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -24,6 +23,7 @@ import { useCan } from "../../lib/capability";
 import { extensionTitle } from "../../lib/extensions";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/extension-ingest-health — whether an installed connector is
@@ -184,7 +184,7 @@ export function ExtensionIngestHealthCard() {
   const t = useT();
   // The reader's own zone: "most recent at 03:14" is only useful against the
   // clock on their wall.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const { canSee, query } = useExtensionIngestHealth();
 
   return (

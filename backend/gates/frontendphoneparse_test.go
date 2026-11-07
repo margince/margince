@@ -11,7 +11,6 @@ package gates
 // drift from the server's, it links numbers the server refuses, or hides the link for stored ones.
 
 import (
-	"os"
 	"regexp"
 	"regexp/syntax"
 	"slices"
@@ -20,6 +19,7 @@ import (
 	"testing"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -30,7 +30,7 @@ var tsDialPrefixRule = regexp.MustCompile("\\.startsWith\\(\"(\\d+)\"\\)\\s*\\?\
 
 func TestTheFrontendPhoneParseMatchesParsePhone(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(frontendContactURI)
+	raw, err := gatekit.ReadFile(frontendContactURI)
 	if err != nil {
 		t.Fatalf("reading the frontend phone mirror: %v", err)
 	}

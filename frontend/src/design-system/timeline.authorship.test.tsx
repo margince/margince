@@ -6,7 +6,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { activityTimeline } from "./activitytimeline";
 import { GroupedTimelineList } from "./timeline";
@@ -105,7 +105,7 @@ describe("History authorship", () => {
     const entries = activityTimeline(thread);
     render(
       <GroupedTimelineList
-        zone={viewerZone()}
+        zone={browserZone()}
         groups={[
           {
             id: "renewal",

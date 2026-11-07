@@ -702,6 +702,8 @@ judges "$c1" case1 promises-packaging-in-german 1 "$c1_promise"
 # negation can stand before the verb or between the verb and the name, so neither
 # the run into the clause nor the gap inside it may cross one.
 judges case40-sort-the-queue.yaml case40 says-what-it-did-not-do 0 "!forbids"
+# The same answer, with one call to change_attention, fails on that call alone.
+judges case40-sort-the-queue.yaml case40 clears-a-notice-while-sorting 1 "called change_attention carrying"
 judges case40-sort-the-queue.yaml case40 puts-the-verb-on-the-wrong-lead 1 "I promoted Bruno" "I disqualified Ines" "I wrote off Piet"
 
 # THE OTHER FAILURE SHAPE: an assertion that looks strong and holds nothing. A
@@ -721,6 +723,9 @@ judges case10-finish-the-import.yaml case10 numbers-that-count-nothing 1 "Firmen
 
 judges case20-put-it-in-the-board-pack.yaml case20 carries-real-figures 0 "!forbids"
 judges case20-put-it-in-the-board-pack.yaml case20 a-date-is-not-a-figure 1 "never said anything matching" "!forbids"
+# The figures must be the ones the run's tools returned: the same answer with one
+# amount typed wrong fails on that amount, whichever path the model took.
+judges case20-put-it-in-the-board-pack.yaml case20 types-a-figure-no-result-holds 1 "1,420,000 EUR" "!forbids"
 
 # ROUND THREE, and every one of these was a pattern that read right and held
 # something else. The three shapes repeat: a negation the guard could not see, a

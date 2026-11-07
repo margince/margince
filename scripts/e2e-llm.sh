@@ -36,11 +36,11 @@ ONLY="${SCENARIO:-}"
 # consumer app defaults to — because a pass rate that moves when a CLI changes
 # its default cannot be read as the product moving.
 #
-#   E2E_LLM_CANDIDATE  claude | gpt | mistral                    (default claude)
+#   E2E_LLM_CANDIDATE  claude | gpt | gemini | mistral           (default claude)
 #   E2E_LLM_VIA        api | openrouter — e2e/llm/drive.py, the neutral bridge:
 #                      every vendor offered the same tools under the server's own
 #                      instructions. The comparable route, filed under the model.
-#                      cli — `claude -p` or `codex exec`, each with its own system
+#                      cli — `claude -p`, `codex exec` or `agy -p`, each with its own system
 #                      prompt and tools, filed apart under <model>@<cli>.
 #                                                                (default api)
 #   E2E_LLM_MODEL      a different model, or
@@ -119,6 +119,9 @@ if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
 fi
 if [[ "$WIRE" = codex-cli ]]; then
   command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }
+fi
+if [[ "$WIRE" = agy-cli ]]; then
+  command -v agy >/dev/null || { echo "the agy (Antigravity) CLI is not on PATH" >&2; exit 1; }
 fi
 
 # E2E_LLM_STACK_PRESET binds the lane's own stack to a committed preset before
@@ -275,14 +278,15 @@ zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$WORK/skill.zip" "$WORK/s
   [[ -f "$SKILL_DIR/INDEX.md" ]] || { echo "HARNESS: the skill has no INDEX.md" >&2; exit 2; }
 }
 
-# use_passport points the assistant at the narrow credential (read, write) or the
-# wide one (adds draft and send). A scenario asks for the wide one with
-# `passport: wide`; every other case is measured exactly as before, because a
-# send tool offered to a case that never asked for one is a different
-# experiment.
+# use_passport points the assistant at the narrow credential (read, write), the
+# wide one (adds draft and send) or the research one (adds enrich). A scenario
+# asks for another with `passport: wide` or `passport: research`; every other
+# case is measured exactly as before, because a send tool offered to a case that
+# never asked for one is a different experiment.
 use_passport() {
   case "$1" in
     wide) PASSPORT="$PASSPORT_WIDE" ;;
+    research) PASSPORT="$PASSPORT_RESEARCH" ;;
     *) PASSPORT="$PASSPORT_NARROW" ;;
   esac
   write_mcp_config
@@ -316,6 +320,12 @@ except Exception: print("")')"
 try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
   [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
+  PASSPORT_RESEARCH="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
+    -d '{"label":"e2e-llm-research","scopes":["read","write","enrich"]}' \
+    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("token",""))
+except Exception: print("")')"
+  [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
 
   [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
@@ -324,7 +334,7 @@ except Exception: print("")')"
   # which reads downstream as a model that chose not to call anything. Fail
   # here instead, where the cause is still visible.
   local probe token
-  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE"; do
+  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH"; do
     probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
       -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
       -H 'Accept: application/json, text/event-stream' \
@@ -449,9 +459,12 @@ restart_stack snapshot_world
 #   --permission-mode dontAsk    with the surface genuinely restricted, a global
 #                                bypass buys nothing.
 #   --max-turns                  hidden from --help on this version but present.
+#
+# e2e/llm/clean.py starts the CLI from an empty directory, with no settings,
+# memory or skills; check.py --clean stops a run whose init line says otherwise.
 run_claude() {
   local prompt_file="$1" out="$2" exited=0
-  claude -p "$(cat "$prompt_file")" \
+  python3 "$ROOT/e2e/llm/clean.py" -p "$(cat "$prompt_file")" \
     --model "$MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
     --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
@@ -501,7 +514,7 @@ else:
     echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
     echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
     echo "  not override; anything else points at the stack or the passport." >&2
-    return 1
+    return 3
   fi
 
   # A NONZERO EXIT IS SCORED ONLY WHEN THE RESULT OWNS IT. The CLI exits nonzero
@@ -518,6 +531,16 @@ for line in open(sys.argv[1]):
 ' "$out")" == clean ]]; then
     echo "the claude CLI exited $exited under a result that reports no error" >>"$out.err"
     return 3
+  fi
+}
+
+# keep_transcript copies a stopped run's transcript where the reader looks. It is
+# the only evidence of which failure this was, so a copy that fails says so.
+keep_transcript() {
+  if ! cp "$1" "$RECORD_DIR/"; then
+    echo "  and the transcript could not be kept: $1" >&2
+  else
+    echo "  the transcript is at $RECORD_DIR/$(basename "$1")"
   fi
 }
 
@@ -592,15 +615,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   esac
 done
 
-# `passport:` is absent (the narrow credential) or `wide`. Anything else would be
+# `passport:` is absent (the narrow credential), `wide` or `research`. Anything else would be
 # read as narrow by use_passport and measure a case on a surface its author did
 # not mean, so a misspelling stops the lane here, before the first token.
 for scenario in "$SCENARIO_DIR"/*.yaml; do
   declared="$(python3 "$ROOT/e2e/llm/check.py" --field passport "$scenario")"
   case "$declared" in
-    ""|wide) ;;
+    ""|wide|research) ;;
     *)
-      echo "$(basename "$scenario") declares passport=$declared; it must be absent or wide" >&2
+      echo "$(basename "$scenario") declares passport=$declared; it must be absent, wide or research" >&2
       exit 1
       ;;
   esac
@@ -608,6 +631,8 @@ done
 
 PASSED=0
 FAILED=0
+SWEEP_CALLS=0
+PROVISIONAL=()
 # The runs the lane INTENDED, summed as it goes. The sweep total's denominator
 # cannot come from the transcripts it is counting: a run that wrote none would
 # then be missing from both halves and the total would report itself complete.
@@ -692,7 +717,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "HARNESS: $name run $i could not be run:"
       tail -5 "$transcript.err" | sed 's/^/  /'
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     if [[ "$run_status" -ne 0 ]]; then
@@ -719,14 +744,16 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "  $why"
       tail -5 "$transcript.err" 2>/dev/null | sed 's/^/  driver: /'
       echo "  This is not a use-case failure. Nothing was scored."
-      # The transcript is the only evidence of WHICH failure this was, so a
-      # copy that fails says so rather than leaving the reader with a verdict
-      # and nothing to check it against.
-      if ! cp "$transcript" "$RECORD_DIR/"; then
-        echo "  and the transcript could not be kept: $transcript" >&2
-      else
-        echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
-      fi
+      keep_transcript "$transcript"
+      exit 2
+    fi
+    # A candidate that loaded the repository's rules or the operator's setup
+    # did not measure the copy, so its run is not scored.
+    if ! why="$(python3 "$ROOT/e2e/llm/check.py" --clean "$transcript")"; then
+      echo
+      echo "HARNESS: $name run $i did not start clean: $why"
+      echo "  This is not a use-case failure. Nothing was scored."
+      keep_transcript "$transcript"
       exit 2
     fi
     # A REQUIRED TOOL THE MODEL WAS NEVER OFFERED fails must_call for a reason
@@ -736,7 +763,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo
       echo "HARNESS: $name run $i was not offered what it needs: $why"
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
@@ -753,7 +780,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "HARNESS: $name run $i left a world that could not be read:"
       tail -3 "$results" | sed 's/^/  /' || :
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer
@@ -762,6 +789,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # broken use cases: every remaining run would be unscorable the same way,
     # each costs a fresh stack, and the answer is the same after eighteen of
     # them as after one.
+    # A run that called nothing is scored on its answer like any other. Only a
+    # sweep in which no run reached the server says the server never attached.
+    if grep -qE '"name": ?"mcp__'"$MCP_SERVER"'__' "$transcript"; then
+      SWEEP_CALLS=$((SWEEP_CALLS + 1))
+    fi
     scored=0
     python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1 || scored=$?
     case "$scored" in
@@ -812,6 +844,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   transcripts=("$WORK/$name".run*.jsonl)
   shopt -u nullglob
 
+  # A verdict written before any run of the sweep reached the server is held
+  # back: the sweep's end decides whether the server ever attached.
+  if [[ "$SWEEP_CALLS" -eq 0 ]]; then
+    PROVISIONAL+=("$name")
+    if [[ -f "$VERDICT_DIR/${name}.json" ]]; then cp "$VERDICT_DIR/${name}.json" "$WORK/${name}.prior.json"; fi
+  fi
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
@@ -828,6 +866,22 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   rm -f "$RECORD_DIR/$name".run*.jsonl
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
+
+# A run that called nothing is scored on its answer, but a sweep in which no run
+# reached the server says it never attached: its verdicts are taken back.
+if [[ "$SWEEP_CALLS" -eq 0 && ${#PROVISIONAL[@]} -gt 0 ]]; then
+  for name in "${PROVISIONAL[@]}"; do
+    if [[ -f "$WORK/${name}.prior.json" ]]; then
+      cp "$WORK/${name}.prior.json" "$VERDICT_DIR/${name}.json"
+    else
+      rm -f "$VERDICT_DIR/${name}.json"
+    fi
+  done
+  echo
+  echo "HARNESS: no run of this sweep called the lane's server, so it may never have attached."
+  echo "  Read one run's answer and its system line. Nothing was recorded."
+  exit 2
+fi
 
 echo
 echo "================ e2e-llm ================"

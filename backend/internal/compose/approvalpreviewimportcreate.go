@@ -103,7 +103,7 @@ func (r approvalPreviewReader) importDealDetails(ctx context.Context, writer *cs
 	}
 	effects := []string{"create_deal_record"}
 	if terminal != nil {
-		fields := map[string]any{previewFieldClosedAt: terminal.ClosedAt, "lost_reason": terminal.LostReason}
+		fields := map[string]any{previewFieldClosedAt: terminal.ClosedAt, previewFieldLostReason: terminal.LostReason}
 		choice, problem := writer.dealStages.resolve(textFields(row.Fields)[dealTargetPipeline], textFields(row.Fields)[dealTargetStage])
 		if problem == nil && choice.semantic == crmcontracts.StageSemanticWon {
 			fields["won_without_contract_reason"] = importedWinReason

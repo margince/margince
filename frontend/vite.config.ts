@@ -1,10 +1,15 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
+import {
+  entryChunks,
+  initialEntries,
+  preloadEntries,
+} from "./scripts/vite-entry-chunks.ts";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
@@ -18,7 +23,25 @@ import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 // invoked. Composed: MARGINCE_COMPOSITION_FRONTEND names the generated
 // directory, exactly as GOWORK names the generated workspace for the Go lane.
 const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
+// One link per enabled unit's screen, written by gen-composition, wherever the
+// unit lives: extensions/, or a module an installation imports. Only the
+// composed lane imports a screen. A stale link is skipped, so it cannot break
+// the config.
+const unitScreensDir = join(
+  frontendRoot,
+  "..",
+  "build",
+  "composition-frontend",
+  "units",
+);
 const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
+const unitScreenDirs =
+  composedComposition && existsSync(unitScreensDir)
+    ? readdirSync(unitScreensDir).flatMap((unit) => {
+        const link = join(unitScreensDir, unit);
+        return existsSync(link) ? [realpathSync(link)] : [];
+      })
+    : [];
 const compositionDir = composedComposition
   ? resolve(composedComposition)
   : join(frontendRoot, "src", "composition");
@@ -67,7 +90,39 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
 const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 
+const entries = initialEntries(frontendRoot);
+const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
+const startup = entryChunks("startup", entries.startup);
+const analyticsPreparation = entryChunks(
+  "analytics-preparation",
+  entries.analyticsPreparation,
+  15,
+);
+const analytics = entryChunks("analytics", entries.analytics);
+
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        strictExecutionOrder: true,
+        codeSplitting: {
+          groups: [
+            bootstrap.group,
+            analyticsPreparation.group,
+            startup.group,
+            analytics.group,
+            {
+              name: "shared",
+              minShareCount: 2,
+              entriesAware: true,
+              entriesAwareMergeThreshold: 64000,
+              includeDependenciesRecursively: false,
+            },
+          ],
+        },
+      },
+    },
+  },
   // serveMcpApps is `apply: "serve"` — a dev-only middleware that adds nothing
   // to the SPA build. It has to live HERE rather than in vite.mcp-apps.config.ts
   // because `make dev` starts this config: without it, a request for a view
@@ -75,6 +130,11 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
+    preloadEntries([...entries.startup, ...entries.analyticsPreparation]),
+    bootstrap.plugin,
+    analyticsPreparation.plugin,
+    startup.plugin,
+    analytics.plugin,
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
@@ -153,11 +213,11 @@ export default defineConfig({
       // links a member into its DEPENDENTS' node_modules, so installing it
       // would mean frontend/package.json listing every enabled unit — an
       // upstream-owned file that adding a unit would then have to edit.
-      // Presence under extensions/ is the enablement here exactly as it is on
-      // the Go side.
+      // gen-composition links each enabled unit's screen into unitScreensDir,
+      // so the set here is the one the Go side composed.
       {
         find: /^@margince-ext\/(.+)$/,
-        replacement: join(frontendRoot, "..", "extensions", "$1", "frontend"),
+        replacement: join(unitScreensDir, "$1"),
       },
     ],
     // ONE copy of every package that keeps state the HOST owns: React's hook
@@ -199,6 +259,9 @@ export default defineConfig({
         // without this `pnpm dev` serves the registry and then 403s the very
         // module it imports.
         join(frontendRoot, "..", "extensions"),
+        // A unit an installation imports sits in build/ or in the
+        // installation's own folder, and the link above resolves to there.
+        ...unitScreenDirs,
       ],
     },
     // Everything the api owns is reachable through this origin, so

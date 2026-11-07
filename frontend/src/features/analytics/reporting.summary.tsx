@@ -1,6 +1,7 @@
+import type { ComponentProps } from "react";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { scopeKey } from "./analytics.context";
@@ -29,7 +30,7 @@ export function TargetProgress({
     <p className="t-caption">
       {t("reporting.remaining")}: {format(Math.max(0, target - value))}
       {target > 0
-        ? ` · ${t("reporting.attainment", { percent: formatNumber(Math.round((value / target) * 100), locale) })}`
+        ? ` · ${t("reporting.attainment", { percent: formatAnalyticsNumber(Math.round((value / target) * 100), locale) })}`
         : ""}
     </p>
   );
@@ -46,9 +47,11 @@ const HEADLINE_METRICS = [
   "meetings_held",
   "accepted_opportunities",
   "leads_created",
+  "leads_qualified",
   "leads_promoted",
   "lead_first_response",
   "leads_awaiting_response",
+  "leads_awaiting_response_now",
   "partner_pipeline",
   "partner_won",
   "partner_commission",
@@ -57,9 +60,14 @@ const HEADLINE_METRICS = [
 
 export function ResultsSummary({
   evaluation,
+  density,
+  lead,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
+  density?: ComponentProps<typeof StatStrip>["density"];
+  // The first figure leads the plate, as on Overview.
+  lead?: boolean;
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
@@ -70,7 +78,7 @@ export function ResultsSummary({
   );
   if (!metrics.length) return null;
   return (
-    <StatStrip>
+    <StatStrip density={density} lead={lead}>
       {metrics.map((metric) => {
         const amount = (value: number | null | undefined) =>
           reportingCompactAmount(
@@ -96,7 +104,7 @@ export function ResultsSummary({
                     {t("reporting.targetPeriodSummary", {
                       actual: amount(actual),
                       target: amount(target),
-                      percent: formatNumber(
+                      percent: formatAnalyticsNumber(
                         Math.round((actual / target) * 100),
                         locale,
                       ),
@@ -174,7 +182,7 @@ function OutcomePeriod({
         {/* Out of nothing says no more than the status beside it. */}
         {!metric.denominator
           ? ""
-          : `${t("reporting.outOf", { total: formatNumber(metric.denominator, locale) })} · `}
+          : `${t("reporting.outOf", { total: formatAnalyticsNumber(metric.denominator, locale) })} · `}
         {headlineBasis(evaluation, metric, { t, plural, locale })}
       </span>
       {metric.coverage.status !== "ok" &&
@@ -202,7 +210,7 @@ function headlineBasis(
     return count == null
       ? t("reporting.openPipelineAsOf", { at })
       : plural("reporting.openPipelineBasis", count, {
-          count: formatNumber(count, locale),
+          count: formatAnalyticsNumber(count, locale),
           at,
         });
   }

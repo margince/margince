@@ -14,9 +14,9 @@ import {
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // One thread of a Deal Room's conversation, and the composer that opens
 // another: what was said, by whom and when, the reply under it, and the verbs
@@ -83,6 +83,7 @@ export function ThreadList({
 function CommentRow({
   comment,
 }: Readonly<{ comment: components["schemas"]["DealRoomComment"] }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const buyer = comment.author.side === "buyer";
@@ -97,7 +98,7 @@ function CommentRow({
           {" · "}
           {t(buyer ? "threads.sideBuyer" : "threads.sideSeller")}
           {" · "}
-          {formatDateTime(comment.created_at, locale, viewerZone())}
+          {formatDateTime(comment.created_at, locale, readerZone)}
         </span>
         <p>{comment.body}</p>
       </div>

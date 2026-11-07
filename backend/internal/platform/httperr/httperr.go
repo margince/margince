@@ -104,16 +104,13 @@ func clientInputValidation(err error) (error, bool) {
 		return Validation(badValue.Field, badValue.Code, badValue.Message), true
 	}
 
-	// A write payload the datasource seam refused to decode — an unknown or
-	// misspelled field, or a value of the wrong type. datasource's own doc
-	// states it maps to 422 on every surface; this is the branch that makes
-	// that true for HTTP rather than letting it fall through to the 500 a
-	// pure client mistake must never answer with.
-	//
-	// The detail names which field and why through the SAME restatement the
-	// native body decode uses, so both paths say one thing about one mistake,
-	// and it ends with what the caller should DO — which a decoder message on
-	// its own never says. Whatever it had to withhold is logged by Write.
+	// A payload the datasource seam refused to decode is a 422, never a 500. A
+	// value outside a contract rule names its field and code, as the REST decode
+	// does. Any other cause is restated as the native body decode restates it,
+	// and Write logs what that withheld.
+	if refused, ok := errors.AsType[*datasource.DecodedValueError](err); ok {
+		return Validation(refused.Field, refused.Code, refused.Error()), true
+	}
 	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
 		detail, _ := fieldDecodeRefusal(badFields.Cause)
 		return Validation("fields", "invalid_field", detail), true

@@ -112,7 +112,7 @@ func (s *Store) Suppress(ctx context.Context, in SuppressInput) error {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return s.suppressAdmittedTx(ctx, tx, in, sub, level)
+		return s.suppressAdmittedTx(ctx, tx, in, sub, level, recordedThroughOf(ctx))
 	})
 }
 
@@ -177,24 +177,8 @@ func survivingSubject(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, er
 // to the data subject; a rep relaying the phone call is a courier, not the
 // author, and recording their seat level would let another seat of equal or
 // greater rank lift a stop the subject asked for. CanOverrule refuses to rank
-// anything above LevelSubject, so stamping it here is what makes the objection
-// hold against the whole staff.
-//
-// THE COST IS REAL AND CURRENTLY WORSE THAN THE DESIGN INTENDS. The plan has a
-// subject-initiated reversal and a per-message exception path; NEITHER EXISTS
-// YET. PublicSaveChoices writes contact_consent and never touches this table, so
-// today a mistyped objection is undone by a database correction and nothing
-// else.
-//
-// Shipping it anyway, because the alternative was worse in the direction that
-// matters: with no writer at all, a rep told "stop the newsletter" recorded a
-// subject_request, which stopped that contact's invoices. A stop too hard to
-// lift is an awkward conversation. A stop too easy to lift is mail somebody
-// explicitly refused, and one that was never recordable is both.
-//
-// The reversal path is the slice that closes this; the door's own description
-// in crm.yaml says plainly that nothing lifts one today, so nobody records one
-// expecting an undo button.
+// anything above LevelSubject, so stamping it here holds the objection against
+// every rep. judgeLift lets an admin correct one a seat typed by mistake.
 //
 // subject_request keeps the seat's own level: it is the rep's report of a
 // conversation, with no article behind it, and an admin correcting a
@@ -216,7 +200,7 @@ func levelFor(ctx context.Context, kind string) commsauthz.AuthorityLevel {
 // LevelUser. That is deliberate and matches the RBAC defaults, where ops and
 // admin are separated by exactly this gate — see LevelAdmin's own comment.
 func authorityOf(ctx context.Context) commsauthz.AuthorityLevel {
-	if auth.RequireAdmin(ctx) == nil {
+	if auth.AdminGranted(ctx) {
 		return commsauthz.LevelAdmin
 	}
 	return commsauthz.LevelUser
@@ -224,7 +208,7 @@ func authorityOf(ctx context.Context) commsauthz.AuthorityLevel {
 
 // suppressAdmittedTx writes the row, its audit entry and its event together.
 func (s *Store) suppressAdmittedTx(
-	ctx context.Context, tx pgx.Tx, in SuppressInput, sub subject, level commsauthz.AuthorityLevel,
+	ctx context.Context, tx pgx.Tx, in SuppressInput, sub subject, level commsauthz.AuthorityLevel, through commsauthz.RecordedThrough,
 ) error {
 	// SERIALISED WITH THE OTHER WRITERS OF THIS SUBJECT'S STOPS, which before
 	// this call was nobody: this insert took no lock, so a merge carrying the
@@ -273,6 +257,13 @@ func (s *Store) suppressAdmittedTx(
 	if err != nil {
 		return err
 	}
+	// The survivor's lock too, which an anonymize of the survivor takes. The
+	// original's first, then the survivor's, as PublicStop takes them.
+	if subjectID != sub.id {
+		if err := lockSubjectSuppressions(ctx, tx, subjectID); err != nil {
+			return err
+		}
+	}
 	sub.id = subjectID
 	// storekit.CapturedBy, which is the write shape's own reader: it resolves
 	// the authenticated principal to the string every audited table stores, so
@@ -290,15 +281,32 @@ func (s *Store) suppressAdmittedTx(
 	// id from. One stop is one row is one message, so a second stop recorded
 	// for the same subject cannot stage a second acknowledgement under an id
 	// the ledger already holds.
-	var stopID ids.UUID
-	if err = tx.QueryRow(ctx, `
+	kept, err := anonymizedAddressHashes(ctx, tx, sub)
+	if err != nil {
+		return err
+	}
+	// One row, or one per kept hash for an anonymized subject. Its addresses
+	// are gone, so the stop is pinned to their hashes, and a returning
+	// subject's new record is matched through them. The first row answers the id.
+	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
-		    (`+sub.column+`, kind, source, captured_by, decided_by_level)
-		VALUES ($1, $2, $3, $4, $5)
+		    (`+sub.column+`, address_hash, kind, source, captured_by, decided_by_level, recorded_through)
+		SELECT $1, u.hash, $2, $3, $4, $5, $6
+		  FROM unnest(coalesce($7::text[], ARRAY[NULL::text])) WITH ORDINALITY AS u(hash, n)
+		 ORDER BY u.n
 		RETURNING id`,
-		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level)).Scan(&stopID); err != nil {
+		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept)
+	if err != nil {
 		return fmt.Errorf("consent: recording the suppression: %w", err)
 	}
+	written, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("consent: recording the suppression: %w", err)
+	}
+	if len(written) == 0 {
+		return fmt.Errorf("consent: recording the suppression: %w", errNoStopWritten)
+	}
+	stopID := written[0]
 
 	// "update" on the contact, which is what qualifyingevent.go records for the
 	// same class of write — a human changing what may be sent to somebody.
@@ -345,10 +353,14 @@ func (s *Store) suppressAdmittedTx(
 // missing field.
 func suppressionSource(reason string) string {
 	if reason == "" {
-		return "recorded by a contact"
+		return seatSourcePrefix
 	}
-	return "recorded by a contact: " + reason
+	return seatSourcePrefix + ": " + reason
 }
+
+// seatSourcePrefix opens the source of every stop recorded through Suppress.
+// reasonFromSource reads the words back after it.
+const seatSourcePrefix = "recorded by a contact"
 
 // suppressionRecordedPayload names what was recorded and at which authority.
 //
@@ -360,4 +372,25 @@ func suppressionRecordedPayload(kind string, level commsauthz.AuthorityLevel) cr
 		Kind:           kind,
 		DecidedByLevel: string(level),
 	}
+}
+
+// errNoStopWritten reports an insert of a stop that returned no row.
+var errNoStopWritten = errors.New("no stop row was written")
+
+// anonymizedAddressHashes reads the hashes an anonymize kept on a contact in
+// place of its addresses. Nil for a lead and for a contact never anonymized.
+// The caller has run EnsureWritable on the subject.
+func anonymizedAddressHashes(ctx context.Context, tx pgx.Tx, sub subject) ([]string, error) {
+	if sub.entityType != entityContact {
+		return nil, nil
+	}
+	var kept []string
+	if err := tx.QueryRow(ctx,
+		`SELECT anonymized_address_hashes FROM contact WHERE id = $1`, sub.id).Scan(&kept); err != nil {
+		return nil, fmt.Errorf("consent: reading whether the subject was anonymized: %w", err)
+	}
+	if len(kept) == 0 {
+		return nil, nil
+	}
+	return kept, nil
 }

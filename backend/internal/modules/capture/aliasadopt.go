@@ -191,7 +191,7 @@ func adoptableMessagesTx(
 func adoptOneMessageTx(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, posture string, msg adoptableMessage,
 ) error {
-	inherited, err := settledVerdictForTx(ctx, tx, seat, msg.threadKey, msg.counterparty)
+	inherited, err := settledVerdictForTx(ctx, tx, seat, msg)
 	if err != nil {
 		return err
 	}
@@ -240,9 +240,9 @@ func adoptOneMessageTx(
 // message was already there, judged or not, and re-opening on it would spend a
 // model call to re-answer a question about mail the seat has had all along. An
 // opening answer it cannot inherit becomes no answer, and the posture decides.
-func settledVerdictForTx(
-	ctx context.Context, tx pgx.Tx, seat ids.UUID, threadKey, counterparty string,
-) (string, error) {
+// A message carrying a document the verdict never read cannot inherit one.
+func settledVerdictForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, msg adoptableMessage) (string, error) {
+	threadKey := msg.threadKey
 	if threadKey == "" {
 		return "", nil
 	}
@@ -261,9 +261,14 @@ func settledVerdictForTx(
 	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
 		return status, nil
 	case VerdictCleared, VerdictSharedByOwner:
-		if addressWasSeen(counterparty, seen) {
-			return status, nil
+		if !addressWasSeen(msg.counterparty, seen) {
+			return "", nil
 		}
+		carries, err := activityCarriesDocumentTx(ctx, tx, msg.id.UUID)
+		if err != nil || carries {
+			return "", err
+		}
+		return status, nil
 	}
 	return "", nil
 }

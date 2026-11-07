@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -88,14 +89,11 @@ func newEvidenceTriggerEnv(t *testing.T, domains ...string) *evidenceTriggerEnv 
 
 	return &evidenceTriggerEnv{
 		Env: e,
-		// A nil reading enqueuer AND a nil proposer: these tests are about the
-		// DETERMINISTIC half, and both nils are the composition an installation
-		// with no model lane runs. TestTheReadingIsQueuedForEveryActivityOnADeal
-		// covers the reading; the proposing half is covered end to end by
-		// compose/integration/stageprogression_e2e_integration_test.go, which
-		// drives the real proposer rather than a stand-in.
+		// A nil reading enqueuer: these tests are about the DETERMINISTIC half,
+		// the composition an installation with no model lane runs.
+		// TestTheReadingIsQueuedForEveryActivityOnADeal covers the reading.
 		trigger: NewStageEvidenceTrigger(
-			e.Pool, e.Deals, staticDomains(domains), nil, nil, slog.Default()),
+			e.Pool, e.Deals, staticDomains(domains), nil, slog.Default()),
 		dealID:  ids.From[ids.DealKind](dealID),
 		stageID: stageID,
 	}
@@ -230,13 +228,12 @@ func TestAPastMeetingTheBuyerAttendedRecordsEventHeld(t *testing.T) {
 	e.assertClaim(t, deals.SourceActivity, deals.ExtractedByDeterministic)
 }
 
-// A transcript is a recording of contacts talking, so it cannot exist for a
-// meeting that did not happen — it settles event_held on its own, and the row
-// cites the lines a human can open and read.
-func TestAMeetingWithATranscriptRecordsEventHeldAndCitesIt(t *testing.T) {
+// A held meeting with a transcript settles event_held, and the row cites the
+// lines a human can open and read.
+func TestAHeldMeetingWithATranscriptRecordsEventHeldAndCitesIt(t *testing.T) {
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
-		linked: true, occurredAt: time.Now().Add(-time.Hour),
+		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held",
 		transcript: "Ines: thanks for the walkthrough.\nRep: our pleasure.",
 	})
 
@@ -250,6 +247,25 @@ func TestAMeetingWithATranscriptRecordsEventHeldAndCitesIt(t *testing.T) {
 	}
 	if lines := e.citedLines(t); len(lines) != 2 || lines[0] != 1 || lines[1] != 2 {
 		t.Errorf("the claim cites lines %v, want the whole two-line transcript", lines)
+	}
+}
+
+// A transcript is not attendance on its own. A meeting nobody reported as held
+// is awaiting its outcome, and the transcript may be of another conversation.
+func TestATranscriptWithNoRecordedOutcomeSettlesNothing(t *testing.T) {
+	e := newEvidenceTriggerEnv(t, "acme-sales.example")
+	activityID := e.seedMeeting(t, meetingSeed{
+		linked: true, occurredAt: clocktest.Now(t).Add(-time.Hour),
+		transcript: "Ines: thanks for the walkthrough.",
+	})
+
+	env := evidenceEnvelope("activity.captured", "activity", activityID,
+		crmcontracts.PublicEventActivityCaptured{Kind: "meeting"})
+	if err := e.trigger.HandleEvent(context.Background(), env); err != nil {
+		t.Fatalf("handling a transcribed meeting with no outcome: %v", err)
+	}
+	if got := e.ledger(t); got != 0 {
+		t.Fatalf("a transcript on a meeting nobody reported held wrote %d rows", got)
 	}
 }
 
@@ -400,7 +416,7 @@ func TestAnAttendeeOnOurOwnDomainIsNotTheBuyer(t *testing.T) {
 func TestAnOldMeetingImportedTodaySettlesNothing(t *testing.T) {
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
-		linked: true, occurredAt: time.Now().Add(-180 * 24 * time.Hour),
+		linked: true, occurredAt: time.Now().Add(-180 * 24 * time.Hour), status: "held",
 		transcript: "Ines: thanks for the walkthrough.",
 	})
 

@@ -135,6 +135,52 @@ function installBaseFetch(
 }
 
 describe("ShareScreen", () => {
+  it("defaults a new team share to lasting write access and a colleague share to seven days of read access", async () => {
+    installBaseFetch();
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Deal Desk/ }));
+    expect(
+      screen.getByRole("button", { name: "Write", pressed: true }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Expiry").textContent).toContain("No expiry");
+    await user.clear(screen.getByLabelText("Person or team"));
+    await user.click(await screen.findByRole("button", { name: /Priya Shah/ }));
+    expect(
+      screen.getByRole("button", { name: "Read", pressed: true }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Expiry").textContent).toContain("7 days");
+  });
+
+  it("shares a company's current contacts through the shared grant form and reports both counts", async () => {
+    const posts: Record<string, unknown>[] = [];
+    installBaseFetch({
+      "/companies/co-1/share-contacts": async (request) => {
+        posts.push(await request.json());
+        return jsonResponse({ shared: 3, skipped: 1 });
+      },
+    });
+    render(<ShareScreen recordType="company-contacts" recordId="co-1" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Deal Desk/ }));
+    await user.click(screen.getByTestId("share-grant-submit"));
+    const confirm = await screen.findByRole("dialog", {
+      name: "Share these contacts?",
+    });
+    expect(posts).toEqual([]);
+    await user.click(
+      within(confirm).getByRole("button", { name: "Grant access" }),
+    );
+    expect(await screen.findByRole("status")).toHaveProperty(
+      "textContent",
+      "3 shared · 1 skipped",
+    );
+    expect(posts).toEqual([
+      { subject_type: "team", subject_id: "t-1", access: "write" },
+    ]);
+    expect(screen.queryByTestId("share-acl-list")).toBeNull();
+  });
+
   it("renders who-has-access, resolving subject and granter names via the roster", async () => {
     installBaseFetch();
     render(<ShareScreen recordType="deal" recordId="d-1" />);

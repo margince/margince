@@ -19,12 +19,12 @@ package gates
 // be chosen from Settings.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -40,7 +40,7 @@ var quotedName = regexp.MustCompile(`"([^"]+)"`)
 // in one direction.
 func readFormConstant(t *testing.T, file, name string) []string {
 	t.Helper()
-	raw, err := os.ReadFile(file)
+	raw, err := gatekit.ReadFile(file)
 	if err != nil {
 		t.Fatalf("read %s: %v", file, err)
 	}

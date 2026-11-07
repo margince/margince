@@ -9,6 +9,7 @@ import { Callout } from "./callout";
 import "./composed.css";
 
 import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
+import type { DealOwnerSeat } from "./dealowner";
 import {
   matchesTitle,
   matchingColumns,
@@ -92,11 +93,12 @@ export type BoardDeal = BoardRecord & {
   closeDate?: string | null;
   closeDateProvisional?: boolean;
   /**
-   * Who carries the deal: the seat's name, and its user id to key the chip.
+   * Who carries the deal: the seat's name, its user id to key the chip, and
+   * its picture if it has one.
    * Null for a deal nobody owns and for one whose owner the caller could not
    * name. The card draws nothing for either; the owner column tells them apart.
    */
-  owner?: Readonly<{ id: string; name: string }> | null;
+  owner?: DealOwnerSeat | null;
   /**
    * The newest email on the deal that the whole workspace may see, as how long
    * ago it was and which way it went. The caller owns the clock. A card that read
@@ -121,10 +123,11 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    * loaded. A caller with a capped/paginated card fetch (the Kanban board) has
    * a real count from a server aggregate that `deals.length` cannot give it.
    * Falls back to `deals.length` when absent, which is correct for a caller
-   * whose card list is the whole stage.
+   * whose card list is the whole stage. `null`, not known yet, states no figure.
    */
-  count?: number;
-  /** Totals withheld because the aggregate cannot measure the card filters. */
+  count?: number | null;
+  /** Totals withheld because the aggregate cannot measure the card filters.
+   *  A plain board's one total is its count, so its head drops the figure. */
   sumHidden?: boolean;
   /** The caller's explanation of the withheld total. */
   sumHiddenReason?: string;
@@ -217,7 +220,6 @@ type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   columns: BoardColumn<Record>[];
   renderCard: (record: Record, column: BoardColumn<Record>) => ReactNode;
   moneyFor: (column: BoardColumn<Record>) => BoardMoneyColumn | undefined;
-  zone?: string;
 };
 
 function BoardLayout<Record extends BoardRecord>({
@@ -228,11 +230,16 @@ function BoardLayout<Record extends BoardRecord>({
   columnDropHandlers,
   onToggleColumn,
   moneyFor,
-  zone,
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
   const sections = useRef(new Map<string, HTMLElement>());
+  const spokenCount =
+    countLabel ??
+    ((count: number) =>
+      translatePlural(locale, "board.count", count, {
+        count: formatNumber(count, locale),
+      }));
   const board = useRef<HTMLDivElement>(null);
   // The search the cards answer, from the list the board is drawn in. With no
   // match in view, the board scrolls to the first and says where they are.
@@ -288,6 +295,8 @@ function BoardLayout<Record extends BoardRecord>({
         {columns.map((column) => {
           const money = moneyFor(column);
           const dealCount = column.count ?? column.deals.length;
+          const countHidden =
+            column.count === null || (!money && column.sumHidden);
           return (
             <section
               key={column.stage}
@@ -343,7 +352,11 @@ function BoardLayout<Record extends BoardRecord>({
                   deals" below, with the unit a bare figure leaves out. So the
                   whole chip, separator included, stays out of the accessible
                   tree rather than announcing the number twice. */}
-                <span className="board-col-count" aria-hidden="true">
+                <span
+                  className="board-col-count"
+                  aria-hidden="true"
+                  hidden={countHidden}
+                >
                   <OptionCount count={dealCount} />
                 </span>
                 {money && (
@@ -356,20 +369,12 @@ function BoardLayout<Record extends BoardRecord>({
                   a screen reader gets it here with its unit, as "12 deals". */}
               <div className="board-col-sub">
                 {money && !column.sumHidden && (
-                  <ColumnTotals
-                    money={money}
-                    scaleMinor={scaleMinor}
-                    zone={zone}
-                  />
+                  <ColumnTotals money={money} scaleMinor={scaleMinor} />
                 )}
-                <span className="sr-only">
-                  {countLabel
-                    ? countLabel(dealCount)
-                    : translatePlural(locale, "board.count", dealCount, {
-                        count: formatNumber(dealCount, locale),
-                      })}
+                <span className="sr-only" hidden={countHidden}>
+                  {spokenCount(dealCount)}
                 </span>
-                {money && column.sumHidden && dealCount > 0 && (
+                {column.sumHidden && (countHidden || dealCount > 0) && (
                   <span className="board-col-refusal">
                     {column.sumHiddenReason}
                   </span>

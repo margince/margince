@@ -442,7 +442,7 @@ describe("asking the handbook from the search box", () => {
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     await user.click(
-      within(panel).getByRole("button", {
+      await within(panel).findByRole("button", {
         name: /your-own-settings\.md, line 156/,
       }),
     );

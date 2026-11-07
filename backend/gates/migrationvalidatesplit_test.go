@@ -36,11 +36,12 @@ package gates
 // they run — so there is nothing to catch.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two statements, matched on the SQL rather than on the line: both appear
@@ -83,7 +84,7 @@ func TestAConstraintIsValidatedInItsOwnMigration(t *testing.T) {
 
 	seen := map[string]bool{}
 	for _, path := range files {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative migration path from the glob above
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative migration path from the glob above
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

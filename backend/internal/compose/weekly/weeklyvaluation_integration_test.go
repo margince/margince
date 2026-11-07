@@ -21,7 +21,7 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	date := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
-	e.Deals.WithClock(func() time.Time { return date })
+	e.Deals.SetClock(func() time.Time { return date })
 	pipeline, open, won := integration.DealFixture(t, e)
 	if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.5", EffectiveDate: date}); err != nil {
 		t.Fatal(err)

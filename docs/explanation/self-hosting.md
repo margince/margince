@@ -28,7 +28,7 @@ cross the split:
   the resource server's own 401, which a split origin breaks. It must be the host
   `--public-base-url` names.
 - The consent flow crosses the two services in both directions. `GET
-  /oauth/authorize` (api) redirects the human's browser to `/#/oauth-consent`
+  /oauth/authorize` (api) redirects the human's browser to `/consent#/oauth-consent`
   (web). That screen reads `/v1/oauth/consent-request` and posts the decision
   back to `/oauth/authorize` (api). Say an ingress serves `/` from somewhere
   else than `/oauth/authorize`, or routes `/oauth` to the web service. Then it gives a 404
@@ -72,6 +72,8 @@ Every release image carries the release it was built from, derived from one buil
 |---|---|---|
 | OCI label `org.opencontainers.image.version` | `docker inspect` / `crane config`, no pull needed | an operator diffing a set |
 | `/etc/margince/release-version` | `docker run --rm <image> cat /etc/margince/release-version`, or `kubectl exec` into a running one | an operator inspecting a role that is running or crash-looping. It is the only place the **web** image's release can be read from the outside, because nginx runs none of our code. It is not what the web tier itself compares against |
+| `margince-api --version`, and the same for `margince-worker` and `margince-migrate` | on a server `/opt/margince/bin/margince-api --version`, or `docker run --rm --entrypoint margince-api <image> --version`. It prints the release and the commit | an operator on a server install, which has no image to look at |
+| `VERSION` at the top of a server bundle | `cat /opt/margince/VERSION` | anyone with the files of a bundle |
 | the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role compares; the label and the file are for humans | the software itself |
 
 ### Why the guard exists

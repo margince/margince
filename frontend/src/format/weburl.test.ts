@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { linkedinUrl, webUrl } from "./weburl";
+import { linkedinUrl, webUrl, withWebScheme } from "./weburl";
 
 // The guard three surfaces share: a company link on a reading chip, a
 // provider's source document in the contact drawer, and a custom field holding
@@ -52,6 +52,32 @@ describe("what may become a link", () => {
     // `mailto:` is a real destination and still not a link this guard makes:
     // a surface that wants one asks for it deliberately.
     expect(webUrl("mailto:sofia@example.com")).toBeNull();
+  });
+});
+
+describe("an address typed without its scheme", () => {
+  it("gets https when it starts with a host, whatever follows the host", () => {
+    for (const typed of [
+      "example.com",
+      "www.example.com/pricing",
+      "example.com?view=full",
+      "example.com#section",
+      "example.com:8443/path",
+    ]) {
+      expect(withWebScheme(typed), typed).toBe(`https://${typed}`);
+    }
+  });
+
+  it("keeps a typed scheme, and leaves what is not a host alone", () => {
+    for (const typed of [
+      "http://example.com",
+      "javascript:alert(1)",
+      "localhost:3000",
+      "sofia@example.com",
+      "example.com:http",
+    ]) {
+      expect(withWebScheme(typed), typed).toBe(typed);
+    }
   });
 });
 

@@ -16,10 +16,12 @@
 .page-pane-sticky {
   position: sticky;
   inset-block-start: 0;
+  /* What the scroller shows below its top padding, less the gap kept under the
+     pane. The shell publishes both, and its banners shorten the scroller; the
+     window's height is the stand-in until the first measure lands. */
   max-block-size: calc(
-    100dvh -
-    var(--topbarH, 0px) -
-    var(--pageGapTop, 0px) -
+    var(--scrollerH, 100dvh) -
+    var(--scrollPadTop, calc(var(--topbarH, 0px) + var(--pageGapTop, 0px))) -
     var(--space-6)
   );
   overflow-y: auto;

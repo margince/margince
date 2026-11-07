@@ -89,7 +89,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 		return ProjectActivityFacts{}, err
 	}
 	current := CurrentTaskClause("a", asOf, identities, arg)
-	counts := relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", arg(asOf)))
+	counts := relstrength.ExternalActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", arg(asOf)))
 	var facts ProjectActivityFacts
 	// The candidate set is every activity with ANY link into the project's
 	// neighbourhood; each is then classified once, so an activity linked to

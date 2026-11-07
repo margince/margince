@@ -61,6 +61,9 @@ func (s *Service) Login(ctx context.Context, email, plaintext, device string) (I
 			return err
 		}
 		id = Identity{UserID: account.UserID, WorkspaceID: wsID, Email: email, DisplayName: account.DisplayName, SeatType: account.SeatType}
+		if err := readSeatProfile(ctx, tx, &id); err != nil {
+			return err
+		}
 		var loadErr error
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, account.UserID)
 		if loadErr != nil {

@@ -28,6 +28,9 @@ type AgentSpec struct {
 	// through the seeder; V1 runs the catalog on UTC.
 	DueHourUTC int
 	Budget     Budget
+	// JudgesSlippingDeals marks a goal whose whole work is the member's
+	// slipping deals. With none, compose closes the run without a model call.
+	JudgesSlippingDeals bool
 	// Tools is what this goal may call, and the SCOPE MODEL is why it has
 	// to exist. A passport carries scopes, and `write` is all-or-nothing
 	// across twelve verbs — so an agent that needs `log_activity` is
@@ -56,6 +59,10 @@ type AgentSpec struct {
 	Tools []string
 }
 
+// SweepQuietDays is the idle window the overnight sweep's goal names. Compose
+// reads the member's slipping list at it before the run starts.
+const SweepQuietDays = 14
+
 // Catalog is the V1 agent set (B-EP06.22): the Morning Brief and the
 // overnight at-risk sweep — the two judgment tasks Surface A and the
 // deterministic workflow path structurally cannot do.
@@ -82,15 +89,19 @@ func Catalog() []AgentSpec {
 		},
 		{
 			Name: "overnight_at_risk_sweep",
-			Goal: "Sweep this workspace's open deals for risk: deals with no activity in " +
-				"14+ days, stakeholders gone quiet, or missing next steps. First call " +
-				"whats_slipping_this_week: it returns the at-risk deals across the whole workspace. " +
+			Goal: "Sweep the open deals your member owns for risk: deals with no activity in " +
+				fmt.Sprintf("%d+ days, stakeholders gone quiet, or missing next steps. First call ", SweepQuietDays) +
+				"whats_slipping_this_week: in this run it returns only the at-risk deals your member owns. " +
+				"Each other member's run sweeps that member's deals, and a deal whose owner has not " +
+				"granted this sweep is swept by nobody, so do not read or log on a deal outside that list. " +
 				"A deal the retrieved context mentions is one example, not the sweep, so do not " +
-				"read or log on it before that list. Then read each listed deal and log ONE note " +
+				"read or log on it before that list. " +
+				"Then read each listed deal and log ONE note " +
 				"activity per at-risk deal summarizing the risk and the evidence (cite the records " +
 				"you read). Do not advance stages, send anything, or archive anything.",
-			SeedQuery:  "risk or stalled or blocked or overdue or quiet",
-			DueHourUTC: 2,
+			SeedQuery:           "risk or stalled or blocked or overdue or quiet",
+			DueHourUTC:          2,
+			JudgesSlippingDeals: true,
 		},
 	}
 }

@@ -25,7 +25,6 @@ package gates_test
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -43,7 +42,7 @@ const recipeFile = "../extensions/openchannel/frontend/recipe.tsx"
 var scopeInFrontend = regexp.MustCompile(`export const SCOPE_INBOUND = "([^"]+)"`)
 
 func TestTheSigningScopeIsSpelledTheSameOnBothSidesOfTheWire(t *testing.T) {
-	source, err := os.ReadFile(recipeFile)
+	source, err := gatekit.ReadFile(recipeFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", recipeFile, err)
 	}
@@ -202,7 +201,7 @@ func canonicalSigningField(t *testing.T, seamFile string, expr ast.Expr) string 
 // through Sprintf at all (it is appended to the payload separately).
 func recipeArgOrder(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(recipeFile)
+	source, err := gatekit.ReadFile(recipeFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", recipeFile, err)
 	}
@@ -327,7 +326,7 @@ func TestTheSignedHeaderNamesAreSpelledTheSameOnBothSidesOfTheWire(t *testing.T)
 			len(values), len(headerConstants), inboundHeaderFile)
 	}
 
-	source, err := os.ReadFile(recipeFile)
+	source, err := gatekit.ReadFile(recipeFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", recipeFile, err)
 	}
@@ -381,7 +380,7 @@ func headerConstantValues(t *testing.T) map[string]string {
 // recipePrintfFormat reads the format the screen's generated command signs with.
 func recipePrintfFormat(t *testing.T) string {
 	t.Helper()
-	source, err := os.ReadFile(recipeFile)
+	source, err := gatekit.ReadFile(recipeFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", recipeFile, err)
 	}

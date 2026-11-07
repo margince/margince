@@ -14,11 +14,11 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { WebFormDrawer } from "./webformdrawer";
 import {
   mintsSecret,
@@ -238,6 +238,7 @@ function FormRow({
 function LastPostLine({
   lastPostAt,
 }: Readonly<{ lastPostAt: string | null | undefined }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   if (lastPostAt === undefined) {
@@ -248,7 +249,7 @@ function LastPostLine({
       {lastPostAt === null
         ? t("webForms.row.noPost")
         : t("webForms.row.lastPost", {
-            when: formatDate(lastPostAt, locale, viewerZone()),
+            when: formatDate(lastPostAt, locale, readerZone),
           })}
     </span>
   );

@@ -38,16 +38,7 @@ type fileRefusal struct {
 	} `json:"details"`
 }
 
-// uploadAs posts one file to /v1/attachments, as the passport when bearer is
-// set and as the signed-in admin when it is nil.
-func uploadAs(t *testing.T, e *apptest.AppEnv, bearer map[string]string, entityType, entityID string, content []byte) (int, json.RawMessage) {
-	t.Helper()
-	form, contentType := multipartAttachment(t, entityType, entityID, "scan.pdf", content)
-	status, raw := postUpload(t, e, "/v1/attachments", bearer, form, contentType)
-	return status, json.RawMessage(raw)
-}
-
-// uploadFiledAs is uploadAs with the document filed against a contract.
+// uploadFiledAs is apptest.UploadAs with the document filed against a contract.
 func uploadFiledAs(t *testing.T, e *apptest.AppEnv, bearer map[string]string, entityType, entityID, contract string, content []byte) (int, json.RawMessage) {
 	t.Helper()
 	var form bytes.Buffer
@@ -67,19 +58,8 @@ func uploadFiledAs(t *testing.T, e *apptest.AppEnv, bearer map[string]string, en
 	if err := mw.Close(); err != nil {
 		t.Fatal(err)
 	}
-	status, raw := postUpload(t, e, "/v1/attachments", bearer, &form, mw.FormDataContentType())
+	status, raw := apptest.PostUpload(t, e, "/v1/attachments", bearer, &form, mw.FormDataContentType())
 	return status, json.RawMessage(raw)
-}
-
-func attachmentIDOf(t *testing.T, raw json.RawMessage) string {
-	t.Helper()
-	var att struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(raw, &att); err != nil || att.ID == "" {
-		t.Fatalf("the upload answered no attachment id (%v): %s", err, raw)
-	}
-	return att.ID
 }
 
 // restFileIDs reads the attachment ids of one listing route, in order. A deal's
@@ -112,9 +92,9 @@ func (d *twoDoors) toolFileIDs(t *testing.T, entityType, entityID string) []stri
 			AttachmentID string `json:"attachment_id"`
 		} `json:"documents"`
 	}
-	raw := d.tool(t, "list_documents", map[string]any{"entity_type": entityType, "entity_id": entityID})
+	raw := d.tool(t, "list_record_documents", map[string]any{"entity_type": entityType, "entity_id": entityID})
 	if err := json.Unmarshal(raw, &page); err != nil {
-		t.Fatalf("list_documents does not decode: %v", err)
+		t.Fatalf("list_record_documents does not decode: %v", err)
 	}
 	out := make([]string, 0, len(page.Documents))
 	for _, doc := range page.Documents {
@@ -134,14 +114,14 @@ func TestAPassportListsAndUploadsFilesOverREST(t *testing.T) {
 		"name": "Filing renewal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
 		"company_id": company, "source": "manual",
 	})
-	if status, raw := uploadAs(t, d.e, nil, "company", company, []byte("PDF-FROM-A-HUMAN")); status != http.StatusCreated {
+	if status, raw := apptest.UploadAs(t, d.e, nil, "company", company, []byte("PDF-FROM-A-HUMAN")); status != http.StatusCreated {
 		t.Fatalf("the admin's upload → %d %s", status, raw)
 	}
-	status, raw := uploadAs(t, d.e, d.bearer, "deal", deal, []byte("PDF-FROM-AN-AGENT"))
+	status, raw := apptest.UploadAs(t, d.e, d.bearer, "deal", deal, []byte("PDF-FROM-AN-AGENT"))
 	if status != http.StatusCreated {
 		t.Fatalf("the passport's upload → %d %s", status, raw)
 	}
-	uploaded := attachmentIDOf(t, raw)
+	uploaded := apptest.AttachmentIDOf(t, raw)
 
 	for _, tc := range []struct{ entityType, entityID, path string }{
 		{"company", company, "/v1/companies/" + company + "/documents"},
@@ -184,7 +164,7 @@ func assertTheAgentWrote(t *testing.T, e *apptest.AppEnv, entity, action string)
 func TestAReadOnlyPassportCannotUploadAFile(t *testing.T) {
 	d := newTwoDoors(t, "files-read-only", "read")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Read Only Works", "source": "manual"})
-	status, raw := uploadAs(t, d.e, d.bearer, "company", company, []byte("PDF"))
+	status, raw := apptest.UploadAs(t, d.e, d.bearer, "company", company, []byte("PDF"))
 	var refusal fileRefusal
 	if err := json.Unmarshal(raw, &refusal); err != nil {
 		t.Fatalf("the refusal does not decode: %v\n%s", err, raw)
@@ -226,7 +206,7 @@ func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
 	if status := d.e.Call(t, "GET", "/v1/attachments?entity_type=contact&entity_id="+hidden, nil, d.bearer, nil); status != http.StatusNotFound {
 		t.Errorf("listing a hidden contact's files → %d, want 404", status)
 	}
-	if status, raw := uploadAs(t, d.e, d.bearer, "contact", hidden, []byte("PDF")); status != http.StatusNotFound {
+	if status, raw := apptest.UploadAs(t, d.e, d.bearer, "contact", hidden, []byte("PDF")); status != http.StatusNotFound {
 		t.Errorf("uploading to a hidden contact → %d %s, want 404", status, raw)
 	}
 	var stored int
@@ -238,22 +218,38 @@ func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
 	}
 }
 
-// Downloading and deleting stay human-only: no tool reads a file's bytes, and
-// no route lets a passport do it either.
-func TestAPassportCannotDownloadOrDeleteAFile(t *testing.T) {
-	d := newTwoDoors(t, "files-human-only", "read", "write")
+// A passport reads a file's bytes through the tool, as the signed-in admin reads
+// them on the route. An archived file is gone from that door too.
+func TestAPassportReadsAFileThroughTheToolUntilItIsArchived(t *testing.T) {
+	d := newTwoDoors(t, "files-read", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Kept Works", "source": "manual"})
-	status, raw := uploadAs(t, d.e, nil, "company", company, []byte("PDF-KEPT"))
+	content := []byte("PDF-KEPT\x00\xff")
+	status, raw := apptest.UploadAs(t, d.e, nil, "company", company, content)
 	if status != http.StatusCreated {
 		t.Fatalf("the admin's upload → %d %s", status, raw)
 	}
-	file := attachmentIDOf(t, raw)
-	for _, method := range []string{"GET", "DELETE"} {
-		var refusal fileRefusal
-		if status := d.e.Call(t, method, "/v1/attachments/"+file, nil, d.bearer, &refusal); status != http.StatusForbidden || refusal.Code != "permission_denied" {
-			t.Errorf("%s /v1/attachments/{id} as a passport → %d %q, want 403 permission_denied", method, status, refusal.Code)
-		}
+	file := apptest.AttachmentIDOf(t, raw)
+
+	var got struct {
+		Filename      string `json:"filename"`
+		SizeBytes     int    `json:"size_bytes"`
+		ContentBase64 string `json:"content_base64"`
 	}
+	if err := json.Unmarshal(d.tool(t, "list_documents", map[string]any{"id": file}), &got); err != nil {
+		t.Fatalf("the download does not decode: %v", err)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(got.ContentBase64)
+	if err != nil {
+		t.Fatalf("content_base64 does not decode: %v", err)
+	}
+	if !bytes.Equal(decoded, content) || got.Filename != "scan.pdf" || got.SizeBytes != len(content) {
+		t.Errorf("the download answered %q, %d bytes, named %q; want the uploaded scan.pdf", decoded, got.SizeBytes, got.Filename)
+	}
+
+	if status := d.e.Call(t, "DELETE", "/v1/attachments/"+file, nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("the admin's archive → %d", status)
+	}
+	d.mcp.CallRefused(t, "list_documents", map[string]any{"id": file})
 }
 
 // A file over what attach_document takes is refused on REST in the tool's own
@@ -265,7 +261,7 @@ func TestAnAgentUploadOverTheToolsLimitIsRefusedAsTheToolRefusesIt(t *testing.T)
 	limit := agents.AttachLimit(uploadCeiling)
 	content := fileOf(int(limit) + 1024)
 
-	status, raw := uploadAs(t, d.e, d.bearer, "company", company, content)
+	status, raw := apptest.UploadAs(t, d.e, d.bearer, "company", company, content)
 	var refusal fileRefusal
 	if err := json.Unmarshal(raw, &refusal); err != nil {
 		t.Fatalf("the refusal does not decode: %v\n%s", err, raw)
@@ -286,7 +282,7 @@ func TestAnAgentUploadOverTheToolsLimitIsRefusedAsTheToolRefusesIt(t *testing.T)
 		t.Errorf("attach_document refused with %q, want it to say %q as REST does", viaTool, overLimit)
 	}
 
-	if status, raw := uploadAs(t, d.e, nil, "company", company, content); status != http.StatusCreated {
+	if status, raw := apptest.UploadAs(t, d.e, nil, "company", company, content); status != http.StatusCreated {
 		t.Errorf("a human's upload of the same file → %d %s, want 201 under the route's own limit", status, bytes.TrimSpace(raw))
 	}
 }
@@ -338,11 +334,11 @@ func TestAFileOnAMeetingAndAContractLandsAlikeOnBothDoors(t *testing.T) {
 	if viaTool.ContractID != contract {
 		t.Errorf("attach_document answers contract %q, want %s", viaTool.ContractID, contract)
 	}
-	rest, tool := filedRowOf(t, d.e, attachmentIDOf(t, raw)), filedRowOf(t, d.e, viaTool.AttachmentID)
+	rest, tool := filedRowOf(t, d.e, apptest.AttachmentIDOf(t, raw)), filedRowOf(t, d.e, viaTool.AttachmentID)
 	if rest != tool {
 		t.Errorf("the REST upload landed as\n%+v\nattach_document as\n%+v", rest, tool)
 	}
-	d.sameEffect(t, "attach", attachmentIDOf(t, raw), viaTool.AttachmentID, "filename", "storage_key", "content_hash", "sha256", "size_bytes")
+	d.sameEffect(t, "attach", apptest.AttachmentIDOf(t, raw), viaTool.AttachmentID, "filename", "storage_key", "content_hash", "sha256", "size_bytes")
 	if want := (filedRow{EntityType: "activity", EntityID: meeting, ContractID: contract}); rest.EntityType != want.EntityType ||
 		rest.EntityID != want.EntityID || rest.ContractID != want.ContractID {
 		t.Errorf("the upload landed on %s %s against contract %q, want the meeting against %s",

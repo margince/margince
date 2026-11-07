@@ -18,6 +18,7 @@ func (h Handlers) ListProducts(w http.ResponseWriter, r *http.Request, params cr
 		Limit:           params.Limit,
 		Query:           params.Q,
 		Active:          params.Active,
+		TaxCategory:     componentKindOf(params.TaxCategory),
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 		Sort:            params.Sort,
 	}
@@ -123,7 +124,7 @@ func (h Handlers) ListDealProducts(w http.ResponseWriter, r *http.Request, id cr
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products, Tag: ProductSetTag(products)})
 }
 
 func (h Handlers) ReplaceDealProducts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -131,10 +132,10 @@ func (h Handlers) ReplaceDealProducts(w http.ResponseWriter, r *http.Request, id
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	products, err := h.store.ReplaceDealProducts(r.Context(), pathID[ids.DealKind](id), req.Products)
+	products, err := h.store.ReplaceDealProducts(r.Context(), pathID[ids.DealKind](id), req.ExpectedTag, req.Products)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products, Tag: ProductSetTag(products)})
 }

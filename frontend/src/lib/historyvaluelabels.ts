@@ -4,6 +4,7 @@
 import type { OccurredPrecision } from "../format/activitywhen";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { CALL_OUTCOME_LABEL } from "./calloutcome";
 
 // The words for a closed vocabulary a change row stores by its wire spelling,
 // beside the field names in lib/historyfieldlabels.ts.
@@ -15,7 +16,10 @@ const PRECISION_WORDS: Readonly<Record<OccurredPrecision, MessageKey>> = {
 const HISTORY_VALUE_LABELS = new Map<
   string,
   Readonly<Record<string, MessageKey>>
->([["occurred_precision", PRECISION_WORDS]]);
+>([
+  ["occurred_precision", PRECISION_WORDS],
+  ["call_outcome", CALL_OUTCOME_LABEL],
+]);
 
 /** A stored value of a closed vocabulary, in words, or undefined. */
 export function historyValueLabel(

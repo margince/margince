@@ -60,14 +60,17 @@ const (
 	emailTypeWork    = "work"
 )
 
-// ErrCounterpartySuppressed marks an erased address (A13): deletion sticks,
-// the counterparty is not re-created. The capture pipeline counts it as a
-// deliberate skip.
+// ErrCounterpartySuppressed marks an address that names no counterparty: an
+// erased one (A13), where deletion sticks, or a technical one. Neither is
+// re-created. The capture pipeline counts it as a skip, not a fault.
 var ErrCounterpartySuppressed = errors.New("contacts: counterparty address is on the erasure suppression list")
 
 // EnsureCounterpartyInput is one captured message's counterparty.
 type EnsureCounterpartyInput struct {
-	Admission func(context.Context, pgx.Tx, bool) error
+	// HoldAuthority runs first in the transaction, before any row lock, and
+	// Admission runs last.
+	HoldAuthority func(context.Context, pgx.Tx) error
+	Admission     func(context.Context, pgx.Tx, bool) error
 	// Replied says this counterparty wrote to US, rather than merely having
 	// been written to. It decides which acquisition the created record
 	// carries, and the two are different facts about the contact.
@@ -182,6 +185,11 @@ func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInp
 // The caller is responsible for the workspace GUC; it is already set by the
 // WithWorkspaceTx that produced tx.
 func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
+	if in.HoldAuthority != nil {
+		if err := in.HoldAuthority(ctx, tx); err != nil {
+			return EnsureCounterpartyResult{}, err
+		}
+	}
 	res, err := s.ensureCapturedCounterparty(ctx, tx, in)
 	if err != nil {
 		return EnsureCounterpartyResult{}, err
@@ -198,6 +206,12 @@ func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in En
 	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
 	if in.Email == "" {
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
+	}
+	// A technical address names no one, so it gains no contact, link or
+	// employer, even where a contact for it already exists. The mail and its
+	// real counterparties are stored as before.
+	if refuseMachineAddress(in.Email) != nil {
+		return EnsureCounterpartyResult{}, ErrCounterpartySuppressed
 	}
 	var res EnsureCounterpartyResult
 	suppressed, err := storekit.EmailSuppressed(ctx, tx, in.Email)
@@ -279,10 +293,10 @@ func (s *Store) CounterpartyLead(ctx context.Context, email string) (ids.LeadID,
 }
 
 func leadWithoutContact(holders storekit.IdentityHolders) ids.LeadID {
-	if len(holders.Leads) == 0 || len(holders.Contacts) > 0 {
+	if len(holders.Contacts) > 0 {
 		return ids.LeadID{}
 	}
-	return holders.Leads[0]
+	return holders.PreferredLead()
 }
 
 // ensureContact runs PO-F-1 and creates when it does not exactly match; a
@@ -443,11 +457,11 @@ func resolveCapturedContact(ctx context.Context, tx pgx.Tx, candidate ContactCan
 	if err != nil {
 		return ContactResolution{}, ids.LeadID{}, err
 	}
-	match, err := DedupeContact(ctx, tx, candidate)
+	match, exact, err := dedupeExactContact(ctx, tx, candidate)
 	if err != nil {
 		return ContactResolution{}, ids.LeadID{}, err
 	}
-	if match.Decision == DecisionExactCollision {
+	if exact {
 		return match, ids.LeadID{}, nil
 	}
 	if !lead.IsZero() {
