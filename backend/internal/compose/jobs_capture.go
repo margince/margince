@@ -42,7 +42,7 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	}
 	digests := &captureDigestWorker{registry: cfg.GmailRegistry, pool: pool, log: log}
 	addDeclaredWorker[CaptureDigestArgs](reg, digests)
-	addDeclaredWorker[GmailSyncArgs](reg, &gmailSyncWorker{registry: cfg.GmailRegistry, log: log})
+	addDeclaredWorker[GmailSyncArgs](reg, &gmailSyncWorker{pool: pool, registry: cfg.GmailRegistry, log: log})
 	// The sync dispatcher scans every registered connector, so a Google
 	// Calendar connection (the same Google OAuth app) syncs on the identical
 	// per-connection path a mailbox does — there is no gcal-specific job.
@@ -230,10 +230,9 @@ func (GmailSyncArgs) Kind() string { return "gmail_sync" }
 func (GmailSyncArgs) FleetWide() {}
 
 // gmailSyncWorker is the dispatcher: due-scan, then one insert per
-// connection. Uniqueness on the connection id means a still-running or
-// already-queued sync is not double-enqueued; only a fleet-enumeration
-// failure is returned (so River retries the tick).
+// connection. Waiting jobs coalesce, and the connection lease prevents concurrent pulls.
 type gmailSyncWorker struct {
+	pool     *pgxpool.Pool
 	registry *capture.Registry
 	log      *slog.Logger
 }
@@ -246,7 +245,7 @@ func (w *gmailSyncWorker) Work(ctx context.Context, _ *river.Job[GmailSyncArgs])
 			enumErr = errors.Join(enumErr, err)
 		}
 		for _, d := range due {
-			if err := dispatchOne(ctx, CaptureSyncArgs{
+			if err := dispatchOne(ctx, w.pool, CaptureSyncArgs{
 				Workspace:    d.Workspace.UUID,
 				ConnectionID: d.ID.String(),
 				Provider:     desc.Name,
@@ -300,7 +299,7 @@ func (w *captureSyncWorker) Work(ctx context.Context, job *river.Job[CaptureSync
 	}
 	if err := w.registry.SyncOnce(wsCtx, conn); err != nil {
 		if _, snoozed := errors.AsType[*river.JobSnoozeError](err); snoozed {
-			return err
+			return jobs.FaultContext(ctx, err)
 		}
 		// A member whose role cannot capture is a setting an admin chose, not
 		// a fault, and it repeats on every tick until they change it.

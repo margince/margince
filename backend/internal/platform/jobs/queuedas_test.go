@@ -80,7 +80,7 @@ func (lockedTestArgs) SessionLocked() {}
 func TestSessionOwnershipCannotBeOverriddenByInsertionOptions(t *testing.T) {
 	caller := &river.InsertOpts{MaxAttempts: 3, UniqueOpts: river.UniqueOpts{ByArgs: true}}
 	for name, got := range map[string]*river.InsertOpts{
-		"direct":  sessionInsertOpts(lockedTestArgs{}, caller),
+		"direct":  SessionInsertOpts(lockedTestArgs{}, caller),
 		"typed":   QueuedAs[lockedTestArgs](caller),
 		"dynamic": QueuedAsArgs(lockedTestArgs{}, caller),
 	} {
@@ -91,7 +91,7 @@ func TestSessionOwnershipCannotBeOverriddenByInsertionOptions(t *testing.T) {
 	if !caller.UniqueOpts.ByArgs {
 		t.Fatal("caller options were mutated")
 	}
-	if got := sessionInsertOpts(queuedAsTestArgs{}, caller); !got.UniqueOpts.ByArgs {
+	if got := SessionInsertOpts(queuedAsTestArgs{}, caller); !got.UniqueOpts.ByArgs {
 		t.Fatal("ordinary jobs lost uniqueness")
 	}
 }

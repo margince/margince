@@ -79,13 +79,15 @@ func (d *DB) WorkLeaseOwned(ctx context.Context, kind string, id ids.UUID) (bool
 	return proof.lease.conn != nil && slices.Contains(proof.lease.keys, sessionKey{name: key}), nil
 }
 
-// WorkLeaseAvailable checks the same key without reserving a worker's session slot.
+// WorkLeaseAvailable observes the same key without briefly blocking its worker.
 func (d *DB) WorkLeaseAvailable(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (bool, error) {
 	key, err := d.workKey(ctx, kind, id)
 	if err != nil {
 		return false, err
 	}
 	var free bool
-	err = tx.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock(hashtextextended(@key, 0))`, pgx.StrictNamedArgs{"key": key}).Scan(&free)
+	err = tx.QueryRow(ctx, `SELECT NOT EXISTS(SELECT 1 FROM pg_locks
+ WHERE locktype = 'advisory' AND granted AND objsubid = 1
+ AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended(@key, 0))`, pgx.StrictNamedArgs{"key": key}).Scan(&free)
 	return free, err
 }

@@ -180,6 +180,47 @@ func TestSessionLockedJobsInsertPastAbandonedRiverRows(t *testing.T) {
 			if err != nil || count != 2 {
 				t.Fatalf("replacement rows=%d, err=%v", count, err)
 			}
+
+			for _, state := range []string{"available", "scheduled", "retryable", "pending"} {
+				if _, err := env.Pool.Exec(t.Context(), `UPDATE river_job SET state = @state::river_job_state WHERE kind = @kind AND state <> 'running'`, pgx.StrictNamedArgs{"kind": args.Kind(), "state": state}); err != nil {
+					t.Fatal(err)
+				}
+				if err := env.DB().Tx(t.Context(), func(tx pgx.Tx) error {
+					inserted, err := runner.EnqueueTxUnique(t.Context(), tx, args, opts)
+					if err != nil || inserted {
+						t.Fatalf("%s queued twice: inserted=%v err=%v", state, inserted, err)
+					}
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
 		})
+	}
+}
+
+func TestConcurrentSessionJobOffersCoalesceWhileWaiting(t *testing.T) {
+	env := integration.Setup(t)
+	integration.ApplyRiverSchema(t)
+	runner, err := jobs.NewInserter(env.Pool, discardLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := CaptureSyncArgs{Workspace: env.WS, ConnectionID: ids.NewV7().String(), Provider: "gmail"}
+	start := make(chan struct{})
+	finished := make(chan error, 8)
+	for range cap(finished) {
+		go func() { <-start; finished <- runner.Enqueue(t.Context(), args, pushSyncOpts()) }()
+	}
+	close(start)
+	for range cap(finished) {
+		if err := <-finished; err != nil {
+			t.Error(err)
+		}
+	}
+	var count int
+	err = env.Pool.QueryRow(t.Context(), `SELECT count(*) FROM river_job WHERE kind = @kind`, pgx.StrictNamedArgs{"kind": args.Kind()}).Scan(&count)
+	if err != nil || count != 1 {
+		t.Fatalf("concurrent offers queued %d rows: %v", count, err)
 	}
 }

@@ -2108,11 +2108,6 @@ kinds:
     timeout: {derived: voiceBuildTimeout, value: 10m}
     opts_owner: caller
     registration: {when: [VoiceBrain], absent: registers_anyway}
-    fault:
-      nil_after_logging: >-
-        the build ROW owns its state: every model failure lands on the row
-        as deferred or failed, never as a River retry loop, and the
-        deferred-retry sweep re-enqueues what is due.
     args:
       Workspace: id
       ProfileID: id

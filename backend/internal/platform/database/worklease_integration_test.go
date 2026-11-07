@@ -63,6 +63,11 @@ func TestWorkLeaseProofNamesOnlyItsLiveOwner(t *testing.T) {
 		if err != nil || !free {
 			t.Fatalf("released owner available=%v err=%v", free, err)
 		}
+		lease, held, err := db.TryWorkLease(ctx, "test", id, slog.Default())
+		if err != nil || !held {
+			t.Fatalf("availability check blocked a worker: %v %v", held, err)
+		}
+		lease.Close(ctx)
 		return nil
 	}); err != nil {
 		t.Fatal(err)

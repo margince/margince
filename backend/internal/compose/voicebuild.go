@@ -419,9 +419,9 @@ func modelNameOrUnrecorded(name string) string {
 	return name
 }
 
-// voiceBuildRetryWorker re-enqueues every due deferred build; the per-build
-// job's uniqueness makes a double offer harmless.
+// voiceBuildRetryWorker re-offers abandoned builds and due budget deferrals.
 type voiceBuildRetryWorker struct {
+	pool  *pgxpool.Pool
 	store *ai.VoiceStore
 	log   *slog.Logger
 }
@@ -436,7 +436,7 @@ func (w *voiceBuildRetryWorker) Work(ctx context.Context, _ *river.Job[VoiceBuil
 			w.log.WarnContext(ctx, "voice build skipped: requester deleted", "build", ref.BuildID.String())
 			continue
 		}
-		if err := dispatchOne(ctx, VoiceBuildArgs{
+		if err := dispatchOne(ctx, w.pool, VoiceBuildArgs{
 			Workspace:   ref.Workspace,
 			ProfileID:   ref.ProfileID.String(),
 			BuildID:     ref.BuildID.String(),

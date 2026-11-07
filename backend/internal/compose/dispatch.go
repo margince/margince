@@ -327,9 +327,9 @@ func dispatchWith(ctx context.Context, workspaces []ids.UUID, insert insertManyF
 // The client is resolved per insert, and only inside the loop, for the reason
 // clientInsertMany states: river.ClientFromContext panics when there is none,
 // and a tick with nothing due must not turn "nothing to do" into a panic.
-func dispatchOne(ctx context.Context, args river.JobArgs, callerOpts *river.InsertOpts) error {
-	_, err := river.ClientFromContext[pgx.Tx](ctx).Insert(ctx, args, jobs.QueuedAsArgs(args, fanOutChildOpts(args.Kind(), callerOpts)))
-	return err
+func dispatchOne(ctx context.Context, pool *pgxpool.Pool, args river.JobArgs, callerOpts *river.InsertOpts) error {
+	runner := jobs.FromClient(pool, river.ClientFromContext[pgx.Tx](ctx))
+	return runner.Enqueue(ctx, args, jobs.QueuedAsArgs(args, fanOutChildOpts(args.Kind(), callerOpts)))
 }
 
 // fanOutChildOpts is what dispatchOne hands River, decided by the child's

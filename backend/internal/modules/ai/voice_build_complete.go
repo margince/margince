@@ -295,10 +295,8 @@ type VoiceBuildRef struct {
 	RequestedBy *ids.UUID
 }
 
-// staleQueuedAge is how long a queued build may sit before the sweep
-// re-offers it: the in-transaction enqueue makes a lost job rare (a crash
-// between commit and job pickup, or a row predating the runner), and the
-// per-build session lease makes a duplicate offer harmless.
+// staleQueuedAge bounds recovery of a queued build whose job was lost.
+// The session lease makes repeated offers safe.
 const staleQueuedAge = time.Minute
 
 // DueDeferredBuilds finds due deferrals, lost queued jobs and running builds with no session owner.
