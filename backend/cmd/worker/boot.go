@@ -327,7 +327,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// model, so it runs on every worker rather than only where a provider is
 	// configured — a deployment without AI still answers "who on our team knows
 	// this contact", which is a deterministic question about our own mail.
-	edges := search.NewGraphEdgeGen(search.NewStore(compose.InstallationDB(pool)))
+	edges := compose.NewGraphEdgeConsumer(pool)
 	_, _ = fmt.Fprintln(stdout, "worker maintaining interaction edges")
 	// Coalesced: a capture burst names the same colleagues event after event,
 	// and one refold per read does their shared pairs once (graphedgebatch.go).
@@ -342,6 +342,12 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	rescope := compose.NewAudienceRescopeGen(pool)
 	_, _ = fmt.Fprintln(stdout, "worker re-scoping derived models on audience changes")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:audience-rescope", rescope.HandleEvent, logger, 0) })
+
+	// A voice sample read from sent mail follows its mail: archived,
+	// restricted, narrowed or marked confidential, the sample is emptied.
+	voiceCopies := compose.NewVoiceCopyRecheckGen(pool)
+	_, _ = fmt.Fprintln(stdout, "worker emptying voice samples whose mail stopped being learnable")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:voice-copy-recheck", voiceCopies.HandleEvent, logger, 0) })
 
 	// The LinkedIn ghost matcher (ADR-0078 §8b): a ghost attaches the moment
 	// its contact exists, whoever created them. Deterministic like the edge
@@ -375,8 +381,8 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	startPartnerActivation(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
-	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)
 	startApprovalNoticeRetract(ctx, pool, rdb, background, logger, stdout)
+	startScheduledSendStop(ctx, pool, rdb, background, logger, stdout)
 	startNoticeCaseOpen(ctx, pool, rdb, background, logger, stdout)
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)

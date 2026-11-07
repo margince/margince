@@ -18,9 +18,9 @@ func (h Handlers) WithPriceSync(sync *PriceSync) Handlers {
 	return h
 }
 
-// priceSyncReady admits a human to a wired engine, answering the request itself otherwise.
+// priceSyncReady admits a user or their agent to a wired engine, answering the request itself otherwise.
 func (h Handlers) priceSyncReady(w http.ResponseWriter, r *http.Request) bool {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return false
 	}
@@ -102,7 +102,7 @@ func toContractRefreshReport(report RateRefreshReport) crmcontracts.AiModelRateR
 		out.Providers = append(out.Providers, crmcontracts.AiModelRateProviderRefresh{
 			Provider: p.Provider, Outcome: string(p.Outcome),
 			Updated: p.Updated, Unchanged: p.Unchanged, Added: p.Added, Kept: p.Kept,
-			Models: p.Models, Unlisted: p.Unlisted,
+			Models: p.Models, Unlisted: p.Unlisted, Review: &p.Review,
 		})
 	}
 	return out

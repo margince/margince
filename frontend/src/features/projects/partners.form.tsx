@@ -33,8 +33,8 @@ import {
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
 import { ActivationNote, MarginTierRow } from "./partners.detailrows";
@@ -322,7 +322,7 @@ function PartnerDetail({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const [editing, setEditing] = useState(false);
 
   if (editing) {

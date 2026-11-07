@@ -162,6 +162,11 @@ func TestEveryUninjectedInstallationSeamRefuses(t *testing.T) {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
 				}
 				_, err = seam(context.Background(), nil, ids.UserID{})
+			case KnownCountry:
+				if seam == nil {
+					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
+				}
+				_, err = seam("de")
 			case IssuerEntityReader:
 				if seam == nil {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)

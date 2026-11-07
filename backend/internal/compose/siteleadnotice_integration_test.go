@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -161,7 +160,7 @@ func TestTheNoticeLinkOpensTheDisclosureForTheLead(t *testing.T) {
 	if err := l.accept(l.stage(t, annaOnTheTeamPage)); err != nil {
 		t.Fatalf("accepting the website lead: %v", err)
 	}
-	token := l.vault.sealed[strings.LastIndex(l.vault.sealed, "/")+1:]
+	token, _ := sealedConfirmToken(l.vault.sealed)
 	store := consent.NewStore(InstallationDB(l.e.Pool))
 	ref, err := store.ResolveConfirmToken(l.e.Admin(), token, consent.FetchByAHuman)
 	if err != nil {

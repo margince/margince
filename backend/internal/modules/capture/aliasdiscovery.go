@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -170,6 +171,7 @@ func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.U
 	if err != nil {
 		return fmt.Errorf("capture: claiming %s as the seat's own: %w", value, err)
 	}
+	database.Forget(tx, ownerIdentitiesMemo)
 	if err := retirePendingForIdentityTx(ctx, tx, seat, identity); err != nil {
 		return err
 	}
@@ -188,7 +190,7 @@ func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.U
 // nothing about the message being captured. Returning an error here would offer
 // a caller the chance to fail a capture over a header nobody reads.
 func storableAddress(deliveredTo string) (string, bool) {
-	value, err := ValidExclusionValue(IdentityKindAddress, deliveredTo)
+	value, err := validRuleValue(identityKinds, IdentityKindAddress, deliveredTo)
 	return value, err == nil && !IsMachineAddress(value)
 }
 

@@ -51,11 +51,14 @@ type Expansion =
       span?: DrawerSpan;
       /** Makes the drawer expandable; the caller keeps the span it reports. */
       onSpanChange?: (span: DrawerSpan) => void;
+      /** As tall as its content, up to the glass, for a drawer that reads short. */
+      fit?: boolean;
     }>
   | Readonly<{
       intent: Exclude<ModalIntent, DrawerIntent>;
       span?: never;
       onSpanChange?: never;
+      fit?: never;
     }>;
 
 // A form with more fields than this is worked through in a drawer.
@@ -72,6 +75,7 @@ export function Modal({
   intent,
   span = "intent",
   onSpanChange,
+  fit = false,
   returnFocusTo,
   initialFocusTo,
   closeReason,
@@ -153,7 +157,9 @@ export function Modal({
   if (!mounted) {
     return null;
   }
-  const box = modalClass(intent, span);
+  const box = fit
+    ? `${modalClass(intent, span)} modal-drawer-fit`
+    : modalClass(intent, span);
   const wide = span === "window";
   // Portalled to the document body rather than rendered in place: a dialog
   // opened from inside a collapsed container — the record header's overflow

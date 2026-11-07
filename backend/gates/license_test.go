@@ -71,8 +71,8 @@ func TestTheContractsExemptionIsAnchoredToTheBackendTree(t *testing.T) {
 // mustHaveFiles is what stops a root from passing by scanning nothing — an
 // aggregate count cannot, because backend/ alone would carry it forever while
 // a unit tree silently escaped the rule. extensions/ is the one root that may
-// legitimately be empty: presence under it IS enablement, so the vanilla lane
-// composes an empty tree on purpose. A root that does not exist at all is
+// legitimately be empty. Presence under it is enablement, so an installation
+// that ships no units composes an empty tree. A root that does not exist at all is
 // still caught, by the walk error below.
 type licensedTree struct {
 	root          string

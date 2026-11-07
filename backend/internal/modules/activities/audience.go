@@ -45,14 +45,14 @@ type SetAudienceInput struct {
 const maxAudienceMembers = 200
 
 // SetAudience limits (or re-opens) who may read the activity's content.
-// Human-only: an agent acting for a human never narrows or widens what the
-// human's colleagues read. The caller needs write authority over the row,
+// The user, or their agent, narrows or widens who reads it; automatic work
+// with no passport never does. The caller needs write authority over the row,
 // which is the author, the assignee or host, or a linked record that is
 // theirs to change. The audience column, the member rows, the audit row and
 // the activity.updated event commit together; a row held under a retention
 // obligation is refused by the restriction guard (423).
 func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudienceInput) (crmcontracts.Activity, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
@@ -71,7 +71,8 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err != nil {
 			return err
 		}
-		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		internalMail, reason, err := authorizeAudienceWriteTx(ctx, tx, id, in, members, held)
+		if err != nil {
 			return err
 		}
 		// A CAPTURED message is not one contact's to set.
@@ -90,7 +91,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		// refusal outranks this one — 422 tells the caller their request is
 		// fixable by asking the owner endpoint instead, which a held row's
 		// request never is.
-		if !held {
+		if !held && !internalMail {
 			if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
 				return err
 			}
@@ -118,7 +119,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		// `manual` says both: a contact set this, and no derivation may move it.
 		if _, err := tx.Exec(ctx,
 			`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
-			id, in.Audience, ReasonManual); err != nil {
+			id, in.Audience, reason); err != nil {
 			return err
 		}
 		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {

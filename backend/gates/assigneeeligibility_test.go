@@ -45,7 +45,7 @@ var eligibilityColumns = []string{"is_agent", "seat_type", "archived_at"}
 // reach into a module and the module must not import the predicate's private
 // half.
 var assigneeEligibilityWriters = map[string]string{
-	"internal/platform/auth/assignscope.go": "the rule itself: an active human seat inside the caller's own write scope",
+	"internal/platform/auth/assignscope.go": "the rule itself: an active human seat that can write",
 	"internal/modules/contacts/leadrouting.go": "the routing pool's own eligibility, system-principal so the scope half " +
 		"does not apply; kept in step with the rule by this gate",
 }
@@ -62,11 +62,11 @@ func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 	t.Parallel()
 	found := map[string][]string{}
 	root := filepath.Join(gatekit.ModuleRoot(t), "internal")
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
@@ -129,41 +129,43 @@ func keysOf(m map[string]string) []string {
 	return out
 }
 
-// The rule's two halves must both appear in the predicate: a version that
-// dropped the seat check while keeping the scope check would still refuse a
-// stranger and happily file work on a suspended colleague.
-func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
+// Each predicate keeps every clause of its rule. The seat rule refuses a seat
+// that cannot do the work, and the run-as rule adds the caller's own write
+// scope. Dropping a clause widens who may be handed a record or acted for,
+// with no test naming what was widened.
+func TestTheAssigneePredicatesKeepEveryClauseOfTheirRule(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(gatekit.ModuleRoot(t), "internal", "platform", "auth", "assignscope.go")
 	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
-	var body string
-	ast.Inspect(file, func(n ast.Node) bool {
-		fn, ok := n.(*ast.FuncDecl)
-		if !ok || fn.Name.Name != "AssigneeEligibleSQL" {
-			return true
-		}
-		src, readErr := os.ReadFile(path)
-		if readErr != nil {
-			t.Fatalf("reading %s: %v", path, readErr)
-		}
-		span := gatekit.SourceFileSet().File(fn.Pos())
-		body = string(src)[span.Offset(fn.Pos()):span.Offset(fn.End())]
-		return false
-	})
-	if body == "" {
-		t.Fatal("AssigneeEligibleSQL is gone from assignscope.go: the rule it holds has moved and this gate has not")
+	src, err := gatekit.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
 	}
-	for _, half := range []string{
-		"workforce.LiveMemberSQL(alias)", "NOT %[2]s.is_agent",
-		"seat_type <> 'read'", "ownerPredicate",
-	} {
-		if !strings.Contains(body, half) {
-			t.Errorf("AssigneeEligibleSQL no longer asks %q. Each clause refuses a seat that cannot do the "+
-				"work, or scopes the destination to the assigner's own reach; dropping one widens who may "+
-				"be handed a record without any test naming what was widened.", half)
+	bodies := map[string]string{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		if fn, ok := n.(*ast.FuncDecl); ok {
+			span := gatekit.SourceFileSet().File(fn.Pos())
+			bodies[fn.Name.Name] = string(src)[span.Offset(fn.Pos()):span.Offset(fn.End())]
+		}
+		return true
+	})
+	rules := map[string][]string{
+		"AssigneeEligibleSQL": {"workforce.LiveMemberSQL(alias)", "NOT %[2]s.is_agent", "seat_type <> 'read'"},
+		"runAsOwnerSQL":       {"AssigneeEligibleSQL(alias)", "ownerPredicate"},
+	}
+	for name, clauses := range rules {
+		body, ok := bodies[name]
+		if !ok {
+			t.Errorf("%s is gone from assignscope.go: the rule it holds has moved and this gate has not", name)
+			continue
+		}
+		for _, clause := range clauses {
+			if !strings.Contains(body, clause) {
+				t.Errorf("%s no longer asks %q, which widens who may be handed a record or acted for.", name, clause)
+			}
 		}
 	}
 }

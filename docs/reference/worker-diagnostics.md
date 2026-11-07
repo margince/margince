@@ -77,6 +77,41 @@ offline fake model. A binding is stored through Settings → AI, or on a fresh i
 time scan always run. Shutdown is clean: subscriber handlers already running end their ack before
 the process stops.
 
+## Worker database budget
+
+The worker has its own connection and statement cache limits in
+[configuration](configuration.md). Its boot log reports the limits it uses. The lower of the
+worker budget, the DSN limit and job count wins. A larger DSN cannot raise the worker budget.
+The budget includes the River listener, which leaves the pool after it connects. The API keeps its
+own pool settings.
+
+Count every process when sizing the database. For example, two API processes with a limit of
+16 and two workers with a limit of 12 may open 56 connections together. Leave room for migrations,
+operators and other database clients too. A per-process limit is no installation-wide limit.
+
+Jobs that hold a connection for a session lock share a slot budget. The slots limit how many
+connections can be pinned; two connections stay outside that limit. Other jobs and event work
+share the remaining connections, so a free slot does not promise a free connection.
+
+A job with no slot yields through River before taking a connection. Long holders can delay other
+lock jobs. Read `margince_worker_pinned_sessions` and
+`margince_worker_session_budget_snoozes_total` with the pool wait metrics when sizing this limit.
+Those connections have no separate pool; other short work may use them too.
+
+The statement cache setting bounds entries, not bytes. It also bounds the `description` cache.
+A smaller cache may cause repeated `Prepare` calls. Measure with
+`TestWorkerCacheReportsHistoryPreparationCost` before reducing it. `work_mem` is per query
+operation; it does not bound all memory of one connection. Use the pool metrics and database memory
+together when sizing the installation.
+
+## Upgrading worker limits
+
+The worker now has a hard budget even when the DSN asks for more connections. An old DSN with
+fewer than four pooled connections is refused at boot. Check the new settings before replacing
+workers, and size every process together. Raise the worker budget explicitly if the installation
+needs more connections. Keep the API pool settings separate. Smaller statement caches can cause
+more `Prepare` calls; check that cost with the test above.
+
 ## Stopping the worker
 
 `SIGTERM` (or `SIGINT`) stops the worker in this order. The times add up to the budget a supervisor
@@ -106,3 +141,129 @@ spec:
 Some jobs often run longer than the window, such as a long crawl or an import of many records.
 They are stopped at every rollout, and run again on another replica. That is safe (River retries them) but wastes work.
 So size the window, and the grace time with it, to the jobs this installation runs.
+
+## Mail import test size
+
+`MARGINCE_IMPORT_BENCH_MESSAGES` sets the message count for
+`TestHistoryImportReportsItsDatabaseWork`. The test checks its range before writing data.
+See [measure a mail import](../how-to/measure-mail-import.md) for the command and what it measures.
+
+## Mail import memory
+
+The Gmail history reader shares a byte budget across its pages. It takes room before fetching
+each message and keeps the message in that budget until capture ends. A later message cannot take
+the room needed by the first fetch that has not ended. The header pass shares the budget with a smaller
+share. Failed or cancelled pages return all of their room.
+
+The limits are in
+[`rawmemory.go`](../../backend/internal/modules/capture/gmail/rawmemory.go).
+A response that states its size can use less room before the body is read; the reader enforces
+that size too. A response with no size keeps all of its room until the fetch ends. A provider rate
+limit ends the page and returns its room before the job waits, with its saved page kept for retry.
+Live sync and sent mail use their own paths.
+
+The byte budget counts input, not all process memory. The parser and Go runtime need room too,
+and the runtime may keep freed bytes before returning them to the system. Use
+[the mail import profile](../how-to/profile-mail-import.md) with the pool and other jobs running
+before changing how many imports run together.
+
+## Mail import queue
+
+`capture.history_concurrency` bounds running history imports across the installation, with a default
+of two, the size of the `mail_history` worker queue. Google limits each mailbox's quota on its
+own, so two mailboxes importing together each run at their own limit. Every process must use the
+same value. Requests beyond that budget stay `queued` and read no
+mail. `capture.history_hold` accepts requests but starts no new page. Both keys are listed in
+[configuration](configuration.md).
+
+The admission pass has its own worker queue, so provider calls cannot fill its worker slots.
+It runs every 15 seconds and restores work only after the old page's database locks are free.
+Each page has an `execution_generation`. Its `cursor`, retry deadline and next River job commit
+together. An older job cannot write the newer page's counts or mail. The page checks its locks once
+a second so a lost connection or a cancelled run stops provider work.
+
+A lower limit returns extra imports to `queued` after their current pages release their locks.
+Their saved progress and provider retry deadlines remain in place. A mailbox-only quota wait can return its
+slot to another ready import. Shared or unknown limits keep the slot. A queued import cannot start
+before its retry deadline.
+
+When a run ends, its slot is offered to the next request. Smaller known imports go first;
+requests waiting an hour move first in age order. The history queue's worker count also limits how
+many pages can run at once; raising the admission limit does not add workers.
+
+Apply the schema changes before the new worker. Stop older history workers and let their current
+pages finish before starting the new workers. Existing jobs with no `execution_generation` become
+admission requests. Never run old and new history workers together.
+
+To return to an older binary, hold new pages and drain the history workers first. Keep the added
+columns, saved progress and queued River jobs. An older binary does not serve the new queues, but its old
+reconcile pass can create paging jobs with no admission limit. Keep history imports disabled while
+running an older binary. Return to the new workers before resuming queued imports.
+
+## Mail import follow-up work
+
+Mail history requests contact and relationship reads on their existing rows. Repeated events
+raise a request number. A new relationship gets an exact read first, so no empty row or made-up
+time reaches a reader. Counts may wait for later mail until the active import group ends.
+Address repairs and shared mail use the same waiting reads. Live changes, removals and a
+smaller audience still take the direct path.
+
+Each exact graph read stores its database snapshot. An audit row names the transaction that
+wrote its source change. A delayed event already covered by that snapshot adds no new work.
+A change committed after the read still raises the request. Older audit rows without this
+value keep the safe path. Stored snapshots hold no database transaction open.
+
+Recovery releases requests when their import ends in success or error, or is cancelled.
+If another import is active or queued, history requests wait on that import instead.
+Deleting a run also releases its requests. A reader completes only the request number it saw;
+a newer request stays waiting. The graph reader uses its own queue. Both readers work in
+small groups, and job retries cannot erase waiting work stored on the rows.
+
+The signature reader keeps the mailbox, audience and human-field checks. Live requests have
+a separate generation and stay ready when history mail comes in behind them. Once that
+generation is read, later history mail waits again. The nightly pass also keeps contacts
+that wait out of its current source query.
+
+Before returning to an older binary, hold imports and stop their event consumers and page
+workers. Finish waiting reads and remove jobs whose arguments contain `pending: true` before
+starting older workers. Older workers may treat this flag as a full repair pass. Keep the
+added columns and progress while making the next fix.
+
+### Gmail quotas and saved page work
+
+All Gmail reads, sends and watch calls share mailbox and project budgets through the existing
+rate-limit store. Each method has its own cost. A mailbox key comes from the saved owner
+address, hashed before it reaches Redis. Refreshing a token does not open a new budget.
+
+The project budget covers the installation's OAuth apps; separate apps do not raise its limit.
+Without a shared store, the budget holds within one process. A shared-store fault stops requests
+until counting works again.
+
+Set `capture.gmail_mailbox_quota` and `capture.gmail_project_quota` to the effective limits shown
+by Google, with the same values in each process. Older projects may have different limits. The
+defaults and environment keys are in [configuration](configuration.md). Method costs follow the
+[Google quota table](https://developers.google.com/workspace/gmail/api/reference/quota).
+
+The mailbox budget is what bounds a history import: a full message costs three times a header
+read. Gmail reads the headers of the first 10 messages of each page and drops the ones the
+capture gates would keep out. It goes on reading headers for the rest of the page only when the
+sample dropped more than one message in three. Otherwise it downloads the rest in full, and the
+same gates judge each message when it is stored.
+
+A largest call still fits at a rolling-minute boundary. A provider retry deadline can only make
+the shared wait longer. A mailbox-only limit leaves other mailboxes ready. Longer waits return
+to the job scheduler, releasing page memory and the worker connection.
+
+Before storing a listed page, Gmail saves its exact ids still to read in `capture_backfill.cursor`.
+It saves counts and those ids together after small groups of finished messages. Header checks
+can finish later ids before an earlier message is stored, so a count alone cannot name where
+to start again. A retry reads the saved ids rather than asking a changed mailbox for the same page.
+
+Only work since the last save may repeat. New saves keep the `execution_generation` and connection
+generation checks. The normal page commit adds only counts not already saved. Saving more mail
+also resets the failure ladder, so a run making progress does not stop for old faults.
+
+Older provider tokens still read as before. Before returning to an older binary, stop new import
+requests and let running imports finish with the new worker, then hold imports and stop it. Keep
+saved tokens until the run ends; an older worker cannot read the new format. For the upgrade,
+hold imports, stop old workers, then start the new workers and release the hold.

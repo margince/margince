@@ -76,7 +76,7 @@ type parsedFile struct {
 func parseInternalTree(t *testing.T) []parsedFile {
 	t.Helper()
 	var out []parsedFile
-	err := filepath.WalkDir(internalTree, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(internalTree, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}

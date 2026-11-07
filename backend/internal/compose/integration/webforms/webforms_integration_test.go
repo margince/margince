@@ -291,7 +291,7 @@ func eraseContact(t *testing.T, e *apptest.AppEnv, contactID string) {
 		t.Fatalf("filing the erasure request → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, integration.AnyMap{
-		"status": "fulfilled", "resolution": "erased per Art. 17", "identity_check": "id_document",
+		"status": "fulfilled", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure request → %d", status)
 	}
@@ -539,6 +539,41 @@ func TestALeadFromAFormWhoseOwnerLeftLandsUnassigned(t *testing.T) {
 	}
 	if got := leadOwnerOf(t, e, "orphan@visitor.example"); got != nil {
 		t.Fatalf("lead owner = %s, want unassigned once the form's owner left", *got)
+	}
+}
+
+// A form outlives what it names. A product retired and an owner gone since it
+// was saved still leave the visitor's lead, with neither on it.
+func TestALeadFromAFormWhoseProductAndOwnerWentStillLands(t *testing.T) {
+	e := setupFormsApp(t)
+	owner := adminID(t, e)
+	var product string
+	if err := e.Owner.QueryRow(context.Background(), `
+		INSERT INTO product (name, unit_price_minor, currency, source, captured_by, component_kind)
+		VALUES ('Retired line', 100000, 'EUR', 'manual', 'human:x', 'software') RETURNING id::text`).Scan(&product); err != nil {
+		t.Fatal(err)
+	}
+	form := createForm(t, e, integration.AnyMap{
+		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}, "owner_id": owner, "product_id": product,
+	})
+	ctx := context.Background()
+	if _, err := e.Owner.Exec(ctx, `UPDATE product SET archived_at = now() WHERE id = $1`, product); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Owner.Exec(ctx, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, owner); err != nil {
+		t.Fatal(err)
+	}
+	answer := browserPost(t, e, form.FormKey, url.Values{"email": {"retired@visitor.example"}}, siteOrigin)
+	if answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s; a retired product must not cost the visitor their enquiry", answer.Status, answer.Body)
+	}
+	var leadProduct, leadOwner *string
+	if err := e.Owner.QueryRow(ctx, `SELECT product_id::text, owner_id::text FROM lead WHERE email = $1`,
+		"retired@visitor.example").Scan(&leadProduct, &leadOwner); err != nil {
+		t.Fatalf("the lead did not land: %v", err)
+	}
+	if leadProduct != nil || leadOwner != nil {
+		t.Errorf("lead product %v and owner %v, want neither once both are gone", leadProduct, leadOwner)
 	}
 }
 

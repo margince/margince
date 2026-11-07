@@ -87,3 +87,20 @@ func TestNotificationAddressesAreSendingSystemsButHumansAtTheBaseDomainAreNot(t 
 		}
 	}
 }
+
+func TestHubSpotBCCHostIsMachine(t *testing.T) {
+	t.Parallel()
+	for _, technical := range []string{"12345@bcc.eu1.hubspot.com", "4711@bcc.hubspot.com", "Log@BCC.HubSpot.com"} {
+		if !HasMachineLocalpart(technical) || !IsMachineAddress(technical) {
+			t.Errorf("%s logs mail into a CRM and must not name a human", technical)
+		}
+	}
+	for _, human := range []string{
+		"anna@hubspot.com", "1987@gmail.com", "anna+crm@acme.com", "bcc@acme.com",
+		"anna@eu1.hubspot.com", "max@bcc.evil-hubspot.com",
+	} {
+		if HasMachineLocalpart(human) {
+			t.Errorf("%s may be a human and must stay valid", human)
+		}
+	}
+}

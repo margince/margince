@@ -45,7 +45,7 @@ function contextCards() {
       <Panel title={en["co.overview.allDeals"]}>
         <PanelBody>{en["co.overview.noWork"]}</PanelBody>
       </Panel>
-      <Panel title={en["co.overview.alsoOnList"]}>
+      <Panel title={en["co.overview.otherOpen"]}>
         <PanelBody>{en["co.overview.nothingOpen"]}</PanelBody>
       </Panel>
     </>

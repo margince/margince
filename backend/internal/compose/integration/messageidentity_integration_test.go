@@ -136,7 +136,7 @@ func echoAlreadyCaptured(subject, stamped string) []byte {
 // worked and a reconcile that quietly gave up both leave one row on the key.
 func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	const subject = "Re: Inbound question"
@@ -196,7 +196,7 @@ func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) 
 // counterparty roots at the wire identity attributes to the send.
 func TestAGmailRewrittenIdentityStillYieldsOneActivityAndOneReplyTarget(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	sentActivity := p.sendExpectingAcceptance(t, "transactional", "Re: Inbound question", "As discussed.")

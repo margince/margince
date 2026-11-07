@@ -42,66 +42,6 @@ import (
 // test is a second answer to the same question.
 const MaxBodyLen = 8000
 
-// Event is one calendar event as any provider describes it, after that
-// provider's own decode. It carries what the rules below read and nothing more:
-// the raw original reaches the Sink verbatim as evidence, so a field absent
-// here is not a field lost.
-type Event struct {
-	Private bool
-	ID      string
-	// ICalUID is the event's identity ACROSS providers, and ID is not: ID is
-	// whatever the provider numbered this event in its own store, so the same
-	// meeting read from Google and from Graph carries two of them and dedupes
-	// as two meetings.
-	//
-	// It names the SERIES, not one occurrence — a weekly call is one UID and
-	// fifty-two meetings — so the occurrence's own start completes the identity
-	// (activities.MeetingIdentityKey). Both syncs already expand recurrences
-	// (gcal `singleEvents=true`, graphcal `calendarView`), so every Event a
-	// decoder produces is one occurrence and StartsAt is that occurrence's.
-	//
-	// Empty when the provider states none, and never synthesized: a made-up
-	// identity would collide two unrelated meetings, which is worse than the
-	// duplicate it set out to prevent.
-	ICalUID   string
-	Cancelled bool
-	// OwnerDeclined says the connected account answered NO to this invitation.
-	// It is a different fact from Cancelled — the organizer's event is alive and
-	// everyone else is still going — but it means the same thing for the seat
-	// whose calendar this is, so Settlement folds the two together.
-	OwnerDeclined bool
-	Subject       string
-	Description   string
-	// StartsAt is the event's start as an instant. The zero value is an
-	// unreadable start, which the Sink then stamps with capture time rather than
-	// sorting the row to the beginning of history — so a decoder that cannot
-	// read a start leaves this zero rather than guessing.
-	EndsAt   time.Time
-	StartsAt time.Time
-	// AllDay says the provider stated a date, not a time: StartsAt is then the
-	// AllDayStart noon anchor rather than a moment anybody scheduled.
-	AllDay    bool
-	Organizer Actor
-	Attendees []Actor
-	// PartiesHidden: the provider withheld guests from this copy of the event.
-	PartiesHidden bool
-}
-
-// Actor is one organizer or attendee. The address resolves the counterparty
-// and the internal test. Room marks a booked room or device, in each vendor's
-// terms. Response is this attendee's own answer as a connector.Response
-// constant, or "" when the provider stated none; a no decides what their row grants.
-type Actor struct {
-	Email string
-	// Name is what the invitation called this party, or "" when the provider
-	// named nobody. It is the only full name an attendee-only contact ever
-	// gets: a contact minted from a bare invitation address is otherwise named
-	// by the local part of their own email.
-	Name     string
-	Response string
-	Room     bool
-}
-
 // Meeting is the classified result of reading one event against the connected
 // account's owner. The owner's own domain gives the internal floor; the
 // workspace's registered domains (CAP-DDL-1) are the authority and are applied
@@ -118,6 +58,7 @@ type Meeting struct {
 	agenda          string
 	masked          bool
 	occurredAt      time.Time
+	seriesSlot      time.Time
 	allDay          bool
 	durationSeconds *int
 	private         bool
@@ -128,6 +69,7 @@ type Meeting struct {
 	ownerDomain     string
 	addresses       []string
 	participants    connector.Parties
+	notes           []capture.MeetingDocument
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -147,6 +89,7 @@ func Classify(ev Event, owner string) Meeting {
 		agenda:          agendaFingerprint(ev.Description),
 		masked:          masked,
 		occurredAt:      ev.StartsAt,
+		seriesSlot:      ev.SeriesSlot,
 		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
 		private:         ev.Private,
@@ -164,6 +107,7 @@ func Classify(ev Event, owner string) Meeting {
 		ownerDomain:   ownerDom,
 		addresses:     eventAddresses(ev, owner),
 		participants:  meetingParties(ev),
+		notes:         NotesDocuments(ev, owner),
 	}
 }
 
@@ -248,7 +192,8 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
-			Direction: "",
+			Direction:        "",
+			MeetingDocuments: m.notes,
 		},
 		Source:     connectorName + ":" + m.id,
 		CapturedBy: "connector:" + connectorName,
@@ -260,7 +205,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		//
 		// Empty when the provider stated no UID, and then the meeting dedupes on
 		// the natural key alone exactly as it did before.
-		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay},
+		CrossDoorIdentity: m.crossDoorIdentity(),
 		Participants:      m.participants.Participants,
 		WithheldParties:   m.participants.Withheld,
 		Addresses:         m.addresses,
@@ -438,8 +383,7 @@ func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connect
 	// an imported meeting left no row under its own key, and the identity is
 	// the only thing that still names that meeting.
 	if identified, ok := sink.(connector.IdentifiedMeetingCanceller); ok {
-		identity := connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay}
-		err = identified.CancelIdentifiedMeeting(ctx, key, identity, m.occurredAt)
+		err = identified.CancelIdentifiedMeeting(ctx, key, m.crossDoorIdentity(), m.occurredAt)
 	} else if canceller, ok := sink.(connector.MeetingCanceller); ok {
 		err = canceller.CancelMeeting(ctx, key, m.occurredAt)
 	} else {

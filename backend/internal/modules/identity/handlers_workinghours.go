@@ -28,7 +28,7 @@ func (h Handlers) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 // only one it writes, taken from the authenticated principal rather than from
 // anything on the request. There is no id to pass and no admin form of it.
 func (h Handlers) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
-	var body crmcontracts.WorkingHours
+	var body crmcontracts.SaveWorkingHoursRequest
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
@@ -43,7 +43,7 @@ func (h Handlers) SaveMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	saved, err := h.svc.SaveMyWorkingHours(r.Context(), WorkingHours{
-		StartMinute: start, EndMinute: end, Days: body.Days, Timezone: body.Timezone,
+		StartMinute: start, EndMinute: end, Days: body.Days, Timezone: optionalValue(body.Timezone),
 	})
 	if err != nil {
 		// No branch for WorkingHoursError: it implements apperrors.FieldFault,

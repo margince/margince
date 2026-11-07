@@ -91,7 +91,11 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
+}
+/* The row's gap spaces its lines; a paragraph's own gap would double it. */
+.analytics-attention-text > * + * {
+  margin-block-start: 0;
 }
 .analytics-attention-text {
   display: contents;
@@ -234,4 +238,32 @@
 
 .analytics-outlook-prose > p + p {
   margin-block-start: var(--paragraphSpacing);
+}
+
+.analytics-lead > .panel,
+.analytics-pair > .panel {
+  align-self: start;
+}
+
+/* A projected shortfall is the one hero line that warns. */
+.analytics-hero-short {
+  color: var(--warningText);
+}
+.analytics-sales-hero .trajectory-chart {
+  padding: 0 var(--padPanel) var(--space-3);
+}
+/* The outlook's first sentence is its verdict, set a step above the prose. */
+.analytics-outlook-lead {
+  font: var(--fontHeadingSmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+.analytics-outlook .panel-foot {
+  justify-content: space-between;
+}
+/* As a chip the scope fits its name rather than holding a column's width. */
+.filter-bar[data-labels="inside"] .analytics-scope-control {
+  flex: none;
+  min-width: 0;
 }

@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import {
@@ -190,6 +190,17 @@ export const QuietlyNarrated: Story = {
 // against, and "±0" beside every figure would claim a comparison nobody made.
 export const FirstWeek: Story = {
   render: panel(weekly(() => jsonResponse(firstWeek), [WEEK_START])),
+};
+
+// A review whose activity lane answered with no days. The chart draws its key and
+// no columns, and names no busiest day; it used to fail to render at all.
+export const NoActivityDays: Story = {
+  render: panel(
+    weekly(
+      () => jsonResponse({ ...narratedWeek, daily_activity: [] }),
+      [WEEK_START, PRIOR_WEEK_START],
+    ),
+  ),
 };
 
 // A week whose wins cannot be priced. One deal in a currency with no usable
@@ -421,12 +432,10 @@ export const LearningsNotRun: Story = {
 export const Workings: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <PanelBody>
-        <WeeklyWorkings
-          counts={narratedWeek.counts}
-          figures={weeklyNumericStatus(undefined).figures}
-        />
-      </PanelBody>
+      <WeeklyWorkings
+        counts={narratedWeek.counts}
+        figures={weeklyNumericStatus(undefined).figures}
+      />
     </InTheWeeksPanel>,
   ),
 };
@@ -435,20 +444,18 @@ export const Workings: Story = {
 export const WorkingsPartlyRecorded: Story = {
   render: frozen(
     <InTheWeeksPanel>
-      <PanelBody>
-        <WeeklyWorkings
-          counts={narratedWeek.counts}
-          figures={
-            weeklyNumericStatus({
-              ...partlyRecordedWeeklyNumbers,
-              figure_coverage: {
-                ...partlyRecordedWeeklyNumbers.figure_coverage,
-                tasks: beforeHistoryWeeklyNumbers.figure_coverage?.tasks,
-              },
-            }).figures
-          }
-        />
-      </PanelBody>
+      <WeeklyWorkings
+        counts={narratedWeek.counts}
+        figures={
+          weeklyNumericStatus({
+            ...partlyRecordedWeeklyNumbers,
+            figure_coverage: {
+              ...partlyRecordedWeeklyNumbers.figure_coverage,
+              tasks: beforeHistoryWeeklyNumbers.figure_coverage?.tasks,
+            },
+          }).figures
+        }
+      />
     </InTheWeeksPanel>,
   ),
 };

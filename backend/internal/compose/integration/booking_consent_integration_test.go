@@ -50,7 +50,7 @@ func TestBookingConsentPassthrough(t *testing.T) {
 		t.Fatalf("create contact → %d", status)
 	}
 
-	tuesday := apptest.NextBookableMorning()
+	tuesday := apptest.NextBookableMorning(t)
 	consent := AnyMap{
 		"purpose_id":     purposeID,
 		"policy_version": "pp-2026-01",
@@ -207,7 +207,7 @@ func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
 		t.Fatalf("withdrawing the purpose → %d", status)
 	}
 
-	tuesday := apptest.NextBookableMorning()
+	tuesday := apptest.NextBookableMorning(t)
 	if status := e.Call(t, "POST", "/v1/bookings", bookingAt(tuesday.Add(3*time.Hour), contact.ID, AnyMap{
 		"consent": AnyMap{
 			"purpose_id": transactional, "policy_version": "pp-2026-01",

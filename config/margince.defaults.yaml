@@ -75,9 +75,6 @@ ai:
 analytics:
   performance_enabled: false
 
-assurance:
-  qualified_forecast_enforced: false
-
 auth:
   password:
     enabled: true
@@ -88,6 +85,10 @@ capture:
   confidentiality_pass_cap: 40
   freemail_extra: null
   freemail_never: null
+  gmail_mailbox_quota: 6000
+  gmail_project_quota: 1200000
+  history_concurrency: 2
+  history_hold: false
   mail_sharing: true
   mail_sync_interval_seconds: 120
   max_backfill_months: 0
@@ -118,10 +119,15 @@ contacts:
 data_tasks:
   pace: 1s
 
+database:
+  worker_max_connections: 12
+  worker_statement_cache_capacity: 256
+
 deals:
   legal_review_enabled: true
   maintenance_writes_enabled: true
-  stage_autopilot_enabled: false
+  silent_close_days: 120
+  stage_autopilot_enabled: true
 
 email:
   enabled: false
@@ -135,6 +141,7 @@ email:
 
 identity:
   enabled_oidc_providers: null
+  mcp_client_check: false
   oauth_dynamic_registration: true
   oauth_metadata_documents: true
   oidc_group_role_map: null
@@ -157,7 +164,8 @@ installation:
   dead_work_banner_hours: 24
   fiscal_year_start_month: 1
   follow_up_reconcile_interval_seconds: 86400
-  forecast_forward_measure: commit_evidence
+  forecast_forward_measure: likely
+  forecast_likely_threshold: 90
   forecast_self_correcting: true
   geocode_backfill_interval_seconds: 3600
   gmail_watch_renew_within_hours: 48

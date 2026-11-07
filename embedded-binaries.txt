@@ -17,3 +17,4 @@ golang.org/x/net | data/nodes | a pre-compiled snapshot of Mozilla's Public Suff
 golang.org/x/net | data/children | the same Public Suffix List snapshot as data/nodes, which the two files index together | MPL-2.0
 google.golang.org/protobuf | editions_defaults.binpb | protobuf's own edition descriptors, compiled from the .proto sources in the same module | BSD-3-Clause
 github.com/margince/margince/backend | module/licensecheck.wasm.module | the license-validation module this product's publisher builds and publishes, bundled byte-for-byte and held to a recorded digest by licensecheck/module_test.go | BUSL-1.1
+github.com/margince/margince/backend | margince-mark.png | the Margince logo mark the mail letterhead shows, drawn by this product's publisher and committed as a PNG in internal/platform/emailview | BUSL-1.1

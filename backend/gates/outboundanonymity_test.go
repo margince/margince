@@ -49,9 +49,11 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"../extensions/openchannel/client.go:func post": "posts a document signed with a secret the RECEIVER issued, over a nonce and a timestamp they check; the signature names the sender to them more exactly than an agent could, and to anyone else the request is unverifiable whatever it claims",
 
 	// This product's own origin, and the harnesses that drive it.
-	"internal/modules/agents/apps/fetch.go:func Fetch":                 "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
-	"internal/compose/integration/apptest/appenv.go:func CallVerbatim": "drives a server the test itself started, in the same process tree, for the length of one test",
-	"internal/compose/integration/apptest/mcp.go:func rpc":             "drives a server the test itself started, in the same process tree, for the length of one test",
+	"internal/modules/agents/apps/fetch.go:func Fetch":                    "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
+	"internal/compose/integration/apptest/appenv.go:func CallVerbatim":    "drives a server the test itself started, in the same process tree, for the length of one test",
+	"internal/compose/integration/apptest/mcp.go:func rpc":                "drives a server the test itself started, in the same process tree, for the length of one test",
+	"internal/compose/integration/apptest/upload.go:func PostUpload":      "drives a server the test itself started, in the same process tree, for the length of one test",
+	"internal/compose/integration/importjobtest/runs.go:func PostCSVFile": "drives a server the test itself started, in the same process tree, for the length of one test",
 
 	// The model providers. Each call carries the customer's own credential — an
 	// API key, or a service account's signed assertion — which is the account
@@ -74,7 +76,7 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// the contact themselves granted, so the provider knows the grant, the app
 	// it was granted to, and the account it was granted on.
 	"internal/modules/capture/gmail/client.go:func watchOnce":       "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/client.go:func getOnce":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/responseget.go:func getOnce":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/gmail/send.go:func postJSONOnce":      "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",

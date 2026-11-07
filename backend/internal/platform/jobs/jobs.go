@@ -232,6 +232,11 @@ func (r *Runner) SubscribeCompleted() (<-chan *river.Event, func()) {
 	return r.client.Subscribe(river.EventKindJobCompleted)
 }
 
+// SubscribeSnoozed reports resource waits without counting them as failures.
+func (r *Runner) SubscribeSnoozed() (<-chan *river.Event, func()) {
+	return r.client.Subscribe(river.EventKindJobSnoozed)
+}
+
 // SubscribeFailed delivers job-FAILURE events — a job that errored and was
 // either set to retry or discarded. It fires per ATTEMPT, so unlike completion
 // and cancellation it does not announce a settled job: a caller that needs the

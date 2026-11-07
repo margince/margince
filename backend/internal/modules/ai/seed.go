@@ -39,15 +39,28 @@ func SeedWorkspaceDefaultsTx(ctx context.Context, tx pgx.Tx, now time.Time) erro
 				provider, model_id,
 				input_per_mtok_microusd, output_per_mtok_microusd,
 				cache_read_per_mtok_microusd, cache_write_per_mtok_microusd,
-				effective_date, lane, source
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'seed')
+				effective_date, lane, source,
+				long_context_above_tokens, long_context_input_per_mtok_microusd,
+				long_context_output_per_mtok_microusd, long_context_cache_read_per_mtok_microusd,
+				long_context_cache_write_per_mtok_microusd
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'seed', $9, $10, $11, $12, $13)
 			ON CONFLICT (provider, model_id, effective_date) DO NOTHING`,
-			r.Provider, r.ModelID,
-			r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
-			r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD,
-			r.EffectiveDate, string(r.Lane)); err != nil {
+			append([]any{r.Provider, r.ModelID,
+				r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
+				r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD,
+				r.EffectiveDate, string(r.Lane)}, bandArgs(r.LongContext)...)...); err != nil {
 			return fmt.Errorf("ai: seed workspace default rates: %w", err)
 		}
 	}
 	return nil
+}
+
+// bandArgs are the five long-context band columns of a seeded row, all nil for
+// a row with one flat price.
+func bandArgs(b *ContextBand) []any {
+	if b == nil {
+		return []any{nil, nil, nil, nil, nil}
+	}
+	return []any{b.AboveTokens, b.InputPerMTokMicroUSD, b.OutputPerMTokMicroUSD,
+		b.CacheReadPerMTokMicroUSD, b.CacheWritePerMTokMicroUSD}
 }

@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"errors"
 	"log/slog"
 
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -36,6 +37,28 @@ var (
 		Key: "capture.trace_payloads", Env: "MARGINCE_CAPTURE_TRACE_PAYLOADS", Type: config.Bool, Default: config.Some(true), Roles: bothRoles,
 		Doc: "Keep each traced message's sender and a bounded subject in the 24-hour capture trace, dropped messages included.",
 	})
+	CaptureHistoryConcurrency = config.Define(config.Spec[int]{
+		Key: "capture.history_concurrency", Env: "MARGINCE_CAPTURE_HISTORY_CONCURRENCY", Type: config.Int, Default: config.Some(2), Roles: bothRoles,
+		Validate: func(value int) error {
+			if value < 1 || value > 64 {
+				return errors.New("must be between 1 and 64")
+			}
+			return nil
+		},
+		Doc: "Limit on history imports running at once across the installation. Use the same value in every process.",
+	})
+	CaptureGmailMailboxQuota = config.Define(config.Spec[int]{
+		Key: "capture.gmail_mailbox_quota", Env: "MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA", Type: config.Int, Default: config.Some(6000), Roles: bothRoles,
+		Validate: validateGmailQuota, Doc: "Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google.",
+	})
+	CaptureGmailProjectQuota = config.Define(config.Spec[int]{
+		Key: "capture.gmail_project_quota", Env: "MARGINCE_CAPTURE_GMAIL_PROJECT_QUOTA", Type: config.Int, Default: config.Some(1200000), Roles: bothRoles,
+		Validate: validateGmailQuota, Doc: "Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process.",
+	})
+	CaptureHistoryHold = config.Define(config.Spec[bool]{
+		Key: "capture.history_hold", Env: "MARGINCE_CAPTURE_HISTORY_HOLD", Type: config.Bool, Default: config.Some(false), Roles: bothRoles,
+		Doc: "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",
+	})
 	CaptureMaxBackfillMonths = config.Define(config.Spec[int]{
 		Key: "capture.max_backfill_months", Env: "MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
 		Doc: "How far back a mailbox import may reach, for the whole installation; 0 is no cap.",
@@ -51,7 +74,7 @@ var (
 func captureSettings() []config.Any {
 	return []config.Any{
 		CaptureFreemailExtra, CaptureFreemailNever, CaptureTransactionalExtra, CaptureTransactionalNever,
-		CaptureTracePayloads, CaptureMaxBackfillMonths, CaptureSkipReservedDomainProposals,
+		CaptureTracePayloads, CaptureMaxBackfillMonths, CaptureHistoryConcurrency, CaptureHistoryHold, CaptureGmailMailboxQuota, CaptureGmailProjectQuota, CaptureSkipReservedDomainProposals,
 	}
 }
 
@@ -68,8 +91,19 @@ func CaptureConfigFromDeploy(c *config.Config, log *slog.Logger) CaptureConfig {
 		TransactionalNever: config.Val(c, CaptureTransactionalNever),
 		TracePayloads:      config.Val(c, CaptureTracePayloads),
 		MaxBackfillMonths:  config.Val(c, CaptureMaxBackfillMonths),
+		HistoryConcurrency: config.Val(c, CaptureHistoryConcurrency),
+		HistoryHold:        config.Val(c, CaptureHistoryHold),
+		GmailMailboxQuota:  config.Val(c, CaptureGmailMailboxQuota),
+		GmailProjectQuota:  config.Val(c, CaptureGmailProjectQuota),
 		Logger:             log,
 
 		SkipReservedDomainProposals: config.Val(c, CaptureSkipReservedDomainProposals),
 	}
+}
+
+func validateGmailQuota(value int) error {
+	if value < 1300 || value > 1_000_000_000 {
+		return errors.New("must be between 1300 and 1000000000 quota units per minute")
+	}
+	return nil
 }

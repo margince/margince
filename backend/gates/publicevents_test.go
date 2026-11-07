@@ -41,7 +41,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -129,7 +128,7 @@ var (
 // schema's enum (there is none today, but nothing stops one) never leaks in.
 func parseSubscribableEventTypeEnum(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(publicEventsPath)
+	raw, err := gatekit.ReadFile(publicEventsPath)
 	if err != nil {
 		t.Fatalf("read %s: %v", publicEventsPath, err)
 	}
@@ -307,7 +306,7 @@ var (
 // line, and an event with no following entity is reported as a contract bug.
 func parseContractEntityTypes(t *testing.T) map[string]string {
 	t.Helper()
-	raw, err := os.ReadFile(publicEventsPath)
+	raw, err := gatekit.ReadFile(publicEventsPath)
 	if err != nil {
 		t.Fatalf("read %s: %v", publicEventsPath, err)
 	}
@@ -478,7 +477,7 @@ func TestNoRawEmitForSubscribableEvent(t *testing.T) {
 	for tp := range crmcontracts.PublicEventVersions {
 		subscribable[tp] = true
 	}
-	err := filepath.WalkDir("internal/modules", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal/modules", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}

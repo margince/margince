@@ -50,8 +50,8 @@ type Documents interface {
 // around the file: the JSON-RPC frame, the other arguments and the retry key.
 const attachFramingAllowance = 64 << 10
 
-// maxInlineFileBytes is the largest decoded file whose base64 fits one request.
-const maxInlineFileBytes = (MaxMCPRequestBytes - attachFramingAllowance) / 4 * 3
+// MaxInlineFileBytes is the largest decoded file whose base64 fits one request.
+const MaxInlineFileBytes = (MaxMCPRequestBytes - attachFramingAllowance) / 4 * 3
 
 // documentParentTypes are the records an agent may file a document against:
 // the set uploadAttachment takes, so both doors accept one vocabulary.
@@ -74,7 +74,8 @@ func RegisterDocumentTools(r *Registry, docs Documents) {
 		return
 	}
 	r.Register(attachDocument{docs: docs})
-	r.Register(listDocuments{docs: docs})
+	r.Register(listRecordDocuments{docs: docs})
+	r.Register(listDocuments{})
 }
 
 func documentParentSchema() string {
@@ -190,10 +191,10 @@ func (t attachDocument) maxBytes(ctx context.Context) int64 {
 // AttachLimit is the largest file an agent may attach on either door: what one
 // MCP request carries inline, or the operator's per-file limit when smaller.
 func AttachLimit(operator int64) int64 {
-	if operator > 0 && operator < maxInlineFileBytes {
+	if operator > 0 && operator < MaxInlineFileBytes {
 		return operator
 	}
-	return maxInlineFileBytes
+	return MaxInlineFileBytes
 }
 
 func requireMediaType(declared string) error {
@@ -249,14 +250,50 @@ func TooLargeToAttach(field string, size, maxBytes int64) error {
 
 // --- list_documents (🟢 read) ---
 
-type listDocuments struct{ docs Documents }
+const listRecordDocumentsName = "list_record_documents"
 
-func (t listDocuments) Spec() mcp.ToolSpec {
+// listDocuments lists a record's files and, when a call names a file's id,
+// answers that file. The contract's download verb is added at registration.
+type listDocuments struct{ routed }
+
+func (listDocuments) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "list_documents", Title: "List a record's documents", Version: toolVersionV1,
-		Description:   listDocumentsCopy.render(),
-		Instead:       listDocumentsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Name: "list_documents", Title: "List a record's documents or read one", Version: toolVersionV1,
+		Description: listDocumentsCopy.render(),
+		Instead:     listDocumentsCopy.Instead,
+		InputSchema: schema(`{"type":"object","properties":{
+			"id":{"description":"A document's id from this list; naming it answers that file's contents as content_base64"},
+			"entity_type":{"description":"Needed to list, with entity_id; left out when id is named"},
+			"entity_id":{"description":"Needed to list, with entity_type; left out when id is named"}}}`),
+	}
+}
+
+func (listDocuments) routeTargets() map[string]string {
+	return map[string]string{listDocumentsChoice: listRecordDocumentsName}
+}
+
+//nolint:unparam // the error belongs to targetChooser: other routers refuse a call here.
+func (listDocuments) chooseTarget(members map[string]json.RawMessage) (string, error) {
+	dropNullMembers(members, routeIDArg)
+	if _, named := members[routeIDArg]; named {
+		return downloadAttachmentName, nil
+	}
+	return listRecordDocumentsName, nil
+}
+
+const (
+	listDocumentsChoice    = "list"
+	routeIDArg             = "id"
+	downloadAttachmentName = "download_attachment"
+)
+
+type listRecordDocuments struct{ docs Documents }
+
+func (t listRecordDocuments) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: listRecordDocumentsName, Title: "List a record's documents", Version: toolVersionV1,
+		Description:   listDocumentsCopy.Purpose,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listAttachments",
 		InputSchema: schema(`{"type":"object","required":["entity_type","entity_id"],
 			"properties":{` + documentParentSchema() + `,
@@ -267,7 +304,7 @@ func (t listDocuments) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t listDocuments) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+func (t listRecordDocuments) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
 		EntityType string   `json:"entity_type"`
 		EntityID   ids.UUID `json:"entity_id"`

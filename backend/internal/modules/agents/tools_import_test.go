@@ -466,10 +466,9 @@ func TestCommitImportCopyStatesSequencingRatherThanAnApproval(t *testing.T) {
 		t.Errorf("commit_import no longer says the state is reached by producing a dry-run "+
 			"report, which is the only precondition it actually has:\n%s", rendered)
 	}
-	// The irreversibility is what earns the dry run its turn, and it is the one
-	// reason to show the counts that does not depend on a control.
-	if !strings.Contains(rendered, "cannot be undone") {
-		t.Errorf("commit_import no longer says the write cannot be undone from this surface:\n%s", rendered)
+	// Undoing asks the user first, which is one reason to show the counts now.
+	if !strings.Contains(rendered, "change_capture takes it back") {
+		t.Errorf("commit_import no longer names how the write is taken back:\n%s", rendered)
 	}
 	for _, claim := range []string{
 		"not this call's to give",

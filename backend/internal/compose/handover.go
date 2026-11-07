@@ -19,9 +19,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -74,10 +76,11 @@ func newHandoverSeam(engine *bulkEngine) handoverSeam {
 }
 
 // admit is the gate the count and the move both pass, in their own transaction.
-// It admits a human whom the member verbs would let act on this member. Every
-// record moved after it is still gated by its own write check.
+// It admits a human whom the member verbs would let act on this member, or an
+// agent acting for one. Every record moved after it is still gated by its own
+// write check.
 func admit(ctx context.Context, tx pgx.Tx, member ids.UUID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	return identity.AdmitMemberHandover(ctx, tx, ids.From[ids.UserKind](member))
@@ -103,12 +106,21 @@ func (s handoverSeam) countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID
 	if counts.Task, err = s.tasks.OpenTasksAssignedTo(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
 		return crmcontracts.HandoverCounts{}, err
 	}
+	if counts.Webhook, err = webhooks.OwnedLiveSubscriptionsTx(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
+		return crmcontracts.HandoverCounts{}, err
+	}
 	for table, count := range handoverTally(&counts) {
+		if table == string(recordTypeList) {
+			continue
+		}
 		owned, err := visibleOwnedIDs(ctx, tx, table, member)
 		if err != nil {
 			return crmcontracts.HandoverCounts{}, err
 		}
 		*count = len(owned)
+	}
+	if counts.List, err = collections.MemberListsCountTx(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
+		return crmcontracts.HandoverCounts{}, err
 	}
 	if !privateUnseen(ctx, member) {
 		return counts, nil
@@ -141,6 +153,7 @@ func handoverTally(counts *crmcontracts.HandoverCounts) map[string]*int {
 	return map[string]*int{
 		tableLead: &counts.Lead, tableContact: &counts.Contact, tableCompany: &counts.Company,
 		tableDeal: &counts.Deal, tableProject: &counts.Project,
+		string(recordTypeList): &counts.List,
 	}
 }
 
@@ -155,6 +168,9 @@ func (s handoverSeam) HandOver(ctx context.Context, member, receiver ids.UUID) (
 		}
 		if member == receiver {
 			return &handoverSameUserError{}
+		}
+		if err := identity.RefuseAgentOwnReceiver(ctx, receiver); err != nil {
+			return err
 		}
 		if err := auth.EnsureAssignee(ctx, tx, receiver); err != nil {
 			if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
@@ -196,6 +212,17 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.Project = projectsMoved
+	// A webhook runs under its owner and stops when they leave; it moves with
+	// the rest of their work so the integration keeps delivering. A receiver
+	// the caller could not name as owner by an edit leaves it with the member.
+	webhooksMoved, err := webhooks.TransferSubscriptionOwnershipTx(ctx, tx, ids.From[ids.UserKind](member), receiver, identity.AdmitMemberHandover)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return crmcontracts.UserHandoverResult{}, err
+	}
+	moved.Webhook = webhooksMoved
+	if moved.List, err = collections.TransferMemberListsTx(ctx, tx, ids.From[ids.UserKind](member), receiver); err != nil {
+		return crmcontracts.UserHandoverResult{}, err
+	}
 	// Whoever now owns the contacts decides who may see them. A share request
 	// put to the member who handed them over is withdrawn with the handover.
 	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {

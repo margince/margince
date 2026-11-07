@@ -163,7 +163,7 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 	// — pointing at bytes nothing can serve. The committed row no longer names
 	// these, and no record ever did.
 	for _, unadopted := range unadoptedLogos {
-		deleteUnreferencedLogo(r.Context(), e.blob, e.logger(), "read "+ids.UUID(readID).String(), &unadopted)
+		deleteUnreferencedObject(r.Context(), e.blob, e.logger(), "read "+ids.UUID(readID).String(), &unadopted)
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractCompany(company))
 }

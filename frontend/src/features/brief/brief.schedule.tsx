@@ -13,11 +13,11 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { activityTimeOfDay } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { itemTitle, moveHref, rowHref } from "../../lib/worklistcopy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import {
@@ -76,7 +76,7 @@ export function SchedulePanel({
 }: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const titleId = useId();
   if (scheduleIsEmpty(day, state)) {
     return null;
@@ -181,7 +181,7 @@ function CalendarRow({
 function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const time = activityTimeOfDay(
     next.starts_at,
     next.occurred_precision,

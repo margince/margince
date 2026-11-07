@@ -17,9 +17,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { accountsOf } from "../../format/connectorprovider";
 import { LocaleProvider } from "../../i18n";
-import type { ImportWindow } from "../../lib/connect-account";
+import type {
+  ConnectAccountInput,
+  ImportWindow,
+} from "../../lib/connect-account";
 import { locationDouble } from "../../testing/locationdouble";
 import { ConnectionAccountRow } from "./connection-account";
+import { type PendingStop, StopConfirm } from "./connection-stop";
 
 // One account on Connections: its services each say how they are doing and
 // carry their own verb. The verbs about the whole account sit in its menu.
@@ -376,6 +380,249 @@ describe("the account's settings", () => {
 });
 
 describe("the account's own verbs", () => {
+  it("ends a stop whose services left the account, and keeps the follow-up connect", () => {
+    const calls = stubApi({});
+    const onStopped = vi.fn();
+    const afterwards: ConnectAccountInput = {
+      provider: "gmail",
+      returnTo: "settings",
+    };
+    const [account] = accountsOf([gcal]);
+    rtlRender(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={account}
+            title="lars@example.de"
+            stop={{ services: ["mail"], afterwards }}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onStopped).toHaveBeenCalledWith(afterwards);
+    expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(0);
+  });
+
+  it("lets a running disconnect end the stop, once, when the account changes under it", async () => {
+    let finish: (response: Response) => void = () => undefined;
+    const calls = stubApi({
+      "POST /disconnect": () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    });
+    const onStopped = vi.fn();
+    const afterwards: ConnectAccountInput = {
+      provider: "gmail",
+      returnTo: "settings",
+    };
+    const client = new QueryClient();
+    const confirm = (connections: CaptureConnection[]) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf(connections)[0]}
+            title="lars@example.de"
+            stop={{ services: ["mail"], afterwards }}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    const view = rtlRender(confirm([gmail, gcal]));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(1),
+    );
+
+    view.rerender(confirm([gcal]));
+    expect(onStopped).not.toHaveBeenCalled();
+
+    finish(new Response(null, { status: 204 }));
+    await waitFor(() => expect(onStopped).toHaveBeenCalledWith(afterwards));
+    expect(onStopped).toHaveBeenCalledOnce();
+  });
+
+  it("keeps naming both services when one leaves during a running disconnect", async () => {
+    let finish: (response: Response) => void = () => undefined;
+    let first = true;
+    stubApi({
+      "POST /disconnect": () => {
+        if (!first) {
+          return new Response(null, { status: 204 });
+        }
+        first = false;
+        return new Promise<Response>((resolve) => {
+          finish = resolve;
+        });
+      },
+    });
+    const onStopped = vi.fn();
+    const client = new QueryClient();
+    const confirm = (connections: CaptureConnection[]) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf(connections)[0]}
+            title="lars@example.de"
+            stop={{ services: ["mail", "calendar"], afterwards: null }}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    const view = rtlRender(confirm([gmail, gcal]));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+
+    view.rerender(confirm([gcal]));
+
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      /stops Mail and Calendar/,
+    );
+    finish(new Response(null, { status: 204 }));
+    await waitFor(() => expect(onStopped).toHaveBeenCalledOnce());
+  });
+
+  it("names only what was confirmed when a service left before the confirm", async () => {
+    let finish: (response: Response) => void = () => undefined;
+    const calls = stubApi({
+      "POST /disconnect": () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    });
+    const onStopped = vi.fn();
+    const user = userEvent.setup();
+    rtlRender(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf([gcal])[0]}
+            title="lars@example.de"
+            stop={{ services: ["mail", "calendar"], afterwards: null }}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(1),
+    );
+
+    expect(screen.getByRole("dialog")).not.toHaveTextContent(/Mail/);
+    finish(new Response(null, { status: 204 }));
+    await waitFor(() => expect(onStopped).toHaveBeenCalledOnce());
+  });
+
+  it("ends a stop whose disconnect failed once its service left the account", async () => {
+    stubApi({
+      "POST /disconnect": () => jsonResponse({ code: "internal" }, 500),
+    });
+    const onStopped = vi.fn();
+    const afterwards: ConnectAccountInput = {
+      provider: "gmail",
+      returnTo: "settings",
+    };
+    const client = new QueryClient();
+    const confirm = (connections: CaptureConnection[]) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf(connections)[0]}
+            title="lars@example.de"
+            stop={{ services: ["mail"], afterwards }}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    const view = rtlRender(confirm([gmail, gcal]));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("dialog")).getByRole("alert"),
+      ).toBeInTheDocument(),
+    );
+    expect(onStopped).not.toHaveBeenCalled();
+
+    view.rerender(confirm([gcal]));
+
+    await waitFor(() => expect(onStopped).toHaveBeenCalledWith(afterwards));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("ends a later stop whose services left, after an earlier stop succeeded", async () => {
+    stubApi({
+      "POST /disconnect": () => new Response(null, { status: 204 }),
+    });
+    const onStopped = vi.fn();
+    const afterwards: ConnectAccountInput = {
+      provider: "gmail",
+      returnTo: "settings",
+    };
+    const client = new QueryClient();
+    const confirm = (
+      connections: CaptureConnection[],
+      stop: PendingStop | null,
+    ) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <StopConfirm
+            account={accountsOf(connections)[0]}
+            title="lars@example.de"
+            stop={stop}
+            onClose={() => undefined}
+            onStopped={onStopped}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const user = userEvent.setup();
+    const view = rtlRender(
+      confirm([gmail, gcal], { services: ["mail"], afterwards: null }),
+    );
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() => expect(onStopped).toHaveBeenCalledWith(null));
+    view.rerender(confirm([gcal], null));
+
+    view.rerender(confirm([gcal], { services: ["mail"], afterwards }));
+
+    await waitFor(() => expect(onStopped).toHaveBeenCalledWith(afterwards));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("disconnects every service of the account after one confirm", async () => {
     const calls = stubApi({
       "POST /disconnect": () => new Response(null, { status: 204 }),

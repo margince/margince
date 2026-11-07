@@ -119,3 +119,31 @@ func TestTheHumansEditKeepsWhatTheAgentsDraftWasWrittenFrom(t *testing.T) {
 		t.Errorf("an edited draft written from an archived conversation → %v, want ErrNotFound", err)
 	}
 }
+
+// A save through the route names no grounding, so the agent's draft keeps resting on
+// what it was written from. One made on a stale version is refused and moves nothing.
+func TestARouteSaveKeepsAnAgentsGroundingAndHonoursTheVersion(t *testing.T) {
+	e := setupSend(t)
+	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
+	ground := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Ground")}
+	store := draftStore(e)
+	agent := e.asAgentFor(t, principal.RowScopeAll)
+	saved, err := store.SaveAgentMailDraft(agent, anchor, agentDraft("From what they said"), []MailDraftAnchor{ground})
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited, err := store.SaveMailDraft(agent, anchor, agentDraft("Shorter"), &saved.Version)
+	if err != nil {
+		t.Fatalf("the agent's route save: %v", err)
+	}
+	if len(edited.Grounding) != 1 || edited.Grounding[0] != ground {
+		t.Errorf("the route save left grounding %+v, want %+v", edited.Grounding, ground)
+	}
+	if _, err := store.SaveMailDraft(agent, anchor, agentDraft("Stale"), &saved.Version); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a save on a stale version answered %v, want ErrVersionSkew", err)
+	}
+	got, err := store.GetMailDraft(agent, anchor)
+	if err != nil || got.Content.Body != "Shorter" {
+		t.Errorf("the draft reads %q (%v), want the newer words", got.Content.Body, err)
+	}
+}

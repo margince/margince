@@ -275,14 +275,15 @@ zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$WORK/skill.zip" "$WORK/s
   [[ -f "$SKILL_DIR/INDEX.md" ]] || { echo "HARNESS: the skill has no INDEX.md" >&2; exit 2; }
 }
 
-# use_passport points the assistant at the narrow credential (read, write) or the
-# wide one (adds draft and send). A scenario asks for the wide one with
-# `passport: wide`; every other case is measured exactly as before, because a
-# send tool offered to a case that never asked for one is a different
-# experiment.
+# use_passport points the assistant at the narrow credential (read, write), the
+# wide one (adds draft and send) or the research one (adds enrich). A scenario
+# asks for another with `passport: wide` or `passport: research`; every other
+# case is measured exactly as before, because a send tool offered to a case that
+# never asked for one is a different experiment.
 use_passport() {
   case "$1" in
     wide) PASSPORT="$PASSPORT_WIDE" ;;
+    research) PASSPORT="$PASSPORT_RESEARCH" ;;
     *) PASSPORT="$PASSPORT_NARROW" ;;
   esac
   write_mcp_config
@@ -316,6 +317,12 @@ except Exception: print("")')"
 try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
   [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
+  PASSPORT_RESEARCH="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
+    -d '{"label":"e2e-llm-research","scopes":["read","write","enrich"]}' \
+    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("token",""))
+except Exception: print("")')"
+  [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
 
   [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
@@ -324,7 +331,7 @@ except Exception: print("")')"
   # which reads downstream as a model that chose not to call anything. Fail
   # here instead, where the cause is still visible.
   local probe token
-  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE"; do
+  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH"; do
     probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
       -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
       -H 'Accept: application/json, text/event-stream' \
@@ -449,9 +456,12 @@ restart_stack snapshot_world
 #   --permission-mode dontAsk    with the surface genuinely restricted, a global
 #                                bypass buys nothing.
 #   --max-turns                  hidden from --help on this version but present.
+#
+# e2e/llm/clean.py starts the CLI from an empty directory, with no settings,
+# memory or skills; check.py --clean stops a run whose init line says otherwise.
 run_claude() {
   local prompt_file="$1" out="$2" exited=0
-  claude -p "$(cat "$prompt_file")" \
+  python3 "$ROOT/e2e/llm/clean.py" -p "$(cat "$prompt_file")" \
     --model "$MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
     --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
@@ -518,6 +528,16 @@ for line in open(sys.argv[1]):
 ' "$out")" == clean ]]; then
     echo "the claude CLI exited $exited under a result that reports no error" >>"$out.err"
     return 3
+  fi
+}
+
+# keep_transcript copies a stopped run's transcript where the reader looks. It is
+# the only evidence of which failure this was, so a copy that fails says so.
+keep_transcript() {
+  if ! cp "$1" "$RECORD_DIR/"; then
+    echo "  and the transcript could not be kept: $1" >&2
+  else
+    echo "  the transcript is at $RECORD_DIR/$(basename "$1")"
   fi
 }
 
@@ -592,15 +612,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   esac
 done
 
-# `passport:` is absent (the narrow credential) or `wide`. Anything else would be
+# `passport:` is absent (the narrow credential), `wide` or `research`. Anything else would be
 # read as narrow by use_passport and measure a case on a surface its author did
 # not mean, so a misspelling stops the lane here, before the first token.
 for scenario in "$SCENARIO_DIR"/*.yaml; do
   declared="$(python3 "$ROOT/e2e/llm/check.py" --field passport "$scenario")"
   case "$declared" in
-    ""|wide) ;;
+    ""|wide|research) ;;
     *)
-      echo "$(basename "$scenario") declares passport=$declared; it must be absent or wide" >&2
+      echo "$(basename "$scenario") declares passport=$declared; it must be absent, wide or research" >&2
       exit 1
       ;;
   esac
@@ -692,7 +712,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "HARNESS: $name run $i could not be run:"
       tail -5 "$transcript.err" | sed 's/^/  /'
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     if [[ "$run_status" -ne 0 ]]; then
@@ -719,14 +739,16 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "  $why"
       tail -5 "$transcript.err" 2>/dev/null | sed 's/^/  driver: /'
       echo "  This is not a use-case failure. Nothing was scored."
-      # The transcript is the only evidence of WHICH failure this was, so a
-      # copy that fails says so rather than leaving the reader with a verdict
-      # and nothing to check it against.
-      if ! cp "$transcript" "$RECORD_DIR/"; then
-        echo "  and the transcript could not be kept: $transcript" >&2
-      else
-        echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
-      fi
+      keep_transcript "$transcript"
+      exit 2
+    fi
+    # A candidate that loaded the repository's rules or the operator's setup
+    # did not measure the copy, so its run is not scored.
+    if ! why="$(python3 "$ROOT/e2e/llm/check.py" --clean "$transcript")"; then
+      echo
+      echo "HARNESS: $name run $i did not start clean: $why"
+      echo "  This is not a use-case failure. Nothing was scored."
+      keep_transcript "$transcript"
       exit 2
     fi
     # A REQUIRED TOOL THE MODEL WAS NEVER OFFERED fails must_call for a reason
@@ -736,7 +758,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo
       echo "HARNESS: $name run $i was not offered what it needs: $why"
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
@@ -753,7 +775,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo "HARNESS: $name run $i left a world that could not be read:"
       tail -3 "$results" | sed 's/^/  /' || :
       echo "  This is not a use-case failure. Nothing was scored."
-      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
+      keep_transcript "$transcript"
       exit 2
     fi
     # EXIT 2 IS NOT A FAILED RUN. `--check` answers 1 for a scenario the answer

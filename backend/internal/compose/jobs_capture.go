@@ -55,9 +55,6 @@ func addGmailCaptureJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 	// the pager registered, and the nightly reconcile that puts a pager back
 	// behind a run whose own was lost (ADR-0063).
 	addDeclaredWorker[CaptureBackfillArgs](reg, &captureBackfillWorker{registry: cfg.GmailRegistry, log: log})
-	addDeclaredWorker[CaptureBackfillReconcileArgs](reg, &captureBackfillReconcileWorker{
-		pool: pool, registry: cfg.GmailRegistry, log: log,
-	})
 	if cfg.GmailWatch.Topic == "" {
 		return
 	}
@@ -96,6 +93,10 @@ func addStoredObjectJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConf
 }
 
 func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
+	addDeclaredWorker[CaptureBackfillReconcileArgs](reg, &captureBackfillReconcileWorker{
+		pool: pool, registry: cfg.GmailRegistry, log: log, enrichEnabled: cfg.EnrichBrain != nil,
+	})
+
 	// The Telegram ingest job is not periodic — a poll enqueues one per accepted
 	// update in the same transaction as the raw capture row; the worker role only
 	// needs the worker registered. Registered unconditionally: unlike
@@ -188,7 +189,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 	// brain would leave exactly that deployment with a backlog nothing ends.
 	addDeclaredWorker[ConfidentialityVerdictArgs](reg, &confidentialityVerdictWorker{
 		pool:     pool,
-		engine:   NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log),
+		engine:   NewConfidentialityVerdictEngine(pool, cfg.ConfidentialityBrain, log).WithObjectStore(cfg.Blobstore),
 		receipts: newSweepRecorder(pool),
 	})
 	// The trace sweep, registered unconditionally and deliberately so: it is
@@ -320,6 +321,13 @@ func (w *captureSyncWorker) Work(ctx context.Context, job *river.Job[CaptureSync
 		return jobs.FaultContext(ctx, err)
 	}
 	if err := w.registry.SyncOnce(wsCtx, conn); err != nil {
+		// A member whose role cannot capture is a setting an admin chose, not
+		// a fault, and it repeats on every tick until they change it.
+		if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {
+			w.log.InfoContext(ctx, "capture connection sync refused for the member's role",
+				"connection", job.Args.ConnectionID, "provider", job.Args.Provider)
+			return nil
+		}
 		w.log.WarnContext(ctx, "capture connection sync failed", "connection", job.Args.ConnectionID,
 			"provider", job.Args.Provider, "err", err, rateLimitAttr(err))
 	}

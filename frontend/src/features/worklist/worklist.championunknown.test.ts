@@ -5,13 +5,13 @@
 // imported deal named by its company and stage.
 
 import { describe, expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { translate } from "../../i18n";
 import { itemTitle, reasonText } from "../../lib/worklistcopy";
 import type { WorklistItem, WorklistReason } from "./worklist.queries";
 
-const zone = viewerZone();
+const zone = browserZone();
 const unknown: WorklistReason = { kind: "champion_unknown" };
 const uncovered: WorklistReason = { kind: "no_champion" };
 
@@ -25,13 +25,15 @@ describe("reasonText — champion unknown", () => {
     ["de", "Champion unbekannt"],
     ["vi", "chưa rõ người ủng hộ"],
   ] as const)("says the champion is unknown in %s", (locale, phrase) => {
-    expect(reasonText(unknown, inLocale(locale), locale, zone)).toBe(phrase);
+    expect(reasonText(unknown, inLocale(locale), locale, zone, undefined)).toBe(
+      phrase,
+    );
   });
 
   it("never reads as the finding that nobody is the champion", () => {
     const t = inLocale("en");
-    expect(reasonText(unknown, t, "en", zone)).not.toBe(
-      reasonText(uncovered, t, "en", zone),
+    expect(reasonText(unknown, t, "en", zone, undefined)).not.toBe(
+      reasonText(uncovered, t, "en", zone, undefined),
     );
   });
 });

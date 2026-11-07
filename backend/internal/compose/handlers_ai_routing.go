@@ -94,7 +94,7 @@ func (h aiRoutingHandlers) GetAiRoutingSchema(w http.ResponseWriter, r *http.Req
 		httperr.NotImplemented(w, r, "GetAiRoutingSchema")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -322,9 +322,8 @@ func (h aiRoutingHandlers) ListProviderLocations(w http.ResponseWriter, r *http.
 		httperr.NotImplemented(w, r, "ListProviderLocations")
 		return
 	}
-	// Human-only (x-agent-access): the agent gate refuses first, and this is
-	// its in-handler twin, as on the binding write.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	// Automatic work with no passport reads no provider's locations.
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

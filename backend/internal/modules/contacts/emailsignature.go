@@ -89,8 +89,9 @@ type SenderSignature struct {
 	LogoKey string
 }
 
-// signingEntity is what the legal entity a user works for gives their mail:
-// its template, falling back to the workspace's, and its imprint and logo.
+// signingEntity is what the legal entity a message goes out for gives it: its
+// template, falling back to the workspace's, and its imprint and logo. A zero
+// entity is the one the user works for now.
 type signingEntity struct {
 	template, imprint string
 	// logoKey is set only on a further entity. The default entity wears the
@@ -99,14 +100,16 @@ type signingEntity struct {
 	isDefault bool
 }
 
-func signingEntityTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (signingEntity, error) {
+func signingEntityTx(ctx context.Context, tx pgx.Tx, user, sending ids.UUID) (signingEntity, error) {
 	workspace, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
 	if err != nil {
 		return signingEntity{}, err
 	}
-	entityID, err := UserLegalEntity(ctx, tx, ids.From[ids.UserKind](user))
-	if err != nil {
-		return signingEntity{}, err
+	entityID := ids.From[ids.LegalEntityKind](sending)
+	if sending.IsZero() {
+		if entityID, err = UserLegalEntity(ctx, tx, ids.From[ids.UserKind](user)); err != nil {
+			return signingEntity{}, err
+		}
 	}
 	entity, err := ResolveEntityIdentity(ctx, tx, entityID)
 	if err != nil {
@@ -132,7 +135,7 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 	}
 	var out EmailSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		entity, err := signingEntityTx(ctx, tx, actor.UserID)
+		entity, err := signingEntityTx(ctx, tx, actor.UserID, ids.Nil)
 		if err != nil {
 			return err
 		}
@@ -220,14 +223,15 @@ func upsertSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, body str
 	return err
 }
 
-// SignatureFor reads one user's signature for the send path.
+// SignatureFor reads one user's signature for the send path, for the legal
+// entity named by sending. Zero is the entity the user works for now.
 //
 // Separate from the Get above because the caller is different: that one answers
 // a settings tab about the reader reading it, this one answers the mailer about
 // the contact SENDING. Both resolve the same row; neither lets one member read
 // another's, because the send path only ever asks about its own authenticated
 // sender.
-func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignature, error) {
+func (s *Store) SignatureFor(ctx context.Context, userID, sending ids.UUID) (SenderSignature, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID != userID {
 		// A send signs with the SENDER's own sign-off. Asking for anybody
@@ -238,7 +242,7 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 	var entity signingEntity
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		entity, err = signingEntityTx(ctx, tx, userID)
+		entity, err = signingEntityTx(ctx, tx, userID, sending)
 		if err != nil {
 			return err
 		}

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { translate, translatePlural } from "../../i18n";
 import type { VocabularyField } from "../../lib/filterdata";
 import {
@@ -280,7 +280,7 @@ describe("the sentence a mixed row reads as", () => {
     t: (key, params) => translate("de", key, params),
     plural: (base, count, params) => translatePlural("de", base, count, params),
     locale: "de",
-    zone: viewerZone(),
+    zone: browserZone(),
   };
 
   it("brackets the and run, so the words read as the filter selects", () => {

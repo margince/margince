@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -41,7 +42,7 @@ func TestADocumentComesBackByteIdenticalToWhatWasUploaded(t *testing.T) {
 	// re-encoding or a trimming round trip would quietly change.
 	const original = "# Betrieb\n\nDie Löschfrist beträgt 400 Tage.\n"
 
-	body, ctype := multipartDocument(t, "handbuch.md", "text/markdown", []byte(original))
+	body, ctype := apptest.MultipartDocument(t, "handbuch.md", "text/markdown", []byte(original))
 	upRec := httptest.NewRecorder()
 	upReq := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
 	upReq.Header.Set("Content-Type", ctype)
@@ -80,7 +81,7 @@ func TestDownloadingWithoutTheDocumentGrantIsRefused(t *testing.T) {
 	admin := e.As(e.Rep1, nil, corpusAdminPerms)
 	made := httpCorpus(admin, t, h)
 
-	body, ctype := multipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
+	body, ctype := apptest.MultipartDocument(t, "operating.md", "text/markdown", []byte(onePassage))
 	upRec := httptest.NewRecorder()
 	upReq := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(admin)
 	upReq.Header.Set("Content-Type", ctype)

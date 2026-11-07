@@ -1,0 +1,188 @@
+/* A document as a tile in a gallery: the Deal Room's board and every record's
+   Documents tab draw their files this one way. Tokens only. */
+
+.board-doc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  transition: border-color var(--dur-state) var(--ease-out);
+}
+
+/* Hover lifts nothing; the edge turns accent, as a file card's does. */
+.board-doc:hover,
+.board-doc:focus-within {
+  border-color: var(--accent);
+}
+
+/* The stage: a page-shaped placeholder on the well ground, the kind stamped
+   in one corner and the caller's mark in the other. It is what lets a reader
+   tell eight tiles apart before opening any of them. */
+.board-doc-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 112px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--groundEdge);
+}
+
+/* A file the buyer no longer gets: its paper recedes, so the tile does not
+   read as one still shared. */
+.board-doc-lapsed .board-doc-stage {
+  opacity: 0.6;
+}
+
+.board-doc-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 58%;
+  height: 96px;
+  padding: var(--space-3) var(--space-3) 0;
+  background: var(--bgElevated);
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  box-shadow: var(--shadow-rest);
+}
+
+.board-doc-page-line {
+  display: block;
+  height: 4px;
+  border-radius: var(--r-xs);
+  background: var(--borderStrong);
+}
+
+.board-doc-page-head {
+  width: 55%;
+  height: 7px;
+  background: var(--borderStrong);
+}
+
+.board-doc-page-short {
+  width: 78%;
+}
+
+.board-doc-kind {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
+}
+
+.board-doc-mark {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+
+.board-doc-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--padCard);
+}
+
+.board-doc-title {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The tile's door, stretched over the whole tile the way a deal card's name
+   is: the text stays where the title belongs, the ::after is what makes the
+   paper clickable. A button rather than a link because what opens is a
+   dialog over this page, not another page. */
+.board-doc-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.board-doc-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.board-doc-open:focus-visible {
+  outline: none;
+}
+
+/* The ring goes on the tile, because the tile is what the press opens. */
+.board-doc:has(.board-doc-open:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Everything with a press of its own sits ABOVE the stretched door, which is
+   the only reason those presses can reach it at all. The mark is already
+   placed on the stage and only needs the layer. */
+.board-doc-body > :not(.board-doc-title, .board-doc-meta),
+.board-doc > :not(.board-doc-stage, .board-doc-body) {
+  position: relative;
+  z-index: 1;
+}
+
+.board-doc-mark {
+  z-index: 1;
+}
+
+.board-doc-meta {
+  overflow-wrap: anywhere;
+}
+
+.board-doc-status {
+  margin-top: var(--space-1);
+}
+
+/* A row in a list: the stage narrows to a lead holding the kind and the mark,
+   and the page shape gives way, so a long library reads at a glance. */
+.board-doc-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.board-doc-row .board-doc-stage {
+  flex: 0 0 5.5rem;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-1);
+  height: auto;
+  min-height: 4rem;
+  padding: var(--space-2);
+  border-bottom: 0;
+  border-inline-end: 1px solid var(--groundEdge);
+}
+
+.board-doc-row .board-doc-page {
+  display: none;
+}
+
+.board-doc-row .board-doc-kind,
+.board-doc-row .board-doc-mark {
+  position: static;
+}
+
+.board-doc-row .board-doc-body {
+  flex: 1 1 0;
+  min-width: 0;
+  /* The column gap parts the facts from verbs a caller sets beside them. */
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--padCard);
+}
+
+/* What the caller adds under the body takes the row's whole width. */
+.board-doc-row > :not(.board-doc-stage, .board-doc-body) {
+  flex-basis: 100%;
+}

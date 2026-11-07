@@ -710,3 +710,51 @@ describe("a failure nobody wrote for a reader", () => {
     ).toBeTruthy();
   });
 });
+
+describe("internal history consent", () => {
+  const internalPreview: BackfillPreview = {
+    ...previewOf(400),
+    internal_mail: {
+      preview_token: "authorized-source-window",
+      received_after: "2026-06-01T00:00:00Z",
+      folders: ["Customer Operations"],
+    },
+  };
+  it("excludes internal history until the owner explicitly includes the previewed scope", async () => {
+    const calls = stubApi({ statuses: [statusNone], preview: internalPreview });
+    const user = userEvent.setup();
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
+    const consent = await screen.findByRole("checkbox", {
+      name: "Include authorized internal mail in a new history import",
+    });
+    expect(consent).toHaveProperty("checked", false);
+    expect(screen.getByText(/Customer Operations/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Start import" }));
+    await waitFor(() =>
+      expect(requestsTo(calls, "/backfill", "POST")).toHaveLength(1),
+    );
+    expect(
+      await requestsTo(calls, "/backfill", "POST")[0]?.clone().json(),
+    ).toEqual({ window: "6m" });
+  });
+  it("sends the current preview token only after an explicit owner choice", async () => {
+    const calls = stubApi({ statuses: [statusNone], preview: internalPreview });
+    const user = userEvent.setup();
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
+    await user.click(
+      await screen.findByRole("checkbox", {
+        name: "Include authorized internal mail in a new history import",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Start import" }));
+    await waitFor(() =>
+      expect(requestsTo(calls, "/backfill", "POST")).toHaveLength(1),
+    );
+    expect(
+      await requestsTo(calls, "/backfill", "POST")[0]?.clone().json(),
+    ).toEqual({
+      window: "6m",
+      internal_mail_preview_token: "authorized-source-window",
+    });
+  });
+});

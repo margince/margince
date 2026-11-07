@@ -1,10 +1,10 @@
-import { Info, KeyRound, Lock, Plus, Trash2 } from "lucide-react";
+import { KeyRound, Lock, Plus, Trash2 } from "lucide-react";
 import { useId } from "react";
 import { Button, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { HelpPopover } from "../../design-system/helppopover";
 import { IconAction } from "../../design-system/iconaction";
-import { Popover } from "../../design-system/popover";
 import { useT } from "../../i18n";
 
 // One header row as the drawer edits it. `stored` marks a name the server
@@ -90,20 +90,10 @@ export function WebhookHeaderRows({
           <Heading size="small" id={titleId}>
             {t("webhooks.headers.title")}
           </Heading>
-          <Popover
-            className="webhook-help"
-            label={
-              <>
-                <Info aria-hidden />
-                <span className="sr-only">
-                  {t("webhooks.headers.helpLabel")}
-                </span>
-              </>
-            }
-          >
+          <HelpPopover label={t("webhooks.headers.helpLabel")}>
             <p>{t("webhooks.headers.hint")}</p>
             <p>{t("webhooks.headers.help")}</p>
-          </Popover>
+          </HelpPopover>
         </span>
         <span className="webhook-section-actions">
           {!hasAuthorization && (

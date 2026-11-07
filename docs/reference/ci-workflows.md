@@ -9,13 +9,14 @@ workflow is outside the gate:
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
 | `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement` | Yes, for an author outside the Margince team |
-| `cache-warm.yml` | `main` every three hours, manual dispatch | No |
+| `cache-warm.yml` | `pace.yml`, `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
 | `closing-declaration.yml` | pull request events | No |
 | `docs-describing.yml` | pull request events | No |
 | `issue-closed.yml` | issue `closed`, a daily check, manual dispatch | No |
-| `main-health.yml` | `main` every two hours, manual dispatch | No |
+| `main-health.yml` | `pace.yml`, `main` every six hours, manual dispatch | No |
+| `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
 | `release.yml` | manual dispatch only | No |
@@ -35,11 +36,15 @@ the one in `CLA.md`.
 
 ## `cache-warm.yml`
 
-The only writer of the Go build cache. A red or cancelled run makes the next lane slower, and costs
-nothing else. It is a separate workflow because a merge queue build cannot fill the cache.
-`actions/cache` scopes a write to the branch that writes plus the default branch, and a queue ref
-does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
-for why it runs on a schedule and not on each push.
+The only writer of the Go build cache and of the golangci analysis cache, and one of the writers of
+the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
+separate workflow because a merge queue build cannot fill the cache. `actions/cache` scopes a write
+to the branch that writes plus the default branch, and a queue ref does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
+for why it does not run on each push.
+
+GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
+three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
+caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-only).
 
 ## `merge-attest.yml`
 
@@ -90,6 +95,10 @@ and runs a script from it. So the job only runs for branches of this repository 
 `pull_request` event did not start it. A fork still gets the report on every push, but not the new
 report on a sent review. `backend/gates/forkheadcheckout_test.go` holds that across the workflow
 tree.
+
+A review the author of the pull request sends does not start it, and does not count as a record. A
+reply to a review thread is saved as a review by whoever replied, so a batch of replies would
+otherwise start one run each.
 
 It says nothing about a pull request nobody has reviewed yet. That is every pull request for most
 of the time it is open, and `merge-attest.yml` says nothing about a missing result for the same reason.
@@ -159,7 +168,14 @@ and holds only `issues: write`.
 
 ## `main-health.yml`
 
-Runs on `main` every two hours.
+Runs on `main` while commits are landing, with at least two hours between two runs.
+
+The GitHub scheduler can start a cron run hours behind its time, or not at all. It keeps no record
+of a run it did not start. So `pace.yml` runs on every push to `main` and starts this
+workflow when the newest run is at least two hours old
+([`scripts/pace-workflow.sh`](../../scripts/pace-workflow.sh), `make test-pace-workflow`).
+A cron line every six hours remains for a quiet `main`, when no push comes.
+
 Each run covers these lanes:
 
 - the backend gate;
@@ -199,7 +215,7 @@ an hour, it cuts the list of commits that may have caused a red to about 12.
 
 ## `scheduled.yml`
 
-Daily on `main`, plus a weekly Monday cron for the two jobs that cost too much to run daily. These
+Daily on `main`, plus a weekly Monday cron for the jobs that cost too much to run daily. These
 checks answer "is `main` still good?", and that answer can change when nothing is merged. `ci.yml`
 asks "is this diff good?", and runs because a diff exists.
 
@@ -207,7 +223,6 @@ asks "is this diff good?", and runs because a diff exists.
 |---|---|---|---|
 | `govulncheck` | daily | Go packages against the vulnerability database | The database changes daily, so a scan per PR proves only the day it merged. |
 | SonarCloud quality gate | daily | The stored gate of `main`, read through the API (no new scan) | It is not a required PR check, so nothing else reads it. `main-health.yml` publishes the analysis. |
-| backend lane | daily | The backend gate, always | A docs-only commit after a breaking one matches no classifier scope. Every gate skips, and the run reports green over a broken tree. |
 | frontend clock drift | daily | The Vitest tests run as if it were 200 days from now, with the same result | A fixture whose fixed date a page part compares to `now` breaks on a calendar date, with no diff. |
 | every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
 | backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
@@ -215,12 +230,13 @@ asks "is this diff good?", and runs because a diff exists.
 | `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
 | use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| MCP role sweep (`make test-roles`) | weekly | Every MCP tool and action called as every seeded role, held to `mcp-tool-roles.json` and `toolchecks.json` | It takes longer than a merge-gate job allows. Each PR still holds the committed table to the registry and to `tools/list`. |
 | weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:
 
-- The backend lane covers the same checks as the merge gate, by design. It is the one check that
-  does not trust the classifier of the gate.
+- The backend gate on `main` runs in `main-health.yml`, not as a daily job here. It runs the same
+  `make check-backend` on every health check, so a daily copy would only repeat it.
 - No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never
   pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
 - Many backend test files read the wall clock, and
@@ -336,9 +352,12 @@ Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#w
 Runs at once: `draft` and `docker-image` each carry a group that cancels, so an older bake stops. `publish`
 carries a group that queues runs and does not cancel. A publish that has started always runs to the end,
 and a publish that still waits when a newer one comes gives up its place. That way only one
-publish runs at a time, but in no set order. Nothing on this path refuses an old version. So a new
-run, or a dispatch of an older commit, can still publish after a newer one
-([#1810](https://github.com/margince/margince/issues/1810)).
+publish runs at a time, but in no set order.
+
+The workflow does not check the order itself. The dist service does. It refuses `publish-release` for a
+version that is not newer than its newest published one. It also refuses the same version a second time.
+So a new run of an old build fails at the publish step. A dispatch of an older commit fails there too,
+instead of landing after a newer release.
 
 ## `release-tag.yml`
 
