@@ -4953,6 +4953,8 @@ export const en = {
   "activity.detail.response.declined": "Declined",
   "activity.detail.response.tentative": "Maybe",
   "activity.detail.response.needsAction": "No answer",
+  "meeting.attendeesMore_one": "and {count} more",
+  "meeting.attendeesMore_other": "and {count} more",
   "activity.detail.guestsLeftOut_one": "and {count} more guest not listed",
   "activity.detail.guestsLeftOut_other": "and {count} more guests not listed",
   "activity.detail.colleagues": "Colleagues",
@@ -16543,6 +16545,9 @@ export const en = {
   "webhooks.event.deal.erased.label": "Deal erased",
   "webhooks.event.deal.erased.when": "A deal is erased for good.",
   "webhooks.eventGroup.offers": "Offers",
+  "webhooks.event.offer.updated.label": "Draft offer edited",
+  "webhooks.event.offer.updated.when":
+    "A draft offer’s header or lines change.",
   "webhooks.event.offer.created.label": "Offer revision created",
   "webhooks.event.offer.created.when":
     "An offer is created, or a sent offer is regenerated into a new draft.",

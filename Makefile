@@ -883,11 +883,11 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## A scenario stops once its verdict is settled; E2E_LLM_ALL_RUNS=1 makes every run.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
 ##
-## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
+## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|gemini|mistral, each pinned
 ## to the model its consumer app defaults to (e2e/llm/candidates.json), and
 ## E2E_LLM_VIA=api|openrouter|cli. api and openrouter run e2e/llm/drive.py, the
 ## neutral bridge that offers every vendor the same tools under the server's own
-## instructions — the comparable route. cli runs `claude -p` or `codex exec`,
+## instructions — the comparable route. cli runs `claude -p`, `codex exec` or `agy -p`,
 ## each with its own system prompt, filed apart under <model>@<cli>. The judge
 ## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter. Codex reports no list of
 ## the tools it offered, so its run is held against the lane's own tools/list;

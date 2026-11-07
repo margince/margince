@@ -16414,6 +16414,24 @@ func (e MeetingInvitationChangeAction) Valid() bool {
 	}
 }
 
+// Defines values for MeetingOtherParticipantKind.
+const (
+	MeetingOtherParticipantKindAddress   MeetingOtherParticipantKind = "address"
+	MeetingOtherParticipantKindColleague MeetingOtherParticipantKind = "colleague"
+)
+
+// Valid indicates whether the value is a known member of the MeetingOtherParticipantKind enum.
+func (e MeetingOtherParticipantKind) Valid() bool {
+	switch e {
+	case MeetingOtherParticipantKindAddress:
+		return true
+	case MeetingOtherParticipantKindColleague:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingPlanReadiness.
 const (
 	MeetingPlanReadinessMeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
@@ -38301,10 +38319,16 @@ type Company360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
 	// Participants The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it.
 	Participants []Company360MeetingParticipant `json:"participants"`
-	StartsAt     time.Time                      `json:"starts_at"`
-	Subject      string                         `json:"subject"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
+	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
+	StartsAt         time.Time `json:"starts_at"`
+	Subject          string    `json:"subject"`
 }
 
 // Company360NextStep One open task on the account, ordered overdue → due → undated.
@@ -41389,13 +41413,19 @@ type Contact360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
 	Participants *[]struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
 		FullName  string             `json:"full_name"`
 	} `json:"participants,omitempty"`
-	StartsAt time.Time `json:"starts_at"`
-	Subject  *string   `json:"subject,omitempty"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
+	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
+	StartsAt         time.Time `json:"starts_at"`
+	Subject          *string   `json:"subject,omitempty"`
 }
 
 // Contact360SinceLastVisit What changed on this contact since the caller last acknowledged seeing them.
@@ -53046,6 +53076,17 @@ type MeetingInvitationRequest struct {
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// MeetingOtherParticipant One attendee of a meeting who is not a contact.
+type MeetingOtherParticipant struct {
+	Kind MeetingOtherParticipantKind `json:"kind"`
+
+	// Name A colleague's display name, or the name the invitation gave an address, else the address.
+	Name string `json:"name"`
+}
+
+// MeetingOtherParticipantKind defines model for MeetingOtherParticipant.Kind.
+type MeetingOtherParticipantKind string
 
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
 // KNOWN about it.
@@ -92262,7 +92303,7 @@ type ServerInterface interface {
 	// Get ready for a meeting about one record.
 	// (GET /meeting-prep)
 	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
-	// The notification centre — every notice addressed to the acting contact, newest first.
+	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
@@ -92403,31 +92444,31 @@ type ServerInterface interface {
 	// State who this installation is.
 	// (PUT /privacy/controller-particulars)
 	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
-	// Disclosure duties this installation owes, soonest deadline first.
+	// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
-	// One disclosure duty.
+	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
 	// (GET /privacy/notice-case-reviews/{id})
 	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a disclosure duty an owner.
+	// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm the source of an unassessed contact.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Preview the source assessment without changing the case.
+	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 	// (POST /privacy/notice-case-reviews/{id}/source/preview)
 	PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Disclosure duties this installation owes, soonest deadline first.
+	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
-	// One disclosure duty.
+	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
 	// (GET /privacy/notice-cases/{id})
 	GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a disclosure duty an owner.
+	// Give a privacy notice already owed (from notice_cases) an owner.
 	// (POST /privacy/notice-cases/{id}/assign)
 	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
@@ -97563,7 +97604,7 @@ func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The notification centre — every notice addressed to the acting contact, newest first.
+// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
 // (GET /notices)
 func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -97845,19 +97886,19 @@ func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disclosure duties this installation owes, soonest deadline first.
+// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
 // (GET /privacy/notice-case-reviews)
 func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One disclosure duty.
+// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
 // (GET /privacy/notice-case-reviews/{id})
 func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a disclosure duty an owner.
+// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
 // (POST /privacy/notice-case-reviews/{id}/assign)
 func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -97869,31 +97910,31 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm the source of an unassessed contact.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Preview the source assessment without changing the case.
+// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 // (POST /privacy/notice-case-reviews/{id}/source/preview)
 func (_ Unimplemented) PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disclosure duties this installation owes, soonest deadline first.
+// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
 // (GET /privacy/notice-cases)
 func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One disclosure duty.
+// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
 // (GET /privacy/notice-cases/{id})
 func (_ Unimplemented) GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a disclosure duty an owner.
+// Give a privacy notice already owed (from notice_cases) an owner.
 // (POST /privacy/notice-cases/{id}/assign)
 func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
