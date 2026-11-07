@@ -44,7 +44,22 @@ var (
 	words      = strings.Fields("we discussed the proposal and agreed to move forward with the next phase of the project please find attached the updated plan the budget looks fine but legal needs another review before we can sign let us meet next week to go through the open points thanks for the quick reply")
 )
 
-func messageID(box, n int) string { return fmt.Sprintf("%x%06x", box+1, n) }
+// messageID is Gmail's id for message n. A later generation serves the same
+// mailboxes as new mail, so a second load run imports instead of replaying.
+func (s *server) messageID(box, n int) string {
+	if s.generation == 0 {
+		return fmt.Sprintf("%x%06x", box+1, n)
+	}
+	return fmt.Sprintf("g%d-%x%06x", s.generation, box+1, n)
+}
+
+// mailID is the RFC822 Message-ID of message n.
+func (s *server) mailID(box, n int) string {
+	if s.generation == 0 {
+		return fmt.Sprintf("<m%d.%d@mx.demo>", box, n)
+	}
+	return fmt.Sprintf("<m%d.%d.g%d@mx.demo>", box, n, s.generation)
+}
 
 func (s *server) rng(box, n int) *rand.Rand {
 	//nolint:gosec // G404: seeded on purpose, so a mailbox is the same on every run
@@ -125,17 +140,17 @@ func (s *server) build(box, n int) message {
 	if root != n {
 		subject = "Re: " + subject
 	}
-	headers := [][2]string{{"From", from}, {"To", to}, {"Subject", subject}, {"Date", date.Format(time.RFC1123Z)}, {"Message-ID", fmt.Sprintf("<m%d.%d@mx.demo>", box, n)}}
+	headers := [][2]string{{"From", from}, {"To", to}, {"Subject", subject}, {"Date", date.Format(time.RFC1123Z)}, {"Message-ID", s.mailID(box, n)}}
 	if r.IntN(4) == 0 {
 		ccName, cc := s.correspondent(r)
 		headers = append(headers, [2]string{"Cc", fmt.Sprintf("%s <%s>", ccName, cc)})
 	}
 	if root != n {
-		ref := fmt.Sprintf("<m%d.%d@mx.demo>", box, root)
+		ref := s.mailID(box, root)
 		headers = append(headers, [2]string{"In-Reply-To", ref}, [2]string{"References", ref})
 	}
 	headers = append(append(headers, extra...), [2]string{"MIME-Version", "1.0"})
-	return message{id: messageID(box, n), labels: labels, date: date, headers: headers, raw: s.body(r, headers, peerName)}
+	return message{id: s.messageID(box, n), labels: labels, date: date, headers: headers, raw: s.body(r, headers, peerName)}
 }
 
 func (s *server) body(r *rand.Rand, headers [][2]string, signer string) string {

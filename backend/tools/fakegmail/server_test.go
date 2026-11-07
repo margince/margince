@@ -99,7 +99,7 @@ func TestAReloadedConsentPageOffersTheSameMailbox(t *testing.T) {
 
 func TestAMessageIsServedOnlyToItsOwnMailbox(t *testing.T) {
 	srv := newTestServer(t, 5)
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+apiPrefix+"/messages/"+messageID(1, 0)+"?format=RAW", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+apiPrefix+"/messages/"+(&server{}).messageID(1, 0)+"?format=RAW", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,5 +215,23 @@ func TestEveryListedMessageIsServedAndRepliesNameAMessageOfTheMailbox(t *testing
 		if peers[id] != peers[parentID] {
 			t.Errorf("message %s with %q replies to %s with %q: one thread, two correspondents", id, peers[id], parentID, peers[parentID])
 		}
+	}
+}
+
+// A later generation is new mail to an importer: other ids and other
+// Message-IDs, and the first generation's ids are no longer served.
+func TestALaterGenerationServesNewMail(t *testing.T) {
+	first, later := &server{}, &server{generation: 2}
+	for _, s := range []*server{first, later} {
+		s.boxes = []mailbox{{owner: "a@demo.test", count: 5, seed: 7}}
+	}
+	if first.messageID(0, 3) == later.messageID(0, 3) || first.mailID(0, 3) == later.mailID(0, 3) {
+		t.Fatal("a later generation repeats the first generation's identities")
+	}
+	if _, _, ok := later.parseID(later.messageID(0, 3)); !ok {
+		t.Fatal("a later generation does not serve its own ids")
+	}
+	if _, _, ok := later.parseID(first.messageID(0, 3)); ok {
+		t.Fatal("a later generation still serves the first generation's ids")
 	}
 }
