@@ -8981,6 +8981,9 @@ DECLARE
   reached record;
 BEGIN
   IF TG_OP = 'INSERT' THEN
+    IF NEW.contact_id IS NULL AND NEW.deal_id IS NULL AND NEW.company_id IS NULL THEN
+      RETURN NULL;
+    END IF;
     at := last_activity_of_activity(NEW.activity_id);
     IF at IS NOT NULL THEN
       FOR reached IN
