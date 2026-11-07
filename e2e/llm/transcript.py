@@ -166,7 +166,7 @@ def from_codex(lines, path, model, driver, offered):
     Codex emits no list of the tools it offered, so `offered` is the lane's own
     tools/list over the same passport, and the status says so.
     """
-    answer, finished, lane_calls = "", False, 0
+    answer, finished = "", False
     with Transcript(path) as out:
         out.init(model, driver, "cli-default", "listed-by-lane", offered)
         for line in lines:
@@ -179,8 +179,6 @@ def from_codex(lines, path, model, driver, offered):
                 entry = event.get("item") or {}
                 if entry.get("type") == "agent_message" and entry.get("text"):
                     answer = entry["text"]
-                if entry.get("type") == "mcp_tool_call" and entry.get("server") == SERVER:
-                    lane_calls += 1
                 stop = _codex_item(out, entry)
                 if stop:
                     out.finish(True, f"HARNESS: {stop}", 0)
@@ -200,13 +198,6 @@ def from_codex(lines, path, model, driver, offered):
                 return 3
         if not finished:
             out.finish(True, "HARNESS: codex stopped before its turn completed", 0)
-            return 3
-        # Codex reports nothing of what it attached, so a run with no call to
-        # this server cannot be told from one whose tools never reached the
-        # model — which once read as three failed runs of a working case.
-        if not lane_calls:
-            out.finish(True, "HARNESS: codex made no call to the lane's server; whether it was "
-                             "attached cannot be told from its stream", 0)
             return 3
         out.finish(False, answer, 1)
         return 0
@@ -264,12 +255,11 @@ def _agy_usage(usage):
     }
 
 
-def from_agy(lines, path, model, driver, offered, attached=False):
+def from_agy(lines, path, model, driver, offered):
     """Write an `agy -p --output-format stream-json` run as a transcript: 0 when it ran, 3 when not.
 
     agy's init lists its whole tool registry, not what the model was offered, so
-    `offered` is the lane's own tools/list over the same passport. `attached`
-    says agy connected to the lane's server, which its stream does not show.
+    `offered` is the lane's own tools/list over the same passport.
     """
     texts, lane_steps, result = {}, set(), None
     with Transcript(path) as out:
@@ -304,10 +294,6 @@ def from_agy(lines, path, model, driver, offered, attached=False):
             return 3
         if result.get("status") != "SUCCESS":
             out.finish(True, f"HARNESS: agy: {result.get('error') or result.get('status')}", 0)
-            return 3
-        if not lane_steps and not attached:
-            out.finish(True, "HARNESS: agy made no call to the lane's server and wrote none of its "
-                             "tool schemas, so the server never reached the model", 0)
             return 3
         out.add_usage(_agy_usage(result.get("usage") or {}))
         out.finish(False, result.get("response") or "", result.get("num_turns") or 1)

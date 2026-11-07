@@ -20,9 +20,9 @@ OFFERED = ["echo", "get-sum"]
 SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad/.system_generated/steps/{}/{}"
 
 
-def convert(lines, attached=False):
+def convert(lines):
     out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
-    code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED, attached=attached)
+    code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED)
     with open(out, encoding="utf-8") as handle:
         return code, out, handle.read()
 
@@ -146,15 +146,11 @@ class FromAgyTest(unittest.TestCase):
     def test_a_run_that_never_finished_is_a_harness_fault(self):
         self.assertEqual(convert(sample()[:-1])[0], 3)
 
-    def test_a_run_that_never_reached_the_lanes_server_is_a_harness_fault(self):
+    def test_a_run_that_calls_nothing_is_scored_on_its_answer(self):
+        # Only the answer can say whether a run needed no call; the lane, not
+        # this run, stops when no run of a sweep reached the server.
         lines = [line for line in sample() if "call_mcp_tool" not in line]
-        code, _out, raw = convert(lines)
-        self.assertEqual(code, 3)
-        self.assertIn("no call to the lane's server", raw)
-
-    def test_an_answer_that_needs_no_call_is_scored_once_the_server_was_attached(self):
-        lines = [line for line in sample() if "call_mcp_tool" not in line]
-        code, out, _raw = convert(lines, attached=True)
+        code, out, _raw = convert(lines)
         self.assertEqual(code, 0)
         self.assertIn("The sum of 2 and 3 is 5", check.read_transcript(out)[1])
 
@@ -167,10 +163,6 @@ class FromAgyTest(unittest.TestCase):
 FAKE_AGY = """#!/usr/bin/env python3
 import json, os, sys, time
 agents = os.path.join(os.getcwd(), ".agents", "agents")
-if os.environ.get("FAKE_AGY_ATTACH"):
-    schemas = os.path.join(os.environ["HOME"], ".gemini", "antigravity-cli", "mcp", "margince_e2e_llm")
-    os.makedirs(schemas, exist_ok=True)
-    open(os.path.join(schemas, "echo.json"), "w").write("{}")
 with open(os.environ["FAKE_AGY_SEEN"], "w") as f:
     json.dump({"argv": sys.argv[1:], "cwd": sorted(os.listdir(os.getcwd())),
                "agents": {name: open(os.path.join(agents, name)).read() for name in os.listdir(agents)},
@@ -256,13 +248,6 @@ class RunAgyTest(unittest.TestCase):
                                   tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name)
         self.assertEqual(code, self.drive.HARNESS)
         self.assertFalse(os.path.exists(self.seen_file))
-
-    def test_a_run_that_calls_nothing_is_scored_when_agy_attached_the_server(self):
-        no_calls = os.path.join(self.bin, "no-calls.jsonl")
-        with open(SAMPLE, encoding="utf-8") as src, open(no_calls, "w", encoding="utf-8") as dst:
-            dst.writelines(line for line in src if "call_mcp_tool" not in line)
-        self.assertEqual(self.run_agy(FAKE_AGY_OUT=no_calls)[0], self.drive.HARNESS)
-        self.assertEqual(self.run_agy(FAKE_AGY_OUT=no_calls, FAKE_AGY_ATTACH="1")[0], 0)
 
     def test_an_agy_that_exits_nonzero_is_a_harness_fault_even_with_a_complete_stream(self):
         code, _out, _seen = self.run_agy(FAKE_AGY_EXIT="1")

@@ -212,20 +212,6 @@ mcpServers:
 _AGY_SETTINGS = json.dumps({"permissions": {"allow": [f"mcp({transcript.SERVER}/*)"]}})
 
 
-def _agy_attached_since(started):
-    """Whether agy connected to the lane's server during this run.
-
-    agy writes the schema of each tool of a server it connects to under its own
-    home, so a fresh file there proves the server reached the model even when
-    the model called none of its tools.
-    """
-    schemas = os.path.join(os.path.expanduser("~"), ".gemini", "antigravity-cli", "mcp", transcript.SERVER)
-    try:
-        return any(entry.stat().st_mtime >= started for entry in os.scandir(schemas))
-    except OSError:
-        return False
-
-
 def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
     """Drive one prompt through `agy -p` and write it as a transcript.
 
@@ -258,7 +244,6 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
             "--output-format", "stream-json", "--print-timeout", f"{timeout}s",
             "--disable-slash-commands", "--settings", _AGY_SETTINGS,
         ]
-        started = time.time() - 1
         try:
             done = subprocess.run(argv, cwd=workspace, stdin=subprocess.DEVNULL, capture_output=True,
                                   text=True, timeout=timeout + AGY_GRACE, check=False)
@@ -267,8 +252,7 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
             partial = expired.stdout or b""
             lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
             stderr, exited = f"agy overran its {timeout}s wall clock and was killed", "killed"
-    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools],
-                               attached=_agy_attached_since(started))
+    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools])
     # A non-zero exit, or a kill at the wall clock, is a program failure
     # whatever the stream says.
     if exited:
