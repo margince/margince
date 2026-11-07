@@ -111,8 +111,8 @@ func TestARouteVerbNeedsTheAPIProcess(t *testing.T) {
 }
 
 // A model picks a router's action by what the action says it does. Two actions
-// of one router that say the same thing cannot be told apart, so a model takes
-// the first and may never reach the one that holds the answer.
+// of one router that say the same thing cannot be told apart. A model takes the
+// first, and may never reach the one that holds the answer.
 func TestNoTwoActionsOfOneRouterSayTheSameThing(t *testing.T) {
 	seen := map[string]string{}
 	for _, v := range RouteVerbs() {
