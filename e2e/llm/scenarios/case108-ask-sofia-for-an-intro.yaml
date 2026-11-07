@@ -9,6 +9,7 @@
 #
 # Nothing is written: the draft comes back for the user to send themself.
 
+name: case108_ask_sofia_for_an_intro
 criteria: [1]
 passport: research
 
