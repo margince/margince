@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -91,13 +92,30 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "redirect_uri is not a URL")
 		return
 	}
+	if !isLoopback(back) {
+		writeError(w, http.StatusBadRequest, "redirect_uri must point at this machine")
+		return
+	}
 	v := back.Query()
 	v.Set("code", "code-"+owner)
 	v.Set("state", q.Get("state"))
 	v.Set("scope", q.Get("scope"))
 	back.RawQuery = v.Encode()
-	//nolint:gosec // G710: sending the browser back to the caller's redirect_uri is what a consent screen does; this one serves local load tests only
 	http.Redirect(w, r, back.String(), http.StatusFound)
+}
+
+// isLoopback admits only a dev stack on this machine, so the consent page
+// cannot send a browser to another site.
+func isLoopback(u *url.URL) bool {
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	host := u.Hostname()
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // token answers both the code exchange and a refresh. The tokens name the
