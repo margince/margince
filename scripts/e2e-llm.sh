@@ -726,7 +726,9 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     if [[ "$run_status" -eq 3 ]]; then
       echo
       echo "HARNESS: $name run $i could not be run:"
-      tail -5 "$transcript.err" | sed 's/^/  /'
+      # A CLI driver files its reason in the transcript, not on stderr.
+      { tail -5 "$transcript.err"; grep -ho '"result": "HARNESS: [^"]*' "$transcript" | cut -d'"' -f4; } \
+        | grep . | sed 's/^/  /'
       echo "  This is not a use-case failure. Nothing was scored."
       keep_transcript "$transcript"
       exit 2

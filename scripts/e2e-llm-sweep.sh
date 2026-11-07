@@ -74,6 +74,14 @@ while :; do
   E2E_LLM_SLUG="$slug" SCENARIO="${run[*]}" make e2e-llm > "$log" 2>&1
   grep -E '^  case[0-9]+_[a-z0-9_]+: (PASS|FAIL)' "$log" | sed "s/^ */$slug /"
   stopped="$(grep -m1 -oE '^HARNESS: case[0-9]+_[a-z0-9_]+' "$log" | cut -d' ' -f2)"
+  limited=0
+  grep -qiE 'out of credits|usage limit|rate limit|quota reached|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' "$log" && limited=1
+  # A limit stops the harness too, and the case it stopped is not at fault.
+  if [[ -n "$stopped" && $limited -eq 1 ]]; then
+    echo "LIMIT $slug: $stopped hit a limit; waiting ${wait_seconds}s"
+    sleep "$wait_seconds"
+    continue
+  fi
   if [[ -n "$stopped" ]]; then
     deferred+=("$stopped")
     echo "DEFERRED $slug $stopped"
@@ -84,7 +92,7 @@ while :; do
     stalled=0
     continue
   fi
-  if [[ -z "$stopped" ]] && grep -qiE 'out of credits|usage limit|rate limit|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' "$log"; then
+  if [[ $limited -eq 1 ]]; then
     echo "LIMIT $slug: waiting ${wait_seconds}s"
     sleep "$wait_seconds"
     continue
