@@ -76,8 +76,8 @@ and for dates after now. The correction test uses the real writer, task and work
 
 The tests above run the sink alone. To see what history imports cost a whole installation, run
 them through a dev stack's worker against `backend/tools/fakegmail`. It serves the Gmail calls the
-connector makes, from mailboxes it builds from a seed: threads, copies, bulk mail, colleagues who
-write to each other and customers they share. `-big` adds files of a real size, up to 15 MiB.
+connector makes. It builds each mailbox from a seed, with threads, copies and news mail. Colleagues
+write to each other and share customers. `-big` adds files of a real size, up to 15 MiB.
 
 1. Start the server from `backend/`, one mailbox per seat the demo data has:
 
@@ -95,16 +95,16 @@ write to each other and customers they share. `-big` adds files of a real size, 
    DEV_SLUG=loadrig make seed-dev
    ```
 
-4. Sign in as each seat and connect Gmail. The server approves at once and hands the mailboxes out
-   in the `-owners` order, so connect the seats in that order. Then start each history import.
+4. Sign in as each seat and connect Gmail. The server will approve at once. It hands out the
+   mailboxes in the `-owners` order, so connect the seats in that order. Then start each history import.
 5. Read the load while the imports run:
    - `curl 127.0.0.1:18085/stats` counts the messages served;
    - `pg_stat_activity` for the stack's database, sampled a few times a second, shows what
      Postgres is busy with;
    - `pg_stat_database` and `pg_stat_user_tables` before and after a window give rows read per
-     message, and which tables they came from;
+     message, and the tables they read;
    - `ps -o rss=` on the stack's worker gives the size of the worker process.
 
-The client keeps to the quota Google sets, so a mailbox imports about 90 messages a minute, as in
-production. A larger `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` lifts that limit, which shows the work per
+The client keeps to the quota Google sets, so a mailbox imports about 90 messages a minute, as
+with real Gmail. More `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` moves that limit, which shows the work per
 message sooner. Stop the stack with `DEV_SLUG=loadrig make dev-stop`.
