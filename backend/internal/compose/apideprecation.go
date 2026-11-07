@@ -14,6 +14,7 @@ func announceDeprecatedOperation(next http.Handler) http.Handler {
 
 func setDeprecationHeaders(w http.ResponseWriter, r *http.Request) {
 	for name, value := range deprecationTable[r.Method+" "+chiRoutePattern(r)] {
+		//nolint:goconst // the generated deprecationTable repeats the header name; this is its one reader
 		if name == "Link" {
 			w.Header().Add(name, value)
 		} else {

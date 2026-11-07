@@ -17,18 +17,32 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
+// WindowMonths is the least time, in calendar months, between a deprecation
+// notice and the removal it announces.
 const WindowMonths = 3
+
+// NoticeExtension is the OpenAPI extension that carries one operation's Notice.
 const NoticeExtension = "x-deprecation"
+
+// PolicyExtension is the OpenAPI extension that states the deprecation policy.
 const PolicyExtension = "x-api-deprecation-policy"
+
+// NoticesExtension is the OpenAPI extension that lists every notice.
 const NoticesExtension = "x-api-deprecation-notices"
+
+// PolicyLink is the Link header value that points a client at the policy.
 const PolicyLink = `<` + httpserver.BaseURL + `/openapi.json>; rel="deprecation"; type="application/json", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel="deprecation"; type="text/markdown"`
 
+// Notice records when a release announced an operation's deprecation, and
+// the sunset date if one is set.
 type Notice struct {
 	Release     string `json:"release" yaml:"release"`
 	AnnouncedAt string `json:"announced_at" yaml:"announced_at"`
 	SunsetAt    string `json:"sunset_at,omitempty" yaml:"sunset_at,omitempty"`
 }
 
+// Validate refuses a notice without its release and time, or with a sunset
+// earlier than the window allows. The zero Notice is valid.
 func (n Notice) Validate() error {
 	if n == (Notice{}) {
 		return nil
@@ -53,6 +67,7 @@ func (n Notice) Validate() error {
 	return nil
 }
 
+// EarliestRemoval is the first day a removal announced at announced may ship.
 func EarliestRemoval(announced time.Time) time.Time {
 	announced = announced.UTC()
 	first := time.Date(announced.Year(), announced.Month()+WindowMonths, 1, announced.Hour(), announced.Minute(), announced.Second(), announced.Nanosecond(), announced.Location())
@@ -60,6 +75,7 @@ func EarliestRemoval(announced time.Time) time.Time {
 	return first.AddDate(0, 0, min(announced.Day(), lastDay)-1)
 }
 
+// Headers are the response headers that announce the notice to a client.
 func (n Notice) Headers() (http.Header, error) {
 	if err := n.Validate(); err != nil {
 		return nil, err
@@ -84,6 +100,8 @@ func (n Notice) Headers() (http.Header, error) {
 	return h, nil
 }
 
+// CheckRemoval refuses removing the operation in release at time at before
+// the notice allows it.
 func (n Notice) CheckRemoval(release string, at time.Time) error {
 	if err := n.Validate(); err != nil {
 		return err
