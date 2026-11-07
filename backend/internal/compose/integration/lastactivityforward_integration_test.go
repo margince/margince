@@ -76,6 +76,18 @@ func TestALinkMovesTheClockForwardWithoutFoldingTheHistory(t *testing.T) {
 		t.Fatalf("a newer note moved the clocks to %v and %v, want both at %v", onContact, onProject, newest)
 	}
 
+	agentAt := newest.Add(time.Hour)
+	agentSubject := "Scheduled agent note"
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: &agentSubject, OccurredAt: &agentAt, Source: "manual", Origin: activities.OriginAgent,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}, {EntityType: "project", EntityID: project}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if onContact, onProject := clocks(); !onContact.Equal(newest) || !onProject.Equal(newest) {
+		t.Fatalf("agent note moved the clocks to %v and %v, want both left at %v", onContact, onProject, newest)
+	}
+
 	if _, err := owner.Exec(ctx, `DELETE FROM activity_link WHERE activity_id = $1`, newestNote); err != nil {
 		t.Fatal(err)
 	}

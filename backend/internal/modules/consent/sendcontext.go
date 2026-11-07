@@ -20,7 +20,7 @@ func withSendingEntity(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (
 	if !req.SendingEntity.IsZero() {
 		return req, nil
 	}
-	entity, err := sendingEntityTx(ctx, tx, senderOf(ctx))
+	entity, err := sendingEntityOf(ctx, tx)
 	if err != nil {
 		return commsauthz.Request{}, err
 	}

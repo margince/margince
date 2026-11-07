@@ -36,7 +36,7 @@ const noMailToList = "Folders belong to a mailbox. Ask the mail connection on th
 // leaves the container one out, which is a smaller card rather than a broken
 // one. A provider that will not answer is 502, because a stale list offered as
 // current is how somebody excludes the wrong folder.
-func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.ListConnectorContainersParams) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "ListConnectorContainers")
 		return
@@ -53,8 +53,14 @@ func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *htt
 		})
 		return
 	}
-	containers, truncated, err := h.registry.ListContainers(r.Context(), string(provider),
-		ids.From[ids.UserKind](actor.UserID))
+	var containers []connector.NamedContainer
+	var truncated bool
+	var err error
+	if params.ConnectionId != nil {
+		containers, truncated, err = h.registry.InternalMailSourceContainers(r.Context(), ids.UUID(*params.ConnectionId), string(provider))
+	} else {
+		containers, truncated, err = h.registry.ListContainers(r.Context(), string(provider), ids.From[ids.UserKind](actor.UserID))
+	}
 	switch {
 	case errors.Is(err, capture.ErrContainersUnsupported):
 		httperr.Write(w, r, &httperr.DetailedError{

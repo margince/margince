@@ -163,6 +163,11 @@ These stay with you, in the app, because they would give it more than you want t
 
 ## Seeing work in progress
 
+The risk sweep during the night looks only at the open deals you own. Nobody
+sweeps the deals of a colleague who has not turned it on. On a quiet deal it
+writes at most one risk note a night. That note does not count as activity, so
+the deal stays in the list of slipping deals.
+
 While the AI in Margince works for you, you can see it in the agent panel
 (**Open agent panel**, under **Running now**). These kinds of work show there:
 

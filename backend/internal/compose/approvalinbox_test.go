@@ -135,7 +135,7 @@ func TestTheToolSurfaceDecidesThroughAnEngineThatCanReleaseEveryKind(t *testing.
 			t.Fatal("an engine that cannot release a held draft was accepted as the tool surface's queue")
 		}
 	}()
-	approvalQueue(approvalsServiceWithEffects(nil))
+	approvalQueue(NewApprovalsServiceWithEffects(nil))
 }
 
 // Every kind this installation can RELEASE says whether releasing it sends.

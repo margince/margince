@@ -72,11 +72,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	}
 	// Put-then-commit (like blobstore): seal the credential in the vault
 	// first, then commit the row that names it. The row stores the opaque ref;
-	// the bytes never touch it. A transaction that fails after the seal strands
-	// the blob: nothing references it, and there is no vault sweep to collect it
-	// — only a human ever will. The blob is inert (unreferenced and encrypted at
-	// rest) and the human simply retries the connect, but a stranded secret is
-	// not a non-event.
+	// the bytes never touch it. A refusal inside the transaction deletes the
+	// blob. A transaction that fails for any other reason strands it, inert and
+	// encrypted, with no vault sweep to collect it.
 	ref, err := r.vault.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(auth))
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: sealing connector credential: %w", err)
@@ -91,7 +89,14 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	}
 	var id ids.UUID
 	var priorRef *string
+	refused := false
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Asked again before any row lock and held until commit: a demotion
+		// since the check above either waits for this row or refuses it.
+		if _, err := r.sink.captureAllowedTx(ctx, tx, actor.UserID); err != nil {
+			refused = true
+			return err
+		}
 		// The SAME lock the OAuth-app write takes, before this row is counted
 		// by anything. refuseStrandingConnections reads the connection count
 		// under it and then commits the new client id; without this the count
@@ -110,6 +115,9 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 		id, priorRef, err = upsertConnection(ctx, tx, row)
 		return err
 	}); err != nil {
+		if refused {
+			keyvault.DeleteDetached(ctx, r.vault, slog.Default(), ws, ref, "refused connect")
+		}
 		return ids.Nil, fmt.Errorf("capture: storing connection: %w", err)
 	}
 	// The row now names the fresh ref; a prior ref (a genuine reconnect over
@@ -262,11 +270,12 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 	// credential; status and account_label are the audit before-image, which
 	// only this read can supply.
 	var priorRef, priorStatus, priorLabel *string
+	var priorID ids.UUID
 	if err := tx.QueryRow(ctx, `
-		SELECT credential_ref, status, account_label FROM capture_connection
+		SELECT id, credential_ref, status, account_label FROM capture_connection
 		 WHERE user_id = $1 AND provider = $2
 		   FOR UPDATE`,
-		in.userID, in.provider).Scan(&priorRef, &priorStatus, &priorLabel); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		in.userID, in.provider).Scan(&priorID, &priorRef, &priorStatus, &priorLabel); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil, err
 	}
 	// A rebind — this grant naming a DIFFERENT mailbox than the row held — is the
@@ -290,6 +299,14 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 	// previous mailbox's date is not this one's. A same-account reconnect
 	// keeps the original stamp.
 	rebound := rebindsAccount(priorLabel, in.accountLabel)
+	args := []any{in.provider, in.userID, in.scopes, string(in.ref), in.accountLabel, in.providerScopes, rebound, nil}
+	if rebound {
+		boundary, err := nextBackfillAccountTimeTx(ctx, tx, priorID)
+		if err != nil {
+			return ids.Nil, nil, err
+		}
+		args[len(args)-1] = boundary
+	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO capture_connection (provider, user_id, scopes, credential_ref, status, account_label, provider_scopes, share_acknowledged_at)
@@ -339,11 +356,20 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- scan away until it lapses.
 		              watch_ref = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_ref END,
 		              watch_expires_at = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_expires_at END,
-		              account_bound_at = CASE WHEN $7 THEN now() ELSE capture_connection.account_bound_at END
-		RETURNING id`,
-		in.provider, in.userID, in.scopes, string(in.ref), in.accountLabel, in.providerScopes, rebound).Scan(&id); err != nil {
+		              account_bound_at = CASE WHEN $7 THEN `+fmt.Sprintf("$%d", len(args))+` ELSE capture_connection.account_bound_at END
+		RETURNING id`, args...).Scan(&id); err != nil {
 		return ids.Nil, nil, err
 	}
+	if err := auditConnectedAccountTx(ctx, tx, id, in, priorStatus, priorLabel); err != nil {
+		return ids.Nil, nil, err
+	}
+	if err := resetConnectionSchedule(ctx, tx, id, rebound); err != nil {
+		return ids.Nil, nil, err
+	}
+	return id, priorRef, nil
+}
+
+func auditConnectedAccountTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in connectionUpsert, priorStatus, priorLabel *string) error {
 	// A grant is a human's deliberate act over their own mailbox, so it is
 	// attributed like any other record mutation. A row that already existed is
 	// a reconnect (an update over the same connection), never a second create.
@@ -353,17 +379,16 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		verb = "update"
 		before = connectionAuditImage(in.provider, *priorStatus, priorLabel)
 	}
-	if err := auditLifecycle(ctx, tx, verb, captureConnectionObject, id, before,
-		connectionAuditImage(in.provider, "connected", in.accountLabel)); err != nil {
-		return ids.Nil, nil, err
-	}
-	if err := resetConnectionSchedule(ctx, tx, id, rebound); err != nil {
-		return ids.Nil, nil, err
-	}
-	return id, priorRef, nil
+	return auditLifecycle(ctx, tx, verb, captureConnectionObject, id, before,
+		connectionAuditImage(in.provider, "connected", in.accountLabel))
 }
 
 func resetConnectionSchedule(ctx context.Context, tx pgx.Tx, id ids.UUID, rebound bool) error {
+	if rebound {
+		if err := cancelPriorAccountBackfillTx(ctx, tx, id); err != nil {
+			return err
+		}
+	}
 	// A (re)connect starts the scheduling ladder clean: a row parked by
 	// reauth_required or degraded by backoff is due immediately with a fresh
 	// credential (ADR-0063).

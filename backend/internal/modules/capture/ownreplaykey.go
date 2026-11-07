@@ -143,6 +143,12 @@ func (s *Sink) upsertRefused(
 	if !errors.Is(refusal, errInvisibleIncumbent) {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, refusal
 	}
+	if internalMailAdmitted(ctx) {
+		ref, admitted, err := s.admitInternalMailCopyTx(ctx, tx, id, rec, fields, birth, memberBound)
+		if err != nil || admitted {
+			return ref, false, counterpartyDecision{}, err
+		}
+	}
 	mine, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err

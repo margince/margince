@@ -2,32 +2,36 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bell } from "lucide-react";
-import { useCallback, useId, useRef, useState } from "react";
+import { Suspense, useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNoticeRead } from "../components/taskactions";
-import { AppLink } from "../design-system/applink";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { useNoticeRead } from "../components/taskactions.rowwrites";
+import { Badge, Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CardBoundary } from "../design-system/cardboundary";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import {
   NOTIFICATIONS_KEY,
-  type NotificationItem,
   useMarkAllNoticesRead,
   useNotifications,
 } from "../features/settings/notifications.queries";
-import { worklistKey } from "../features/worklist/worklist.queries";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { opensElsewhere } from "../lib/linkclick";
+import { lazy } from "../i18n/lazy";
 import { problemMessageOf } from "../lib/problem";
-import { useViewerZone } from "../lib/viewerzone";
-import { noticeAction } from "./noticeaction";
-import { noticeHeadline } from "./noticeheadline";
+import { worklistKey } from "../lib/workkeys";
 import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
 import "./topbar-popover.css";
+
+const NoticeRow = lazy(
+  async () => ({
+    default: (await import("./notificationrow")).NoticeRow,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 // The notification centre, as the chrome carries it: a count somebody sees
 // without opening anything, and the history behind it.
@@ -227,121 +231,28 @@ function NotificationCentre({
             <EmptyState>{t("notifications.empty")}</EmptyState>
           ) : (
             <>
-              <ul className="notifbell-list">
-                {rows.map((notice) => (
-                  <NoticeRow
-                    key={notice.id}
-                    notice={notice}
-                    onSettle={settle.mutate}
-                    onActivate={onActivate}
-                    settling={
-                      settle.isPending && settle.variables === notice.id
-                    }
-                  />
-                ))}
-              </ul>
+              <Suspense
+                fallback={<PendingBody label={t("notifications.centre")} />}
+              >
+                <ul className="notifbell-list">
+                  {rows.map((notice) => (
+                    <NoticeRow
+                      key={notice.id}
+                      notice={notice}
+                      onSettle={settle.mutate}
+                      onActivate={onActivate}
+                      settling={
+                        settle.isPending && settle.variables === notice.id
+                      }
+                    />
+                  ))}
+                </ul>
+              </Suspense>
               <LoadMoreButton query={query} />
             </>
           )}
         </QueryStates>
       </PanelBody>
     </Panel>
-  );
-}
-
-/**
- * Whether an agent authored the change behind this notice.
- *
- * The origin names the ORIGINAL actor rather than the automation that delivered
- * the message, which is the distinction that makes the tint honest: a system
- * job running a rule nobody inferred is not a model deciding, and drawing it in
- * the AI colour would tell a reader one did.
- */
-function agentAuthored(notice: NotificationItem): boolean {
-  return notice.origin?.actor_type === "agent";
-}
-
-function NoticeRow({
-  notice,
-  onSettle,
-  onActivate,
-  settling,
-}: Readonly<{
-  notice: NotificationItem;
-  onSettle: (id: string) => void;
-  /**
-   * Dismiss the centre, because the subject is a destination: the panel is
-   * chrome over the page the link is about to replace, and one left standing
-   * covers the record it just opened. Inside clicks are the popover's business
-   * to ignore (app/popover.ts), so a row that closes says so here.
-   */
-  onActivate: () => void;
-  /** Whether the write in flight is THIS row's, rather than any row's. */
-  settling: boolean;
-}>) {
-  const readerZone = useViewerZone();
-  const t = useT();
-  const action = noticeAction(notice.target);
-  const href = action?.href;
-  const { locale } = useLocale();
-  const settled = notice.read_at !== undefined;
-  const { headline, detail } = noticeHeadline(notice, t);
-  return (
-    <li className={settled ? "notifrow notifrow-settled" : "notifrow"}>
-      <div className="notifrow-head">
-        {href ? (
-          <AppLink
-            className="entity-link notifrow-subject"
-            href={href}
-            onClick={onActivate}
-          >
-            {headline}
-          </AppLink>
-        ) : (
-          // A kind this app has no page for is NAMED and not linked. A link
-          // into nothing is worse than no link: it promises a page the product
-          // cannot reach.
-          <span className="notifrow-subject">{headline}</span>
-        )}
-        {!settled && <Badge tone="accent">{t("notifications.unread")}</Badge>}
-        {agentAuthored(notice) && (
-          <Badge tone="ai">{t("notifications.byAgent")}</Badge>
-        )}
-      </div>
-      {detail !== undefined && <p className="notifrow-body t-sub">{detail}</p>}
-      {notice.body !== undefined && (
-        <p className="notifrow-body t-sub">{notice.body}</p>
-      )}
-      <time className="t-caption" dateTime={notice.created_at}>
-        {formatDateTime(notice.created_at, locale, readerZone)}
-      </time>
-      {/* Mark read is its own control rather than something the open does on
-          its way out: a mutation fired as the reader navigates away races the
-          unmount, and a record opened in a new tab is not yet a visit made. */}
-      {(action || !settled) && (
-        <div className="notifrow-verb">
-          {action && (
-            <AppLink
-              className="btn btn-ghost"
-              href={action.href}
-              onClick={(event) => {
-                if (!opensElsewhere(event)) onActivate();
-              }}
-            >
-              {t(action.label)}
-            </AppLink>
-          )}
-          {!settled && (
-            <Button
-              variant="link"
-              pending={settling}
-              onClick={() => onSettle(notice.id)}
-            >
-              {t("notifications.markRead")}
-            </Button>
-          )}
-        </div>
-      )}
-    </li>
   );
 }

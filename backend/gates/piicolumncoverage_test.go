@@ -121,6 +121,9 @@ var erasureColumnBaseline = map[string][]string{
 		// message with no record of the law it was judged under, which is the
 		// accountability half Art. 5(2) requires the erasure to keep.
 		"ruleset_codes",
+		// The sending legal entity's country code: the controller's
+		// jurisdiction, never the subject's, kept for the same reason.
+		"data_protection_country",
 	},
 	// A rights case's own vocabulary: what kind of request arrived, how it
 	// reached us, where it stands, and the minted code somebody quotes when
@@ -191,6 +194,8 @@ var erasureColumnBaseline = map[string][]string{
 		"source_system",
 	},
 	"activity_participant": {
+		// Precision is a closed clock vocabulary mirrored from its parent, never source prose.
+		"domain_evidence_precision",
 		"response",
 		"role",
 	},

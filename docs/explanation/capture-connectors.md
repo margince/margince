@@ -464,7 +464,7 @@ Capture spans two process roles, api and worker (see [architecture.md](architect
   `disconnect`, `list`, and backfill `preview`/`start` (which queues)/`status`/`cancel`. It also serves
   the two mail push webhooks, the morning `digest` read, the capture settings switch, and the list of
   consumer mail domains.
-- **`worker`** runs *every background pull* as River jobs on a schedule, on the one leader worker.
+- **`worker`** runs *every background pull* as River jobs on a schedule.
   - Those are the sync dispatcher (`30s`) → `SyncOnce` per connection, and the backfill engine (one page
     per tick). They also include each vendor's scan for watch renewal (`6h`), and the capture jobs
     (sort every hour, enrich + digest daily).

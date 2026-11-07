@@ -5,8 +5,8 @@ import { Badge, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { throwProblem, unwrap } from "../../lib/problem";
-import { type AnalyticsScope, scopeQuery } from "./analytics.context";
+import { throwProblem } from "../../lib/problem";
+import type { AnalyticsScope } from "./analytics.context";
 import { CheckTable } from "./analytics.forecast.checktable";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import {
@@ -15,6 +15,9 @@ import {
   outOfDate,
   verdictStands,
 } from "./analytics.forecast.freshness";
+import { useInputChecks } from "./inputchecks.queries";
+
+export { useInputChecks } from "./inputchecks.queries";
 
 type Assurance = components["schemas"]["ForecastAssurance"];
 
@@ -79,23 +82,6 @@ export function ForecastReview({
 // them shares, so answering one here clears it everywhere it is counted.
 // The findings, for one record scope when given; without one, every finding
 // the reader may see. The answer carries the server's groups and totals.
-export function useInputChecks(enabled = true, scope?: AnalyticsScope) {
-  const query = scope ? scopeQuery(scope) : {};
-  return useQuery({
-    enabled,
-    queryKey: ["input-checks", query],
-    // The signal stops the read of a scope the reader has already left.
-    queryFn: async ({ signal }) => {
-      const data = unwrap(
-        await api.GET("/forecast/assurance/exceptions", {
-          params: { query },
-          signal,
-        }),
-      );
-      return data;
-    },
-  });
-}
 
 function ReviewPanel({
   run,

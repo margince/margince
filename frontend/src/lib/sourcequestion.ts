@@ -26,26 +26,26 @@ export type SourceAnswer =
 
 // The answers that name one kind on their own.
 //
-// Meeting face to face maps to `event_or_form`, whatever they agreed to. Their
-// agreement to be contacted does not show they were told who holds their
-// details, so the Art. 13 duty stays open. `in_person_permission` closes that
-// duty, and only an officer who knows the notice was given picks it, under
-// "Another source".
+// Meeting face to face maps to `in_person_permission`: they learned at the
+// meeting who we are and that we will follow up, so no notice is owed. The
+// drawer also sends `met_in_person`, so the meeting supports personal
+// follow-up mail the same way as the communication-context answer.
 const DIRECT: Readonly<
   Record<Exclude<SourceAnswer, "other" | "unsure">, SourceKind>
 > = {
   contacted: "subject_initiated",
   asked: "requested_quote_or_meeting",
-  met: "event_or_form",
+  met: "in_person_permission",
   introduced: "referral",
 };
 
 // The kinds the first list does not say in its own words. "Another source"
-// opens them as a second list. `event_or_form` is in it too: an event or a web
-// form is not always a meeting face to face.
+// opens them as a second list. `event_or_form` is in it: an event or a web
+// form owes a notice that a meeting does not.
 const NAMED_FIRST: ReadonlySet<SourceKind> = new Set([
   "subject_initiated",
   "requested_quote_or_meeting",
+  "in_person_permission",
   "referral",
 ]);
 

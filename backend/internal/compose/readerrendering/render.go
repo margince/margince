@@ -115,10 +115,8 @@ var (
 	linkRun  = regexp.MustCompile(`https?://[^\s<>"')\]]+`)
 )
 
-// Check refuses a reply a reader must not be shown. That is one that dropped a
-// number, an address or a link, came back empty, or is in another language
-// than the target. It also refuses "already in your language" over text known
-// to be in another one.
+// Check rejects lost sections, protected spans and large changes in length or
+// sentence count. These bounds catch substitution, not semantic equivalence.
 func Check(in Input, reply Reply) error {
 	if reply.AlreadyInTarget {
 		if in.Source != textlang.Unknown && in.Source != in.Target {
@@ -128,14 +126,11 @@ func Check(in Input, reply Reply) error {
 		}
 		return nil
 	}
-	if strings.TrimSpace(in.Body) != "" && strings.TrimSpace(reply.Body) == "" {
-		return errors.New("the body came back empty; render the whole body")
-	}
-	source, rendered := in.Subject+"\n"+in.Body, reply.Subject+"\n"+reply.Body
-	for _, pattern := range []*regexp.Regexp{digitRun, emailRun, linkRun} {
-		if lost := missingSpans(pattern, source, rendered); len(lost) > 0 {
-			return fmt.Errorf("the rendering lost %s; keep every number, email address and link exactly",
-				strings.Join(lost, ", "))
+	for _, section := range []struct{ name, source, rendered string }{
+		{"subject", in.Subject, reply.Subject}, {"body", in.Body, reply.Body},
+	} {
+		if err := checkSection(section.source, section.rendered); err != nil {
+			return fmt.Errorf("the %s changed: %w", section.name, err)
 		}
 	}
 	if got := textlang.DetectFirst(reply.Body, reply.Subject); got != textlang.Unknown && got != in.Target {

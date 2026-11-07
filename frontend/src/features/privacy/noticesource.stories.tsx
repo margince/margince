@@ -30,6 +30,8 @@ const meta: Meta<typeof NoticeSourceReview> = {
     (Story) => {
       stubWithSession(
         {
+          "GET /privacy/notice-case-reviews/case-source/source": () =>
+            jsonResponse({ items: [] }),
           "GET /privacy/notice-case-reviews/case-source": () =>
             jsonResponse({
               ...unconfirmed,

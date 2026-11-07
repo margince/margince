@@ -24,12 +24,14 @@ var catalog = map[string]struct {
 	stream  string
 	version int
 }{
-	"contact.created":  {contactStreamEntity, 1},
-	"contact.updated":  {contactStreamEntity, 1},
-	"contact.archived": {contactStreamEntity, 1},
-	"contact.merged":   {contactStreamEntity, 1},
-	"contact.restored": {contactStreamEntity, 1},
-	"consent.changed":  {contactStreamEntity, 1},
+	"internal_mail_history.created": {captureStreamEntity, 1},
+	"capture_settings.updated":      {captureStreamEntity, 1},
+	"contact.created":               {contactStreamEntity, 1},
+	"contact.updated":               {contactStreamEntity, 1},
+	"contact.archived":              {contactStreamEntity, 1},
+	"contact.merged":                {contactStreamEntity, 1},
+	"contact.restored":              {contactStreamEntity, 1},
+	"consent.changed":               {contactStreamEntity, 1},
 	// Somebody recorded that we may not write to a subject. Its own type rather
 	// than a consent.changed, because a suppression is not the absence of
 	// consent: it outranks a grant and a later re-grant does not erase it, so a

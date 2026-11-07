@@ -114,6 +114,15 @@ func (e *scoutEnv) email(t *testing.T, subject, direction string, company ids.UU
 // document files one captured part on the mail, through capture's own writer.
 func (e *scoutEnv) document(t *testing.T, mail ids.UUID, filename, contentType string) ids.UUID {
 	t.Helper()
+	return captureMailDocument(t, e.Env, blobstore.NewMemory(), mail, filename, contentType, []byte(filename))
+}
+
+// captureMailDocument stages and records one file on a mail through capture's
+// own writer, into blob, and returns its attachment id.
+func captureMailDocument(
+	t *testing.T, e *integration.Env, blob blobstore.Store, mail ids.UUID, filename, contentType string, body []byte,
+) ids.UUID {
+	t.Helper()
 	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
 		principal.Principal{
 			Type: principal.PrincipalConnector, ID: "connector:imap",
@@ -122,9 +131,9 @@ func (e *scoutEnv) document(t *testing.T, mail ids.UUID, filename, contentType s
 				RowScope: principal.RowScopeAll,
 			},
 		}), ids.NewV7())
-	store := activities.NewStore(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory())
+	store := activities.NewStore(InstallationDB(e.Pool)).WithBlobstore(blob)
 	staged, err := store.StageCapturedFiles(ctx, []activities.CapturedFile{{
-		PartID: filename, Filename: filename, ContentType: contentType, Body: []byte(filename),
+		PartID: filename, Filename: filename, ContentType: contentType, Body: body,
 	}})
 	if err != nil {
 		t.Fatalf("staging %s: %v", filename, err)

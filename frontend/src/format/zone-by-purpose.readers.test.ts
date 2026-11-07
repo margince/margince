@@ -33,6 +33,7 @@ const companyZoneSites: { file: string; why: string }[] = [
     "analytics.overview.sales.tsx",
     "analytics.overview.team.tsx",
     "analytics.questions.saved.tsx",
+    "analytics.questions.answer.tsx",
     "inputcheck.answer.tsx",
     "inputcheck.facts.tsx",
     "reporting.executions.tsx",

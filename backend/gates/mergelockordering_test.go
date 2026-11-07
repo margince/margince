@@ -7,24 +7,8 @@
 
 package gates
 
-// A capture that may merge threads takes the merge lock before it touches an activity.
-//
-// Not every capture: a non-email record, and a message nothing stored links,
-// take no lock at all, which is what keeps a workspace-wide lock off the common
-// path. The ordering binds the ones that can reach a merge.
-//
-// mergeLinkedThreads takes one workspace-wide advisory lock and then updates
-// every row of the threads it merges. A concurrent capture that has already
-// written — and so locked — one of those rows, and then waits for the same
-// advisory lock, closes a cycle; Postgres breaks it by aborting one transaction.
-// Nothing is lost, because the aborted capture is retried, so the cost is paid in
-// repeated retries on exactly the busy shared conversations two mailboxes both
-// carry.
-//
-// Taking the coarse lock before any fine one removes the cycle, and that ordering
-// is the kind of property an ordinary edit undoes without looking wrong: move the
-// probe below the first write, or give the lock a second spelling, and the cycle
-// is back with every test still green. Hence a gate rather than a comment.
+// Capture locks component identities before rows; later writers use the same
+// coordinator without waiting while they own rows.
 
 import (
 	"go/ast"
@@ -41,12 +25,9 @@ const (
 	captureJoin     = "internal/modules/capture/threadjoin.go"
 	captureLockFile = "internal/modules/capture/capturebeforethewrite.go"
 	lockTakerName   = "takeMergeLockFirst"
-	lockStatement   = "mergeLockStatement"
 	captureEntryFn  = "Upsert"
-	// The alias sighting sits two calls down. Upsert calls the mail read, which
-	// calls the wrapper that settles what the seat's own addresses decide. The
-	// gate reads each link: the mail read's position inside Upsert, the wrapper
-	// inside the mail read, and the sighting inside the wrapper.
+	// Upsert takes the merge lock before landing. The landing step resolves
+	// mailbox aliases before capture, which can lock existing activity rows.
 	mailReadFile    = "internal/modules/capture/threadboundary.go"
 	mailReadFn      = "readMailForTheSeatTx"
 	seatAddressFile = "internal/modules/capture/sentfromownaddress.go"
@@ -86,17 +67,15 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 		t.Errorf("%s no longer calls %s, so the ordering below pins the wrapper and not the "+
 			"alias path it stands for", seatAddressFn, aliasSightingFn)
 	}
-	for _, reaches := range []string{mailReadFn, "captureActivity"} {
-		at := offsetOfCall(entry, reaches)
-		if at < 0 {
-			t.Errorf("%s no longer calls %s — this gate reads the order of the two, so a rename "+
-				"leaves it holding nothing", captureEntryFn, reaches)
-			continue
-		}
-		if lockAt > at {
-			t.Errorf("%s takes the merge lock after %s, which can lock an activity row — the "+
-				"coarse lock has to come first or the cycle is back", captureEntryFn, reaches)
-		}
+	landingAt := offsetOfCall(entry, "landActivityTx")
+	if landingAt < 0 || lockAt > landingAt {
+		t.Fatal("Upsert must take the merge lock before landActivityTx can touch an activity")
+	}
+	landing := functionNamed(t, gatekit.ModuleRoot(t), "internal/modules/capture/sinkactivitylanding.go", "landActivityTx")
+	readAt := offsetOfCall(landing, mailReadFn)
+	captureAt := offsetOfCall(landing, "captureActivity")
+	if readAt < 0 || captureAt < 0 || readAt > captureAt {
+		t.Fatal("landActivityTx must resolve the seat's mailbox before capturing an activity")
 	}
 }
 
@@ -123,47 +102,37 @@ func offsetOfCall(fn *ast.FuncDecl, name string) int {
 	return found
 }
 
-// TestTheMergeLockHasOneSpelling is the other half: two spellings are two locks,
-// and the ordering would hold over a lock nobody else takes.
-//
-// It reads the two FUNCTIONS rather than counting the name in a file, because a
-// text count is inflated by any comment that mentions it — this gate passed on
-// exactly that coincidence once, while the file holding the early lock had moved
-// out of what it read.
 func TestTheMergeLockHasOneSpelling(t *testing.T) {
 	t.Parallel()
-
 	tree := gatekit.ModuleRoot(t)
-	for _, site := range []struct{ file, function string }{
-		{captureLockFile, lockTakerName},
-		{captureJoin, "mergeLinkedThreads"},
+	for _, site := range []struct{ file, function, coordinator string }{
+		{captureLockFile, lockTakerName, "WaitThreadKeysTx"},
+		{captureJoin, "mergeLinkedThreads", "LockThreadKeysTx"},
 	} {
 		fn := functionNamed(t, tree, site.file, site.function)
-		if !bodyUses(fn, lockStatement) {
-			t.Errorf("%s does not take %s — a path that locks nothing, or locks a second "+
-				"spelling of the same name, and the ordering means nothing", site.function, lockStatement)
+		if offsetOfCall(fn, site.coordinator) < 0 {
+			t.Errorf("%s must call the shared %s coordinator", site.function, site.coordinator)
 		}
-	}
-
-	// And the SQL is spelled in exactly ONE string literal across these files.
-	//
-	// Read from the parsed literals, not the bytes: counting the text found a doc
-	// comment that mentions the lock and called it a second spelling, and missed a
-	// literal split across lines entirely. This gate passed once on that
-	// coincidence while the file holding the early lock had moved out of what it
-	// read, which is the shape worth not repeating.
-	spellings := 0
-	for _, file := range []string{captureEntry, captureLockFile, captureJoin} {
-		for _, literal := range sqlStringsIn(t, tree+"/"+file, mustRead(t, tree+"/"+file)) {
-			if strings.Contains(literal, "pg_advisory_xact_lock") {
-				spellings++
+		for _, literal := range sqlStringsIn(t, tree+"/"+site.file, mustRead(t, tree+"/"+site.file)) {
+			if strings.Contains(literal, "pg_advisory") {
+				t.Errorf("%s spells a second lock protocol", site.file)
 			}
 		}
 	}
-	if spellings != 1 {
-		t.Errorf("pg_advisory_xact_lock is spelled in %d string literals across the capture path, "+
-			"want 1 — two spellings of one lock name are two locks, and the ordering holds over "+
-			"neither", spellings)
+	coordinator := "internal/platform/database/storekit/threadlocks.go"
+	for _, function := range []string{"WaitThreadKeysTx", "LockThreadKeysTx"} {
+		fn := functionNamed(t, tree, coordinator, function)
+		if !callsName(fn, "threadStateTx") {
+			t.Errorf("%s bypasses the shared component key ledger", function)
+		}
+		for _, name := range []string{"threadBarrier"} {
+			if !bodyUses(fn, name) {
+				t.Errorf("%s does not share %s", function, name)
+			}
+		}
+	}
+	if !bodyUses(functionNamed(t, tree, coordinator, "threadStateTx"), "threadComponent") {
+		t.Error("thread coordinator lost its shared namespace")
 	}
 }
 
@@ -265,30 +234,4 @@ func TestAnAbsentCallIsNotTheEarliestOne(t *testing.T) {
 		t.Errorf("a function that never takes the lock read as offset %d, want negative — a zero "+
 			"would compare as earlier than every real call and the gate would pass", got)
 	}
-}
-
-// invokedLiterals collects the function literals this body actually runs: the ones
-// handed straight to a call, which is how the whole capture transaction reaches the
-// store — s.db.Tx(ctx, func(tx pgx.Tx) error { ... }) — and the ones called in
-// place. A literal nobody passes anywhere does not execute, so a call inside one
-// says nothing about what the function does, and reading position cannot tell the
-// two apart without this.
-func invokedLiterals(fn *ast.FuncDecl) map[*ast.FuncLit]bool {
-	invoked := map[*ast.FuncLit]bool{}
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		if lit, isLit := call.Fun.(*ast.FuncLit); isLit {
-			invoked[lit] = true
-		}
-		for _, arg := range call.Args {
-			if lit, isLit := arg.(*ast.FuncLit); isLit {
-				invoked[lit] = true
-			}
-		}
-		return true
-	})
-	return invoked
 }

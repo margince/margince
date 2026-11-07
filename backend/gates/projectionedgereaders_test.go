@@ -76,8 +76,21 @@ var projectionGateSpellings = map[string]bool{
 // reason it may read the table without a caller gate. Every entry must match a
 // real site — a stale one fails the census the day its subject moves.
 var projectionMaintenanceSites = gatekit.Waive(map[string]string{
-	"internal/modules/search:recomputePairs":                 "the fold runs under the system principal from the cg:graph-edge consumer; it rewrites the projection from the base tables and returns nothing to a caller",
-	"internal/modules/search:recomputeContactPairs":          "the contact fold, same contract as recomputePairs: system principal, rewrites from base tables, returns nothing",
+	"internal/modules/search:lockInteractionPairs":           "System-only interaction maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:uncoveredInteractionPairs":      "System-only interaction maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:queueInteractionPairs":          "System-only interaction maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:pendingContactPairs":            "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:pendingInteractionPairs":        "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:settleContactPairs":             "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:settleInteractionPairs":         "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:ReleaseGraphHistoryTx":          "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:HasPendingGraphWorkTx":          "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:lockContactPairs":               "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:uncoveredContactPairs":          "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/modules/search:queueContactPairs":              "System-only derived-work maintenance: pair keys remain inside the exact-fold, lock or scheduling path and never reach a human response.",
+	"internal/compose:releaseTerminalImportWork":             "The import recovery pass uses its system principal to find terminal runs with derived work. It returns only whether more work remains, never graph rows or pair keys.",
+	"internal/modules/search:foldPairs":                      "the fold runs under the system principal from the cg:graph-edge consumer; it rewrites the projection from the base tables; returned keys remain inside maintenance",
+	"internal/modules/search:foldContactPairs":               "the contact fold, same contract as foldPairs: system principal, rewrites from base tables, returns keys only inside maintenance",
 	"internal/modules/search:affectedContactPairs":           "resolves which pairs an activity touches for the fold — including stale edges of a relinked participant; the keys never leave the maintenance path",
 	"internal/modules/search:affectedPairs":                  "the colleague half of affectedContactPairs, same contract: names which pairs an activity touches for the fold, stale edges of a relinked participant included, and the keys never leave the maintenance path",
 	"internal/modules/search:contactPairsForContact":         "resolves a contact's pairs for the fold on merge/archive; the keys never leave the maintenance path",

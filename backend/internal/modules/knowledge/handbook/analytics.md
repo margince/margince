@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/accountcoverage.go -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/modules/assurance backend/internal/compose/accountcoverage.go -->
 # Analytics and forecasting
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
@@ -10,15 +10,14 @@
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
 3. Read the **Period forecast** and what it is made of: **Already won**, **Likely** and **Weighted**.
-   The forecast gap sets the manager’s total against won sales plus Likely deals.
-   Review **Checks before the call**; source details are under **Data and evidence checked**.
-A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
+   The forecast gap sets the manager’s total against won sales plus Likely deals. Review **Checks before the call**; source details are under **Data and evidence checked**.
+
+If Margince cannot confirm that a check still matches the records, it says so. Wait for an update or choose **Check again**. A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.
 Every seat is offered **Whole company**, every live team and its own records; a seat whose scope is its teams also gets **My teams** first.
-Totals are the same for everyone. You can read a team's totals without being in it, but only the owners you may measure show by name.
-A rep opens on their own records.
+Totals are the same for everyone. You can read a team's totals without being in it, but only the owners you may measure show by name. A rep opens on their own records.
 
 ### How do I see my pipeline report?
 1. Click **Analytics**, then the **Pipeline** tab.
@@ -33,6 +32,8 @@ The **Forecast** section is where this period will land. The **Pipeline** sectio
 
 The list names up to five open forecast checks for the records you picked. Each shows the deal, what the check found, the owner and the money in question. High checks come first, then the largest amounts. **Review** opens the forecast review. When there are more checks, one line counts them all.
 
+On **Sales review**, the selected filters also narrow checks about deals. Forecast figures and checks about other records cover the whole selected group. The Forecast page states this when those filters are set.
+
 A check is **Out of date** when a record it read changed after it ran. It reads deals with their offers, contracts and activities, buying signals with their company, stages and forecast calls. The verdict and findings stay as the check left them, with the mark beside them, and the verdict loses its colour. **Check again** reads the changes now, and the next nightly check reads them too. A check that could not read every source, the mailbox included, clears no mark. Until a check reads every source, the review says it cannot tell whether anything changed.
 
 A change to one deal also starts a check of that deal alone. When it lands, it clears that deal's mark, and the screen does not wait for it. A manager forecast is checked against the pipeline it was recorded over. **Forecast call needs review** names the call and the deals that moved.
@@ -45,13 +46,14 @@ A seat that cannot read saved reports gets a **Custom reports** button there ins
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
+A custom answer keeps the base currency and rate reference date used when it ran. Changing the page's currency keeps the currency on that answer. When a field hidden by your role leaves records you can read out of the answer, the answer says how many.
+
 A deal's own amount is in that deal's currency, and amounts in two currencies cannot be added. So a custom report that totals, averages, or takes the smallest, largest or middle deal amount must group by currency or filter to one currency. For one total across currencies, measure the amount in the base currency, which converts each deal at its own rate. A deal whose currency has no rate is left out of that total. A count of the base amount says how many deals it covers. A saved report that adds amounts across currencies says so when you open it, instead of showing a number.
 
 The **My outcomes** section shows your own targets, open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
-To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
-The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
+To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**. The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
 
 Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the current permissions of whoever opens it. Also called: send a report, share dashboard, report link.
 
@@ -61,8 +63,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
    It also shows when the link was created and when it expires.
 2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
 
-The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same.
-A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
+The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).

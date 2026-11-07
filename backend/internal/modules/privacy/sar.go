@@ -85,6 +85,7 @@ type SARPackage struct {
 	// meant a subject who asked to be erased, and was refused, could not see
 	// that the refusal existed — the one thing they would need to appeal it.
 	RightsRequests []map[string]any `json:"rights_requests"`
+	RequestProofs  []map[string]any `json:"request_proofs"`
 	// The unsubscribe links minted for this subject, which are capabilities
 	// over their own record and live two years.
 	//
@@ -476,25 +477,6 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 			return nil, err
 		}
 		out = append(out, id)
-	}
-	return out, rows.Err()
-}
-
-// subjectStrings runs a one-column text query into a slice. The contact is $1,
-// and any further arguments follow it.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
-	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []string{}
-	for rows.Next() {
-		var v string
-		if err := rows.Scan(&v); err != nil {
-			return nil, err
-		}
-		out = append(out, v)
 	}
 	return out, rows.Err()
 }

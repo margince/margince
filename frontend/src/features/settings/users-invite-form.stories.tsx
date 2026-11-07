@@ -12,10 +12,11 @@ import {
 } from "../../testing/story-utils";
 import { InviteUserForm } from "./users-invite-form";
 
-// An address, a name, a role and the teams the member lands in, committed
-// together. TWO surfaces ask it — the roster's dialog in Settings → Contacts and
-// the setup journey's team step — and it is one form so the two cannot come to
-// invite differently, which is the difference the `askName` story shows.
+// An address, a name, a role, the teams the member lands in and the legal
+// entity they work for, committed together. TWO surfaces ask it: the roster's
+// dialog in Settings → Contacts and the setup journey's team step. It is one
+// form so the two cannot come to invite differently; the `askName` story shows
+// the one difference.
 
 const meta: Meta<typeof InviteUserForm> = {
   title: "Settings/People/Members/Invite",
@@ -25,12 +26,23 @@ const meta: Meta<typeof InviteUserForm> = {
 export default meta;
 type Story = StoryObj<typeof InviteUserForm>;
 
-function Served({ children }: Readonly<{ children: ReactNode }>) {
+function Served({
+  children,
+  entities = false,
+}: Readonly<{ children: ReactNode; entities?: boolean }>) {
   installFetchStub({
     "GET /me": meRoute({
-      user_admin: ["read", "create"],
+      user_admin: entities ? ["read", "create", "update"] : ["read", "create"],
       team_admin: ["read"],
+      ...(entities ? { legal_entity: ["read", "update"] as const } : {}),
     }),
+    "GET /legal-entities": () =>
+      jsonResponse({
+        data: [
+          { id: "le-default", is_default: true, display_name: "Acme" },
+          { id: "le-vienna", is_default: false, display_name: "Acme Wien" },
+        ],
+      }),
     "GET /teams": () =>
       jsonResponse({
         data: [
@@ -71,6 +83,19 @@ export const AddressOnly: Story = {
   render: () => (
     <Served>
       <InviteUserForm askName={false} onInvited={() => undefined} />
+    </Served>
+  ),
+};
+
+/**
+ * An installation that trades as two legal entities, and an inviter who may
+ * assign members. The form asks which one the member works for, and starts on
+ * the default.
+ */
+export const WithLegalEntity: Story = {
+  render: () => (
+    <Served entities>
+      <InviteUserForm onInvited={() => undefined} />
     </Served>
   ),
 };

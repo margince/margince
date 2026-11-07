@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 type followUpFieldError struct{ Field, Message string }
@@ -123,5 +124,12 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	if err := admitTaskTime(in); err != nil {
 		return err
 	}
-	return validateActivityDuration(in.DurationSeconds)
+	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		return err
+	}
+	keys := []string{in.ThreadKey}
+	if in.SourceSystem != nil && *in.SourceSystem == connector.EmailSourceSystem && in.SourceID != nil {
+		keys = append(keys, *in.SourceID)
+	}
+	return storekit.LockThreadKeysTx(ctx, tx, keys...)
 }

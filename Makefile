@@ -616,7 +616,9 @@ ifdef CHECK_WRITERS_RAN
 else
 	cd frontend && pnpm install --frozen-lockfile
 	@./scripts/check-contract-frontend-drift.sh
+	cd frontend && pnpm gen:approval-reading --check
 endif
+	cd frontend && pnpm gen:essential-copy --check
 
 ## fe-unit — the vitest suite. FE_COVERAGE=1 instruments the run so it also
 ## writes frontend/coverage/lcov.info for the `sonarcloud` job — ONE execution
@@ -972,6 +974,7 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
+## FE_UAT_BASE_REF chooses the PR base (origin/main by default).
 ## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
 ## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:

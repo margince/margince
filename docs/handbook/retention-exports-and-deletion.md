@@ -60,6 +60,11 @@ Also called: right to be forgotten, Art. 17, delete my data, data subject reques
 ### How do I answer a data access request?
 To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
 
+Open a closed request to read its proof, including its reference, identity check, answer date and how long the proof is kept.
+An erasure proof also counts changes to stored entries.
+The subject's data package includes their request proofs.
+A request opened through a confirm link already has its identity check filled in.
+
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
 ### How do I archive a record?

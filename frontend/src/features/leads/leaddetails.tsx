@@ -7,6 +7,7 @@ import { ConversationSuggestionsCard } from "../../components/conversationsugges
 import { EntityRef } from "../../components/entityref";
 import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
+import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import {
@@ -410,6 +411,7 @@ function LeadDetailsBody({
   return (
     <>
       <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <LeadStops leadId={lead.id} />
       {!lead.archived_at && (
         <ConversationSuggestionsCard
           key={lead.id}

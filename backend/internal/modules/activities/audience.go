@@ -71,7 +71,8 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		if err != nil {
 			return err
 		}
-		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		internalMail, reason, err := authorizeAudienceWriteTx(ctx, tx, id, in, members, held)
+		if err != nil {
 			return err
 		}
 		// A CAPTURED message is not one contact's to set.
@@ -90,7 +91,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		// refusal outranks this one — 422 tells the caller their request is
 		// fixable by asking the owner endpoint instead, which a held row's
 		// request never is.
-		if !held {
+		if !held && !internalMail {
 			if err := refuseCapturedAudienceWrite(ctx, tx, id); err != nil {
 				return err
 			}
@@ -118,7 +119,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		// `manual` says both: a contact set this, and no derivation may move it.
 		if _, err := tx.Exec(ctx,
 			`UPDATE activity SET audience = $2, audience_reason = $3 WHERE id = $1`,
-			id, in.Audience, ReasonManual); err != nil {
+			id, in.Audience, reason); err != nil {
 			return err
 		}
 		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {

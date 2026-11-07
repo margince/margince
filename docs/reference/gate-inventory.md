@@ -30,6 +30,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `analyticsvocabularylabels_test.go` | H3 | The question builder names the analytics vocabulary the server serves, no more and no fewer. |
 | `approvalfieldlabels_test.go` | H2 | An approval names a withheld field with the label the record's history panel gives it. |
 | `approvalpreviewwords_test.go` | H2 | An approval's email and read\_approval word a preview's effects and states as the approval card does. |
+| `approvalreadingcatalog_test.go` | H2 | _(no doc comment)_ |
 | `appviewfixtures_test.go` | H2 | Each MCP App view's test fixture has the member names of the Go result its tool returns. |
 | `attachmenttypes_test.go` | H3 | The file picker offers the kinds of file the server keeps, no more and no fewer. |
 | `auditcoherence_test.go` | H3 | The audit\_log action and actor\_type vocabularies in crm.yaml match the table's CHECK constraints. |
@@ -40,6 +41,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the same variable whether to publish a record, and both answer only to the same value. |
 | `bookinginvite_test.go` | H2 | A booking's attendee addresses reach the calendar invitation, and the contract says the booking queues one. |
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
+| `capturedmeetingpast_test.go` | H2 | The mail permission check and consent count a captured meeting only once its time has passed and nobody called it off. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
 | `checklanes_test.go` | H3 | `make check` runs every leg its two halves, check-backend and check-fe, run. |
 | `cla_test.go` | H2 | An acceptance of the CLA covers the text it was shown, under the version that text carries. |
@@ -136,7 +138,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jsonsafeinteger_test.go` | H1 | A bigint that reaches a JSON client is bounded to what the client can hold. |
 | `labelinstructions_test.go` | H2 | Every label the docs put in front of a session is one `.github/labels.yml` declares. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
-| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact, company and project skips a task and a called-off meeting, and counts only what has happened. |
+| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact, company and project skips a task and a canceled or no-show meeting, and counts only what has happened. |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
 | `listsortdeclared_test.go` | H2 | An operation that declares the shared `Sort` parameter has a handler that reads it. |
 | `listsortvocabulary_test.go` | H3 | A sort the list offers is a sort the server accepts. |
@@ -148,7 +150,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it, and outbound mail links to it before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly panel's labels. |
 | `mcpparityareas_test.go` | H2 | The work-area table the server reads matches the parity catalog's placement and the contract's WorkArea enum. |
-| `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has one answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale (100 for EUR, 1000 for KWD, 1 for VND) is one fact, and the table that holds it lives in shared/kernel/values. |
 | `mockproblemcodes_test.go` | H2 | Every Problem a frontend test, story or fixture answers carries a code the server can send. |
@@ -500,6 +501,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
 | `replayscope_test.go` | H2 | A replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
 | `resetflushscope_test.go` | H2 | The reset's cache flush has two entry points by design, and the split is a security boundary rather than a style choice. |
+| `threadcomponentwriters_test.go` | H2 | The ownership census supplies packages; its SQL parser supplies columns. |
 | `versionguard_test.go` | H2 | A version pin is only real if the pinned table's version actually moves. |
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | Every mutation that writes an audit row commits a paired outbox event on the same static call path, through storekit, across modules and the composition layer. |
@@ -556,7 +558,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audiencelockorder_test.go` | H2 | Several activity audiences are recomputed in one agreed order, or two transactions deadlock. |
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `automationtarget_test.go` | H2 | An automation action targets the record its trigger fired on. |
-| `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
+| `backfillledgerlock_test.go` | H2 | Credits for one run are serialized before inserting ledger evidence. |
 | `bare5xx_test.go` | H2 | A 5xx the api sends carries a problem body, or it says which surface it is on. |
 | `bindableidentityonce_test.go` | H2 | Who may bind an arrival to the activity already holding its identity is decided in one place: activities.bindableIdentityUnder, which both exported entry points delegate to. |
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |
@@ -660,7 +662,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `langcopyonecensus_test.go` | H2 | One census reads every langcopy.Phrase table, and no owner walks its own. |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and two functions in two packages each called themselves the one spelling of it while the tree held about twenty copies. |
 | `marketingquestion_test.go` | H2 | The question a grant is bound to is the question the screen asks. |
-| `mergelockordering_test.go` | H2 | A capture that may merge threads takes the merge lock before it touches an activity. |
+| `mergelockordering_test.go` | H2 | Capture locks component identities before rows; later writers use the same coordinator without waiting while they own rows. |
 | `noisejudgedspelling_test.go` | H2 | "An already-settled answer disowns this contact" is spelled once. |
 | `onedraftwriter_test.go` | H1 | One writer produces every grounded draft, or the surfaces drift. |
 | `overridewarning_test.go` | H2 | The words behind a recorded acknowledgement cannot change without the version changing. |
@@ -696,10 +698,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with synthetic statements rather than the tree, for the reason extensionsqlscopecases\_test.go gives for its own cases. |
+| `retentionconstants_test.go` | H2 | _(no doc comment)_ |
 | `rowscopeplanted_test.go` | H2 | The defect this census is for, planted and run. |
 | `subjectlockorderwalk_test.go` | H2 | The lock-order walk judged on planted bodies. |
 | `tableownershipexpressions_test.go` | H2 | Complete concatenations keep one statement identity. |
 | `taskcensuscoverage_test.go` | H2 | The task census rejects unsupported source stamps and unresolved task kinds. |
+| `threadcomponentmutations_test.go` | H2 | _(no doc comment)_ |
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with synthetic statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with synthetic source rather than the tree, for the reason retainedcolumncases\_test.go gives for its own cases. |

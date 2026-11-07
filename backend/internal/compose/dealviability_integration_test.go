@@ -337,3 +337,45 @@ func TestANewDeliveringMailboxMakesTheReceiptStale(t *testing.T) {
 		t.Fatal("a second mailbox delivering the deal's mail left the receipt current")
 	}
 }
+
+// A past meeting with the buyer moves the deal whether or not anyone reported
+// it held. A meeting still to come, a canceled one and a no-show do not.
+func TestAPastMeetingNobodyCalledOffIsCustomerProgress(t *testing.T) {
+	e := integration.Setup(t)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	buyer, now := e.SeedContact(t, "Buyer", nil), clocktest.Now(t)
+	progressOf := func(deal ids.UUID) string {
+		return e.WsScalar(t, `SELECT coalesce(max(a.occurred_at)::text, 'none') FROM activity a
+			JOIN activity_link al ON al.activity_id = a.id
+			WHERE al.deal_id = $1 AND a.archived_at IS NULL AND `+customerProgressSQL("a", "$2"), deal, now)
+	}
+	past, ahead := now.AddDate(0, 0, -3), now.AddDate(0, 0, 3)
+	for name, tc := range map[string]struct {
+		status string
+		at     time.Time
+		moved  bool
+	}{
+		"a past meeting nobody reported": {"", past, true},
+		"a past meeting still booked":    {"booked", past, true},
+		"a held meeting":                 {"held", past, true},
+		"a meeting still to come":        {"booked", ahead, false},
+		"a canceled meeting":             {"canceled", past, false},
+		"a no-show":                      {"no_show", past, false},
+	} {
+		deal := e.SeedDeal(t, "Met the buyer ("+name+")", pipeline, open, &e.Rep1)
+		subject, at := "Workshop with the buyer", tc.at
+		in := activities.LogActivityInput{
+			Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}, {EntityType: "contact", EntityID: buyer}},
+		}
+		if tc.status != "" {
+			in.MeetingStatus = &tc.status
+		}
+		if _, _, err := e.Activities.LogActivity(e.Admin(), in); err != nil {
+			t.Fatal(err)
+		}
+		if got := progressOf(deal); (got != "none") != tc.moved {
+			t.Errorf("%s: customer progress at %s, want progress %v", name, got, tc.moved)
+		}
+	}
+}

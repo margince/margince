@@ -85,6 +85,7 @@ const glyphTrigger = () => screen.getByRole("button", { name: "Account" });
 
 const openMenu = async (user: UserEvent, trigger: HTMLElement) => {
   await user.click(trigger);
+  await screen.findByRole("menu", { name: "Account" });
   return trigger;
 };
 

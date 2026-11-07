@@ -83,7 +83,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	authH := identity.NewHandlers(identitySvc).
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
 		WithInstallationDescribed(installationDescribed(anchor)).
-		WithInstallationBrand(installationBrand(anchor))
+		WithInstallationBrand(installationBrand(anchor)).
+		WithEntityMembership(anchor.AssignLegalEntityMemberTx)
 
 	// The transport directory, loaded on the REAL assembly path rather than in
 	// newServer: route-level tests construct that one directly with a pool that
@@ -101,6 +102,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
+	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
 	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
 	// The tool registry is built HERE, after the options, on the Server that is

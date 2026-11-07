@@ -166,9 +166,9 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if hygiene.Action == CloseDateActionAutoApply {
 			label = "auto_apply"
 		}
-		_, wrote, err := c.apply(ctx, cand, label, EvidenceOf(proposal, cand.expectedClose), runID, func(p *storekit.Patch) {
-			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-			if !cand.provisional {
+		wrote, err := c.apply(ctx, cand, label, EvidenceOf(proposal, cand.expectedClose), runID, func(p *storekit.Patch, row lockedDeal) {
+			setCloseDate(p, row.expectedClose, *hygiene.ProposedClose)
+			if !row.provisional {
 				p.Set("close_date_provisional", false, true)
 			}
 		}, map[string]any{
@@ -259,13 +259,13 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		extra[CloseDateMedianDaysKey] = pace.days
 		extra[CloseDateRemainingStagesKey] = StagesToGo(cand.remainingOpen)
 	}
-	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
+	wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch, row lockedDeal) {
 		if notched != effective {
-			setWinProbability(p, cand.override, cand.overrideBy, &notched, SourceMargince)
+			setWinProbability(p, row.override, row.overrideBy, &notched, SourceMargince)
 		}
 		// A future date stays intact while confidence is reviewed.
-		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-		if !cand.provisional && (cand.expectedClose == nil || !dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
+		setCloseDate(p, row.expectedClose, *hygiene.ProposedClose)
+		if !row.provisional && (row.expectedClose == nil || !dateOnly(*row.expectedClose).Equal(*hygiene.ProposedClose)) {
 			p.Set("close_date_provisional", false, true)
 		}
 	}, extra)

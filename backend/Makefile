@@ -738,6 +738,13 @@ arch-lint: ## Import-boundary lint (go-arch-lint over .go-arch-lint.yml)
 # today, the composed client types and docs as their slices land) — the same
 # split Task 11's tsconfig alias makes for TypeScript.
 gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the contract
+	@# The approval reading catalog needs the frontend toolchain. A checkout
+	@# without it skips the write; fe-drift checks the committed copy.
+	@if command -v pnpm >/dev/null 2>&1 && [ -d ../frontend/node_modules ]; then \
+		cd ../frontend && pnpm gen:approval-reading; \
+	else \
+		echo "gen: approval reading catalog not regenerated (no frontend toolchain); fe-drift checks it"; \
+	fi
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm

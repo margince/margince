@@ -548,6 +548,38 @@
             "type": "string"
           }
         },
+        "gmail_mailbox_quota": {
+          "description": "Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 6000
+        },
+        "gmail_project_quota": {
+          "description": "Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1200000
+        },
+        "history_concurrency": {
+          "description": "Limit on history imports running at once across the installation. Use the same value in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1
+        },
+        "history_hold": {
+          "description": "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        },
         "mail_sharing": {
           "description": "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
           "type": [
@@ -827,6 +859,31 @@
             "null"
           ],
           "default": "1s"
+        }
+      }
+    },
+    "database": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "worker_max_connections": {
+          "description": "Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 12
+        },
+        "worker_statement_cache_capacity": {
+          "description": "Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN default_query_exec_mode.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 256
         }
       }
     },

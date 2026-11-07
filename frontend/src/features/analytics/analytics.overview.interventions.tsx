@@ -21,8 +21,9 @@ import type { UrlParams } from "../../lib/urlstate";
 import { type AttentionState, attentionState } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
-import { useInputChecks } from "./analytics.forecast.review";
 import { checkLabel } from "./inputcheck.facts";
+import { useInputChecks } from "./inputchecks.queries";
+import type { Dimensions } from "./reporting.dimensions";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type CheckList = NonNullable<ReturnType<typeof useInputChecks>["data"]>;
@@ -49,9 +50,12 @@ export type Interventions = Readonly<{
  * The findings Sales review acts on and the sources behind them, read under
  * the keys their own sections read them by.
  */
-export function useInterventions(scope: AnalyticsScope): Interventions {
+export function useInterventions(
+  scope: AnalyticsScope,
+  dimensions?: Dimensions,
+): Interventions {
   const canReadForecast = useCan("forecast", "read");
-  const checks = useInputChecks(canReadForecast, scope);
+  const checks = useInputChecks(canReadForecast, scope, dimensions);
   const coverage = useDataCoverage();
   const canReadCoverage = useCan("data_coverage", "read");
   const unread =

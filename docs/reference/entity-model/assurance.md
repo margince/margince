@@ -188,7 +188,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_run
 
-15 columns · primary key `(id)` · referenced by 3 foreign keys
+16 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -197,6 +197,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `digest` | `text` |  |  |
 | `eligible_deals` | `integer`, default `0` | yes |  |
 | `eligible_signals` | `integer`, default `0` | yes |  |
+| `outbox_inputs_tracked` | `boolean`, default `false` | yes |  |
 | `read_through_generation` | `bigint` |  |  |
 | `readiness` | `text` |  | One of `ready`, `ready_with_exceptions`, `needs_review`, `checks_incomplete`. |
 | `requested_by` | `text` |  |  |

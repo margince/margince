@@ -24,14 +24,11 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
-		"pipeline, a rep's leads, a contact's timeline.",
-	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
-		"the set continues past it.",
+	Purpose: "List one page of matching records: deals in a pipeline, a rep's leads, or a contact's timeline.",
+	Limits:  "Only declared record_type filters apply. Further pages may exist.",
 	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
 		"or a total.",
-	Retain: "Pass next_cursor back to read the next page; a call without it re-reads the first. " +
-		"A result's `owner` says who holds it. " + sayWhoseItIs,
+	Retain: "Pass next_cursor for the next page; omit it for the first. `owner` names the holder. " + sayWhoseItIs,
 }
 
 var readViewCopy = toolCopy{

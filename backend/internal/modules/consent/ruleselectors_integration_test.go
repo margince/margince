@@ -88,39 +88,41 @@ func TestAnAddressSuffixIsNeverACountry(t *testing.T) {
 	}
 }
 
-// TestTheSendingEntityPicksTheDataProtectionCountry: a sender assigned to an
-// entity sends under its country; one assigned to none sends for the default
-// entity, which takes the installation's.
+// TestTheSendingEntityPicksTheDataProtectionCountry: a message of a further
+// entity goes out under that entity's country. The default entity and no
+// entity at all take the installation's.
 func TestTheSendingEntityPicksTheDataProtectionCountry(t *testing.T) {
 	e := setupChannelConsent(t)
 	store := e.store.WithInstallationCountry(
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return "de", nil }))
-	countryFor := func(sender ids.UUID) jurisdiction.Code {
-		t.Helper()
+	var defaultEntity ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `SELECT id FROM legal_entity WHERE is_default`).Scan(&defaultEntity); err != nil {
+		t.Fatal(err)
+	}
+	branch := ids.NewV7()
+	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch)
+
+	for _, tc := range []struct {
+		name   string
+		entity ids.UUID
+		want   jurisdiction.Code
+	}{
+		{"no entity", ids.Nil, "de"},
+		{"the default entity", defaultEntity, "de"},
+		{"the vn entity", branch, "vn"},
+	} {
 		var got jurisdiction.Code
 		if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 			var err error
-			got, err = store.dataProtectionCountryTx(e.ctx, tx, sender)
+			got, err = store.dataProtectionCountryTx(e.ctx, tx, tc.entity)
 			return err
 		}); err != nil {
 			t.Fatal(err)
 		}
-		return got
-	}
-
-	if got := countryFor(e.user); got != "de" {
-		t.Errorf("a sender with no entity sent under %q, want the default entity's de", got)
-	}
-	if got := countryFor(ids.Nil); got != "de" {
-		t.Errorf("automatic work sent under %q, want the default entity's de", got)
-	}
-	entity := ids.NewV7()
-	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, entity)
-	e.exec(t, `INSERT INTO legal_entity_member (legal_entity_id, user_id, assigned_by)
-		VALUES ($1, $2, 'human:x')`, entity, e.user)
-	if got := countryFor(e.user); got != "vn" {
-		t.Errorf("a sender of the vn entity sent under %q", got)
+		if got != tc.want {
+			t.Errorf("%s sent under %q, want %q", tc.name, got, tc.want)
+		}
 	}
 }
 

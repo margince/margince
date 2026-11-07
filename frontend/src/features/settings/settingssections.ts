@@ -158,6 +158,7 @@ export const SETTINGS_SECTIONS = {
   tags: ["tagAdmin.listLabel"],
   products: ["product.title", "template.title"],
   capture: [
+    "internalMail.title",
     "mailSharing.cardTitle",
     "ownDomains.title",
     "captureSettings.title",

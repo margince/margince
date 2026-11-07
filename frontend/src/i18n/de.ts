@@ -168,6 +168,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.work.projects": "Projekte",
   "users.work.alerts": "Offene Hinweise",
   "users.work.tasks": "Aufgaben",
+  "users.work.lists": "Listen",
+  "privacy.proofReference": "Anfragenummer",
+  "privacy.proofAnswered": "Beantwortet am",
+  "privacy.proofKeptUntil": "Nachweis aufbewahrt bis",
+  "privacy.proofCompletedBy": "Abgeschlossen von",
+  "privacy.proofAutomated": "Automatisierter Vorgang",
+  "privacy.proofErasureChanges": "Erfasste Löschänderungen",
+  "privacy.proofPartialCounts":
+    "Ein Teil der Löschung lässt sich nicht zählen. Der Auskunftsexport enthält die erfasste Aufstellung.",
+  "privacy.proofExportCounts":
+    "Der Auskunftsexport enthält die erfasste Aufstellung.",
+  "privacy.proofUnknown": "Nicht erfasst",
+  "analytics.q.conversionFrame":
+    "Basiswährung: {currency}. Wechselkurse vom {date}.",
 
   "homeRepair.taskPermission":
     "Zum Archivieren geprüfter Aufgaben brauchst du die Berechtigung, Aktivitäten zu archivieren.",
@@ -2666,6 +2680,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.meeting_documents_added":
     "Besprechungsnotizen aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
+  "history.field.meeting_guests_removed":
+    "Gäste an ihre eigene Besprechung zurückgegeben",
   "history.field.guest_answers_changed":
     "Antworten der Gäste aus dem Kalender aktualisiert",
   "history.field.guests_left_out": "Nicht aufgeführte Gäste",
@@ -4292,6 +4308,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.products.remove": "{name} entfernen",
   "deal.products.add": "Produkt hinzufügen",
   "deal.products.alreadyListed": "Bereits aufgeführt",
+  "deal.products.changedWhileEditing":
+    "Jemand hat die Produkte dieses Deals gespeichert, während du sie bearbeitet hast. Die Liste zeigt jetzt diese Fassung; nimm deine Änderung erneut vor und speichere.",
   "deal.products.fromOffer": "Aus dem Angebot",
   "deal.products.setByHand": "Selbst festgelegt",
   "deal.lines.empty":
@@ -4775,6 +4793,57 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.reason.verdict": "Durch Einstufung zurückgehalten",
   "compose.reason.counterparty": "Zurückgehalten: E-Mail mit der Gegenseite",
   "compose.reason.explicitlyConfidential": "Als vertraulich markiert",
+  "internalMail.authorizeHistory":
+    "Einen gesonderten Import interner E-Mail-Historie für diese Quelle freigeben",
+  "internalMail.historySince": "Ältere E-Mails empfangen ab (UTC)",
+  "internalMail.historyApprovalNote":
+    "Diese Freigabe startet keinen Import. Der Postfachnutzer muss den Umfang prüfen und interne Historie beim Start ausdrücklich einschließen.",
+  "internalMail.needHistoryDate":
+    "Für jede freigegebene interne Historienquelle ein frühestes Empfangsdatum wählen.",
+  "internalMail.reauthorizeSource":
+    "Die Postfachfreigabe hat sich geändert. Zum erneuten Aufnehmen speichern. Die interne Erfassung bleibt bis dahin gestoppt.",
+  "internalMail.historyTitle": "Freigabe interner Historie",
+  "internalMail.historyAfter":
+    "Freigegebene interne E-Mails empfangen nach {date}",
+  "internalMail.historyFolders": "Ordner der internen Quelle",
+  "internalMail.historyImportNote":
+    "Mit dieser Option beginnt ein neuer Import. Die Anbieterschätzung umfasst das gesamte Postfachfenster. Interne E-Mails werden nur innerhalb der freigegebenen Quelle und des Zeitraums bis zum Importstart ergänzt. Übliche Ausschlüsse und der Zugriff für Teilnehmende bleiben bestehen.",
+  "internalMail.includeHistory":
+    "Freigegebene interne E-Mails in einen neuen Historienimport einschließen",
+  "internalMail.title": "Interne betriebliche E-Mails",
+  "internalMail.scope":
+    "Ausgewählte betriebliche E-Mails zwischen Teammitgliedern speichern. Zunächst lesen nur Teilnehmende mit. Teilnehmende können einzelne Nachrichten mit benannten Teammitgliedern teilen. Verknüpfungen und das Teilen eines Threads erweitern den Zugriff nicht.",
+  "internalMail.authorization":
+    "Vor dem Aktivieren die betriebliche Freigabe und Information der Mitarbeitenden sicherstellen. Die Auswahl verwendet vorhandene Postfachrechte und erteilt keine neuen Anbieterrechte.",
+  "internalMail.enable": "Interne betriebliche E-Mails erfassen",
+  "internalMail.sources": "Betriebliche Postfachverbindungen",
+  "internalMail.noSources":
+    "Zuerst ein Postfach verbinden, dann eine betriebliche Quelle wählen.",
+  "internalMail.unavailableSource": "Postfachverbindung nicht verfügbar",
+  "internalMail.needSource":
+    "Vor dem Aktivieren mindestens eine betriebliche Postfachverbindung wählen.",
+  "internalMail.disable":
+    "Deaktivieren oder Entfernen einer Quelle stoppt neue interne E-Mails. Gespeicherte Nachrichten behalten ihre Zugriffsbeschränkungen und Datenschutzregeln.",
+  "internalMail.future":
+    "Die Erfassung beginnt mit neuen E-Mails. Interne Historie bleibt ausgeschlossen, bis ein Admin einen Zeitraum freigibt und der Postfachnutzer sie in einem gesonderten Import ausdrücklich einschließt.",
+  "internalMail.allFolders": "Alle zulässigen Ordner",
+  "internalMail.selectedFolders": "Nur ausgewählte Ordner",
+  "internalMail.chooseFolders": "Ordner wählen",
+  "internalMail.folders": "Ordner dieser Verbindung",
+  "internalMail.loadingFolders": "Postfachordner werden geladen",
+  "internalMail.foldersUnsupported":
+    "Dieser Anbieter kann Ordner nicht auflisten. Die gesamte Verbindung kann mit den üblichen Ausschlüssen gewählt werden.",
+  "internalMail.unavailableFolder": "Ordner nicht verfügbar",
+  "internalMail.removeFolder": "Ordner entfernen",
+  "internalMail.searchFolders": "Ordner suchen",
+  "internalMail.noFolders": "Keine passenden Ordner",
+  "internalMail.done": "Fertig",
+  "internalMail.partialFolders":
+    "Der Anbieter lieferte nur einen Teil der Ordnerliste. Vorhandene Auswahlen bleiben erhalten.",
+  "internalMail.shareNote":
+    "Dies ändert nur die benannten Lesenden dieser Nachricht. Teilnehmende behalten Zugriff. Eine neue Auswahl ersetzt die bisher benannten Lesenden.",
+  "compose.reason.internalOperational":
+    "Interne betriebliche E-Mail: Teilnehmende und ausgewählte Teammitglieder",
   "compose.reason.membersOnly": "Zurückgehalten: E-Mail unter Teammitgliedern",
   "compose.reason.noCounterparty": "Zurückgehalten: keine Gegenseite",
   "compose.audience": "Sichtbarkeit ändern",
@@ -6403,6 +6472,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bulk.doneCount_other": "{count} Einträge für dich erledigt.",
 
   "deal.pendingApprovals": "Wartet auf Freigabe",
+  "deal.approval.open": "Öffnen",
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
   "deal.offerNeedsCurrency":
@@ -7712,6 +7782,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail senden",
   "compose.threadLeave": "Neue E-Mail",
+  "compose.channelDraftUnavailable":
+    "KI-Entwürfe sind in diesem Kanal nicht verfügbar. Schreib deine Antwort unten.",
   "compose.draftKept":
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du so weit bist.",
   "compose.threadFailed":
@@ -8151,6 +8223,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.emptyTeamBody": "Niemand in {scope} hat einen Deal.",
   "analytics.deliveryCoversAll":
     "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
+  "analytics.wholeScopeForecast":
+    "Prognosewerte und Prüfungen ohne Deal gelten für die gesamte ausgewählte Gruppe, unabhängig von Produkt-, Länder- oder Branchenfiltern.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.board.rail": "Ausblick und nächste Schritte",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
@@ -8484,7 +8558,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateRefresh":
     "Wähle „Erneut prüfen“, um die Änderungen jetzt zu lesen, oder warte auf den nächsten nächtlichen Lauf.",
   "review.freshnessUnknown":
-    "Ob sich die Daten seit dieser Prüfung geändert haben, ist nicht bekannt: Seit Margince Änderungen verfolgt, lief keine Prüfung, die jede Quelle gelesen hat. Wähle „Erneut prüfen“, um eine zu starten.",
+    "Margince hat noch nicht bestätigt, ob sich die Daten seit dieser Prüfung geändert haben. Warte auf eine Aktualisierung oder wähle „Erneut prüfen“, um sie jetzt zu lesen.",
   "review.allSourcesRead": "Alle Quellen geprüft.",
   "review.source.mail": "Postfach",
   "review.source.calendar": "Kalender",
@@ -10459,6 +10533,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Erfassungsdatum ist unbekannt; die Pflicht kann bereits fällig sein.",
   "noticeDuty.observedOn": "Beobachtet am",
   "notice.source.more": "Für diesen Kontakt sind weitere Quellen zu prüfen.",
+  "notice.source.evidenceOnFile": "Vorhandene Nachweise",
+  "notice.source.original": "Ursprünglicher Quelldatensatz",
+  "notice.source.originalUnknown": "Dieser Datensatz nennt keine Quelle.",
+  "notice.source.happenedOn": "Am {date}",
+  "notice.source.recordedOn": "Erfasst am {date}",
+  "notice.source.describeEvidence": "Anderen Nachweis beschreiben",
+  "notice.source.openRecord": "Datensatz ansehen",
+  "notice.source.moreEvidence": "Weitere Nachweise anzeigen",
+  "notice.source.preview": "Vor der Bestätigung",
+  "notice.source.previewNone":
+    "Aus dieser Quelle folgt keine eigene Informationspflicht.",
+  "notice.source.previewOwed": "Ein Datenschutzhinweis ist bis {date} fällig.",
+  "notice.source.previewLatest":
+    "Ein Datenschutzhinweis ist spätestens bis {date} fällig. Das Erfassungsdatum ist unbestätigt.",
+  "notice.source.selectedHint":
+    "Der gewählte Datensatz bleibt als Nachweis erhalten. Bei Bedarf eine Erklärung ergänzen.",
   "notice.source.title": "Quelle prüfen",
   "notice.source.explanation":
     "Die Quelle ist unbestätigt. Eine Informationspflicht und eine gesetzliche Frist stehen noch nicht fest. Vor einem Datenschutzhinweis prüfen, wie der Kontakt erfasst wurde.",
@@ -10484,6 +10574,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zum Beispiel: die erste E-Mail des Kontakts oder wer den Kontakt vorgestellt hat.",
   "notice.source.effect":
     "Beim Speichern wird festgehalten, woher die Daten stammen. Verlangt diese Quelle einen Datenschutzhinweis, wird die Pflicht mit ihrer Frist angelegt. Es wird keine E-Mail gesendet, und ob du den Kontakt anschreiben darfst, ändert sich nicht.",
+  "notice.source.metEffect":
+    "Beim Speichern wird das Treffen festgehalten. Danach darfst du ihnen persönlich nachfassen, aber nie Werbung oder einen Newsletter senden. Ein Datenschutzhinweis ist nicht fällig: beim Treffen haben sie erfahren, wer ihr seid. Es wird keine E-Mail gesendet. Gib den Tag des Treffens an.",
   "notice.source.whyUnknown":
     "Nirgends ist festgehalten, woher die Daten dieses Kontakts stammen.",
   "notice.source.whyUnconfirmed":
@@ -14477,6 +14569,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} offene Aufgaben",
   "users.handover.webhooks_one": "{count} Webhook",
   "users.handover.webhooks_other": "{count} Webhooks",
+  "users.handover.lists_one": "{count} Liste",
+  "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
   "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
   "users.removeMfaConfirmBody":
@@ -16190,7 +16284,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.removeRule": "Regel entfernen",
   "ownDomains.title": "Eigene E-Mail-Domains",
   "ownDomains.sub":
-    "Domains, die zu diesem Unternehmen gehören. Nachrichten zwischen Teammitgliedern werden für niemanden gespeichert, auch nicht für dich.",
+    "Domains, die zu diesem Unternehmen gehören. Nachrichten zwischen Teammitgliedern werden übersprungen, sofern ihre Quelle nicht für interne betriebliche E-Mails freigegeben ist.",
   "ownDomains.curatedTitle": "Hier verwaltet",
   "ownDomains.irreversible":
     "Eine hinzugefügte Domain gilt ab der nächsten Nachricht. Wird die Domain entfernt, werden E-Mails ab dann wieder erfasst. E-Mails, die während der Eintragung übersprungen wurden, bietet kein Postfach erneut an. Erfasste E-Mails bleiben erhalten.",

@@ -5,7 +5,7 @@ import {
   QueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
-import { ENTITY_NAME_KEY } from "../components/entityref";
+import { ENTITY_NAME_KEY } from "../components/entityref.queries";
 import { isRecordRead, isTimelineRead } from "../lib/activitykeys";
 import {
   ConnectivityError,

@@ -97,6 +97,11 @@ export function ForecastView({
 
   return (
     <div className="analytics-stack">
+      {(params.get("product") ||
+        params.get("country") ||
+        params.get("industry")) && (
+        <p className="t-caption">{t("analytics.wholeScopeForecast")}</p>
+      )}
       {/* Which window the figures below are over, and the verb that records a
           call about it. Above the readings rather than beside them, because
           every number on this page changes when the window moves — a control

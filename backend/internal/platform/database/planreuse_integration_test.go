@@ -79,6 +79,31 @@ func TestAFailedCallStillRestoresHowTheSnapshotPlans(t *testing.T) {
 	})
 }
 
+func TestExplicitPlanReuseRestoresTheCallerModeAfterARefusal(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	refused := errors.New("refused")
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode=force_custom_plan`); err != nil {
+			return err
+		}
+		var during string
+		err := database.ReuseGenericPlansTx(ctx, tx, func() error {
+			during = planCacheMode(ctx, t, tx)
+			return refused
+		})
+		if !errors.Is(err, refused) || during != "force_generic_plan" {
+			t.Fatalf("mode=%q error=%v, want generic planning and the caller's refusal", during, err)
+		}
+		if after := planCacheMode(ctx, t, tx); after != "force_custom_plan" {
+			t.Fatalf("mode after refusal=%q, want the caller's custom mode", after)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // The mode is the transaction's alone. After a snapshot that ended in a failed
 // statement, every pooled connection plans as usual for the next request.
 func TestReusedPlansNeverReachTheNextRequestOnTheConnection(t *testing.T) {

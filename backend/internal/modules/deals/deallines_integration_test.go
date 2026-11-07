@@ -210,7 +210,7 @@ func TestLinesOwnTheDealsValue(t *testing.T) {
 	if !errors.As(err, &owned) {
 		t.Fatalf("a typed amount answered %v, want deal_has_lines", err)
 	}
-	_, err = e.store.ReplaceDealProducts(e.productCtx(), dealID, []crmcontracts.DealProductInput{{ProductId: openapi_types.UUID(bananas.UUID)}})
+	_, err = e.store.ReplaceDealProducts(e.productCtx(), dealID, readTag(t, e, dealID), []crmcontracts.DealProductInput{{ProductId: openapi_types.UUID(bananas.UUID)}})
 	if !errors.As(err, &owned) {
 		t.Fatalf("a hand-set product list answered %v, want deal_has_lines", err)
 	}

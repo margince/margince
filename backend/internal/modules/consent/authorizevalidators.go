@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/contractterm"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -100,6 +101,8 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
 		commsauthz.CategoryPrivacyNotice:
 		return validateConfirmation(ctx, tx, subject, category)
+	case commsauthz.CategoryCustomerService, commsauthz.CategoryAccountNotice, commsauthz.CategorySecurityNotice:
+		return validateCustomerNotice(ctx, tx, subject, category)
 	case commsauthz.CategoryOptoutConfirmation:
 		// A DIFFERENT EVIDENCE from the three above, which is why it is its own
 		// arm. Those carry a link and the live link is the evidence; an
@@ -107,11 +110,9 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 		// standing stop it acknowledges.
 		return validateOptOutAcknowledgement(ctx, tx, subject, category)
 	default:
-		// Every other category — marketing, customer service, account notices,
-		// and the remaining subject-serving one that carries no link — has no
-		// record evidence this file can read today. They stay unsupported and fall
-		// through to the legacy verdict, which is exactly what they did before
-		// this file existed.
+		// Every other category, marketing among them, has no record evidence
+		// this file can read today. It stays unsupported and falls through to
+		// the legacy verdict.
 		return unsupported, nil
 	}
 }
@@ -141,7 +142,7 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 // from us. Either they wrote or met with us inside the window, or a request of
 // theirs is on record at any age.
 func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules) (bool, error) {
-	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now().Add(-w.reply))
+	found, err := repliedOrWasRecorded(ctx, tx, subject, time.Now(), w.reply)
 	if err != nil || found {
 		return found, err
 	}
@@ -156,11 +157,12 @@ func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRu
 // in-person exchange supports a composer send, and both readers agree. A lead
 // has no qualifying event, because the table is keyed on contacts. It keeps
 // the authorship test alone, which wroteToUsWithin spells for both kinds.
-func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time) (bool, error) {
+func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, asOf time.Time, window time.Duration) (bool, error) {
+	since := asOf.Add(-window)
 	if subject.Kind != entityContact {
 		return wroteToUsWithin(ctx, tx, subject, since)
 	}
-	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, &subject.Address)
+	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address)
 	if err != nil {
 		return false, err
 	}
@@ -208,48 +210,92 @@ func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request
 
 // validateInvoice answers a message about a named financial event.
 //
-// An invoice belongs to an COMPANY, so reaching a contact means going
-// through employment. That is a real gap in ordinary CRM data — a finance
-// contact who was never linked to the customer record — and it is a data gap
-// rather than a legal one. So a missing link is unsupported with a reason a
-// human can act on, never a refusal: the legacy path still answers, and the
-// operator is told what to link.
+// An invoice belongs to a company, and its mail goes to the company's billing
+// contact (documentRecipientSQL). Employment alone chooses nobody. A recipient
+// the record does not name is unsupported, never refused. The operator is told
+// what to link.
 func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryInvoiceOrPayment,
 		commsauthz.BasisContract, `
 		SELECT EXISTS (
 			SELECT 1 FROM finance_invoice i
-			  JOIN relationship r ON r.company_id = i.company_id
 			 WHERE i.id = $1::uuid
 			   -- A deleted or voided invoice is not a financial event anybody
-			   -- is owed a message about. The contract validator beside this
-			   -- already excludes its archived rows; this one did not, so a
-			   -- voided invoice authorized a send forever.
+			   -- is owed a message about.
 			   AND i.archived_at IS NULL
 			   AND i.void_at IS NULL
-			   AND r.kind = 'employment'
-			   AND r.contact_id = $2::uuid
-			   AND `+employment.IsCurrentSQL("r.ended_at")+`
-			   AND r.archived_at IS NULL
-		)`, req.Evidence.InvoiceID)
+			   AND `+documentRecipientSQL("i.company_id", "$3::uuid")+`
+		)`, req.Evidence.InvoiceID, zeroAsNull(req.Evidence.DealID), buyerRoles)
 }
 
-// validateContract answers a notice a live contract requires. Same shape and
-// same reasoning as the invoice: the document names a company, and the
-// contact is reached through employment.
+// validateContract answers a notice a contract in force requires. Same
+// recipient rule as the invoice. The deal is the contract's own, else the one named.
 func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryContractNotice,
 		commsauthz.BasisContract, `
 		SELECT EXISTS (
 			SELECT 1 FROM contract c
-			  JOIN relationship r ON r.company_id = c.company_id
 			 WHERE c.id = $1::uuid
-			   AND c.archived_at IS NULL
-			   AND r.kind = 'employment'
-			   AND r.contact_id = $2::uuid
+			   AND `+contractCarriesMailSQL("c")+`
+			   AND `+documentRecipientSQL("c.company_id", "coalesce(c.deal_id, $3::uuid)")+`
+		)`, req.Evidence.ContractID, zeroAsNull(req.Evidence.DealID), buyerRoles)
+}
+
+// contractCarriesMailSQL is true when the contract aliased alias supports mail
+// today. It must be in force (contractterm.InForceSQL). Its status must agree:
+// active, or cancelled with the cancellation taking effect after today. The contracts module judges by dates alone, so an expired
+// or cancelled contract with no dates still counts there; here it does not.
+func contractCarriesMailSQL(alias string) string {
+	return "(" + contractterm.InForceSQL(alias, "current_date") +
+		" AND (" + alias + ".status = 'active' OR (" + alias + ".status = 'cancelled' AND " +
+		alias + ".cancellation_effective_on > current_date)))"
+}
+
+// documentRecipientSQL is true when the recipient in $2 is who an invoice or a
+// contract of the company goes to: a billing contact of the company. A company
+// with none sends to the buyer on the deal (buyerRoles, in $4), and only on a
+// deal of that company.
+func documentRecipientSQL(company, deal string) string {
+	return `(EXISTS (SELECT 1 FROM relationship b
+		              WHERE b.kind = 'billing_contact' AND b.company_id = ` + company + `
+		                AND b.contact_id = $2::uuid AND b.archived_at IS NULL)
+		  OR (NOT EXISTS (SELECT 1 FROM relationship b
+		                   WHERE b.kind = 'billing_contact' AND b.company_id = ` + company + `
+		                     AND b.archived_at IS NULL)
+		      AND EXISTS (SELECT 1 FROM relationship r JOIN deal d ON d.id = r.deal_id
+		                   WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ` + deal + `
+		                     AND d.company_id = ` + company + ` AND d.archived_at IS NULL
+		                     AND r.contact_id = $2::uuid AND r.role = ANY($4)
+		                     AND r.ended_at IS NULL AND r.archived_at IS NULL)))`
+}
+
+// validateCustomerNotice answers service, account and security mail to a
+// customer. A customer is a contact currently employed at a company with a
+// contract in force or a won deal. No inline fact is needed; the record carries the relationship.
+func validateCustomerNotice(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
+	var customer bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM relationship r
+			 WHERE r.kind = 'employment' AND r.contact_id = $1::uuid
 			   AND `+employment.IsCurrentSQL("r.ended_at")+`
 			   AND r.archived_at IS NULL
-		)`, req.Evidence.ContractID)
+			   AND (EXISTS (SELECT 1 FROM contract c
+			                 WHERE c.company_id = r.company_id
+			                   AND `+contractCarriesMailSQL("c")+`)
+			        OR EXISTS (SELECT 1 FROM deal d
+			                    WHERE d.company_id = r.company_id AND d.archived_at IS NULL
+			                      AND d.status = 'won')))`, subject.ID).Scan(&customer); err != nil {
+		return resolution{}, wrapEvidenceRead("whether the recipient works for a customer", err)
+	}
+	if !customer {
+		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	basis := commsauthz.BasisContract
+	if category == commsauthz.CategorySecurityNotice {
+		basis = commsauthz.BasisVitalOrSecurityInterest
+	}
+	return resolution{Category: category, Basis: basis, Supported: true}, nil
 }
 
 // validateQuote answers a requested quote or offer. Either a sent offer on the
@@ -321,7 +367,10 @@ func wrapEvidenceRead(what string, err error) error {
 // One function because the three differ only in their query and their basis. A
 // second copy of "named nothing, so unsupported" is a second place for the
 // no-evidence answer to drift.
-func validateCompanyDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID) (resolution, error) {
+//
+// args are the query's parameters after the named record ($1) and the
+// recipient ($2).
+func validateCompanyDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID, args ...any) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if named == (ids.UUID{}) {
 		// The caller claimed the category and named no record. Nothing to look
@@ -329,7 +378,7 @@ func validateCompanyDocument(ctx context.Context, tx pgx.Tx, subject subjectRef,
 		return unsupported, nil
 	}
 	var found bool
-	if err := tx.QueryRow(ctx, query, named, subject.ID).Scan(&found); err != nil {
+	if err := tx.QueryRow(ctx, query, append([]any{named, subject.ID}, args...)...).Scan(&found); err != nil {
 		return resolution{}, wrapEvidenceRead("the record this message is about", err)
 	}
 	if !found {

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -127,6 +128,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}); err != nil {
 		t.Fatalf("running the reads: %v", err)
 	}
+	sent.sql = append(sent.sql, capturedPartyPlanStatements(t, e, pool)...)
 	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
 	for _, bad := range []string{"WHERE a.kind = $3", "AND p.role IN ($2", "AND m.status = ANY($7)", "AND a.is_done = $4"} {
 		if !boundIndexedColumn.MatchString(bad) {
@@ -141,4 +143,45 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 			t.Errorf("a statement under generic plans binds %q; spell it as a literal or leave the read out of plan reuse:\n%s", found, sql)
 		}
 	}
+}
+
+func capturedPartyPlanStatements(t *testing.T, e *integration.Env, pool *pgxpool.Pool) []string {
+	t.Helper()
+	authorizeCaptureMailbox(t, e, e.Rep1, "planner@ourco.test")
+	sent := &sentStatements{}
+	config := pool.Config()
+	config.ConnConfig.Tracer = sent
+	traced, err := testdb.OwnPoolFromConfig(t.Context(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer traced.Close()
+	raw := []byte("From: Pat Buyer <plan@buyer.test>\r\nTo: planner@ourco.test\r\nMessage-ID: <plan-proof@buyer.test>\r\nSubject: Project\r\nDate: Wed, 04 Jun 2026 08:00:00 +0000\r\n\r\nHello\r\n")
+	mail, err := mailmap.Parse(raw, "planner@ourco.test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := newCaptureSink(traced, CaptureConfig{}).Upsert(mailboxOwnerCtx(e, e.Rep1), mail.ToRecord("gmail", raw)); err != nil {
+		t.Fatal(err)
+	}
+	var proof []string
+	generic := false
+	for _, query := range sent.sql {
+		if strings.Contains(query, "set_config('plan_cache_mode', 'force_generic_plan'") {
+			generic = true
+		}
+		if strings.HasPrefix(query, "SELECT set_config('plan_cache_mode', $1") {
+			generic = false
+		}
+		if strings.Contains(query, "SELECT a.occurred_at, coalesce(a.subject,'')") {
+			if !generic {
+				t.Fatal("party proof did not run under generic plans")
+			}
+			proof = append(proof, query)
+		}
+	}
+	if len(proof) == 0 {
+		t.Fatal("capture sent no party-proof statement")
+	}
+	return proof
 }

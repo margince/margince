@@ -1524,6 +1524,13 @@
         "privacy_request.read"
       ]
     },
+    "get_notice_source_evidence": {
+      "checks": [
+        "activity.read",
+        "contact.read",
+        "privacy_request.read"
+      ]
+    },
     "get_ownership_offer": {
       "checks": []
     },
@@ -1813,6 +1820,11 @@
     "lift_counterparty_hold": {
       "checks": []
     },
+    "lift_lead_suppression": {
+      "checks": [
+        "lead.update"
+      ]
+    },
     "link_company_contacts": {
       "checks": [
         "company.read",
@@ -2045,6 +2057,11 @@
       ]
     },
     "list_lead_manual_signals": {
+      "checks": [
+        "lead.read"
+      ]
+    },
+    "list_lead_stops": {
       "checks": [
         "lead.read"
       ]
@@ -2499,6 +2516,11 @@
         "user_admin.delete",
         "user_admin.read",
         "user_admin.update"
+      ]
+    },
+    "preview_notice_source": {
+      "checks": [
+        "privacy_request.read"
       ]
     },
     "preview_send_authorization": {
