@@ -264,11 +264,12 @@ def _agy_usage(usage):
     }
 
 
-def from_agy(lines, path, model, driver, offered):
+def from_agy(lines, path, model, driver, offered, attached=False):
     """Write an `agy -p --output-format stream-json` run as a transcript: 0 when it ran, 3 when not.
 
     agy's init lists its whole tool registry, not what the model was offered, so
-    `offered` is the lane's own tools/list over the same passport.
+    `offered` is the lane's own tools/list over the same passport. `attached`
+    says agy connected to the lane's server, which its stream does not show.
     """
     texts, lane_steps, result = {}, set(), None
     with Transcript(path) as out:
@@ -304,9 +305,9 @@ def from_agy(lines, path, model, driver, offered):
         if result.get("status") != "SUCCESS":
             out.finish(True, f"HARNESS: agy: {result.get('error') or result.get('status')}", 0)
             return 3
-        if not lane_steps:
-            out.finish(True, "HARNESS: agy made no call to the lane's server; whether it was "
-                             "attached cannot be told from its stream", 0)
+        if not lane_steps and not attached:
+            out.finish(True, "HARNESS: agy made no call to the lane's server and wrote none of its "
+                             "tool schemas, so the server never reached the model", 0)
             return 3
         out.add_usage(_agy_usage(result.get("usage") or {}))
         out.finish(False, result.get("response") or "", result.get("num_turns") or 1)

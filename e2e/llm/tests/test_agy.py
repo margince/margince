@@ -20,9 +20,9 @@ OFFERED = ["echo", "get-sum"]
 SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad/.system_generated/steps/{}/{}"
 
 
-def convert(lines):
+def convert(lines, attached=False):
     out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
-    code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED)
+    code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED, attached=attached)
     with open(out, encoding="utf-8") as handle:
         return code, out, handle.read()
 
@@ -152,6 +152,12 @@ class FromAgyTest(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertIn("no call to the lane's server", raw)
 
+    def test_an_answer_that_needs_no_call_is_scored_once_the_server_was_attached(self):
+        lines = [line for line in sample() if "call_mcp_tool" not in line]
+        code, out, _raw = convert(lines, attached=True)
+        self.assertEqual(code, 0)
+        self.assertIn("The sum of 2 and 3 is 5", check.read_transcript(out)[1])
+
     def test_lines_that_are_not_json_are_skipped(self):
         lines = sample()
         lines.insert(1, "[agy] retrying the model in 12s")
@@ -159,13 +165,19 @@ class FromAgyTest(unittest.TestCase):
 
 
 FAKE_AGY = """#!/usr/bin/env python3
-import json, os, sys
+import json, os, sys, time
 agents = os.path.join(os.getcwd(), ".agents", "agents")
+if os.environ.get("FAKE_AGY_ATTACH"):
+    schemas = os.path.join(os.environ["HOME"], ".gemini", "antigravity-cli", "mcp", "margince_e2e_llm")
+    os.makedirs(schemas, exist_ok=True)
+    open(os.path.join(schemas, "echo.json"), "w").write("{}")
 with open(os.environ["FAKE_AGY_SEEN"], "w") as f:
     json.dump({"argv": sys.argv[1:], "cwd": sorted(os.listdir(os.getcwd())),
                "agents": {name: open(os.path.join(agents, name)).read() for name in os.listdir(agents)},
                "mode": oct(os.stat(os.getcwd()).st_mode & 0o777)}, f)
 sys.stdout.write(open(os.environ["FAKE_AGY_OUT"]).read())
+sys.stdout.flush()
+time.sleep(float(os.environ.get("FAKE_AGY_HANG", "0")))
 sys.exit(int(os.environ.get("FAKE_AGY_EXIT", "0")))
 """
 
@@ -180,21 +192,24 @@ class RunAgyTest(unittest.TestCase):
             handle.write(FAKE_AGY)
         os.chmod(os.path.join(self.bin, "agy"), 0o755)
         self.seen_file = os.path.join(self.bin, "seen.json")
+        # agy's own home, where it writes the schemas of a server it attached.
+        self.home = tempfile.mkdtemp()
         self.env = {"PATH": self.bin + os.pathsep + os.environ["PATH"], "FAKE_AGY_SEEN": self.seen_file,
-                    "FAKE_AGY_OUT": SAMPLE, "MARGINCE_E2E_TOKEN": "s3cr3t-passport"}
+                    "FAKE_AGY_OUT": SAMPLE, "MARGINCE_E2E_TOKEN": "s3cr3t-passport", "HOME": self.home}
         self.mcp = FakeMcp([{"name": t, "inputSchema": {"type": "object"}} for t in OFFERED])
         self.mcp.__enter__()
 
     def tearDown(self):
         self.mcp.__exit__(None, None, None)
         shutil.rmtree(self.bin, ignore_errors=True)
+        shutil.rmtree(self.home, ignore_errors=True)
 
-    def run_agy(self, **env):
+    def run_agy(self, route=None, timeout=60, **env):
         import candidates
         out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
         with unittest.mock.patch.dict(os.environ, dict(self.env, **env)):
-            code = self.drive.run_agy(candidates.resolve("gemini", "cli"), self.mcp.url, "MARGINCE_E2E_TOKEN",
-                                      "Echo pelican.", out, timeout=60)
+            code = self.drive.run_agy(route or candidates.resolve("gemini", "cli"), self.mcp.url,
+                                      "MARGINCE_E2E_TOKEN", "Echo pelican.", out, timeout=timeout)
         with open(self.seen_file, encoding="utf-8") as handle:
             return code, out, json.load(handle)
 
@@ -228,6 +243,26 @@ class RunAgyTest(unittest.TestCase):
         _code, _out, seen = self.run_agy()
         self.assertEqual(seen["cwd"], [".agents"])
         self.assertEqual(list(seen["agents"]), ["margince-e2e-llm.md"])
+
+    def test_an_agy_killed_at_the_wall_clock_is_a_harness_fault_even_with_a_complete_stream(self):
+        with unittest.mock.patch.object(self.drive, "AGY_GRACE", 0.5):
+            code, _out, _seen = self.run_agy(timeout=0, FAKE_AGY_HANG="5")
+        self.assertEqual(code, self.drive.HARNESS)
+
+    def test_an_effort_the_model_id_does_not_carry_is_refused_before_agy_runs(self):
+        import candidates
+        route = candidates.resolve("gemini", "cli", effort="reasoning high", folder="gemini-high")
+        code = self.drive.run_agy(route, self.mcp.url, "MARGINCE_E2E_TOKEN", "Echo pelican.",
+                                  tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name)
+        self.assertEqual(code, self.drive.HARNESS)
+        self.assertFalse(os.path.exists(self.seen_file))
+
+    def test_a_run_that_calls_nothing_is_scored_when_agy_attached_the_server(self):
+        no_calls = os.path.join(self.bin, "no-calls.jsonl")
+        with open(SAMPLE, encoding="utf-8") as src, open(no_calls, "w", encoding="utf-8") as dst:
+            dst.writelines(line for line in src if "call_mcp_tool" not in line)
+        self.assertEqual(self.run_agy(FAKE_AGY_OUT=no_calls)[0], self.drive.HARNESS)
+        self.assertEqual(self.run_agy(FAKE_AGY_OUT=no_calls, FAKE_AGY_ATTACH="1")[0], 0)
 
     def test_an_agy_that_exits_nonzero_is_a_harness_fault_even_with_a_complete_stream(self):
         code, _out, _seen = self.run_agy(FAKE_AGY_EXIT="1")

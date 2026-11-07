@@ -186,8 +186,10 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
     return code
 
 
-# agy has no turn cap either, so the same wall clock stands in for one.
+# agy has no turn cap either, so the same wall clock stands in for one. agy
+# ends its own turn at --print-timeout; the grace past it is for its shutdown.
 AGY_TIMEOUT = CODEX_TIMEOUT
+AGY_GRACE = 60
 
 # The agent agy runs as: the lane's one server and none of the operator's own
 # servers, rules or skills. agy reads no header from the environment, so the
@@ -210,6 +212,20 @@ mcpServers:
 _AGY_SETTINGS = json.dumps({"permissions": {"allow": [f"mcp({transcript.SERVER}/*)"]}})
 
 
+def _agy_attached_since(started):
+    """Whether agy connected to the lane's server during this run.
+
+    agy writes the schema of each tool of a server it connects to under its own
+    home, so a fresh file there proves the server reached the model even when
+    the model called none of its tools.
+    """
+    schemas = os.path.join(os.path.expanduser("~"), ".gemini", "antigravity-cli", "mcp", transcript.SERVER)
+    try:
+        return any(entry.stat().st_mtime >= started for entry in os.scandir(schemas))
+    except OSError:
+        return False
+
+
 def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
     """Drive one prompt through `agy -p` and write it as a transcript.
 
@@ -217,6 +233,12 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
     workspace file is within reach of a tool that slips through.
     """
     driver = f"{route.candidate}:{route.via}"
+    # agy names the effort in the model id (gemini-3.8-flash-high), so an effort
+    # set apart from it would be filed under a label the run never used.
+    if route.effort != candidates.table()[route.candidate]["effort"]:
+        print(f"the agy route takes its effort from the model id; set E2E_LLM_MODEL to that "
+              f"model's {route.effort.split()[-1]} tier instead of E2E_LLM_EFFORT", file=sys.stderr)
+        return HARNESS
     token = os.environ.get(token_env, "")
     try:
         _instructions, tools = mcpclient.Session(mcp_url, token).open()
@@ -236,15 +258,19 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
             "--output-format", "stream-json", "--print-timeout", f"{timeout}s",
             "--disable-slash-commands", "--settings", _AGY_SETTINGS,
         ]
+        started = time.time() - 1
         try:
             done = subprocess.run(argv, cwd=workspace, stdin=subprocess.DEVNULL, capture_output=True,
-                                  text=True, timeout=timeout + 60, check=False)
+                                  text=True, timeout=timeout + AGY_GRACE, check=False)
             lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
         except subprocess.TimeoutExpired as expired:
             partial = expired.stdout or b""
             lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
-            stderr, exited = f"agy overran its {timeout}s wall clock and was killed", None
-    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools])
+            stderr, exited = f"agy overran its {timeout}s wall clock and was killed", "killed"
+    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools],
+                               attached=_agy_attached_since(started))
+    # A non-zero exit, or a kill at the wall clock, is a program failure
+    # whatever the stream says.
     if exited:
         code = HARNESS
     if code:

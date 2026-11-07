@@ -163,7 +163,7 @@ Every case gets every tool description in `tools/list`, so pick the set by the t
 - one case that already passed on every target, to catch a harness that does not work.
 
 ```bash
-for c in claude gpt; do
+for c in claude gpt gemini; do
   for s in case20_put_it_in_the_board_pack case49_who_can_introduce_us; do
     MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=$c E2E_LLM_VIA=cli \
       E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
