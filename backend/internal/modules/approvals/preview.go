@@ -144,7 +144,7 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 		}
 		return s.previewContextPin(ctx, tx, subject)
 	})
-	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
+	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		preview.State = "stale"
 		return preview, heldBack, nil
 	}

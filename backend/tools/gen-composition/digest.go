@@ -10,6 +10,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -171,4 +172,34 @@ func digestFileOrEmpty(path string) (string, error) {
 		return "", err
 	}
 	return digestBytes(content), nil
+}
+
+func compareInputs(recorded, current manifestInputs) error {
+	if recorded.IncludeDevelopment != current.IncludeDevelopment {
+		return errors.New("development extension selection changed since generation")
+	}
+	if recorded.Core != current.Core {
+		return errors.New("core inputs changed since generation")
+	}
+	if recorded.ApprovalsLock != current.ApprovalsLock {
+		return errors.New("extensions/approvals.lock changed since generation")
+	}
+	for name, row := range current.Extensions {
+		rec, ok := recorded.Extensions[name]
+		if !ok {
+			return fmt.Errorf("extension %s added since generation", name)
+		}
+		if rec.Tree != row.Tree {
+			return fmt.Errorf("extension %s changed since generation", name)
+		}
+		if rec.Manifest != row.Manifest {
+			return fmt.Errorf("extension %s manifest changed since generation", name)
+		}
+	}
+	for name := range recorded.Extensions {
+		if _, ok := current.Extensions[name]; !ok {
+			return fmt.Errorf("extension %s removed since generation", name)
+		}
+	}
+	return nil
 }

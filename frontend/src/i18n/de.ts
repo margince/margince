@@ -2102,6 +2102,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "brief.weekly.tasksCompleted": "Aufgaben erledigt",
   "brief.weekly.noMeetings": "Keine Termine erfasst",
+  "brief.weekly.leadsUnavailable":
+    "Lead-Zahlen sind für diese Woche nicht verfügbar.",
   "brief.weekly.noLeads": "Keine eingegangen",
   "brief.weekly.noCommitments": "Keine fällig",
   "brief.weekly.basis":
@@ -2133,7 +2135,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Schätzung aus {count} gewonnenem Deal · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
   "home.receipt.basis_other":
     "Schätzung aus {count} gewonnenen Deals · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
-  "brief.changes.keepDate": "Datum behalten",
   "worklist.handled.showHistory": "Letzte Änderungen anzeigen",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.dateUnconfirmed":
@@ -2265,9 +2266,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
   "brief.changes.superseded":
     "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
-  "brief.changes.title": "Angewandte Änderungen prüfen",
-  "brief.changes.accept": "Annehmen",
-  "brief.changes.accepted": "Angenommen",
   "brief.changes.undone": "Rückgängig gemacht",
   "brief.updates.title": "Updates",
   "brief.task.undated": "Kein Fälligkeitsdatum",
@@ -19117,30 +19115,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.undo.archived":
     "Archiviert. Margince eröffnet dafür keinen Deal mehr, außer es kommen neue Kaufsignale.",
   "changes.kind.stage_move": "In eine spätere Phase verschoben",
-  "changes.summary_one":
-    "Margince hat {count} deiner Deals aktualisiert: {parts}",
-  "changes.summary_other":
-    "Margince hat {count} deiner Deals aktualisiert: {parts}",
-  "changes.part.closed_one": "{count} geschlossen",
-  "changes.part.closed_other": "{count} geschlossen",
-  "changes.part.redated_one": "{count} neu datiert",
-  "changes.part.redated_other": "{count} neu datiert",
-  "changes.part.revalued_one": "{count} neu bewertet",
-  "changes.part.revalued_other": "{count} neu bewertet",
-  "changes.part.probabilities_one": "{count} Wahrscheinlichkeit",
-  "changes.part.probabilities_other": "{count} Wahrscheinlichkeiten",
-  "changes.part.moved_one": "{count} verschoben",
-  "changes.part.moved_other": "{count} verschoben",
-  "changes.part.opened_one": "{count} eröffnet",
-  "changes.part.opened_other": "{count} eröffnet",
-  "changes.part.revived_one": "{count} wieder eröffnet",
-  "changes.part.revived_other": "{count} wieder eröffnet",
-  "changes.viewAll": "Alle ansehen",
-  "changes.undoAll": "Alle rückgängig machen",
-  "changes.undoAllDone_one": "Auf {count} Deal rückgängig gemacht.",
-  "changes.undoAllDone_other": "Auf {count} Deals rückgängig gemacht.",
-  "changes.undoAllPartly":
-    "Auf {undone} Deals rückgängig gemacht. Bei {kept} blieb eine Änderung, die seitdem bearbeitet wurde.",
   "changes.partly":
     "Rückgängig gemacht, außer {field}, das seitdem geändert wurde.",
   "changes.refused":
@@ -21479,4 +21453,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für {count} erste Qualifizierung ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
   "analytics.team.qualificationUnattributed_other":
     "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
+  "brief.done.title": "Für dich erledigt",
+  "brief.done.waiting_one": "{count} Deal wartet auf deine Prüfung",
+  "brief.done.waiting_other": "{count} Deals warten auf deine Prüfung",
+  "brief.done.reviewAll_one": "{count} Deal prüfen",
+  "brief.done.reviewAll_other": "Alle {count} Deals prüfen",
+  "brief.done.drawerTitle_one": "{count} Deal, den Margince geändert hat",
+  "brief.done.drawerTitle_other": "{count} Deals, die Margince geändert hat",
+  "changes.undoDeals_one": "Änderungen an {count} Deal rückgängig machen",
+  "changes.undoDeals_other": "Änderungen an {count} Deals rückgängig machen",
+  "brief.done.undoChanges_one": "{count} Änderung rückgängig machen",
+  "brief.done.undoChanges_other": "{count} Änderungen rückgängig machen",
+  "brief.done.history": "Änderungsverlauf ansehen",
+  "brief.done.dealsLabel": "Deals, die Margince geändert hat",
+  "brief.done.noReason":
+    "Margince hat keinen Grund erfasst, den du lesen kannst.",
+  "brief.done.customerWrote": "Der Kunde schrieb:",
+  "brief.changes.markReviewed": "Als geprüft markieren",
+  "brief.changes.reviewed": "Geprüft",
+  "magic.lane.doneOther": "Weitere erledigte Arbeit",
+  "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
+  "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",
+  "changes.bulk.partly_one": "{count} Deal wurde teilweise rückgängig gemacht.",
+  "changes.bulk.partly_other":
+    "{count} Deals wurden teilweise rückgängig gemacht.",
+  "changes.bulk.kept_one": "{count} Deal behält seine Änderungen.",
+  "changes.bulk.kept_other": "{count} Deals behalten ihre Änderungen.",
+  "changes.bulk.confirm_one":
+    "{count} Deal braucht deine Bestätigung. Mach ihn in seiner eigenen Zeile rückgängig.",
+  "changes.bulk.confirm_other":
+    "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
+  "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
+  "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
+  "changes.bulk.retry": "Erneut senden",
 };

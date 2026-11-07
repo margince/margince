@@ -13,6 +13,9 @@ Remove that label when setting a monthly milestone. Keep its `priority:` label.
 
 ## Clear the blockers
 
+Keep the old API working. [The API change rules](../reference/api-compatibility.md) say when one may be
+removed. The current CI lane does not let an operation be removed.
+
 An issue the next release cannot ship without carries `release: blocker`
 ([issue-labels.md](../reference/issue-labels.md#release)). List what is left:
 

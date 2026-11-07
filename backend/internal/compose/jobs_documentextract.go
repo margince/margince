@@ -43,34 +43,20 @@ type DocumentExtractArgs struct {
 // Kind is the string River persists for this job.
 func (DocumentExtractArgs) Kind() string { return "document_extract" }
 
+func (DocumentExtractArgs) SessionLocked() {}
+
 // WorkspaceID declares the one tenant this job's work belongs to, and is what
 // binds the worker's context — a worker that picked its own could claim one
 // workspace and work in another.
 func (a DocumentExtractArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
-// documentExtractInsertOpts deduplicates the job by args: the reading id is unique per reading, so a re-submitted
-// enqueue of the SAME reading collapses while a fresh reading always queues.
-//
-// ByState is the load-bearing half, and its absence is a trap. River's default
-// uniqueness window INCLUDES completed, so a re-enqueue of a reading whose
-// earlier job has finished is silently skipped — and EnqueueTx cannot see the
-// skip. That is exactly the path the abandoned-reading recovery takes: a job
-// that completed while leaving its row `running` (a retry inside the lease
-// declines the claim and returns), the lease expires, a rep presses the button
-// again, and the re-armed row is queued with no job behind it. Every later
-// press then joins that row, and the in-flight index blocks any fresh reading —
-// the document is unreadable until somebody deletes the row by hand.
-//
-// Restricting the window to the ACTIVE states is what makes the recovery real:
-// a reading in flight still dedupes, a finished one no longer blocks its own
-// replacement.
+// The reading lease owns execution; a dead River row must not suppress a new request.
 func documentExtractInsertOpts() *river.InsertOpts {
 	return jobs.QueuedAs[DocumentExtractArgs](&river.InsertOpts{
 		// One-off: a rep asked for this document to be read and nothing
 		// re-asks, so the ladder carries the blob-store blip and the malformed
 		// attachment alone — the reading vcardIngestMaxAttempts is sized for.
 		MaxAttempts: oneOffJobMaxAttempts,
-		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	})
 }
 
@@ -96,6 +82,7 @@ type documentExtractWorker struct {
 	// activities is the run record's movements, named as the seam the engine
 	// already takes rather than the concrete store: the worker's whole
 	// relationship with the module is claim, open, finish.
+	pool       *pgxpool.Pool
 	language   baselanguage.Resolver
 	activities documentReadStore
 	extractor  *DocumentExtractor
@@ -109,10 +96,17 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = withDocumentReader(wsCtx, args.RequestedBy, args.ExtractionReadID)
+	_, err = InstallationDB(w.pool).WithWorkLease(wsCtx, "document_extract", args.ExtractionReadID, w.log, func(owned context.Context) error {
+		return w.read(owned, args)
+	})
+	return jobs.FaultContext(ctx, err)
+}
+
+func (w *documentExtractWorker) read(wsCtx context.Context, args DocumentExtractArgs) error {
 	if w.extractor == nil {
-		return jobs.FaultContext(ctx, w.declineUnread(wsCtx, args))
+		return jobs.FaultContext(wsCtx, w.declineUnread(wsCtx, args))
 	}
-	err = w.extractor.Read(wsCtx, w.activities, args.ExtractionReadID, args.AttachmentID)
+	err := w.extractor.Read(wsCtx, w.activities, args.ExtractionReadID, args.AttachmentID)
 	if errors.Is(err, apperrors.ErrConflict) {
 		// The CAS miss: the reading is no longer queued — a rival replica took
 		// it, or it was already closed. Nothing to do and nothing wrong.
@@ -120,7 +114,7 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 			"attachment_extraction_id", args.ExtractionReadID)
 		return nil
 	}
-	return jobs.FaultContext(ctx, err)
+	return jobs.FaultContext(wsCtx, err)
 }
 
 // declineUnread closes a reading no configured lane can perform. Failing it
@@ -158,6 +152,7 @@ func newDocumentExtractWorker(
 	pool *pgxpool.Pool, brain documentCompleter, blob blobstore.Store, log *slog.Logger,
 ) *documentExtractWorker {
 	worker := &documentExtractWorker{
+		pool:       pool,
 		language:   installationLanguage(pool),
 		activities: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob),
 		log:        log,

@@ -46817,7 +46817,10 @@ export interface components {
          *     The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
          */
         SettingsAvailability: {
-            /** @description True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it. */
+            /**
+             * @deprecated
+             * @description Deprecated. Still required and returned for compatibility throughout the API notice window. New clients read `read_enabled` from `GET /company/context/capabilities` instead. This field continues to report whether the company-context rollout has typed reads active. It does not gate the installation's Company settings page.
+             */
             company_context: boolean;
             /** @description Reporting is always available. Retained for compatibility with older clients. */
             reporting?: boolean;
@@ -53825,6 +53828,12 @@ export interface components {
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
             /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
+            /**
              * @description True when the reader may not read activities. A meeting is an activity, so every
              *     meeting figure in the team's counts and each member's row reads zero and says nothing,
              *     and no member carries a meetings pattern. Absent from an older server.
@@ -54317,6 +54326,12 @@ export interface components {
          */
         WeeklyReview: {
             /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
+            /**
              * @description True when the reader may not read activities. A meeting is an activity, so every
              *     meeting figure in this review, its prior week and its scorecard reads zero and says
              *     nothing, and the narrative and learnings read as not run. Absent from an older server.
@@ -54563,6 +54578,12 @@ export interface components {
         };
         /** @description The week before this one, for comparison. */
         WeeklyReviewPrior: {
+            /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
             /** Format: date */
             local_week_start: string;
             counts: components["schemas"]["WeeklyReviewCounts"];
@@ -56083,6 +56104,12 @@ export interface components {
             kind: string;
             /** @description What was done, in the words the act itself recorded. */
             summary: string;
+            /** @description `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses. */
+            headline?: string;
+            /** @description Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it. */
+            reason?: string;
+            /** @description The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote. */
+            customer_quote?: string;
             /** @description The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /**
@@ -56447,7 +56474,7 @@ export interface components {
             due_today: number;
             /** @description The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar. */
             planned: number;
-            /** @description Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is. */
+            /** @description Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count. */
             review: number;
         };
         /**
@@ -56881,7 +56908,9 @@ export interface components {
              *     `today` is work a seller executes. `review` is a judgement somebody must make
              *     before work continues — an approval, a duplicate pair, an introduction.
              *     `system_health` is a source or automation an administrator must restore.
-             *     `receipt` is completed work, reported so the reader can see it happened.
+             *     `receipt` is deprecated and retained only for published-client compatibility
+             *     through the API notice window. The work queue never emits it. Completed-work
+             *     receipts are served by `GET /worklist/handled` and have their own presentation.
              *
              *     A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
              *     `source` that a browser could recompute: two rows of one source can differ,
@@ -57555,7 +57584,10 @@ export interface components {
             audit_log_id: string;
             /** @description The kind of change; absent when the change could not be read. */
             kind?: string;
-            /** @enum {string} */
+            /**
+             * @description Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
+             * @enum {string}
+             */
             reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew" | "needs_confirmation";
             /** @description With `needs_confirmation`, the notes the team added to the opened or reopened deal. */
             team_notes?: number;

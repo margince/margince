@@ -45,7 +45,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 |---|---|
 | `check-q` | Quiet `make check`: full log in `.tmp/check.log`, excerpt on failure |
 | `check-go` | The Go half of the gate (`make -C backend check`) |
-| `fe-install` / `fe-typecheck` | Frontend deps install / `tsc` typecheck (scope-aware FE gates) |
+| `fe-install` / `fe-typecheck` | Frontend deps install / `tsc` typecheck (scope-aware FE gates). The install checks the root pnpm pin first. A known native binary placeholder is completed with that pinned package’s own installer, then checked again |
 
 ## Gates
 
@@ -73,7 +73,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 | `arch-lint` | `go-arch-lint` over `.go-arch-lint.yml`: a hard gate on the import DAG |
 | `gen` | Regenerate everything derived from `api/crm.yaml` (contract types, 501 stubs, agent-policy table, the agent contract and operation index of the Margince skill) and the extension composition |
 | `drift` | `gen`, then fail if any generated file changed: the contract drift gate |
-| `composition` | Materialize `build/composition/` from the extensions `instance/go.mod` requires ([install-extensions-as-go-modules.md](../how-to/install-extensions-as-go-modules.md)). An `instance/go.mod` that requires no extension composes the empty set, whose wiring is byte-identical to the committed `composition/` stub |
+| `composition` | Materialize `build/composition/` from the extensions `instance/go.mod` requires ([install-extensions-as-go-modules.md](../how-to/install-extensions-as-go-modules.md)). [Build modes](../how-to/build-a-custom-margince.md) states when examples join the set. An `instance/go.mod` that requires no extension composes the empty set, whose wiring is byte-identical to the committed `composition/` stub |
 | `check-static` | The static legs of backend `check` (`STATIC_LEGS`: `lint-base`, `lint-strict`, `vet`, `arch-lint`), which CI runs as its own job, `backend-lint`, split over two legs. Backend `check` runs the legs in `CHECK_LEGS`, all of them unless the command line passes fewer |
 | `check-composition` | `composition`, then `gen-composition -verify`: a clean regeneration must reproduce the recorded input digests and output hashes of `composition.json` byte for byte (the drift gate for ignored composition output) |
 | `test-extensions` | Every enabled extension's own test lane (each unit under `extensions/` is its own Go module, so `./...` never reaches them), run on the composed workspace; part of `make check` |
@@ -83,7 +83,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 
 - Runs on its own `margince_test` namespace, never the dev `margince` DB, so it can run concurrently with `make dev`.
 - Parallel: each package runs on its own throwaway clone db (`CREATE DATABASE … TEMPLATE margince_test`). It also gets a private MinIO bucket and its own Redis logical db (1..63 by slot; db 0 stays reserved for `make dev`). Packages share nothing; within a package the lane still runs `-p 1`.
-- Fails loudly without a database and never skips.
+- Fails loudly without a database and never skips. A declared clone must match its migration ledger and hold no test rows before any schema write. For a ledger that differs, run `make test-db-up` in that worktree, then run the lane again. Other errors name the template or migration fix.
 - Once every package passes, it fails on a statement that carries the activity content gate more than once, unless its sender is in `backend/tools/sql-census/repeated-gates.txt`. `make test-it` runs the same check over its one package.
 - `INTEGRATION_JOBS=N` tunes concurrency.
 - CI slices the lane per test across several runners. `INTEGRATION_SHARD=k/N` runs slice `k` of `N`, always the same slice for one value; use the same value to debug a red CI shard locally. `INTEGRATION_SHARD_OUT=dir` collects the manifests + coverage pods `scripts/test-integration-reconcile.sh` verifies and merges.
@@ -160,7 +160,7 @@ The root `make check` runs the backend gate above and these deterministic root s
 | `check-host-ports` | Every host port published by `docker-compose.dev.yml` is below the ephemeral floor (32768), so `db-up` cannot lose a bind to a transient client port |
 | `make-target-parity` | Every backend target `make help-all` lists runs from the repo root, a wrong name fails there, and `make help` prints. The root sends a name to `backend/` through one pattern rule. A name it sends must stay out of the root `.PHONY` list: `make` then prints `Nothing to be done` and exits 0, so a CI step that calls it passes without running what it gates |
 | `test-make-target-parity` | The own test of `make-target-parity`. It runs the gate on a copy of the real Makefile, which must pass, then on copies with each known wrong rule, which must fail |
-| `contract-breaking-check` | oasdiff severity gate on `api/crm.yaml` against `CHECK_BASE_REF` (`origin/main` by default; an explicit ref must exist). Breaking changes fail; additive changes pass |
+| `contract-breaking-check` | oasdiff severity gate on `api/crm.yaml` against `CHECK_BASE_REF` (`origin/main` by default; an explicit ref must exist). Breaking changes fail; additive changes pass. Operations marked `deprecated` must keep their published notice dates and finish the notice window before removal. Shell fixtures verify PR and exact release bases and that compatibility exceptions cannot bypass operation notices |
 | `contract-frontend-drift` | The third regeneration a `backend/api/crm.yaml` change owes: `pnpm gen:api` regenerates `frontend/src/api/schema.d.ts` and `public-events.ts`, and this fails when they differ. Skips loudly when `pnpm` is absent (the CI `deterministic-gates` job installs Go only, and takes that path). On a pull request, the `fe-drift` of `fe-quality` covers it, with routing pinned by `TestTheContractReachesTheFrontendLane`. `fe-drift` runs this same script, so both lanes have one spelling. `check-backend` runs it before the other gates, because it writes files they read |
 | `test-contract-frontend-drift` | the own test of `contract-frontend-drift`: the skip is loud, goes to stderr, is the gate's only early exit, and the artifact census precedes it. A gate that may skip can skip without a sound, so the skip itself is tested. A `check-backend` prerequisite |
 | `migration-versions` | Every migration version this branch adds is unclaimed on `CHECK_BASE_REF` (`origin/main` by default) and sorts above the highest one there, per namespace, derived from `backend/migrations/*/`. See [migration-versions](#migration-versions) |

@@ -260,7 +260,7 @@ func (v *dealVerdictEnv) accept(t *testing.T, dealID ids.UUID, correction string
 	}
 }
 
-func TestAnAcceptedChangeHasNoUndoOnAnyPath(t *testing.T) {
+func TestAReviewedChangeStillUndoesOnEveryPath(t *testing.T) {
 	v := setupDealVerdict(t)
 	v.run(t)
 	h := newMarginceChangeHandlers(v.Pool)
@@ -271,19 +271,6 @@ func TestAnAcceptedChangeHasNoUndoOnAnyPath(t *testing.T) {
 	bundle := summary.Bundles[0]
 	v.accept(t, v.deal, deals.VerdictAmountCorrection)
 
-	result, err := h.undoBundle(v.owner(t), crmcontracts.UndoMarginceChangeItem{
-		DealId: openapi_types.UUID(v.deal), Version: bundle.Version, AuditLogIds: wireUUIDs(bundle.AuditLogIDs),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	accepted := slices.ContainsFunc(result.Kept, func(k crmcontracts.UndoMarginceChangeKept) bool {
-		return k.Reason == crmcontracts.UndoMarginceChangeKeptReasonAccepted && k.Kind != nil && *k.Kind == deals.VerdictAmountCorrection
-	})
-	if !accepted || v.field(t, "amount_minor") != "4500000" {
-		t.Fatalf("bulk Undo after Accept = %+v, amount %s; want the accepted amount kept", result, v.field(t, "amount_minor"))
-	}
-
 	w := httptest.NewRecorder()
 	h.ListDealMarginceChanges(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(v.owner(t)),
 		openapi_types.UUID(v.deal), crmcontracts.ListDealMarginceChangesParams{})
@@ -291,10 +278,22 @@ func TestAnAcceptedChangeHasNoUndoOnAnyPath(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil {
 		t.Fatal(err)
 	}
-	for _, change := range page.Changes {
-		if change.Kind == deals.VerdictAmountCorrection && (change.Undo != nil || change.Review == nil || !change.Review.Accepted) {
-			t.Fatalf("the deal's list shows the accepted amount as %s, want accepted and no Undo", w.Body.String())
-		}
+	listed := slices.ContainsFunc(page.Changes, func(change crmcontracts.Receipt) bool {
+		return change.Kind == deals.VerdictAmountCorrection && change.Undo != nil &&
+			change.Review != nil && change.Review.Accepted && change.Review.CanUndo
+	})
+	if !listed {
+		t.Fatalf("the deal's list shows the reviewed amount as %s, want it reviewed and still offering Undo", w.Body.String())
+	}
+
+	result, err := h.undoBundle(v.owner(t), crmcontracts.UndoMarginceChangeItem{
+		DealId: openapi_types.UUID(v.deal), Version: bundle.Version, AuditLogIds: wireUUIDs(bundle.AuditLogIDs),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(result.Undone, deals.VerdictAmountCorrection) || v.field(t, "amount_minor") == "4500000" {
+		t.Fatalf("bulk Undo after review = %+v, amount %s; want the reviewed amount taken back", result, v.field(t, "amount_minor"))
 	}
 }
 
@@ -453,7 +452,7 @@ func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
 	}
 }
 
-func TestAChangeKeptForItsOwnReasonKeepsItWhenTheDealIsHeld(t *testing.T) {
+func TestAHeldDealKeepsAReviewedChangeForTheDealsReason(t *testing.T) {
 	v := setupBundle(t)
 	v.accept(t, v.deal, deals.VerdictProbabilityCorrection)
 	v.moveOn(t)
@@ -472,7 +471,7 @@ func TestAChangeKeptForItsOwnReasonKeepsItWhenTheDealIsHeld(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]crmcontracts.UndoMarginceChangeKeptReason{
-		deals.VerdictProbabilityCorrection: crmcontracts.UndoMarginceChangeKeptReasonAccepted,
+		deals.VerdictProbabilityCorrection: crmcontracts.UndoMarginceChangeKeptReasonChangedSince,
 		deals.VerdictCloseDateCorrection:   crmcontracts.UndoMarginceChangeKeptReasonChangedSince,
 		deals.VerdictStageMoveCorrection:   crmcontracts.UndoMarginceChangeKeptReasonChangedSince,
 	}

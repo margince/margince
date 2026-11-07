@@ -10,13 +10,15 @@
 # re-sync from the spec repo runs with CONTRACT_STABILITY=pre-live, which
 # still prints every breaking change but does not block.
 #
-# Usage: check-contract-breaking.sh [base-ref]   (default: origin/main)
+# Usage: check-contract-breaking.sh [base-ref] [release-version]
+# A release version keeps the exact patch base; a PR uses its merge base.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 CRM_YAML="${CRM_YAML:-backend/api/crm.yaml}"
 BASE_REF="${1:-origin/main}"
+RELEASE_VERSION="${2:-}"
 
 # Tool resolution, same order as the backend Makefile's gate binaries:
 # prefer the install from `make tools` (CI restores it from cache — the
@@ -84,7 +86,7 @@ fi
 # A shallow clone can have both refs and still no common ancestor; keep the tip
 # in that case rather than failing, since the check above has already decided
 # whether a missing base is fatal.
-if MERGE_BASE="$(git merge-base HEAD "$BASE_REF" 2>/dev/null)" && [[ -n "$MERGE_BASE" ]]; then
+if [[ -z "$RELEASE_VERSION" ]] && MERGE_BASE="$(git merge-base HEAD "$BASE_REF" 2>/dev/null)" && [[ -n "$MERGE_BASE" ]]; then
   BASE_REF="$MERGE_BASE"
 fi
 
@@ -105,6 +107,12 @@ if [[ "$CONTRACT_STABILITY" = stable ]] && [[ -f "$ALLOWLIST" ]]; then
     fi
   done < "$ALLOWLIST"
 fi
+
+notice_base="$(mktemp)"
+trap 'rm -f "$notice_base"' EXIT
+git show "$BASE_REF:$CRM_YAML" > "$notice_base"
+GOWORK="$ROOT/go.work" go run ./backend/tools/check-apideprecation \
+  -base "$notice_base" -current "$CRM_YAML" -release "$RELEASE_VERSION"
 
 if [[ "$CONTRACT_STABILITY" = pre-live ]] || [[ "$ALLOWLISTED_RESYNC" = 1 ]]; then
   # Advisory stance: print every change (oasdiff without --fail-on never

@@ -259,17 +259,16 @@ func (s *Store) StartExtractionReadFor(
 func (s *Store) rearmIfAbandonedExtraction(
 	ctx context.Context, tx pgx.Tx, read *ExtractionRead, enqueue ExtractionReadEnqueue,
 ) error {
-	// Both live statuses can strand, and only one of them is obvious. A RUNNING
-	// row past its lease is the killed worker. A QUEUED row past it is a job
-	// that never claimed at all — cancelled, discarded after exhausting its
-	// attempts, or lost with the queue — and it strands exactly as hard, because
-	// the in-flight index makes the corpse block every new reading of the
-	// document while `rearm` is the only thing that could clear it.
-	//
-	// A queued row ages from attempt_at, not created_at: a reading released or
-	// re-armed a moment ago and dated by its creation would be re-armed again
-	// on the very next press, under a rising attempt, for as long as it waited.
-	// The predicate is ExtractionRead.Abandoned spelled in SQL.
+	free, err := s.db.WorkLeaseAvailable(ctx, tx, "document_extract", read.ID)
+	if err != nil {
+		return err
+	}
+	if !free {
+		return nil
+	}
+	if read.Status == ExtractionReadRunning && enqueue != nil {
+		return enqueue(ctx, tx, *read)
+	}
 	rearmed, err := scanExtractionRead(tx.QueryRow(ctx, `
 		UPDATE attachment_extraction
 		   SET status = 'queued', started_at = NULL, status_detail = NULL,

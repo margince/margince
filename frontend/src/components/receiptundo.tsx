@@ -21,7 +21,10 @@ import type { Receipt } from "../lib/handled";
 import { useReceiptUndo } from "../lib/receiptundo";
 import { BundleUndo } from "./marginchanges";
 
-export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
+export function ReceiptUndo({
+  receipt,
+  onDone,
+}: Readonly<{ receipt: Receipt; onDone?: () => void }>) {
   const t = useT();
   const writable = useCanWrite("deal", "update");
   const receiptUndo = useReceiptUndo();
@@ -69,6 +72,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
           },
         ]}
         label={t("common.undo")}
+        onDone={onDone}
       />
     );
   }
@@ -80,12 +84,15 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
         pending={receiptUndo.pending}
         busyLabel={t("history.undo.busy")}
         onClick={() =>
-          receiptUndo.press({
-            kind,
-            id: subject.id,
-            auditId: undo.audit_log_id,
-            version: undo.version,
-          })
+          receiptUndo.press(
+            {
+              kind,
+              id: subject.id,
+              auditId: undo.audit_log_id,
+              version: undo.version,
+            },
+            onDone,
+          )
         }
       >
         {t("common.undo")}
