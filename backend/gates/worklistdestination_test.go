@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // batchStandsForOtherRows names a group rather than a record, so its screen is
@@ -68,10 +69,13 @@ func TestEveryWorklistSourceHasADestination(t *testing.T) {
 			}
 			continue
 		}
+		if attention.DestinationOfSource(crmcontracts.WorklistItemSource(source)) == crmcontracts.WorklistItemDestinationWorklistDestinationReceipt {
+			t.Errorf("%s puts completed work back in the work queue", source)
+		}
 		if !slices.Contains(classified, source) {
 			t.Errorf("the worklist can emit %q and nothing says which screen it belongs on: "+
 				"add it to destinationOfSource in internal/compose/attention/destination.go, "+
-				"choosing today, review, system_health or receipt", source)
+				"choosing today, review or system_health", source)
 		}
 	}
 	// And the other direction: a classification for a source the contract no
