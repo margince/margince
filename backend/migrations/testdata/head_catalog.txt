@@ -1672,7 +1672,8 @@ public.audit_log.trg_audit_no_mutate CREATE TRIGGER trg_audit_no_mutate BEFORE D
 public.audit_log_immutable() secdef=false cfg=- acl=- 
 BEGIN
   IF TG_OP = 'UPDATE'
-     AND NEW.before IS NULL AND NEW.after IS NULL
+     AND NEW.before IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.before)
+     AND NEW.after IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.after)
      AND NEW.evidence = audit_redacted_evidence(
        OLD.action IN ('erase','anonymize','expire','release','pin','restrict') AND OLD.before IS NULL AND OLD.after IS NULL, OLD.evidence, OLD.action)
      AND (to_jsonb(NEW) - ARRAY['before','after','evidence']) =
@@ -1738,6 +1739,38 @@ BEGIN
     END IF;
   END LOOP;
   RETURN kept;
+END;
+
+public.audit_redacted_image(kind text, payload jsonb) secdef=false cfg=- acl=- DECLARE
+  kept jsonb := '{}'::jsonb;
+  field text;
+  held jsonb;
+  value text;
+BEGIN
+  IF jsonb_typeof(payload) IS DISTINCT FROM 'object' THEN
+    RETURN NULL;
+  END IF;
+  FOR field, held IN SELECT key, item FROM jsonb_each(payload) entry(key, item) LOOP
+    value := held #>> '{}';
+    IF field = 'status' AND jsonb_typeof(held) = 'string'
+       AND ((kind = 'lead' AND value IN ('new','contacted','engaged','promoted','disqualified'))
+         OR (kind = 'data_subject_request' AND value IN ('open','in_progress','fulfilled','rejected'))) THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF kind = 'data_subject_request' AND field IN ('resolution','dispute_open')
+          AND jsonb_typeof(held) = 'boolean' THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF kind = 'activity' THEN
+      IF (field = 'meeting_status' AND value IN ('booked','held','no_show','canceled'))
+         OR (field = 'occurred_precision' AND value IN ('instant','day'))
+         OR (field = 'occurred_at' AND jsonb_typeof(held) = 'string'
+             AND value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$') THEN
+        kept := kept || jsonb_build_object(field, held);
+      ELSIF field = 'commitment_admission_redacted' AND held <> 'null'::jsonb THEN
+        kept := kept || jsonb_build_object(field, true);
+      END IF;
+    END IF;
+  END LOOP;
+  RETURN nullif(kept, '{}'::jsonb);
 END;
 
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

@@ -127,7 +127,7 @@ It can update only `before`, `after` and `evidence`, and the trigger allows only
 The trigger and column grants are in [the audit change](../../backend/migrations/core/1794066141_privacy_certificates_allow_payload_redaction.up.sql).
 
 `storekit.RedactAuditHistory` needs a privacy proof written in the same transaction.
-It clears the field images and keeps a mark of erasure. On a proof it also keeps typed
+It keeps fixed states and dates, removes personal fields and marks the erasure. A proof keeps typed
 counts, retention metadata and a valid request reference. Contact erasure reasons cannot copy names or addresses. Hold and release decisions keep the reason and name of the one who decided.
 It cancels kept outbox copies, including those whose audit entry names the erased record
 while their event names a parent record.

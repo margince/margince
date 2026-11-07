@@ -331,7 +331,7 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place, and deletes raw capture, embeddings and attachment bytes. It clears stored audit payloads and cancels kept outbox copies of the erased records.
+  place, and deletes raw capture, embeddings and attachment bytes. It clears personal audit values and cancels kept outbox copies of the erased records.
   Audit IDs, actors, actions and times stay fixed. A proof in the same transaction allows
   payload erasure, and an audit marker records that erasure. All of this runs in **one transaction
   per record**. It refuses a subject under `legal_hold`.

@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RedactAuditHistory removes retained payloads after a privacy certificate was
-// written in this transaction. The database keeps audit metadata immutable.
+// RedactAuditHistory removes personal payload values after a privacy certificate
+// was written in this transaction. The database keeps audit metadata immutable.
 func RedactAuditHistory(ctx context.Context, tx pgx.Tx, certificate ids.UUID) error {
 	return RedactAuditHistoryThrough(ctx, tx, certificate, certificate)
 }
@@ -34,7 +34,8 @@ func RedactAuditHistoryThrough(ctx context.Context, tx pgx.Tx, certificate, thro
 		return errors.New("store: payload redaction needs a privacy certificate written in this transaction")
 	}
 	if _, err := tx.Exec(ctx, `UPDATE audit_log history
-		SET before = NULL, after = NULL, evidence = audit_redacted_evidence(
+		SET before = audit_redacted_image(history.entity_type, history.before),
+        after = audit_redacted_image(history.entity_type, history.after), evidence = audit_redacted_evidence(
           history.action IN ('erase','anonymize','expire','release','pin','restrict')
           AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action)
 		FROM audit_log certificate, audit_log boundary
@@ -43,7 +44,8 @@ func RedactAuditHistoryThrough(ctx context.Context, tx pgx.Tx, certificate, thro
 		  AND history.entity_type = boundary.entity_type
 		  AND history.entity_id = boundary.entity_id
 		  `+auditHistoryThroughBoundary+`
-		  AND (history.before IS NOT NULL OR history.after IS NOT NULL
+		  AND (history.before IS DISTINCT FROM audit_redacted_image(history.entity_type, history.before)
+ OR history.after IS DISTINCT FROM audit_redacted_image(history.entity_type, history.after)
 		       OR history.evidence IS DISTINCT FROM audit_redacted_evidence(
                history.action IN ('erase','anonymize','expire','release','pin','restrict')
                AND history.before IS NULL AND history.after IS NULL, history.evidence, history.action))`, args); err != nil {

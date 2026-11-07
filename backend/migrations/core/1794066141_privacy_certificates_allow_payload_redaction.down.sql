@@ -12,3 +12,4 @@ $$;
 
 DROP FUNCTION audit_redacted_evidence(boolean, jsonb, text);
 DROP FUNCTION audit_privacy_reason_codes();
+DROP FUNCTION audit_redacted_image(text, jsonb);

@@ -3,6 +3,40 @@ SET LOCAL lock_timeout = '3s';
 CREATE FUNCTION audit_privacy_reason_codes() RETURNS text[] LANGUAGE sql IMMUTABLE
 AS $$SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased']::text[]$$;
 
+CREATE FUNCTION audit_redacted_image(kind text, payload jsonb) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE AS $$DECLARE
+  kept jsonb := '{}'::jsonb;
+  field text;
+  held jsonb;
+  value text;
+BEGIN
+  IF jsonb_typeof(payload) IS DISTINCT FROM 'object' THEN
+    RETURN NULL;
+  END IF;
+  FOR field, held IN SELECT key, item FROM jsonb_each(payload) entry(key, item) LOOP
+    value := held #>> '{}';
+    IF field = 'status' AND jsonb_typeof(held) = 'string'
+       AND ((kind = 'lead' AND value IN ('new','contacted','engaged','promoted','disqualified'))
+         OR (kind = 'data_subject_request' AND value IN ('open','in_progress','fulfilled','rejected'))) THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF kind = 'data_subject_request' AND field IN ('resolution','dispute_open')
+          AND jsonb_typeof(held) = 'boolean' THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF kind = 'activity' THEN
+      IF (field = 'meeting_status' AND value IN ('booked','held','no_show','canceled'))
+         OR (field = 'occurred_precision' AND value IN ('instant','day'))
+         OR (field = 'occurred_at' AND jsonb_typeof(held) = 'string'
+             AND value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$') THEN
+        kept := kept || jsonb_build_object(field, held);
+      ELSIF field = 'commitment_admission_redacted' AND held <> 'null'::jsonb THEN
+        kept := kept || jsonb_build_object(field, true);
+      END IF;
+    END IF;
+  END LOOP;
+  RETURN nullif(kept, '{}'::jsonb);
+END;
+$$;
+
 CREATE FUNCTION audit_redacted_evidence(certificate boolean, payload jsonb, verb text DEFAULT '') RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE AS $$DECLARE
   kept jsonb := '{"redacted":true}'::jsonb;
@@ -47,7 +81,8 @@ CREATE OR REPLACE FUNCTION audit_log_immutable() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'UPDATE'
-     AND NEW.before IS NULL AND NEW.after IS NULL
+     AND NEW.before IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.before)
+     AND NEW.after IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.after)
      AND NEW.evidence = audit_redacted_evidence(
        OLD.action IN ('erase','anonymize','expire','release','pin','restrict') AND OLD.before IS NULL AND OLD.after IS NULL, OLD.evidence, OLD.action)
      AND (to_jsonb(NEW) - ARRAY['before','after','evidence']) =
