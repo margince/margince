@@ -26,8 +26,10 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -45,12 +47,8 @@ func restoreSAROriginals(ctx context.Context, blob blobstore.Store, pkg *privacy
 		return
 	}
 	for i, row := range pkg.RawCapture {
-		// pgx decodes a jsonb string to a Go string, so an RFC822 original
-		// arrives here as the message text itself. A payload that is not a
-		// string is one of the column's other spellings — a calendar resource
-		// stored as a JSON object — and carries no stanza to restore.
-		payload, isText := row["payload"].(string)
-		if !isText || !partslim.IsSlimmed([]byte(payload)) {
+		payload, readable := storedOriginalText(row["payload"])
+		if !readable || !partslim.IsSlimmed(payload) {
 			continue
 		}
 		if blob == nil {
@@ -61,7 +59,7 @@ func restoreSAROriginals(ctx context.Context, blob blobstore.Store, pkg *privacy
 			pkg.RawCapture[i]["payload"] = nil
 			continue
 		}
-		restored, err := partslim.RestoreStoredParts([]byte(payload),
+		restored, err := partslim.RestoreStoredParts(payload,
 			func(ref partslim.PartRef) ([]byte, error) {
 				return readStoredPart(ctx, blob, ref)
 			})
@@ -71,8 +69,39 @@ func restoreSAROriginals(ctx context.Context, blob blobstore.Store, pkg *privacy
 			pkg.RawCapture[i]["payload"] = nil
 			continue
 		}
-		pkg.RawCapture[i]["payload"] = string(restored)
+		pkg.RawCapture[i]["payload"] = respelledOriginal(restored)
 	}
+}
+
+// storedOriginalText is the original a payload holds, in either spelling a
+// slimmed message can have: a JSON string for text, or the base64 envelope for
+// bytes jsonb cannot hold as text. A calendar resource stored as itself has no
+// stanza, and IsSlimmed passes it by.
+func storedOriginalText(payload any) ([]byte, bool) {
+	if text, isText := payload.(string); isText {
+		return []byte(text), true
+	}
+	spelled, err := json.Marshal(payload)
+	if err != nil {
+		return nil, false
+	}
+	original, err := capture.DecodeStoredOriginal(spelled)
+	return original, err == nil
+}
+
+// respelledOriginal stores a restored original back in the spelling the column
+// gives it, so a binary message leaves in its envelope as it came in. One it
+// cannot spell is withheld, like one it cannot restore.
+func respelledOriginal(original []byte) any {
+	encoded, err := capture.EncodeStoredOriginal(original)
+	if err != nil {
+		return nil
+	}
+	var value any
+	if err := json.Unmarshal(encoded, &value); err != nil {
+		return nil
+	}
+	return value
 }
 
 // readStoredPart reads one part's octets for the restore.

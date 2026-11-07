@@ -136,3 +136,46 @@ func TestAnOriginalNothingCanComeOutOfIsStoredWhole(t *testing.T) {
 		t.Fatalf("stored %q, want the provider's bytes unchanged", original)
 	}
 }
+
+// A file whose attachment row was already there names an older object, which
+// only the part sweep can prove. The original keeps that file's bytes rather
+// than naming an object this capture staged and no row points at.
+func TestAFileRecordedBeforeKeepsItsBytesInTheOriginal(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	sourceID := "msg-conflict-" + tag
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		var earlier ids.UUID
+		if err := tx.QueryRow(ctx, `INSERT INTO activity (kind, occurred_at, source, captured_by)
+			VALUES ('email', now(), 'manual', 'human:test') RETURNING id`).Scan(&earlier); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO attachment (entity_type, entity_id, activity_id, filename, byte_size,
+			storage_key, checksum, source, captured_by, category, external_source_id, external_part_id)
+			VALUES ('activity', $1, $1, 'contract.pdf', 1, 'an/older/object', 'sum', 'email', 'human:test',
+			        'email_attachment', $2, 'part:1')`, earlier, connector.EmailSourceSystem+":"+sourceID)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the earlier attachment row: %v", err)
+	}
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))
+	file := largePDF()
+	rec := withFiles(mailRecord(sourceID), connector.Part{
+		Ordinal: 1, Filename: "contract.pdf", ContentType: "application/pdf", Body: file,
+	})
+	rec.Raw = mimeWithFile(file)
+	ref, err := sink.Upsert(ctx, rec)
+	if err != nil {
+		t.Fatalf("capture: %v", err)
+	}
+	stored := slimmedOriginalOf(ctx, t, db, ref.ID)
+	if stored.outcome != nil {
+		t.Fatalf("the original is stamped %q, want it whole for the sweep", *stored.outcome)
+	}
+	original, err := capture.DecodeStoredOriginal(stored.payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(original, rec.Raw) {
+		t.Fatal("the original lost a file whose row names another object")
+	}
+}
