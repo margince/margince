@@ -58,13 +58,17 @@ writes: true
 prompt: |
   I need a short written pipeline section for Thursday's board pack — the
   headline open pipeline and what we have won so far, in a couple of sentences
-  with the figures in it. No per-rep breakdown, they do not want that. Put it
-  together as one document I can paste.
+  with the figures in it. No per-rep breakdown, they do not want that. Keep
+  the figures in Margince so finance can open them and check them before
+  Thursday, and give me the section to paste.
 
-# The model chooses its path: the composed document, or the named reports with
-# the section written from them. Either is right when its figures are Margince's,
-# so the answer is checked against what the run's own tool results returned.
+# The model chooses its path; the outcome is checked. The pasted figures must be
+# the ones the run's tools returned, and the figures finance opens must be kept:
+# only a saved question leaves them where finance can re-ask them.
 figures_from_results: true
+
+must_end_with:
+  - me "admin@demo.test" saved_questions=1+
 
 may_call:
   # The block grammar, for a caller that wants the kinds before composing. NOT

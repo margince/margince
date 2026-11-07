@@ -33,6 +33,7 @@ human sees. Four more are not stored fields either:
     - contact "Greta Lindqvist" own_draft=Preisworkshop   the user's own unsent draft there, by subject
     - automation "Stage-change notify" status=enabled   a rule by name, read_view's automations
     - me "admin@demo.test" timezone=Europe/Lisbon   the passport's own seat, as whoami answers it
+    - me "admin@demo.test" saved_questions=1+   at least that many questions the seat saved
 
 It runs after the run and before the lane restores the snapshot, through the
 lane's own passport, and only through tools the server LISTS: a router is called
@@ -511,10 +512,26 @@ def _me_problem(session, want):
     # would score that seat's field as this one's.
     if seat.get("email") != want.name:
         raise Unreadable(f"the lane's passport acts for {seat.get('email')!r}, not {want.name!r}")
+    if want.field == "saved_questions":
+        return _saved_questions_problem(session, want)
     actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
     if actual == want.value:
         return ""
     return f'ended with {want.field}={actual} on the seat "{want.name}", wanted {want.value}'
+
+
+def _saved_questions_problem(session, want):
+    """The problem line for a saved_questions=N+ entry: at least N saved, since a
+    run may save one question per figure."""
+    least = re.fullmatch(r"(\d+)\+", want.value)
+    if not least:
+        raise Unreadable(f"saved_questions takes N+, not {want.value!r}")
+    saved = _data(session, "read_reports", {"kind": "report_runs", "limit": _PAGE_LIMIT}).get("data")
+    if not isinstance(saved, list):
+        raise Unreadable("read_reports report_runs carries no data list")
+    if len(saved) >= int(least.group(1)):
+        return ""
+    return f'ended with {len(saved)} saved questions on the seat "{want.name}", wanted {want.value}'
 
 
 def _own_draft_problem(session, want, record_id):
