@@ -78,8 +78,16 @@ func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec co
 		return err
 	}
 	crowd, err := stampGuestsPastCap(ctx, tx, id, fields.Kind, attested, rec.WithheldParties, roster)
-	if err != nil || crowd.leftOut == 0 {
+	if err != nil {
 		return err
+	}
+	if roster != nil && rec.CalendarAnswer != nil {
+		if _, err := settleAnswers(ctx, tx, id, MeetingRoster{Seat: *roster, Current: true, OwnerAnswer: rec.CalendarAnswer}, nil); err != nil {
+			return err
+		}
+	}
+	if crowd.leftOut == 0 {
+		return nil
 	}
 	_, err = recordGuestsLeftOut(ctx, tx, id, crowd.leftOut)
 	return err
