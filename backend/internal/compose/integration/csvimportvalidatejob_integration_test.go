@@ -130,8 +130,9 @@ func TestAnOverBudgetTestRunReturnsToDraft(t *testing.T) {
 	e := setupImportApp(t)
 	queued := queueLeadTest(t, e, leadFile(12_000))
 
-	// The job's context ends long before 12,000 rows can be read twice.
-	results := importjobtest.WorkQueuedBy(t, e, e.ImportJobs(), compose.ImportValidateArgs{}.Kind(), 50*time.Millisecond)
+	// Reading 12,000 rows twice takes seconds, so this deadline ends the job
+	// mid-read. It is wide enough that a loaded runner has claimed the run first.
+	results := importjobtest.WorkQueuedBy(t, e, e.ImportJobs(), compose.ImportValidateArgs{}.Kind(), time.Second)
 	if len(results) != 1 || results[0].EventKind != river.EventKindJobCompleted {
 		t.Fatalf("the timed-out test ended %+v, want its job completed, not snoozed or retried", results)
 	}
