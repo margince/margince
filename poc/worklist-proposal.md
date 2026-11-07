@@ -228,6 +228,10 @@ time. A walk's page 2 and a kept Home answer can show the same mix. The rule:
 a read judges everything at its own `as_of`. The fix passes the read's time
 down; the check now records `main` twice, apart in time, before it compares.
 
+Filed from this check: #10765 (the badge's clock), #10766 (planning),
+#10767 (seat mail by address and time), #10768 (last touch), #10769 (the
+first link of a captured mail) and #10770 (the base currency lock).
+
 ---
 
 ## Part 2. The new base
