@@ -49,7 +49,7 @@ type extensionUnit struct {
 // yet is a hard error, not a silent drop. None are left today
 // (unbuiltCapabilityLayers is empty), and the rule outlives the list.
 func scanExtensions(root string) ([]extensionUnit, error) {
-	sources, err := instanceUnits(root)
+	sources, err := selectedInstanceUnits(root)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +325,7 @@ func computeInputs(root string) (manifestInputs, error) {
 		}
 		rows[u.Name] = manifestExtRow{Tree: tree, Manifest: unitManifest}
 	}
-	return manifestInputs{Core: core, ApprovalsLock: lock, Extensions: rows}, nil
+	return manifestInputs{Core: core, ApprovalsLock: lock, Extensions: rows, IncludeDevelopment: *includeDevelopment}, nil
 }
 
 // coreDigest covers the committed inputs the composed outputs derive from.

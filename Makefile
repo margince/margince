@@ -1,3 +1,5 @@
+include scripts/composition-profile.mk
+
 # Thin delegator: the real Makefile lives in backend/ (the Go module root).
 # `make check` is the merge gate; `make dev` boots everything.
 # The frontend lane is separate (`make frontend-check`) — it needs node+pnpm,
@@ -359,6 +361,7 @@ FORCE:
 
 # The match-anything rule above would otherwise try to remake this file.
 Makefile: ;
+scripts/composition-profile.mk: ;
 
 ## check-fe — the frontend half of the gate (part of `make check`). Its first
 ## leg, fe-typecheck-composed, installs the frontend deps, and the check below
@@ -1320,6 +1323,7 @@ make-target-parity:
 ## test-make-target-parity — the gate's own test: the shipped Makefiles pass and
 ## each planted forwarding mistake fails.
 test-make-target-parity:
+	@bash scripts/test-composition-profile.sh
 	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — strict compatibility against CHECK_BASE_REF

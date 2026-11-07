@@ -1177,6 +1177,7 @@ up)
   mkdir -p "$rundir"
   : > "$log"
   echo "$label → db=$db api=:$api_port fe=:$fe_port (logs: $log)"
+  echo "Development extensions enabled; checks and generation keep the same selection."
   # On the console, not in the log: a failure here leaves nothing to tail.
   ensure_infra
   {
@@ -1217,7 +1218,7 @@ up)
     # `go run` does) resolves the vanilla stub and applies zero extension
     # migrations, leaving a composed api booting over a database with none
     # of its extensions' tables.
-    ( cd backend && GOWORK="$PWD/../go.work" go run ./tools/gen-composition )
+    ( cd backend && GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development )
     ( cd backend && MARGINCE_OWNER_DSN="$dev_owner_url" \
       GOWORK="$PWD/../build/composition/go.work" go run ./cmd/migrate up )
     echo "=== build api (once, before the readiness poll) ==="
