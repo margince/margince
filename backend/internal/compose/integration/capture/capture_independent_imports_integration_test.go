@@ -206,7 +206,9 @@ func independentImports(t *testing.T, scenario concurrentImportCase) {
 		generations[id] = generation
 		return nil
 	}}
-	ctx, cancel := context.WithTimeout(principal.WithWorkspaceID(context.Background(), env.e.WS), 10*time.Second)
+	// The second pool's lock_timeout proves the imports do not wait for each
+	// other. This deadline only bounds the run, which a loaded runner slows.
+	ctx, cancel := context.WithTimeout(principal.WithWorkspaceID(context.Background(), env.e.WS), time.Minute)
 	defer cancel()
 	if err := first.DispatchBackfills(ctx, scheduler, false); err != nil {
 		t.Fatal(err)
