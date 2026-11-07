@@ -83,13 +83,13 @@ class FromCodexTest(unittest.TestCase):
         lines.insert(1, item("error", message="MCP client for `margince_e2e_llm` failed to start"))
         self.assertEqual(convert(lines)[0], 3)
 
-    def test_a_run_that_never_reached_the_lanes_server_is_a_harness_fault(self):
-        # Codex says nothing about what it attached, and a run whose tools never
-        # reached the model reads exactly like one that chose to call nothing.
+    def test_a_run_that_calls_nothing_is_scored_on_its_answer(self):
+        # A no-call answer is right only when the case needs no data and no
+        # change, which the case's own checks decide.
         lines = [l for l in sample() if '"mcp_tool_call"' not in l]
-        code, _out, raw = convert(lines)
-        self.assertEqual(code, 3)
-        self.assertIn("no call to the lane's server", raw)
+        code, out, _raw = convert(lines)
+        self.assertEqual(code, 0)
+        self.assertEqual(check.unrun(out), "")
 
     def test_any_error_item_stops_the_run_whatever_its_wording(self):
         lines = sample()

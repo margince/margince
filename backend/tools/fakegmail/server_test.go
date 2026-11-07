@@ -58,7 +58,7 @@ func getJSON(t *testing.T, srv *httptest.Server, path, token string, out any) {
 func consentCode(t *testing.T, srv *httptest.Server, hint string) string {
 	t.Helper()
 	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	q := url.Values{"redirect_uri": {"http://app.test/cb"}, "state": {"s1"}}
+	q := url.Values{"redirect_uri": {"http://localhost:5173/cb"}, "state": {"s1"}}
 	if hint != "" {
 		q.Set("login_hint", hint)
 	}
@@ -117,7 +117,7 @@ func TestAMessageIsServedOnlyToItsOwnMailbox(t *testing.T) {
 func TestTheConsentFlowConnectsTheHintedMailbox(t *testing.T) {
 	srv := newTestServer(t, 5)
 	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	consent := srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {"http://app.test/cb"}, "state": {"s1"}, "login_hint": {"b@demo.test"}}.Encode()
+	consent := srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {"http://localhost:5173/cb"}, "state": {"s1"}, "login_hint": {"b@demo.test"}}.Encode()
 	resp, err := client.Get(consent)
 	if err != nil {
 		t.Fatal(err)
@@ -233,5 +233,31 @@ func TestALaterGenerationServesNewMail(t *testing.T) {
 	}
 	if _, _, ok := later.parseID(first.messageID(0, 3)); ok {
 		t.Fatal("a later generation still serves the first generation's ids")
+	}
+}
+
+// The consent page sends a browser back only to a stack on this machine.
+func TestTheConsentPageRefusesARedirectOffThisMachine(t *testing.T) {
+	srv := newTestServer(t, 1)
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	for _, target := range []string{"https://evil.example/cb", "http://localhost.evil.example/cb", "javascript:alert(1)", "//evil.example/cb"} {
+		resp, err := client.Get(srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {target}}.Encode())
+		if err != nil {
+			t.Fatal(err)
+		}
+		closeBody(t, resp)
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("redirect_uri %q: status %d, want 400", target, resp.StatusCode)
+		}
+	}
+	for _, target := range []string{"http://127.0.0.1:8080/cb", "http://[::1]:8080/cb", "http://app.localhost:5173/cb"} {
+		resp, err := client.Get(srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {target}}.Encode())
+		if err != nil {
+			t.Fatal(err)
+		}
+		closeBody(t, resp)
+		if resp.StatusCode != http.StatusFound {
+			t.Errorf("redirect_uri %q: status %d, want 302", target, resp.StatusCode)
+		}
 	}
 }

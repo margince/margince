@@ -224,7 +224,7 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 			return err
 		}
 		bound := storekit.NewPatch()
-		bound.Set("source_commercial_revision", *current.SourceCommercialRevision, head.Revision)
+		bound.Set(sourceRevisionField, *current.SourceCommercialRevision, head.Revision)
 		if !bound.Empty() {
 			if err := bound.ApplyLocked(ctx, tx, lock); err != nil {
 				return fmt.Errorf("name the deal revision the draft came from: %w", err)
@@ -234,10 +234,18 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 		if err != nil {
 			return err
 		}
-		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
 			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
-			map[string]any{"refreshed_from_revision": head.Revision, "was_revision": *current.SourceCommercialRevision}); err != nil {
+			map[string]any{"refreshed_from_revision": head.Revision, "was_revision": *current.SourceCommercialRevision})
+		if err != nil {
 			return fmt.Errorf("audit the refresh from the deal: %w", err)
+		}
+		changed := lineEditFields(totals.Before, totals.After)
+		if !bound.Empty() {
+			changed = append(changed, sourceRevisionField)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, changed); err != nil {
+			return err
 		}
 		out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly)
 		return err

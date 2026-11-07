@@ -4990,6 +4990,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.declined": "Abgesagt",
   "activity.detail.response.tentative": "Vielleicht",
   "activity.detail.response.needsAction": "Keine Antwort",
+  "meeting.attendeesMore_one": "und {count} weiterer Gast",
+  "meeting.attendeesMore_other": "und {count} weitere Gäste",
   "activity.detail.guestsLeftOut_one":
     "und {count} weiterer Gast, nicht aufgeführt",
   "activity.detail.guestsLeftOut_other":
@@ -16666,6 +16668,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.deal.erased.label": "Deal gelöscht",
   "webhooks.event.deal.erased.when": "Ein Deal wird endgültig gelöscht.",
   "webhooks.eventGroup.offers": "Angebote",
+  "webhooks.event.offer.updated.label": "Angebotsentwurf bearbeitet",
+  "webhooks.event.offer.updated.when":
+    "Kopf oder Positionen eines Angebotsentwurfs ändern sich.",
   "webhooks.event.offer.created.label": "Angebotsrevision erstellt",
   "webhooks.event.offer.created.when":
     "Ein Angebot wird erstellt, oder ein gesendetes Angebot wird als neuer Entwurf neu erzeugt.",
