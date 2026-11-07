@@ -17,7 +17,8 @@ import transcript  # noqa: E402
 # and answers. Only the operator's home and the workspace path were rewritten.
 SAMPLE = os.path.join(HERE, "testdata", "agy", "echo-and-sum.jsonl")
 OFFERED = ["echo", "get-sum"]
-SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad/.system_generated/steps/{}/{}"
+SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad-ef66-4233-91c4-2852503da362/.system_generated/steps/{}/{}"
+OTHER_SPILL = "/home/operator/.gemini/antigravity-cli/brain/0000-other/.system_generated/steps/{}/{}"
 
 
 def convert(lines):
@@ -125,8 +126,8 @@ class FromAgyTest(unittest.TestCase):
                               tool_step(10, "read_file", Path=SPILL.format(9, "resource_0.txt")))
         self.assertEqual(convert(lines)[0], 0)
 
-    def test_reading_a_spill_of_a_step_that_was_no_lane_call_stops_the_run(self):
-        lines = before_answer(sample(), tool_step(9, "read_file", Path=SPILL.format(2, "output.txt")))
+    def test_reading_a_spill_of_another_conversation_stops_the_run(self):
+        lines = before_answer(sample(), tool_step(9, "read_file", Path=OTHER_SPILL.format(5, "output.txt")))
         self.assertEqual(convert(lines)[0], 3)
 
     def test_a_failed_lane_call_reaches_the_transcript_as_an_error(self):
