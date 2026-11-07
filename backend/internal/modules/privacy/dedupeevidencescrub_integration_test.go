@@ -21,13 +21,17 @@ package privacy
 // weakest of them does.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // dedupeSubjects is one seeded subject: the contact, the lead they were
@@ -68,19 +72,120 @@ var dedupeEvidenceActs = map[string]struct {
 }
 
 func TestAnonymizingASubjectEmptiesTheirDuplicatePairEvidence(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	for name, act := range dedupeEvidenceActs {
 		t.Run(name, func(t *testing.T) {
-			ctx := context.Background()
-			tx := subjectColumnsTx(ctx, t)
-			subjects, contactPair, leadPair := seedDedupePairs(ctx, t, tx)
+			for _, state := range storedDedupeDispositions(ctx, t) {
+				for _, archived := range []bool{false, true} {
+					t.Run(fmt.Sprintf("%s/archived=%t", state, archived), func(t *testing.T) {
+						tx := subjectColumnsTx(ctx, t)
+						subjects, contactPair, leadPair := seedDedupePairs(ctx, t, tx)
+						mustExec(ctx, t, tx, `UPDATE dedupe_candidate
+							SET disposition = @state,
+							    disposed_at = CASE WHEN @state = 'open' THEN NULL ELSE timestamptz '2000-01-01 00:00:00+00' END,
+							    disposed_by = CASE WHEN @state = 'open' THEN NULL ELSE split_part(captured_by, ':', 2)::uuid END,
+							    archived_at = CASE WHEN @archived THEN timestamptz '2000-01-01 00:00:00+00' ELSE NULL END
+							WHERE id = ANY(@pairs)`, pgx.StrictNamedArgs{
+							"state": state, "archived": archived, "pairs": []ids.UUID{contactPair, leadPair},
+						})
+						contactBefore := readDedupeScrubState(ctx, t, tx, contactPair)
+						leadBefore := readDedupeScrubState(ctx, t, tx, leadPair)
+						if err := act.run(ctx, tx, subjects); err != nil {
+							t.Fatalf("anonymizing: %v", err)
+						}
+						assertDedupeScrubState(t, contactBefore, readDedupeScrubState(ctx, t, tx, contactPair), act.contact, state)
+						assertDedupeScrubState(t, leadBefore, readDedupeScrubState(ctx, t, tx, leadPair), act.leads, state)
+						var contacts, leads []ids.UUID
+						if act.contact {
+							contacts = []ids.UUID{subjects.contact.UUID}
+						}
+						if act.leads {
+							leads = []ids.UUID{subjects.lead}
+						}
+						if err := scrubDedupeEvidence(ctx, tx, contacts, leads); err != nil {
+							t.Fatal(err)
+						}
+						assertDedupeScrubState(t, contactBefore, readDedupeScrubState(ctx, t, tx, contactPair), act.contact, state)
+						assertDedupeScrubState(t, leadBefore, readDedupeScrubState(ctx, t, tx, leadPair), act.leads, state)
+						for pair, targeted := range map[ids.UUID]bool{contactPair: act.contact, leadPair: act.leads} {
+							var count int
+							if err := tx.QueryRow(ctx, `SELECT count(*) FROM audit_log
+                                WHERE entity_type='dedupe_candidate' AND entity_id=$1 AND action='archive'
+                                AND after = '{"archived":true,"reason":"subject_erased"}'::jsonb`, pair).Scan(&count); err != nil {
+								t.Fatal(err)
+							}
+							want := 0
+							if targeted && state == "open" && !archived {
+								want = 1
+							}
+							if count != want {
+								t.Errorf("closure audits=%d, want %d", count, want)
+							}
+						}
 
-			if err := act.run(ctx, tx, subjects); err != nil {
-				t.Fatalf("anonymizing: %v", err)
+					})
+				}
 			}
-
-			assertDedupeEvidence(ctx, t, tx, contactPair, "the contact pair", act.contact)
-			assertDedupeEvidence(ctx, t, tx, leadPair, "the lead pair", act.leads)
 		})
+	}
+}
+
+func storedDedupeDispositions(ctx context.Context, t *testing.T) []string {
+	t.Helper()
+	tx := subjectColumnsTx(ctx, t)
+	var check string
+	if err := tx.QueryRow(ctx, `SELECT pg_get_constraintdef(oid) FROM pg_constraint
+		WHERE conrelid = 'dedupe_candidate'::regclass AND conname = 'dedupe_candidate_disposition_check'`).Scan(&check); err != nil {
+		t.Fatal(err)
+	}
+	matches := regexp.MustCompile(`'([^']+)'`).FindAllStringSubmatch(check, -1)
+	if len(matches) < 3 {
+		t.Fatalf("dedupe disposition census is too short: %s", check)
+	}
+	states := make([]string, len(matches))
+	for i, match := range matches {
+		states[i] = match[1]
+	}
+	return states
+}
+
+type dedupeScrubState struct {
+	metadata json.RawMessage
+	evidence json.RawMessage
+	archived string
+	version  int64
+}
+
+func readDedupeScrubState(ctx context.Context, t *testing.T, tx pgx.Tx, id ids.UUID) dedupeScrubState {
+	t.Helper()
+	var state dedupeScrubState
+	if err := tx.QueryRow(ctx, `SELECT to_jsonb(d) - ARRAY['evidence', 'archived_at', 'updated_at', 'version'],
+		evidence, coalesce(archived_at::text, ''), version FROM dedupe_candidate d WHERE id = @id`,
+		pgx.StrictNamedArgs{"id": id}).Scan(&state.metadata, &state.evidence, &state.archived, &state.version); err != nil {
+		t.Fatal(err)
+	}
+	return state
+}
+
+func assertDedupeScrubState(t *testing.T, before, after dedupeScrubState, scrubbed bool, disposition string) {
+	t.Helper()
+	if !bytes.Equal(before.metadata, after.metadata) {
+		t.Errorf("duplicate decision metadata changed: before=%s after=%s", before.metadata, after.metadata)
+	}
+	if !scrubbed {
+		if !bytes.Equal(before.evidence, after.evidence) || before.version != after.version || before.archived != after.archived {
+			t.Errorf("another subject's duplicate match changed: before=%+v after=%+v", before, after)
+		}
+		return
+	}
+	if string(after.evidence) != emptyDedupeEvidence || after.version != before.version+1 {
+		t.Errorf("duplicate evidence was not cleared once: before=%+v after=%+v", before, after)
+	}
+	if disposition == "open" && after.archived == "" {
+		t.Error("a pending duplicate match was not closed")
+	}
+	if (disposition != "open" || before.archived != "") && before.archived != after.archived {
+		t.Errorf("an existing decision's archive state changed: before=%q after=%q", before.archived, after.archived)
 	}
 }
 
@@ -139,7 +244,7 @@ func fileDedupePair(
 	evidence, err := json.Marshal([]map[string]any{
 		{
 			"field": "full_name", "left_value": "Hedda Subject", "right_value": "Hedda Subject",
-			"signal": "collide", "score": 0.91,
+			"signal": "collide", "score": 0.91, "future_detail": map[string]string{"private_note": "Hedda Subject"},
 		},
 		{"field": "email", "left_value": email, "right_value": nil, "signal": "one_sided"},
 	})
@@ -153,36 +258,9 @@ func fileDedupePair(
 	}[entity]
 	mustExec(ctx, t, tx, `
 		INSERT INTO dedupe_candidate (id, entity_type, `+column+`, confidence, evidence, source, captured_by)
-		VALUES ($1, $2, $3, $4, 0.91, $5, 'manual', 'user:'||$6::text)`,
-		id, entity, left, right, evidence, user)
+		VALUES (@id, @entity, @left, @right, 0.91, @evidence, 'manual', 'user:'||@user::text)`,
+		pgx.StrictNamedArgs{"id": id, "entity": entity, "left": left, "right": right, "evidence": evidence, "user": user})
 	return id
-}
-
-// assertDedupeEvidence reads one candidate back and reports the gap between
-// what the act had to destroy and what it did.
-//
-// It asks in both directions. An act that emptied a pair it has no business
-// reaching would be scrubbing somebody else's open decision, which is a defect
-// of its own and one a one-sided assertion cannot see.
-func assertDedupeEvidence(ctx context.Context, t *testing.T, tx pgx.Tx, id ids.UUID, pair string, wantEmpty bool) {
-	t.Helper()
-	var evidence json.RawMessage
-	if err := tx.QueryRow(ctx,
-		`SELECT evidence FROM dedupe_candidate WHERE id = $1`, id).Scan(&evidence); err != nil {
-		t.Fatalf("reading %s back: %v", pair, err)
-	}
-	var rows []map[string]any
-	if err := json.Unmarshal(evidence, &rows); err != nil {
-		t.Fatalf("%s holds evidence that is not the detector's array shape: %v", pair, err)
-	}
-	switch {
-	case wantEmpty && len(rows) != 0:
-		t.Errorf("%s still holds %d evidence row(s) after the act: %s — the subject's name and "+
-			"address survive in the snapshot the anonymize was supposed to reach", pair, len(rows), evidence)
-	case !wantEmpty && len(rows) == 0:
-		t.Errorf("%s was emptied by an act that does not name its subject — the predicate reaches "+
-			"pairs beyond the record being anonymized", pair)
-	}
 }
 
 // An erasure step that CANNOT write says so.
@@ -196,7 +274,7 @@ func assertDedupeEvidence(ctx context.Context, t *testing.T, tx pgx.Tx, id ids.U
 // every later statement is refused — and it is the one fault a test can stage
 // without taking the table away from every other suite on the lane.
 func TestAScrubThatCannotWriteReportsItRatherThanCommitting(t *testing.T) {
-	ctx := context.Background()
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.New[ids.ContactKind]()
 
