@@ -237,8 +237,10 @@ class RunAgyTest(unittest.TestCase):
         self.assertEqual(list(seen["agents"]), ["margince-e2e-llm.md"])
 
     def test_an_agy_killed_at_the_wall_clock_is_a_harness_fault_even_with_a_complete_stream(self):
-        with unittest.mock.patch.object(self.drive, "AGY_GRACE", 0.5):
-            code, _out, _seen = self.run_agy(timeout=0, FAKE_AGY_HANG="5")
+        # The grace must outlast the fake's interpreter start, or the kill lands
+        # before the stream this test promises is complete. The hang outlasts it.
+        with unittest.mock.patch.object(self.drive, "AGY_GRACE", 5):
+            code, _out, _seen = self.run_agy(timeout=0, FAKE_AGY_HANG="60")
         self.assertEqual(code, self.drive.HARNESS)
 
     def test_an_effort_the_model_id_does_not_carry_is_refused_before_agy_runs(self):
