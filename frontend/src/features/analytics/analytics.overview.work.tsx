@@ -34,7 +34,9 @@ export const AssessmentPanel = lazy(
   CardBoundary,
 );
 
-export const DecisionsPanel = lazy<NonNullable<ComponentProps<typeof DecisionsView>>>(
+export const DecisionsPanel = lazy<
+  NonNullable<ComponentProps<typeof DecisionsView>>
+>(
   async () => ({
     default: (await import("./analytics.decisions")).DecisionsPanel,
   }),
