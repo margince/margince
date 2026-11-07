@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -29,6 +30,9 @@ type server struct {
 	now        time.Time
 	big        bool
 	generation int
+	// callbackOrigin is one more origin the consent page may send a browser
+	// back to, for a stack whose public URL is not on loopback.
+	callbackOrigin string
 }
 
 func (s *server) routes() *http.ServeMux {
@@ -91,13 +95,36 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "redirect_uri is not a URL")
 		return
 	}
+	if !isLoopback(back) && (s.callbackOrigin == "" || origin(back) != s.callbackOrigin) {
+		writeError(w, http.StatusBadRequest, "redirect_uri must point at this machine or at -callback-origin")
+		return
+	}
 	v := back.Query()
 	v.Set("code", "code-"+owner)
 	v.Set("state", q.Get("state"))
 	v.Set("scope", q.Get("scope"))
 	back.RawQuery = v.Encode()
-	//nolint:gosec // G710: sending the browser back to the caller's redirect_uri is what a consent screen does; this one serves local load tests only
+	//nolint:gosec // G710: the check above admits only loopback or the origin the operator named
 	http.Redirect(w, r, back.String(), http.StatusFound)
+}
+
+// isLoopback admits only a dev stack on this machine, so the consent page
+// cannot send a browser to another site.
+func isLoopback(u *url.URL) bool {
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	host := u.Hostname()
+	name := strings.ToLower(strings.TrimSuffix(host, "."))
+	if name == "localhost" || strings.HasSuffix(name, ".localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func origin(u *url.URL) string {
+	return strings.ToLower(u.Scheme + "://" + u.Host)
 }
 
 // token answers both the code exchange and a refresh. The tokens name the

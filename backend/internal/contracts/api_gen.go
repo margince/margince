@@ -75393,9 +75393,10 @@ type ListUsersParams struct {
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
 
-	// IncludeInvited Also list invited seats — members who have not signed in yet. Each row's `status` says so.
-	// A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
-	// Naming the colleagues a record already points at is `GET /users/names`.
+	// IncludeInvited Deprecated compatibility option. Also lists invited seats that have not signed in yet.
+	// Assignment pickers use the default active roster and leave out rows whose `is_agent` is
+	// true. Resolve known colleague ids with `GET /users/names`. This option remains accepted
+	// throughout the API compatibility window.
 	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
 
