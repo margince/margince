@@ -177,7 +177,13 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	}
 	// ATTACH: the named record gains an activity that every reader of it
 	// will see, so a share marked read-only does not confer this.
-	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
+	if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+		return err
+	}
+	if link.EntityType == linkEntityDeal {
+		return refuseAnotherMembersDeal(ctx, tx, link.EntityID)
+	}
+	return nil
 }
 
 // linkRefusal names the body field when the caller typed the links. Links a

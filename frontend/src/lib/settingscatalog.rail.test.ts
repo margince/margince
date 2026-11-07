@@ -79,11 +79,6 @@ describe("what the rail carries and what it leaves behind", () => {
     const reach = settingsReach(seededRep);
     expect(reach.looksUp.map((page) => page.id)).toEqual([
       "pipelines",
-      // Stage automation MOVED here when the page grew its switches. A rep
-      // holds pipeline read and not update, so the report is still theirs to
-      // consult and every control on it is refused — which is what looksUp
-      // means. It sat in the acted-on half while the page was read-only.
-      "stageautomation",
       "leads",
       // The acquisition-source catalog, gated on custom_field like the lead
       // vocabulary beside it: a rep reads the channels and changes none.

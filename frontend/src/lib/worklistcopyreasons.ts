@@ -115,7 +115,10 @@ const SAID_BY_THE_WHEN_LINE = new Set<string>([
   "meeting_soon",
 ]);
 
-/** The reasons a row says in its phrase line: all but those said elsewhere. */
+/**
+ * The reasons a row says in its phrase line: all but those said elsewhere.
+ * The Worklist row shows `pinned` as a pin beside its name.
+ */
 export function phrasedReasons(
   item: WorklistItem,
   whenDrawn: boolean,
@@ -135,13 +138,28 @@ export function phrasedReasons(
   );
 }
 
-// One fact behind an item's rank.
+/**
+ * Who the row is with, by name: the message's sender when the row's contact
+ * is not that sender, else the contact.
+ */
+export function partyName(item: WorklistItem): string | undefined {
+  const mail = item.email_summary;
+  if (item.contact && mail?.counterparty_contact_id === item.contact.id)
+    return item.contact.label ?? mail.counterparty ?? undefined;
+  return mail?.counterparty ?? item.contact?.label ?? undefined;
+}
+
+// One fact behind an item's rank. A reason about the other side names them
+// when the row knows who they are.
 export function reasonText(
   reason: WorklistReason,
   t: T,
   locale: Locale,
   zone: string,
+  party: string | undefined,
 ): string | null {
+  if (reason.kind === "buyer_wrote_last" && party)
+    return t("worklist.because.buyer_wrote_last.named", { name: party });
   if (!known(reason.kind)) {
     // A reason this build has no sentence for is DROPPED, not printed as its
     // own key. The row keeps its other reasons and says one thing less.
@@ -197,8 +215,6 @@ export function dealFactsText(
       ),
     );
   }
-  if (deal.forecast_category === "omitted")
-    parts.push(t("worklist.deal.omitted"));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
@@ -245,14 +261,36 @@ export function whenText(
   if (key === null) {
     return null;
   }
-  const zone = item.source === "task" ? record : viewer;
+  if (item.source === "task") {
+    return taskWhen(item, item.due_at, key, t, locale, record, now);
+  }
   // A meeting's `due_at` is its start, as exact as the meeting is; any other
   // row's is a deadline, which always has its time.
   const when =
     item.source === "meeting"
-      ? momentText(item.due_at, item.occurred_precision, locale, zone, now)
-      : momentText(item.due_at, "instant", locale, zone, now);
+      ? momentText(item.due_at, item.occurred_precision, locale, viewer, now)
+      : momentText(item.due_at, "instant", locale, viewer, now);
   return t(key, { when });
+}
+
+// A task with an agreed time reads like any other moment: the time alone
+// today, the date and time otherwise. A task due by its day has no hour to
+// print. Due today, the row's "due today" reason says it already.
+function taskWhen(
+  item: WorklistItem,
+  dueAt: string,
+  key: "worklist.when.starts" | "worklist.when.due",
+  t: T,
+  locale: Locale,
+  record: string,
+  now: Date,
+): string | null {
+  if (item.due_has_time === true) {
+    return t(key, { when: momentText(dueAt, "instant", locale, record, now) });
+  }
+  return sameCalendarDay(new Date(dueAt), now, record)
+    ? null
+    : t(key, { when: formatDate(dueAt, locale, record) });
 }
 
 // Which sentence the moment goes in, or null for a row whose `due_at` is not a

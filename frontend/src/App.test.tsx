@@ -18,6 +18,13 @@ import {
   wizardRow,
 } from "./testing/appharness";
 import { meFixture } from "./testing/mefixture";
+// The screens these cases open, loaded while the file is collected. A screen's
+// first import costs seconds; inside a case it races the case's own waiters.
+import "./features/brief/brief";
+import "./App.settings";
+import "./features/settings/settings";
+import "./features/sign-in/forcedmfa";
+import "./features/voice-knowledge/search";
 
 // B-EP09.17: the locale switch flips the whole UI between DE and EN. With the
 // browser asking for a language we don't ship, the app mounts in the A100
@@ -138,8 +145,6 @@ describe("the custom-fields admin, at its address inside settings", () => {
   });
 
   it("mounts the field builder on the Data model page", async () => {
-    // Routing is under test; wait for the real lazy module before timing UI queries.
-    await import("./features/settings/settings");
     // Every query the surface fires must resolve, or QueryGate paints its error
     // card instead of the heading: /me (an admin holding the custom_field write
     // the entry is gated on), the per-object field list, and the audit rail.
@@ -194,25 +199,8 @@ describe("the custom-fields admin, at its address inside settings", () => {
     // The SURFACE's own section header, at level 2. The shell's page head titles
     // the PAGE — "Data model" — so anchoring at level 1 would pass even if this
     // section never mounted.
-    // WAITING FOR A CHUNK, not for a request. The settings screen arrives on a
-    // chunk of its own and the shell no longer carries it — the catalog, the
-    // addresses and the visibility predicate moved out so that src/app/** could
-    // ask its three questions without pulling every settings card into the
-    // always-loaded bundle. What the shell stopped paying for on every page, a
-    // settings route now pays once on arrival, and in jsdom that import is
-    // resolved by the test runner rather than served from a browser cache.
-    //
-    // It lands just past the 1000ms default: this passes at 1500ms on an idle
-    // machine and failed at the default on a loaded runner, which is the wrong
-    // way round for a threshold to sit. Stated as a literal because
-    // scripts/test-budget.test.ts folds these numbers to check them against the
-    // per-test ceiling, and a timeout it cannot read is a budget nobody checked.
     expect(
-      await screen.findByRole(
-        "heading",
-        { level: 2, name: "Custom fields" },
-        { timeout: 3000 },
-      ),
+      await screen.findByRole("heading", { level: 2, name: "Custom fields" }),
     ).toBeTruthy();
   });
 });
@@ -253,7 +241,6 @@ describe("extension routes (vanilla registry)", () => {
 
 describe("locale switch", () => {
   it("mounts in English (A100) and flips the chrome to German on switch", async () => {
-    await import("./features/settings/settings");
     // The seat keeps the language before the page switches, so the write must
     // be answered; every other read stays the session-only stub.
     const sessionOnly = sessionOnlyFetch();
@@ -290,15 +277,9 @@ describe("locale switch", () => {
     // also what makes this an app-level claim: the choice is made on one route
     // and has to hold on the next one, not just inside the card that made it.
     window.location.hash = "#/settings/account";
-    // The settings chunk again, for the reason spelled out on the Data model
-    // case above: this waits for the module to arrive, not for a request.
     await pickOption(
       userEvent.setup(),
-      await screen.findByRole(
-        "combobox",
-        { name: "Language" },
-        { timeout: 3000 },
-      ),
+      await screen.findByRole("combobox", { name: "Language" }),
       "Deutsch",
     );
     // The language is drafted until the page's save bar writes it.
@@ -608,6 +589,14 @@ describe("password-reset deep link", () => {
         JSON.stringify({ oidc_providers: [], password: true }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
+    }
+    // No digest yet, as on a new install. The catch-all list body below is no
+    // digest, and the Brief's greeting reads one the moment it arrives.
+    if (url.endsWith("/v1/digest")) {
+      return new Response(JSON.stringify({ code: "no_digest_yet" }), {
+        status: 404,
+        headers: { "Content-Type": "application/problem+json" },
+      });
     }
     if (url.endsWith("/v1/assistant/profile")) {
       return new Response(

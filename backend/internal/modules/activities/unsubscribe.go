@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -332,7 +333,7 @@ func lockedPurposeKey(key string) bool {
 // still owes its disclosures, so they are folded into the body BEFORE the
 // branching starts rather than added to each arm.
 func (s *Store) deliverability(
-	ctx context.Context, body, subject string, recipients []string, surface unsubscribeSurface,
+	ctx context.Context, body, subject string, recipients []string, surface unsubscribeSurface, entity ids.UUID,
 ) (sendDeliverability, error) {
 	// THE SURFACE decides whether this is advertising, not the category alone.
 	// A caller that names only the deprecated consent key carries no category,
@@ -340,7 +341,7 @@ func (s *Store) deliverability(
 	// German objection route and the Vietnamese advertiser contact — from
 	// exactly the sends that carry an unsubscribe surface and are therefore
 	// advertising by the product's own reckoning.
-	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()))
+	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), recipients, entity)
 	if err != nil {
 		return sendDeliverability{}, err
 	}

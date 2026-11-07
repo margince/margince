@@ -114,6 +114,15 @@ func (e *scoutEnv) email(t *testing.T, subject, direction string, company ids.UU
 // document files one captured part on the mail, through capture's own writer.
 func (e *scoutEnv) document(t *testing.T, mail ids.UUID, filename, contentType string) ids.UUID {
 	t.Helper()
+	return captureMailDocument(t, e.Env, blobstore.NewMemory(), mail, filename, contentType, []byte(filename))
+}
+
+// captureMailDocument stages and records one file on a mail through capture's
+// own writer, into blob, and returns its attachment id.
+func captureMailDocument(
+	t *testing.T, e *integration.Env, blob blobstore.Store, mail ids.UUID, filename, contentType string, body []byte,
+) ids.UUID {
+	t.Helper()
 	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
 		principal.Principal{
 			Type: principal.PrincipalConnector, ID: "connector:imap",
@@ -122,9 +131,9 @@ func (e *scoutEnv) document(t *testing.T, mail ids.UUID, filename, contentType s
 				RowScope: principal.RowScopeAll,
 			},
 		}), ids.NewV7())
-	store := activities.NewStore(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory())
+	store := activities.NewStore(InstallationDB(e.Pool)).WithBlobstore(blob)
 	staged, err := store.StageCapturedFiles(ctx, []activities.CapturedFile{{
-		PartID: filename, Filename: filename, ContentType: contentType, Body: []byte(filename),
+		PartID: filename, Filename: filename, ContentType: contentType, Body: body,
 	}})
 	if err != nil {
 		t.Fatalf("staging %s: %v", filename, err)
@@ -398,6 +407,32 @@ func TestAProposedAmountNeedsBothTheAmountAndTheCurrency(t *testing.T) {
 	unpriced := e.suggestions(e.signalReader(), t, bare)
 	if len(unpriced) != 1 || unpriced[0].AmountMinor != nil || unpriced[0].Currency != nil {
 		t.Fatalf("an amount without a currency suggested %+v, want a suggestion with no amount", unpriced)
+	}
+}
+
+// A chat reading is a suggestion, never evidence. The writer refuses one on a
+// PDF, so the test marks a later reading of the proposal as a chat by hand.
+// The scout still prices the deal from the deal facts.
+func TestALaterChatReadingDoesNotHideTheDealFacts(t *testing.T) {
+	e := setupScout(t)
+	priced := e.SeedCompany(t, "Priced GmbH", nil)
+	proposal := e.document(t, e.email(t, "Angebot", "outbound", priced, e.daysAgo(2)), "Angebot.pdf", "application/pdf")
+	e.reading(t, proposal,
+		extraction.ExtractedField{Field: "amount_minor", Value: "1250000", Confidence: "high"},
+		extraction.ExtractedField{Field: "currency", Value: "EUR", Confidence: "high"})
+	e.reading(t, proposal, extraction.ExtractedField{Field: "chat_text", Value: "Laura: 99 EUR", Confidence: "high"})
+	if _, err := e.Pool.Exec(context.Background(), `
+		UPDATE attachment_extraction SET question = 'chat_capture'
+		 WHERE id = (SELECT id FROM attachment_extraction WHERE attachment_id = $1 ORDER BY created_at DESC LIMIT 1)`,
+		proposal); err != nil {
+		t.Fatal(err)
+	}
+
+	e.buyerPair(t, priced, e.daysAgo(6))
+	e.pass(t)
+	got := e.suggestions(e.signalReader(), t, priced)
+	if len(got) != 1 || got[0].AmountMinor == nil || *got[0].AmountMinor != 1250000 {
+		t.Fatalf("the proposal suggested %+v, want the 12,500.00 EUR the deal facts state", got)
 	}
 }
 

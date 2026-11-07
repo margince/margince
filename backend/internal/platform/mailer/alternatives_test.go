@@ -17,7 +17,7 @@ import (
 func TestProductMailCarriesReadableTextAndEscapedMarkup(t *testing.T) {
 	relay := startFakeRelay(t, false)
 	host, port := relay.Address(t)
-	sender := SMTP{Host: host, Port: port, FromAddress: "product@example.test"}
+	sender := SMTP{Host: host, Port: port, FromAddress: "product@example.test", Letterhead: fixedLetterhead{}}
 	text := "The buyer needs a revised quote.\n\nhttps://example.test/#/deals/one"
 	if err := sender.Send(context.Background(), "reader@example.test", "Your next customer action", text); err != nil {
 		t.Fatal(err)
@@ -51,8 +51,10 @@ func TestProductMailCarriesReadableTextAndEscapedMarkup(t *testing.T) {
 	if len(bodies) != 2 || !strings.HasPrefix(types[0], "text/plain") || !strings.HasPrefix(types[1], "text/html") {
 		t.Fatalf("alternatives = %v", types)
 	}
-	if strings.ReplaceAll(bodies[0], "\r\n", "\n") != text {
-		t.Fatal("plain alternative changed the words")
+	// The text half opens with who the mail is from, then the words as the
+	// builder wrote them.
+	if strings.ReplaceAll(bodies[0], "\r\n", "\n") != "Northstar GmbH\nPowered by Margince\n\n"+text {
+		t.Fatalf("plain alternative = %q", bodies[0])
 	}
 	if !strings.Contains(bodies[1], "The buyer needs a revised quote.") || !strings.Contains(bodies[1], `href="https://example.test/#/deals/one"`) {
 		t.Fatal("markup lost the fact or destination")

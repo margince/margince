@@ -37,11 +37,12 @@ type bulkWriters struct {
 // admitVerb refuses a verb the caller may not use at all, sets the store its
 // rows are written through, and answers what the verb asks of each record.
 func (e *bulkEngine) admitVerb(ctx context.Context, change *bulkChange) (principal.Action, error) {
+	rule, ownerArchives := auth.ArchiveRuleFor(string(change.recordType))
 	switch {
-	case change.verb == crmcontracts.BulkVerbArchive && change.recordType == crmcontracts.BulkRecordTypeDeal && change.undo == nil:
-		// Each row's archive asks the deal archive rule, which admits an owner
-		// without the delete grant. Bringing one back still asks delete.
-		return principal.ActionRead, auth.RequireArchiveGrant(ctx, auth.DealArchive)
+	case change.verb == crmcontracts.BulkVerbArchive && ownerArchives && change.undo == nil:
+		// Each row's archive asks the record's archive rule, which admits an
+		// owner without the delete grant. Bringing one back still asks delete.
+		return principal.ActionRead, auth.RequireArchiveGrant(ctx, rule)
 	case change.verb == crmcontracts.BulkVerbArchive:
 		return principal.ActionDelete, nil
 	case isListVerb(change.verb):

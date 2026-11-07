@@ -127,8 +127,9 @@ type Service struct {
 	// the seam refuses a principal with no human behind it, and the lane
 	// renders that as withheld.
 	captureHealth CaptureHealth
-	// aiWork is OPTIONAL and per-user exactly as captureHealth is.
-	aiWork AIWork
+	// aiWork and bookingHealth are optional and per-user, as captureHealth is.
+	aiWork        AIWork
+	bookingHealth BookingHealth
 	// pins is OPTIONAL like the lanes above it: nil means this feed applies no
 	// reader override, and the day ranks as it did before pinning existed.
 	pins Pins
@@ -241,7 +242,6 @@ type Service struct {
 	// taskScope narrows the task lane to whose work this read answers for. Set
 	// per read (Assemble keeps the lane feed's behaviour; the ranked queue's
 	// resolved scope sets it), because the same service answers both surfaces.
-	//
 	// A task carries an assignee and so has three answers available to it —
 	// anybody's, the reader's, nobody's — where a mailbox or a notice is
 	// per-reader by construction and has only one.

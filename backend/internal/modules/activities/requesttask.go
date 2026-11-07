@@ -78,7 +78,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 		request.Subject = in.Subject
 	}
 	request.Body = in.Body
-	request.DueAt, request.RemindAt = in.DueAt, in.RemindAt
+	request.DueAt, request.DueHasTime, request.RemindAt = in.DueAt, in.DueHasTime, in.RemindAt
 	request.CustomFields, request.customColumns, request.customChecked = in.CustomFields, in.customColumns, in.customChecked
 	return s.LogActivityTx(ctx, tx, request)
 }

@@ -38,10 +38,13 @@ const MANY_TEAMS = REGIONS.flatMap((region, row) =>
   })),
 );
 
+const VIENNA = "30000000-0000-4000-8000-000000000002";
+
 function installMemberEditorRoutes(
   teams: readonly { id: string; name: string }[] = [
     { id: "20000000-0000-4000-8000-000000000001", name: "Delivery" },
   ],
+  entities = false,
 ) {
   installFetchStub({
     "GET /me": () =>
@@ -51,9 +54,22 @@ function installMemberEditorRoutes(
           allow: {
             user_admin: ["read", "update", "delete"],
             team_admin: ["read", "update"],
+            ...(entities ? { legal_entity: ["read", "update"] as const } : {}),
           },
         }),
       ),
+    "GET /legal-entities": () =>
+      jsonResponse({
+        data: [
+          {
+            id: "30000000-0000-4000-8000-000000000001",
+            is_default: true,
+            display_name: "Acme",
+          },
+          { id: VIENNA, is_default: false, display_name: "Acme Wien" },
+        ],
+      }),
+    [`GET /legal-entities/${VIENNA}/members`]: () => jsonResponse({ data: [] }),
     "GET /teams": () =>
       jsonResponse({
         data: teams,
@@ -114,6 +130,21 @@ export const ManyTeams: Story = {
 export const NoTeamsYet: Story = {
   render: () => {
     installMemberEditorRoutes([]);
+    return (
+      <StoryProviders>
+        <EditMember member={IMPORTED_MEMBER} onClose={() => undefined} />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * An installation with two legal entities, and a reader who may assign
+ * members. The dialog names the member's entity, here the default one.
+ */
+export const WithLegalEntity: Story = {
+  render: () => {
+    installMemberEditorRoutes(undefined, true);
     return (
       <StoryProviders>
         <EditMember member={IMPORTED_MEMBER} onClose={() => undefined} />

@@ -147,6 +147,10 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 	if err := def.ValidateJSON(next); err != nil {
 		return WriteReceipt{}, err
 	}
+	next, err = def.CanonicalJSON(next)
+	if err != nil {
+		return WriteReceipt{}, err
+	}
 	if err := LockForWrite(ctx, tx, key); err != nil {
 		return WriteReceipt{}, err
 	}
@@ -161,6 +165,9 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 		}
 		canonical, err := def.CanonicalJSON(before)
 		if err != nil {
+			return WriteReceipt{}, err
+		}
+		if err := def.CheckChange(ctx, tx, canonical, next); err != nil {
 			return WriteReceipt{}, err
 		}
 		// Three cases, and the middle one is why `stored` is consulted at all.
@@ -204,10 +211,13 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 		// secret is redacted here rather than at each writer — there is only one
 		// writer today, and the next one would not know to.
 		auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
-			map[string]any{key: def.AuditImage(before)},
+			map[string]any{key: def.AuditImage(canonical)},
 			map[string]any{key: def.AuditImage(next)})
 		if err != nil {
 			return WriteReceipt{}, fmt.Errorf("settings: auditing %s: %w", key, err)
+		}
+		if err := def.Changed(ctx, tx, auditID); err != nil {
+			return WriteReceipt{}, err
 		}
 		return WriteReceipt{Changed: true, AuditID: auditID}, nil
 	}
@@ -312,12 +322,18 @@ func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T,
 // RequireRead is the gate on reading a setting's value: read on the object the
 // entry declares. `setting` carries no RLS, so this gate is its only control.
 func RequireRead(ctx context.Context, def Definition) error {
-	return auth.Require(ctx, def.Object(), principal.ActionRead)
+	if err := auth.Require(ctx, def.Object(), principal.ActionRead); err != nil {
+		return err
+	}
+	return def.Authorize(ctx, principal.ActionRead)
 }
 
 // RequireWrite is the gate on changing a setting: update on its object.
 func RequireWrite(ctx context.Context, def Definition) error {
-	return auth.Require(ctx, def.Object(), principal.ActionUpdate)
+	if err := auth.Require(ctx, def.Object(), principal.ActionUpdate); err != nil {
+		return err
+	}
+	return def.Authorize(ctx, principal.ActionUpdate)
 }
 
 // lookup resolves a key to its declaration, refusing an unregistered one.
@@ -414,6 +430,21 @@ func GetTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
 	}
 	return out, nil
+}
+
+// GetStoredTx is GetTx that also reports whether a row stands behind the
+// value, for a reader whose answer differs when nobody chose one.
+func GetStoredTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, bool, error) {
+	var zero T
+	if err := RequireRead(ctx, e); err != nil {
+		return zero, false, err
+	}
+	stored, err := hasRow(ctx, tx, e.Key())
+	if err != nil {
+		return zero, false, err
+	}
+	out, err := GetTx(ctx, tx, e)
+	return out, stored, err
 }
 
 // RequireTx reads a setting inside a transaction the caller already holds, for

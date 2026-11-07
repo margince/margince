@@ -195,6 +195,7 @@ export function usePutDown(item: WorklistItem) {
   return {
     offered,
     source: item.source,
+    rowId: item.id,
     put,
     // The answer whose write is out, or nothing while none is. Not a bare
     // boolean: every control in the band reads the same value, and what each
@@ -230,7 +231,7 @@ export function PutDownByThumb({
   // counter shared by both would be moved by a flick the other way, so a reader
   // alternating directions would never step through either side's judgements.
   const [walked, setWalked] = useState({ start: 0, end: 0 });
-  const write = usePutDown(item);
+  const write = useRowPutDown(item);
   const { offered, put, t } = write;
   if (!folded || offered.length === 0) {
     return <PutDown value={write}>{children}</PutDown>;
@@ -271,13 +272,21 @@ function PutDown({
 
 export type PutDown = ReturnType<typeof usePutDown>;
 
-// The row's one write, the one PutDownByThumb holds, so a press in the menu and
-// a swipe confirm cannot write twice. Verbs drawn outside a row get their own.
-// Both hooks run either way, because a hook cannot be called conditionally.
+// The row's one write, the one PutDownByThumb or OneRowWrite holds, so a press
+// in the menu and a swipe confirm cannot write twice. Verbs drawn outside a row
+// get their own. Both hooks run either way: a hook cannot be called conditionally.
 export function useRowPutDown(item: WorklistItem): PutDown {
   const shared = useContext(PutDownContext);
   const own = usePutDown(item);
-  return shared ?? own;
+  return shared?.rowId === item.id ? shared : own;
+}
+
+// One write for a card that draws its own controls around a row, such as a tick.
+export function OneRowWrite({
+  item,
+  children,
+}: Readonly<{ item: WorklistItem; children: React.ReactNode }>) {
+  return <PutDown value={usePutDown(item)}>{children}</PutDown>;
 }
 
 // Done, beside the row's answer: the one judgement that finishes the row. Below

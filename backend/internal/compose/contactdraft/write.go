@@ -35,6 +35,7 @@ type Completer interface {
 const draftSystem = `You draft an email to one contact, for a salesperson to send under their own name, from a JSON summary of that contact in their CRM.
 Return ONLY a JSON object: {"subject":"...","body":"...","reasoning":[{"kind":"intent|recipient|relationship|deal|commitment|conversation","label":"...","entity_type":"deal|activity|contact|lead","entity_id":"..."}]}.
 ` + draftrules.FirstTouch + `
+This opens a NEW email. Historical messages are context, not a selected thread. Do not reuse their subject or add a reply prefix. If subject is supplied, write the body for that subject and the stated intent.
 Say one thing and ask for one thing. Three short paragraphs at most.
 If a meeting is given, this contact is already booked to speak with us. Do not ask for a call — that reads as not knowing. Refer to the meeting in plain words ("nächste Woche", "am Donnerstag"), never as a timestamp, and use it: something to send or confirm before it is a better ask than another meeting.
 A recent message may carry a "said" — the opening of a message our side sent. A recent message may carry a "snippet" — the opening of a message on this thread. Answer what it says. Do NOT attribute it: say "the question about X" and never "you wrote" or "you said", because a thread carries messages from more than one sender and nothing here tells you which of them wrote this. Quote nothing back verbatim. It is the opening only; the part you cannot see is where the detail is, so do not assume the rest says what you would expect.

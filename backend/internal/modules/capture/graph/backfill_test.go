@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -233,5 +234,58 @@ func TestBackfillSkipsAnUnreadableMessageAndKeepsGoing(t *testing.T) {
 	}
 	if len(sink.recs) != 1 {
 		t.Fatalf("sink received %d records, want the readable one", len(sink.recs))
+	}
+}
+
+// A history import reads the folders the standing sync reads and no others. A
+// message in Junk Email is never downloaded, even one that looks like the
+// owner's sent mail. It does not count toward the page's tally.
+func TestBackfillNeverFetchesAMessageOutsideTheSyncedFolders(t *testing.T) {
+	api := &fakeAPI{
+		listIDs: []string{"m-in", "m-junk", "m-out"},
+		sentIDs: map[string]bool{"m-out": true},
+		junkIDs: map[string]bool{"m-junk": true},
+		raws: map[string][]byte{
+			"m-in":   rawMsg("in@mail.example", "alice@acme.com"),
+			"m-junk": rawMsg("junk@mail.example", owner),
+			"m-out":  rawMsg("out@mail.example", owner),
+		},
+	}
+	sink := &recordingSink{}
+
+	res, err := pinnedConn(api).BackfillPage(context.Background(), authBytes(t), time.Time{}, "", sink)
+	if err != nil {
+		t.Fatalf("BackfillPage: %v", err)
+	}
+	for _, id := range api.fetched {
+		if id == "m-junk" {
+			t.Fatal("the import downloaded a message filed in Junk Email")
+		}
+	}
+	if len(sink.recs) != 2 || res.Scanned != 2 || res.Captured != 2 {
+		t.Fatalf("records=%d tally=%+v, want the inbox and sent messages only", len(sink.recs), res)
+	}
+}
+
+// The import fetches each message through the folder the listing found it in,
+// so Graph can refuse one moved out since. The refusal skips that message.
+func TestBackfillFetchesThroughTheListedFolderAndSkipsAMovedMessage(t *testing.T) {
+	api := &fakeAPI{
+		listIDs: []string{"m-moved", "m-out"},
+		sentIDs: map[string]bool{"m-out": true},
+		skipIDs: map[string]bool{"m-moved": true},
+		raws:    map[string][]byte{"m-out": rawMsg("out@mail.example", owner)},
+	}
+	sink := &recordingSink{}
+
+	res, err := pinnedConn(api).BackfillPage(context.Background(), authBytes(t), time.Time{}, "", sink)
+	if err != nil {
+		t.Fatalf("BackfillPage: %v", err)
+	}
+	if want := []string{inboxFolderID, sentFolderID}; !slices.Equal(api.fetchedFrom, want) {
+		t.Fatalf("fetched from folders %v, want the listed folders %v", api.fetchedFrom, want)
+	}
+	if res.Skipped != 1 || res.Captured != 1 || len(sink.recs) != 1 {
+		t.Fatalf("tally = %+v with %d records, want the moved message skipped", res, len(sink.recs))
 	}
 }

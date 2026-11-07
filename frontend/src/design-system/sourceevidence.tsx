@@ -7,7 +7,7 @@ import { useLocale, useT } from "../i18n";
 import { useActivity } from "../lib/activityread";
 import type { SourceOpenerFor } from "../lib/opensource";
 import { ProblemError, problemCode } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";
 import { type SectionState, SurfaceState } from "./surfacestate";
@@ -37,7 +37,7 @@ export function SourceEvidence({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The kind decides the form, so it is resolved before either is drawn. The
   // PLAIN activity read, not the email presentation: that endpoint refuses any
   // kind but `email`, so asking it first would 404 on every transcript.
@@ -80,7 +80,7 @@ export function SourceEvidence({
       <SourceEmailPanel
         activityId={activityId}
         formatWhen={(at, precision) =>
-          formatActivityWhen(at, precision, locale, recordZone)
+          formatActivityWhen(at, precision, locale, readerZone)
         }
         onOpenThread={open}
       />
@@ -94,7 +94,7 @@ export function SourceEvidence({
             source.occurred_at,
             source.occurred_precision,
             locale,
-            recordZone,
+            readerZone,
           ),
           source.subject,
         ]

@@ -24,8 +24,9 @@ import (
 )
 
 // Every availability door reads the host's calendar. A gone connection is a
-// request the host can act on. A calendar the provider could not report is
-// named as the problem. Neither is a bare 500.
+// request the host can act on. The standing page is the exception: it is
+// paused then, and a paused page answers as an unknown slug. A calendar the
+// provider could not report is named as the problem. Neither is a bare 500.
 func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 	for name, tc := range map[string]struct {
 		fail func(*invitationCalendar)
@@ -80,12 +81,16 @@ func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 			if name == "check" && (door == "invitation" || door == "management link") {
 				continue
 			}
+			want := tc.want
+			if name == "check" && door == "booking page" {
+				want = http.StatusNotFound
+			}
 			rec := httptest.NewRecorder()
 			call(rec, httptest.NewRequest(http.MethodGet, "/availability", nil).WithContext(f.ctx))
-			if rec.Code != tc.want {
-				t.Errorf("%s via %s answered %d %s, want %d", door, name, rec.Code, rec.Body.String(), tc.want)
+			if rec.Code != want {
+				t.Errorf("%s via %s answered %d %s, want %d", door, name, rec.Code, rec.Body.String(), want)
 			}
-			if tc.want == http.StatusBadGateway && !strings.Contains(rec.Body.String(), connector.CalendarUnavailableCode) {
+			if want == http.StatusBadGateway && !strings.Contains(rec.Body.String(), connector.CalendarUnavailableCode) {
 				t.Errorf("%s via %s does not name the calendar as the problem: %s", door, name, rec.Body.String())
 			}
 		}

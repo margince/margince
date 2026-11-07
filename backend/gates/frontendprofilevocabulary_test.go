@@ -35,11 +35,12 @@ package gates
 // gate exists to catch.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // profileVocabularyScreens are the browser's mirrors of the vocabulary: the
@@ -164,7 +165,7 @@ func TestTheBrowserSpellsTheWholeProfileVocabulary(t *testing.T) {
 	}
 
 	for _, mirror := range profileVocabularyScreens {
-		source, err := os.ReadFile(mirror.file)
+		source, err := gatekit.ReadFile(mirror.file)
 		if err != nil {
 			t.Fatalf("reading %s: %v", mirror.file, err)
 		}

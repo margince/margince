@@ -231,8 +231,9 @@ func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids
 		var existing ids.ContactID
 		err := tx.QueryRow(ctx,
 			`SELECT contact_id FROM contact_email
-			  WHERE email = lower($1) AND archived_at IS NULL AND contact_id <> $2`,
-			e.Email, self.UUID).Scan(&existing)
+			  WHERE email = ANY($1::text[]) AND archived_at IS NULL AND contact_id <> $2
+			  ORDER BY created_at, id LIMIT 1`,
+			storekit.EmailLookups(e.Email), self.UUID).Scan(&existing)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}

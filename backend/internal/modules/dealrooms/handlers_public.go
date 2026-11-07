@@ -134,14 +134,13 @@ func (h Handlers) RequestDealRoomLink(w http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(ctx, "deal room link request failed", "err", err)
 		return
 	}
-	attributed := r.WithContext(ctx)
 	for _, inv := range issued {
-		sendErr := h.sendInvite(attributed, inv)
+		sendErr := h.sendInvite(ctx, inv)
 		if sendErr != nil {
 			slog.ErrorContext(ctx, "deal room link request email failed",
 				"participant_id", inv.Participant.Id, "err", sendErr)
 		}
-		h.recordSendOutcome(attributed, inv, sendErr)
+		h.recordSendOutcome(ctx, inv, sendErr)
 	}
 }
 

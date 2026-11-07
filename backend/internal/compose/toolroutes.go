@@ -29,8 +29,8 @@ func (s Server) ListSlippingDeals(w http.ResponseWriter, r *http.Request, params
 }
 
 // ListAtRiskRelationships serves at_risk_relationships.
-func (s Server) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
-	serveTool(w, r, s.toolRegistry.Invoke, "at_risk_relationships", noArguments{})
+func (s Server) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAtRiskRelationshipsParams) {
+	serveTool(w, r, s.toolRegistry.Invoke, "at_risk_relationships", params)
 }
 
 // CatchUpOnRecord serves catch_me_up_on.
@@ -134,6 +134,14 @@ func (s Server) DescribeAnalyticsVocabulary(w http.ResponseWriter, r *http.Reque
 // DescribeRecordFields serves describe_record_fields.
 func (s Server) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, s.toolRegistry.Invoke, "describe_record_fields", noArguments{})
+}
+
+// DescribeRouterActions serves describe_router_actions.
+func (s Server) DescribeRouterActions(w http.ResponseWriter, r *http.Request, params crmcontracts.DescribeRouterActionsParams) {
+	serveTool(w, r, s.toolRegistry.Invoke, "describe_router_actions", struct {
+		Router string `json:"router"`
+		Action string `json:"action,omitempty"`
+	}{params.Router, actionOf(params.Action)})
 }
 
 // DescribeListFilters serves describe_list_filters.
@@ -284,4 +292,11 @@ func writeToolPayload(w http.ResponseWriter, r *http.Request, sealed json.RawMes
 	w.WriteHeader(http.StatusOK)
 	//craft:ignore swallowed-errors WriteHeader already committed the response — nothing can report a write failure to the client anymore
 	_, _ = w.Write(payload)
+}
+
+func actionOf(named *string) string {
+	if named == nil {
+		return ""
+	}
+	return *named
 }

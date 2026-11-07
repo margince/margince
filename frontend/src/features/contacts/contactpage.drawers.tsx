@@ -3,6 +3,7 @@ import { useCallback, useRef } from "react";
 import { LogActivityAction } from "../../components/logactivity.action";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useThreadProject } from "../../lib/activityfiling";
 import {
   type CallStart,
   CallStartProvider,
@@ -65,10 +66,16 @@ export function momentDrafts(action: ContactMomentAction): boolean {
     : action.kind === "draft_reply";
 }
 
-// What a moment card's action does, off the surface the server named. A
-// standalone function rather than a closure inside ContactPageV2: the switch's
-// branches are this function's cognitive weight, not the page's.
-//
+function composerOpening(
+  destination: NonNullable<ContactMomentAction["destination"]>,
+) {
+  const anchored = destination.entity_type === "activity";
+  return {
+    drafts: !anchored || Boolean(destination.entity_id),
+    activityId: anchored ? (destination.entity_id ?? undefined) : undefined,
+  };
+}
+
 // A destination this client cannot route opens nothing rather than guessing.
 // The typed descriptor exists so a button with no path is never rendered.
 // Silently doing something else would be worse than the 404 it prevents.
@@ -77,7 +84,11 @@ export function runContactMomentAction(
   t: ReturnType<typeof useT>,
   handlers: Readonly<{
     contactId: string;
-    openComposer: (intent: string, drafts?: boolean) => void;
+    openComposer: (
+      intent: string,
+      drafts?: boolean,
+      activityId?: string,
+    ) => void;
     setDrawer: (drawer: Drawer) => void;
     openBrief: (activityId: string | null) => void;
     // The prep moment is raised off the next meeting, so that is the one it
@@ -106,11 +117,22 @@ export function runContactMomentAction(
       }
       return;
     case "booking":
-      navigate({ screen: "book", id: `contact-${handlers.contactId}` });
+      navigate(
+        { screen: "book", id: `contact-${handlers.contactId}` },
+        destination.entity_type === "activity" && destination.entity_id
+          ? new Map([["activity", destination.entity_id]])
+          : undefined,
+      );
       return;
-    case "composer":
-      handlers.openComposer(composerIntentOf(destination.prefill, t), true);
+    case "composer": {
+      const opening = composerOpening(destination);
+      handlers.openComposer(
+        composerIntentOf(destination.prefill, t),
+        opening.drafts,
+        opening.activityId,
+      );
       return;
+    }
     case "research":
       handlers.setDrawer("research");
       return;
@@ -223,7 +245,11 @@ export type Drawer =
   | null;
 
 /** What a press on this page asked the composer for. */
-export type PressedComposer = Readonly<{ intent: string; drafts: boolean }>;
+export type PressedComposer = Readonly<{
+  intent: string;
+  drafts: boolean;
+  activityId?: string;
+}>;
 
 /**
  * Whether the composer is open, what it is about, and how to close it.
@@ -272,10 +298,11 @@ export function useComposer(
     // rather than folded into it: the intent is words for the reader, and this
     // decides which transport the composer opens on.
     //
-    // Only for an address-opened composer. A rep who pressed Write is not
-    // answering anything in particular. A thread id from a link they already
-    // dismissed would anchor that press on it.
-    threadId: (key !== undefined && params.get(THREAD_PARAM)) || undefined,
+    // A pressed recommendation and an addressed reply both name their source.
+    // Plain Email clears that source when it opens.
+    threadId:
+      (key !== undefined ? params.get(THREAD_PARAM) : pressed.activityId) ||
+      undefined,
     // The address is the worklist's prepared move, pressed as an AI verb, so
     // that composer drafts on arrival, as a pressed AI verb's does. A press of
     // Write here starts empty.
@@ -294,6 +321,35 @@ export function useComposer(
 // Keyed by the record: navigating to another contact while it is open remounts
 // it rather than re-pointing it. Without the key, the text written for one
 // contact would be filed against another.
+function useContactReplySource(
+  contactId: string,
+  view: Contact360,
+  threadId: string | undefined,
+  open: boolean,
+) {
+  const source = useThreadProject(threadId, open);
+  const onPage = (view.activities?.data ?? []).some(
+    (activity) => activity.id === threadId,
+  );
+  const related =
+    onPage ||
+    (source.activity?.links ?? []).some(
+      (link) => link.entity_type === "contact" && link.entity_id === contactId,
+    );
+  const refused =
+    source.failed ||
+    source.activity?.content_state === "withheld" ||
+    (source.activity !== undefined && !related);
+  const permitted = !threadId || (source.settled && related && !refused);
+  return {
+    activityId: threadId,
+    activity: refused ? undefined : source.activity,
+    stale: Boolean(threadId) && refused,
+    mayDraft: permitted,
+    blocked: !permitted,
+  };
+}
+
 export function ContactMailDrawer({
   contactId,
   view,
@@ -325,7 +381,13 @@ export function ContactMailDrawer({
   // Which transport that conversation is ON, rather than the contact's own
   // lead. A worklist row is about one message, and opening on whatever the
   // contact happens to lead with would draft a reply into a different thread.
-  const anchored = transportForActivity(transports, view, threadId);
+  const source = useContactReplySource(contactId, view, threadId, open);
+  const anchored = transportForActivity(
+    transports,
+    view,
+    source.activityId,
+    source.activity,
+  );
   // Nothing until the drawer is first opened, and mounted from then on. A
   // composer mounted with the page would read on every render, even when nobody
   // is writing. One unmounted the moment it closes has no frame to animate out on.
@@ -344,10 +406,12 @@ export function ContactMailDrawer({
       contactId={contactId}
       recordAddress={recordAddress}
       transports={transports}
+      activityId={source.activityId}
       initialTransportId={anchored.chosen?.id}
-      staleThread={anchored.stale}
+      staleThread={source.stale}
+      sourceBlocked={source.blocked}
       intent={intent}
-      draftOnOpen={draftOnOpen}
+      draftOnOpen={draftOnOpen && source.mayDraft}
       open={open}
       onClose={onClose}
     />

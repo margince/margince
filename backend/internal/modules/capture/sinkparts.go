@@ -22,7 +22,9 @@ package capture
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -60,8 +62,9 @@ type FileKeeper interface {
 		from FileSource, files []CapturedFile) error
 	// RecordLinks writes a row for each document link a message carried, with
 	// no bytes: the address and the text it was shown under.
+	// It answers how many rows are new; a link already recorded is not.
 	RecordLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-		from FileSource, links []MailLink) error
+		from FileSource, links []MailLink) (int, error)
 }
 
 // CapturedFile is one file a message carried, already bounded, renamed safely
@@ -278,4 +281,40 @@ func (s *Sink) logPartDrops(ctx context.Context, tx pgx.Tx, rec connector.Normal
 		}
 	}
 	return nil
+}
+
+type capturedFileFingerprint struct {
+	partID, filename, contentType, declaredType string
+	body                                        [sha256.Size]byte
+}
+
+type retryFileKeeper struct {
+	FileKeeper
+	fingerprints []capturedFileFingerprint
+	staged       []StagedFile
+}
+
+func (k *retryFileKeeper) Stage(ctx context.Context, files []CapturedFile) ([]StagedFile, error) {
+	fingerprints := make([]capturedFileFingerprint, len(files))
+	for i, file := range files {
+		fingerprints[i] = capturedFileFingerprint{file.PartID, file.Filename, file.ContentType, file.DeclaredType, sha256.Sum256(file.Body)}
+	}
+	if k.fingerprints != nil && slices.Equal(fingerprints, k.fingerprints) {
+		return k.staged, nil
+	}
+	staged, err := k.FileKeeper.Stage(ctx, files)
+	if err != nil {
+		return nil, err
+	}
+	k.fingerprints, k.staged = fingerprints, staged
+	return staged, nil
+}
+
+func (s *Sink) withRetryFileStage() *Sink {
+	if s.files == nil {
+		return s
+	}
+	clone := *s
+	clone.files = &retryFileKeeper{FileKeeper: s.files}
+	return &clone
 }

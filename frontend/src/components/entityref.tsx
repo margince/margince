@@ -3,7 +3,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AppLink } from "../design-system/applink";
-import { Avatar } from "../design-system/avatar";
 import { useT } from "../i18n";
 import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
@@ -15,6 +14,7 @@ import {
   usableName,
 } from "./entityref.queries";
 import { type RosterKind, useRosterWalk } from "./roster";
+import { SeatAvatar } from "./seatavatar";
 
 // A cross-record reference rendered as the target's display name plus a
 // backlink to its 360, resolved by id. Records point at each other by id
@@ -358,7 +358,7 @@ export function OwnerName({
   if (resolved != null && face) {
     return (
       <span className="avatar-row">
-        <Avatar identity={ownerId} name={resolved} />
+        <SeatAvatar id={ownerId} name={resolved} />
         <span>{resolved}</span>
       </span>
     );

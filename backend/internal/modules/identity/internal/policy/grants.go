@@ -185,6 +185,9 @@ const (
 	// Append-forward like ai_model_rate, and for the same reason: a past-dated
 	// row prices a historical rollup.
 	objFxRate = "fx_rate"
+	// The tax rate sheet: rows are added and never changed or removed. So the
+	// seats that keep it hold create and read, and none holds update or delete.
+	objTaxRate = "tax_rate"
 	// Admin/ops-only on EVERY verb, read included: a migration run is a
 	// workspace-wide bulk mutation of the estate, and unlike custom_field there
 	// is no per-rep read surface — the migrate-in screen is an admin surface.
@@ -250,8 +253,8 @@ const (
 	objJobHealth = "job_health"
 	objDataTask  = "data_task"
 	// Which extension units this installation composed. Read-only because
-	// presence under `extensions/` IS the enablement — there is no runtime
-	// toggle for a grant to gate.
+	// the instance's go.mod is the enablement: there is no runtime toggle for
+	// a grant to gate.
 	objExtensionAccess = "extension_access"
 	// Erasing the installation's data. Admin only, and never Ops: the reset is
 	// the one action no operator performs on someone else's behalf.

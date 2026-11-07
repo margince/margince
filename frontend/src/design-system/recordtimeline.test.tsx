@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider, useT } from "../i18n";
 import { withEmailOpener } from "../lib/openemail";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { activityTimeline } from "./activitytimeline";
 import { LoadMoreButton } from "./querystates";
 import {
@@ -165,9 +165,9 @@ function mount(firstPage?: ActivityPage, client = newQueryClient()) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={INSTALLATION_ZONE}>
+        <ViewerZoneProvider zone={INSTALLATION_ZONE}>
           <Harness firstPage={firstPage} />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -199,9 +199,9 @@ function mountIds(client: QueryClient, firstPage?: ActivityPage) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={INSTALLATION_ZONE}>
+        <ViewerZoneProvider zone={INSTALLATION_ZONE}>
           <IdsHarness firstPage={firstPage} />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -271,9 +271,9 @@ describe("a record timeline you can work in", () => {
         initialProps: { enabled: true },
         wrapper: ({ children }) => (
           <QueryClientProvider client={client}>
-            <RecordZoneProvider zone={INSTALLATION_ZONE}>
+            <ViewerZoneProvider zone={INSTALLATION_ZONE}>
               {children}
-            </RecordZoneProvider>
+            </ViewerZoneProvider>
           </QueryClientProvider>
         ),
       },
@@ -464,9 +464,9 @@ describe("a record timeline you can work in", () => {
     render(
       <QueryClientProvider client={newQueryClient()}>
         <LocaleProvider initial="en">
-          <RecordZoneProvider zone={INSTALLATION_ZONE}>
+          <ViewerZoneProvider zone={INSTALLATION_ZONE}>
             <LeadHarness onOpen={(id) => opened.push(id)} />
-          </RecordZoneProvider>
+          </ViewerZoneProvider>
         </LocaleProvider>
       </QueryClientProvider>,
     );

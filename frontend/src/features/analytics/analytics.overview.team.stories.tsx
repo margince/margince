@@ -14,8 +14,8 @@ import {
   teamEvaluation,
   teamHandoffs,
   teamReview,
-  upcomingWindow,
 } from "./analytics.overview.fixtures";
+import { upcomingWindow } from "./analytics.overview.routes.fixtures";
 import { waitingHandoffs } from "./analytics.overview.scenariodata";
 import {
   ReasonsDrawer,

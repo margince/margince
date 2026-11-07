@@ -152,7 +152,7 @@ func TestAcceptingACaptureCollisionFillsTheLeadsEmptyFields(t *testing.T) {
 	// The production wiring, not a service a test assembled: the registry is
 	// exactly what decides whether accepting this card does anything, so a test
 	// that registered its own effects would be proving its own setup.
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	sink := capture.NewSink(e.DB()).WithStager(mergeStager{svc: svc})
 	ctx := connectorCtx(e)
 
@@ -233,7 +233,7 @@ func pendingCollisionFor(t *testing.T, e *integration.Env, target ids.UUID) ids.
 // it is gated behind a human decision in the first place.
 func TestAcceptingACaptureCollisionNeverOverwritesWhatIsAlreadyThere(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	sink := capture.NewSink(e.DB()).WithStager(mergeStager{svc: svc})
 	ctx := connectorCtx(e)
 

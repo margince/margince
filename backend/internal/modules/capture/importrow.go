@@ -184,8 +184,10 @@ func (s *Sink) recordThisImport(
 	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {
 		return err
 	}
-	if err := recordPartyEvidenceTx(ctx, tx, id, owner, deliveringConnector(ctx), rec, fields); err != nil {
-		return err
+	if !internalMailAdmitted(ctx) {
+		if err := recordPartyEvidenceTx(ctx, tx, id, owner, deliveringConnector(ctx), rec, fields); err != nil {
+			return err
+		}
 	}
 	// The confidentiality question for THIS seat's view of the thread, opened
 	// in the same transaction as the message it is about. A message that landed
@@ -197,8 +199,10 @@ func (s *Sink) recordThisImport(
 	// message has nothing for the verdict to open, and asking anyway would
 	// spend a model call per message on a `shared` mailbox to reach the answer
 	// it already has.
-	if err := openConfidentialityQuestionTx(ctx, tx, id, owner, rec, fields, birth); err != nil {
-		return err
+	if !internalMailAdmitted(ctx) {
+		if err := openConfidentialityQuestionTx(ctx, tx, id, owner, rec, fields, birth); err != nil {
+			return err
+		}
 	}
 	if s.recomputeAudience == nil {
 		return nil

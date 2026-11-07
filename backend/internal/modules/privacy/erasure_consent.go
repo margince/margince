@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,8 +48,14 @@ import (
 // turns two proven writes into two unproven ones and the gates go quietly
 // green. A third capability is added here as a third statement.
 func deleteConsentCapabilities(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, reason string,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails, keptHashes []string, reason string,
 ) error {
+	if err := clearRequestAddresses(ctx, tx, contactID.UUID); err != nil {
+		return err
+	}
+	if err := clearWithdrawalAddresses(ctx, tx, stopsOfContact, contactID.UUID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM preference_token WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's preference-center token: %w", err)
 	}
@@ -157,16 +164,18 @@ func deleteConsentCapabilities(
 	// bounce consent/bouncesuppress.go records — deliberately carries no
 	// contact_id, because the engine matches the contact arm before the address
 	// arm and a contact-scoped row would refuse every address that record has.
-	// Keyed only on contact_id this delete walks straight past those rows, and
-	// an erased subject's address survives in plaintext in a table nothing will
-	// ever clean.
+	// Keyed only on contact_id, this delete would miss those rows and leave the
+	// erased address behind. A stop an anonymize kept holds only the address's
+	// hash. The address arm matches it for a live address. keptHashes reaches
+	// the addresses an earlier anonymize removed.
 	// Merged-away records too, for the reason the override delete below gives.
+	lowered, hashes := storekit.StopAddressArgs(emails...)
 	if _, err := tx.Exec(ctx, `
-		DELETE FROM communication_suppression
-		 WHERE contact_id = $1
-		    OR contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
-		    OR lower(address) = ANY($2)`,
-		contactID, lowerAll(emails)); err != nil {
+		DELETE FROM communication_suppression s
+		 WHERE s.contact_id = $1
+		    OR s.contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
+		    OR `+storekit.StopOnAddressesSQL("s", "$2", "$3"),
+		contactID, lowered, append(hashes, keptHashes...)); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's suppressions: %w", err)
 	}
 	// An override is a rep vouching FOR this contact and carries no address, so

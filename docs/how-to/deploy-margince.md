@@ -1,13 +1,10 @@
 <!-- prose:plain -->
 # Deploy Margince on your own servers
 
-Margince ships container materials that suit any container platform (Kubernetes, Nomad, Docker
-Compose, a plain host). This repo carries only the **generic** pieces. A concrete deployment (its
-domain, secrets, platform manifests) is yours to own, so keep those in your own infra repo.
-
-Why a deployment is shaped this way (two database roles, one host, one release for every role) is
-in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting is in
-[reference/configuration.md](../reference/configuration.md).
+Keep deployment domains, secrets and platform manifests in the repository that holds your deployment.
+For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md).
+See [self-hosting](../explanation/self-hosting.md) for the role layout and
+[configuration](../reference/configuration.md) for settings.
 
 ## The least production needs
 
@@ -16,9 +13,6 @@ in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting 
   `license.token_file`.
 - For the first boot, `MARGINCE_CONFIG` names a `margince.yaml` with `workspace` and
   `bootstrap_admin`, and `MARGINCE_ADMIN_PASSWORD` holds the first admin's password.
-
-What each other feature needs is in
-[What each feature needs](../reference/what-each-feature-needs.md).
 
 ## What ships in this repo
 
@@ -31,6 +25,14 @@ What each other feature needs is in
 | `scripts/deploy/worker-entrypoint.sh` | start the worker as app (no owner credential) |
 | `scripts/deploy/db-bootstrap.sql` | one-time DB role + database + extension setup |
 | `frontend/nginx.conf` | SPA static serving (listens on 8080, non-root) |
+| `scripts/deploy/server/` | the systemd units and nginx files of a server bundle |
+
+## Pull a release
+
+Each `v*` release pushes `ghcr.io/margince/api:<tag>`, `ghcr.io/margince/worker:<tag>` and
+`ghcr.io/margince/web:<tag>`, for `linux/amd64` and `linux/arm64`. Pull each by the hash that `images.txt` on
+the release page names, so all three roles come from one release. The release page gives the `cosign verify`
+command that checks each one.
 
 ## Build the images
 
@@ -295,8 +297,16 @@ Do not leave api replicas from two releases running. The recorded release is las
 ([why](../explanation/self-hosting.md#every-role-runs-at-one-release)). If that happened, restart the
 api at the intended release to restore the record.
 
-To read the release a role carries, see
-[Where the release can be read](../explanation/self-hosting.md#where-the-release-can-be-read).
+### Change mail thread locks
+
+Before changing the thread locks, set `MARGINCE_CAPTURE_HISTORY_HOLD=true` on the api and worker.
+Let running pages finish, then stop every api and worker that can write mail or its metadata.
+Start every writer at the same release before clearing the hold. Mail sent by a user and privacy
+writes still run while history is held. Older writers do not share every lock used when many threads join.
+
+Keep queued runs, cursors and pending jobs. Resume one history run at a time while measuring load.
+A rollback also stops and restarts all writers; keep additive schema and finish derived work
+with a release that can read it. The [capture settings](../reference/configuration.md) list the controls.
 
 ## After the first boot
 

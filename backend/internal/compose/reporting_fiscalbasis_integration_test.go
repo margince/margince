@@ -175,7 +175,7 @@ func TestASentEditionAsksABoundCardWithItsFilters(t *testing.T) {
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
 	for range 3 {
-		q.e.seedOpenDeal(t, "Unpriced", 20, &q.e.Rep1, nil, nil)
+		q.e.seedOpenDeal(t, "Unpriced", 20, &q.e.Rep1, nil)
 	}
 	run := saveForecastRun(q.human, t, q.e, analyticsquery.Query{
 		Entity:   "open-deals-per-company",

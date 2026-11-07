@@ -166,9 +166,7 @@ func newestSource(in Input) time.Time {
 // the company's current facts.
 func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) (crmcontracts.CompanyDossier, error) {
 	var zero crmcontracts.CompanyDossier
-	// A dossier is a reading aid for a contact; an agent reading records through
-	// a passport has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return zero, err
 	}
 	userID, err := actingUser(ctx)
@@ -198,7 +196,8 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 
 	// The company is NAMED to the rail here, from the same input the dossier
 	// is written from.
-	sections, by, laneFailed := WriteDossier(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, in, lang)
+	lane, withheld := ai.ReadLane(ctx, s.lane)
+	sections, by, laneFailed := WriteDossier(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, in, lang)
 	if laneFailed && found && cached.usable(fingerprint) {
 		// The floor is a real answer, but it is a plainer one than the model
 		// already wrote for these same facts. A transient outage must not
@@ -221,7 +220,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 	// Not cached when the lane failed, for the growth fit's reason: stored under
 	// the current fingerprint, this plainer answer would be served as a hit on
 	// every later read, so one transient outage would outlive itself.
-	if laneFailed {
+	if laneFailed || withheld {
 		return s.enrich(ctx, written.wire(companyID, s.now().UTC()))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {

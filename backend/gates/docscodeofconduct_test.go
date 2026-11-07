@@ -15,16 +15,17 @@ package gates
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const adoptedCodeOfConductSHA256 = "aba2ef77efcf21dff03aaa1fbe79b7b67884767db51b040c28dd732ca71b5bb0"
 
 func TestCodeOfConductIsTheAdoptedText(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join(docsTreeRoot, "CODE_OF_CONDUCT.md"))
+	raw, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, "CODE_OF_CONDUCT.md"))
 	if err != nil {
 		t.Fatalf("read CODE_OF_CONDUCT.md: %v", err)
 	}
