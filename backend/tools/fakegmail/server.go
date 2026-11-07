@@ -101,6 +101,7 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 	v.Set("state", q.Get("state"))
 	v.Set("scope", q.Get("scope"))
 	back.RawQuery = v.Encode()
+	//nolint:gosec // G710: isLoopback above admits only a host on this machine
 	http.Redirect(w, r, back.String(), http.StatusFound)
 }
 
