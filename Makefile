@@ -658,6 +658,7 @@ FE_SHARD ?=
 ## between majors (.vitest-reports → .vitest/blob); the upload step reads it too.
 FE_BLOB_DIR := .vitest-reports
 fe-unit:
+	node --test scripts/ensure-pnpm.test.mjs
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
@@ -739,6 +740,7 @@ fe-storybook:
 ## fe-install — install the frontend deps (pnpm, frozen lockfile). The FE half
 ## of `make install`; also what `fe-uat` / `dev` assume has run.
 fe-install:
+	node scripts/ensure-pnpm.mjs
 	cd frontend && pnpm install --frozen-lockfile
 
 ## fe-typecheck — TypeScript typecheck of the frontend (tsc project build, no
