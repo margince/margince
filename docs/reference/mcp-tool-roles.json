@@ -9286,6 +9286,20 @@
     },
     {
       "tool": "read_workspace",
+      "action": "views",
+      "verb": "describe_views",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_workspace",
       "action": "voice_build",
       "verb": "get_voice_build",
       "allowed_for": [
