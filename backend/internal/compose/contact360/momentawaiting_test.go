@@ -62,6 +62,10 @@ func TestTheWaitDoesNotHideWhatWeOweOrTheirAnswer(t *testing.T) {
 			},
 			want: crmcontracts.ContactMomentRuleOpenPromise,
 		},
+		"the last day before the rule still waits": {
+			page: &crmcontracts.Contact360{LastOutboundAt: new(at(goneQuietAfterDays - 1))},
+			want: crmcontracts.ContactMomentRuleAwaitingReply,
+		},
 		"a wait past the rule is a silence": {
 			page: &crmcontracts.Contact360{LastOutboundAt: new(at(goneQuietAfterDays))},
 			want: crmcontracts.ContactMomentRuleGoneQuiet,
