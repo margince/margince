@@ -26,6 +26,9 @@ import (
 // The four are one step because they answer one question. What does an erasure
 // owe a record that is not the subject's, but names them in passing?
 func (e *Eraser) redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.ContactID, keys subjectKeys) error {
+	if err := redactUnlinkedNotes(ctx, tx, keys); err != nil {
+		return err
+	}
 	if err := redactWorkflowRuns(ctx, tx, keys.emails); err != nil {
 		return err
 	}

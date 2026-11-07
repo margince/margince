@@ -109,6 +109,18 @@ func assertSelectorReadsHold(t *testing.T, selector, sql, table string) {
 // activity_link — the set an activity can be held through.
 func tablesCarryingLegalHoldReachableFromActivityLink(t *testing.T) []string {
 	t.Helper()
+	withHold, linked := legalHoldCatalog(t)
+	var out []string
+	for table := range withHold {
+		if linked[table] {
+			out = append(out, table)
+		}
+	}
+	return out
+}
+
+func legalHoldCatalog(t *testing.T) (map[string]bool, map[string]bool) {
+	t.Helper()
 	catalog, err := os.ReadFile(headCatalogPath)
 	if err != nil {
 		t.Fatalf("read schema catalog: %v", err)
@@ -125,11 +137,31 @@ func tablesCarryingLegalHoldReachableFromActivityLink(t *testing.T) []string {
 			linked[m[1]] = true
 		}
 	}
-	var out []string
-	for table := range withHold {
-		if linked[table] {
-			out = append(out, table)
+	return withHold, linked
+}
+
+func TestMarkerCleanupChecksAndLocksEveryTableCarryingLegalHold(t *testing.T) {
+	held, _ := legalHoldCatalog(t)
+	if len(held) < 4 {
+		t.Fatalf("short legal-hold census: %v", held)
+	}
+	lock := regexp.MustCompile(`(?i)^LOCK TABLE ([a-z_,]+) IN SHARE MODE$`).FindStringSubmatch(markerHoldLockSQL)
+	if len(lock) != 2 {
+		t.Fatal("marker cleanup must take shared locks on the checked hold tables")
+	}
+	locked := map[string]bool{}
+	for _, table := range strings.Split(lock[1], ",") {
+		locked[table] = true
+	}
+	for table := range held {
+		read := regexp.MustCompile(`FROM ` + regexp.QuoteMeta(table) + ` WHERE legal_hold`).MatchString(markerHoldSQL)
+		if !read || !locked[table] {
+			t.Errorf("marker cleanup must check and lock held table %s", table)
 		}
 	}
-	return out
+	for table := range locked {
+		if !held[table] {
+			t.Errorf("marker cleanup locks %s without a legal_hold column", table)
+		}
+	}
 }

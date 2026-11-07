@@ -28,7 +28,7 @@ func TestAFullNameIsMatchedAsWholeWordsAndAOneWordNameNotAtAll(t *testing.T) {
 
 func TestAnAddressIsBoundedOnlyByWhatWouldMakeItAnotherAddress(t *testing.T) {
 	t.Parallel()
-	want := `(^|[^[:alnum:].+-])ann@example\.com($|[^[:alnum:].-]|\.($|[^[:alnum:]]))`
+	want := `(?<![[:alnum:]._%+-])ann@example\.com(?=$|[^[:alnum:].-]|\.(?:$|[^[:alnum:]]))`
 	if got := wholeAddressPattern("ann@example.com"); got != want {
 		t.Errorf("wholeAddressPattern = %q, want %q", got, want)
 	}

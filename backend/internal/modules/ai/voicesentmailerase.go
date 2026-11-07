@@ -5,7 +5,6 @@ package ai
 
 import (
 	"context"
-	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // sentMailExclusionErased is the reason a sample carries once the mail it was
@@ -104,7 +104,7 @@ func EraseSamplesNamingTx(ctx context.Context, tx pgx.Tx, fullName string, email
 // mark beside it, such as markdown or brackets, still matches. A missed
 // erasure costs more than one extra emptied sample.
 func wholeAddressPattern(email string) string {
-	return `(^|[^[:alnum:].+-])` + regexp.QuoteMeta(email) + `($|[^[:alnum:].-]|\.($|[^[:alnum:]]))`
+	return values.EmailTextPattern(email)
 }
 
 // wholeNamePattern is the regular expression a full name is found by: every
@@ -112,15 +112,7 @@ func wholeAddressPattern(email string) string {
 // name fits too many contacts to erase by. "Anna" would empty every sample
 // greeting another Anna.
 func wholeNamePattern(fullName string) (string, bool) {
-	words := strings.Fields(fullName)
-	if len(words) < 2 {
-		return "", false
-	}
-	quoted := make([]string, 0, len(words))
-	for _, word := range words {
-		quoted = append(quoted, regexp.QuoteMeta(word))
-	}
-	return `\m` + strings.Join(quoted, `\s+`) + `\M`, true
+	return values.FullNameTextPattern(fullName, 2)
 }
 
 // sampleNotScrubbedSQL keeps a sample this erasure already finished out of

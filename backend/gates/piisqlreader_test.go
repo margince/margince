@@ -161,6 +161,7 @@ var erasureCascadeFiles = []string{
 	// timeline has one — and named here so weekly_plan_commitment cannot look
 	// uncovered the moment its redaction moves.
 	"internal/modules/privacy/erasure_commitments.go",
+	"internal/modules/privacy/erasure_unlinkednotes.go",
 	"internal/modules/privacy/erasure_rivals.go",
 	// What a licensed data provider was PAID to tell us about the subject,
 	// and the runs that bought it (ADR-0101). Same Art. 17 transaction, its

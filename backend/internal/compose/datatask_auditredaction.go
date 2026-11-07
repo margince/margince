@@ -28,11 +28,22 @@ func auditRedactionDataTask() datatask.Task {
 
 func linkedAuditRedactionDataTask() datatask.Task {
 	steps := auditRedactionSteps(privacy.RedactLinkedHistoricalAuditPageTx)
+	weekly := auditRedactionSteps(privacy.RedactMarkedWeeklyAuditPageTx)[0]
+	weekly.Name = "marked_weekly_images"
+	weekly.Estimate = func(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
+		if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+			return 0, false, err
+		}
+		var count int64
+		err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id FROM weekly_plan_commitment LIMIT @maximum) bounded`, pgx.StrictNamedArgs{"maximum": maximum + 1}).Scan(&count)
+		return min(count, maximum), count > maximum, err
+	}
+	steps = append(steps, weekly)
 	identities := auditRedactionSteps(privacy.RedactLinkedHistoricalIdentitiesPageTx)[0]
 	identities.Name = "request_identity_images"
 	steps = append(steps, identities)
 	return datatask.Task{
-		ID: "core/1794076293_linked_erased_audit_payloads", Version: 1,
+		ID: "core/1794076293_linked_erased_audit_payloads", Version: 2,
 		Title:    "Removing linked payloads left by earlier privacy erasures",
 		Requires: []string{"core/1794066141", "core/1794067376", "core/1794076293"}, Steps: steps,
 	}

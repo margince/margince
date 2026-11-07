@@ -338,6 +338,13 @@ into consent's handlers.
 
   Background tasks remove copies left by earlier erasures, using old proofs and stored links.
   They keep later edits and skip holds. Request references go after their linked copies.
+
+  Old weekly items whose text is already cleared can be matched by their erased label.
+  A user can change that label, so this choice can clear the wrong copy.
+  A hold on any record stops that part of the pass.
+
+  An erasure also clears matching names and mail addresses from notes with no contact link.
+  It keeps the rest of the note. A linked hold or an already restricted row keeps that note.
 - **The suppression list** holds a hash of each erased address and handle. No later capture, import
   or typed create can store one again. A booking on the public booking page still can, because a
   refusal there would show which addresses were erased.

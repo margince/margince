@@ -25,13 +25,13 @@ package privacy
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // subjectApprovalMatch is the WHERE clause naming every staging that holds the
@@ -148,7 +148,7 @@ func addressPatterns(emails []string) []string {
 			continue
 		}
 		patterns = append(patterns,
-			`(^|[^a-z0-9._%+-])`+regexp.QuoteMeta(strings.ToLower(email))+`($|[^a-z0-9.-])`)
+			values.EmailTextPattern(strings.ToLower(email)))
 	}
 	return patterns
 }

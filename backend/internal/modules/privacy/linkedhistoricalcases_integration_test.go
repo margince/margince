@@ -134,7 +134,7 @@ func TestHistoricalEntryProofCannotRedactAnotherEntryOnTheSameRecord(t *testing.
 	}
 }
 
-func TestAnEditableWeeklyLabelDoesNotAuthorizeHistoricalErasure(t *testing.T) {
+func TestTheLinkedMatcherDoesNotInferASubjectFromAnEditableWeeklyLabel(t *testing.T) {
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
