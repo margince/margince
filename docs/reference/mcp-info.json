@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 232785,
+    "tool_catalog_bytes": 232917,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59601,
+    "approx_wire_tokens_total": 59634,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 54963,
+      "description_bytes": 55095,
       "input_schema_bytes": 113876,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 168839
+      "description_plus_input_schema_bytes": 168971
     }
   },
   "tools": {
@@ -888,7 +888,7 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. ready says the user is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user before you file under a project, which only a member can undo from the activity. attach checks the record first; read list_documents before attaching the same file again. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach, bring_back, cancel_send, check_new_send, check_send, discard_draft, hide_document, log, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the action archive_document, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. ready says the user is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user before you file under a project, which only a member can undo from the activity. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach, bring_back, cancel_send, check_new_send, check_send, discard_draft, hide_document, log, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the action archive_document, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -11231,7 +11231,7 @@
           "readOnlyHint": false,
           "title": "Invite to a meeting"
         },
-        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace, so name them and the time and get the user's yes first; the call stages for approval. Read check_availability before choosing a time. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace, so name them and the time and get the user's yes first; the call stages for approval. Read check_availability before choosing a time. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
         "inputSchema": {
           "properties": {
             "action": {
