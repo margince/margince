@@ -153,13 +153,18 @@ func TestRunnerBindsTheSessionBudgetAndResumesWaitingWork(t *testing.T) {
 	}
 	close(embedder.release)
 	released = true
+	// The resumed run walks every registered data task, one batch per pickup of
+	// its snooze, so how long it takes grows with the catalog. A job the budget
+	// left stuck never completes, however long the wait.
+	resumed, cancelResumed := context.WithTimeout(t.Context(), 5*time.Minute)
+	defer cancelResumed()
 	for {
 		select {
 		case event := <-completed:
 			if event.Job.ID == waitingID {
 				return
 			}
-		case <-ctx.Done():
+		case <-resumed.Done():
 			t.Fatal("waiting job did not complete after the holder released its slot")
 		}
 	}

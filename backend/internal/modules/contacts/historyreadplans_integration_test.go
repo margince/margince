@@ -212,12 +212,20 @@ func (e *dedupeEnv) seedHistoryReadBackground(ctx context.Context, t *testing.T,
 			t.Fatal(err)
 		}
 	}
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `WITH background AS(
-   INSERT INTO contact(full_name,source,captured_by) SELECT 'Unrelated '||n,'manual','test:bounded-history' FROM generate_series(1,100000) n RETURNING id)
-   INSERT INTO contact_email(contact_id,email,source,captured_by) SELECT id,id::text||'@unrelated.test','manual','test:bounded-history' FROM background`); err != nil {
+	// One statement per batch, so no single write outlasts the statement timeout
+	// of a busy shard.
+	for after := 0; after < 100000; after += 10000 {
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `WITH background AS(
+   INSERT INTO contact(full_name,source,captured_by) SELECT 'Unrelated '||n,'manual','test:bounded-history' FROM generate_series(@after::int+1,@through::int) n RETURNING id)
+   INSERT INTO contact_email(contact_id,email,source,captured_by) SELECT id,id::text||'@unrelated.test','manual','test:bounded-history' FROM background`,
+				pgx.NamedArgs{"after": after, "through": after + 10000})
 			return err
+		}); err != nil {
+			t.Fatal(err)
 		}
+	}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `WITH hot AS(
           INSERT INTO activity(kind,direction,source,captured_by,counterparty_email,counterparty_outbound_attested,occurred_at)
           SELECT 'email','outbound','gmail','connector:gmail',
