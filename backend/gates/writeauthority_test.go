@@ -111,6 +111,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:attachToSettledVerdict":     "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",
 	"internal/modules/contacts:employerDomainsVisible":     "filters read-only work-domain evidence; no company mutation occurs before the shared employer resolver",
 	"internal/modules/contacts:previewDomainEmployerTx":    "read-only employer planning checks visibility; writes still pass the resolver and their mutation authority gates",
+	"internal/modules/contacts:promotionEmployerFactsTx":   "reads whether the stored company can be an employment target; contact and relationship writes keep their own gates, and a company industry carry separately requires company update and EnsureChangeable",
 	"internal/modules/contacts:EmployerNameMatchesTx":      "matches a visible company for an employment link; matching changes no existing company. New companies pass CreateCompanyTx and the edge passes contact write authority and link-target gates",
 	"internal/modules/contacts:ensureCompanyAndEmployment": "checks whether a domain-matched company may be named before attaching a contact. It changes no company row; the inferred edge uses the capture employment writer and its existing contact and seat locks",
 
