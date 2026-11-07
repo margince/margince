@@ -9,7 +9,6 @@ package compose
 // so the door has to refuse to queue it at all.
 
 import (
-	"github.com/riverqueue/river"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -17,6 +16,7 @@ import (
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )

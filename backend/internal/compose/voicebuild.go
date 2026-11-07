@@ -42,6 +42,7 @@ type VoiceBuildArgs struct {
 // Kind is the stable job identifier River persists in river_job.
 func (VoiceBuildArgs) Kind() string { return "voice_build" }
 
+// SessionLocked says the worker holds a session lease on the work for the run.
 func (VoiceBuildArgs) SessionLocked() {}
 
 // WorkspaceID binds this build to its tenant (jobs.WorkspaceScoped).

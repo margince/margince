@@ -270,6 +270,7 @@ type CaptureSyncArgs struct {
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureSyncArgs) Kind() string { return "capture_sync" }
 
+// SessionLocked says the worker holds a session lease on the work for the run.
 func (CaptureSyncArgs) SessionLocked() {}
 
 // WorkspaceID binds this connection's sync to its tenant (jobs.WorkspaceScoped).
