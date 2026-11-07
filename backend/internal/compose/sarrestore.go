@@ -74,9 +74,11 @@ func restoreSAROriginals(ctx context.Context, blob blobstore.Store, pkg *privacy
 }
 
 // storedOriginalText is the original a payload holds, in either spelling a
-// slimmed message can have: a JSON string for text, or the base64 envelope for
-// bytes jsonb cannot hold as text. A calendar resource stored as itself has no
-// stanza, and IsSlimmed passes it by.
+// slimmed message can have. Text is a JSON string; bytes jsonb cannot hold as
+// text are in the base64 envelope. A calendar resource has no stanza, and
+// IsSlimmed passes it by.
+//
+//craft:ignore naked-any the payload is whatever pgx decoded from jsonb: a string or an object
 func storedOriginalText(payload any) ([]byte, bool) {
 	if text, isText := payload.(string); isText {
 		return []byte(text), true
@@ -92,6 +94,8 @@ func storedOriginalText(payload any) ([]byte, bool) {
 // respelledOriginal stores a restored original back in the spelling the column
 // gives it, so a binary message leaves in its envelope as it came in. One it
 // cannot spell is withheld, like one it cannot restore.
+//
+//craft:ignore naked-any the value goes back into the package as decoded jsonb
 func respelledOriginal(original []byte) any {
 	encoded, err := capture.EncodeStoredOriginal(original)
 	if err != nil {

@@ -66,8 +66,8 @@ func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 }
 
 // insertRawCaptureTx is the one insert of a stored original. A non-empty
-// slimmed outcome stamps the row as the part sweep would, so the sweep never
-// reads an original that already names its files instead of carrying them.
+// slimmed outcome stamps the row as the part sweep would. The sweep then never
+// reads an original that names its files instead of carrying them.
 func insertRawCaptureTx(
 	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, payload []byte, slimmed partSlimOutcome,
 ) (ids.UUID, error) {

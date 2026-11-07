@@ -5,10 +5,10 @@ package capture
 
 // The original of a new message that carried files.
 //
-// Its files are in the object store before the message's original is written,
-// so the original is written once, naming each object instead of carrying its
-// bytes. Writing it whole and letting the part sweep rewrite it later sent every
-// file through Postgres twice and left the first copy for vacuum.
+// Its files reach the object store before its original is written. So the
+// original is written once, and names each object instead of carrying its
+// bytes. Written whole, every file went through Postgres twice: once here, and
+// once when the part sweep rewrote the row, leaving the first copy for vacuum.
 
 import (
 	"context"
@@ -60,7 +60,7 @@ func releaseHeldOriginalTx(
 }
 
 // releaseHeldOriginalForScopedKeyTx is the record a seat-scoped original is
-// stored from. A held-back original reaches that path unfiltered, so a private
+// stored from. A held-back original reaches that path unfiltered. So a private
 // message's file bytes come out here, as storeOriginalTx takes them out of the
 // shared one.
 func releaseHeldOriginalForScopedKeyTx(
@@ -74,9 +74,21 @@ func releaseHeldOriginalForScopedKeyTx(
 	return withholdPrivateOriginalTx(ctx, tx, scoped)
 }
 
+// keepPartsAndOriginal stores a new activity's files, then its held-back
+// original, which can name them only once they are stored.
+func (s *Sink) keepPartsAndOriginal(
+	ctx context.Context, tx pgx.Tx, activity ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields,
+) (connector.NormalizedRecord, error) {
+	kept, staged, err := s.keepParts(ctx, tx, activity, rec, fields)
+	if err != nil {
+		return kept, err
+	}
+	return kept, s.storeDeferredOriginalTx(ctx, tx, activity, rec, staged)
+}
+
 // storeDeferredOriginalTx writes a new activity's held-back original and points
 // the activity at it. A message whose files were withheld or not stored keeps
-// the bytes, exactly as storeOriginalTx writes them.
+// the bytes, as storeOriginalTx writes them.
 func (s *Sink) storeDeferredOriginalTx(
 	ctx context.Context, tx pgx.Tx, activity ids.ActivityID,
 	original connector.NormalizedRecord, staged []StagedFile,
@@ -134,8 +146,8 @@ func (s *Sink) storeSlimOriginalTx(
 
 // filesThisCaptureStoredTx pairs each file this capture staged with the
 // attachment row that now names its object. A file whose row already existed
-// names an older object; it keeps its bytes in the original, for the part
-// sweep to prove against that object.
+// names an older object. It keeps its bytes in the original, and the part sweep
+// proves them against that object.
 func (s *Sink) filesThisCaptureStoredTx(
 	ctx context.Context, tx pgx.Tx, activity ids.ActivityID,
 	original connector.NormalizedRecord, staged []StagedFile,

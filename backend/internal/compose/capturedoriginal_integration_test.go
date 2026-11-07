@@ -116,7 +116,7 @@ func TestANewMessagesOriginalNamesItsStoredFileInsteadOfCarryingIt(t *testing.T)
 }
 
 // An original whose file cannot be located in it, here one with no MIME parts,
-// is stored whole and left for the part sweep, as every original was before.
+// is stored whole. The part sweep meets it as before.
 func TestAnOriginalNothingCanComeOutOfIsStoredWhole(t *testing.T) {
 	ctx, db, tag := captureWorkspace(t)
 	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blobstore.NewMemory()))

@@ -32,9 +32,8 @@ func sarMessage(text string, file []byte) []byte {
 		folded.String() + "--b1--\r\n")
 }
 
-// An Art. 15 export hands back the provider's original whichever spelling the
-// column stored it in: text as a JSON string, bytes jsonb cannot hold as text
-// in the base64 envelope.
+// An Art. 15 export hands back the provider's original in either spelling the
+// column stores. Text is a JSON string; other bytes are in the base64 envelope.
 func TestAnExportRestoresASlimmedOriginalInEitherSpelling(t *testing.T) {
 	ctx := context.Background()
 	file := bytes.Repeat([]byte("%PDF-1.4 figures "), 1024)

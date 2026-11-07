@@ -209,10 +209,6 @@ func (s *Sink) finishTakeOver(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision, memberBound bool,
 ) error {
-	rec, err := releaseHeldOriginalTx(ctx, tx, rec)
-	if err != nil {
-		return err
-	}
 	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 		return err
 	}
@@ -248,12 +244,8 @@ func (s *Sink) finishNewActivity(
 	// before staging, because this is the last point where the bodies are
 	// still only in memory: once stageParts has run they are in the object
 	// store, and the raw original points at them rather than carrying them.
-	original := rec
-	rec, staged, err := s.keepParts(ctx, tx, id, rec, fields)
+	rec, err := s.keepPartsAndOriginal(ctx, tx, id, rec, fields)
 	if err != nil {
-		return counterpartyDecision{}, err
-	}
-	if err := s.storeDeferredOriginalTx(ctx, tx, id, original, staged); err != nil {
 		return counterpartyDecision{}, err
 	}
 	if err := s.logPartDrops(ctx, tx, rec); err != nil {
