@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -85,8 +86,8 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // that adds round trips to every message. Lower it when a change removes
 // some; never raise it to make a change pass.
 const (
-	historyExchangesPerMessage    = 187
-	historyTransactionsPerMessage = 7.5
+	historyExchangesPerMessage    = 185
+	historyTransactionsPerMessage = 7.2
 )
 
 func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
@@ -97,7 +98,10 @@ func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
 	if os.Getenv("MARGINCE_IMPORT_BENCH_SQL") != "" {
 		pool = profileHistoryPool(e.Admin(), t, pool)
 	}
-	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	// The live tally is written at most twice a second of wall time, so its
+	// count follows the runner's speed rather than the code. One write per page
+	// keeps the budget about the work each message costs.
+	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{}).WithProgressPacing(24 * time.Hour)
 	page := &mailPageConnector{nextToken: "next", sent: make(map[string]bool, count)}
 	for i := range count {
 		messageID, party := fmt.Sprintf("budget-%d@myco.example", i), fmt.Sprintf("budget-%d@globex.example", (i/2)%parties)
