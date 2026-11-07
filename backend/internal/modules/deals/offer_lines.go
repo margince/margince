@@ -26,21 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ProductCurrencyMismatchError maps to 422: a line snapshots its price
-// from a product priced in another currency — converting silently would
-// fabricate a number (P11).
-type ProductCurrencyMismatchError struct{ Product, Offer string }
-
-func (e *ProductCurrencyMismatchError) Error() string {
-	return "product is priced in " + e.Product + " but the offer is in " + e.Offer +
-		"; give the line an explicit unit_price_minor in the offer currency"
-}
-
-// FieldFault refuses a line priced in a currency the offer does not use.
-func (e *ProductCurrencyMismatchError) FieldFault() (field, code, message string) {
-	return "unit_price_minor", "product_currency_mismatch", e.Error()
-}
-
 // OfferLineInputRow is one line as the store consumes it: decimals as
 // exact strings (formatted once at the transport edge), price in minor
 // units, with product-snapshot defaults resolved here.
@@ -195,10 +180,14 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		// What the added line MOVED on the offer is the three money columns;
 		// that a line was added is context about the mutation, so it lands in
 		// evidence rather than as a field the offer never had.
-		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
 			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
-			map[string]any{"line_added": true}); err != nil {
+			map[string]any{"line_added": true})
+		if err != nil {
 			return fmt.Errorf("audit line add: %w", err)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, lineEditFields(totals.Before, totals.After)); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read offer after line add: %w", err)
@@ -302,10 +291,14 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		// moved them, because "the totals stood still" is a claim only a
 		// recorded pair can make. The line's own field patch is context about
 		// the write and lands in evidence.
-		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
 			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
-			lineFieldEvidence(lineID, lineBefore, lineAfter)); err != nil {
+			lineFieldEvidence(lineID, lineBefore, lineAfter))
+		if err != nil {
 			return fmt.Errorf("audit line update: %w", err)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, lineEditFields(totals.Before, totals.After)); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read offer after line update: %w", err)
@@ -397,10 +390,10 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, cur currentOf
 }
 
 // AcceptOfferLineItem flips a staged (AI-proposed) line to accepted, at
-// which point it starts counting toward the offer totals (E03.21a). The
+// which point it starts counting toward the offer totals. The
 // contract does not expose proposal_state yet, so this is the store seam
-// the future drafting surface confirms through; accepting an already
-// accepted line is a no-op because the desired end-state already holds.
+// the future drafting surface confirms through. Accepting an already
+// accepted line is a no-op, because the desired end-state already holds.
 func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, lineID ids.UUID) (crmcontracts.Offer, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, err
@@ -440,12 +433,16 @@ func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		}
 		// Acceptance is what makes the line count, so the offer's money moves
 		// here; the state the line left behind is context about the write.
-		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
 			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
 			lineFieldEvidence(lineID,
 				map[string]any{"proposal_state": ProposalStaged},
-				map[string]any{"proposal_state": ProposalAccepted})); err != nil {
+				map[string]any{"proposal_state": ProposalAccepted}))
+		if err != nil {
 			return fmt.Errorf("audit line accept: %w", err)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, lineEditFields(totals.Before, totals.After)); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read offer after line accept: %w", err)
@@ -455,6 +452,7 @@ func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 	return out, err
 }
 
+// RemoveOfferLineItem removes a draft's line and recomputes its totals.
 func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, lineID ids.UUID) (crmcontracts.Offer, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, err
@@ -482,10 +480,14 @@ func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		}
 		// Which line went is context about the write; what the removal did to
 		// the offer is the three money columns.
-		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
 			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
-			map[string]any{lineIDKey: lineID, "line_removed": true}); err != nil {
+			map[string]any{lineIDKey: lineID, "line_removed": true})
+		if err != nil {
 			return fmt.Errorf("audit line remove: %w", err)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, lineEditFields(totals.Before, totals.After)); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read offer after line remove: %w", err)
