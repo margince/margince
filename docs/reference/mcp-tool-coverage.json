@@ -27,14 +27,13 @@
     {
       "model": "gpt-5.6-sol@codex-cli",
       "cases_with_a_committed_run": 70,
-      "cases_that_reached_their_bar": 67,
-      "cases_below_their_bar": 3,
-      "runs": 153,
-      "passed": 140,
-      "reliability": 0.9150326797385621,
+      "cases_that_reached_their_bar": 68,
+      "cases_below_their_bar": 2,
+      "runs": 147,
+      "passed": 136,
+      "reliability": 0.9251700680272109,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
-        "case41_close_the_project",
         "case86_tell_her_what_we_hold"
       ],
       "route": "Codex CLI"
@@ -883,8 +882,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -920,8 +919,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -1022,9 +1021,9 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 2,
-          "passed": 0,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gpt:cli",
           "search": "semantic"
         }
@@ -1123,8 +1122,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -1230,7 +1229,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1299,7 +1298,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1400,7 +1399,7 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1435,7 +1434,7 @@
         {
           "model": "gpt-5.6-sol@codex-cli",
           "runs": 3,
-          "passed": 3,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -1766,8 +1765,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -1802,8 +1801,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -3416,9 +3415,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
+          "runs": 5,
           "passed": 4,
-          "reliability": 1,
+          "reliability": 0.8,
           "cases_below_their_bar": []
         }
       }
@@ -3488,8 +3487,8 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 7,
-          "passed": 7,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -3683,12 +3682,10 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 11,
-          "passed": 8,
-          "reliability": 0.7272727272727273,
-          "cases_below_their_bar": [
-            "case41_close_the_project"
-          ]
+          "runs": 10,
+          "passed": 10,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -3745,8 +3742,8 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 5,
+          "runs": 4,
+          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -3923,9 +3920,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 7,
-          "reliability": 0.7777777777777778,
+          "runs": 8,
+          "passed": 6,
+          "reliability": 0.75,
           "cases_below_their_bar": []
         }
       }
@@ -3980,9 +3977,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -4007,9 +4004,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -4118,8 +4115,8 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 5,
+          "runs": 4,
+          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4145,9 +4142,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -4173,9 +4170,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
+          "runs": 5,
+          "passed": 4,
+          "reliability": 0.8,
           "cases_below_their_bar": []
         }
       }
@@ -4233,9 +4230,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 8,
-          "passed": 7,
-          "reliability": 0.875,
+          "runs": 7,
+          "passed": 6,
+          "reliability": 0.8571428571428571,
           "cases_below_their_bar": []
         }
       }
@@ -4263,8 +4260,8 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 5,
-          "passed": 5,
+          "runs": 4,
+          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4376,9 +4373,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
+          "runs": 7,
           "passed": 6,
-          "reliability": 1,
+          "reliability": 0.8571428571428571,
           "cases_below_their_bar": []
         }
       }
@@ -4407,9 +4404,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
-          "reliability": 1,
+          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         }
       }
@@ -4439,9 +4436,9 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 8,
-          "passed": 7,
-          "reliability": 0.875,
+          "runs": 7,
+          "passed": 6,
+          "reliability": 0.8571428571428571,
           "cases_below_their_bar": []
         }
       }
@@ -4529,11 +4526,9 @@
         },
         "gpt-5.6-sol@codex-cli": {
           "runs": 2,
-          "passed": 0,
-          "reliability": 0,
-          "cases_below_their_bar": [
-            "case41_close_the_project"
-          ]
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
         }
       }
     },
@@ -4557,8 +4552,8 @@
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 3,
-          "passed": 3,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
