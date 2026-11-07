@@ -887,7 +887,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /privacy/notice-case-reviews/{id}/assign` | assignNoticeCaseReview | Give a contact's privacy-notice case (from notice_case_reviews) an owner. | Change records | at once |
 | `GET /privacy/notice-case-reviews/{id}/source` | getNoticeSourceEvidence | Read accessible evidence for a contact source assessment. | Read records | at once |
 | `POST /privacy/notice-case-reviews/{id}/source` | assessNoticeSource | Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first. | Change records | at once |
-| `POST /privacy/notice-case-reviews/{id}/source/preview` | previewNoticeSource | Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. | Read records | at once |
+| `POST /privacy/notice-case-reviews/{id}/source/preview` | previewNoticeSource | Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them. | Read records | at once |
 | `PATCH /data-subject-requests/{id}` | updateDataSubjectRequest | Update a data-subject request's status / assignee / resolution. | Change records | at once |
 | `GET /confirm-submissions` | listConfirmSubmissions | List what subjects sent through their own confirm links. | Read records | at once |
 | `POST /confirm-submissions/{id}/resolve` | resolveConfirmSubmission | Accept or decline what a subject proposed. | Change records | at once |

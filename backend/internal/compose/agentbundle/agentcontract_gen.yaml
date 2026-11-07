@@ -16695,7 +16695,7 @@ paths:
       tags: [Compliance]
       operationId: previewNoticeSource
       security: [{bearerAuth: []}]
-      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case.
+      summary: Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
       requestBody:
         required: true
         content:
@@ -16712,7 +16712,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case.
+        Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 
         Needs the passport permission Read records.
 

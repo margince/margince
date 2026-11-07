@@ -16233,7 +16233,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. */
+        /** Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them. */
         post: operations["previewNoticeSource"];
         delete?: never;
         options?: never;
