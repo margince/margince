@@ -158,12 +158,17 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 			Email: a.Email, Name: a.DisplayName, Room: a.isRoom(), Response: guestResponse(a.ResponseStatus),
 		})
 	}
+	answer := ownerCalendarAnswer(ev.Attendees, owner)
+	cancelled := strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled)
+	organizer := ev.Organizer.Self || (strings.TrimSpace(owner) != "" && strings.EqualFold(strings.TrimSpace(ev.Organizer.Email), strings.TrimSpace(owner)))
 	return meetingmap.Event{
 		ID:            ev.ID,
 		Private:       ev.Visibility != "" && ev.Visibility != "default" && ev.Visibility != "public",
 		ICalUID:       strings.TrimSpace(ev.ICalUID),
-		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled),
-		OwnerResponse: ownerResponse(ev.Attendees, owner),
+		Cancelled:     cancelled && organizer,
+		Removed:       cancelled && !organizer,
+		OwnerResponse: answer.Response,
+		OwnerAddress:  answer.Address,
 		Subject:       ev.Summary,
 		Description:   ev.Description,
 		StartsAt:      parseStart(ev.Start),
@@ -191,13 +196,12 @@ func guestResponse(status string) string {
 	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
 }
 
-// ownerResponse prefers Google's self entry, so aliases and group invitations
-// use the connected calendar's answer rather than an address match's answer.
-func ownerResponse(attendees []eventActor, owner string) string {
+// ownerCalendarAnswer uses Google's self entry before an address match.
+func ownerCalendarAnswer(attendees []eventActor, owner string) connector.CalendarAnswer {
 	if self, ok := ownerAttendee(attendees, owner); ok {
-		return guestResponse(self.ResponseStatus)
+		return connector.CalendarAnswer{Address: self.Email, Response: guestResponse(self.ResponseStatus)}
 	}
-	return ""
+	return connector.CalendarAnswer{}
 }
 
 // ownerAttendee picks the attendee entry belonging to the connected account:

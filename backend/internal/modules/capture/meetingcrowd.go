@@ -128,31 +128,41 @@ func settleAnswers(
 		addresses = append(addresses, address)
 		responses = append(responses, p.Response)
 	}
-	if len(addresses) == 0 {
-		return 0, nil
-	}
-	var owned []string
-	if roster.Current && actorUserID(ctx) == roster.Seat {
-		self, err := ownerIdentitiesTx(ctx, tx)
-		if err != nil {
-			return 0, err
-		}
-		for _, address := range addresses {
-			if self.CoversAddressExactly(address) {
-				owned = append(owned, address)
+
+	ownerAddress, ownerResponse := "", ""
+	if roster.Current && actorUserID(ctx) == roster.Seat && roster.OwnerAnswer != nil {
+		ownerResponse = roster.OwnerAnswer.Response
+		address := strings.ToLower(strings.TrimSpace(roster.OwnerAnswer.Address))
+		if ownerResponse != "" && address != "" {
+			alone, err := ownAddressHeldAloneTx(ctx, tx, roster.Seat, address)
+			if err != nil {
+				return 0, err
+			}
+			if alone {
+				ownerAddress = address
 			}
 		}
 	}
-	ownAnswer := `(@current AND (ap.user_id=@seat OR (ap.user_id IS NULL AND ap.address=ANY(@owned::text[]))))`
+
+	if ownerResponse != "" {
+		addresses = append(addresses, "")
+		responses = append(responses, ownerResponse)
+	}
+	if len(addresses) == 0 {
+		return 0, nil
+	}
+	ownAnswer := `(@current AND @owner_response<>'' AND (ap.user_id=@seat OR (ap.user_id IS NULL AND ap.address=@owner_address AND @owner_address<>'')))`
 	tag, err := tx.Exec(ctx, `
-  UPDATE activity_participant ap SET response=inp.response,
-   roster_seat=CASE WHEN `+ownAnswer+` THEN @seat ELSE ap.roster_seat END
-  FROM unnest(@addresses::text[],@responses::text[]) AS inp(address,response)
-  WHERE ap.activity_id=@activity AND ap.address=inp.address
-   AND (ap.roster_seat=@seat OR `+ownAnswer+`)
-   AND (ap.response IS DISTINCT FROM inp.response OR (`+ownAnswer+` AND ap.roster_seat IS DISTINCT FROM @seat))
-   AND (@current OR ap.response IS NULL)`, pgx.StrictNamedArgs{
-		"activity": activityID, "seat": roster.Seat, "addresses": addresses, "responses": responses, "current": roster.Current, "owned": owned,
+ UPDATE activity_participant ap SET response=CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END,
+ roster_seat=CASE WHEN `+ownAnswer+` THEN @seat ELSE ap.roster_seat END
+ FROM unnest(@addresses::text[],@responses::text[]) AS inp(address,response)
+ WHERE ap.activity_id=@activity
+ AND ((inp.address<>'' AND ap.address=inp.address AND ap.roster_seat=@seat) OR `+ownAnswer+`)
+ AND (ap.response IS DISTINCT FROM CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END
+  OR (`+ownAnswer+` AND ap.roster_seat IS DISTINCT FROM @seat))
+ AND (@current OR ap.response IS NULL)`, pgx.StrictNamedArgs{
+		"activity": activityID, "seat": roster.Seat, "addresses": addresses, "responses": responses, "current": roster.Current,
+		"owner_address": ownerAddress, "owner_response": ownerResponse,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: recording the answers a calendar lists: %w", err)

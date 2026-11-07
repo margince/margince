@@ -63,9 +63,12 @@ type Meeting struct {
 	durationSeconds *int
 	private         bool
 	cancelled       bool
+	removed         bool
 	hasExternal     bool // any party outside the OWNER's own domain; the sink judges the rest
 	partiesHidden   bool
 	ownerDomain     string
+	ownerAddress    string
+	ownerResponse   string
 	addresses       []string
 	participants    connector.Parties
 	notes           []capture.MeetingDocument
@@ -75,6 +78,11 @@ type Meeting struct {
 // owner (whose domain marks "internal"). Pure — the caller has already decoded
 // the bytes — so the whole mapping is fixture-provable.
 func Classify(ev Event, owner string) Meeting {
+	ownerAddress := strings.ToLower(strings.TrimSpace(ev.OwnerAddress))
+	if ownerAddress == "" {
+		ownerAddress = strings.ToLower(strings.TrimSpace(owner))
+	}
+
 	ownerDom := domainOf(owner)
 	attendeeEmails, external := classifyAttendees(ev.Attendees, ownerDom)
 	organizerDom := domainOf(ev.Organizer.Email)
@@ -93,6 +101,7 @@ func Classify(ev Event, owner string) Meeting {
 		durationSeconds: eventDuration(ev),
 		private:         ev.Private,
 		cancelled:       ev.Cancelled,
+		removed:         ev.Removed,
 		// The organizer counts as a party: an externally-organized meeting is a
 		// customer touch even when the owner is the only listed attendee.
 		//
@@ -103,8 +112,10 @@ func Classify(ev Event, owner string) Meeting {
 		hasExternal:   external > 0 || organizerIsExternal(ev.Organizer.Email, organizerDom, ownerDom),
 		partiesHidden: ev.PartiesHidden,
 		ownerDomain:   ownerDom,
+		ownerAddress:  ownerAddress,
+		ownerResponse: ev.OwnerResponse,
 		addresses:     eventAddresses(ev, owner),
-		participants:  meetingParties(ev, owner),
+		participants:  meetingParties(ev, ownerAddress),
 		notes:         NotesDocuments(ev, owner),
 	}
 }
@@ -158,8 +169,6 @@ func meetingParties(ev Event, owner string) connector.Parties {
 	if address := strings.ToLower(strings.TrimSpace(owner)); address != "" && ev.OwnerResponse != "" {
 		if at, listed := seen[address]; listed {
 			out[at].Response = ev.OwnerResponse
-		} else {
-			add(Actor{Email: address, Response: ev.OwnerResponse}, connector.ParticipantRoleAttendee)
 		}
 	}
 
@@ -183,9 +192,15 @@ func (m Meeting) ID() string { return m.id }
 // connectorName comes from the registry that ran this connector, so no record
 // can claim the attestation by describing itself.
 func (m Meeting) ToRecord(connectorName string, raw []byte) connector.NormalizedRecord {
+	var answer *connector.CalendarAnswer
+	if m.ownerResponse != "" {
+		answer = &connector.CalendarAnswer{Address: m.ownerAddress, Response: m.ownerResponse}
+	}
+
 	return connector.NormalizedRecord{
-		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
+		EntityType:     datasource.EntityActivity,
+		CalendarAnswer: answer,
+		NaturalKey:     connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
 			Kind:            "meeting",
 			ProviderPrivate: m.private,
@@ -360,7 +375,7 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 	case SettleDrop:
 		countEvent(ctx, connectorName, m.id, "dropped_"+reason.Label())
 		return nil
-	case SettleCancel:
+	case SettleCancel, SettleRemove:
 		return cancelCaptured(ctx, sink, m, connectorName, reason)
 	case SettleCapture:
 		_, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw))
@@ -383,6 +398,15 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 // called off at the moment we noticed, and every question about when bookings
 // fell through would answer with the sync schedule instead of the calendar.
 func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connectorName string, reason Reason) error {
+	if m.removed {
+		remover, ok := sink.(connector.MeetingRemover)
+		if !ok {
+			countEvent(ctx, connectorName, m.id, OutcomeCancelUnsupported)
+			return nil
+		}
+		return settleWrite(ctx, connectorName, m.id, reason.Label(), remover.RemoveCalendarMeeting(ctx, connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}, m.crossDoorIdentity(), m.occurredAt))
+	}
+
 	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
 	var err error
 	// The identity travels too where the sink can use it: an event matched onto

@@ -3,7 +3,11 @@
 
 package meetingmap
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
 
 // What capture should DO with one event, and why — as distinct from what an
 // event MAPS to, which is meetingmap.go beside this.
@@ -21,10 +25,10 @@ type Settlement int
 const (
 	// SettleCapture writes the meeting.
 	SettleCapture Settlement = iota
-	// SettleCancel means the organizer called the meeting off. A meeting captured while it was live
-	// must be marked cancelled rather than left standing; one never captured
-	// has nothing to mark, and the writer's own upsert answers that.
+	// SettleCancel means the organizer called the shared meeting off.
 	SettleCancel
+	// SettleRemove retires only the syncing calendar's copy.
+	SettleRemove
 	// SettleDrop means this event never belongs in the timeline at all.
 	SettleDrop
 )
@@ -70,6 +74,12 @@ func (m Meeting) Settle() (Reason, Settlement) {
 	}
 	if m.cancelled {
 		return ReasonCancelled, SettleCancel
+	}
+	if m.removed {
+		return ReasonCancelled, SettleRemove
+	}
+	if m.ownerResponse == connector.ResponseDeclined {
+		return "", SettleCapture
 	}
 	// An event naming nobody but the owner is a block in their own calendar —
 	// focus time, a reminder, a flight. Nobody was met, so there is no

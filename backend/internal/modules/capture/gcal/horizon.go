@@ -37,7 +37,7 @@ func (c *Connector) listIsStale(listedAt time.Time) bool {
 // invitation remains subject to the capture window, like every other RSVP.
 func beyondHorizon(raw []byte, owner string, edge time.Time) bool {
 	ev, err := decodeEvent(raw, owner)
-	if err != nil || ev.Cancelled {
+	if err != nil || (ev.Cancelled || ev.Removed) {
 		return false
 	}
 	return ev.StartsAt.After(edge)

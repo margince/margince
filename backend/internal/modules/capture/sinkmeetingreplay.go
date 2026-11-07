@@ -28,26 +28,37 @@ func (s *Sink) ReplayMeeting(ctx context.Context, rec connector.NormalizedRecord
 	return err
 }
 
-func (s *Sink) landActivityForReplay(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields, owner ids.UUID, existingOnly bool) (activityLanding, error) {
+func (s *Sink) prepareActivityCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, existingOnly bool) error {
+	if _, activity := rec.Fields.(ActivityFields); !activity {
+		if existingOnly {
+			return errors.New("capture: an existing-only replay needs an activity")
+		}
+		return nil
+	}
 	if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
-		return activityLanding{}, err
+		return err
 	}
 	if existingOnly {
 		allowed, err := s.meetingReplayAllowed(ctx, tx, rec)
 		if err != nil {
-			return activityLanding{}, err
+			return err
 		}
 		if !allowed {
-			return activityLanding{}, connector.ErrSkip
+			return connector.ErrSkip
 		}
 	}
-	return s.landActivityTx(ctx, tx, rec, fields, owner)
+	return nil
 }
 
 func (s *Sink) meetingReplayAllowed(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+	_, found, err := s.meetingForSeat(ctx, tx, rec)
+	return found, err
+}
+
+func (s *Sink) meetingForSeat(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (ids.ActivityID, bool, error) {
 	matched, found, err := s.activityHoldingIdentity(ctx, tx, rec)
 	if err != nil {
-		return false, err
+		return ids.ActivityID{}, false, err
 	}
 	var own ids.ActivityID
 	var live bool
@@ -57,23 +68,25 @@ func (s *Sink) meetingReplayAllowed(ctx context.Context, tx pgx.Tx, rec connecto
 	}).Scan(&own, &live)
 	if err == nil {
 		if !live {
-			return false, nil
+			return ids.ActivityID{}, false, nil
 		}
-		return SeatHoldsActivityTx(ctx, tx, own)
+		held, err := SeatHoldsActivityTx(ctx, tx, own)
+		return own, held, err
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return false, fmt.Errorf("capture: finding the meeting to replay: %w", err)
+		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting to replay: %w", err)
 	}
 	if !found {
-		return false, nil
+		return ids.ActivityID{}, false, nil
 	}
 	err = tx.QueryRow(ctx, `SELECT id FROM activity WHERE id=@id AND kind='meeting'
  AND archived_at IS NULL AND restricted_at IS NULL FOR UPDATE`, pgx.StrictNamedArgs{"id": matched}).Scan(&own)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
+		return ids.ActivityID{}, false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("capture: locking the matched meeting to replay: %w", err)
+		return ids.ActivityID{}, false, fmt.Errorf("capture: locking the matched meeting to replay: %w", err)
 	}
-	return SeatHoldsActivityTx(ctx, tx, own)
+	held, err := SeatHoldsActivityTx(ctx, tx, own)
+	return own, held, err
 }

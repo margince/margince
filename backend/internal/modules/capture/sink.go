@@ -221,7 +221,7 @@ var (
 // key. Replays return the existing row and write nothing new, so an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
-	return s.upsert(ctx, rec, false)
+	return s.upsert(ctx, rec, rec.CalendarAnswer != nil && rec.CalendarAnswer.Response == connector.ResponseDeclined)
 }
 
 func (s *Sink) upsert(ctx context.Context, rec connector.NormalizedRecord, existingOnly bool) (datasource.EntityRef, error) {
@@ -245,6 +245,10 @@ func (s *Sink) upsert(ctx context.Context, rec connector.NormalizedRecord, exist
 				return err
 			}
 
+			if err := s.prepareActivityCapture(ctx, tx, rec, existingOnly); err != nil {
+				return err
+			}
+
 			// A skip commits its breadcrumb before the connector advances its cursor.
 			ctx, drop, err := s.dropBeforeStoreTx(ctx, tx, rec)
 			if err != nil {
@@ -257,7 +261,7 @@ func (s *Sink) upsert(ctx context.Context, rec connector.NormalizedRecord, exist
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
-				attempt.activityLanding, err = s.landActivityForReplay(ctx, tx, rec, fields, actor.UserID, existingOnly)
+				attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
 				return err
 			case LeadFields:
 				if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {

@@ -25,7 +25,7 @@ const (
 	captureJoin     = "internal/modules/capture/threadjoin.go"
 	captureLockFile = "internal/modules/capture/capturebeforethewrite.go"
 	lockTakerName   = "takeMergeLockFirst"
-	captureEntryFn  = "Upsert"
+	captureEntryFn  = "upsert"
 	// Upsert takes the merge lock before landing. The landing step resolves
 	// mailbox aliases before capture, which can lock existing activity rows.
 	mailReadFile    = "internal/modules/capture/threadboundary.go"
@@ -49,10 +49,22 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 	t.Parallel()
 
 	entry := functionNamed(t, gatekit.ModuleRoot(t), captureEntry, captureEntryFn)
-	lockAt := offsetOfCall(entry, lockTakerName)
-	if lockAt < 0 {
-		t.Fatalf("%s does not call %s — a capture that locks an activity row before the merge "+
-			"lock deadlocks against a concurrent merge of the same thread", captureEntryFn, lockTakerName)
+	for _, caller := range []struct{ file, name string }{
+		{captureEntry, "Upsert"},
+		{"internal/modules/capture/sinkmeetingreplay.go", "ReplayMeeting"},
+	} {
+		if offsetOfCall(functionNamed(t, gatekit.ModuleRoot(t), caller.file, caller.name), "upsert") < 0 {
+			t.Fatalf("%s must use the shared capture transaction", caller.name)
+		}
+	}
+	lockAt := offsetOfCall(entry, "prepareActivityCapture")
+	prepare := functionNamed(t, gatekit.ModuleRoot(t), "internal/modules/capture/sinkmeetingreplay.go", "prepareActivityCapture")
+	mergeAt, guardAt := offsetOfCall(prepare, lockTakerName), offsetOfCall(prepare, "meetingReplayAllowed")
+	if mergeAt < 0 || guardAt < 0 || mergeAt > guardAt {
+		t.Fatal("prepareActivityCapture must take the merge lock before locking the replayed meeting")
+	}
+	if dropAt := offsetOfCall(entry, "dropBeforeStoreTx"); lockAt < 0 || dropAt < 0 || lockAt > dropAt {
+		t.Fatal("capture must prepare and guard a replay before writing skip records")
 	}
 	// The sighting is still the first thing that can reach an activity, through
 	// two wrappers. Asserting the outer one alone would let the sighting move out

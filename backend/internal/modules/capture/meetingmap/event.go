@@ -19,8 +19,10 @@ type Event struct {
 	// provider states none: a made-up identity would join unrelated meetings.
 	ICalUID   string
 	Cancelled bool
+	Removed   bool
 	// OwnerResponse is the connected calendar's answer. Participant rows carry
 	// it; only Cancelled cancels the shared meeting.
+	OwnerAddress  string
 	OwnerResponse string
 	Subject       string
 	Description   string

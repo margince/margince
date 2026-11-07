@@ -130,7 +130,7 @@ func TestTheOwnersDeclineIsReadOffTheAttendeeList(t *testing.T) {
 			if ev.OwnerResponse != "" {
 				found := false
 				for _, party := range meetingmap.Classify(ev, rsvpOwner).Participants().Participants {
-					if party.Email == rsvpOwner && party.Response == ev.OwnerResponse {
+					if party.Email == ev.OwnerAddress && party.Response == ev.OwnerResponse {
 						found = true
 					}
 				}

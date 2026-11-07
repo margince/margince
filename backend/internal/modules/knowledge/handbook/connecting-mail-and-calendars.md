@@ -60,7 +60,7 @@ Also called: calendar sync, sync meetings, link my agenda.
 
 A meeting from your calendar names every guest on the invitation under **Attendees**, whether they accepted, declined or did not answer yet. A guest who is a contact links to their record. A guest who is not a contact yet shows by the name or address on the invitation. Colleagues show under **Colleagues**. A booked room is not a guest.
 
-Declining an invitation changes your RSVP. It does not cancel the meeting for colleagues who are still going. Only an organizer cancellation cancels the shared meeting.
+If you say no to an invitation, the meeting stays on for colleagues who are still going. It is called off for everyone only when the colleague who set it up calls it off.
 
 Each guest's answer shows next to their name: **Declined**, **Maybe** or **No answer**. A guest who accepted shows no label. The next calendar sync updates an answer that changed.
 
