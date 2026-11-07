@@ -1239,7 +1239,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `change_reports.discard_draft` | `discard_reporting_report_draft` | `report_definition.read` `report_definition.update` |
 | Reports and analytics | `change_reports.draft` | `draft_report` | `installation_settings.read` `report_definition.create` `report_definition.read` |
 | Reports and analytics | `change_reports.freeze_edition` | `freeze_reporting_edition` | `installation_settings.read` `report_edition.create` `report_edition.read` |
-| Reports and analytics | `change_reports.launch_initiative` | `launch_sales_initiative` | `deal.read` `lead.read` `sales_initiative.update` |
+| Reports and analytics | `change_reports.launch_initiative` | `launch_sales_initiative` | `deal.read` `sales_initiative.update` |
 | Reports and analytics | `change_reports.publish_draft` | `publish_reporting_report_draft` | `installation_settings.read` `report_definition.read` `report_definition.update` |
 | Reports and analytics | `change_reports.publish_framework` | `publish_reporting_framework` | `reporting_framework.read` `reporting_framework.update` |
 | Reports and analytics | `change_reports.record_decision` | `record_sales_decision` | `activity.create` `activity.read` `installation_settings.read` |

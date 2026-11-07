@@ -1805,7 +1805,6 @@
     "launch_sales_initiative": {
       "checks": [
         "deal.read",
-        "lead.read",
         "sales_initiative.update"
       ]
     },
