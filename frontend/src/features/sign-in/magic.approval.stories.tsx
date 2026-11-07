@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { wonProposal } from "../../testing/magic.approval.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { MagicLaneSection } from "./magic.lines";
@@ -20,7 +20,7 @@ export const Ready: Story = {
           title="Waiting on you"
           rows={[wonProposal]}
           since={undefined}
-          zone={viewerZone()}
+          zone={browserZone()}
           byDay={false}
         />
       </Panel>
@@ -47,7 +47,7 @@ export const Stale: Story = {
             },
           ]}
           since={undefined}
-          zone={viewerZone()}
+          zone={browserZone()}
           byDay={false}
         />
       </Panel>
@@ -72,7 +72,7 @@ export const WithoutOptionalEvidence: Story = {
             },
           ]}
           since={undefined}
-          zone={viewerZone()}
+          zone={browserZone()}
           byDay={false}
         />
       </Panel>
@@ -103,7 +103,7 @@ export const DayLifecycleSource: Story = {
             },
           ]}
           since={undefined}
-          zone={viewerZone()}
+          zone={browserZone()}
           byDay={false}
         />
       </Panel>

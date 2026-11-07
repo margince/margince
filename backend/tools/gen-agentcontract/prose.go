@@ -17,7 +17,7 @@ import (
 // names them, keyed by the scope x-mcp-tool declares; permissionnames_test.go holds the mirror.
 var permissionNames = map[string]string{
 	"read": "Read records", "draft": "Draft messages", "write": "Change records",
-	"send": "Send messages", "enrich": "Buy contact data",
+	"send": "Send messages", "enrich": "Use AI and buy data",
 }
 
 // tierSentences say what the agent gate does with a mutating call at each tier.

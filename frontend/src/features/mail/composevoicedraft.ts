@@ -237,7 +237,6 @@ export function useVoiceDraft({
     epoch: draftEpoch.current,
     body,
     html,
-    servedBody: fields.servedBody,
     grounding: { ...account.grounding, recipientId, projectId },
     ...(instruction === undefined ? {} : { instruction }),
   });

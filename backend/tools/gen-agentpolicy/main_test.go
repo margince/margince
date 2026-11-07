@@ -87,3 +87,36 @@ func TestAnUnannotatedReadFailsGenerationUnlessAnonymous(t *testing.T) {
 		t.Errorf("defects = %v, want one naming listCompanyFacts", defects)
 	}
 }
+
+// The parity catalog reads x-settings-audience as two words. A third is a defect
+// here, since anything but member would put the operation in the admin group.
+func TestAnUnknownSettingsAudienceFailsGeneration(t *testing.T) {
+	const paths = `
+/pipelines:
+  get:
+    operationId: listPipelines
+    x-mcp-tool: { verb: list_pipelines, tier: auto_execute, scope: read }
+    x-settings-audience: %s
+`
+	for audience, defects := range map[string]int{"member": 0, "admin": 0, "everyone": 1} {
+		if _, got := policiesOf(t, strings.ReplaceAll(paths, "%s", audience)); len(got) != defects {
+			t.Errorf("x-settings-audience: %s gave defects %v, want %d", audience, got, defects)
+		}
+	}
+}
+
+// x-agent-access and x-mcp-tool state opposite answers, so one operation may not
+// declare both.
+func TestAnOperationCannotBeBothHumanOnlyAndATool(t *testing.T) {
+	const paths = `
+/pipelines:
+  get:
+    operationId: listPipelines
+    x-mcp-tool: { verb: list_pipelines, tier: auto_execute, scope: read }
+    x-agent-access: human-only
+    x-human-only-reason: pending
+`
+	if _, defects := policiesOf(t, paths); len(defects) != 1 || !strings.Contains(defects[0], "listPipelines") {
+		t.Errorf("defects = %v, want one naming listPipelines", defects)
+	}
+}

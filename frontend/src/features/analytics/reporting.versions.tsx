@@ -14,8 +14,8 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import type { ReportingReport } from "./reporting.model";
 
 type ReportRevision = components["schemas"]["ReportingReportRevision"];
@@ -193,7 +193,7 @@ export function ReportVersions({
 }: Readonly<{ report: ReportingReport; editable: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const revisions = useReportRevisions(report.id, editable);
   const action = useRevisionAction(report);
   const draftOpen = report.draft_revision !== undefined;

@@ -29,7 +29,7 @@ func sampleQuarter() (crmcontracts.ReportingEvaluation, *ForecastOperands, heldT
 		Context:   crmcontracts.ReportingContext{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Currency: "EUR", Interval: crmcontracts.ReportingWindow{StartAt: quarter.StartAt, EndAt: quarter.StartAt.AddDate(0, 1, 15)}, TargetInterval: &quarter},
 		Selection: crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{forecastLanding}},
 	}
-	ops := &ForecastOperands{Quarter: comparisonQuarter, Measure: "commit_evidence", LandingMinor: 76_000_000, WonMinor: 42_000_000, OpenMinor: 136_000_000}
+	ops := &ForecastOperands{Quarter: comparisonQuarter, Measure: "likely", LandingMinor: 76_000_000, WonMinor: 42_000_000, OpenMinor: 136_000_000}
 	held := heldTargets{keyFor(evaluation.Context.Scope, comparedMetric): {Id: openapi_types.UUID(ids.NewV7()), Revision: 3, Unit: "EUR", Definition: crmcontracts.ReportingTargetInput{Metric: comparedMetric, Value: 80_000_000}}}
 	return evaluation, ops, held
 }
@@ -43,8 +43,8 @@ func TestTheSampleQuarterIsFortyThousandShortAtThreePointSixCoverage(t *testing.
 	if rounded := fmt.Sprintf("%.1f", *got.Coverage); rounded != "3.6" {
 		t.Fatalf("coverage %v rounds to %s, want 3.6: 1.36m open over 380k left to win", *got.Coverage, rounded)
 	}
-	if *got.TargetRevision != 3 || got.Operands == nil || got.Qualified.Status != "not_enforced" {
-		t.Fatalf("comparison %+v, want target revision 3, its operands, and no qualified figure while it is off", got)
+	if *got.TargetRevision != 3 || got.Operands == nil {
+		t.Fatalf("comparison %+v, want target revision 3 and its operands", got)
 	}
 }
 
@@ -59,27 +59,10 @@ func TestAManagerCallIsTheWholeQuarterAndIsNotAddedToWhatIsWon(t *testing.T) {
 
 func TestATargetAlreadyWonReadsReachedRatherThanAnEndlessCoverage(t *testing.T) {
 	evaluation, ops, held := sampleQuarter()
-	ops.WonMinor, ops.LandingMinor, ops.QualifiedOpenMinor = 90_000_000, 95_000_000, new(int64(1_000_000))
+	ops.WonMinor, ops.LandingMinor = 90_000_000, 95_000_000
 	got := compareForecast(context.Background(), evaluation, ops, held)
 	if got.Status != "target_reached" || got.Coverage != nil || *got.Remaining != 0 || *got.Gap != -15_000_000 {
 		t.Fatalf("comparison %+v, want the target reached, nothing left and no coverage", got)
-	}
-	if got.Qualified.Status != "target_reached" || got.Qualified.Coverage != nil {
-		t.Fatalf("qualified %+v, want reached with no coverage", got.Qualified)
-	}
-}
-
-func TestQualifiedCoverageDividesTheQualifiedOpenDealsByTheSameRemainder(t *testing.T) {
-	evaluation, ops, held := sampleQuarter()
-	ops.QualifiedOpenMinor = new(int64(57_000_000))
-	got := compareForecast(context.Background(), evaluation, ops, held)
-	if got.Qualified.Status != "compared" || *got.Qualified.OpenPipeline != 57_000_000 || *got.Qualified.Coverage != 1.5 {
-		t.Fatalf("qualified %+v, want 570k over the 380k left to win, 1.5", got.Qualified)
-	}
-	ops.QualifiedOpenMinor = new(int64(0))
-	got = compareForecast(context.Background(), evaluation, ops, held)
-	if got.Qualified.Status != "compared" || *got.Qualified.Coverage != 0 {
-		t.Fatalf("qualified %+v, want a measured zero when no open deal qualifies", got.Qualified)
 	}
 }
 
@@ -211,7 +194,7 @@ func TestTheShortfallFollowsTheLandingAndWhatIsLeftToWinDoesNot(t *testing.T) {
 	for _, tc := range []struct {
 		measure crmcontracts.ReportingTargetComparisonBasis
 		landing int64
-	}{{"commit_evidence", 140}, {"weighted", 170}, {"manager_call", 190}} {
+	}{{"likely", 140}, {"weighted", 170}, {"manager_call", 190}} {
 		evaluation, ops, held := sampleQuarter()
 		ops.Measure, ops.WonMinor, ops.LandingMinor, ops.OpenMinor = tc.measure, 100, tc.landing, 110
 		held[keyFor(evaluation.Context.Scope, comparedMetric)] = crmcontracts.ReportingTarget{Unit: "EUR", Definition: crmcontracts.ReportingTargetInput{Metric: comparedMetric, Value: 200}}

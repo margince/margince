@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { daysPast } from "./lateness";
+import { calendarLateness, daysPast } from "./lateness";
+import { UTC_ZONE } from "./timezone";
 
 // A fixed instant, not the machine's clock: every case below is an offset from
 // it, so the suite reads the same in June as in December.
@@ -45,5 +46,38 @@ describe("daysPast", () => {
       days: 0,
       late: false,
     });
+  });
+});
+
+describe("calendarLateness", () => {
+  it("counts the midnights the reader's calendar crossed, not 24-hour spans", () => {
+    // Due 23:00, read at 01:00 the next day: two hours, and yesterday's date.
+    expect(
+      calendarLateness(
+        "2026-08-11T23:00:00Z",
+        "2026-08-12T01:00:00Z",
+        UTC_ZONE,
+      ),
+    ).toEqual({ days: 1, late: true });
+  });
+
+  it("is late by no days when the date passed earlier today", () => {
+    expect(
+      calendarLateness(
+        "2026-08-12T08:00:00Z",
+        "2026-08-12T10:00:00Z",
+        UTC_ZONE,
+      ),
+    ).toEqual({ days: 0, late: true });
+  });
+
+  it("is not late at the due instant or before it", () => {
+    expect(
+      calendarLateness(
+        "2026-08-12T10:00:00Z",
+        "2026-08-12T10:00:00Z",
+        UTC_ZONE,
+      ),
+    ).toEqual({ days: 0, late: false });
   });
 });

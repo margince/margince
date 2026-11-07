@@ -55,7 +55,32 @@ type rawEvent struct {
 	// withheld from every copy but the organizer's.
 	AttendeesOmitted        bool  `json:"attendeesOmitted"`        //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	GuestsCanSeeOtherGuests *bool `json:"guestsCanSeeOtherGuests"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	// Attachments are the Drive files attached to the event. Google attaches
+	// the notes and transcript it writes for a Meet call here.
+	Attachments []eventAttachment `json:"attachments"`
+	// Conference is the call the event carries, read only for its kind.
+	Conference eventConference `json:"conferenceData"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
+
+// eventAttachment is one Drive file attached to an event.
+type eventAttachment struct {
+	FileID   string `json:"fileId"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	Title    string `json:"title"`
+	MimeType string `json:"mimeType"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+}
+
+// eventConference is the part of an event's conferenceData that says which
+// kind of call it is.
+type eventConference struct {
+	Solution struct {
+		Key struct {
+			Type string `json:"type"`
+		} `json:"key"`
+	} `json:"conferenceSolution"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+}
+
+// googleMeetType is the conference type Google states for a Meet call.
+const googleMeetType = "hangoutsMeet"
 
 // partiesHidden reports whether this copy of the event may leave guests out.
 func (ev rawEvent) partiesHidden() bool {
@@ -120,6 +145,10 @@ func decodeEvent(raw []byte, owner string) (meetingmap.Event, error) {
 
 // decode maps Google's event resource onto the neutral shape.
 func decode(ev rawEvent, owner string) meetingmap.Event {
+	documents := make([]meetingmap.Document, 0, len(ev.Attachments))
+	for _, a := range ev.Attachments {
+		documents = append(documents, meetingmap.Document{FileID: a.FileID, Title: a.Title, MimeType: a.MimeType})
+	}
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
 		attendees = append(attendees, meetingmap.Actor{
@@ -140,6 +169,8 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:     attendees,
 		PartiesHidden: ev.partiesHidden(),
+		GoogleMeet:    ev.Conference.Solution.Key.Type == googleMeetType,
+		Documents:     documents,
 	}
 }
 

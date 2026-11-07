@@ -82,7 +82,7 @@ func (s *Service) WithReceiptDetails(d ReceiptDetails) *Service {
 
 // HandledForYou is what was done, newest first, from the page `cursor` names.
 func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontracts.HandledForYou, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
 	position, err := decodeHandledCursor(cursor)
@@ -171,7 +171,7 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 	}
 	subjects := make([]*crmcontracts.AttentionSubject, 0, 2*len(page))
 	for i, receipt := range page {
-		row := handledReceipt(receipt)
+		row := WireReceipt(receipt)
 		if i < len(details) {
 			row.Actor, row.Changes = details[i].Actor, details[i].Changes
 		}
@@ -193,8 +193,8 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 	return nil
 }
 
-// handledReceipt is one completed act on the wire.
-func handledReceipt(receipt Receipt) crmcontracts.Receipt {
+// WireReceipt is one completed act on the wire.
+func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 	out := crmcontracts.Receipt{
 		Id:              openapi_types.UUID(receipt.ID),
 		Review:          receipt.Review,

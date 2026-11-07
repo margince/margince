@@ -17,6 +17,19 @@ import (
 
 var requestInstant = time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
 
+// readingAt is s reading at instant. A badge judges a request at its reading's
+// clock, and a request past the waiting horizon reads none, so a test that
+// seeds at requestInstant reads its badge at that time too.
+func readingAt(s *Store, instant time.Time) *Store {
+	return s.WithClock(func() time.Time { return instant })
+}
+
+// readingAtRequest is s reading a day after requestInstant: after every event
+// a test writes around the request, and well inside the waiting horizon.
+func readingAtRequest(s *Store) *Store {
+	return readingAt(s, requestInstant.AddDate(0, 0, 1))
+}
+
 // requestCounterparty is who the seeded request is with. One address, shared by
 // the request and the replies to it: the settlement reads match a thread on the
 // correspondent, so a reply written to somebody else is not an answer to this.
@@ -113,7 +126,7 @@ func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testin
 	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	moves, err := store.EmailSummariesByID(e.as(), []ids.UUID{source})
+	moves, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{source})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +221,7 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	if _, _, err := store.LogActivity(asClassifier(e), LogActivityInput{Kind: "email", Source: "test", ThreadKey: *original.ThreadKey, Direction: &direction, OccurredAt: &at}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := store.EmailSummariesByID(e.as(), []ids.UUID{first, answered, info})
+	got, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{first, answered, info})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +233,7 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	}
 	// Both positive and negative obligations agree on the list and the detail.
 	for _, id := range []ids.UUID{first, answered, info} {
-		detail, err := store.GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](id), nil)
+		detail, err := readingAtRequest(store).GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](id), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -247,7 +260,7 @@ func TestArchivingAnUnfinishedEmailTaskRestoresTheRequestWithoutRecapture(t *tes
 	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	moves, err := store.EmailSummariesByID(e.as(), []ids.UUID{source})
+	moves, err := readingAtRequest(store).EmailSummariesByID(e.as(), []ids.UUID{source})
 	if err != nil {
 		t.Fatal(err)
 	}

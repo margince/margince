@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import type { FilterVocabulary } from "../../lib/filterdata";
@@ -84,5 +84,78 @@ describe("a filter nothing matches", () => {
     nothingMatches(tree);
     expect(await screen.findByText(loosen)).toBeInTheDocument();
     expect(screen.queryByText(switchToOr)).toBeNull();
+  });
+});
+
+describe("the results head", () => {
+  it("shows Export beside the count without opening a menu", async () => {
+    nothingMatches(newGroup("and", [newLeaf("city", "eq", "Berlin")]));
+    const exportCsv = await screen.findByRole("button", {
+      name: en["filters.exportCsv"],
+    });
+    const head = screen
+      .getByRole("heading", { name: en["filters.resultsTitle"] })
+      .closest("header");
+
+    expect(head?.contains(exportCsv)).toBe(true);
+    expect(
+      head?.contains(
+        screen.getByRole("button", { name: en["filters.exportJson"] }),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("export while the filter changes", () => {
+  it("waits for the new filter's rows before it offers the file", async () => {
+    const answers: Array<() => void> = [];
+    installFetchStub({
+      "POST /filters/preview": () =>
+        new Promise<Response>((resolve) => {
+          answers.push(() =>
+            resolve(
+              jsonResponse({
+                resource: "contact",
+                match_count: 1,
+                columns: ["id", "full_name", "city"],
+                rows: [{ id: "c1", full_name: "Ann Lee", city: "Berlin" }],
+                truncated: false,
+              }),
+            ),
+          );
+        }),
+    });
+    const outcome = (tree: Group) => (
+      <StoryProviders>
+        <FilterOutcome
+          tab="contacts"
+          tree={tree}
+          vocabulary={{ data: VOCABULARY, isPending: false, isError: false }}
+        />
+      </StoryProviders>
+    );
+    const { rerender } = render(
+      outcome(newGroup("and", [newLeaf("city", "eq", "Berlin")])),
+    );
+    await waitFor(() => expect(answers).toHaveLength(1));
+    answers[0]?.();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["filters.exportCsv"] }),
+      ).toBeEnabled(),
+    );
+
+    rerender(outcome(newGroup("and", [newLeaf("city", "eq", "Hamburg")])));
+    await waitFor(() => expect(answers).toHaveLength(2));
+    expect(
+      screen.getByRole("button", { name: en["filters.exportCsv"] }),
+    ).toBeDisabled();
+
+    answers[1]?.();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["filters.exportCsv"] }),
+      ).toBeEnabled(),
+    );
   });
 });

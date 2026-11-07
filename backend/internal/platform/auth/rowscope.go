@@ -338,16 +338,26 @@ func VisibleToExisting(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 	return visibleThrough(ctx, tx, table, id, EnsureVisibleExisting)
 }
 
+// probeRead notes table's read check and records no refusal, for a caller that
+// answers a missing grant as "withheld" rather than refusing the call.
+func probeRead(ctx context.Context, table string) error {
+	read := Check{Object: table, Actions: []principal.Action{principal.ActionRead}}
+	noteCheck(ctx, read)
+	return probeCheck(ctx, read)
+}
+
+// visibleThrough's "no" is an answer the caller branches on, so its row probe
+// records no refusal either.
 func visibleThrough(ctx context.Context, tx pgx.Tx, table string, id ids.UUID,
-	probe func(context.Context, pgx.Tx, string, ids.UUID) error,
+	ensure func(context.Context, pgx.Tx, string, ids.UUID) error,
 ) (bool, error) {
-	if err := Require(ctx, table, principal.ActionRead); err != nil {
+	if err := probeRead(ctx, table); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return false, nil
 		}
 		return false, err
 	}
-	err := probe(ctx, tx, table, id)
+	err := ensure(withoutRecorder(ctx), tx, table, id)
 	switch {
 	case err == nil:
 		return true, nil
@@ -393,7 +403,7 @@ func VisibleSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UU
 	out := make(map[ids.UUID]bool, len(rowIDs))
 	// No grant on the referenced type: every id is withheld, and the caller
 	// cannot tell that from the rows simply not being there.
-	if err := Require(ctx, table, principal.ActionRead); err != nil {
+	if err := probeRead(ctx, table); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return out, nil
 		}

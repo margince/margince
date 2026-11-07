@@ -24,7 +24,7 @@ import { type Locale, useLocale, useT } from "../../../i18n";
 import { DEAL_COMMITMENTS_KEY } from "../../../lib/activitykeys";
 import { useCanWrite } from "../../../lib/capability";
 import { problemStatus, unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 
 type DealCommitments = components["schemas"]["DealCommitments"];
 type DealCommitment = DealCommitments["data"][number];
@@ -123,7 +123,7 @@ function CommitmentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const differs = row.differs_from_deal;
   return (
     <OverviewRow
@@ -141,8 +141,10 @@ function CommitmentRow({
               ? t("co.next.due", { when: formatDate(row.due_at, locale, zone) })
               : t("co.next.undated")}
           </span>{" "}
+          {/* Both badges wrap: the amount and the question are what they are
+              for, and the card's column is narrow on wide screens. */}
           {differs && (
-            <Badge tone="warning">
+            <Badge tone="warning" wrap>
               {t("deal.commitments.differs", {
                 amount: formatMoneyWhole(
                   differs.amount_minor,
@@ -169,7 +171,9 @@ function CommitmentRow({
       }
       right={
         row.overdue ? (
-          <Badge tone="danger">{t("deal.commitments.overdue")}</Badge>
+          <Badge tone="danger" wrap>
+            {t("deal.commitments.overdue")}
+          </Badge>
         ) : undefined
       }
     />

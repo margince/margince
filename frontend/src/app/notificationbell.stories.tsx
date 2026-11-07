@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -150,11 +150,56 @@ export const CentreOpen: Story = {
   play: openIt,
 };
 
+// Each move a target can name, beside Mark read: a decision to review and a
+// stopped correction that opens System health.
+export const CentreActions: Story = {
+  render: story([
+    notice("n1", "Is boris@customer.example a contact worth keeping?", {
+      kind: "approval_pending",
+      target: { type: "approval", id: "55555555-5555-4555-8555-555555555555" },
+    }),
+    notice("n2", "Background correction stopped: Folding address domains", {
+      kind: "data_task_failed",
+      body: "It stopped at step fold after 5 failed attempts in a row and will not run again on its own. Open System health to retry it once the cause is fixed.",
+      target: {
+        type: "data_task",
+        id: "66666666-6666-4666-8666-666666666666",
+      },
+    }),
+  ]),
+  play: openIt,
+};
+
 // A seat nothing has ever told anything. The empty state says what WILL arrive
 // here rather than reporting a count of zero.
 export const NothingEverRaised: Story = {
   render: story([]),
   play: openIt,
+};
+
+// The empty centre on a phone. The sentence stands on the heading's inset, with
+// no box of its own inside the panel.
+export const NothingEverRaisedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story([]),
+  play: async (context) => {
+    await openIt(context);
+    const body = within(document.body);
+    const empty = await body.findByText(/Nothing has come in yet/);
+    const heading = body.getByRole("heading", { name: "Notifications" });
+    await expect(getComputedStyle(empty).borderTopWidth).toBe("0px");
+    await expect(empty.getBoundingClientRect().left).toBe(
+      heading.getBoundingClientRect().left,
+    );
+  },
+};
+
+export const NothingEverRaisedPhoneDark: Story = {
+  globals: { viewport: { value: "phone" }, theme: "dark" },
+  tags: ["uat-phone"],
+  render: story([]),
+  play: NothingEverRaisedPhone.play,
 };
 
 // A centre with a history and nothing waiting. No bulk verb: there is nothing

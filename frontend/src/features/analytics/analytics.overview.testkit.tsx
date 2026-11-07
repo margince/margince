@@ -11,12 +11,12 @@ import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
 import {
   isMovement,
-  overviewRoutes,
   prospectingEvaluation,
   type Seat,
   salesEvaluation,
   startingMovement,
 } from "./analytics.overview.fixtures";
+import { overviewRoutes } from "./analytics.overview.routes.fixtures";
 import type { ReportingEvaluation } from "./reporting.model";
 
 export * from "./analytics.overview.fixtures";
@@ -136,3 +136,9 @@ export async function readings() {
   });
   return within(strip);
 }
+
+export {
+  overviewRoutes,
+  twoPipelines,
+  upcomingWindow,
+} from "./analytics.overview.routes.fixtures";

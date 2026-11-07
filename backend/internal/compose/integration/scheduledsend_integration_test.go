@@ -293,7 +293,7 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 
 func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	activitiesBefore := p.countActivities(t, "true")
@@ -354,7 +354,7 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 // arrived while its record still says it was merely handed over.
 func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -384,7 +384,7 @@ func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 // returns rows that read "sent" — each half correct, the pair useless.
 func TestFilteringByStatusFindsTheStateTheListActuallyShows(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -569,7 +569,7 @@ func (p *preflightEnv) listScheduledIDs(t *testing.T, status string) []string {
 
 func TestConsentWithdrawnBeforeFiringHoldsTheMessage(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	deliveriesBefore := p.countDeliveries(t)
@@ -604,7 +604,7 @@ func TestConsentWithdrawnBeforeFiringHoldsTheMessage(t *testing.T) {
 // but never made. So this asserts the ACTION, not the appearance.
 func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.withdrawConsent(t)
@@ -645,7 +645,7 @@ func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
 // decision nobody would make again.
 func TestARepCanAbandonAHeldMessageFromTheirInbox(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.withdrawConsent(t)
@@ -678,7 +678,7 @@ func TestARepCanAbandonAHeldMessageFromTheirInbox(t *testing.T) {
 // with it rather than leaving a decided card over a message in the wrong state.
 func TestARejectionThatCannotCancelLeavesTheCardRetryable(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.withdrawConsent(t)
@@ -716,7 +716,7 @@ func TestARejectionThatCannotCancelLeavesTheCardRetryable(t *testing.T) {
 // choice they had just made.
 func TestAStaleAttemptDoesNotHoldAMessageTheRepJustRescheduled(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	before := p.rowVersion(t, id)
@@ -750,7 +750,7 @@ func TestAStaleAttemptDoesNotHoldAMessageTheRepJustRescheduled(t *testing.T) {
 // between them would let this case take that arm.
 func TestAnAttemptThatNeverReadTheRowDoesNotHoldARescheduledMessage(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	p.rescheduleTo(t, id, time.Now().Add(48*time.Hour))
@@ -774,7 +774,7 @@ func TestAnAttemptThatNeverReadTheRowDoesNotHoldARescheduledMessage(t *testing.T
 // driving the timer — which is exactly the state a discarded job leaves behind.
 func TestARecoveryPassReArmsAMessageWhoseAlarmIsGone(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	// Well past the recovery grace, so the pass treats it as stranded rather
@@ -806,7 +806,7 @@ func TestARecoveryPassReArmsAMessageWhoseAlarmIsGone(t *testing.T) {
 
 func TestAMessageFiredTooLateIsHeldRatherThanSent(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 
@@ -826,7 +826,7 @@ func TestAMessageFiredTooLateIsHeldRatherThanSent(t *testing.T) {
 
 func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
 	activitiesBefore := p.countActivities(t, "true")
@@ -852,7 +852,7 @@ func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
 
 func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
@@ -882,7 +882,7 @@ func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 // differently from the immediate one written beside it.
 func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	// A record the anchor does not carry — the shape a project attached to the

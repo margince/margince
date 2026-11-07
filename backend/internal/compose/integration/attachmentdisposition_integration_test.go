@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -38,7 +39,7 @@ func TestDownloadedAttachmentIsSavedNotRendered(t *testing.T) {
 
 	// Markup, because that is the shape that would execute: a benign PDF proves
 	// the header is set, not that the dangerous case is covered by it.
-	body, ctype := multipartAttachment(t, "contact", contact.String(), "invoice.html",
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(), "invoice.html",
 		[]byte(`<html><script>document.title="xss"</script></html>`))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
@@ -81,7 +82,7 @@ func TestAnUploadedFilenameIsSanitizedBeforeItIsStored(t *testing.T) {
 
 	// A newline, a path separator and a right-to-left override: the three classes
 	// SafeFilename exists for, in one name.
-	body, ctype := multipartAttachment(t, "contact", contact.String(),
+	body, ctype := apptest.MultipartAttachment(t, "contact", contact.String(),
 		"../etc/quo\u202ete\nreason=sent.pdf", []byte("PDF-BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)

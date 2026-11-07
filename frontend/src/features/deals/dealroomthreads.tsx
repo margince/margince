@@ -1,8 +1,8 @@
 import { BookOpen, MessageSquare } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge, Button } from "../../design-system/atoms";
+import { DocumentTile } from "../../design-system/documenttile";
 import { Eyebrow } from "../../design-system/eyebrow";
-import { fileKind } from "../../design-system/filechip";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatBytes, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -222,88 +222,54 @@ function DocumentCard({
   const plural = usePlural();
   const { locale } = useLocale();
   const unanswered = unansweredCount(threads);
-  const kind = fileKind(doc.filename);
   const read = doc.lapsed ? undefined : doc.read;
   return (
-    <article
-      className={doc.lapsed ? "board-doc board-doc-lapsed" : "board-doc"}
-      aria-label={doc.title}
+    <DocumentTile
+      filename={doc.filename}
+      title={doc.title}
+      open={read}
+      lapsed={doc.lapsed}
+      mark={
+        unanswered > 0 ? (
+          <Badge tone="warning">
+            {plural("threads.unanswered", unanswered, {
+              count: formatNumber(unanswered, locale),
+            })}
+          </Badge>
+        ) : null
+      }
+      meta={[
+        doc.meta,
+        doc.byteSize === null || doc.byteSize === undefined
+          ? ""
+          : formatBytes(doc.byteSize, locale),
+      ]
+        .filter((part) => part !== "")
+        .join(" · ")}
+      body={
+        <>
+          {doc.shareMark ? (
+            <div className="board-doc-status">{doc.shareMark}</div>
+          ) : null}
+          {read || doc.actions ? (
+            <div className="board-doc-verbs">
+              {/* The visible spelling of the act the title already opens. */}
+              {read ? (
+                <Button
+                  variant="primary"
+                  aria-label={t("threads.readTitle", { title: doc.title })}
+                  onClick={read}
+                >
+                  <BookOpen aria-hidden />
+                  {t("threads.read")}
+                </Button>
+              ) : null}
+              {doc.actions}
+            </div>
+          ) : null}
+        </>
+      }
     >
-      <div className="board-doc-stage">
-        {/* The page is a shape, not a rendering of the file: the bytes are
-            never fetched to draw a thumbnail, and a shape that promised to be
-            page one would be a promise the board cannot keep. */}
-        <span className="board-doc-page" aria-hidden>
-          <span className="board-doc-page-line board-doc-page-head" />
-          <span className="board-doc-page-line" />
-          <span className="board-doc-page-line board-doc-page-short" />
-          <span className="board-doc-page-line" />
-          <span className="board-doc-page-line board-doc-page-short" />
-        </span>
-        {kind ? (
-          <span className="board-doc-kind file-chip-kind" aria-hidden>
-            {kind}
-          </span>
-        ) : null}
-        {unanswered > 0 ? (
-          <span className="board-doc-unanswered">
-            <Badge tone="warning">
-              {plural("threads.unanswered", unanswered, {
-                count: formatNumber(unanswered, locale),
-              })}
-            </Badge>
-          </span>
-        ) : null}
-      </div>
-      <div className="board-doc-body">
-        {/* The tile's own door when the file can be read here: the title is a
-            button stretched over the stage and the facts by CSS, so pressing
-            anywhere on the paper opens it, while the verbs and the threads
-            sit above the stretch and keep their own presses. It carries the
-            TITLE, not "Read", so a screen reader hears which document it
-            opens; the Read verb beside it is the visible spelling of the
-            same act. */}
-        {read ? (
-          <button
-            type="button"
-            className="board-doc-title board-doc-open"
-            aria-haspopup="dialog"
-            onClick={read}
-          >
-            {doc.title}
-          </button>
-        ) : (
-          <p className="board-doc-title">{doc.title}</p>
-        )}
-        <p className="t-caption board-doc-meta">
-          {[
-            doc.meta,
-            doc.byteSize === null || doc.byteSize === undefined
-              ? ""
-              : formatBytes(doc.byteSize, locale),
-          ]
-            .filter((part) => part !== "")
-            .join(" · ")}
-        </p>
-        {doc.shareMark ? (
-          <div className="board-doc-status">{doc.shareMark}</div>
-        ) : null}
-        {read || doc.actions ? (
-          <div className="board-doc-verbs">
-            {read ? (
-              <Button
-                variant="primary"
-                aria-label={t("threads.readTitle", { title: doc.title })}
-                onClick={read}
-              >
-                <BookOpen aria-hidden />
-                {t("threads.read")}
-              </Button>
-            ) : null}
-            {doc.actions}
-          </div>
-        ) : null}
-      </div>
       {threads.length > 0 ? (
         <div className="board-doc-threads">
           <span className="t-caption board-doc-threads-head">
@@ -318,7 +284,7 @@ function DocumentCard({
         </div>
       ) : null}
       <DocumentQuestion doc={doc} verbs={verbs} />
-    </article>
+    </DocumentTile>
   );
 }
 

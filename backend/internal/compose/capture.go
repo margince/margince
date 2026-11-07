@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
@@ -38,7 +39,7 @@ import (
 // grant would mean a second connection for the same mailbox.
 //
 // The send scope permits transmission only; it cannot read, modify, or delete.
-// The pair is still least-privilege: no gmail.modify, no settings, no delete.
+// The list is least-privilege: no gmail.modify, no settings, no delete.
 // The calendar connector owns its own calendar-read scope inside the gcal
 // package.
 //
@@ -50,6 +51,7 @@ import (
 var gmailScopes = []string{
 	"https://www.googleapis.com/auth/gmail.readonly",
 	gmail.SendScope,
+	googleconn.ProfileScope,
 }
 
 // graphScopes are the Microsoft identity platform permissions a Graph mailbox
@@ -335,6 +337,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		).
 		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
 		WithMeetingFolder(foldCapturedMeeting(activities.NewStore(InstallationDB(pool)))).
+		WithMeetingHostKeeper(keepOrganizerHost(activities.NewStore(InstallationDB(pool)))).
 		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every

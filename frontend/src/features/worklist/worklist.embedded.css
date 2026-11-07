@@ -1,0 +1,125 @@
+/* Home's drawer draws the queue in Home's own language: each row is a card on
+   the drawer's ground, and the day's panel gives up its frame and band. */
+.worklist-embedded .worklist-day > .panel {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+}
+.worklist-embedded .worklist-day > .panel > .panel-head {
+  background: transparent;
+}
+.worklist-embedded .worklist-band,
+.worklist-embedded .worklist-due-run {
+  padding-inline: 0;
+}
+.worklist-embedded .worklist-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.worklist-embedded .worklist-list > li > .worklist-row {
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+  background: var(--ground);
+  box-shadow: var(--shadow-rest);
+}
+/* A card carries its own edge, so the hairline between list rows goes. */
+.worklist-embedded .worklist-list > li > .worklist-row::before {
+  content: none;
+}
+/* The row in hand is ringed rather than barred, as a card is. */
+.worklist-embedded .worklist-list > li > .worklist-row-selected {
+  border-color: var(--textSecondary);
+}
+/* A row here names the work; its preview and last contact are in its details. */
+.worklist-embedded .worklist-list .emailentry__preview,
+.worklist-embedded .worklist-list .worklist-row-touch {
+  display: none;
+}
+
+/* THE DRAWER'S HEAD IS TWO LINES. The view tabs and whose day share the first,
+   the cuts take the second, and the day's sentence closes it as a count. */
+.worklist-embedded .worklist-header {
+  flex-flow: row wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.worklist-embedded .worklist-header-line,
+.worklist-embedded .worklist-header-cuts {
+  display: contents;
+}
+.worklist-embedded .worklist-header-cuts > .segmented {
+  order: 1;
+}
+.worklist-embedded .worklist-header-dials {
+  order: 2;
+  align-items: center;
+  margin-inline-start: auto;
+}
+.worklist-embedded .worklist-header .filterpills {
+  order: 3;
+  flex: 1 1 100%;
+}
+.worklist-embedded .worklist-lead,
+.worklist-embedded .worklist-completeness {
+  order: 4;
+  flex: 1 1 100%;
+}
+.worklist-embedded .worklist-lead {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+/* The picker's face names the day it shows, so its label is for a screen reader. */
+.worklist-embedded .worklist-owner-field {
+  min-inline-size: 12rem;
+}
+.worklist-embedded .worklist-owner-field > .t-label {
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The day's head carries Select at its far end, its title and badge together,
+   on the cards' own inset. Once rows are picked the bar takes its own line. */
+.worklist-embedded .worklist-day > .panel-ai > .panel-head {
+  padding-inline: 0;
+}
+.worklist-embedded .worklist-day > .panel-ai > .panel-head > .panel-title {
+  margin-inline-end: 0;
+}
+.worklist-embedded .lt-bulkbar:has(> :only-child) {
+  position: relative;
+  z-index: 1;
+  justify-content: flex-end;
+  margin: 0;
+  /* ds:ignore centres Select on the day's head band it overlays */
+  padding: calc((var(--panel-head-h) - var(--controlHeight)) / 2) 0;
+  border: 0;
+  background: transparent;
+}
+.worklist-embedded .lt-bulkbar:has(> :only-child) + .panel {
+  /* ds:ignore lifts the panel under the Select it shares a line with */
+  margin-top: calc(-1 * var(--panel-head-h));
+}
+.worklist-embedded .worklist-band {
+  margin-block: var(--space-3) var(--space-2);
+}
+
+/* The kind chip and the work it labels read as one line, as on Home's cards.
+   Where the drawer has the width, the verbs stand beside the work. */
+.worklist-embedded .worklist-list > li > .worklist-row {
+  --worklist-kind-w: 4.75rem;
+  column-gap: var(--space-3);
+}
+@container (min-width: 44rem) {
+  .worklist-embedded .worklist-list > li > .worklist-row {
+    grid-template-columns:
+      auto var(--worklist-kind-w) minmax(0, 1fr)
+      fit-content(var(--worklist-acts-w, 32rem));
+  }
+  .worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-acts {
+    grid-column: 4;
+  }
+}

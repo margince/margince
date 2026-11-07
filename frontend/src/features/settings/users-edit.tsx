@@ -22,7 +22,11 @@ import {
   type User,
   useMemberRefresh,
 } from "./users-members";
+import { useCaptureStopWarning } from "./users-rolecell";
 import { MemberTeamsField } from "./users-teams";
+
+// Ids are compared as ids, in code-point order, so the set check does not depend on a locale.
+const byId = (a: string, b: string) => Number(a > b) - Number(a < b);
 
 export function EditMember({
   member,
@@ -39,6 +43,7 @@ export function EditMember({
   const [role, setRole] = useState(memberRole(member));
   const [teamIds, setTeamIds] = useState(memberTeams(member));
   const roles = useAssignableRoles(true);
+  const stopsCapture = useCaptureStopWarning(baseline, roles.data ?? []);
   const managesTeams = useHoldsAdminRole();
   const teams = useRoster("team", true);
   const partial = useRosterPartial("team", true);
@@ -88,8 +93,8 @@ export function EditMember({
     },
   });
   const teamsChanged =
-    [...teamIds].sort().join(";") !==
-    [...(baseline.team_ids ?? [])].sort().join(";");
+    [...teamIds].sort(byId).join(";") !==
+    [...(baseline.team_ids ?? [])].sort(byId).join(";");
   const initialRole = memberRole(baseline);
   const roleChanged = role !== initialRole;
   const ready =
@@ -155,7 +160,11 @@ export function EditMember({
         <QueryStates query={roles} pendingLabel={t("users.roleLabel")}>
           {null}
         </QueryStates>
-        <Field label={t("users.roleLabel")}>
+        <Field
+          label={t("users.roleLabel")}
+          hint={stopsCapture(role, memberRole(baseline))}
+          hintLive
+        >
           {(control) => (
             <Select
               {...control}

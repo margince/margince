@@ -13,7 +13,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"strings"
 	"testing"
 
@@ -49,8 +48,8 @@ var bookingFlow = []struct {
 var bookingHandoff = []struct{ file, fn, calls string }{
 	{"internal/modules/activities/booking.go", "Store.BookMeeting", "bookingInvitation"},
 	{"internal/modules/activities/booking.go", "Store.BookMeeting", "reserveAndQueueInvitation"},
-	{"internal/modules/activities/scheduling_invitation.go", "Store.reserveAndQueueInvitation", "invitationRoster"},
-	{"internal/modules/activities/scheduling_roster.go", "Store.invitationRoster", "furtherAttendees"},
+	{"internal/modules/activities/scheduling_invitation.go", "Store.reserveAndQueueInvitation", "resolveRoster"},
+	{"internal/modules/activities/scheduling_roster.go", "Store.resolveRoster", "furtherAttendees"},
 }
 
 func TestABookingsAttendeesReachTheCalendarInvitation(t *testing.T) {
@@ -76,7 +75,7 @@ func TestABookingsAttendeesReachTheCalendarInvitation(t *testing.T) {
 
 func TestTheBookingContractSaysItQueuesAnInvitation(t *testing.T) {
 	t.Parallel()
-	contract, err := os.ReadFile("api/crm.yaml")
+	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

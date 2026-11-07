@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// ReportDraftRequest is a saved report's next charts, prepared for a human to
+// ReportDraftRequest is a saved report's next charts, prepared for someone to
 // publish. With no report id, it is a new report only its author sees. It has
 // no audience, so no call through it changes who sees a report.
 type ReportDraftRequest struct {
@@ -43,7 +43,7 @@ func (t draftReport) Spec() mcp.ToolSpec {
 		Description: draftReportCopy.render(),
 		Instead:     draftReportCopy.Instead,
 		// Auto-executed because nothing another reader sees moves: a draft
-		// waits for a human to publish it, and a new report is private.
+		// waits until it is published, and a new report is private.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		Unlisted:     true,
 		OpenAPIOp:    "saveReportingReportDraft",

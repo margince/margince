@@ -9,11 +9,14 @@ package contacts
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -73,12 +76,39 @@ func requirePartnerWriteGrant(ctx context.Context) error {
 
 // requireMarginTierGrant holds the partner grant on a write that sets or clears
 // the margin tier, because the tier prices every later commission. It reads the
-// clears the caller sent, before a set-up adds its own.
+// clears the caller sent, before a set-up adds its own. An agent never sets it,
+// on any door: it decides commission on every later deal.
 func requireMarginTierGrant(ctx context.Context, in UpsertPartnerInput) error {
 	if in.MarginTier == nil && !slices.Contains(in.Cleared, partnerFieldMarginTier) {
 		return nil
 	}
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return &httperr.DetailedError{
+			Status: http.StatusForbidden, Code: "agent_sets_no_margin_tier",
+			Detail: "the margin tier decides commission on every later deal, so a user sets it on the company's Partner tab",
+		}
+	}
 	return auth.Require(ctx, "partner", principal.ActionUpdate)
+}
+
+// refuseAgentPromotion keeps an agent to the terms of a live partner. Making a
+// company a partner waits for a user on set_up_partner, whose approved run is
+// the one agent write that names MustCreate. The caller holds the company's lock.
+func refuseAgentPromotion(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) error {
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalAgent || in.MustCreate {
+		return nil
+	}
+	live, err := hasPartnerRow(ctx, tx, in.CompanyID)
+	if err != nil {
+		return fmt.Errorf("contacts: reading whether the company is a partner: %w", err)
+	}
+	if live {
+		return nil
+	}
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "agent_promotes_no_partner",
+		Detail: "this company is not a partner yet, and an agent does not make it one here; use set_up_partner, which waits for a user's approval",
+	}
 }
 
 // asFreshProgram makes a set-up start from the column defaults even when it

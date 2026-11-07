@@ -11,7 +11,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -32,7 +31,7 @@ func TestHomeRepairExplainsEveryOwnerReason(t *testing.T) {
 	census := repairReasonCensus{constants: map[string]ast.Expr{}, functions: map[string]*ast.FuncDecl{}, reasons: map[string]bool{}}
 	var files []*ast.File
 	for _, directory := range []string{"internal/compose", "internal/compose/lifecyclereview", "internal/modules/activities", "internal/modules/deals", "internal/platform/auth"} {
-		entries, err := os.ReadDir(directory)
+		entries, err := gatekit.ReadDir(directory)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +56,7 @@ func TestHomeRepairExplainsEveryOwnerReason(t *testing.T) {
 	if len(census.reasons) == 0 {
 		t.Fatal("repair reason census is empty")
 	}
-	source, err := os.ReadFile("../frontend/src/features/settings/homerepair.tsx")
+	source, err := gatekit.ReadFile("../frontend/src/features/settings/homerepair.tsx")
 	if err != nil {
 		t.Fatal(err)
 	}

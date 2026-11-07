@@ -18,8 +18,6 @@ package integration
 
 import (
 	"context"
-	"io"
-	"log/slog"
 	"net/http"
 	"testing"
 
@@ -83,7 +81,7 @@ func TestAskingACorpusWithoutTheEngineWiredIsNotImplemented(t *testing.T) {
 // outcome says nothing was searched.
 func TestAskingWithNoEmbedLaneAnswersRetrievalUnavailableRatherThan501(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
-		compose.WithCorpusAsk(unaskableEmbedder{}, nil, quietAskLog()))
+		compose.WithCorpusAsk(unaskableEmbedder{}, nil, apptest.QuietAskLog()))
 	e.BootstrapWorkspace(t)
 	corpusID := createCorpusOverHTTP(t, e)
 
@@ -110,7 +108,7 @@ func TestAskingWithNoEmbedLaneAnswersRetrievalUnavailableRatherThan501(t *testin
 // not_covered, which would blame a question nothing was searched for.
 func TestAskingAnEmptyCorpusOverHTTPIsNotReady(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t,
-		compose.WithCorpusAsk(askableEmbedder{}, nil, quietAskLog()))
+		compose.WithCorpusAsk(apptest.AskableEmbedder{}, nil, apptest.QuietAskLog()))
 	e.BootstrapWorkspace(t)
 	corpusID := createCorpusOverHTTP(t, e)
 
@@ -121,25 +119,4 @@ func TestAskingAnEmptyCorpusOverHTTPIsNotReady(t *testing.T) {
 	if answer["outcome"] != "not_ready" {
 		t.Fatalf("outcome = %v, want not_ready", answer["outcome"])
 	}
-}
-
-// askableEmbedder reports a binding, so retrieval is possible and the outcome
-// is decided by the corpus rather than by the installation.
-type askableEmbedder struct{}
-
-func (askableEmbedder) EmbedIdentity() (string, int) { return "fake/http@4", 4 }
-
-func (askableEmbedder) Embed(_ context.Context, req model.EmbedRequest) (model.Embeddings, error) {
-	vectors := make([][]float32, len(req.Inputs))
-	for i := range vectors {
-		vectors[i] = []float32{1, 0, 0, 0}
-	}
-	return model.Embeddings{Vectors: vectors, Dims: 4}, nil
-}
-
-// quietAskLog is the logger the engine degrades through. Discarded: the degrade
-// LINE is production's honesty about a fallback, and a suite that printed it
-// would bury the assertion it is here for.
-func quietAskLog() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
