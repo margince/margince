@@ -207,8 +207,8 @@ func (p *pairEnv) wantOneMeeting(t *testing.T, start time.Time) ids.UUID {
 	return survivor
 }
 
-// withLockDetail words err with the detail Postgres reports for a deadlock, which
-// the wrapped message drops: the processes involved and the statement each ran.
+// withLockDetail words err with the lock waits Postgres reports for a deadlock,
+// which the wrapped message drops. The statements involved are in the server log.
 func withLockDetail(err error) string {
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) {
@@ -234,10 +234,15 @@ func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 	ready.Done()
 	done.Wait()
 	close(errs)
+	syncFailed := false
 	for err := range errs {
 		if err != nil {
-			t.Fatalf("SyncOnce: %s", withLockDetail(err))
+			t.Errorf("SyncOnce: %s", withLockDetail(err))
+			syncFailed = true
 		}
+	}
+	if syncFailed {
+		t.FailNow()
 	}
 
 	p.wantOneMeeting(t, start)
