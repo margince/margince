@@ -279,6 +279,10 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}
+	return s.finishCapture(ctx, rec, attempt)
+}
+
+func (s *Sink) finishCapture(ctx context.Context, rec connector.NormalizedRecord, attempt captureAttempt) (datasource.EntityRef, error) {
 	ref := attempt.ref
 	if attempt.dropped != "" {
 		// The breadcrumb is committed; only now does the connector learn the

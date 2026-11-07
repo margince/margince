@@ -26,7 +26,11 @@ import (
 
 // manualAudienceReason is activities.ReasonManual: a member set the audience.
 // Spelled here because a module never imports a sibling.
-const manualAudienceReason = "manual"
+const (
+	manualAudienceReason = "manual"
+	rosterSeatArg        = "seat"
+	rosterAddressesArg   = "addresses"
+)
 
 // MeetingRoster is the guest list one calendar holds for a meeting on file.
 type MeetingRoster struct {
@@ -214,7 +218,7 @@ func retireOffTheRoster(
  OR (NOT @left AND ap.roster_seat=@seat AND ap.address IS NOT NULL
  AND ap.user_id IS DISTINCT FROM @seat AND ap.user_id IS DISTINCT FROM a.host_user_id
  AND ((ap.user_id IS NOT NULL AND ap.address=ANY(@declined)) OR (@complete AND NOT ap.address=ANY(@addresses)))))`, pgx.StrictNamedArgs{
-		capturedActivityObject: activityID, "seat": roster.Seat, "left": roster.Left, "declined": declined, "complete": roster.Complete, "addresses": addresses,
+		capturedActivityObject: activityID, rosterSeatArg: roster.Seat, "left": roster.Left, "declined": declined, "complete": roster.Complete, rosterAddressesArg: addresses,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: retiring the guests a calendar no longer lists: %w", err)

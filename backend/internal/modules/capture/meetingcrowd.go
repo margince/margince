@@ -161,7 +161,7 @@ func settleAnswers(
  AND (ap.response IS DISTINCT FROM CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END
   OR (`+ownAnswer+` AND ap.roster_seat IS DISTINCT FROM @seat))
  AND (@current OR ap.response IS NULL)`, pgx.StrictNamedArgs{
-		capturedActivityObject: activityID, "seat": roster.Seat, "addresses": addresses, "responses": responses, "current": roster.Current,
+		capturedActivityObject: activityID, rosterSeatArg: roster.Seat, rosterAddressesArg: addresses, "responses": responses, "current": roster.Current,
 		"owner_address": ownerAddress, "owner_response": ownerResponse,
 	})
 	if err != nil {

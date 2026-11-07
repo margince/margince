@@ -30,7 +30,7 @@ func (s *Sink) RemoveCalendarMeeting(ctx context.Context, key connector.NaturalK
 		var organizer bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM activity_participant
    WHERE activity_id=@activity AND user_id=@seat AND role=@organizer)`, pgx.StrictNamedArgs{
-			capturedActivityObject: id, "seat": actorUserID(ctx), "organizer": connector.ParticipantRoleOrganizer,
+			capturedActivityObject: id, rosterSeatArg: actorUserID(ctx), "organizer": connector.ParticipantRoleOrganizer,
 		}).Scan(&organizer); err != nil {
 			return err
 		}
