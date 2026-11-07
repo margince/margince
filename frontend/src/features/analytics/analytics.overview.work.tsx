@@ -1,5 +1,7 @@
+import type { ComponentProps } from "react";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { lazy } from "../../i18n/lazy";
+import type { DecisionsPanel as DecisionsView } from "./analytics.decisions";
 export const MemberTable = lazy(
   async () => ({
     default: (await import("./analytics.overview.team.members")).MemberTable,
@@ -32,7 +34,7 @@ export const AssessmentPanel = lazy(
   CardBoundary,
 );
 
-export const DecisionsPanel = lazy(
+export const DecisionsPanel = lazy<NonNullable<ComponentProps<typeof DecisionsView>>>(
   async () => ({
     default: (await import("./analytics.decisions")).DecisionsPanel,
   }),
