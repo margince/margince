@@ -162,7 +162,7 @@ func (s *Sink) filesThisCaptureStoredTx(
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT storage_key FROM attachment
-		 WHERE activity_id = $1 AND storage_key = ANY($2::text[]) AND archived_at IS NULL`, activity, keys)
+		 WHERE activity_id = $1 AND storage_key = ANY($2::text[]) AND archived_at IS NULL AND NOT bytes_withheld`, activity, keys)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the files this message stored: %w", err)
 	}
