@@ -122,6 +122,16 @@ func routeExact(lanes []exactLane) (ContactResolution, bool) {
 	return ContactResolution{}, false
 }
 
+// Capture defers review work until it owns the review lanes.
+func dedupeExactContact(ctx context.Context, tx pgx.Tx, candidate ContactCandidate) (ContactResolution, bool, error) {
+	lanes, err := exactLanes(ctx, tx, candidate)
+	if err != nil {
+		return ContactResolution{}, false, err
+	}
+	match, found := routeExact(lanes)
+	return match, found, nil
+}
+
 // rivalOf finds the one contact to report alongside the routed one.
 //
 // A LATER LANE FIRST, which is the order this has always reported in and is

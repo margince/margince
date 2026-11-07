@@ -1706,6 +1706,9 @@ type Activity struct {
 	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
 
+	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+	CanShareInternal *bool `json:"can_share_internal,omitempty"`
+
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
@@ -3331,6 +3334,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "call_outcome")
 	}
 
+	if raw, found := object["can_share_internal"]; found {
+		err = json.Unmarshal(raw, &a.CanShareInternal)
+		if err != nil {
+			return fmt.Errorf("error reading 'can_share_internal': %w", err)
+		}
+		delete(object, "can_share_internal")
+	}
+
 	if raw, found := object["capture_label"]; found {
 		err = json.Unmarshal(raw, &a.CaptureLabel)
 		if err != nil {
@@ -3797,6 +3808,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["call_outcome"], err = json.Marshal(a.CallOutcome)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
+	if a.CanShareInternal != nil {
+		object["can_share_internal"], err = json.Marshal(a.CanShareInternal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'can_share_internal': %w", err)
 		}
 	}
 

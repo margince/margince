@@ -184,10 +184,23 @@ func TestTheOwnersSwitchStopsTheClose(t *testing.T) {
 	}
 }
 
-func TestAnOwnerWhoLosesTheDealGrantBeforeTheCloseKeepsTheDeal(t *testing.T) {
-	for name, revoke := range map[string]string{
-		"role removed": `DELETE FROM role_assignment WHERE user_id = $1`,
-		"suspended":    `UPDATE app_user SET status = 'suspended' WHERE id = $1`,
+// The check decides to close a deal, and closes it in a later transaction. An
+// owner who leaves, loses the deal grant or turns the switch off in between
+// keeps the deal open.
+func TestAnOwnerWhoLeavesBeforeTheSilentCloseWritesKeepsTheDeal(t *testing.T) {
+	for name, change := range map[string]func(c *closeLostEnv, t *testing.T){
+		"nothing changes": func(*closeLostEnv, *testing.T) {},
+		"suspended": func(c *closeLostEnv, t *testing.T) {
+			c.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, c.Rep1)
+		},
+		"role removed": func(c *closeLostEnv, t *testing.T) {
+			c.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, c.Rep1)
+		},
+		"switch turned off": func(c *closeLostEnv, t *testing.T) {
+			if _, err := approvals.NewService(InstallationDB(c.Pool)).SetAutoApply(c.owner(t), deals.DealCloseLostKind, false); err != nil {
+				t.Fatal(err)
+			}
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := setupCloseLost(t)
@@ -203,19 +216,19 @@ func TestAnOwnerWhoLosesTheDealGrantBeforeTheCloseKeepsTheDeal(t *testing.T) {
 			if len(due) != 1 || due[0].deal.UUID != c.silent {
 				t.Fatalf("due = %+v, want only the silent deal", due)
 			}
-			owner, err := ownersAgent(ctx, c.closer.users, c.Rep1, marginceActorID)
-			if err != nil {
-				t.Fatal(err)
-			}
-			c.WsExec(t, revoke, c.Rep1)
+			change(c, t)
 
-			closed, err := c.closer.closeAs(owner, due[0], c.now)
+			closed, err := c.closer.closeOne(ctx, due[0], c.now)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if closed || c.status(t, c.silent) != string(deals.DealOpen) {
-				t.Fatalf("closed = %v, deal is %s: want the deal left open for an owner who lost the grant",
-					closed, c.status(t, c.silent))
+			want, wantStatus := false, deals.DealOpen
+			if name == "nothing changes" {
+				want, wantStatus = true, deals.DealLost
+			}
+			if closed != want || c.status(t, c.silent) != string(wantStatus) {
+				t.Fatalf("closed = %v, deal is %s: want closed = %v, deal %s",
+					closed, c.status(t, c.silent), want, wantStatus)
 			}
 		})
 	}

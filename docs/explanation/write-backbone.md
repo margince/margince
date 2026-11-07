@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/shared/kernel/events backend/internal/platform/events/relay.go backend/internal/platform/events/subscriber.go backend/internal/platform/events/dedupe.go backend/internal/platform/httpserver/chassis.go backend/internal/compose/runnerservice.go -->
+<!-- describes: backend/internal/platform/database/storekit backend/internal/platform/database/database.go backend/internal/shared/kernel/events backend/internal/platform/events/relay.go backend/internal/platform/events/subscriber.go backend/internal/platform/events/dedupe.go backend/internal/modules/assurance/inputposition.go backend/internal/compose/assurancefreshness.go backend/internal/platform/httpserver/chassis.go backend/internal/compose/runnerservice.go -->
 # The write backbone: storekit, `audit_log` & the outbox
 
 Every audited write in this backend commits **three rows in one transaction**. They are the domain row, an
@@ -276,6 +276,8 @@ time reports it.
 | `cg:flow-bridge` | (reserved) | declared, no subscriber |
 | `cg:read-model` | (reserved) read models | declared, no subscriber |
 | `cg:audit-stream` | (reserved) the audit part of agent actions | declared, no subscriber |
+
+A forecast input event stays unread in the outbox until the consumer or a complete check records it. The reading cannot be called current during that wait. A scan records the events visible before it reads its sources. Events committed later stay unread.
 
 **The workflow seam** (`ports/workflow`) is how `cg:workflows` acts without a builder screen.
 A `Handler` declares a `Spec` (name + trigger + tier), a `Match` check with no side effects, and a

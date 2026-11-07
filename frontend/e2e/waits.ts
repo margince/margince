@@ -177,19 +177,13 @@ export async function listClipping(page: Page): Promise<string[]> {
   });
 }
 
-/**
- * The tab a click opened, once its navigation has committed to `url`.
- *
- * A new tab loads the whole app from cold, which on a busy runner can take
- * longer than an assertion's 5 seconds. Its URL reads "" until the navigation
- * commits. Waiting for the commit, not the load, asks only whether
- * the click opened the right place.
- */
+/** A cold tab must finish parsing its document before callers start their
+ * shorter UI assertion timers. A committed URL can still have pending modules. */
 export async function openedAt(
   opened: Promise<Page>,
   url: RegExp,
 ): Promise<Page> {
   const tab = await opened;
-  await tab.waitForURL(url, { waitUntil: "commit" });
+  await tab.waitForURL(url, { waitUntil: "domcontentloaded" });
   return tab;
 }

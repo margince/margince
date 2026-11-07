@@ -64,6 +64,11 @@ const (
 	folderSent  = "sentitems"
 )
 
+// syncedFolders are the only folders mail capture reads, Sent Items first. The
+// standing sync walks them and a history import keeps to them, so Junk Email,
+// Deleted Items, Drafts and every other folder are never fetched.
+var syncedFolders = [...]string{folderSent, folderInbox}
+
 // deltaPage is one page of a messages delta. A tombstoned entry
 // carries @removed instead of message fields — nothing to fetch for it.
 type deltaPage struct {

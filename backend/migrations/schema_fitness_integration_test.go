@@ -441,7 +441,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// store already put through auth.EnsureLinkTarget. Reads inherit the
 	// activity's own visibility (the link walk), so a participant row never
 	// discloses an activity its reader could not already open.
-	"activity_participant.activity_id": "child row: written only beside the activity itself, inside the transaction that mints it",
+	"activity_participant.activity_id":                    "child row: written only beside the activity itself, inside the transaction that mints it",
+	"activity_participant.domain_evidence_parent_version": "server-derived: the database copies the clock version from the already-gated activity_id. It names no independent target and is never accepted from a client",
 	// The external identities one message answers to, and the row a second
 	// provider's copy of it resolves to.
 	"activity_mail_reference.activity_id": "gated: the WRITE is a child row stored beside the email a capture just landed or took over, on the id the capture itself resolved, inside that capture's transaction. The READ (activities.MailNeighboursTx) answers activity ids only to capture's thread join, which acts on a neighbour solely when the capturing seat holds it (its own capture_import row) and only ever rewrites thread keys; no id, subject or content reaches a caller. ON DELETE CASCADE, plus an explicit purge on the erasure path beside activity_identity, because erasure archives rather than deletes",

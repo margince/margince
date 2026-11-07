@@ -10,13 +10,12 @@ import {
 } from "./sourcequestion";
 
 describe("the source question maps each answer to an existing kind", () => {
-  // Agreeing to be contacted does not show they were told who holds their
-  // details, so no answer in the first list closes the Art. 13 duty that way.
-  it("keeps the notice duty open for a face-to-face meeting", () => {
-    expect(sourceKindFor("met", "")).toBe("event_or_form");
-    const first = SOURCE_ANSWERS.map((answer) => sourceKindFor(answer, ""));
-    expect(first).not.toContain("in_person_permission");
-    expect(OTHER_KINDS).toContain("in_person_permission");
+  // At a meeting they learned who we are, so it owes no notice, and an
+  // event or form, which does, stays a separate answer.
+  it("confirms a face-to-face meeting as permission given in person", () => {
+    expect(sourceKindFor("met", "")).toBe("in_person_permission");
+    expect(OTHER_KINDS).not.toContain("in_person_permission");
+    expect(OTHER_KINDS).toContain("event_or_form");
   });
 
   it("keeps contacting us apart from asking for a quote or a meeting", () => {
@@ -34,14 +33,14 @@ describe("the source question maps each answer to an existing kind", () => {
 
   // Every kind a reviewer may confirm is reachable, so the question never
   // hides a source the old picker offered.
-  it("reaches every confirmable kind, with seven behind Another source", () => {
+  it("reaches every confirmable kind, with six behind Another source", () => {
     const reached = new Set([
       ...SOURCE_ANSWERS.map((answer) => sourceKindFor(answer, "")),
       ...OTHER_KINDS,
     ]);
     reached.delete(null);
     expect([...reached].sort()).toEqual([...SOURCE_KINDS].sort());
-    expect(OTHER_KINDS).toHaveLength(7);
+    expect(OTHER_KINDS).toHaveLength(6);
     expect(SOURCE_KINDS).not.toContain("unknown_legacy");
   });
 });

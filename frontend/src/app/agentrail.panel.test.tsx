@@ -165,9 +165,11 @@ async function openPanel(answers: Answers = {}, locale: "en" | "de" = "en") {
   const trigger = container.querySelector(".arhit");
   if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
   await user.click(trigger);
-  const opened = document.querySelector(".arpanel");
-  if (!opened) throw new Error("no .arpanel on the document after the click");
-  return opened;
+  return waitFor(() => {
+    const opened = document.querySelector(".arpanel");
+    if (!opened) throw new Error("The agent panel has not loaded");
+    return opened;
+  });
 }
 
 afterEach(() => {

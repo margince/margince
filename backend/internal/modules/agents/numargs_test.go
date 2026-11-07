@@ -188,14 +188,14 @@ func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 		return RecordSearchPage{}, nil
 	})
 	RegisterSlippingTools(registry,
-		func(context.Context, int) ([]SlippingDeal, error) {
+		func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 			t.Error("the deal lister ran for a limit the schema forbids")
 			return nil, nil
 		},
 		func(context.Context, SlippingDeal) (ids.UUID, string, error) {
 			t.Error("a draft was written for a limit the schema forbids")
 			return ids.Nil, "", nil
-		}, testStalledDays)
+		}, testStalledDays, testStalledDays)
 	ctx := scopedAgentCtx(principal.ScopeRead, principal.ScopeDraft)
 
 	for _, tc := range []struct {
@@ -223,10 +223,10 @@ func TestTheAdvertisedLimitsBindTheToolsThatAdvertiseThem(t *testing.T) {
 func TestACapInsideItsDeclaredRangeReachesTheTool(t *testing.T) {
 	reads := 0
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterSlippingTools(registry, func(context.Context, int) ([]SlippingDeal, error) {
+	RegisterSlippingTools(registry, func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 		reads++
 		return nil, nil
-	}, nil, testStalledDays)
+	}, nil, testStalledDays, testStalledDays)
 	ctx := scopedAgentCtx(principal.ScopeRead)
 
 	// An omitted optional argument is a complete call, an explicit null carries no
@@ -249,10 +249,10 @@ func TestABoundCheckNeverAnswersAQuestionAboutShape(t *testing.T) {
 	// handler's own decode, each of which names what it wanted. A second, vaguer
 	// answer to the same question is worse than none.
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterSlippingTools(registry, func(context.Context, int) ([]SlippingDeal, error) {
+	RegisterSlippingTools(registry, func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 		t.Error("the deal lister ran for arguments that are not an object")
 		return nil, nil
-	}, nil, testStalledDays)
+	}, nil, testStalledDays, testStalledDays)
 
 	if err := registry.requireDeclaredBounds("whats_slipping_this_week", json.RawMessage(`[0]`)); err != nil {
 		t.Errorf("the bound check refused a shape with %v, which is not its verdict to give", err)

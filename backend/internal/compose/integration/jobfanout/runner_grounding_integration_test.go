@@ -22,6 +22,9 @@ func TestEachShippedAgentReachesTheModelSeeded(t *testing.T) {
 			alternatives := strings.Split(spec.SeedQuery, " or ")
 			name := alternatives[len(alternatives)-1] + " Harbor Logistics"
 			re := setupRunner(t)
+			if spec.JudgesSlippingDeals {
+				re.seedSlippingDeal(t)
+			}
 			var company struct {
 				ID string `json:"id"`
 			}

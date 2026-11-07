@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 228820,
+    "tool_catalog_bytes": 234137,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 58519,
+    "approx_wire_tokens_total": 59849,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 54940,
-      "input_schema_bytes": 114338,
-      "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 169278
+      "description_bytes": 54963,
+      "input_schema_bytes": 115228,
+      "output_schema_bytes": 51838,
+      "description_plus_input_schema_bytes": 170191
     }
   },
   "tools": {
@@ -1408,7 +1408,7 @@
           "readOnlyHint": false,
           "title": "Record consent, stops, holds and privacy work"
         },
-        "description": "Do the user's privacy work on a contact or record: record consent, record that a contact asked to stop, allow a refused category, record the exchange that makes correspondence lawful, answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline what a subject proposed, place a legal hold and pin an activity to the retention floor. record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event, retract_qualifying_event, retract_acquisition_request and record_communication_context have legal weight: tell the user what you will record and call only after they say yes. The proof names you as its author. Record only what the user or the contact said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, releasing a restricted record, restoring a change and retention policy are done in the app. Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace topic record_history for one record's trail. (Runs immediately; the user's yes is needed for the actions allow_contact, confirm_notice_source, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Do the user's privacy work on a contact or record: record consent, record that a contact asked to stop, allow a refused category, record the exchange that makes correspondence lawful, answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline what a subject proposed, place a legal hold and pin an activity to the retention floor. record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event, retract_qualifying_event, retract_acquisition_request and record_communication_context have legal weight: tell the user what you will record and call only after they say yes. The proof names you as its author. Record only what the user or the contact said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, releasing a restricted record, restoring a change and retention policy are done in the app. Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace topic record_history for one record's trail. (Runs immediately; the user's yes is needed for the actions allow_contact, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -1418,6 +1418,7 @@
                 "assign_notice_case",
                 "assign_notice_case_review",
                 "confirm_notice_source",
+                "lift_lead_suppression",
                 "lift_suppression",
                 "open_data_subject_request",
                 "pin_activity_to_floor",
@@ -1447,7 +1448,7 @@
               "type": "string"
             },
             "id": {
-              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
               "type": "string"
             },
             "idempotency_key": {
@@ -1464,11 +1465,11 @@
               "type": "string"
             },
             "request_body": {
-              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "suppressionId": {
-              "description": "lift_suppression only",
+              "description": "lift_lead_suppression, lift_suppression only",
               "type": "string"
             }
           },
@@ -3998,6 +3999,10 @@
               "minItems": 1,
               "type": "array"
             },
+            "compact": {
+              "description": "list, query only: Activity identifying facts and body_length without long prose. Default false returns full records.",
+              "type": "boolean"
+            },
             "cursor": {
               "description": "list, search only: Keyset cursor from a previous page's next_cursor",
               "type": "string"
@@ -4471,6 +4476,28 @@
                         },
                         "type": "array"
                       },
+                      "conflicts": {
+                        "items": {
+                          "properties": {
+                            "blocks_approval": {
+                              "type": "boolean"
+                            },
+                            "kind": {
+                              "type": "string"
+                            },
+                            "summary": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "blocks_approval",
+                            "kind",
+                            "summary"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
                       "created_at": {
                         "format": "date-time",
                         "type": "string"
@@ -4572,6 +4599,227 @@
                       "expires_at": {
                         "format": "date-time",
                         "type": "string"
+                      },
+                      "files": {
+                        "items": {
+                          "properties": {
+                            "byte_size": {
+                              "type": "integer"
+                            },
+                            "content_type": {
+                              "type": "string"
+                            },
+                            "filename": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "byte_size",
+                            "content_type",
+                            "filename",
+                            "id"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "import_rows": {
+                        "items": {
+                          "properties": {
+                            "changes": {
+                              "items": {
+                                "properties": {
+                                  "after": {
+                                    "properties": {
+                                      "currency": {
+                                        "type": "string"
+                                      },
+                                      "entity_id": {
+                                        "format": "uuid",
+                                        "type": "string"
+                                      },
+                                      "entity_type": {
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "text": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "before": {
+                                    "properties": {
+                                      "currency": {
+                                        "type": "string"
+                                      },
+                                      "entity_id": {
+                                        "format": "uuid",
+                                        "type": "string"
+                                      },
+                                      "entity_type": {
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "text": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "field": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "after",
+                                  "before",
+                                  "field",
+                                  "label"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "details": {
+                              "items": {
+                                "properties": {
+                                  "field": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "value": {
+                                    "properties": {
+                                      "currency": {
+                                        "type": "string"
+                                      },
+                                      "entity_id": {
+                                        "format": "uuid",
+                                        "type": "string"
+                                      },
+                                      "entity_type": {
+                                        "type": "string"
+                                      },
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "text": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "text"
+                                    ],
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "field",
+                                  "label",
+                                  "value"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "effects": {
+                              "items": {
+                                "properties": {
+                                  "effect": {
+                                    "type": "string"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "effect",
+                                  "label"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "line": {
+                              "type": "integer"
+                            },
+                            "object": {
+                              "type": "string"
+                            },
+                            "object_label": {
+                              "type": "string"
+                            },
+                            "outcome": {
+                              "type": "string"
+                            },
+                            "outcome_label": {
+                              "type": "string"
+                            },
+                            "source_key": {
+                              "type": "string"
+                            },
+                            "target": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "changes",
+                            "details",
+                            "effects",
+                            "line",
+                            "object",
+                            "object_label",
+                            "outcome",
+                            "outcome_label",
+                            "source_key"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
                       },
                       "kind": {
                         "type": "string"
@@ -5809,6 +6057,28 @@
                   },
                   "type": "array"
                 },
+                "conflicts": {
+                  "items": {
+                    "properties": {
+                      "blocks_approval": {
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "blocks_approval",
+                      "kind",
+                      "summary"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "created_at": {
                   "format": "date-time",
                   "type": "string"
@@ -5910,6 +6180,227 @@
                 "expires_at": {
                   "format": "date-time",
                   "type": "string"
+                },
+                "files": {
+                  "items": {
+                    "properties": {
+                      "byte_size": {
+                        "type": "integer"
+                      },
+                      "content_type": {
+                        "type": "string"
+                      },
+                      "filename": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "byte_size",
+                      "content_type",
+                      "filename",
+                      "id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "import_rows": {
+                  "items": {
+                    "properties": {
+                      "changes": {
+                        "items": {
+                          "properties": {
+                            "after": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "before": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            },
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "after",
+                            "before",
+                            "field",
+                            "label"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "details": {
+                        "items": {
+                          "properties": {
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "label",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "effects": {
+                        "items": {
+                          "properties": {
+                            "effect": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "effect",
+                            "label"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "line": {
+                        "type": "integer"
+                      },
+                      "object": {
+                        "type": "string"
+                      },
+                      "object_label": {
+                        "type": "string"
+                      },
+                      "outcome": {
+                        "type": "string"
+                      },
+                      "outcome_label": {
+                        "type": "string"
+                      },
+                      "source_key": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "changes",
+                      "details",
+                      "effects",
+                      "line",
+                      "object",
+                      "object_label",
+                      "outcome",
+                      "outcome_label",
+                      "source_key"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "kind": {
                   "type": "string"
@@ -6121,6 +6612,11 @@
               "maximum": 50,
               "minimum": 1,
               "type": "integer"
+            },
+            "owner_id": {
+              "description": "at_risk, slipping only: Narrow to deals owned by this member; existing read scope still applies",
+              "format": "uuid",
+              "type": "string"
             },
             "project_id": {
               "description": "commitments only: Keep only promises filed under this project or under none",
@@ -7620,6 +8116,7 @@
                 "lead_promotion_preview",
                 "lead_score",
                 "lead_signals",
+                "lead_stops",
                 "legal_entity_logo",
                 "legal_review",
                 "legal_reviews",
@@ -7633,6 +8130,8 @@
                 "my_linkedin_reach",
                 "notice_case",
                 "notice_case_review",
+                "notice_source_evidence",
+                "notice_source_preview",
                 "notices",
                 "offer_pdf",
                 "offered_values",
@@ -7703,7 +8202,7 @@
               "type": "boolean"
             },
             "cursor": {
-              "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notices only",
+              "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
               "type": "string"
             },
             "days": {
@@ -7761,7 +8260,7 @@
               "type": "boolean"
             },
             "id": {
-              "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
+              "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
               "type": "string"
             },
             "kind": {
@@ -7835,7 +8334,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "rule": {
@@ -7944,9 +8443,17 @@
               "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
               "type": "boolean"
             },
+            "country": {
+              "description": "input_exceptions only",
+              "type": "string"
+            },
             "from": {
               "description": "movement only: The opening snapshot.",
               "format": "uuid",
+              "type": "string"
+            },
+            "industry": {
+              "description": "input_exceptions only",
               "type": "string"
             },
             "period": {
@@ -7956,6 +8463,11 @@
                 "month",
                 "week"
               ],
+              "type": "string"
+            },
+            "product_id": {
+              "description": "input_exceptions only",
+              "format": "uuid",
               "type": "string"
             },
             "reading": {
@@ -10145,6 +10657,11 @@
             },
             "buildId": {
               "description": "voice_build only",
+              "type": "string"
+            },
+            "connection_id": {
+              "description": "connector_containers only",
+              "format": "uuid",
               "type": "string"
             },
             "contact_id": {

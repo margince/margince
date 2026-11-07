@@ -11,10 +11,10 @@ import { formatDateTime } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
+import { InitiativeDrawer } from "./analytics.drawers";
 import { BoardChart } from "./analytics.overview.board";
 import { metricOf } from "./analytics.overview.readings";
-import { InitiativeDrawer } from "./reporting.initiativedrawer";
-import { useSalesInitiatives } from "./reporting.initiatives";
+import { useSalesInitiatives } from "./reporting.initiatives.queries";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,

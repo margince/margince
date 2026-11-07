@@ -32,6 +32,10 @@ Open **Analytics → Reports** and pick the product under **Product sales**. Sal
 
 On Sales review or Performance, open **Filters** and pick a **Product**, a **Country · company address**, an **Industry** and a **Value basis**. Each choice shows as a chip. The **×** on a chip removes that one filter. Every figure, chart, record list and export follows the same chips.
 
+Checks about deals follow the selected filters too.
+Forecast figures and checks about other records cover the whole selected group.
+The Forecast page says so while these filters are set.
+
 A deal counts for a product when the accepted offer has a line for it, or when someone set the deal's products by hand. **Sales won** for a product is the value of that product's lines on the accepted offers of the deals won in the period. It is converted the way the deal's own amount is. A won deal with no priced link to the product stays in the count and adds nothing to the value. Open pipeline for a product is the whole open deal, because an open deal has no accepted offer to split.
 
 **Country · company address** reads the checked address of the deal's company. **Industry** reads the company's industry. A lead with no company keeps the industry a rep typed.

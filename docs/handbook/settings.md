@@ -190,7 +190,7 @@ The Capture rules page in Settings (group **Data**) decides what comes into the 
 
 The same card holds **Held threads reviewed per run**. A mailbox set to *Held until checked* holds its mail until Margince has checked the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets.
 
-**Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, including you. Take note: no mailbox offers again the mail skipped while a domain is on this list.
+**Own email domains** are the domains that belong to this company. Mail between colleagues is skipped by default. An Admin can add a mailbox and its folders under **Internal operational mail**. That mail stays with its participants. See [Capture](capture.md) for the source and history choices. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
 **Enrichment.** Whether Margince fills in facts on captured companies by itself.
 

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -145,7 +146,7 @@ func dealFilingApplies(ctx context.Context, in *LogActivityInput) bool {
 
 // meetingHeldOrUnset is false only for a meeting that states it was not held.
 func meetingHeldOrUnset(in *LogActivityInput) bool {
-	return in.Kind != KindMeeting || in.MeetingStatus == nil || *in.MeetingStatus == string(crmcontracts.ActivityMeetingStatusHeld)
+	return in.Kind != KindMeeting || in.MeetingStatus == nil || meetingoutcome.IsHeld(*in.MeetingStatus)
 }
 
 // fileOnChosenDeal links the deal the caller chose, which must be an open deal

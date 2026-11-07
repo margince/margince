@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -56,6 +55,7 @@ import (
 // ADR-0054 reason as the stager.
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
+		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
@@ -192,7 +192,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // queue rather than two readings of it; a second engine here is how the two
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
-	staged := approvalsServiceWithEffects(pool)
+	staged := NewApprovalsServiceWithEffects(pool)
 	s.homeCache = homecache.New(pool)
 	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
@@ -371,7 +371,7 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
-		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision)).
+		WithEraser(ComposedEraser(pool, nil, nil)).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

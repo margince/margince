@@ -75,7 +75,8 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 			return err
 		}
 		w := packRulesFor(country)
-		since := s.now().Add(-w.reply)
+		asOf := s.now()
+		since := asOf.Add(-w.reply)
 		// The same marketing context the send path builds for this caller, so
 		// the advisory answer and the send agree on the existing-customer route.
 		marketing, err := marketingContextTx(ctx, tx, w)
@@ -83,7 +84,7 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 			return err
 		}
 		for _, purpose := range purposes {
-			verdict, err := GuardVerdictForContact(ctx, tx, contactID.String(), purpose, since, marketing)
+			verdict, err := GuardVerdictForContact(ctx, tx, contactID.String(), purpose, since, asOf, marketing)
 			if err != nil {
 				return err
 			}

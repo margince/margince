@@ -5,6 +5,11 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
+import {
+  entryChunks,
+  initialEntries,
+  preloadEntries,
+} from "./scripts/vite-entry-chunks.ts";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
@@ -22,7 +27,13 @@ const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
 // unit lives: extensions/, or a module an installation imports. Only the
 // composed lane imports a screen. A stale link is skipped, so it cannot break
 // the config.
-const unitScreensDir = join(frontendRoot, "..", "build", "composition-frontend", "units");
+const unitScreensDir = join(
+  frontendRoot,
+  "..",
+  "build",
+  "composition-frontend",
+  "units",
+);
 const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
 const unitScreenDirs =
   composedComposition && existsSync(unitScreensDir)
@@ -79,7 +90,39 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
 const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 
+const entries = initialEntries(frontendRoot);
+const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
+const startup = entryChunks("startup", entries.startup);
+const analyticsPreparation = entryChunks(
+  "analytics-preparation",
+  entries.analyticsPreparation,
+  15,
+);
+const analytics = entryChunks("analytics", entries.analytics);
+
 export default defineConfig({
+  build: {
+    rolldownOptions: {
+      output: {
+        strictExecutionOrder: true,
+        codeSplitting: {
+          groups: [
+            bootstrap.group,
+            analyticsPreparation.group,
+            startup.group,
+            analytics.group,
+            {
+              name: "shared",
+              minShareCount: 2,
+              entriesAware: true,
+              entriesAwareMergeThreshold: 64000,
+              includeDependenciesRecursively: false,
+            },
+          ],
+        },
+      },
+    },
+  },
   // serveMcpApps is `apply: "serve"` — a dev-only middleware that adds nothing
   // to the SPA build. It has to live HERE rather than in vite.mcp-apps.config.ts
   // because `make dev` starts this config: without it, a request for a view
@@ -87,6 +130,11 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
+    preloadEntries([...entries.startup, ...entries.analyticsPreparation]),
+    bootstrap.plugin,
+    analyticsPreparation.plugin,
+    startup.plugin,
+    analytics.plugin,
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.

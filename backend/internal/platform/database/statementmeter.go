@@ -19,6 +19,7 @@ import (
 // the whole of each Acquire call: checkout, any connect and health check.
 type StatementCost struct {
 	Statements int64
+	Prepares   int64
 	Failed     int64
 	Acquires   int64
 	DBTime     time.Duration
@@ -29,6 +30,7 @@ type StatementCost struct {
 func (c StatementCost) Minus(earlier StatementCost) StatementCost {
 	return StatementCost{
 		Statements: c.Statements - earlier.Statements,
+		Prepares:   c.Prepares - earlier.Prepares,
 		Failed:     c.Failed - earlier.Failed,
 		Acquires:   c.Acquires - earlier.Acquires,
 		DBTime:     c.DBTime - earlier.DBTime,
@@ -40,6 +42,7 @@ func (c StatementCost) Minus(earlier StatementCost) StatementCost {
 func (c StatementCost) Plus(other StatementCost) StatementCost {
 	return StatementCost{
 		Statements: c.Statements + other.Statements,
+		Prepares:   c.Prepares + other.Prepares,
 		Failed:     c.Failed + other.Failed,
 		Acquires:   c.Acquires + other.Acquires,
 		DBTime:     c.DBTime + other.DBTime,
@@ -209,6 +212,9 @@ func (t statementTracer) TracePrepareStart(ctx context.Context, _ *pgx.Conn, _ p
 }
 
 func (t statementTracer) TracePrepareEnd(ctx context.Context, _ *pgx.Conn, data pgx.TracePrepareEndData) {
+	if meter, ok := StatementMeterOf(ctx); ok && !data.AlreadyPrepared && data.Err == nil {
+		meter.add(StatementCost{Prepares: 1})
+	}
 	t.ended(ctx, data.Err)
 }
 

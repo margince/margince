@@ -130,8 +130,8 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates/listActivities/listDealOffers/listCommissionEntries/listDealRooms/listDealRoomThreads/listDealRoomDocuments/listDealRoomParticipants/listPartners",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity","offer","commission","deal_room","deal_room_thread","deal_room_document","deal_room_participant","partner"]},` +
-			t.filtersProperty() + `
-			"q":{"type":"string","description":"Text to match, as the record type's list route takes it, alongside any filters. Types with no text of their own refuse it."},
+			t.filtersProperty() + compactRecordsProperty + `
+			"q":{"type":"string","description":"List-route text match alongside filters. Types without text search refuse it."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
 			"additionalProperties":false}`),
@@ -223,6 +223,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 		Q          string            `json:"q"`
 		Limit      json.RawMessage   `json:"limit"`
 		Cursor     string            `json:"cursor"`
+		Compact    bool              `json:"compact"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -248,15 +249,22 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	out := listResult(ctx, t.name, res)
+	result := listResult(ctx, t.name, res)
+	if args.Compact {
+		for i := range result.Records {
+			if err := compactActivityRecord(&result.Records[i].wireRecord); err != nil {
+				return nil, err
+			}
+		}
+	}
 	calendar, owed, err := t.activityListCalendar(ctx, args.RecordType, args.Filters)
 	if err != nil {
 		return nil, err
 	}
 	if owed {
-		out.Calendar = &calendar
+		result.Calendar = &calendar
 	}
-	return json.Marshal(out)
+	return json.Marshal(result)
 }
 
 // pageLimit reads the page size, telling an ABSENT argument from an explicit

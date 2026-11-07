@@ -24,8 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// backfillPageSize bounds one BackfillPage call; the engine commits cursor
-// and counters between pages, so this is also the resume granularity.
+// backfillPageSize bounds one provider listing; checkpoints retain its remaining ids.
 const backfillPageSize = 100
 
 var _ connector.Backfiller = (*Connector)(nil)
@@ -45,7 +44,7 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillEstimate{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return connector.BackfillEstimate{}, err
 	}
@@ -69,28 +68,30 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillPageResult{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	access, err := c.oauth.AccessToken(ctx, st.RefreshToken)
+	ctx, access, err := c.authorize(ctx, st)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	gate := &rateGate{}
-	type listing struct {
-		ids  []string
-		next string
-	}
-	page, err := rateLimited(ctx, gate, func() (listing, error) {
-		ids, next, err := c.api.ListAfter(ctx, access, afterQuery(after), pageToken, backfillPageSize)
-		return listing{ids: ids, next: next}, err
-	})
+	page, err := c.listHistoryPage(ctx, access, afterQuery(after), pageToken, gate)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	w := &pageWalk{
 		c: c, ctx: ctx, access: access, owner: st.Owner, sink: sink, gate: gate,
-		ids: page.ids, progress: connector.BackfillProgressFrom(ctx),
-		res: connector.BackfillPageResult{NextToken: page.next, Scanned: len(page.ids)},
+		ids: page.IDs, settled: make(map[string]bool), progress: connector.BackfillProgressFrom(ctx),
+		res: connector.BackfillPageResult{NextToken: *page.Next, Scanned: len(page.IDs)},
+	}
+	if err := w.saveCheckpoint(ctx); err != nil {
+		return connector.BackfillPageResult{}, err
 	}
 	if err := w.walk(); err != nil {
+		if w.failedInRow == 0 {
+			err = errors.Join(err, w.saveCheckpoint(ctx))
+		}
+		return connector.BackfillPageResult{}, err
+	}
+	if err := w.saveCheckpoint(ctx); err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	return w.res, nil
@@ -105,12 +106,11 @@ type pageWalk struct {
 	sink     connector.Sink
 	gate     *rateGate
 	ids      []string
+	settled  map[string]bool
 	progress connector.BackfillReporter
 	res      connector.BackfillPageResult
-	// finished counts messages settled so far, in either pass. It is what the
-	// engine hears as scanned: a page that dies mid-walk is retried from the
-	// committed token, and reporting the whole listing up front would show
-	// progress the retry then repeats.
+
+	savedAt     int
 	finished    int
 	failedInRow int
 }
@@ -128,7 +128,7 @@ func (w *pageWalk) walk() error {
 	}
 	return inOrder(w.ctx, len(keep),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getRaw(ctx, keep[i]) })
+			return w.getRaw(ctx, keep[i])
 		},
 		func(i int, msg Message, err error) error {
 			msgCtx, message := capturemetrics.BeginMessage(w.ctx)
@@ -142,7 +142,7 @@ func (w *pageWalk) walk() error {
 			}
 			captured, err := captureOne(msgCtx, msg, w.sink, w.c.bounces, w.owner)
 			return w.settleMessage(message, keep[i], captured, err)
-		})
+		}, w.c.rawMemory, rawFetchReservation)
 }
 
 // judgeHeaders reads every message's headers and answers the ids that still
@@ -154,7 +154,7 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 	keep := make([]string, 0, len(w.ids))
 	err := inOrder(w.ctx, len(w.ids),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getHeaders(ctx, headers, w.ids[i]) })
+			return w.getHeaders(ctx, headers, w.ids[i])
 		},
 		func(i int, msg Message, err error) error {
 			id := w.ids[i]
@@ -180,7 +180,7 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 				return nil //nolint:nilerr // the full path decides and reports for itself
 			}
 			return w.settleMessage(message, id, false, nil)
-		})
+		}, w.c.rawMemory, headerFetchReservation)
 	return keep, err
 }
 
@@ -203,6 +203,7 @@ func dropFromHeaders(ctx context.Context, fetched Message, judge connector.PreSt
 	}
 	rec := msg.AttestSentByOwner(fetched.FiledAsSent).ToRecord(connectorName, nil)
 	rec.Containers = labelContainers(fetched.Labels)
+	rec.ProviderReceivedAt = fetched.ReceivedAt
 	return judge.DropBeforeStore(ctx, rec)
 }
 
@@ -220,6 +221,11 @@ func (w *pageWalk) settle(id string, captured bool, err error) error {
 	case endsPage(w.ctx, err):
 		return err
 	default:
+		if w.failedInRow == 0 {
+			if checkpointErr := w.saveCheckpoint(w.ctx); checkpointErr != nil {
+				return checkpointErr
+			}
+		}
 		w.failedInRow++
 		if w.failedInRow >= failedInARowEndsPage {
 			return err
@@ -229,6 +235,12 @@ func (w *pageWalk) settle(id string, captured bool, err error) error {
 			"message", id, "error_class", "internal", "err", err)
 	}
 	w.finished++
+	w.settled[id] = true
+	if w.failedInRow == 0 && w.finished-w.savedAt >= checkpointEvery {
+		if err := w.saveCheckpoint(w.ctx); err != nil {
+			return err
+		}
+	}
 	// The live tally has no failed column: a failed message shows as skipped
 	// until the page commits, and the commit files it under failed.
 	w.progress.Observed(w.ctx, w.finished, w.res.Captured, w.res.Skipped+w.res.Failed)
@@ -283,9 +295,9 @@ func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken, query string) 
 // ListAfter returns one page of message ids matching the query.
 func (a *httpAPI) ListAfter(ctx context.Context, accessToken, query, pageToken string, pageSize int) ([]string, string, error) {
 	var out struct {
-		Messages []struct {
+		Messages boundedJSONList[struct {
 			ID string `json:"id"`
-		} `json:"messages"`
+		}] `json:"messages"`
 		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google names this field
 	}
 	q := url.Values{"q": {query}, paramMaxResults: {strconv.Itoa(pageSize)}, includeSpamTrash: {"false"}}

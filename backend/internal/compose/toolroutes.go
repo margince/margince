@@ -29,8 +29,8 @@ func (s Server) ListSlippingDeals(w http.ResponseWriter, r *http.Request, params
 }
 
 // ListAtRiskRelationships serves at_risk_relationships.
-func (s Server) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
-	serveTool(w, r, s.toolRegistry.Invoke, "at_risk_relationships", noArguments{})
+func (s Server) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAtRiskRelationshipsParams) {
+	serveTool(w, r, s.toolRegistry.Invoke, "at_risk_relationships", params)
 }
 
 // CatchUpOnRecord serves catch_me_up_on.

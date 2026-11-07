@@ -7,7 +7,7 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { Field, Textarea, TextInput } from "../../design-system/field";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import type { SalesInitiative } from "./reporting.initiatives";
+import type { SalesInitiative } from "./reporting.initiatives.queries";
 import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import {
   type SetupProposal,

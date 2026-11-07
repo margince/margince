@@ -17,8 +17,8 @@ import { unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { reportingQuery } from "./reporting.model";
 import {

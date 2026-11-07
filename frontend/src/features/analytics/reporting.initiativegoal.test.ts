@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import { bodyOf, goalOf, ruleOf } from "./reporting.initiativegoal";
-import type { SalesInitiative } from "./reporting.initiatives";
+import type { SalesInitiative } from "./reporting.initiatives.queries";
 
 // The initiative drawer's goal names who owns the initiative. An empty owner
 // is left off the body, so the server makes the caller the owner.

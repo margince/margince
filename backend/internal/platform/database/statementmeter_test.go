@@ -98,8 +98,11 @@ func TestAnExplicitPrepareCountsAndOneInsideAQueryDoesNot(t *testing.T) {
 	tracer.TracePrepareEnd(inner, nil, pgx.TracePrepareEndData{})
 	tracer.TraceQueryEnd(query, nil, pgx.TraceQueryEndData{})
 
-	if got := meter.Cost(); got.Statements != 2 {
-		t.Fatalf("cost = %+v, want the explicit prepare and the query", got)
+	if got := meter.Cost(); got.Statements != 2 || got.Prepares != 2 {
+		t.Fatalf("cost = %+v, want two calls and two server preparations", got)
+	}
+	if got := meter.Cost().Minus(StatementCost{Prepares: 1}); got.Prepares != 1 {
+		t.Fatalf("preparation delta = %d want 1", got.Prepares)
 	}
 }
 
@@ -179,4 +182,16 @@ func BenchmarkStatementTracer(b *testing.B) {
 		ctx, _ := WithStatementMeter(context.Background())
 		run(b, ctx)
 	})
+}
+
+func TestCachedAndFailedPreparesDoNotCountAsNewPlans(t *testing.T) {
+	tracer := statementTracer{now: steppedClock(time.Millisecond)}
+	ctx, meter := WithStatementMeter(context.Background())
+	cached := tracer.TracePrepareStart(ctx, nil, pgx.TracePrepareStartData{})
+	tracer.TracePrepareEnd(cached, nil, pgx.TracePrepareEndData{AlreadyPrepared: true})
+	failed := tracer.TracePrepareStart(ctx, nil, pgx.TracePrepareStartData{})
+	tracer.TracePrepareEnd(failed, nil, pgx.TracePrepareEndData{Err: errors.New("cannot prepare")})
+	if got := meter.Cost(); got.Prepares != 0 || got.Failed != 1 {
+		t.Fatalf("prepare cost=%+v", got)
+	}
 }

@@ -17,8 +17,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/token"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -26,8 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
-
-const idempotencyMapSource = "internal/compose/replayscope.go"
 
 // idempotencyExemptions names the contract operations that declare the
 // IdempotencyKey parameter but are deliberately NOT claimed by the
@@ -105,42 +101,10 @@ func idempotencyKeyDeclarations(t *testing.T) map[string]bool {
 // never a silently dropped operation.
 func mappedIdempotentOperations(t *testing.T) map[string]bool {
 	t.Helper()
-	file, err := gatekit.ParseFile(idempotencyMapSource, 0)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", idempotencyMapSource, err)
-	}
 	mapped := map[string]bool{}
-	for _, decl := range file.Decls {
-		gen, ok := decl.(*ast.GenDecl)
-		if !ok || gen.Tok != token.VAR {
-			continue
-		}
-		for _, spec := range gen.Specs {
-			value, ok := spec.(*ast.ValueSpec)
-			if !ok || len(value.Names) != 1 || value.Names[0].Name != "replayableOperations" || len(value.Values) != 1 {
-				continue
-			}
-			lit, ok := value.Values[0].(*ast.CompositeLit)
-			if !ok {
-				t.Fatalf("%s: replayableOperations is no longer a composite map literal — teach this extractor the new shape", idempotencyMapSource)
-			}
-			for _, elt := range lit.Elts {
-				kv, ok := elt.(*ast.KeyValueExpr)
-				if !ok {
-					t.Fatalf("%s: replayableOperations holds a non key/value element — teach this extractor the new shape", idempotencyMapSource)
-				}
-				keyLit, ok := kv.Key.(*ast.BasicLit)
-				if !ok || keyLit.Kind != token.STRING {
-					t.Fatalf("%s: replayableOperations has a non-string-literal key — teach this extractor the new shape", idempotencyMapSource)
-				}
-				key, err := strconv.Unquote(keyLit.Value)
-				if err != nil {
-					t.Fatalf("%s: unquoting map key %s: %v", idempotencyMapSource, keyLit.Value, err)
-				}
-				mapped[key] = true
-			}
-		}
-	}
+	forEachMapEntry(t, "replayableOperations", func(route string, _ ast.Expr, _ map[string]string) {
+		mapped[route] = true
+	})
 	return mapped
 }
 

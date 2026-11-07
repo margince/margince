@@ -242,6 +242,7 @@ export function useComposeSend({
   fields,
   files,
   carriageBlocked,
+  sourceBlocked,
   anchorActivity,
   grounding,
   projectId,
@@ -259,6 +260,7 @@ export function useComposeSend({
   fields: ComposeFields;
   files: readonly ChosenFile[];
   carriageBlocked: boolean;
+  sourceBlocked?: boolean;
   anchorActivity: Activity | undefined;
   /** What a new message is about; null on an anchored send. */
   grounding: Grounding | null;
@@ -409,7 +411,7 @@ export function useComposeSend({
   };
   const confirm = () => {
     // Marking and focusing is harmless when only a carriage block is present.
-    if (missing.length > 0 || carriageBlocked) {
+    if (missing.length > 0 || carriageBlocked || sourceBlocked) {
       setAttempted(true);
       globalThis.requestAnimationFrame(focusFirstMissing);
       return;
@@ -419,6 +421,7 @@ export function useComposeSend({
   // What this client already knows will stop the send. The mark beside Send
   // makes no passed claim while any of it stands.
   const blocked =
+    Boolean(sourceBlocked) ||
     missing.length > 0 ||
     carriageBlocked ||
     fields.sendUnavailable ||

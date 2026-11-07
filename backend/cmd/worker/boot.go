@@ -327,7 +327,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// model, so it runs on every worker rather than only where a provider is
 	// configured — a deployment without AI still answers "who on our team knows
 	// this contact", which is a deterministic question about our own mail.
-	edges := search.NewGraphEdgeGen(search.NewStore(compose.InstallationDB(pool)))
+	edges := compose.NewGraphEdgeConsumer(pool)
 	_, _ = fmt.Fprintln(stdout, "worker maintaining interaction edges")
 	// Coalesced: a capture burst names the same colleagues event after event,
 	// and one refold per read does their shared pairs once (graphedgebatch.go).

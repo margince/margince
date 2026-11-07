@@ -66,9 +66,9 @@ func withoutComments(literal string) string {
 	return out.String()
 }
 
-// sqlLiterals returns every Go string literal in one source file. Both the
-// write-target and read-target scans run over these.
-func sqlLiterals(t *testing.T, path string) []string {
+// sqlLiterals resolves supplied constants before reading their literals, so
+// one statement cannot become several incomplete assignment lists.
+func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []string {
 	t.Helper()
 	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
@@ -76,6 +76,12 @@ func sqlLiterals(t *testing.T, path string) []string {
 	}
 	var out []string
 	ast.Inspect(file, func(n ast.Node) bool {
+		if join, ok := n.(*ast.BinaryExpr); ok && len(constants) > 0 {
+			if text := renderSQL(join, constants[0]); !strings.Contains(text, unresolved) {
+				out = append(out, text)
+				return false
+			}
+		}
 		lit, ok := n.(*ast.BasicLit)
 		if !ok || lit.Kind != token.STRING {
 			return true
@@ -215,6 +221,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
 	"internal/modules/privacy/floorpolicy.go":          "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
+	"internal/modules/privacy/entityfloor.go":          "the further legal entities' floors the policy above resolves. It reads entity ids and countries and writes nothing",
 	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
 	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
 	"internal/modules/privacy/scheduledsends.go":       "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
@@ -569,16 +576,14 @@ func unreadableWriteOn(statements []string, assembledFragment string) string {
 	return assembledFragment
 }
 
-// assembledSweepTargets returns, per table, a swept SQL literal that is joined
-// to a runtime value — `"UPDATE provider_run SET" + storekit.Scrub…`. The table
-// comes from the literal's own text, which is where the write target is even
-// when the assignments are not.
+// assembledSweepTargets reports SQL joined to values the reader cannot resolve.
+// The readable fragment names the table even when assignments do not.
 //
 // This reads the CONCATENATION, not the string, and that is the whole point.
 // assembledSetTarget can only judge the text it is handed, and a fragment that
 // reads as a finished statement is indistinguishable from one that is; the `+`
 // node is the only place the fact that more follows is written down.
-func assembledSweepTargets(t *testing.T, path string) map[string]string {
+func assembledSweepTargets(t *testing.T, path string, constants ...map[string]string) map[string]string {
 	t.Helper()
 	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
@@ -633,6 +638,9 @@ func assembledSweepTargets(t *testing.T, path string) map[string]string {
 		join, ok := n.(*ast.BinaryExpr)
 		if !ok || join.Op != token.ADD {
 			return true
+		}
+		if len(constants) > 0 && !strings.Contains(renderSQL(join, constants[0]), unresolved) {
+			return false
 		}
 		// One side a literal and the other not. Two literals joined are still
 		// one literal as far as the text is concerned — sqlLiterals reads both

@@ -295,7 +295,7 @@ func TestHTTPAPIEstimateAfterCountsIDsExactlyAcrossPages(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	got, floor, err := api.EstimateAfter(context.Background(), "tok", "after:2026/01/05")
 	if err != nil || got != 3 {
 		t.Fatalf("EstimateAfter = %d, %v — want an exact id count of 3, not the estimate", got, err)
@@ -326,7 +326,7 @@ func TestHTTPAPIListAfterPagesWithToken(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	ids, next, err := api.ListAfter(context.Background(), "tok", "after:2026/01/05", "tok-prev", 100)
 	if err != nil {
 		t.Fatalf("ListAfter: %v", err)
@@ -351,7 +351,7 @@ func TestHTTPAPIListAfterFirstPageOmitsToken(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	ids, next, err := api.ListAfter(context.Background(), "tok", "after:2026/01/05", "", 50)
 	if err != nil || len(ids) != 0 || next != "" {
 		t.Fatalf("empty window = %v/%q/%v, want an honest empty page", ids, next, err)

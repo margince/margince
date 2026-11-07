@@ -160,7 +160,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
     // subscribers, and this is one of them.
     await user.click(screen.getByRole("button", { name: "Account" }));
-    await user.click(screen.getByRole("menuitem", { name: "Theme" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Theme" }));
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 

@@ -225,8 +225,8 @@ the text lands. Both write a row per recipient into `communication_decision`.
 The answer is no by default, and an allow rests on evidence, never on a purpose key the caller
 supplies. The engine resolves a kind from what the send is: the thread it answers, the invoice it is
 about, the template it uses. It then checks what that kind requires. A reply is allowed because this
-recipient is on the thread the subject opened. An invoice is allowed because a live invoice reaches
-them through the company they work for now.
+recipient is on the thread the subject opened. An invoice goes to the company's billing contact,
+or to the buyer on the deal when the company has none.
 
 A marketing mail still needs consent, and there a `requires_double_opt_in` purpose needs a confirmed
 `consent_event`. A send whose kind nothing supports is `review`, never a silent pass.

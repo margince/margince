@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import { Button } from "../../design-system/atoms";
+import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
@@ -14,10 +15,9 @@ import { useCompanyZone } from "../../lib/companyzone";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
-import { AssessmentPanel } from "./analytics.assessment";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import { DecisionsPanel } from "./analytics.decisions";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { useSalesCharts } from "./analytics.overview.board";
 import {
   type OverviewDials,
@@ -30,26 +30,29 @@ import {
   useInterventions,
 } from "./analytics.overview.interventions";
 import { useOverviewNavigation } from "./analytics.overview.navigation";
+import {
+  OVERVIEW_DEFAULT_PERIOD,
+  salesQuestion,
+} from "./analytics.overview.questions";
 import { metricOf } from "./analytics.overview.readings";
 import { SalesFigures } from "./analytics.overview.salesfigures";
 import { SalesHeader } from "./analytics.overview.salesheader";
 import { SinceLastReview } from "./analytics.overview.since";
+import { AssessmentPanel, DecisionsPanel } from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
 import { applyDimensions } from "./reporting.dimensions";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
   ReportingSelection,
 } from "./reporting.model";
+import { useReportingEvaluation } from "./reporting.queries";
 import {
-  customInterval,
+  pipelineIsGone,
   useOverviewFilters,
   validDateRange,
-} from "./reporting.overview";
-import { useReportingEvaluation } from "./reporting.queries";
-import { viewRequest } from "./reporting.views";
+} from "./reporting.selection";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type Pipeline = components["schemas"]["Pipeline"];
@@ -98,19 +101,9 @@ function SalesReviewBody({
   const { locale } = useLocale();
   const zone = useCompanyZone();
   const [params] = useUrlParams();
-  const filters = useOverviewFilters(pipelines, "this_quarter");
-  const { metrics, blocks } = viewRequest("sales", catalog, filters.period);
-  const selection: ReportingSelection = {
-    scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
-    pipeline_id: filters.pipelineId || undefined,
-    period: filters.period,
-    interval: customInterval(filters.period, filters.start, filters.end, zone),
-    target_basis: filters.targetBasis,
-    close_window: filters.closeWindow,
-    ...filters.dimensions,
-    metrics,
-    blocks: [],
-  };
+  const filters = useOverviewFilters(pipelines, OVERVIEW_DEFAULT_PERIOD.sales);
+  const { selection, blocks } = salesQuestion(catalog, scope, filters, zone);
+  const { metrics } = selection;
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   // A pipeline the address names and this reader cannot open is said, never
   // swapped for the default one.
@@ -138,7 +131,7 @@ function SalesReviewBody({
     if (scopeKey(next.scope) !== scopeKey(scope))
       replaceDial("scope", scopeKey(next.scope));
   };
-  const checks = useInterventions(scope);
+  const checks = useInterventions(scope, filters.dimensions);
   const invalid = problemCodeOf(query.error) === "reporting_interval_invalid";
   // The evaluation the page draws below its readings; a cached answer to a
   // question the page no longer asks is never drawn.
@@ -219,18 +212,22 @@ function SalesReviewBody({
         rail={
           <>
             {answered && (
-              <AssessmentPanel
-                selection={selection}
-                evaluation={answered}
-                onEvidence={openEvidence}
-              />
+              <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+                <AssessmentPanel
+                  selection={selection}
+                  evaluation={answered}
+                  onEvidence={openEvidence}
+                />
+              </Suspense>
             )}
             <InterventionPanel
               interventions={checks}
               dials={findingDials(doors)}
               emptyLabel=""
             />
-            <DecisionsPanel review={selection} />
+            <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+              <DecisionsPanel review={selection} />
+            </Suspense>
           </>
         }
       />
@@ -245,16 +242,6 @@ function SalesReviewBody({
         />
       )}
     </>
-  );
-}
-
-// A pipeline the address names that is not among the reader's pipelines.
-function pipelineIsGone(
-  named: string | undefined,
-  pipelines: readonly Pipeline[],
-): boolean {
-  return (
-    !!named && named !== "all" && !pipelines.some(({ id }) => id === named)
   );
 }
 

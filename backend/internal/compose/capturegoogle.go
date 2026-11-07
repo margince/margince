@@ -132,7 +132,7 @@ func newCaptureRegistryWithGoogle(
 ) *capture.Registry {
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if appReachable(resolve, c.canSync()) {
-		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPI(nil, "")).
+		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
 			WithBounceSink(newBounceSink(pool)))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 	}
@@ -266,7 +266,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			registry:      newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg),
 			authority:     identity.NewService(pool),
 			oauth:         gmailOAuth,
-			gmailAPI:      gmail.NewAPI(nil, ""),
+			gmailAPI:      gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),
 			gcalOAuth:     gcalOAuth,
 			gcalAPI:       gcal.NewAPI(nil, ""),
 			signer:        newStateSigner([]byte(c.StateKey)),

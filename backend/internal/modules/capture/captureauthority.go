@@ -6,8 +6,12 @@ package capture
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -107,4 +111,55 @@ func (r *Registry) syncCredential(runCtx context.Context, credentialRef *string,
 		return nil, err
 	}
 	return r.resolveCredential(runCtx, credentialRef, authBytes)
+}
+
+// mailboxRunKey marks a context the registry built for one mailbox sync, page or
+// push. Its writes ask CaptureRefusal again inside their own transaction.
+type mailboxRunKey struct{}
+
+func asMailboxRun(ctx context.Context) context.Context {
+	return context.WithValue(ctx, mailboxRunKey{}, true)
+}
+
+func isMailboxRun(ctx context.Context) bool {
+	run, ok := ctx.Value(mailboxRunKey{}).(bool)
+	return ok && run
+}
+
+// withAuthority rebinds ctx's actor to authority read inside a transaction.
+func withAuthority(ctx context.Context, rbac authz.RBAC, seat principal.SeatType) (context.Context, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return ctx, apperrors.ErrPermissionDenied
+	}
+	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
+	return principal.WithActor(ctx, actor), nil
+}
+
+// captureAllowedTx asks CaptureRefusal of the member's authority as of tx. A
+// role change that takes capture away then waits for this write or refuses it.
+// Call it before tx locks a row. A sink composed without an authority
+// reader asks nothing.
+func (s *Sink) captureAllowedTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (context.Context, error) {
+	if s == nil || s.partyAuthority == nil {
+		return ctx, nil
+	}
+	rbac, seat, err := s.partyAuthority.HeldAuthorityTx(ctx, tx, user)
+	if err != nil {
+		return ctx, err
+	}
+	if ctx, err = withAuthority(ctx, rbac, seat); err != nil {
+		return ctx, err
+	}
+	return ctx, actingCaptureRefusal(ctx)
+}
+
+// mailboxRunAllowedTx is captureAllowedTx for the member a mailbox run acts
+// for. A capture from any other door is not asked.
+func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Context, error) {
+	if !isMailboxRun(ctx) {
+		return ctx, nil
+	}
+	_, owner := capturePrincipal(ctx)
+	return s.captureAllowedTx(ctx, tx, owner)
 }

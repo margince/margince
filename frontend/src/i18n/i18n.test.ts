@@ -539,8 +539,10 @@ const OWNER_WORD: Record<string, string> = {
 describe("the owner and the responsibility roles", () => {
   it("names the owner's word for every locale, as its label says it", () => {
     for (const [locale, catalog] of Object.entries(catalogs)) {
+      const owner = catalog["list.owner"];
+      if (!owner) throw new Error("The locale catalog was not loaded");
       expect(
-        catalog["list.owner"].toLowerCase(),
+        owner.toLowerCase(),
         `${locale}: the owner's word is missing`,
       ).toContain(OWNER_WORD[locale]);
     }

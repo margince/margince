@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -51,22 +52,25 @@ func partyWasWrittenToTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
  FROM activity a JOIN candidates c ON c.activity_id=a.id WHERE ` + visible + `)
  SELECT a.occurred_at, coalesce(a.subject,''), coalesce(a.body,'') FROM visible_activities a
  WHERE a.archived_at IS NULL AND ` + partySendProofSQL("a", address) + ` ORDER BY a.occurred_at,a.id LIMIT 2`
-	rows, err := tx.Query(ctx, query, args...)
-	if err != nil {
-		return false, err
-	}
-	defer rows.Close()
 	sent := []outboundMail{}
-	for rows.Next() {
-		var mail outboundMail
-		var subject, body string
-		if err := rows.Scan(&mail.at, &subject, &body); err != nil {
-			return false, err
+	err = database.ReuseGenericPlansTx(ctx, tx, func() error {
+		rows, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return err
 		}
-		mail.words = subject + " " + textlang.NewTextOnly(body)
-		sent = append(sent, mail)
-	}
-	if err := rows.Err(); err != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var mail outboundMail
+			var subject, body string
+			if err := rows.Scan(&mail.at, &subject, &body); err != nil {
+				return err
+			}
+			mail.words = subject + " " + textlang.NewTextOnly(body)
+			sent = append(sent, mail)
+		}
+		return rows.Err()
+	})
+	if err != nil {
 		return false, err
 	}
 	return writesTo(sent), nil

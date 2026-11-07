@@ -62,7 +62,11 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { resolveRelative, sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  parseSource,
+  resolveRelative,
+  sourceFileAt,
+} from "../../scripts/lib/source-tree";
 
 const srcRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTER = join(srcRoot, "lib/router.tsx");
@@ -573,6 +577,34 @@ function elementVerdict(
   seen: ReadonlySet<string>,
 ): Verdict {
   const tag = element.tagName.getText();
+  if (reactSuspense(file, tag) && ts.isJsxElement(element.parent)) {
+    if (element.attributes.properties.some(ts.isJsxSpreadAttribute)) {
+      return {
+        inset: false,
+        trail: "Suspense fallback comes from unreadable spread props",
+      };
+    }
+    const fallback = element.attributes.properties.find(
+      (attribute) =>
+        ts.isJsxAttribute(attribute) && attribute.name.getText() === "fallback",
+    );
+    const expression =
+      fallback &&
+      ts.isJsxAttribute(fallback) &&
+      fallback.initializer &&
+      ts.isJsxExpression(fallback.initializer)
+        ? fallback.initializer.expression
+        : fallback && ts.isJsxAttribute(fallback)
+          ? fallback.initializer
+          : undefined;
+    const roots = element.parent.children.flatMap(rootsOfChild);
+    return insetVerdict(
+      file,
+      [...roots, ...(expression ? rootsOfExpression(expression) : [])],
+      insetting,
+      seen,
+    );
+  }
   if (/^[a-z]/.test(tag)) {
     const classes = classesOn(element);
     if (classes === undefined) {
@@ -603,6 +635,53 @@ function elementVerdict(
   // defect this gate exists for, so the walk does not follow children looking
   // for a kinder answer.
   return own ?? { inset: false, trail: `nothing readable behind <${tag}>` };
+}
+
+function reactSuspense(file: ts.SourceFile, tag: string): boolean {
+  const imported = file.statements.some((statement) => {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "react"
+    )
+      return false;
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamespaceImport(bindings))
+      return tag === `${bindings.name.text}.Suspense`;
+    return (
+      bindings !== undefined &&
+      ts.isNamedImports(bindings) &&
+      bindings.elements.some(
+        (element) =>
+          (element.propertyName ?? element.name).text === "Suspense" &&
+          element.name.text === tag,
+      )
+    );
+  });
+  if (!imported) return false;
+  const root = tag.split(".")[0];
+  const namesRoot = (name: ts.BindingName): boolean =>
+    ts.isIdentifier(name)
+      ? name.text === root
+      : name.elements.some(
+          (element) => ts.isBindingElement(element) && namesRoot(element.name),
+        );
+  let shadowed = false;
+  const visit = (node: ts.Node) => {
+    if (
+      (ts.isParameter(node) || ts.isVariableDeclaration(node)) &&
+      namesRoot(node.name)
+    )
+      shadowed = true;
+    if (
+      (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
+      node.name?.text === root
+    )
+      shadowed = true;
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return !shadowed;
 }
 
 /** What the component itself renders, when this walk can open it. */
@@ -690,22 +769,28 @@ function dispatchKey(
  * Derived rather than listed: a screen routed there has no rail above it and
  * therefore no page head to line up with.
  */
-function raillessComponents(): ReadonlySet<string> {
+function raillessComponents(source = sourceFileAt(APP)): ReadonlySet<string> {
   const out = new Set<string>();
   const visit = (node: ts.Node) => {
     if (
       ts.isJsxElement(node) &&
       node.openingElement.tagName.getText() === "RaillessFrame"
     ) {
-      for (const root of node.children.flatMap(rootsOfChild)) {
-        if (root.kind === "element") {
-          out.add(root.node.tagName.getText());
-        }
-      }
+      const collect = (child: ts.Node) => {
+        const tag = ts.isJsxElement(child)
+          ? child.openingElement.tagName
+          : ts.isJsxSelfClosingElement(child)
+            ? child.tagName
+            : undefined;
+        if (tag && ts.isIdentifier(tag) && /^[A-Z]/.test(tag.text))
+          out.add(tag.text);
+        ts.forEachChild(child, collect);
+      };
+      node.children.forEach(collect);
     }
     ts.forEachChild(node, visit);
   };
-  visit(sourceFileAt(APP));
+  visit(source);
   return out;
 }
 
@@ -728,6 +813,55 @@ describe("page gutter", () => {
   const railLess = new Set(railLessNames());
   const entries = dispatch();
 
+  it.each([
+    [
+      "both branches inset",
+      '<Suspense fallback={<div className="wrap" />}><div className="wrap" /></Suspense>',
+      true,
+    ],
+    [
+      "text fallback",
+      '<Suspense fallback="Loading"><div className="wrap" /></Suspense>',
+      false,
+    ],
+    [
+      "spread fallback",
+      '<Suspense {...props}><div className="wrap" /></Suspense>',
+      false,
+    ],
+    [
+      "flush fallback",
+      '<Suspense fallback={<div />}><div className="wrap" /></Suspense>',
+      false,
+    ],
+    [
+      "flush loaded view",
+      '<Suspense fallback={<div className="wrap" />}><div /></Suspense>',
+      false,
+    ],
+    [
+      "aliased boundary",
+      '<Wait fallback={<div className="wrap" />}><div className="wrap" /></Wait>',
+      true,
+    ],
+    [
+      "namespace boundary",
+      '<React.Suspense fallback={<div className="wrap" />}><div className="wrap" /></React.Suspense>',
+      true,
+    ],
+  ])("checks every Suspense branch: %s", (name, expression, expected) => {
+    const fixture = parseSource(
+      `${name}.tsx`,
+      `import { Suspense, Suspense as Wait } from "react"; import * as React from "react"; function Screen() { return ${expression}; }`,
+    );
+    const body = bodyOfComponent(fixture, "Screen");
+    expect(body).toBeDefined();
+    if (!body) throw new Error("fixture has no screen body");
+    expect(
+      insetVerdict(fixture, rootsOfBody(body), new Set(), new Set()).inset,
+    ).toBe(expected);
+  });
+
   it("reads a whole census, not a partial one", () => {
     expect(screens.length).toBeGreaterThan(0);
     expect(railLess.size).toBeGreaterThan(0);
@@ -744,6 +878,22 @@ describe("page gutter", () => {
     expect(
       [...NOT_OURS_TO_INSET.keys()].filter((name) => !known.has(name)),
     ).toEqual([]);
+  });
+
+  it("finds railless screens below a provider without exempting HTML tags", () => {
+    const source = parseSource(
+      "App.tsx",
+      `
+      const view = <RaillessFrame><CompleteLocale><ResetRoute />
+        <div><AuthScreen /></div>
+      </CompleteLocale></RaillessFrame>;
+    `,
+    );
+    expect([...raillessComponents(source)].sort()).toEqual([
+      "AuthScreen",
+      "CompleteLocale",
+      "ResetRoute",
+    ]);
   });
 
   it("insets every screen that renders inside the railed shell", () => {

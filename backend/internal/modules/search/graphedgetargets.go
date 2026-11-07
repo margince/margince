@@ -23,23 +23,22 @@ import (
 type edgeTargets struct {
 	contactPairs []contactPair
 	pairs        []pair
-	// dropped are contacts whose edges are removed outright, after the folds
-	// so a drop outlasts anything that could have refolded them.
+	history      graphHistoryTargets
+	// Drops outlast every fold so a removed contact cannot be recreated by this batch.
 	dropped []ids.UUID
 }
 
-// addActivities names the pairs the activities touch. Reads only: the pairs
-// are resolved BEFORE any fold, so a pair whose rows have all gone is still
-// named and can be deleted by it.
-func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+// addActivities includes prior pairs when a change could have displaced evidence.
+// Captures name current participants, without unrelated colleague edges.
+func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, includePrior bool) error {
 	if len(activityIDs) == 0 {
 		return nil
 	}
-	contactPairs, err := affectedContactPairs(ctx, tx, activityIDs)
+	contactPairs, err := affectedContactPairs(ctx, tx, activityIDs, includePrior)
 	if err != nil {
 		return err
 	}
-	pairs, err := affectedPairs(ctx, tx, activityIDs)
+	pairs, err := affectedPairs(ctx, tx, activityIDs, includePrior)
 	if err != nil {
 		return err
 	}
@@ -81,7 +80,21 @@ func (t *edgeTargets) addContact(ctx context.Context, tx pgx.Tx, contactID ids.U
 
 // apply writes the gathered targets: contact table first, interaction second.
 func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
-	if err := recomputeContactPairs(ctx, tx, t.contactPairs); err != nil {
+	if err := lockGraphWrites(ctx, tx); err != nil {
+		return err
+	}
+	missingContacts, err := t.lockContactPairs(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if err := recomputeContactPairs(ctx, tx, t.contactPairs, missingContacts); err != nil {
+		return err
+	}
+
+	if err := t.history.markContacts(ctx, tx); err != nil {
+		return err
+	}
+	if err := t.history.prepareContacts(ctx, tx, missingContacts); err != nil {
 		return err
 	}
 	if len(t.dropped) > 0 {
@@ -89,7 +102,18 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 			return fmt.Errorf("search: dropping a contact's observed peer edges: %w", err)
 		}
 	}
-	if err := recomputePairs(ctx, tx, t.pairs); err != nil {
+	missingInteractions, err := t.lockInteractionPairs(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if err := recomputePairs(ctx, tx, t.pairs, missingInteractions); err != nil {
+		return err
+	}
+
+	if err := t.history.markInteractions(ctx, tx); err != nil {
+		return err
+	}
+	if err := t.history.prepareInteractions(ctx, tx, missingInteractions); err != nil {
 		return err
 	}
 	if len(t.dropped) > 0 {

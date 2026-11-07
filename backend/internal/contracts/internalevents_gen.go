@@ -131,6 +131,11 @@ type InternalEventBriefOpened struct {
 	Unread int `json:"unread" minimum:"0"`
 }
 
+// InternalEventCaptureSettingsUpdated Capture source authorization changed. Source content and private folder names are omitted.
+type InternalEventCaptureSettingsUpdated struct {
+	ChangedKeys []string `json:"changed_keys"`
+}
+
 // InternalEventDealSuggestionAccepted A rep accepted a suggestion and a deal was opened from it. The deal publishes its own deal.created; this records the decision.
 type InternalEventDealSuggestionAccepted struct{}
 
@@ -153,6 +158,13 @@ type InternalEventExistingCustomerNoticeCreated struct {
 
 // InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
 type InternalEventExistingCustomerNoticeWithdrawn struct{}
+
+// InternalEventInternalMailHistoryCreated A mailbox owner explicitly authorized an internal history import within the administrator's current source policy.
+type InternalEventInternalMailHistoryCreated struct {
+	BackfillId     openapi_types.UUID `json:"backfill_id"`
+	ReceivedAfter  time.Time          `json:"received_after"`
+	ReceivedBefore time.Time          `json:"received_before"`
+}
 
 // InternalEventLeadPrivacyNoticeCreated A website lead's Art. 14 notice was queued, or could not be given and nothing about the lead was kept. Entity-less and without the lead, which keeps it off the subscribable set: a named lead's unmet legal obligation is not a subscriber's to read. The proof row stays on the audit row the emit points at.
 type InternalEventLeadPrivacyNoticeCreated struct {
@@ -254,6 +266,10 @@ func (InternalEventBriefOpened) EventType() string { return "brief.opened" }
 
 func (InternalEventBriefOpened) EntityType() string { return "" }
 
+func (InternalEventCaptureSettingsUpdated) EventType() string { return "capture_settings.updated" }
+
+func (InternalEventCaptureSettingsUpdated) EntityType() string { return "capture_settings" }
+
 func (InternalEventDealSuggestionAccepted) EventType() string { return "deal_suggestion.accepted" }
 
 func (InternalEventDealSuggestionAccepted) EntityType() string { return "" }
@@ -285,6 +301,12 @@ func (InternalEventExistingCustomerNoticeWithdrawn) EventType() string {
 func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
 	return "existing_customer_notice"
 }
+
+func (InternalEventInternalMailHistoryCreated) EventType() string {
+	return "internal_mail_history.created"
+}
+
+func (InternalEventInternalMailHistoryCreated) EntityType() string { return "capture_connection" }
 
 func (InternalEventLeadPrivacyNoticeCreated) EventType() string { return "lead_privacy_notice.created" }
 

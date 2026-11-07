@@ -179,6 +179,7 @@ const (
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
+	"enrolled_at":         "server timestamp of source enrollment, never an activity occurrence",
 	"opened_at":           actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
 	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
 	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp,
@@ -200,7 +201,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"scheduled_at": aheadStamp, "remind_at": aheadStamp, "due_at": aheadStamp, "next_step_due_at": aheadStamp,
 	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp, "next_expiry_at": aheadStamp,
 
-	"accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
+	"answered_at": actStamp, "accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
 	"resolved_at": actStamp, "closed_at": actStamp, "submitted_at": actStamp, "requested_at": actStamp,
 	"delivered_at": actStamp, "read_at": actStamp, "assigned_at": actStamp, "routed_at": actStamp,
 	"promoted_at": actStamp, "qualified_at": actStamp, "taken_at": actStamp, "issued_at": actStamp,
