@@ -19,9 +19,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestACopiedRecipientOfMailSentFromMarginceWasWrittenTo(t *testing.T) {
+func TestEveryRecipientOfMailSentFromMarginceWasWrittenTo(t *testing.T) {
+	for _, role := range []string{"to", "cc", "bcc"} {
+		t.Run(role, func(t *testing.T) { recipientWasWrittenTo(t, role) })
+	}
+}
+
+func recipientWasWrittenTo(t *testing.T, role string) {
+	t.Helper()
 	ctx, pool := meetingTenureEnv(t)
-	const copied = "copied@buyer.example"
+	copied := role + "@buyer.example"
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		seat, mail := ids.NewV7(), ids.NewV7()
 		if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Sender')`,
@@ -34,8 +41,8 @@ func TestACopiedRecipientOfMailSentFromMarginceWasWrittenTo(t *testing.T) {
 			'human:'||$2::text, 'lead@buyer.example', true)`, mail, seat); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'lead@buyer.example', 'to'), ($1, $2, 'cc')`,
-			mail, copied); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'lead@buyer.example', 'to'), ($1, $2, $3)`,
+			mail, copied, role); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO comms_outbound (activity_id, provider, message_id, recipients, cc, subject, body, status, sender_kind, user_id, consent_purpose)
@@ -48,7 +55,7 @@ func TestACopiedRecipientOfMailSentFromMarginceWasWrittenTo(t *testing.T) {
 			return err
 		}
 		if !sent {
-			t.Error("an address copied on mail sent from Margince was not written to")
+			t.Errorf("a %s recipient of mail sent from Margince was not written to", role)
 		}
 		return nil
 	})
