@@ -222,7 +222,8 @@ func spliceFor(raw []byte, part StoredPart) (splice, error) {
 func locateEncoded(raw, body []byte) ([]byte, int, []byte, error) {
 	b64 := make([]byte, base64.StdEncoding.EncodedLen(len(body)))
 	base64.StdEncoding.Encode(b64, body)
-	var folded []byte
+	// Sized for the narrowest candidate with CRLF, so no candidate grows it.
+	folded := make([]byte, 0, len(b64)+2*(len(b64)/64+1))
 	for _, width := range candidateWraps {
 		for _, eol := range [][]byte{[]byte("\r\n"), []byte("\n")} {
 			// One buffer serves every candidate, so a large attachment is held
