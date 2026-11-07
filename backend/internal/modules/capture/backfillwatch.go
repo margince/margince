@@ -45,7 +45,7 @@ func watchBackfillOwnership(ctx context.Context, ticks <-chan time.Time, check f
 // The transaction fence provides exclusion; polling also stops provider I/O after cancellation or lease loss.
 func (r *Registry) monitorBackfill(ctx context.Context) (context.Context, func()) {
 	ctx, cancel := context.WithCancelCause(ctx)
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(r.ownershipWatch)
 	stopped := make(chan struct{})
 	go func() {
 		defer close(stopped)

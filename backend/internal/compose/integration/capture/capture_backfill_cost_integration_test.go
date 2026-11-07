@@ -87,7 +87,7 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // some; never raise it to make a change pass.
 const (
 	historyExchangesPerMessage    = 185
-	historyTransactionsPerMessage = 7.2
+	historyTransactionsPerMessage = 7.15
 )
 
 func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
@@ -98,10 +98,11 @@ func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
 	if os.Getenv("MARGINCE_IMPORT_BENCH_SQL") != "" {
 		pool = profileHistoryPool(e.Admin(), t, pool)
 	}
-	// The live tally is written at most twice a second of wall time, so its
-	// count follows the runner's speed rather than the code. One write per page
-	// keeps the budget about the work each message costs.
-	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{}).WithProgressPacing(24 * time.Hour)
+	// The live tally write and the page's ownership check both run on wall
+	// time, so their count follows the runner's speed rather than the code.
+	// Holding both off for the page keeps the budget about each message.
+	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{}).
+		WithProgressPacing(24 * time.Hour).WithOwnershipWatch(24 * time.Hour)
 	page := &mailPageConnector{nextToken: "next", sent: make(map[string]bool, count)}
 	for i := range count {
 		messageID, party := fmt.Sprintf("budget-%d@myco.example", i), fmt.Sprintf("budget-%d@globex.example", (i/2)%parties)
