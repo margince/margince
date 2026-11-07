@@ -240,7 +240,7 @@ func callsItFinal(text string) bool {
 }
 
 // The prefix census above knows an irreversible act by its verb. A tool named
-// otherwise is held by its own description: a write whose contract says it
+// otherwise is held by its own description. A write whose contract says it
 // destroys data or leaves no Undo must tell the client to ask first.
 func TestAWriteItsContractCallsFinalAsksTheUserFirst(t *testing.T) {
 	doc := loadContract(t)
