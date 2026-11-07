@@ -106,6 +106,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
 	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
+	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(readViews(agentPolicies)))
 	agents.RegisterRouteVerbs(registry, declaredRouteVerbs(agentPolicies), routeThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db)})

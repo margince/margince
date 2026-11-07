@@ -217,6 +217,7 @@
     "describeAnalyticsVocabulary": "business",
     "describeListFilters": "business",
     "describeQueryVocabulary": "business",
+    "describeReadViews": "business",
     "describeRecordFields": "business",
     "describeReportBlocks": "business",
     "describeReportVocabulary": "business",
@@ -1319,6 +1320,9 @@
       "business"
     ],
     "describe_router_actions": [
+      "business"
+    ],
+    "describe_views": [
       "business"
     ],
     "direct_communication_send": [

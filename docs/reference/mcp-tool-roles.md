@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 374 | 373✓ 1✗ | 347✓ 27✗ | 348✓ 26✗ | 347✓ 27✗ | 175✓ 199✗ | 318✓ 56✗ |
+| [Business operations](#business-operations) | 375 | 374✓ 1✗ | 348✓ 27✗ | 349✓ 26✗ | 348✓ 27✗ | 176✓ 199✗ | 319✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 45 | 45✓ 0✗ | 25✓ 20✗ | 25✓ 20✗ | 29✓ 16✗ | 9✓ 36✗ | 24✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 38 | 38✓ 0✗ | 32✓ 6✗ | 32✓ 6✗ | 38✓ 0✗ | 26✓ 12✗ | 31✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 38 | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 34✓ 4✗ | 38✓ 0✗ |
@@ -405,6 +405,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_workspace.list_filters` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.query` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.record_fields` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `read_workspace.views` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### Brief, worklist, weekly plan and notices
 
@@ -1239,7 +1240,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `change_reports.discard_draft` | `discard_reporting_report_draft` | `report_definition.read` `report_definition.update` |
 | Reports and analytics | `change_reports.draft` | `draft_report` | `installation_settings.read` `report_definition.create` `report_definition.read` |
 | Reports and analytics | `change_reports.freeze_edition` | `freeze_reporting_edition` | `installation_settings.read` `report_edition.create` `report_edition.read` |
-| Reports and analytics | `change_reports.launch_initiative` | `launch_sales_initiative` | `deal.read` `lead.read` `sales_initiative.update` |
+| Reports and analytics | `change_reports.launch_initiative` | `launch_sales_initiative` | `deal.read` `sales_initiative.update` |
 | Reports and analytics | `change_reports.publish_draft` | `publish_reporting_report_draft` | `installation_settings.read` `report_definition.read` `report_definition.update` |
 | Reports and analytics | `change_reports.publish_framework` | `publish_reporting_framework` | `reporting_framework.read` `reporting_framework.update` |
 | Reports and analytics | `change_reports.record_decision` | `record_sales_decision` | `activity.create` `activity.read` `installation_settings.read` |
@@ -1325,6 +1326,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Search and record context | `read_workspace.list_filters` | `describe_list_filters` |  |
 | Search and record context | `read_workspace.query` | `describe_query_vocabulary` |  |
 | Search and record context | `read_workspace.record_fields` | `describe_record_fields` |  |
+| Search and record context | `read_workspace.views` | `describe_views` |  |
 | Brief, worklist, weekly plan and notices | `annotate_brief` | `annotate_brief` | `deal.read` |
 | Brief, worklist, weekly plan and notices | `change_activities.ready` | `confirm_meeting_ready` | `activity.read` |
 | Brief, worklist, weekly plan and notices | `change_activities.unready` | `undo_meeting_ready` | `activity.read` |

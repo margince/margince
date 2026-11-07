@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39892,
+    "tokens": 39550,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 830
+    "mean_tool_tokens": 823
   },
   "agents": [
     {
@@ -89,7 +89,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2671
+      "tokens": 2674
     },
     {
       "name": "read_details",
@@ -126,10 +126,6 @@
     {
       "name": "preview_import",
       "tokens": 1012
-    },
-    {
-      "name": "read_view",
-      "tokens": 984
     },
     {
       "name": "read_forecast",
@@ -170,6 +166,10 @@
     {
       "name": "change_offers",
       "tokens": 678
+    },
+    {
+      "name": "read_view",
+      "tokens": 638
     },
     {
       "name": "update_record",

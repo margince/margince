@@ -570,6 +570,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /record-fields` | describeRecordFields | The fields a record create or update may write, for each record type. | Read records | at once |
 | `GET /router-actions` | describeRouterActions | What each action of one MCP router takes, as its own route defines it. | Read records | at once |
 | `GET /list-filters` | describeListFilters | The filters a record list may be narrowed by, for each record type. | Read records | at once |
+| `GET /read-views` | describeReadViews | The views the read_view agent tool reads, and the arguments each takes. | Read records | at once |
 | `GET /search` | search | Cross-object search (contacts, companies, deals, activities, leads). | Read records | at once |
 | `GET /embeddings/reindex/status` | EmbedReindexStatus | The embed-store binding marker + the derived reindex-needed signal. | Read records | at once |
 | `GET /embeddings/reindex/identities` | EmbedReindexIdentities | The two embed-store identities, without the backlog scan. | Read records | at once |

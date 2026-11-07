@@ -833,6 +833,9 @@
     "describe_router_actions": {
       "checks": []
     },
+    "describe_views": {
+      "checks": []
+    },
     "direct_communication_send": {
       "checks": [
         "activity.create",
@@ -1805,7 +1808,6 @@
     "launch_sales_initiative": {
       "checks": [
         "deal.read",
-        "lead.read",
         "sales_initiative.update"
       ]
     },

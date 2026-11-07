@@ -3122,7 +3122,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 984,
+      "tokens": 638,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -3309,7 +3309,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2671,
+      "tokens": 2674,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing",
