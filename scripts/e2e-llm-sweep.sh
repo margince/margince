@@ -11,8 +11,10 @@
 # A case is done when its verdict was written after E2E_SWEEP_SINCE in any
 # worktree the sweep names, so lanes share the work and a restart skips what
 # any lane finished. After each batch the lane runs again on what is left.
-# A subscription limit makes it wait and go on; a batch that finishes nothing
-# twice stops it, because the cause is not one more batch will fix.
+# A subscription limit makes it wait and go on. A case that stops the harness
+# waits until the others have run, since the lane runs a batch in file order
+# and stops at the first such case; once only it is left, a batch that
+# finishes nothing twice stops the lane, so that you read the log.
 #
 # Run each lane from its own worktree: a worktree owns one dev stack, and two
 # lanes building in one would race. Lanes share the Postgres, Redis and object
@@ -55,6 +57,7 @@ finished() {
 
 stalled=0
 batch=0
+deferred=()
 while :; do
   left=()
   for name in "${names[@]}"; do finished "$name" || left+=("$name"); done
@@ -62,18 +65,26 @@ while :; do
     echo "LANE DONE $slug"
     exit 0
   fi
+  run=()
+  for name in "${left[@]}"; do [[ " ${deferred[*]-} " == *" $name "* ]] || run+=("$name"); done
+  [[ ${#run[@]} -eq 0 ]] && run=("${left[@]}")
   batch=$((batch + 1))
   log="$logs/$slug.batch$batch.log"
-  echo "BATCH $slug #$batch: ${#left[@]} cases, log $log"
-  E2E_LLM_SLUG="$slug" SCENARIO="${left[*]}" make e2e-llm > "$log" 2>&1
+  echo "BATCH $slug #$batch: ${#run[@]} cases, log $log"
+  E2E_LLM_SLUG="$slug" SCENARIO="${run[*]}" make e2e-llm > "$log" 2>&1
   grep -E '^  case[0-9]+_[a-z0-9_]+: (PASS|FAIL)' "$log" | sed "s/^ */$slug /"
+  stopped="$(grep -m1 -oE '^HARNESS: case[0-9]+_[a-z0-9_]+' "$log" | cut -d' ' -f2)"
+  if [[ -n "$stopped" ]]; then
+    deferred+=("$stopped")
+    echo "DEFERRED $slug $stopped"
+  fi
   still=0
   for name in "${left[@]}"; do finished "$name" || still=$((still + 1)); done
-  if [[ $still -lt ${#left[@]} ]]; then
+  if [[ $still -lt ${#left[@]} || ${#run[@]} -lt ${#left[@]} ]]; then
     stalled=0
     continue
   fi
-  if grep -qiE 'out of credits|usage limit|rate limit|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' "$log"; then
+  if [[ -z "$stopped" ]] && grep -qiE 'out of credits|usage limit|rate limit|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' "$log"; then
     echo "LIMIT $slug: waiting ${wait_seconds}s"
     sleep "$wait_seconds"
     continue
