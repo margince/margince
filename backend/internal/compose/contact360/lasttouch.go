@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -170,7 +169,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	// inbound arm adds authorship on top.
 	reached := fmt.Sprintf(`FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND a.id IN (SELECT id FROM readable_activity)%s%s`,
-		fmt.Sprintf(contactReachesActivity, "c.id"), projectScope(opts, arg), readerlessBasis(ctx))
+		fmt.Sprintf(contactReachesActivity, "c.id"), projectScope(opts, arg), auth.ReaderlessAudience(ctx, "a"))
 	asOf := "now()"
 	if !opts.AsOf.IsZero() {
 		asOf = fmt.Sprintf("$%d::timestamptz", arg(opts.AsOf))
@@ -226,15 +225,6 @@ func scanLastTouches(ctx context.Context, tx pgx.Tx, query string, args []any, o
 		out[contactID] = touch
 	}
 	return rows.Err()
-}
-
-// readerlessBasis narrows the system principal to workspace-visible rows. The
-// content gate admits every audience for it, and nobody reads its dates.
-func readerlessBasis(ctx context.Context) string {
-	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalSystem {
-		return auth.AudienceWorkspaceOnly("a")
-	}
-	return ""
 }
 
 // newestRow picks a direction's newest row, the one max(a.occurred_at) names.
