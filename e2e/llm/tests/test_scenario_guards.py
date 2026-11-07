@@ -66,8 +66,8 @@ class UseTheMomentTest(GuardCase):
 
     def test_leads_carrying_no_address_is_a_true_aside(self):
         self.assertGreen(
-            "All three are owned by Sofia Meier, not you, so check with her before you drop in. "
-            "I didn't check leads, because they carry no address field."
+            "Dom Digital, Rheinufer and Vorort Systeme are owned by Sofia Meier, not you, so check with her "
+            "before you drop in. I didn't check leads, because they carry no address field."
         )
 
     def test_a_workspace_with_no_address_field_still_fires(self):
