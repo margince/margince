@@ -10,6 +10,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
+// MeetingAttendingRolesSQL is the roles that say a party attends a meeting. A
+// `from` or `to` row records whose calendar it came off.
+const MeetingAttendingRolesSQL = `'organizer', 'attendee'`
+
 // MeetingResponsibilitySQL binds work to a supported host, participant or booking.
 // Importing a record or owning its calendar does not establish attendance.
 // Arguments are compile-time SQL expressions, never request text.
@@ -17,7 +21,7 @@ func MeetingResponsibilitySQL(meeting, seat string) string {
 	return fmt.Sprintf(`((%[4]s = %[2]s AND NOT starts_with(%[1]s.captured_by, 'connector:'))
 	   OR EXISTS (SELECT 1 FROM activity_participant attending
 	               WHERE attending.activity_id = %[1]s.id AND attending.user_id = %[2]s
-	                 AND attending.role IN ('organizer', 'attendee')
+	                 AND attending.role IN (`+MeetingAttendingRolesSQL+`)
 	                 AND %[3]s)
 	   OR EXISTS (SELECT 1 FROM meeting_invitation booked
 	               WHERE booked.activity_id = %[1]s.id AND booked.host_user_id = %[2]s))`,
@@ -29,7 +33,7 @@ func UnclaimedMeetingSQL(meeting string) string {
 	return fmt.Sprintf(`((%[3]s IS NULL OR starts_with(%[1]s.captured_by, 'connector:'))
 	   AND NOT EXISTS (SELECT 1 FROM activity_participant attending
 	               WHERE attending.activity_id = %[1]s.id AND attending.user_id IS NOT NULL
-	                 AND attending.role IN ('organizer', 'attendee')
+	                 AND attending.role IN (`+MeetingAttendingRolesSQL+`)
 	                 AND %[2]s)
 	   AND NOT EXISTS (SELECT 1 FROM meeting_invitation booked WHERE booked.activity_id = %[1]s.id))`,
 		meeting, auth.ParticipantStandsSQL("attending", meeting), KnownMeetingHostSQL(meeting))

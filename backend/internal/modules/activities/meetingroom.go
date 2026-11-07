@@ -19,9 +19,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // meetingAttendeeCap bounds who is named. This is "who is in the room" for
@@ -40,15 +41,15 @@ type MeetingAttendee = struct {
 }
 
 // MeetingOther is an attendee who is not a contact: a colleague, or an address
-// Margince knows no contact for.
+// no contact or seat on the meeting holds.
 type MeetingOther struct {
-	Kind string
+	Kind crmcontracts.MeetingOtherParticipantKind
 	Name string
 }
 
 // MeetingRoom is a meeting's linked deal and attendees, each only as far as the
 // reader may see it. Contacts are named first, then the others, within one cap.
-// More counts the attendees past it.
+// More counts the attendees past it, and the guests capture left off a crowd.
 type MeetingRoom struct {
 	LinkedDealID *ids.UUID
 	Attendees    []MeetingAttendee
@@ -63,11 +64,18 @@ type roomEntry struct {
 	Name      string             `json:"name"`
 }
 
+// roomColumn is the room column: the attendees on file, and how many guests a
+// crowded meeting stores no row for.
+type roomColumn struct {
+	Attendees []roomEntry `json:"attendees"`
+	LeftOut   int         `json:"left_out"`
+}
+
 // Attendee kinds the room column renders.
 const (
 	roomContact   = "contact"
-	roomColleague = "colleague"
-	roomAddress   = "address"
+	roomColleague = string(crmcontracts.MeetingOtherParticipantKindColleague)
+	roomAddress   = string(crmcontracts.MeetingOtherParticipantKindAddress)
 )
 
 // MeetingRoomColumns renders two SELECT columns over `activity a`: the linked
@@ -91,10 +99,16 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 	// captured invite makes its sender `from` and `attendee`) and is in the room
 	// once. A row naming a contact is that contact; one naming only a seat is a
 	// colleague; one naming only an address is that address.
+	//
+	// This renders in the card's own query, so it cannot call ColleagueSeats or
+	// the guest read. Their rule holds here: a seat attends through a standing
+	// organizer or attendee row, since owning a calendar is not attending, and
+	// only a live human is a colleague. An address also held by a contact or a
+	// seat on this meeting is that attendee, not a second one.
 	return fmt.Sprintf(`(SELECT dl.deal_id FROM activity_link dl
 		          JOIN deal d ON d.id = dl.deal_id AND d.archived_at IS NULL
 		         WHERE dl.activity_id = a.id AND (%[1]s) LIMIT 1),
-		       COALESCE((
+		       json_build_object('left_out', a.guests_left_out, 'attendees', COALESCE((
 		         SELECT json_agg(json_build_object('kind', room.kind, 'contact_id', room.contact_id, 'name', room.name)
 		                         ORDER BY room.rank, room.name, room.sort_key)
 		         FROM (
@@ -105,19 +119,24 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 		           UNION ALL
 		           SELECT 1, '`+roomColleague+`', NULL, u.display_name, u.id::text
 		             FROM (SELECT DISTINCT ap.user_id FROM activity_participant ap
-		                    WHERE ap.activity_id = a.id AND ap.contact_id IS NULL AND ap.user_id IS NOT NULL) seats
-		             JOIN app_user u ON u.id = seats.user_id
+		                    WHERE ap.activity_id = a.id AND ap.contact_id IS NULL AND ap.user_id IS NOT NULL
+		                      AND ap.role IN (%[3]s) AND %[4]s) seats
+		             JOIN app_user u ON u.id = seats.user_id AND %[5]s
 		           UNION ALL
 		           SELECT 2, '`+roomAddress+`', NULL, addressed.name, addressed.address
 		             FROM (SELECT DISTINCT ON (lower(ap.address)) lower(ap.address) AS address,
 		                          COALESCE(NULLIF(btrim(ap.display_name), ''), ap.address) AS name
 		                     FROM activity_participant ap
 		                    WHERE ap.activity_id = a.id AND ap.contact_id IS NULL AND ap.user_id IS NULL
-		                      AND ap.role IN ('`+connector.ParticipantRoleOrganizer+`', '`+connector.ParticipantRoleAttendee+`')
+		                      AND ap.role IN (%[3]s)
 		                      AND ap.address IS NOT NULL AND btrim(ap.address) <> ''
-		                    ORDER BY lower(ap.address), ap.display_name NULLS LAST) addressed
+		                      AND NOT EXISTS (SELECT 1 FROM activity_participant held
+		                                       WHERE held.activity_id = a.id AND lower(held.address) = lower(ap.address)
+		                                         AND (held.contact_id IS NOT NULL OR held.user_id IS NOT NULL))
+		                    ORDER BY lower(ap.address), NULLIF(btrim(ap.display_name), '') NULLS LAST) addressed
 		         ) room
-		       ), '[]'::json)`, dealScope, contactScope), nil
+		       ), '[]'::json))`, dealScope, contactScope, storekit.MeetingAttendingRolesSQL,
+		auth.ParticipantStandsSQL("ap", "a"), workforce.LiveHumanSQL("u")), nil
 }
 
 // readableScope is one record kind's visibility for MeetingRoomColumns: nothing
@@ -137,13 +156,14 @@ func readableScope(ctx context.Context, granted bool, object, alias string, arg 
 // ScanMeetingRoom turns the two columns MeetingRoomColumns rendered into a room,
 // capped here rather than in SQL so the cap sits beside the type it bounds.
 func ScanMeetingRoom(dealID *ids.UUID, attendees []byte) (MeetingRoom, error) {
-	var decoded []roomEntry
-	if err := json.Unmarshal(attendees, &decoded); err != nil {
+	var column roomColumn
+	if err := json.Unmarshal(attendees, &column); err != nil {
 		return MeetingRoom{}, fmt.Errorf("activities: decoding the meeting's attendees: %w", err)
 	}
-	room := MeetingRoom{LinkedDealID: dealID, Attendees: []MeetingAttendee{}}
+	room := MeetingRoom{LinkedDealID: dealID, Attendees: []MeetingAttendee{}, More: column.LeftOut}
+	decoded := column.Attendees
 	if len(decoded) > meetingAttendeeCap {
-		room.More = len(decoded) - meetingAttendeeCap
+		room.More += len(decoded) - meetingAttendeeCap
 		decoded = decoded[:meetingAttendeeCap]
 	}
 	for _, entry := range decoded {
@@ -151,7 +171,7 @@ func ScanMeetingRoom(dealID *ids.UUID, attendees []byte) (MeetingRoom, error) {
 			room.Attendees = append(room.Attendees, MeetingAttendee{ContactId: entry.ContactID, FullName: entry.Name})
 			continue
 		}
-		room.Others = append(room.Others, MeetingOther{Kind: entry.Kind, Name: entry.Name})
+		room.Others = append(room.Others, MeetingOther{Kind: crmcontracts.MeetingOtherParticipantKind(entry.Kind), Name: entry.Name})
 	}
 	return room, nil
 }
@@ -175,7 +195,7 @@ func (r MeetingRoom) OtherParticipants() *[]crmcontracts.MeetingOtherParticipant
 	}
 	out := make([]crmcontracts.MeetingOtherParticipant, 0, len(r.Others))
 	for _, other := range r.Others {
-		out = append(out, crmcontracts.MeetingOtherParticipant{Kind: crmcontracts.MeetingOtherParticipantKind(other.Kind), Name: other.Name})
+		out = append(out, crmcontracts.MeetingOtherParticipant{Kind: other.Kind, Name: other.Name})
 	}
 	return &out
 }

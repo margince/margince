@@ -67,8 +67,8 @@ func nextMeetingSection(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
-	// The room through the one owner Contact360 and the activity detail read,
-	// so the company page names the same attendees for the same meeting.
+	// The room Contact360 reads too, so both pages name the same attendees for
+	// the same meeting.
 	room, err := activities.MeetingRoomColumns(ctx, arg)
 	if err != nil {
 		return nil, err

@@ -852,7 +852,17 @@ func TestCompany360NextMeetingNamesColleaguesAndAddresses(t *testing.T) {
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`, meeting, buyer)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`, meeting, e.Rep3)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, display_name, role)
-		VALUES ($1, 'lena@prospect.test', 'Lena Prospect', 'attendee'), ($1, 'notes@northwind.test', NULL, 'attendee')`, meeting)
+		VALUES ($1, 'lena@prospect.test', 'Lena Prospect', 'attendee'), ($1, 'lena@prospect.test', '', 'organizer'),
+		       ($1, 'notes@northwind.test', NULL, 'attendee')`, meeting)
+	// None of these is a further attendee: a seat owning the calendar, a departed
+	// colleague, and an address its own contact already holds.
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`, meeting, e.Rep2)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`, meeting, e.AdminUser)
+	if _, err := owner.Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.AdminUser); err != nil {
+		t.Fatalf("deactivating the seat: %v", err)
+	}
+	e.WsExec(t, `UPDATE activity_participant SET address = 'ines@northwind.test' WHERE activity_id = $1 AND contact_id = $2`, meeting, buyer)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'INES@northwind.test', 'attendee')`, meeting)
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	view, err := svc.Assemble(reader, ids.From[ids.CompanyKind](company))
@@ -892,5 +902,15 @@ func TestCompany360NextMeetingNamesColleaguesAndAddresses(t *testing.T) {
 	named := len(view.NextMeeting.Participants) + len(*view.NextMeeting.OtherParticipants)
 	if named != 8 || view.NextMeeting.ParticipantsMore == nil || *view.NextMeeting.ParticipantsMore != 4 {
 		t.Errorf("twelve attendees name %d and count %v more, want 8 named and 4 more", named, view.NextMeeting.ParticipantsMore)
+	}
+
+	// A crowded calendar event stores no row for some guests. They still count.
+	e.WsExec(t, `UPDATE activity SET guests_left_out = 3 WHERE id = $1`, meeting)
+	view, err = svc.Assemble(reader, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	if view.NextMeeting.ParticipantsMore == nil || *view.NextMeeting.ParticipantsMore != 7 {
+		t.Errorf("participants_more = %v with three guests left out, want 7", view.NextMeeting.ParticipantsMore)
 	}
 }

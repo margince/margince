@@ -38319,13 +38319,13 @@ type Company360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
-	// OtherParticipants The attendees who are not contacts: colleagues, and addresses Margince knows no contact for. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
 	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
 
 	// Participants The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it.
 	Participants []Company360MeetingParticipant `json:"participants"`
 
-	// ParticipantsMore How many more attendees there are than the eight named. Absent when every attendee is named.
+	// ParticipantsMore How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
 	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
 	StartsAt         time.Time `json:"starts_at"`
 	Subject          string    `json:"subject"`
@@ -41413,7 +41413,7 @@ type Contact360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
-	// OtherParticipants The attendees who are not contacts: colleagues, and addresses Margince knows no contact for, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
 	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
 
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
@@ -41422,7 +41422,7 @@ type Contact360NextMeeting struct {
 		FullName  string             `json:"full_name"`
 	} `json:"participants,omitempty"`
 
-	// ParticipantsMore How many more attendees there are than the eight named. Absent when every attendee is named.
+	// ParticipantsMore How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
 	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
 	StartsAt         time.Time `json:"starts_at"`
 	Subject          *string   `json:"subject,omitempty"`

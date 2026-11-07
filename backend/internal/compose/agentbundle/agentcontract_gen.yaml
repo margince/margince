@@ -32079,13 +32079,13 @@ components:
         other_participants:
           type: array
           description: >-
-            The attendees who are not contacts: colleagues, and addresses Margince knows no contact for. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+            The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
           maxItems: 8
           items: {$ref: '#/components/schemas/MeetingOtherParticipant'}
         participants_more:
           type: integer
           minimum: 1
-          description: How many more attendees there are than the eight named. Absent when every attendee is named.
+          description: How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
     Company360MeetingParticipant:
       type: object
       description: One attendee of the next meeting, named only when the caller may read them.
@@ -32851,13 +32851,13 @@ components:
         other_participants:
           type: array
           description: >-
-            The attendees who are not contacts: colleagues, and addresses Margince knows no contact for, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+            The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
           maxItems: 8
           items: {$ref: '#/components/schemas/MeetingOtherParticipant'}
         participants_more:
           type: integer
           minimum: 1
-          description: How many more attendees there are than the eight named. Absent when every attendee is named.
+          description: How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
     ConversationClaimKind:
       type: string
       description: |-
