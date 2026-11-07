@@ -23,7 +23,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -73,7 +72,7 @@ func TestEveryIdentityInsertGoesThroughTheChokepoint(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
 		}
@@ -119,7 +118,7 @@ func TestLeadIdentityProbesAreSingleSourced(t *testing.T) {
 		if rel == home {
 			continue
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
 		}
@@ -158,7 +157,7 @@ func TestOnlyTheMergePathRetiresARecord(t *testing.T) {
 			continue
 		}
 		rel := filepath.ToSlash(path)
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
 		}
@@ -183,7 +182,7 @@ func TestOnlyTheMergePathRetiresARecord(t *testing.T) {
 func goSourceFiles(t *testing.T, root string) []string {
 	t.Helper()
 	var out []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

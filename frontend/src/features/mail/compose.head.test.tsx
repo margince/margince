@@ -217,6 +217,115 @@ describe("the recipient lines", () => {
   });
 });
 
+describe("an address line pasted or typed as a list", () => {
+  it("makes one recipient per address, whatever splits them", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByLabelText("To"));
+    await user.paste(
+      "a@one.example, b@two.example; c@three.example d@four.example",
+    );
+    await user.keyboard("{Enter}");
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)?.to).toEqual([
+      "dana@brandt.example",
+      "a@one.example",
+      "b@two.example",
+      "c@three.example",
+      "d@four.example",
+    ]);
+  });
+
+  it("takes the address out of an Outlook line, and none twice", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    const to = await screen.findByLabelText("To");
+    await user.type(
+      to,
+      "Dana Brandt <dana@brandt.example>; Milo Fenn <milo@nordwand.example>{Enter}",
+    );
+
+    expect(
+      screen.getAllByRole("button", { name: "Remove dana@brandt.example" }),
+    ).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Remove milo@nordwand.example" }),
+    ).toBeTruthy();
+  });
+
+  it("keeps a part that is no address in the box, and names it", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    const to = await screen.findByLabelText<HTMLInputElement>("To");
+    await user.click(to);
+    await user.paste("not-an-address, e@five.example");
+
+    expect(
+      screen.getByRole("button", { name: "Remove e@five.example" }),
+    ).toBeTruthy();
+    expect(to.value).toBe("not-an-address");
+    expect(
+      await screen.findByText(
+        "Not an email address: not-an-address. Correct it or remove it.",
+      ),
+    ).toBeTruthy();
+
+    await user.clear(to);
+    await user.type(to, "{Enter}");
+    expect(screen.queryByText(/Not an email address/)).toBeNull();
+  });
+
+  it("holds Send while a line keeps refused text, and frees it once cleared", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    const to = await screen.findByLabelText<HTMLInputElement>("To");
+    await user.type(to, "not-an-address{Enter}");
+    const send = () =>
+      screen.getByRole<HTMLButtonElement>("button", { name: "Send" });
+
+    expect(send().disabled).toBe(true);
+    expect(
+      screen.getByText(
+        "Correct or remove the text that is not an email address.",
+      ),
+    ).toBeTruthy();
+
+    await user.clear(to);
+    expect(send().disabled).toBe(false);
+    await fillAndSend(user);
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)?.to).toEqual(["dana@brandt.example"]);
+  });
+
+  it("commits Cc on a semicolon, and names a wrong part there too", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Cc"), "f@six.example;nope;");
+
+    expect(
+      screen.getByRole("button", { name: "Remove f@six.example" }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "Not an email address: nope. Correct it or remove it.",
+      ),
+    ).toBeTruthy();
+  });
+});
+
 describe("the copies", () => {
   // Copies are the rare half of addressing, and always-drawn rows made every
   // ordinary mail read as a form with empty fields in it. Bcc is also the one
@@ -386,7 +495,7 @@ describe("the project a message files under", () => {
 
   // Nothing connected is nothing to ask about. The fixture at the top of this
   // file carries no projects, which is the ordinary contact.
-  it("keeps the picker shut on No project when no project is connected", async () => {
+  it("hides the project picker when no project is connected", async () => {
     stubRoutes();
     render(drawer());
 
@@ -529,9 +638,7 @@ describe("a reply written from a deal", () => {
   });
 });
 
-// The picker stays in its row, so the head keeps its shape, but it offers nothing.
 function expectNoProjectToOffer() {
-  const picker = screen.getByLabelText("Project");
-  expect(picker.textContent).toContain("No project");
-  expect(picker.hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByLabelText("Project")).toBeNull();
+  expect(screen.queryByText("No project")).toBeNull();
 }

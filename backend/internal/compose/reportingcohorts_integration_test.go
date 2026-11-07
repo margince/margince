@@ -248,7 +248,8 @@ func TestLeadCohortFollowsArrivalsToTheirOutcomeForTheOwnerTheyArrivedWith(t *te
 	actor, _ := principal.Actor(ctx)
 	actor.Permissions.Objects["lead"] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	ctx = principal.WithActor(ctx, actor)
-	store := contacts.NewStore(InstallationDB(e.Pool))
+	eventAt := start.Add(2 * time.Minute)
+	store := contacts.NewStore(InstallationDB(e.Pool)).SetClock(func() time.Time { return eventAt })
 	rep1, rep3 := ids.From[ids.UserKind](e.Rep1), ids.From[ids.UserKind](e.Rep3)
 	lead := func(owner *ids.UserID) ids.LeadID {
 		name := "Cohort lead"
@@ -285,7 +286,7 @@ func TestLeadCohortFollowsArrivalsToTheirOutcomeForTheOwnerTheyArrivedWith(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	deal := e.seedOpenDeal(t, "Accepted from a lead", 55, &e.Rep1, nil, nil)
+	deal := e.seedOpenDeal(t, "Accepted from a lead", 55, &e.Rep1, nil)
 	if err := store.DecideHandoff(ctx, handoff, contacts.HandoffDecision{Status: contacts.HandoffAccepted, DealID: &deal}); err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +298,7 @@ func TestLeadCohortFollowsArrivalsToTheirOutcomeForTheOwnerTheyArrivedWith(t *te
 		t.Fatal(err)
 	}
 
-	at := clocktest.Now(t).Add(time.Minute)
+	at := eventAt.Add(time.Minute)
 	service := newReportingService(e.Pool, func() time.Time { return at })
 	interval := crmcontracts.ReportingWindow{StartAt: start, EndAt: at}
 	evaluate := func(owner ids.UUID) crmcontracts.ReportingEvaluation {

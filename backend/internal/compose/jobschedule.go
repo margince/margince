@@ -13,6 +13,7 @@ package compose
 
 import (
 	"slices"
+	"time"
 
 	"github.com/riverqueue/river"
 
@@ -81,6 +82,11 @@ func periodicInsertOpts(args river.JobArgs) *river.InsertOpts {
 	if _, locked := args.(sessionLocked); locked {
 		opts.UniqueOpts = river.UniqueOpts{}
 	}
+	// A stale running tick must not suppress later recovery windows.
+	if _, admission := args.(CaptureBackfillReconcileArgs); admission {
+		opts.UniqueOpts.ByPeriod = time.Second
+	}
+
 	if _, owned := args.(river.JobArgsWithInsertOpts); !owned {
 		opts.MaxAttempts = periodicPassMaxAttempts
 	}

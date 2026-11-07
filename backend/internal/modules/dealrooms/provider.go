@@ -32,7 +32,6 @@ func NewProvider(db *database.DB) *Provider {
 const (
 	filterDealID           = "deal_id"
 	filterDealRoomID       = "deal_room_id"
-	filterThreadID         = "thread_id"
 	filterDocumentID       = "document_id"
 	filterState            = "state"
 	filterParticipantEmail = "participant_email"
@@ -206,48 +205,24 @@ func recordsOf[V any](t datasource.EntityType, rows []V, page storekit.Page, key
 	return records, page.NextCursor, page.HasMore, nil
 }
 
-// Create opens a room, a thread in one, or a reply in a thread. It writes as
-// the seller's side, under the rules the seller's REST routes apply.
+// Create opens a room, under the rules the seller's REST route applies. A thread or
+// a reply reaches a buyer as it is written, so an agent spends send on its route.
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {
+	if in.EntityType != datasource.EntityDealRoom {
+		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.EntityType)}
+	}
 	raw, err := datasource.RawFields(in.Fields)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
-	fields, roomID, err := takeRoomIDs(raw, in.EntityType != datasource.EntityDealRoom)
-	if err != nil {
-		return datasource.EntityRef{}, err
+	fields := map[string]json.RawMessage{}
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return datasource.EntityRef{}, httperr.Validation("fields", "malformed_json", err.Error())
 	}
 	if fields["source"], err = json.Marshal(in.Source); err != nil {
 		return datasource.EntityRef{}, err
 	}
-	switch in.EntityType {
-	case datasource.EntityDealRoom:
-		return p.createRoom(ctx, fields)
-	case datasource.EntityDealRoomThread:
-		return p.openThread(ctx, roomID, fields)
-	case datasource.EntityDealRoomComment:
-		return p.reply(ctx, roomID, fields)
-	default:
-		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.EntityType)}
-	}
-}
-
-// takeRoomIDs lifts the room a thread or reply goes in out of its fields. The
-// route names it in its path, the seam among the fields.
-func takeRoomIDs(raw json.RawMessage, needsRoom bool) (map[string]json.RawMessage, ids.DealRoomID, error) {
-	fields := map[string]json.RawMessage{}
-	if err := json.Unmarshal(raw, &fields); err != nil {
-		return nil, ids.DealRoomID{}, httperr.Validation("fields", "malformed_json", err.Error())
-	}
-	if !needsRoom {
-		return fields, ids.DealRoomID{}, nil
-	}
-	var room ids.UUID
-	if err := json.Unmarshal(fields[filterDealRoomID], &room); err != nil || room.IsZero() {
-		return nil, ids.DealRoomID{}, httperr.Validation(filterDealRoomID, "required", "name the room by its deal_room_id")
-	}
-	delete(fields, filterDealRoomID)
-	return fields, ids.DealRoomID{UUID: room}, nil
+	return p.createRoom(ctx, fields)
 }
 
 func (p *Provider) createRoom(ctx context.Context, fields map[string]json.RawMessage) (datasource.EntityRef, error) {
@@ -261,37 +236,6 @@ func (p *Provider) createRoom(ctx context.Context, fields map[string]json.RawMes
 	}
 	room, err := p.store.CreateRoom(ctx, in)
 	return datasource.EntityRef{Type: datasource.EntityDealRoom, ID: ids.UUID(room.Id)}, err
-}
-
-func (p *Provider) openThread(ctx context.Context, roomID ids.DealRoomID, fields map[string]json.RawMessage) (datasource.EntityRef, error) {
-	var req crmcontracts.OpenDealRoomThreadRequest
-	if err := decodeFields(fields, &req); err != nil {
-		return datasource.EntityRef{}, err
-	}
-	in, err := openThreadInput(req, true)
-	if err != nil {
-		return datasource.EntityRef{}, err
-	}
-	thread, err := p.store.OpenThread(ctx, roomID, in)
-	return datasource.EntityRef{Type: datasource.EntityDealRoomThread, ID: ids.UUID(thread.Id)}, err
-}
-
-func (p *Provider) reply(ctx context.Context, roomID ids.DealRoomID, fields map[string]json.RawMessage) (datasource.EntityRef, error) {
-	var thread ids.UUID
-	if err := json.Unmarshal(fields[filterThreadID], &thread); err != nil || thread.IsZero() {
-		return datasource.EntityRef{}, httperr.Validation(filterThreadID, "required", "a reply names the thread it answers: its thread_id")
-	}
-	delete(fields, filterThreadID)
-	var req crmcontracts.PostDealRoomCommentRequest
-	if err := decodeFields(fields, &req); err != nil {
-		return datasource.EntityRef{}, err
-	}
-	body, source, err := commentInput(req, true)
-	if err != nil {
-		return datasource.EntityRef{}, err
-	}
-	answered, err := p.store.Reply(ctx, roomID, thread, body, source, optionalUUID(req.RequestId))
-	return datasource.EntityRef{Type: datasource.EntityDealRoomThread, ID: ids.UUID(answered.Id)}, err
 }
 
 func decodeFields[T any](fields map[string]json.RawMessage, into *T) error {

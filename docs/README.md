@@ -84,9 +84,9 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
 - [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
   a new forecast model is tested against, before it is scored.
-- [how-to/implement-deal-viability-review.md](how-to/implement-deal-viability-review.md): the plan for the
-  review of deals whose customer stopped answering, and what is still open.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
+- [prove-a-tool-in-the-role-matrix.md](how-to/prove-a-tool-in-the-role-matrix.md): make a new MCP tool show
+  ✓ or ✗ for every role.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
 - [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
@@ -96,6 +96,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
 - [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
+- [land-through-develop.md](how-to/land-through-develop.md): merge into `develop` on a shorter CI run, and how
+  `develop` reaches `main`.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.
 - [mint-a-passport.md](how-to/mint-a-passport.md): make a passport token for an agent.
@@ -111,6 +113,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
+- [measure-mail-import.md](how-to/measure-mail-import.md): measure a mail import.
+- [profile-mail-import.md](how-to/profile-mail-import.md): profile a mail import.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
   vLLM, with no cloud key.
 - [read-what-a-company-runs.md](how-to/read-what-a-company-runs.md): turn on the public lookup of what
@@ -146,6 +150,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
+  extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
   of an extension runs as.
 - [land-companies-and-deals-from-an-extension.md](how-to/land-companies-and-deals-from-an-extension.md): hand the
@@ -181,6 +187,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
 - [ai-certification.md](reference/ai-certification.md): which AI features each model passed. Generated.
+- [mcp-parity.md](reference/mcp-parity.md): how much of the web app an agent can do through MCP. Generated.
+- [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): which MCP tools the tests use, and how they
   score. Generated.
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
@@ -339,6 +347,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Run it in production
 
 - [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [install-on-a-server.md](how-to/install-on-a-server.md): run a release on one Linux server, from its
+  files.
 - [change-a-setting.md](how-to/change-a-setting.md): change a setting, check it before a start, and see
   where each value comes from.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when

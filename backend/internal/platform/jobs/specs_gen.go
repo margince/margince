@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "ca91e077598e84cdfae8664b5e9c53a69bfbd08d8e9ff2af89f560367b12f0bb"
+const JobContractHash = "62914c8f6a2f20b313dd8f1eab17182f65f2c32d6ba1e0ca29c040daddd63556"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -140,15 +140,6 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Args:      []ArgField{{Name: "Deal"}, {Name: "Workspace"}},
 	},
-	"assurance_review_delivery": {
-		Kind:      "assurance_review_delivery",
-		GoType:    "AssuranceReviewDeliveryArgs",
-		Role:      Worker,
-		Queue:     "default",
-		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
-		OptsOwner: OptsCaller,
-		Args:      []ArgField{{Name: "Episode", Scalar: true, Reason: "The review's episode counter, so a job for an episode that has since ended does nothing."}, {Name: "Exception"}, {Name: "Workspace"}},
-	},
 	"assurance_run": {
 		Kind:      "assurance_run",
 		GoType:    "AssuranceRunArgs",
@@ -192,23 +183,22 @@ var specs = map[string]Spec{
 		Kind:         "capture_backfill",
 		GoType:       "CaptureBackfillArgs",
 		Role:         Worker,
-		Queue:        "default",
+		Queue:        "mail_history",
 		Timeout:      TimeoutPolicy{Fixed: 8 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"GmailRegistry"}},
-		Fault:        FaultPolicy{NilAfterLogging: "the backfill ROW owns the outcome: RunBackfillStep ends the run and records the fault class on the row against its own give-up cap, on a context detached from the job because the job context dying mid-page is the commonest fault. A River retry would re-page a run the engine already ended."},
-		Args:         []ArgField{{Name: "BackfillID"}, {Name: "Workspace"}},
+		Fault:        FaultPolicy{NilAfterLogging: "the backfill ROW owns the outcome: RunBackfillExecution ends the run and records the fault class on the row against its own give-up cap, on a context detached from the job because the job context dying mid-page is the commonest fault. A River retry would re-page a run the engine already ended."},
+		Args:         []ArgField{{Name: "BackfillID"}, {Name: "ExecutionGeneration", Scalar: true, Reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}, {Name: "Workspace"}},
 	},
 	"capture_backfill_reconcile": {
-		Kind:         "capture_backfill_reconcile",
-		GoType:       "CaptureBackfillReconcileArgs",
-		Role:         Worker,
-		Fleet:        true,
-		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
-		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{Fixed: 24 * time.Hour},
-		Registration: Registration{When: []string{"GmailRegistry"}},
+		Kind:      "capture_backfill_reconcile",
+		GoType:    "CaptureBackfillReconcileArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "mail_admission",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 15 * time.Second},
 	},
 	"capture_classify": {
 		Kind:         "capture_classify",
@@ -262,6 +252,7 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 24 * time.Hour},
 		Registration: Registration{When: []string{"EnrichBrain"}},
+		Args:         []ArgField{{Name: "Pending", Scalar: true, Reason: "Selects the durable pending cohort; absent means the existing full repair pass."}},
 	},
 	"capture_part_slim": {
 		Kind:         "capture_part_slim",
@@ -602,10 +593,11 @@ var specs = map[string]Spec{
 		GoType:    "GraphEdgeReconcileArgs",
 		Role:      Worker,
 		Fleet:     true,
-		Queue:     "default",
+		Queue:     "graph_projection",
 		Timeout:   TimeoutPolicy{Fixed: 15 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 24 * time.Hour},
+		Args:      []ArgField{{Name: "Pending", Scalar: true, Reason: "Selects the durable pending cohort; absent means the existing full repair pass."}},
 	},
 	"graph_watch_renew": {
 		Kind:         "graph_watch_renew",
@@ -768,7 +760,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Fault:     FaultPolicy{NilAfterLogging: "ONE branch, and it is a mis-wired ROLE rather than a failed send: a worker composed with no operator relay says so at Warn, claims nothing, and returns nil. No durable retry stands behind that, and none is wanted — each role reads its own config, so returning a failure would have an installation that deliberately runs no operator mail discard a row per decision, and would leave a relay-less replica bouncing rows rather than sending them. What makes the green row honest is that the thing the product promises still happened: the notice is on the recipient's Worklist, which is where every notice is, and this message is only a nudge toward it. The log is how an operator tells one unconfigured worker from a quiet week.\nIt waives THAT branch and no other. The failures above the claim are returned and River retries them, and the ones below it are recorded rather than logged away — a refusal writes its cause into notice.email_error beside a claim that is never released. That is where the durability lives, and it is deliberate: SMTP returns no receipt, so a retried attempt could not tell a refused message from a delivered one and would risk telling a colleague twice that the same decision is waiting. The green River row means 'this notice's one attempt is concluded'; the row says how it went."},
+		Fault:     FaultPolicy{NilAfterLogging: "ONE branch, and it is a mis-wired ROLE rather than a failed send: a worker composed with no operator relay says so at Warn, claims nothing, and returns nil. No durable retry stands behind that, and none is wanted — each role reads its own config, so returning a failure would have an installation that deliberately runs no operator mail discard a row per decision, and would leave a relay-less replica bouncing rows rather than sending them. What makes the green row honest is that the thing the product promises still happened: the notice is on the recipient's Worklist, which is where every notice is, and this message is only a nudge toward it. The log is how an operator tells one unconfigured worker from a quiet week.\nIt waives THAT branch and no other. The failures above the claim are returned and River retries them. A relay that never took the message (mailer.NotTaken) releases the claims and is returned too, so the next rung sends it; no relay holds a copy, so the retry cannot send a second one. Any other relay failure, and the last rung, writes its cause into notice.email_error beside a claim that is never released, and cancels the job so job health counts it as dead. SMTP returns no receipt, so a message the relay may have taken is never sent again."},
 		Args:      []ArgField{{Name: "NoticeID"}, {Name: "Workspace"}},
 	},
 	"owed_verdict": {
@@ -821,6 +813,16 @@ var specs = map[string]Spec{
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Setting: "installation.retention_sweep_interval_seconds"},
+	},
+	"project_health_scan": {
+		Kind:      "project_health_scan",
+		GoType:    "ProjectHealthScanArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"provider_lookup_sweep": {
 		Kind:         "provider_lookup_sweep",
@@ -1093,8 +1095,11 @@ var queues = map[string]int{
 	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,
+	"graph_projection":  1,
 	"import_check":      2,
 	"import_write":      1,
+	"mail_admission":    1,
+	"mail_history":      2,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
 	"technical_lookup":  1,

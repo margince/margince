@@ -28,13 +28,16 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// inJurisdiction binds the store to a pack declaring the given disclosures.
+// inJurisdiction registers a pack declaring the given disclosures and puts both
+// selectors in its country. The default entity sends, and the recipient lives
+// there.
 func inJurisdiction(
 	t *testing.T, e *channelConsentEnv, code string, ds ...messagingrules.Disclosure,
 ) *Store {
@@ -42,6 +45,7 @@ func inJurisdiction(
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: 1, Disclosures: ds,
 	})
+	livesIn(t, e, code)
 	return e.store.WithInstallationCountry(
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
 			return jurisdiction.Code(code), nil
@@ -99,7 +103,29 @@ func stateParticulars(t *testing.T, e *channelConsentEnv, p ControllerParticular
 	}
 }
 
-// disclosures asks what a message of this category must carry.
+// recipientAddress is the env contact's mail address, which livesIn files.
+func recipientAddress(e *channelConsentEnv) string {
+	return "subject-" + e.contact.String() + "@cc.test"
+}
+
+// livesIn gives the env contact a mail address and a postal address in code's
+// country, written the way the contacts writer stores one: upper case.
+func livesIn(t *testing.T, e *channelConsentEnv, code string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:x') ON CONFLICT DO NOTHING`,
+		e.contact, recipientAddress(e)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, code); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// disclosures asks what a message of this category to the env contact must
+// carry.
 func disclosures(
 	t *testing.T, e *channelConsentEnv, store *Store, category commsauthz.Category,
 ) []DisclosureLine {
@@ -107,7 +133,9 @@ func disclosures(
 	var out []DisclosureLine
 	if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = store.DisclosuresFor(e.ctx, tx, category)
+		out, err = store.DisclosuresFor(e.ctx, tx, DisclosureQuery{
+			Category: category, Recipients: []string{recipientAddress(e)},
+		})
 		return err
 	}); err != nil {
 		t.Fatalf("resolving the disclosures: %v", err)
@@ -371,5 +399,60 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 		t.Errorf("the refused request still changed the particulars to %+v: the read gate "+
 			"has to run BEFORE the write, or a 403 arrives after the mutation committed",
 			after)
+	}
+}
+
+// TestAFurtherEntityNamesItselfAsTheController: a message of a further legal
+// entity names that entity's legal name and address as its controller. It
+// keeps the installation's privacy contact, which an entity does not state.
+// The default entity keeps the installation's particulars.
+//
+// Mutation: return the installation's particulars from controllerOf and this
+// fails.
+func TestAFurtherEntityNamesItselfAsTheController(t *testing.T) {
+	e := setupChannelConsent(t)
+	store := inJurisdiction(t, e, "zk",
+		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity},
+		messagingrules.Disclosure{Kind: messagingrules.PrivacyContact})
+	stateParticulars(t, e, ControllerParticulars{
+		LegalName: "Beispiel GmbH", PostalAddress: "Hauptstraße 1\n10115 Berlin", PrivacyContact: "privacy@beispiel.test",
+	})
+	branch := ids.NewV7()
+	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country,
+		  address_line1, address_postal_code, address_city, captured_by)
+		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', '1 Le Loi', '700000', 'Saigon', 'human:x')`, branch)
+	textOf := func(entity ids.UUID) map[string]string {
+		t.Helper()
+		out := map[string]string{}
+		if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+			lines, err := store.DisclosuresFor(e.ctx, tx, DisclosureQuery{
+				Category: commsauthz.CategoryReplyToInbound, Recipients: []string{recipientAddress(e)}, Entity: entity,
+			})
+			for _, line := range lines {
+				out[line.Kind] = line.Text
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+
+	home := textOf(ids.Nil)
+	if !strings.Contains(home[string(messagingrules.ControllerIdentity)], "Beispiel GmbH") {
+		t.Errorf("the default entity's controller line is %q, want the installation's", home[string(messagingrules.ControllerIdentity)])
+	}
+	got := textOf(branch)
+	controller := got[string(messagingrules.ControllerIdentity)]
+	for _, want := range []string{"Branch Co Ltd", "1 Le Loi", "700000 Saigon", "ZK"} {
+		if !strings.Contains(controller, want) {
+			t.Errorf("the branch's controller line %q lacks %q", controller, want)
+		}
+	}
+	if strings.Contains(controller, "Beispiel") {
+		t.Errorf("the branch's controller line %q names the installation", controller)
+	}
+	if got[string(messagingrules.PrivacyContact)] != "privacy@beispiel.test" {
+		t.Errorf("the branch's privacy contact is %q, want the installation's", got[string(messagingrules.PrivacyContact)])
 	}
 }

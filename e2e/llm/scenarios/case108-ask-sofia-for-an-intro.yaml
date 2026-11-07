@@ -1,0 +1,52 @@
+# CASE 108 — An agent verb that always calls a model spends `enrich`, so the
+# drafted introduction lives on run_research. The model reaches it there, on a
+# passport that holds enrich, and says what it wrote and that nothing was sent.
+#
+# The seed gives Sofia Meier three mails with Heike Brandt at Nordwind Armaturen
+# (case 49), so the route exists and draft_intro_request can name both. The ask
+# is to the COLLEAGUE: the forwardable note to Heike is a different message, and
+# a first mail to Heike is a third. Neither is what was asked for, but neither is
+# forbidden; must_call_with names the one that was.
+#
+# Nothing is written: the draft comes back for the user to send themself.
+name: case108_ask_sofia_for_an_intro
+criteria: [1]
+passport: research
+
+writes: true
+
+# THE PROMPT ASKS FOR THE PRODUCT'S DRAFT. draft_intro_request grounds on the
+# same route read_relationships returns, and changes and sends nothing, so a
+# model that reads the route and writes the ask itself has done the job well.
+# Asking it to prefer the drafter for an ask that does not name it would grade a
+# preference with no reason behind it. The user who wants Margince's drafted
+# ask says so, and that is the request this case keeps covered.
+prompt: |
+  We want into Nordwind Armaturen, and Sofia knows somebody there. Have
+  Margince draft the message I should send Sofia to ask her for the
+  introduction.
+
+must_call:
+  - draft_intro_request
+
+may_call:
+  - read_relationships
+  - search_records
+  - list_records
+  - read_record
+  - resolve_entities
+  - read_workspace
+  - draft_intro_note
+
+must_call_with:
+  - run_research.action=draft_intro_request
+
+must_mention:
+  - "Sofia"
+  - "Heike"
+
+must_not_mention:
+  - "(?i)\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:sent|emailed|messaged|forwarded)\b"
+
+runs: 3
+pass_at: 2

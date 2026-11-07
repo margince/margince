@@ -158,7 +158,7 @@ func (s *ChannelStore) Disconnect(ctx context.Context, id ids.UUID) error {
 	if err := auth.Require(ctx, channelConnectionObject, principal.ActionDelete); err != nil {
 		return err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if s.vault == nil {

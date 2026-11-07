@@ -100,10 +100,10 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	})
 }
 
-// ApplyReviewedOwedVerdictTx keeps a human-reviewed correction on the ordinary audited writer.
+// ApplyReviewedOwedVerdictTx keeps a reviewed correction on the ordinary audited writer.
 func ApplyReviewedOwedVerdictTx(ctx context.Context, tx pgx.Tx, expected OwedReviewCandidate, verdict, ruleset, reason string, runID ids.UUID, bodyLimit, priorBodyLimit int) (bool, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return false, apperrors.ErrPermissionDenied
 	}
 	if err := auth.EnsureActivityWritable(ctx, tx, expected.Candidate.ID); err != nil {

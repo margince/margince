@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sync/semaphore"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -32,7 +34,7 @@ const (
 	// rateWaitInPage is the longest wait a page takes inside itself when Gmail
 	// says slow down. A longer wait ends the page instead, and the engine comes
 	// back after it, holding no worker meanwhile.
-	rateWaitInPage = time.Minute
+	rateWaitInPage = 5 * time.Second
 
 	// rateRetriesInPage bounds how often one call is retried after a rate limit
 	// before the page gives up and the engine's ladder takes over.
@@ -109,6 +111,9 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 		if err == nil || !errors.Is(err, connector.ErrRateLimited) {
 			return v, err
 		}
+		if _, yield := errors.AsType[*quotaYieldError](err); yield {
+			return zero, err
+		}
 		wait := backoff.Jittered(attempt, rateBackoffBase, rateBackoffCap)
 		var limited *connector.RateLimitedError
 		if errors.As(err, &limited) && limited.RetryAfter > wait {
@@ -124,71 +129,96 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 	}
 }
 
-// inOrder fetches n items with a bounded pool and hands each result to consume
-// in index order, so what consume writes never depends on which fetch finished
-// first. consume returning an error stops the walk and is returned.
-func inOrder[T any](
+type orderedMessage struct {
+	v           Message
+	err         error
+	reservation *rawReservation
+}
+type rawFetch struct {
+	index       int
+	reservation *rawReservation
+}
+
+func queueMessageFetches(ctx context.Context, n int, tokens chan<- struct{}, next chan<- rawFetch, budget *semaphore.Weighted, reservationBytes int64) {
+	defer close(next)
+	for i := range n {
+		select {
+		case tokens <- struct{}{}:
+		case <-ctx.Done():
+			return
+		}
+		// Reserve in listing order, before a later result can occupy the budget.
+		reservation, err := reserveMemory(ctx, budget, reservationBytes)
+		if err != nil {
+			return
+		}
+		select {
+		case next <- rawFetch{index: i, reservation: reservation}:
+		case <-ctx.Done():
+			reservation.release()
+			return
+		}
+	}
+}
+
+// inOrder keeps fetches bounded and delivers each result in listing order.
+// Its budget covers fetch and consumption. A nil budget skips accounting.
+func inOrder(
 	ctx context.Context, n int,
-	fetch func(ctx context.Context, i int) (T, error),
-	consume func(i int, v T, err error) error,
+	fetch func(ctx context.Context, i int) (Message, error),
+	consume func(i int, v Message, err error) error,
+	budget *semaphore.Weighted, reservationBytes int64,
 ) error {
 	if n == 0 {
 		return nil
 	}
-	// cancel runs in the closure below, which has to wait for the workers
-	// after cancelling them. A bare defer cannot order the two.
 	ctx, cancel := context.WithCancel(ctx)
-	type result struct {
-		v   T
-		err error
-	}
-	slots := make([]chan result, n)
+	slots := make([]chan orderedMessage, n)
 	for i := range slots {
-		slots[i] = make(chan result, 1)
+		slots[i] = make(chan orderedMessage, 1)
 	}
 	tokens := make(chan struct{}, backfillLookahead)
-	next := make(chan int)
+	next := make(chan rawFetch)
 	var wg sync.WaitGroup
 	defer func() {
 		cancel()
 		wg.Wait()
-	}()
-	go func() {
-		defer close(next)
-		for i := range n {
+		for _, slot := range slots {
 			select {
-			case tokens <- struct{}{}:
-			case <-ctx.Done():
-				return
-			}
-			select {
-			case next <- i:
-			case <-ctx.Done():
-				return
+			case remaining := <-slot:
+				remaining.reservation.release()
+			default:
 			}
 		}
 	}()
+	wg.Go(func() { queueMessageFetches(ctx, n, tokens, next, budget, reservationBytes) })
 	for range min(backfillFetchWorkers, n) {
 		wg.Go(func() {
-			for i := range next {
-				v, err := fetch(ctx, i)
-				slots[i] <- result{v: v, err: err}
+			for item := range next {
+				v, err := fetch(item.reservation.context(ctx), item.index)
+				item.reservation.shrink(retainedRawBytes(v))
+				slots[item.index] <- orderedMessage{v: v, err: err, reservation: item.reservation}
 			}
 		})
 	}
 	for i := range n {
-		var r result
 		select {
-		case r = <-slots[i]:
+		case result := <-slots[i]:
+			err := consumeOrderedMessage(i, result, consume)
+			<-tokens
+			if err != nil {
+				return err
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-		<-tokens
-		if err := consume(i, r.v, r.err); err != nil {
-			return err
-		}
 	}
 	return nil
+}
+
+func consumeOrderedMessage(index int, result orderedMessage, consume func(int, Message, error) error) error {
+	defer result.reservation.release()
+	return consume(index, result.v, result.err)
 }
 
 // endsPage reports whether a message's failure is the connection's rather than

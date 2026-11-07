@@ -29,7 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -152,7 +151,7 @@ func magicKeysWithin(file *ast.File) []string {
 // remove a key that was never real, so it cannot make this side read short.
 func magicKeysIn(t *testing.T, path string) map[string]bool {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

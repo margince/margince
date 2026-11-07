@@ -29,6 +29,7 @@ const REASON: Record<GuardEntry["reason_code"], MessageKey> = {
   no_consent_exception_not_offered:
     "consent.reason.no_consent_exception_not_offered",
   no_consent: "consent.reason.no_consent",
+  existing_customer: "consent.reason.existing_customer",
 };
 
 const QUALIFYING: Record<QualifyingKind, MessageKey> = {

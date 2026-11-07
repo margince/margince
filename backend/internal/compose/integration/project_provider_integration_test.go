@@ -267,8 +267,8 @@ func TestTheAgentSeamAdvancesADealAndReportsTheStageSemantic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("advance through the seam: %v", err)
 	}
-	if moved.ID != deal {
-		t.Fatalf("advance returned %s, want the deal it moved", moved.ID)
+	if moved.Ref.ID != deal {
+		t.Fatalf("advance returned %s, want the deal it moved", moved.Ref.ID)
 	}
 	// The move landed and left its history behind — the seam runs the same
 	// store path the human one does, so the trail is identical.

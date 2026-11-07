@@ -79,12 +79,12 @@ func (s *salesAssessments) Assess(ctx context.Context, selection crmcontracts.Re
 }
 
 func (s *salesAssessments) AssessView(ctx context.Context, selection crmcontracts.ReportingSelection, refresh bool, view *crmcontracts.SalesAssessmentView, receipt *reporting.EvidenceExpectation) (crmcontracts.SalesAssessment, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return crmcontracts.SalesAssessment{}, auth.RequireHuman(ctx)
+		return crmcontracts.SalesAssessment{}, auth.RequireHumanOrItsAgent(ctx)
 	}
 	evaluation, in, err := s.prepareAssessment(ctx, selection, view, receipt, actor.UserID)
 	if err != nil {
@@ -148,6 +148,14 @@ func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmc
 		in.Candidates = nil
 		in.Decisions = nil
 	}
+	if in.View != string(crmcontracts.SalesAssessmentViewSales) {
+		work, err := s.upcomingFacts(ctx, evaluation)
+		if err != nil {
+			return evaluation, in, err
+		}
+		in.Cells = append(in.Cells, work...)
+	}
+	displayAssessmentCells(&in, evaluation)
 	return evaluation, in, nil
 }
 
@@ -215,7 +223,7 @@ func (s *salesAssessments) write(ctx context.Context, evaluation crmcontracts.Re
 		Cells:         assessmentCells(in),
 		Decisions:     len(in.Decisions),
 	}
-	if s.lane == nil || len(in.Cells) == 0 {
+	if s.lane == nil || !assessmentWorthExplaining(in) {
 		return out
 	}
 	laneCtx, cancel := context.WithTimeout(ctx, assessmentDeadline)
@@ -298,11 +306,29 @@ func (s *salesAssessments) gather(ctx context.Context, selection crmcontracts.Re
 		return salesassessment.Input{}, fmt.Errorf("reporting timezone: %w", apperrors.ErrInvalidArgument)
 	}
 	in := salesassessment.Input{Frame: assessmentFrame(evaluation.Context, zone)}
-	for _, action := range reportingOverviewActions(evaluation) {
-		in.Actions = append(in.Actions, salesassessment.ActionIn{ID: action.Id, Label: action.Label, Count: action.Count, Cell: "metric:" + string(action.Evidence.Metric)})
+	actions := []crmcontracts.ReportingOverviewAction{}
+	if evaluation.OverviewActions != nil {
+		actions = *evaluation.OverviewActions
+	}
+	for _, action := range actions {
+		cell := "action:" + action.Id
+		count := float64(action.Count)
+		window := evaluation.Context.Interval
+		if action.Evidence.Metric == reportingForecastLanding && evaluation.Context.CloseInterval != nil {
+			window = *evaluation.Context.CloseInterval
+		}
+		when := assessmentWindow(window, zone)
+		if action.Evidence.ContextId == reportingState {
+			when = evaluation.Context.StateAt.In(zone).Format("2006-01-02")
+		}
+		in.Cells = append(in.Cells, assessmentCell(cell, action.Label, &count, "count", when, crmcontracts.ReportingCoverage{Status: "ok"}))
+		in.Actions = append(in.Actions, salesassessment.ActionIn{ID: action.Id, Label: action.Label, Count: action.Count, Cell: cell})
 	}
 	names := reporting.ExplanationCopy(evaluation.Context)
 	for _, metric := range evaluation.Metrics {
+		if metric.Id == reportingStageAge || metric.Id == reportingLeadsPromoted {
+			continue
+		}
 		window := evaluation.Context.Interval
 		if metric.Id == reportingForecastLanding {
 			if metric.ForecastBasis == nil {
@@ -429,7 +455,7 @@ func (s *salesAssessments) recordedDecisions(ctx context.Context, candidates []s
 		if err != nil {
 			return nil, fmt.Errorf("a candidate deal id: %w", err)
 		}
-		listed, err := s.decisions.List(ctx, &dealID, nil)
+		listed, err := s.decisions.List(ctx, decisionFilter{deal: &dealID})
 		if err != nil {
 			return nil, err
 		}
@@ -462,7 +488,7 @@ func decisionsIn(listed []crmcontracts.SalesDecision, room int) []salesassessmen
 func assessmentCells(in salesassessment.Input) []crmcontracts.SalesAssessmentCell {
 	out := make([]crmcontracts.SalesAssessmentCell, 0, len(in.Cells))
 	for _, cell := range in.Cells {
-		out = append(out, crmcontracts.SalesAssessmentCell{Id: cell.ID, Label: cell.Label, Value: cell.Value})
+		out = append(out, crmcontracts.SalesAssessmentCell{Id: cell.ID, Label: cell.Label, Value: cell.Value, Display: new(salesassessment.CellDisplay(cell))})
 	}
 	return out
 }

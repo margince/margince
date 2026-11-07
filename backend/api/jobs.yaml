@@ -94,6 +94,15 @@ queues:
     max_workers: 1
     reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
+  graph_projection:
+    max_workers: 1
+    reason: Exact graph drains run apart from admission and short maintenance jobs.
+  mail_admission:
+    max_workers: 1
+    reason: Admission recovery must run while every history reader is waiting on a provider.
+  mail_history:
+    max_workers: 2
+    reason: History pages wait on providers and must leave short maintenance jobs able to run.
   comms_send:
     max_workers: 3
     reason: >-
@@ -363,46 +372,26 @@ kinds:
     role: worker
     fleet: true
     go_type: CaptureBackfillReconcileArgs
-    queue: default
+    queue: mail_admission
     timeout: 2m
     opts_owner: caller
-    cadence: 24h
-    registration: {when: [GmailRegistry], absent: registers_nothing}
+    cadence: 15s
+    registration: always
     reason: >-
-      The nightly pass ADR-0063 called for and nobody built: it puts a paging
-      job back behind every backfill run that is still live.
-
-      IT EXISTS BECAUSE TWO CORRECT DECISIONS MEET BADLY. capture_backfill is
-      inserted with one attempt, because the run ROW owns the outcome and a
-      River retry would re-page a run the engine already ended; and a run is
-      protected by a unique index over the connection while it is queued or
-      running, so one import cannot start on top of another. If that single
-      attempt is ever lost to something the engine never sees — a worker killed
-      mid-page, a rescue, a queue that dropped it — the row stays live with no
-      job behind it, and the index then refuses every future StartBackfill for
-      that connection. The import stops and the only symptom is a contact who
-      cannot start one.
-
-      It re-enqueues rather than deciding anything: the insert carries the same
-      ByArgs uniqueness the start does, so a run whose job is alive dedupes onto
-      it and a run whose job is gone gets a new one. Nightly rather than
-      minutely because the failure it repairs is rare and its cost is a delay,
-      not a loss — and a pass that ran often enough to notice quickly would
-      spend its every tick confirming that nothing was wrong.
-
-      Two minutes bounds an enumeration and an insert per live run. It does no
-      paging itself: the job it queues does that, under its own eight.
+      Restore durable paging jobs and admit queued imports without exceeding
+      the installation budget. Recover durable signature requests and release terminal imports. Ownership comes from advisory locks and execution
+      generations, so a delayed job or an old timestamp never proves an owner died.
 
   capture_backfill:
     role: worker
     go_type: CaptureBackfillArgs
-    queue: default
+    queue: mail_history
     timeout: 8m
     opts_owner: caller
     registration: {when: [GmailRegistry], absent: registers_nothing}
     fault:
       nil_after_logging: >-
-        the backfill ROW owns the outcome: RunBackfillStep ends the run and
+        the backfill ROW owns the outcome: RunBackfillExecution ends the run and
         records the fault class on the row against its own give-up cap, on a
         context detached from the job because the job context dying mid-page
         is the commonest fault. A River retry would re-page a run the engine
@@ -410,6 +399,7 @@ kinds:
     args:
       Workspace: id
       BackfillID: id
+      ExecutionGeneration: {scalar: true, reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}
     reason: >-
       One page of up to 100 large real messages fetched serially over the
       network, then a snooze. Without the headroom the job context dies mid-page
@@ -587,6 +577,8 @@ kinds:
     queue: default
     timeout: 20m
     opts_owner: caller
+    args:
+      Pending: {scalar: true, reason: "Selects the durable pending cohort; absent means the existing full repair pass."}
     cadence: 24h
     registration: {when: [EnrichBrain], absent: registers_nothing}
     reason: >-
@@ -678,26 +670,6 @@ kinds:
       seconds; two minutes leaves room to wait for the nightly pass's lock.
       Unique on the workspace and the deal while one is waiting or running, so
       a burst of edits to one deal is one job.
-
-  assurance_review_delivery:
-    role: worker
-    go_type: AssuranceReviewDeliveryArgs
-    queue: default
-    timeout: 2m
-    opts_owner: caller
-    args:
-      Workspace: id
-      Exception: id
-      Episode:
-        scalar: true
-        reason: The review's episode counter, so a job for an episode that has since ended does nothing.
-    reason: >-
-      Delivers one review episode as its task. Inserted in the transaction that
-      records the finding, so the delivery exists exactly when the review does.
-      Each attempt reads the newest finished run that observed the review, and
-      a retry never starts a new check. One review's task and filing take
-      seconds. Unique on the review and its episode while one is waiting or
-      running.
 
   close_date_sweep:
     role: worker
@@ -1091,9 +1063,11 @@ kinds:
     role: worker
     fleet: true
     go_type: GraphEdgeReconcileArgs
-    queue: default
+    queue: graph_projection
     timeout: 15m
     opts_owner: caller
+    args:
+      Pending: {scalar: true, reason: "Selects the durable pending cohort; absent means the existing full repair pass."}
     cadence: 24h
     reason: >-
       Daily, because the 90-day window counts go stale through the passage of
@@ -1238,14 +1212,13 @@ kinds:
         unconfigured worker from a quiet week.
 
         It waives THAT branch and no other. The failures above the claim are
-        returned and River retries them, and the ones below it are recorded
-        rather than logged away — a refusal writes its cause into
-        notice.email_error beside a claim that is never released. That is where
-        the durability lives, and it is deliberate: SMTP returns no receipt, so
-        a retried attempt could not tell a refused message from a delivered one
-        and would risk telling a colleague twice that the same decision is
-        waiting. The green River row means 'this notice's one attempt is
-        concluded'; the row says how it went.
+        returned and River retries them. A relay that never took the message
+        (mailer.NotTaken) releases the claims and is returned too, so the next
+        rung sends it; no relay holds a copy, so the retry cannot send a second
+        one. Any other relay failure, and the last rung, writes its cause into
+        notice.email_error beside a claim that is never released, and cancels
+        the job so job health counts it as dead. SMTP returns no receipt, so a
+        message the relay may have taken is never sent again.
     args:
       Workspace: id
       NoticeID: id
@@ -1759,6 +1732,23 @@ kinds:
       longest-unchecked first, each against at most fifty thousand records in
       keyset pages, so ten minutes bounds the slowest pass with room to spare
       and a pass cut short resumes where the checkpoints say.
+
+
+  project_health_scan:
+    role: worker
+    fleet: true
+    go_type: ProjectHealthScanArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Daily, because its inputs move by the day: the quiet rule counts thirty
+      days without a filed activity, and a task is overdue once its due date
+      has passed. An hourly pass would find the same answer twenty-three times
+      out of twenty-four. One pass is two indexed reads per in-flight project
+      and calls no model, so ten minutes covers every workspace of an
+      installation with room to spare.
 
 
   deal_scout:

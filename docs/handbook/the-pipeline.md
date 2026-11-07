@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/lossreason.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stageprogression.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
+<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/lossreason.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stagemoveverdict.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
 # The pipeline: how a deal moves
 
 The pipeline in Margince is the ladder of stages every deal moves through. Deals
@@ -36,8 +36,8 @@ Also called: close won, close a deal as won, win an opportunity.
 ### How do I mark a deal as lost?
 When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and say why. There is no separate Lost button.
 1. Open the deal and click the Lost stage on its **Stage** ladder. Or drag the card to the Lost column on **Board**.
-2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. **Confirm** stays off until you pick a reason.
-3. Press **Confirm**.
+2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. The note box has room for several lines, and Enter starts a new line. **Confirm** stays off until you pick a reason.
+3. Press **Confirm**, or press Ctrl+Enter (⌘+Enter on a Mac) in the note.
 
 The reason and the note are kept on the deal. If the customer comes back later, reopen the deal instead of creating a new one. Pressing **Cancel** or Escape, or clicking outside, clears what you picked and typed.
 Also called: close lost, lose a deal, mark an opportunity lost, the customer said no.
@@ -71,7 +71,7 @@ To add, rename, reorder or remove stages, open the account menu → **Settings**
 
 A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only settings" at the top of the page.
 
-An agent is always refused. Also called: deal stages, sales process, customise the pipeline, reorder stages.
+An agent acting for someone who may edit pipelines can do the same. It cannot add a won or lost stage or change what a stage means. While a move runs by itself on the pipeline, it cannot change the stages or **Exit criteria** either. Also called: deal stages, sales process, customise the pipeline, reorder stages.
 
 ### How do I create another pipeline?
 To add a pipeline, open **Settings** → **Pipelines** and choose **New pipeline**.
@@ -118,8 +118,8 @@ Rename them, reorder them, add your own. Two rules you cannot change: a won stag
 is always 100 and a lost stage is always 0.
 
 You edit pipelines and stages at **Settings → Pipelines**, in the Sales group.
-Only a human can edit them. An agent is refused, because every "should this deal
-move?" idea is judged against the stage ladder.
+An agent acting for you can edit them too. What a stage means stays with you, and so do the
+stages while a move runs by itself: automatic moves are judged on them.
 
 Removing a stage tells you what happens. The stages after it move up, and past
 stage changes still read well. Deals still on it have to move first.
@@ -143,13 +143,13 @@ or lost stage asks first:
 > **Move to Lost?** This closes the deal as lost. Nothing changes until you
 > confirm.
 
-If the deal has open tasks, the dialog lists them, and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
+If the deal has open tasks, the dialog lists them under the question, each with its due date or **No due date**. It lists at most five, then says how many more there are, if any. **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
 
 ### Losing
 
-**A lost deal needs a reason** from **Why was it lost?**, which an administrator
-keeps under **Settings → Loss reasons**. The **Note** is optional. Reopening
-clears the reason, and the deal's history keeps every time it was lost.
+**A lost deal needs a reason** from **Why was it lost?**, which an administrator keeps under **Settings → Loss reasons**. The **Note** is optional.
+**How it stands** shows the reason beside the day the deal closed, with the note under it. A long note shows its first two lines, and **Show more** opens the rest.
+Reopening clears the reason, and the deal's history keeps every time it was lost.
 
 ### Winning
 
@@ -271,82 +271,54 @@ the reports behind it whole. You can retire a source instead of deleting it.
 Deals that already name it still read "(retired)" instead of going empty. A deal
 that names none reads "Not set".
 
-## Forecast category
+## Win probability
 
-A deal's forecast category is separate from its stage, and is your call. You set it when you edit the deal, to **Commit**, **Best case**,
-**Pipeline** or **Omitted**.
+A deal's **Probability**, from 0 to 100%, starts as its stage's. Set the deal's
+own when you edit it; it then reads "set by you", with the stage's value beside
+it. A colleague's reads "set by" and their name. Empty the field to use the
+stage's again.
 
-Two more appear in reports, but nobody chooses them: **Slipped** and **No
-category**. Margince marks a Commit or Best case deal Slipped when its close date
-has passed, is missing, or is still only a guess. Nobody sets it; it is what the
-dates say.
+A stage move sets it back to the new stage's and says so:
+"Probability set to 75% by the stage Negotiating". A won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
+it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
+close date counts as **Likely**.
 
 ## Close dates Margince sets
 
-Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its future date, and its forecast category drops one step. The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
+Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%).
+
+The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks and is at least 7 days away. It is never further away than the setting `deals.silent_close_days`, which is 120 days unless an admin changed it. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
 
 A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Waiting for your word** on **Home**, to accept or undo; see [Your day](your-day.md#waiting-for-your-word). To stop these changes on your deals, see [Approvals](approvals.md).
 
 ## Reading the numbers
 
-The deals board in Margince loads 100 deals at a time. But the totals at the top of each column count every matching deal, the ones not loaded yet too. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
+Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
 
 A stage with no total shows no bar, and the bar has no dark part when the weighted total is unknown. No stage shows a bar when the totals on the board are in more than one currency. When the totals have a rate date, a last line gives the date of the exchange rates used. It also says how many deals have no price, when some have none. Point at the stage total, or move to it with Tab, to see both totals in full, down to the smallest unit of the currency. A weighted total that is unknown shows there as a line, not an amount.
 
-The totals count every matching deal you may see, loaded as a card or not. They
-are held back when a tag filter is on ("Loaded deals only. No total
-while a tag filter is on."). They are also held back when the owner filter names
-someone whose numbers you may not measure ("Loaded deals only. This owner’s
-totals are outside what you may measure."). You may measure yourself, the
-members of teams you lead, and anyone if your access covers the whole company.
+The totals at the top of each column count every matching deal, the ones not loaded yet too. While the totals are still loading, or if they fail to load, a column shows the count of its loaded cards instead. A column that is still loading shows no count. If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. If a later page fails, the cards already loaded stay, an error shows, and **Load more** tries that page again. The **Table** view loads one list.
+
+The totals count every deal you may see, which are the deals the board shows as cards. They are held back when the board includes archived deals. They are also held back when you narrow the board by stage, tag, search, team or unassigned deals. A range such as close date or value holds them back too. A tag filter, for example, shows "Loaded deals only. No total while a tag filter is on."
+
+They are held back too when the owner filter names someone whose numbers you may not measure ("Loaded deals only. Only an administrator can let you measure this owner’s totals."). You may measure yourself, the members of teams you lead, and anyone if your access covers the whole company. Where totals are held back, the count at the top of the board covers only the loaded cards and says so.
 
 Every deal report has an **Explain this number** control that shows the rows the
 number was built from. If a number looks wrong, open it.
 
-The deal reports are **Open deals by stage**, **Forecast categories**, **Open
+The deal reports are **Open deals by stage**, **Forecast by probability**, **Open
 deals per company**, and the sales and time-in-stage reports in **Performance**. They
 live under **Analytics**; see [Analytics and forecasting](analytics.md).
 
-## Stage automation: the evidence before trusting a move
+## Stage moves Margince makes
 
-Stage automation in Margince means the product suggests stage moves, and a stage
-move may later move deals by itself. Before you trust it to, there is a record of
-how its ideas really went, at **Settings → Stage automation** (in the Sales
-group).
+Margince may move an open deal to a later stage when the customer's own words meet what the stage asks for. It tells you after, and you can undo the move. See [Deals the customer supports](deals-the-customer-supports.md#when-the-deal-reached-a-later-stage). Also called: stage automation, automatic stage moves.
 
-The report itself is read-only. Under it sit the rules that decide what each
-stage move may do, and changing one of those needs permission to edit
-pipelines. Without it, the page shows "Read-only settings" at the top.
+## Deals Margince opens and reopens
 
-Under **Transition rules**, turning a stage move on does not start moving deals.
-Margince keeps asking until the record is good enough. Then it moves deals by
-itself and tells you after. A stage move that Margince has stopped shows
-**Resume**, which still has to reach the same bar.
+A customer may ask for an offer at a company with no open deal. Margince then opens a deal for the company's owner at the first stage. When the company's last closed deal was lost, Margince reopens that deal instead, for its owner. It counts only messages that reached Margince after the deal was lost.
 
-It reports three counts for each pipeline and stage move, over a number of
-days. It counts how many ideas someone **Reviewed**, how many are **Still
-open**, and how many **Expired**. An expired idea is one nobody answered in time; it does
-not count as a no.
-
-The reviewed ones are split into **Accepted** (as proposed), **Edited**
-(accepted after edits), **Rejected**, and **Undone or corrected**. That last
-one is a move that was undone, or whose evidence they marked wrong. Those four
-are shown as a share of what was reviewed.
-
-It also reports **Days observed**, from the first reviewed idea to the last. It
-says why that counts: "A good rate from one afternoon is not a track record."
-
-The **Track record** table shows **Reviewed**, **Accepted** and **Undone or corrected**.
-A stage move's details show **Edited**, **Rejected**, **Still open**, **Expired** and **Days observed**.
-They also show how often each kind of evidence, such as a signed document, was accepted as proposed.
-**What the figures mean**, under the table, explains every figure in the table and in the details.
-
-### How do I set up stage automation?
-To let Margince move deals between stages by itself, open **Settings** → **Stage automation** (in the **Sales** group). Switch a stage move on under **Transition rules**.
-1. Pick the pipeline and read each stage move's record. Check **Reviewed**, **Accepted** and **Undone or corrected** in **Track record**, then **Rejected** and **Days observed** in its details.
-2. Under **Transition rules**, turn on the stage move you trust.
-
-Nothing moves at once. Margince keeps suggesting moves for you to check until the record is good enough, then moves deals and tells you after. Changing a rule needs permission to edit pipelines. Also called: automatic stage moves, pipeline automation.
+Both show on **Home** with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
 
 ## Badges on a deal card
 

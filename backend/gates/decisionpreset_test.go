@@ -16,7 +16,6 @@ package gates
 // profile — a block kept in comments is exactly the one nothing else parses.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -24,6 +23,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -41,7 +41,7 @@ var (
 // constant the pattern no longer finds fails rather than comparing nothing.
 func readDecisionPreset(t *testing.T) ai.DecisionsConfig {
 	t.Helper()
-	raw, err := os.ReadFile(routingFieldsFile)
+	raw, err := gatekit.ReadFile(routingFieldsFile)
 	if err != nil {
 		t.Fatalf("read %s: %v", routingFieldsFile, err)
 	}
@@ -94,7 +94,7 @@ func TestTheOpenRouterDecisionPresetIsTheCommentedPresetLane(t *testing.T) {
 	preset := readDecisionPreset(t)
 	matched := 0
 	for _, path := range presetFiles(t) {
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("%s: %v", path, err)
 		}

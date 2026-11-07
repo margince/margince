@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { unwrap } from "../../lib/problem";
+import { useTagVocabularyInvalidation } from "../../lib/tags.queries";
 import type { MutationOutcome } from "../../lib/undoableremoval";
 
 export type Tag = components["schemas"]["Tag"];
@@ -57,45 +58,6 @@ export function useCountedTagCatalog(enabled: boolean) {
 }
 
 /**
- * Every write on this card refreshes the same three reads.
- *
- * The catalog is what the card draws. The vocabulary is what the pickers and
- * the filter dials offer, and a word coined here has to reach them or an admin
- * adds a tag and then cannot find it. The record reads carry the words
- * themselves, so a rename that did not reach them would leave the old spelling
- * on every open record page.
- */
-function useVocabularyInvalidation() {
-  const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: ["tags"] });
-    void queryClient.invalidateQueries({ queryKey: ["tag"] });
-    void queryClient.invalidateQueries({ queryKey: ["record-tags"] });
-    // The three record LISTS carry their rows' tags inline, keyed under their
-    // own prefixes rather than under any tag key. Without these a rename or a
-    // merge leaves the old spelling on every row a reader has already loaded,
-    // for as long as that page stays fresh — and this client disables refetch
-    // on focus, so coming back to the tab does not repair it.
-    for (const list of TAGGED_LISTS) {
-      void queryClient.invalidateQueries({ queryKey: [list] });
-    }
-  };
-}
-
-/** The list reads whose rows carry tags inline. */
-const TAGGED_LISTS = ["contacts", "companies", "deals"] as const;
-
-export function useCreateTag() {
-  const invalidate = useVocabularyInvalidation();
-  return useMutation({
-    mutationFn: async (body: { name: string; color?: TagColor }) => {
-      return unwrap(await api.POST("/tags", { body }));
-    },
-    onSuccess: invalidate,
-  });
-}
-
-/**
  * A rename or a recolour, pinned to the version the card read.
  *
  * If-Match, not last-write-wins: two admins tidying the vocabulary in the same
@@ -103,7 +65,7 @@ export function useCreateTag() {
  * word — the loser's spelling is what every record then carries.
  */
 export function useUpdateTag() {
-  const invalidate = useVocabularyInvalidation();
+  const invalidate = useTagVocabularyInvalidation();
   return useMutation({
     mutationFn: async (input: {
       id: string;
@@ -138,7 +100,7 @@ export function useUpdateTag() {
  * `onSuccess` gets the id that restores it.
  */
 export function useArchiveTag(outcome: MutationOutcome<string | null>) {
-  const invalidate = useVocabularyInvalidation();
+  const invalidate = useTagVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
       unwrap(
@@ -157,7 +119,7 @@ export function useArchiveTag(outcome: MutationOutcome<string | null>) {
 }
 
 export function useRestoreTag(outcome: MutationOutcome<string>) {
-  const invalidate = useVocabularyInvalidation();
+  const invalidate = useTagVocabularyInvalidation();
   return useMutation({
     mutationFn: async (id: string) => {
       unwrap(
@@ -176,7 +138,7 @@ export function useRestoreTag(outcome: MutationOutcome<string>) {
 
 /** Fold one word into another. The source is retired; the target survives. */
 export function useMergeTags() {
-  const invalidate = useVocabularyInvalidation();
+  const invalidate = useTagVocabularyInvalidation();
   return useMutation({
     mutationFn: async (input: { id: string; intoTagID: string }) => {
       return unwrap(

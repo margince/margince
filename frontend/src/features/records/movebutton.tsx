@@ -9,7 +9,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ListChecks, Sparkles } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -21,7 +21,7 @@ import { useCan } from "../../lib/capability";
 import { refreshSuggestedMoves, useCurrentMove } from "../../lib/currentmove";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -101,7 +101,7 @@ export function MoveButton({
   // mounts one for its timeline; this one is a lone control on the deal card,
   // so a message cited in the brief it opens has nowhere else to go.
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const [taskId, setTaskId] = useState<string | null>(null);
   const openTask = useCurrentMove<string>(setTaskId);
   const openBrief = useCurrentMove<string>(setBriefId);
@@ -232,7 +232,6 @@ export function MoveButton({
               })
             }
           >
-            <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>
           <ErrorLine error={openBrief.error} />
@@ -290,7 +289,6 @@ function FollowUpDraft({
           })
         }
       >
-        <Sparkles aria-hidden />
         {t("worklist.verb.draft_follow_up_now")}
       </Button>
       <ErrorLine error={check.error} />

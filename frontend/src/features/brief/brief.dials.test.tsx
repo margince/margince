@@ -3,11 +3,13 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
+  firstWeek,
   meetingRow,
   readingsDay,
+  type WeeklyReview,
   waitingRow,
 } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
@@ -71,6 +73,7 @@ function stubBrief(
   teamWeek: Worklist["team_week"] = scopeOptions.includes("team")
     ? "teams_led"
     : "none",
+  review: WeeklyReview | null = null,
 ) {
   return stubApi({
     "GET /worklist": () => jsonResponse(worklist(scopeOptions, teamWeek)),
@@ -82,7 +85,7 @@ function stubBrief(
         truncated: false,
       }),
     "GET /weekly-reviews/latest": () =>
-      jsonResponse({ title: "Not Found" }, 404),
+      review ? jsonResponse(review) : jsonResponse({ title: "Not Found" }, 404),
     "GET /weekly-plans/current": () =>
       jsonResponse({ title: "Not Found" }, 404),
     "GET /teams": () =>
@@ -176,32 +179,41 @@ describe("the Brief's dials", () => {
   //
   // The work column already switches on the view. The rail did not, because it
   // is drawn once outside that branch and nothing asserted otherwise.
-  it("leaves the morning's rail off the weekly", async () => {
+  it("gives the weekly its own rail, without the morning's", async () => {
     globalThis.location.hash = "#/home?view=weekly";
-    stubBrief(["mine"]);
+    stubBrief(["mine"], "none", firstWeek);
     render(<BriefScreen />);
 
     await screen.findByRole("group", { name: en["brief.view.label"] });
     await waitFor(() =>
-      expect(document.querySelector("#brief-weekly")).not.toBeNull(),
+      expect(
+        document.querySelector(".brief-weekly-page .brief-rail"),
+      ).not.toBeNull(),
     );
-    // Every panel IN THE RAIL, counted through the rail's own region and the
-    // design system's own panel class, so this is the rail's content rather
-    // than one panel's id — a panel that collapses on a quiet morning is absent
-    // for a reason that has nothing to do with the view, and an id-shaped
-    // assertion would pass on that instead. The quiet LINE goes with them: it
-    // is the rail reporting on the rail.
+    // The morning's sections and its quiet line are the rail reporting on the
+    // day, so none of them stands beside the week.
     expect(
       document.querySelectorAll(".page-zones-aside .brief-section"),
     ).toHaveLength(0);
     expect(document.querySelector("#brief-quiet")).toBeNull();
-    // And the TRACK is gone with them. The <aside> element is gated on having
-    // content, but the grid template is on the wrapper and driven by `shape` —
-    // so dropping only the contents leaves the weekly at seventy per cent
-    // width beside a third of nothing, which reads as a rail that failed to
-    // load rather than one that was never there. `page-zones-aside` is the
-    // class that reserves the column.
-    expect(document.querySelector(".page-zones-aside")).toBeNull();
+  });
+
+  // A first week has no report, no weeks to step to and no plan, so no empty
+  // column or landmark stands beside it.
+  it("draws no weekly rail when the week has nothing to put in it", async () => {
+    globalThis.location.hash = "#/home?view=weekly";
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
+
+    await waitFor(() =>
+      expect(document.querySelector("#brief-weekly")).not.toBeNull(),
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector(".brief-weekly-page .brief-rail"),
+      ).toBeNull(),
+    );
+    expect(screen.queryByRole("complementary")).toBeNull();
   });
 
   // THE READINGS AND THE LINE UNDER THEM BELONG TO THE MORNING TOO.
@@ -317,12 +329,12 @@ describe("the Brief's dials", () => {
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
     const glance = screen.getByTestId("brief-glance");
     expect(glance.children).toHaveLength(2);
-    expect(glance.firstElementChild?.firstElementChild?.tagName).toBe("H1");
+    expect(glance.querySelector(".glance-title > h1")).toBeTruthy();
     // And no clock. The time the queue was read was the one thing here that
     // moved on its own, and a substring read is what catches it coming back in
     // some other wording.
     expect(glance.textContent).not.toContain(
-      formatTimeOfDay(readingsDay({}).as_of, "en", viewerZone()),
+      formatTimeOfDay(readingsDay({}).as_of, "en", browserZone()),
     );
 
     cleanup();

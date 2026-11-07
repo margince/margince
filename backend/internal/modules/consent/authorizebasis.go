@@ -54,6 +54,12 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 		return err
 	}
 	threadKey := threadKeyOf(ctx, tx, req.AnchorActivityID)
+	if err := storekit.LockThreadKeysTx(ctx, tx, threadKey); err != nil {
+		return err
+	}
+	if threadKey != threadKeyOf(ctx, tx, req.AnchorActivityID) {
+		return storekit.RetryThreadTransaction(ctx, tx)
+	}
 	live, err := basisAlreadyLive(ctx, tx, subject, res.Basis, threadKey)
 	if err != nil {
 		return err
@@ -61,8 +67,7 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 	if live {
 		return nil
 	}
-	// Locked here and not earlier, so a send that records nothing and a send
-	// whose basis already stands take no lock at all.
+	// The subject row is locked only when this transaction records new evidence.
 	//
 	// A merge archives the retired record and carries its consent rows across.
 	// A basis written after the carry had passed would sit on a record no read

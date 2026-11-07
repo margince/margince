@@ -84,3 +84,24 @@
 .ct-seat-role {
   color: var(--textSecondary);
 }
+
+/* The contact's deals as the board's cards, as many to a row as fit. */
+.ct-deal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--gapCards);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A deal not yet read keeps its place in the grid as a quiet tile. */
+.ct-deal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--padCard);
+  border: 1px dashed var(--borderStrong);
+  border-radius: var(--r-control);
+}

@@ -299,6 +299,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// a second store over the same pool would be a second answer to "what is
 		// still open".
 		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
+		// The reader's own booking page, once it was used and while it takes
+		// no bookings.
+		WithBookingHealth(newAttentionBookingHealth(pool, db)).
 		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
 		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the

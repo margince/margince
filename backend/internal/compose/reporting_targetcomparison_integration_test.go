@@ -16,7 +16,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -137,9 +136,6 @@ func TestTheQuarterReviewSampleIsFortyThousandShortAtThreePointSixCoverage(t *te
 	if *got.Gap != 4_000_000 || *got.Remaining != 38_000_000 || *got.OpenPipeline != 136_000_000 || *got.Coverage < 3.55 || *got.Coverage >= 3.65 {
 		t.Fatalf("gap %v remaining %v open %v coverage %v, want 40k short, 380k left and 3.6", *got.Gap, *got.Remaining, *got.OpenPipeline, *got.Coverage)
 	}
-	if got.Qualified == nil || got.Qualified.Status != "not_enforced" || got.Qualified.Coverage != nil {
-		t.Fatalf("qualified %+v, want no qualified figure while the qualified forecast is off", got.Qualified)
-	}
 	receipt := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
 	evidence, err := q.service.Evidence(q.human, q.selection(), got.Operands.OpenPipeline.Metric, got.Operands.OpenPipeline.ContextId, "", nil, nil, 10, receipt)
 	if err != nil || len(evidence.Rows) != 1 || *evidence.Rows[0].Value != 136_000_000 {
@@ -147,21 +143,6 @@ func TestTheQuarterReviewSampleIsFortyThousandShortAtThreePointSixCoverage(t *te
 	}
 	if rows := comparisonCSV(t, evaluation); rows["gap"] != "4000000" || rows["coverage"] == "" || rows["status"] != "compared" {
 		t.Fatalf("export rows %v, want the same gap, coverage and status", rows)
-	}
-}
-
-func TestQualifiedCoverageCountsOnlyTheDealsTheQualifiedForecastKeeps(t *testing.T) {
-	q := seedTargetQuarter(t)
-	if err := config.Save(q.human, StoredConfig(q.env.Pool), assurance.QualifiedForecastEnforced, true); err != nil {
-		t.Fatal(err)
-	}
-	_, got := q.comparison(t, q.selection())
-	// No open deal was checked yet, so each reads unknown and none qualifies.
-	if got.Qualified == nil || got.Qualified.Status != "compared" || *got.Qualified.OpenPipeline != 0 || *got.Qualified.Coverage != 0 {
-		t.Fatalf("qualified %+v, want a measured zero beside the 1.36m of all open deals", got.Qualified)
-	}
-	if *got.OpenPipeline != 136_000_000 {
-		t.Fatalf("all open %v, want 1.36m: qualification never rewrites the baseline", *got.OpenPipeline)
 	}
 }
 
@@ -185,7 +166,7 @@ func TestAComparisonTheQuarterCannotSupportSaysWhyAndOffersOneItCan(t *testing.T
 	if got.Status != "incompatible" || *got.Incompatibility != "manager_call_pipeline" || got.SupportedSelection.PipelineId != nil {
 		t.Fatalf("pipeline comparison %+v, want the call refused for one pipeline and every pipeline offered", got)
 	}
-	if err := config.Save(q.human, StoredConfig(q.env.Pool), identity.ForecastForwardMeasure, string(forecasting.MeasureCommitEvidence)); err != nil {
+	if err := config.Save(q.human, StoredConfig(q.env.Pool), identity.ForecastForwardMeasure, string(forecasting.MeasureLikely)); err != nil {
 		t.Fatal(err)
 	}
 	_, got = q.comparison(t, pipeline)

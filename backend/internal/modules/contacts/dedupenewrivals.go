@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,10 +37,21 @@ func newRivals[T any](ctx context.Context, tx pgx.Tx, entityType string, subject
 	return ranked[:min(len(ranked), dedupeRivalLimit)], nil
 }
 
-// pairedWith answers the rivals the queue holds a pair with the subject for,
-// open or decided. A pair the system archived undecided is not held: filing
-// it again reopens it (refileArchivedCandidateTx). The coalesce expressions
-// are uq_dedupe_candidate_pair's, so the index serves the lookup.
+// heldPairSQL is the condition that dedupe_candidate row d is a pair the queue
+// holds between subject and rival, open or decided. A pair the system archived
+// undecided is not held: filing it again reopens it (refileArchivedCandidateTx).
+// The coalesce expressions are uq_dedupe_candidate_pair's, so the index serves
+// the lookup. rival may be `ANY($n)`.
+func heldPairSQL(entityType, subject, rival string) string {
+	return storekit.SQLf(`d.entity_type = %[1]s AND (d.archived_at IS NULL OR d.disposition <> 'open')
+		AND ((coalesce(d.left_contact_id, d.left_company_id, d.left_lead_id) = %[2]s
+		      AND coalesce(d.right_contact_id, d.right_company_id, d.right_lead_id) = %[3]s)
+		  OR (coalesce(d.right_contact_id, d.right_company_id, d.right_lead_id) = %[2]s
+		      AND coalesce(d.left_contact_id, d.left_company_id, d.left_lead_id) = %[3]s))`,
+		entityType, subject, rival)
+}
+
+// pairedWith answers the rivals the queue holds a pair with the subject for.
 func pairedWith[T any](ctx context.Context, tx pgx.Tx, entityType string, subject ids.UUID,
 	ranked []T, rivalOf func(T) ids.UUID,
 ) (map[ids.UUID]bool, error) {
@@ -49,14 +61,10 @@ func pairedWith[T any](ctx context.Context, tx pgx.Tx, entityType string, subjec
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT CASE WHEN l = $2 THEN r ELSE l END FROM (
-		  SELECT coalesce(left_contact_id, left_company_id, left_lead_id) AS l,
-		         coalesce(right_contact_id, right_company_id, right_lead_id) AS r
-		    FROM dedupe_candidate
-		   WHERE entity_type = $1 AND (archived_at IS NULL OR disposition <> 'open')
-		     AND ((coalesce(left_contact_id, left_company_id, left_lead_id) = $2
-		           AND coalesce(right_contact_id, right_company_id, right_lead_id) = ANY($3))
-		       OR (coalesce(right_contact_id, right_company_id, right_lead_id) = $2
-		           AND coalesce(left_contact_id, left_company_id, left_lead_id) = ANY($3)))) pairs`,
+		  SELECT coalesce(d.left_contact_id, d.left_company_id, d.left_lead_id) AS l,
+		         coalesce(d.right_contact_id, d.right_company_id, d.right_lead_id) AS r
+		    FROM dedupe_candidate d
+		   WHERE `+heldPairSQL("$1", "$2", "ANY($3)")+`) pairs`,
 		entityType, subject, rivals)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the pairs the queue holds: %w", err)
