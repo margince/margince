@@ -6,14 +6,11 @@
 package main
 
 import (
-	"context"
 	"io"
 	"log/slog"
 	"os"
 	"strconv"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -21,10 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
-// The worker's event lanes park bus connections in blocking reads. With every
-// bus connection held that way, a shared ceiling must still answer: it rides
+// The worker's event lanes keep bus connections checked out in blocking reads.
+// With every bus connection taken, a shared ceiling must still answer: it rides
 // its own client, not the bus pool.
-func TestCeilingsStillAnswerWhileEveryBusConnectionIsBlocked(t *testing.T) {
+func TestCeilingsStillAnswerWhileEveryBusConnectionIsTaken(t *testing.T) {
 	addr := os.Getenv("MARGINCE_TEST_REDIS")
 	if addr == "" {
 		t.Skip("MARGINCE_TEST_REDIS not set")
@@ -38,35 +35,28 @@ func TestCeilingsStillAnswerWhileEveryBusConnectionIsBlocked(t *testing.T) {
 		t.Fatal("the ceilings share the bus client")
 	}
 
-	// Hold every bus connection in a blocking read, as the lanes do.
-	held := bus.Options().PoolSize
-	blockCtx, release := context.WithCancel(t.Context())
-	var readers sync.WaitGroup
-	for range held {
-		readers.Go(func() {
-			//craft:ignore swallowed-errors the read only exists to hold a connection; it ends by cancellation
-			_ = bus.XRead(blockCtx, &redis.XReadArgs{Streams: []string{"test:ceilings:idle", "$"}, Block: 3 * time.Second}).Err()
-		})
-	}
+	// Check out every bus connection and keep it, as the lanes' reads do.
+	held := make([]*redis.Conn, 0, bus.Options().PoolSize)
 	t.Cleanup(func() {
-		release()
-		readers.Wait()
+		for _, conn := range held {
+			//craft:ignore swallowed-errors returning a held test connection; the client closes next
+			_ = conn.Close()
+		}
 		closeBus(slog.New(slog.NewTextHandler(io.Discard, nil)), bus, coordination)
 	})
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		stats := bus.PoolStats()
-		if int(stats.TotalConns) >= held && stats.IdleConns == 0 {
-			break
+	for range bus.Options().PoolSize {
+		conn := bus.Conn()
+		if err := conn.Ping(t.Context()).Err(); err != nil {
+			t.Fatalf("hold a bus connection: %v", err)
 		}
-		if time.Now().After(deadline) {
-			t.Fatalf("bus pool never filled: %+v of %d", stats, held)
-		}
-		time.Sleep(20 * time.Millisecond)
+		held = append(held, conn)
+	}
+	if stats := bus.PoolStats(); stats.IdleConns != 0 {
+		t.Fatalf("the bus pool still has idle connections: %+v", stats)
 	}
 
 	pacer := ratelimit.NewPacer()
 	if _, _, err := pacer.Reserve(t.Context(), ratelimit.Budget{Key: "test/ceilings/" + t.Name(), PerMinute: 600, Cost: 1}); err != nil {
-		t.Fatalf("a ceiling failed while the bus pool was busy: %v", err)
+		t.Fatalf("a ceiling failed while the bus pool was taken: %v", err)
 	}
 }
