@@ -505,8 +505,8 @@ func grantContactsRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope
 	}
 }
 
-// An arrival the workspace cannot see yet adds no evidence, so it folds
-// nothing. Opening it to the workspace is the update that folds it.
+// An arrival the workspace cannot see yet, or one that has not happened, adds
+// no evidence, so it folds nothing. Opening it to the workspace is the update that folds it.
 func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Hidden Arrival")
@@ -547,6 +547,20 @@ func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
 	}
 	if got := edgeOf(); got != before {
 		t.Fatalf("a hidden arrival refolded the edge: %+v, was %+v", got, before)
+	}
+
+	ahead := seedExchange(t, e, contact)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = now() + interval '1 day' WHERE id = $1`, ahead)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "activity.captured", "activity", ahead)); err != nil {
+		t.Fatal(err)
+	}
+	if got := edgeOf(); got != before {
+		t.Fatalf("a workspace arrival that has not happened yet refolded the edge: %+v, was %+v", got, before)
 	}
 
 	setAudience(hidden, "workspace")
