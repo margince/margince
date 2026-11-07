@@ -16,13 +16,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-type workLeaseKey struct{}
-type workLeaseProof struct {
-	pool  *pgxpool.Pool
-	key   string
-	nonce string
-	lease *SessionLease
-}
+type (
+	workLeaseKey   struct{}
+	workLeaseProof struct {
+		pool  *pgxpool.Pool
+		key   string
+		nonce string
+		lease *SessionLease
+	}
+)
 
 func (d *DB) workKey(ctx context.Context, kind string, id ids.UUID) (string, error) {
 	workspace, err := d.Workspace(ctx)
@@ -32,6 +34,7 @@ func (d *DB) workKey(ctx context.Context, kind string, id ids.UUID) (string, err
 	return kind + ":" + workspace.String() + ":" + id.String(), nil
 }
 
+// TryWorkLease takes the tenant's lease on one unit of work; false means another holder has it.
 func (d *DB) TryWorkLease(ctx context.Context, kind string, id ids.UUID, log *slog.Logger) (*SessionLease, bool, error) {
 	key, err := d.workKey(ctx, kind, id)
 	if err != nil {

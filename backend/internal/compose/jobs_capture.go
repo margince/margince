@@ -270,6 +270,7 @@ type CaptureSyncArgs struct {
 // Kind is the stable job identifier River persists in river_job.
 func (CaptureSyncArgs) Kind() string { return "capture_sync" }
 
+// SessionLocked lets a dead worker's lease, not its River row, free the sync.
 func (CaptureSyncArgs) SessionLocked() {}
 
 // WorkspaceID binds this connection's sync to its tenant (jobs.WorkspaceScoped).
