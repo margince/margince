@@ -75,7 +75,8 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 		ConnectionID: ids.NewV7().String(),
 		Provider:     "gmail",
 	}
-	probe := &fanOutProbeWorker{pool: e.Pool,
+	probe := &fanOutProbeWorker{
+		pool:  e.Pool,
 		fleet: []ids.UUID{fleetChild},
 		child: loopChild,
 		done:  make(chan error, 1),
