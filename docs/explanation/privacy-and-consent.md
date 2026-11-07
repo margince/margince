@@ -615,6 +615,6 @@ Later mail capture and data tasks keep a user's confirmed source decision.
 | Duties to tell | `internal/modules/consent/noticecase.go` (`privacy_notice_case`) |
 | A website lead's notice | `internal/modules/consent/leadnotice.go` (`lead_privacy_notice`), `internal/compose/siteleadnotice.go`, `internal/modules/privacy/erasure_untoldlead.go` |
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
-| The engine-and-gate report | `internal/modules/consent/allowedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
+| The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
 | Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |

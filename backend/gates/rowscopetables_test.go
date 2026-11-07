@@ -650,5 +650,7 @@ const (
 	// ordered locks (one), and interaction retry/release/lock/queue selectors
 	// (four). Their system-only callers consume these keys inside maintenance;
 	// none enters a response. Human graph reads retain their object and row gates.
-	modulesTierUnscopedCeiling = 162
+	// 163: the subject access export's retained copies name the subject's own
+	// contact and lead ids, and it answers for that one contact across every owner.
+	modulesTierUnscopedCeiling = 163
 )
