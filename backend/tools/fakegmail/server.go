@@ -19,14 +19,14 @@ import (
 const apiPrefix = "/gmail/v1/users/me"
 
 type server struct {
-	boxes    []mailbox
-	byOwner  map[string]int
+	boxes     []mailbox
+	byOwner   map[string]int
 	mu        sync.Mutex
 	connected map[string]bool
-	calls    sync.Map
-	rawBytes atomic.Int64
-	now      time.Time
-	big      bool
+	calls     sync.Map
+	rawBytes  atomic.Int64
+	now       time.Time
+	big       bool
 }
 
 func (s *server) routes() *http.ServeMux {
