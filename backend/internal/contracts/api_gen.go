@@ -41068,7 +41068,7 @@ type Contact struct {
 	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
-	// CreatedFromActivityId The note, mail or quick capture this contact was read out of, where one was named at creation. Null on a contact a member typed, and null to a reader who may not open that record, so the source chip renders without a link rather than refusing the contact.
+	// CreatedFromActivityId The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
 	CreatedFromActivityId *openapi_types.UUID `json:"created_from_activity_id,omitempty"`
 	Emails                *[]ContactEmail     `json:"emails,omitempty"`
 

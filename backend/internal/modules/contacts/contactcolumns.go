@@ -22,7 +22,7 @@ import (
 // refusing the contact. A bare id would say a record exists that the reader
 // cannot reach, which is the disclosure the audience exists to prevent.
 func contactColumns(ctx context.Context, arg func(any) int) (string, error) {
-	source, err := auth.ActivityContentClause(ctx, "src", arg)
+	source, err := createdFromSQL(ctx, arg)
 	if err != nil {
 		return "", err
 	}
@@ -33,8 +33,21 @@ func contactColumns(ctx context.Context, arg func(any) int) (string, error) {
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("contact") + `,
 	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark,
-	(SELECT src.id FROM activity src
+	` + source + ` AS created_from_activity_id`, nil
+}
+
+// createdFromSQL is the source column a reader may see. The row half is the
+// reader's activity audience. The object half is the activity read grant: a
+// reader the activity reads refuse outright gets null, not the record's id.
+func createdFromSQL(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, "activity") {
+		return `NULL::uuid`, nil
+	}
+	audience, err := auth.ActivityContentClause(ctx, "src", arg)
+	if err != nil {
+		return "", err
+	}
+	return `(SELECT src.id FROM activity src
 	  WHERE src.id = contact.created_from_activity_id
-	    AND src.archived_at IS NULL AND ` + source + `)
-	  AS created_from_activity_id`, nil
+	    AND src.archived_at IS NULL AND ` + audience + `)`, nil
 }

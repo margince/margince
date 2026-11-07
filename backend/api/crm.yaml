@@ -44666,9 +44666,9 @@ components:
           readOnly: true
           description: >-
             The note, mail or quick capture this contact was read out of, where
-            one was named at creation. Null on a contact a member typed, and
-            null to a reader who may not open that record, so the source chip
-            renders without a link rather than refusing the contact.
+            one was named at creation. Absent on a contact a member typed, and
+            absent to a reader who may not open that record, so the contact
+            still reads rather than being refused.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]

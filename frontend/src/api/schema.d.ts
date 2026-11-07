@@ -31414,7 +31414,7 @@ export interface components {
             readonly acquisition_request?: components["schemas"]["ContactAcquisitionRequest"];
             /**
              * Format: uuid
-             * @description The note, mail or quick capture this contact was read out of, where one was named at creation. Null on a contact a member typed, and null to a reader who may not open that record, so the source chip renders without a link rather than refusing the contact.
+             * @description The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
              */
             readonly created_from_activity_id?: string | null;
             /**

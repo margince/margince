@@ -369,11 +369,18 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 // function read as this package's row resolution. Every writer through it is
 // then a write that resolved its row the wrong way.
 //
-// EnsureVisibleExisting rather than EnsureVisible: an id no row holds is
-// refused instead of stored as a link to nothing.
+// An activity is not an owner-scoped table, so the row half is the activity
+// content probe, the one every reader of a note or a mail passes. The live
+// probe refuses an id no row holds rather than storing a link to nothing.
+//
+// A caller without the activity read grant is refused as not found, as the
+// contract promises, so the answer never says that the record exists.
 func refuseUnreadableSource(ctx context.Context, tx pgx.Tx, source *ids.UUID) error {
 	if source == nil {
 		return nil
 	}
-	return auth.EnsureVisibleExisting(ctx, tx, "activity", *source)
+	if !auth.ReadGranted(ctx, "activity") {
+		return auth.HideRow(ctx, "activity")
+	}
+	return auth.EnsureActivityContentVisibleLive(ctx, tx, *source)
 }
