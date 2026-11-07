@@ -217,8 +217,9 @@ func (h marginceChangeHandlers) ownerless(ctx context.Context) ([]crmcontracts.T
 	return out, cut, nil
 }
 
-// changeReceipts draws report rows as receipts with their review state. An
-// accepted change carries no Undo: the owner kept it.
+// changeReceipts draws report rows as receipts with their review state. A
+// reviewed change keeps its Undo: marking it reviewed acknowledges it and
+// takes nothing back.
 func (h marginceChangeHandlers) changeReceipts(ctx context.Context, rows []deals.CorrectionReceipt) ([]crmcontracts.Receipt, error) {
 	keys := make([]deals.AppliedChangeKey, 0, len(rows))
 	for _, row := range rows {
@@ -233,9 +234,6 @@ func (h marginceChangeHandlers) changeReceipts(ctx context.Context, rows []deals
 		receipt := correctionReceipt(row)
 		if review, ok := reviews[deals.AppliedChangeKey{DealID: row.DealID, ChangeID: row.AuditLogID}]; ok {
 			receipt.Review = &review
-		}
-		if row.Accepted {
-			receipt.Undo = nil
 		}
 		out = append(out, attention.WireReceipt(receipt))
 	}
@@ -397,10 +395,7 @@ func undoRefusal(err error) (crmcontracts.UndoMarginceChangeKeptReason, bool) {
 	if err == nil {
 		return "", false
 	}
-	if conflict, ok := errors.AsType[*deals.CorrectionReversalError](err); ok {
-		if conflict.Reason == deals.AlreadyAccepted {
-			return crmcontracts.UndoMarginceChangeKeptReasonAccepted, true
-		}
+	if _, ok := errors.AsType[*deals.CorrectionReversalError](err); ok {
 		return crmcontracts.UndoMarginceChangeKeptReasonChangedSince, true
 	}
 	switch {

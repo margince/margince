@@ -56770,6 +56770,12 @@ type Receipt struct {
 	// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 	CloseDateChange *CloseDateChange `json:"close_date_change,omitempty"`
 
+	// CustomerQuote The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote.
+	CustomerQuote *string `json:"customer_quote,omitempty"`
+
+	// Headline `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses.
+	Headline *string `json:"headline,omitempty"`
+
 	// Id The completed act, as its own surface spells it.
 	Id openapi_types.UUID `json:"id"`
 
@@ -56778,6 +56784,9 @@ type Receipt struct {
 
 	// OccurredAt When it happened.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// Reason Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
+	Reason *string `json:"reason,omitempty"`
 
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
@@ -63088,7 +63097,9 @@ type UndoMarginceChangeKept struct {
 	AuditLogId openapi_types.UUID `json:"audit_log_id"`
 
 	// Kind The kind of change; absent when the change could not be read.
-	Kind   *string                      `json:"kind,omitempty"`
+	Kind *string `json:"kind,omitempty"`
+
+	// Reason Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
 	Reason UndoMarginceChangeKeptReason `json:"reason"`
 
 	// TeamNotes With `needs_confirmation`, the notes the team added to the opened or reopened deal.
@@ -63101,7 +63112,7 @@ type UndoMarginceChangeKept struct {
 	TeamWork *string `json:"team_work,omitempty"`
 }
 
-// UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.
+// UndoMarginceChangeKeptReason Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
 type UndoMarginceChangeKeptReason string
 
 // UndoMarginceChangeResult What happened to one deal. `undone` lists the kinds taken back; `kept` lists each

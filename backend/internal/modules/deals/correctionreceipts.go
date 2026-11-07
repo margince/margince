@@ -60,8 +60,6 @@ type CorrectionReceipt struct {
 	// Evidence is the change's audit evidence, withheld like Basis after the
 	// deal changed hands.
 	Evidence []byte
-	// Accepted reports that the owner kept the change.
-	Accepted bool
 	OwnerID  *ids.UUID
 	// FromStage and ToStage name the stages a stage move or a close went
 	// between, as they are called today.
@@ -151,7 +149,7 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 		&row.Version, &row.BeforeClose, &row.AfterClose, &row.Evidence,
 		&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
 		&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
-		&row.Currency, &row.Accepted, &row.OwnerID, &row.FromStage, &row.ToStage,
+		&row.Currency, &row.OwnerID, &row.FromStage, &row.ToStage,
 		&row.StageProbability); err != nil {
 		return row, err
 	}
@@ -213,7 +211,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       %[2]s, %[3]s,
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
 			       coalesce(a.evidence->>'amount_currency', d.currency::text),
-			       c.accepted_at IS NOT NULL, d.owner_id,
+			       d.owner_id,
 			       (SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id'),
 			       (SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id'),
 			       (SELECT h.win_probability_at_change::int FROM deal_stage_history h WHERE h.id = c.stage_history_id)

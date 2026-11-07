@@ -75002,6 +75002,24 @@ components:
         id: { type: string, format: uuid, description: 'The completed act, as its own surface spells it.' }
         kind: { type: string, description: "The producer's own sub-type — for the label, never for authority." }
         summary: { type: string, description: 'What was done, in the words the act itself recorded.' }
+        headline:
+          type: string
+          description: >-
+            `summary` without the reason and the customer's words appended to it, for a client
+            that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt
+            whose summary carries neither, and on older responses.
+        reason:
+          type: string
+          description: >-
+            Why Margince did it, in the words recorded when it acted. Never composed when the
+            receipt is read. Absent when no reason was recorded, and when this reader may not
+            read why: only the owner the change was made for reads it.
+        customer_quote:
+          type: string
+          description: >-
+            The customer's own words the change rests on, where the act recorded them, masked
+            with the amount they state. Kept apart from `reason`, which is Margince's reading
+            and never a quote.
         summary_parts:
           allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
           description: The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
@@ -76727,6 +76745,9 @@ components:
         reason:
           type: string
           enum: [accepted, already_undone, changed_since, not_found, not_permitted, version_skew, needs_confirmation]
+          description: >-
+            Why the change was kept. `accepted` is no longer sent: a change marked reviewed
+            still undoes. A client keeps reading it from an older server.
         team_notes:
           type: integer
           description: With `needs_confirmation`, the notes the team added to the opened or reopened deal.

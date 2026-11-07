@@ -56068,6 +56068,12 @@ export interface components {
             kind: string;
             /** @description What was done, in the words the act itself recorded. */
             summary: string;
+            /** @description `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses. */
+            headline?: string;
+            /** @description Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it. */
+            reason?: string;
+            /** @description The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote. */
+            customer_quote?: string;
             /** @description The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /**
@@ -57540,7 +57546,10 @@ export interface components {
             audit_log_id: string;
             /** @description The kind of change; absent when the change could not be read. */
             kind?: string;
-            /** @enum {string} */
+            /**
+             * @description Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
+             * @enum {string}
+             */
             reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew" | "needs_confirmation";
             /** @description With `needs_confirmation`, the notes the team added to the opened or reopened deal. */
             team_notes?: number;
