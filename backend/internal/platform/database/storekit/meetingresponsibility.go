@@ -18,14 +18,14 @@ const MeetingAttendingRolesSQL = `'organizer', 'attendee'`
 // Importing a record or owning its calendar does not establish attendance.
 // Arguments are compile-time SQL expressions, never request text.
 func MeetingResponsibilitySQL(meeting, seat string) string {
-	return fmt.Sprintf(`((%[4]s = %[2]s AND NOT starts_with(%[1]s.captured_by, 'connector:'))
+	return fmt.Sprintf(`(((%[4]s = %[2]s AND NOT starts_with(%[1]s.captured_by, 'connector:'))
 	   OR EXISTS (SELECT 1 FROM activity_participant attending
 	               WHERE attending.activity_id = %[1]s.id AND attending.user_id = %[2]s
 	                 AND attending.role IN (`+MeetingAttendingRolesSQL+`)
 	                 AND %[3]s)
 	   OR EXISTS (SELECT 1 FROM meeting_invitation booked
-	               WHERE booked.activity_id = %[1]s.id AND booked.host_user_id = %[2]s))`,
-		meeting, seat, auth.ParticipantStandsSQL("attending", meeting), KnownMeetingHostSQL(meeting))
+	               WHERE booked.activity_id = %[1]s.id AND booked.host_user_id = %[2]s)) AND NOT %[5]s)`,
+		meeting, seat, auth.ParticipantStandsSQL("attending", meeting), KnownMeetingHostSQL(meeting), auth.MeetingSeatDeclinedSQL(meeting, seat))
 }
 
 // UnclaimedMeetingSQL is a meeting no seat answers for by that same evidence.
