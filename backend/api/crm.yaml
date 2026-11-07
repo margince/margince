@@ -18961,7 +18961,7 @@ paths:
 
         Your own mailbox only. A sender is personal to the colleague who knows them: one rep's family
         member is another rep's customer.
-      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: set_capture_sender_decision, router: change_capture, action: set_sender_decision, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       requestBody:
         required: true
