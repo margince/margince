@@ -308,7 +308,7 @@ answer. So a record built from stored runs is the same measure.
 It is on by default, and out of git, like the trace. `RESUME=<dir>` sets its folder; `RESUME=` measures
 everything again. A stored file cut off in the middle of a write still replays every whole run before the
 cut. One run owns a folder at a time. So runs of more than one `TASK=` at once each need their own
-`RESUME=<dir>`. A run that ends early, even one its timeout kills, frees the folder for the next run.
+`RESUME=<dir>`. A run that ends early, even one its timeout stops, frees the folder for the next run.
 
 ## How the verdict is decided
 
