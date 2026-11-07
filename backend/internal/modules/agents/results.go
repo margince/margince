@@ -54,6 +54,9 @@ type ListRecordsResult struct {
 	// NextCursor is absent rather than empty when there is no next page — an
 	// empty string reads as a cursor a caller might try to use.
 	NextCursor string `json:"next_cursor,omitempty"`
+	// Calendar is GET /activities' own field: present on an activity list read
+	// as the reader's diary, and only `connected` makes an empty day a free one.
+	Calendar *crmcontracts.ReaderCalendar `json:"calendar,omitempty"`
 }
 
 // QueryWorkspaceResult is what query_workspace answers: the records a plan

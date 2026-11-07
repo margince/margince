@@ -94,6 +94,30 @@ class FinishTheImportTest(GuardCase):
             with self.subTest(said=said):
                 self.assertGreen(self.report + said)
 
+    def test_a_negation_in_an_earlier_clause_does_not_block_the_mapping(self):
+        for said in (
+            "Your CSV headers didn't match the company fields, so I mapped `name` to display name, "
+            "`city` to address city, `size` to size band, and `country` to address country.",
+            "The headers differ, so size went to size band.",
+        ):
+            with self.subTest(said=said):
+                self.assertGreen(self.report + said)
+
+    def test_the_target_named_by_its_label(self):
+        self.assertGreen(
+            self.report + "The columns resolve as name → company name, city → city, size → employee band, "
+            "and country → country."
+        )
+
+    def test_a_label_without_a_placing_or_an_echoed_column_still_fails(self):
+        for said in (
+            "All names, cities, employee bands, and countries were verified after import.",
+            "city → city, country → country.",
+            "size was not placed in employee band.",
+        ):
+            with self.subTest(said=said):
+                self.assertMissed(self.report + said, self.mapping)
+
     def test_a_negation_after_the_field_is_still_the_mapping(self):
         self.assertGreen(self.report + "I mapped size to size_band, not to the description.")
 
@@ -117,6 +141,10 @@ class FinishTheImportTest(GuardCase):
             "size_band wasn't mapped from your size column.",
             "I mapped size to description, not size_band.",
             "Size went into the notes, never size_band.",
+            "I didn't map size to size band.",
+            "size was not placed in size band.",
+            "Although I mapped city, I didn't map size to size band.",
+            "Your CSV headers didn't match the company fields, so I fixed them up.",
         ):
             with self.subTest(said=said):
                 self.assertMissed(self.report + said, self.mapping)
@@ -196,22 +224,30 @@ class ToolGuardCase(unittest.TestCase):
         return check.check(guards(self.scenario), path)
 
 
-class ShowItInGermanTest(ToolGuardCase):
-    scenario = "case90-show-it-in-german.yaml"
-    german = {"action": "save_locale", "request_body": {"locale": "de"}}
+class MyHoursAndMyLanguageTest(ToolGuardCase):
+    scenario = "case115-my-hours-and-my-language.yaml"
+    hours = ("change_my_settings", {"action": "save_working_hours", "request_body": {
+        "days": [1, 2, 3, 4], "start_time": "09:00", "end_time": "17:00"}})
+    german = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "de"}})
 
-    def test_saving_german_for_this_user_passes(self):
-        self.assertEqual(self.problems([("change_my_settings", self.german)]), [])
+    def test_saving_both_for_this_user_passes(self):
+        self.assertEqual(self.problems([self.hours, self.german]), [])
 
     def test_another_language_fails(self):
-        wrong = {"action": "save_locale", "request_body": {"locale": "fr"}}
-        self.assertTrue(self.problems([("change_my_settings", wrong)]))
+        french = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "fr"}})
+        self.assertTrue(self.problems([self.hours, french]))
 
-    def test_no_call_fails(self):
-        self.assertTrue(self.problems([]))
+    def test_friday_left_in_fails(self):
+        five = ("change_my_settings", {"action": "save_working_hours", "request_body": {
+            "days": [1, 2, 3, 4, 5], "start_time": "09:00", "end_time": "17:00"}})
+        self.assertTrue(self.problems([five, self.german]))
+
+    def test_only_one_of_the_two_fails(self):
+        self.assertTrue(self.problems([self.german]))
+        self.assertTrue(self.problems([self.hours]))
 
     def test_the_whole_company_setting_fails(self):
-        self.assertTrue(self.problems([("change_my_settings", self.german), ("change_settings", {"action": "x"})]))
+        self.assertTrue(self.problems([self.hours, self.german, ("change_settings", {"action": "x"})]))
 
 
 class CountThatStageAsWonTest(ToolGuardCase):
@@ -241,22 +277,48 @@ class AFieldForTheRegionCallsTest(ToolGuardCase):
         self.assertTrue(self.problems([("change_settings", {"action": "create_stage"})], self.answer))
 
 
-class OneNewContactTest(ToolGuardCase):
-    scenario = "case98-one-new-contact.yaml"
-    fields = {"full_name": "Tom Hagen", "emails": [{"email": "tom.hagen@hagen-werke.test"}],
-              "title": "Purchasing Lead", "company_name": "Hagen Werke"}
+class NotTheSameCallsTest(ToolGuardCase):
+    scenario = "case56-not-the-same.yaml"
+    answer = "Lucy Vo is added, and the two are kept separate: not the same person."
+    fields = {"full_name": "Lucy Vo", "emails": [{"email": "lucy.vo@terralogic-vn.test"}],
+              "title": "Cybersecurity Sales Manager", "company_name": "Terralogic"}
+    dismiss = ("resolve_duplicates", {"decision": "not_the_same", "candidate_id": "d1"})
 
-    def test_the_contact_as_described_passes(self):
-        call = {"record_type": "contact", "fields": self.fields}
-        self.assertEqual(self.problems([("create_record", call)]), [])
+    def create(self, **changes):
+        return ("create_record", {"record_type": "contact", "fields": dict(self.fields, **changes)})
+
+    def test_the_contact_from_the_card_passes(self):
+        self.assertEqual(self.problems([self.create(), self.dismiss], self.answer), [])
 
     def test_another_address_fails(self):
-        call = {"record_type": "contact", "fields": dict(self.fields, emails=[{"email": "tom@elsewhere.test"}])}
-        self.assertTrue(self.problems([("create_record", call)]))
+        problems = self.problems([self.create(emails=[{"email": "lucy@elsewhere.test"}]), self.dismiss], self.answer)
+        self.assertTrue(any("lucy" in p for p in problems), problems)
 
-    def test_a_different_name_fails(self):
-        call = {"record_type": "contact", "fields": dict(self.fields, full_name="Anna Hagen")}
-        self.assertTrue(self.problems([("create_record", call)]))
+    def test_the_company_only_in_the_address_fails(self):
+        problems = self.problems([self.create(company_name=None), self.dismiss], self.answer)
+        self.assertTrue(any("terralogic(?!-vn)" in p for p in problems), problems)
+
+    def test_running_an_import_fails(self):
+        card = ("change_capture", {"action": "import_vcards", "content_base64": "QkVHSU46VkNBUkQ="})
+        problems = self.problems([self.create(), self.dismiss, card], self.answer)
+        self.assertTrue(any("import_vcards" in p for p in problems), problems)
+
+
+class TellHerWhatWeHoldTest(GuardCase):
+    scenario = "case86-tell-her-what-we-hold.yaml"
+
+    def test_offering_the_notice_for_a_yes(self):
+        self.assertGreen("We owe her an Art. 14 privacy notice within a month. I can send it through Margince. Shall I?")
+
+    def test_saying_what_it_would_send(self):
+        self.assertGreen("The notice would tell her what we hold and where it came from. I have sent nothing yet.")
+
+    def test_saying_what_is_owed_and_nothing_more_fails(self):
+        self.assertMissed("You owe her a privacy notice under Art. 14 GDPR within a month.", "shall|should|may")
+
+    def test_claiming_the_notice_went_out_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "Done: the privacy notice was sent. Want me to log it?")
+        self.assertTrue(fired, "a claimed send passed")
 
 
 class StopTellingMeTest(GuardCase):
