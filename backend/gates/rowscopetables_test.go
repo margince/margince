@@ -650,5 +650,8 @@ const (
 	// ordered locks (one), and interaction retry/release/lock/queue selectors
 	// (four). Their system-only callers consume these keys inside maintenance;
 	// none enters a response. Human graph reads retain their object and row gates.
-	modulesTierUnscopedCeiling = 162
+	// 163: contacts.holdCohortActivities locks the activities a cohort repair
+	// may write before it locks the contact. The ids bound that repair's writes
+	// inside its transaction, and none is returned to a caller.
+	modulesTierUnscopedCeiling = 163
 )

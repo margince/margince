@@ -188,9 +188,9 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 	// Synchronously, on the verdict's own transaction, although the same repair
 	// also runs off the contact event: this cohort is a commit-time promise the
 	// verdict makes, and a promise kept by a consumer is kept at some other time.
-	// The promotion is idempotent, so the consumer's later pass finds nothing
-	// left to do.
-	if _, err := store.PromoteContactCohortTx(ctx, tx, res.ContactID); err != nil {
+	// The promotion is idempotent, so the consumer's later pass finds only the
+	// mail another transaction held while this one ran.
+	if _, err := store.PromoteHeldContactCohortTx(ctx, tx, res.ContactID); err != nil {
 		return counterpartyCreated{}, err
 	}
 	// Only a contact this ensure MADE. An address that already had a record is

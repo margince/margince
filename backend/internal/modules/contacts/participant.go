@@ -39,25 +39,31 @@ import (
 // a replayed capture already promoted its row on the first pass. None of those
 // is an error, and none should fail an ensure that has otherwise succeeded.
 func nameContactAmongParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, contactID ids.ContactID) error {
-	_, err := promoteParticipantsToContact(ctx, tx, &activityID, contactID, nil)
+	_, err := promoteParticipantsToContact(ctx, tx, []ids.UUID{activityID.UUID}, contactID, nil)
 	return err
 }
 
-// promoteParticipantsToContact is that update at either width: one activity when
-// activityID is set, every activity this contact's addresses reach when it is
-// nil. ONE statement rather than two, because the capture path and the cohort
-// repair are the same promotion asked at different scopes — two spellings would
-// drift on the guards below, and each of those is why the write is safe.
-// batch bounds a cohort-wide pass; nil means unbounded, which is what the
-// single-activity pin uses because one activity's rows are already bounded.
+// promotableParticipantSQL is the predicate, on the participant row alias, for
+// an address-only row the promotion names @cohort_contact on. Live addresses
+// only: an abandoned alias names a party who is no longer reachable there.
+func promotableParticipantSQL(alias string) string {
+	return alias + `.contact_id IS NULL
+		   AND ` + alias + `.user_id IS NULL
+		   AND ` + alias + `.address IS NOT NULL
+		   AND NOT ` + alias + `.past_party_cap
+		   AND EXISTS (
+		       SELECT 1 FROM contact_email pe
+		        WHERE pe.contact_id = @cohort_contact AND pe.archived_at IS NULL
+		          AND lower(pe.email) = ` + alias + `.address)`
+}
+
+// promoteParticipantsToContact is that update over the given activities: the
+// one the ensure ran for, or the ones a cohort repair holds. Both paths share
+// this one statement, so both apply the same guards.
+// batch bounds a cohort pass; nil means unbounded, for the single activity.
 func promoteParticipantsToContact(
-	ctx context.Context, tx pgx.Tx, activityID *ids.ActivityID, contactID ids.ContactID, batch *int,
+	ctx context.Context, tx pgx.Tx, activities []ids.UUID, contactID ids.ContactID, batch *int,
 ) ([]ids.UUID, error) {
-	var pin *ids.UUID
-	if activityID != nil {
-		id := activityID.UUID
-		pin = &id
-	}
 	// The WHERE clause carries the idempotence: a row that already names a
 	// contact is left alone, so a second pass cannot repoint a participant that
 	// a merge or a human has since settled differently.
@@ -70,44 +76,28 @@ func promoteParticipantsToContact(
 	// for a party already recorded, not a second party. The cohort scan that
 	// looks for work carries this same guard, which is what lets it terminate:
 	// a row this refuses must not be offered again on every pass.
-	//
-	// Live addresses only. An abandoned alias names a party who is no longer
-	// reachable there, and naming a contact by it claims a correspondence the
-	// address no longer carries.
 	rows, err := tx.Query(ctx, `
 		UPDATE activity_participant ap
-		   SET contact_id = $2
-		 WHERE ($1::uuid IS NULL OR ap.activity_id = $1)
-		   AND ap.contact_id IS NULL
-		   AND ap.user_id IS NULL
-		   AND ap.address IS NOT NULL
-		   AND NOT ap.past_party_cap
-		   AND EXISTS (
-		       SELECT 1 FROM contact_email pe
-		        WHERE pe.contact_id = $2 AND pe.archived_at IS NULL
-		          AND lower(pe.email) = ap.address)
+		   SET contact_id = @cohort_contact
+		 WHERE ap.activity_id = ANY(@activities)
+		   AND `+promotableParticipantSQL("ap")+`
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_participant other
 		        WHERE other.activity_id = ap.activity_id
 		          AND other.role = ap.role
-		          AND other.contact_id = $2)
-		   AND ($3::int IS NULL OR ap.id IN (
+		          AND other.contact_id = @cohort_contact)
+		   AND (@batch::int IS NULL OR ap.id IN (
 		       SELECT sub.id FROM activity_participant sub
-		        WHERE ($1::uuid IS NULL OR sub.activity_id = $1)
-		          AND sub.contact_id IS NULL AND sub.user_id IS NULL
-		          AND sub.address IS NOT NULL AND NOT sub.past_party_cap
+		        WHERE sub.activity_id = ANY(@activities)
 		          -- Correlated to THIS contact. A bound that picked the first N
 		          -- address-only rows in the workspace would let somebody else's
 		          -- backlog fill it: this contact stays selected by the sweep,
 		          -- is offered every tick, and is never reached.
-		          AND EXISTS (
-		              SELECT 1 FROM contact_email pe
-		               WHERE pe.contact_id = $2 AND pe.archived_at IS NULL
-		                 AND lower(pe.email) = sub.address)
+		          AND `+promotableParticipantSQL("sub")+`
 		        ORDER BY sub.id
-		        LIMIT $3))
+		        LIMIT @batch))
 		RETURNING ap.activity_id`,
-		pin, contactID, batch)
+		pgx.NamedArgs{"cohort_contact": contactID, "activities": activities, "batch": batch})
 	if err != nil {
 		return nil, fmt.Errorf("contacts: naming the contact among an activity's participants: %w", err)
 	}
