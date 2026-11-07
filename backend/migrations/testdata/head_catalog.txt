@@ -9003,7 +9003,9 @@ END;
 
 public.trg_activity_link_project_last_activity() secdef=false cfg=- acl=- BEGIN
   IF TG_OP = 'INSERT' THEN
-    PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
+    IF NEW.project_id IS NOT NULL THEN
+      PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
+    END IF;
     RETURN NULL;
   END IF;
   PERFORM move_project_last_activity(OLD.project_id);
