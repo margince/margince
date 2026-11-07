@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 223.5 KB |
+| Tool catalog | 228.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 58519 |
+| Approx. wire tokens | 59849 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 46.3 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.7 KB | 24% | Yes, every step |
-| Input schemas | 111.7 KB | 49% | Yes, every step |
+| Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 53.7 KB | 23% | Yes, every step |
+| Input schemas | 112.5 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **165.3 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **166.2 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1935 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 811 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 834 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 678 |
@@ -86,16 +86,16 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1908 |
+| [`find_records`](#find_records) | Find records | yes |  | 1949 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 927 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
-| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
+| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2125 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 924 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2167 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 314 |
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 984 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2648 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2671 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
@@ -1869,9 +1869,9 @@ details_confirmation to mail the contact, read_details contact_consent, contact_
 contact_stops to check a contact before you record, read_workspace topics data_subject_requests,
 notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace
 topic record_history for one record's trail. (Runs immediately; the user's yes is needed for the
-actions allow_contact, confirm_notice_source, lift_suppression, open_data_subject_request,
-pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent,
-record_qualifying_event, resolve_confirm_submission, retract_acquisition_request,
+actions allow_contact, confirm_notice_source, lift_lead_suppression, lift_suppression,
+open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context,
+record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request,
 retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request, so tell
 them what the call will change and get it before calling, unless they asked for this call
 themselves; requires passport scope "write".)
@@ -1889,6 +1889,7 @@ themselves; requires passport scope "write".)
         "assign_notice_case",
         "assign_notice_case_review",
         "confirm_notice_source",
+        "lift_lead_suppression",
         "lift_suppression",
         "open_data_subject_request",
         "pin_activity_to_floor",
@@ -1918,7 +1919,7 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "id": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1935,11 +1936,11 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "suppressionId": {
-      "description": "lift_suppression only",
+      "description": "lift_lead_suppression, lift_suppression only",
       "type": "string"
     }
   },
@@ -4689,6 +4690,10 @@ next_cursor to read on.
       "minItems": 1,
       "type": "array"
     },
+    "compact": {
+      "description": "list, query only: Activity identifying facts and body_length without long prose. Default false returns full records.",
+      "type": "boolean"
+    },
     "cursor": {
       "description": "list, search only: Keyset cursor from a previous page's next_cursor",
       "type": "string"
@@ -5174,6 +5179,28 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
                 },
                 "type": "array"
               },
+              "conflicts": {
+                "items": {
+                  "properties": {
+                    "blocks_approval": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "blocks_approval",
+                    "kind",
+                    "summary"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "created_at": {
                 "format": "date-time",
                 "type": "string"
@@ -5275,6 +5302,227 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
               "expires_at": {
                 "format": "date-time",
                 "type": "string"
+              },
+              "files": {
+                "items": {
+                  "properties": {
+                    "byte_size": {
+                      "type": "integer"
+                    },
+                    "content_type": {
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "byte_size",
+                    "content_type",
+                    "filename",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "import_rows": {
+                "items": {
+                  "properties": {
+                    "changes": {
+                      "items": {
+                        "properties": {
+                          "after": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          },
+                          "before": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          },
+                          "field": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "after",
+                          "before",
+                          "field",
+                          "label"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "details": {
+                      "items": {
+                        "properties": {
+                          "field": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "entity_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "entity_type": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "label",
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "effects": {
+                      "items": {
+                        "properties": {
+                          "effect": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "effect",
+                          "label"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "line": {
+                      "type": "integer"
+                    },
+                    "object": {
+                      "type": "string"
+                    },
+                    "object_label": {
+                      "type": "string"
+                    },
+                    "outcome": {
+                      "type": "string"
+                    },
+                    "outcome_label": {
+                      "type": "string"
+                    },
+                    "source_key": {
+                      "type": "string"
+                    },
+                    "target": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "changes",
+                    "details",
+                    "effects",
+                    "line",
+                    "object",
+                    "object_label",
+                    "outcome",
+                    "outcome_label",
+                    "source_key"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
               },
               "kind": {
                 "type": "string"
@@ -6552,6 +6800,28 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           },
           "type": "array"
         },
+        "conflicts": {
+          "items": {
+            "properties": {
+              "blocks_approval": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "blocks_approval",
+              "kind",
+              "summary"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "created_at": {
           "format": "date-time",
           "type": "string"
@@ -6653,6 +6923,227 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
         "expires_at": {
           "format": "date-time",
           "type": "string"
+        },
+        "files": {
+          "items": {
+            "properties": {
+              "byte_size": {
+                "type": "integer"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "byte_size",
+              "content_type",
+              "filename",
+              "id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "import_rows": {
+          "items": {
+            "properties": {
+              "changes": {
+                "items": {
+                  "properties": {
+                    "after": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "before": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "field": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "after",
+                    "before",
+                    "field",
+                    "label"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "details": {
+                "items": {
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "label",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "effects": {
+                "items": {
+                  "properties": {
+                    "effect": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "effect",
+                    "label"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "line": {
+                "type": "integer"
+              },
+              "object": {
+                "type": "string"
+              },
+              "object_label": {
+                "type": "string"
+              },
+              "outcome": {
+                "type": "string"
+              },
+              "outcome_label": {
+                "type": "string"
+              },
+              "source_key": {
+                "type": "string"
+              },
+              "target": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "changes",
+              "details",
+              "effects",
+              "line",
+              "object",
+              "object_label",
+              "outcome",
+              "outcome_label",
+              "source_key"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "kind": {
           "type": "string"
@@ -6867,6 +7358,11 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
       "maximum": 50,
       "minimum": 1,
       "type": "integer"
+    },
+    "owner_id": {
+      "description": "at_risk, slipping only: Narrow to deals owned by this member; existing read scope still applies",
+      "format": "uuid",
+      "type": "string"
     },
     "project_id": {
       "description": "commitments only: Keep only promises filed under this project or under none",
@@ -8394,6 +8890,7 @@ needs the user now, and read_record for a record's own fields.
         "lead_promotion_preview",
         "lead_score",
         "lead_signals",
+        "lead_stops",
         "legal_entity_logo",
         "legal_review",
         "legal_reviews",
@@ -8407,6 +8904,8 @@ needs the user now, and read_record for a record's own fields.
         "my_linkedin_reach",
         "notice_case",
         "notice_case_review",
+        "notice_source_evidence",
+        "notice_source_preview",
         "notices",
         "offer_pdf",
         "offered_values",
@@ -8477,7 +8976,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "cursor": {
-      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notices only",
+      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
       "type": "string"
     },
     "days": {
@@ -8535,7 +9034,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
+      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -8609,7 +9108,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "string"
     },
     "request_body": {
-      "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "ai_budget_preview, ai_routing_preview, ai_task_overrides_preview, automation_preview, backfill_preview, filter_preview, mail_deal_repair_preview, notice_source_preview, voice_source_preview only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "rule": {
@@ -8737,9 +9236,17 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
       "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
       "type": "boolean"
     },
+    "country": {
+      "description": "input_exceptions only",
+      "type": "string"
+    },
     "from": {
       "description": "movement only: The opening snapshot.",
       "format": "uuid",
+      "type": "string"
+    },
+    "industry": {
+      "description": "input_exceptions only",
       "type": "string"
     },
     "period": {
@@ -8749,6 +9256,11 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         "month",
         "week"
       ],
+      "type": "string"
+    },
+    "product_id": {
+      "description": "input_exceptions only",
+      "format": "uuid",
       "type": "string"
     },
     "reading": {
@@ -11031,6 +11543,11 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
     },
     "buildId": {
       "description": "voice_build only",
+      "type": "string"
+    },
+    "connection_id": {
+      "description": "connector_containers only",
+      "format": "uuid",
       "type": "string"
     },
     "contact_id": {
