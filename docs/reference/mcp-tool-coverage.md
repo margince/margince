@@ -17,7 +17,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 70 of 70 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Put it in the board pack. |
+| `claude-sonnet-5-5` | Claude Code CLI | 70 of 70 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
 | `gpt-5.6-sol` | Codex CLI | 70 of 70 | 🟡 Mostly | Reliable on 67 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,; Close the project out; The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
@@ -39,7 +39,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | ✅ | ✅ |
 | Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | ✅ | ✅ |
 | Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | ✅ | ✅ |
-| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ❌ | ✅ |
+| Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | ✅ | ✅ |
 | Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | ✅ | ✅ |
 | Find us a slot | Real openings, from the host's own calendar<br>The other side's calendar is not claimed to be known | ✅ | ✅ |
 | A word for the ones from the fair | The word the workspace already has is reused<br>A word that does not exist is coined before it is applied | ✅ | ✅ |
@@ -127,11 +127,11 @@ Everything below is the detail behind the two tables above: which tools each job
 | | |
 |---|---:|
 | Tools the assistant is offered | 48 |
-| … some case requires | 38 |
+| … some case requires | 37 |
 | … some case requires as one of a set | 3 |
-| … **no case requires** | 7 |
-| … of those, permitted somewhere but never required | 2 |
-| Prompt tokens spent on tools no case requires | 2889 |
+| … **no case requires** | 8 |
+| … of those, permitted somewhere but never required | 3 |
+| Prompt tokens spent on tools no case requires | 3816 |
 | Use cases | 70 |
 | Acceptance criteria the cases declare, each with a statement | 117 |
 
@@ -141,10 +141,8 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 70 of 70 | 69 | 1 | 139/144 | 97% |
+| `claude-sonnet-5-5@claude-cli` | 70 of 70 | 70 | 0 | 140/143 | 98% |
 | `gpt-5.6-sol@codex-cli` | 70 of 70 | 67 | 3 | 140/153 | 92% |
-
-> `claude-sonnet-5-5@claude-cli` below its bar on: case20_put_it_in_the_board_pack
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case41_close_the_project, case86_tell_her_what_we_hold
 
@@ -228,8 +226,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case115_my_hours_and_my_language](../../e2e/llm/scenarios/case115-my-hours-and-my-language.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Own hours go to the own-settings tool<br>**2** A user's language is their own | `change_my_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
-| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | **FAIL** | 1/3 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `read_analytics` |
-| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | `read_analytics` |
+| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
+| [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_forecast` |
 | [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_forecast` |
 | [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
@@ -513,7 +511,6 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
-| `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `run_research` | 1.00 | 2 | `case108_ask_sofia_for_an_intro` |
@@ -541,7 +538,6 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `read_reports` | 0.80 | 4/5 | - | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `change_activities` | 0.93 | 14/15 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
-| `read_analytics` | 0.33 | 1/3 | `case20_put_it_in_the_board_pack` | `case20_put_it_in_the_board_pack` |
 | `create_record` | 0.86 | 6/7 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `read_attention` | 0.86 | 6/7 | - | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 0.67 | 2/3 | - | `case49_who_can_introduce_us` |
@@ -606,12 +602,13 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 7 tools no use case requires, **2 are graded elsewhere** and 5 are untried by any lane.
+So of the 8 tools no use case requires, **2 are graded elsewhere** and 6 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
+| `read_analytics` | 927 | - | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` | - |
 | `change_record_parts` | 621 | - | - | - |
 | `change_relationships` | 472 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
