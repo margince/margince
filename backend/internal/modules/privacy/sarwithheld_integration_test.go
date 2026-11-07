@@ -24,7 +24,6 @@ package privacy
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"os"
 	"regexp"
 	"slices"
@@ -35,6 +34,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // withheldFromTheExport names, per table, the columns an Art. 15 package must

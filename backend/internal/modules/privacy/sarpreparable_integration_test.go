@@ -27,7 +27,6 @@ package privacy
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"os"
 	"strings"
 	"testing"
@@ -36,6 +35,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestEverySARSectionStatementResolvesAgainstTheSchema(t *testing.T) {

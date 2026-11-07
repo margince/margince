@@ -49,7 +49,7 @@ func redactLinkedHistoricalPage(ctx context.Context, tx pgx.Tx, after, until ids
 	page := HistoricalAuditPage{}
 	for _, entry := range entries {
 		page.Scanned = append(page.Scanned, entry.id)
-		identity := entry.kind == "data_subject_request" && entry.action == "create"
+		identity := entry.kind == rightsRequestEntity && entry.action == actionCreate
 		if !entry.needed || identity != identitiesOnly {
 			continue
 		}
@@ -73,7 +73,7 @@ func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, l
  `+storekit.AuditRedactionNeededSQL+`
  OR EXISTS(SELECT 1 FROM event_outbox retained WHERE retained.envelope->'trace'->>'audit_log_id'=history.id::text))
  FROM audit_log history WHERE history.id>@after AND history.id<@until ORDER BY history.id LIMIT @limit`,
-		pgx.StrictNamedArgs{"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, "limit": limit})
+		pgx.StrictNamedArgs{"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, auditPageLimitParameter: limit})
 	if err != nil {
 		return nil, err
 	}

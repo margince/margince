@@ -27,7 +27,7 @@ func legacyAuditSubjectQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArg
    ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF record`, args
 	case "approval":
 		return legacyApprovalAuditQuery(entry)
-	case "data_subject_request":
+	case rightsRequestEntity:
 		return legacyRequestAuditQuery(entry)
 	case "deal_room_comment":
 		if entry.actorType != "buyer" {

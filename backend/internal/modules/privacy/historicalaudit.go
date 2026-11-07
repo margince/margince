@@ -16,6 +16,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
+const (
+	auditPageLimitParameter = "limit"
+	rightsRequestEntity     = "data_subject_request"
+)
+
 // HistoricalAuditPage counts changes and the inspected keys for cursor progress.
 type HistoricalAuditPage struct {
 	Scanned []ids.UUID
@@ -36,7 +41,7 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 	 action=ANY(@erasure_actions) AND before IS NULL AND after IS NULL
 	 AND (evidence ? 'cause' OR evidence ? 'retention_action' OR evidence ? 'emails_suppressed')
 	 FROM audit_log WHERE id > @after AND id < @until ORDER BY id LIMIT @limit`,
-		pgx.StrictNamedArgs{"after": after, "until": until, "limit": limit, "erasure_actions": storekit.AuditRedactionActions()})
+		pgx.StrictNamedArgs{"after": after, "until": until, auditPageLimitParameter: limit, "erasure_actions": storekit.AuditRedactionActions()})
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
@@ -109,13 +114,13 @@ func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID,
 		err = tx.QueryRow(ctx, `SELECT legal_hold FROM contact WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "lead":
 		err = tx.QueryRow(ctx, `SELECT legal_hold FROM lead WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
-	case "data_subject_request":
+	case rightsRequestEntity:
 		err = tx.QueryRow(ctx, `SELECT dispute_open FROM data_subject_request WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "privacy_request_proof":
 		err = tx.QueryRow(ctx, `SELECT d.dispute_open FROM data_subject_request d
    JOIN audit_log certificate ON certificate.evidence->>'request_id'=d.id::text
    WHERE certificate.id=@original FOR UPDATE OF d`, pgx.StrictNamedArgs{"original": original}).Scan(&held)
-	case "deal":
+	case reportingDeal:
 		err = tx.QueryRow(ctx, `SELECT legal_hold FROM deal WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
 	case "activity":
 		current, carried := floor.sqlArgs()

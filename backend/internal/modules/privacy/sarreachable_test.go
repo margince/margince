@@ -20,13 +20,13 @@ package privacy
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"os"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // fromJoin names the table a FROM or JOIN clause reads. SAR sections are
