@@ -351,6 +351,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
   files.
 - [change-a-setting.md](how-to/change-a-setting.md): change a setting, check it before a start, and see
   where each value comes from.
+- [host-margince-for-customers.md](how-to/host-margince-for-customers.md): run one installation for each
+  company you host, and agree with each customer who does which task.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
   something fails.
 - [deployment.md](deployment.md): the old page, now a pointer to the two above.
