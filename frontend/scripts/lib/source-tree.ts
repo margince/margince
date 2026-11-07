@@ -257,7 +257,7 @@ export function resolveRelative(
 // moduleSpecifiers lists what `source` imports, statically or by `import()`.
 // "values" drops only `import type` and `export type … from`, the forms erased.
 export function moduleSpecifiers(
-  source: ts.SourceFile,
+  source: ts.Node,
   edges: "all" | "values" | "static",
 ): string[] {
   const found: string[] = [];

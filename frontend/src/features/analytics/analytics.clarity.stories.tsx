@@ -20,7 +20,6 @@ import {
 } from "./analytics.overview.fixtures";
 import { InitiativePanel } from "./analytics.overview.initiative";
 import { upcomingMeetings } from "./analytics.overview.prospectingdata";
-import { UpcomingMeetings } from "./analytics.overview.prospectingwork";
 import { MetricReading } from "./analytics.overview.readings";
 import {
   overviewRoutes,
@@ -28,6 +27,7 @@ import {
 } from "./analytics.overview.routes.fixtures";
 import { quarterSales } from "./analytics.overview.scenariodata";
 import { SinceLastReview } from "./analytics.overview.since";
+import { UpcomingMeetings } from "./analytics.overview.work";
 import { StageTable } from "./analytics.pipeline";
 import { CallCheckSheet } from "./inputcheck.call";
 import { CheckFacts } from "./inputcheck.facts";

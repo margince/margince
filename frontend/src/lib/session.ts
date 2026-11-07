@@ -1,3 +1,11 @@
+import { AuthProbeError, readSession } from "./session.read";
+
+export {
+  AuthProbeError,
+  type AuthProbeKind,
+  readSession,
+} from "./session.read";
+
 import {
   type QueryClient,
   queryOptions,
@@ -9,63 +17,8 @@ import type { Middleware } from "openapi-fetch";
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
 import { healthScope } from "./healthscopekey";
-import { problemMessage, unwrap } from "./problem";
+import { unwrap } from "./problem";
 import { forgetSeat } from "./storage";
-
-// Authentication and availability are different product states. A failed
-// session probe is typed, so the auth boundary can pick its screen. It shows
-// login (401), the connection problem (network/5xx), or installation
-// unavailable (503, pre-bootstrap or a broken singleton). Not every error is login.
-export type AuthProbeKind =
-  | "unauthorized"
-  | "connection"
-  | "installation"
-  // The account is authenticated but still using a password its operator
-  // chose, and the server refuses every route but the one that replaces it.
-  // A distinct kind because the remedy is distinct. The login screen would
-  // loop: the credentials are correct, and using them again lands in the
-  // same refusal.
-  | "must-change-password"
-  // The installation requires a second factor this account does not hold yet,
-  // and the server refuses every route but the enrolment ones.
-  | "must-enrol-mfa";
-
-export class AuthProbeError extends Error {
-  readonly kind: AuthProbeKind;
-  constructor(kind: AuthProbeKind, message: string) {
-    super(message);
-    this.name = "AuthProbeError";
-    this.kind = kind;
-  }
-}
-
-// probeKindFor maps a /me response status onto the boundary state. 503 is
-// the middleware's installation-not-ready answer; any other 5xx (or a
-// rejected fetch) is a connectivity problem; everything else reads as "no
-// session", the login screen.
-function probeKindFor(status: number, code?: string): AuthProbeKind {
-  if (status === 503) return "installation";
-  if (status >= 500) return "connection";
-  if (status === 403 && code === "password_change_required") {
-    return "must-change-password";
-  }
-  if (status === 403 && code === "mfa_enrolment_required") {
-    return "must-enrol-mfa";
-  }
-  return "unauthorized";
-}
-
-// codeInProblemBody reads the machine code straight off a problem body. The
-// exported problemCodeOf (lib/problem.ts) takes a thrown ProblemError instead.
-// Here the probe still holds the decoded body. The code separates a refusal
-// the caller can act on from one they cannot.
-function codeInProblemBody(error: unknown): string | undefined {
-  if (typeof error === "object" && error !== null && "code" in error) {
-    const { code } = error as { code?: unknown };
-    return typeof code === "string" ? code : undefined;
-  }
-  return undefined;
-}
 
 // authExitNotice marks a chosen sign-out so the boundary's next 401 reads
 // as "signed out", not "session expired". Module-scoped: one boundary
@@ -83,9 +36,11 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // card, and role-aware affordances all read the same probe. The server binds
 // the installation's singleton company itself, so the probe needs nothing but
 // the session cookie.
+export const SESSION_STALE_MS = 5 * 60_000;
+
 export const sessionOptions = queryOptions({
   queryKey: ["me"],
-  staleTime: 5 * 60_000,
+  staleTime: SESSION_STALE_MS,
   // A role change does not revoke live sessions, and the UI scopes
   // affordances by the grants this snapshot carries. So it must not sit stale
   // for its full staleTime. "always", not `true`: `true`
@@ -110,29 +65,6 @@ export function useMe(enabled = true) {
     previousScope.current = scope;
   }, [client, scope]);
   return query;
-}
-
-// The boundary's one reading of /me; the connection screen's check shares it.
-export async function readSession(signal?: AbortSignal, prepare?: "analytics") {
-  const result = await api
-    .GET("/me", { signal, params: { query: { prepare } } })
-    .catch(() => null);
-  if (!result) {
-    throw new AuthProbeError("connection", "the API could not be reached");
-  }
-  const { data, error, response } = result;
-  if (error) {
-    throw new AuthProbeError(
-      probeKindFor(response.status, codeInProblemBody(error)),
-      problemMessage(error),
-    );
-  }
-  if (!data?.user) {
-    // Without the user the contract requires it is no session, whatever the
-    // status said: a server answering garbage is an availability problem.
-    throw new AuthProbeError("connection", "malformed /me response");
-  }
-  return data;
 }
 
 /** True when /me gives the boundary any answer but the connection screen. */

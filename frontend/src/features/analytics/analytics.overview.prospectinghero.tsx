@@ -2,20 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { components } from "../../api/schema";
-import { Button, StatCard } from "../../design-system/atoms";
+import { Button, PendingBody, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatAnalyticsNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { upcomingThrough } from "./analytics.outcomes.sdr";
 import {
-  OutcomeWeeks,
   outcomeWeeks,
   type ProspectingOutcome,
   type useProspectingWeeks,
-} from "./analytics.overview.prospectingweeks";
+} from "./analytics.overview.prospectingweeks.queries";
 import { metricOf, readingValue } from "./analytics.overview.readings";
+import { OutcomeWeeks } from "./analytics.overview.work";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -125,11 +126,13 @@ export function ProspectingResults({
           </div>
           {chart && (
             <div className="analytics-hero-chart">
-              <OutcomeWeeks
-                chart={chart}
-                evaluation={weeks.data ?? evaluation}
-                onEvidence={onEvidence}
-              />
+              <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+                <OutcomeWeeks
+                  chart={chart}
+                  evaluation={weeks.data ?? evaluation}
+                  onEvidence={onEvidence}
+                />
+              </Suspense>
             </div>
           )}
           {outcome && !chart && weeks.isError && (

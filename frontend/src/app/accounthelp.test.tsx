@@ -66,6 +66,7 @@ const helpItem = (name: string | RegExp) =>
 async function openHelpByKeyboard(user: UserEvent) {
   trigger().focus();
   await user.keyboard("{Enter}");
+  await screen.findByRole("menu", { name: "Account" });
   for (let at = 0; at < 4; at++) {
     await user.keyboard("{ArrowDown}");
   }
@@ -75,6 +76,7 @@ async function openHelpByKeyboard(user: UserEvent) {
 
 async function openHelp(user: UserEvent) {
   await user.click(trigger());
+  await screen.findByRole("menu", { name: "Account" });
   await user.click(row("Help and feedback"));
 }
 

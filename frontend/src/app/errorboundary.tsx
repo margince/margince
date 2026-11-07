@@ -3,7 +3,11 @@ import { Component, type ReactNode } from "react";
 import { Button, EmptyState } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { resetLocaleFailures } from "../i18n/catalogs";
-import { isStaleChunkError, reloadForNewBuild } from "../lib/stalebuild";
+import {
+  isStaleChunkError,
+  reloadForNewBuild,
+  retryStaleChunk,
+} from "../lib/stalebuild";
 import "./errorboundary.css";
 
 // The app-level error boundary (architecture/frontend, "the data layer").
@@ -35,7 +39,7 @@ function RenderFailure({ onRetry }: Readonly<{ onRetry: () => void }>) {
 }
 
 type BoundaryProps = Readonly<{ onReset: () => void; children: ReactNode }>;
-type BoundaryState = Readonly<{ failed: boolean }>;
+type BoundaryState = Readonly<{ failed: boolean; error?: unknown }>;
 
 // React reports a caught error to the console with its component stack on its
 // own, so this boundary adds no reporting of its own — the same failure logged
@@ -43,8 +47,8 @@ type BoundaryState = Readonly<{ failed: boolean }>;
 class RenderErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   state: BoundaryState = { failed: false };
 
-  static getDerivedStateFromError(): BoundaryState {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown): BoundaryState {
+    return { failed: true, error };
   }
 
   componentDidCatch(error: unknown): void {
@@ -56,11 +60,12 @@ class RenderErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 
   private readonly retry = () => {
+    if (retryStaleChunk(this.state.error)) return;
     // The cache is reset BEFORE the re-render: a query that threw keeps its
     // failed result, so a boundary that only cleared its own state would hand
     // the same error straight back and the button would do nothing visible.
     this.props.onReset();
-    this.setState({ failed: false });
+    this.setState({ failed: false, error: undefined });
   };
 
   render(): ReactNode {

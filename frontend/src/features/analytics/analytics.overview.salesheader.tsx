@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { ExpanderChevron } from "../../design-system/disclosure";
 import { FilterBar } from "../../design-system/filterbar";
 import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
-import { ReviewDecisionsAction } from "./analytics.decisions";
 import { OverviewSaveActions } from "./analytics.overview.readings";
+import { ReviewDecisionsAction } from "./analytics.overview.work";
 import { DimensionChips } from "./reporting.dimensions";
 import { ReportingExportButton } from "./reporting.export";
 import { ReportingFilters } from "./reporting.filters";
@@ -104,7 +104,9 @@ export function SalesHeader({
       </Button>
       <OverflowMenu label={t("analytics.overview.more")}>
         <OverviewSaveActions selection={saved} scope={scope} />
-        <ReviewDecisionsAction />
+        <Suspense fallback={null}>
+          <ReviewDecisionsAction />
+        </Suspense>
         {evaluation && !charts?.isPending && (
           <ReportingExportButton
             evaluation={evaluation}

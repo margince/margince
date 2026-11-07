@@ -56,9 +56,7 @@ import { stagesOfEveryPipeline } from "./pipelinestages";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
-import { SECTION_REPORTS, useReportRun } from "./analytics.reports";
-
-export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
+import { SECTION_REPORTS, useReportRun } from "./analytics.reports.queries";
 
 export function AnalyticsScreen({
   reviewActions,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { THIS_QUARTER } from "../lib/dealranges";
+import { THIS_QUARTER } from "../../lib/dealranges";
 import { admittedDealFilters } from "./dealdials";
 
 // A range dial from an address or a saved view is sent only in a shape the

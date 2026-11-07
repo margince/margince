@@ -5,9 +5,8 @@ import { Badge, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { throwProblem, unwrap } from "../../lib/problem";
-import { useUrlParams } from "../../lib/urlstate";
-import { type AnalyticsScope, scopeQuery } from "./analytics.context";
+import { throwProblem } from "../../lib/problem";
+import type { AnalyticsScope } from "./analytics.context";
 import { CheckTable } from "./analytics.forecast.checktable";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import {
@@ -16,7 +15,9 @@ import {
   outOfDate,
   verdictStands,
 } from "./analytics.forecast.freshness";
-import type { Dimensions } from "./reporting.dimensions";
+import { useInputChecks } from "./inputchecks.queries";
+
+export { useInputChecks } from "./inputchecks.queries";
 
 type Assurance = components["schemas"]["ForecastAssurance"];
 
@@ -81,33 +82,6 @@ export function ForecastReview({
 // them shares, so answering one here clears it everywhere it is counted.
 // The findings, for one record scope when given; without one, every finding
 // the reader may see. The answer carries the server's groups and totals.
-export function useInputChecks(
-  enabled = true,
-  scope?: AnalyticsScope,
-  dimensions?: Dimensions,
-) {
-  const [params] = useUrlParams();
-  const query = {
-    ...(scope ? scopeQuery(scope) : {}),
-    product_id: dimensions?.product_id ?? params.get("product") ?? undefined,
-    country: dimensions?.country ?? params.get("country") ?? undefined,
-    industry: dimensions?.industry ?? params.get("industry") ?? undefined,
-  };
-  return useQuery({
-    enabled,
-    queryKey: ["input-checks", query],
-    // The signal stops the read of a scope the reader has already left.
-    queryFn: async ({ signal }) => {
-      const data = unwrap(
-        await api.GET("/forecast/assurance/exceptions", {
-          params: { query },
-          signal,
-        }),
-      );
-      return data;
-    },
-  });
-}
 
 function ReviewPanel({
   run,
