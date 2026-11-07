@@ -16,7 +16,7 @@ The current facts live elsewhere:
 - [enrich-with-a-local-llm.md](../how-to/enrich-with-a-local-llm.md#serve-the-model-with-vllm-instead): the steps to start vLLM and bind a stack to it;
 - [certify-an-ai-model.md](../how-to/certify-an-ai-model.md): how to run the lane;
 - [configuration.md](../reference/configuration.md): the `vllm` binding;
-- [system-requirements.md](../reference/system-requirements.md): the size of a GPU host.
+- [system-requirements.md](../operations/system-requirements.md): the size of a GPU host.
 
 ## The short answer
 
