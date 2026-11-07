@@ -185,4 +185,3 @@ func ordinalOf(partID string) (int, bool) {
 	ordinal, err := strconv.Atoi(digits)
 	return ordinal, err == nil
 }
-
