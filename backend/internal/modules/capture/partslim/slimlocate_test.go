@@ -41,3 +41,29 @@ func TestFindingAFoldedBodyInPlaceAgreesWithCountingTheFoldedText(t *testing.T) 
 		}
 	}
 }
+
+// An attachment of zeros folds to identical lines, so a run of all of them but
+// the last matches deeply from every line start. The search stops at its
+// budget before the true copy after that run, and leaves the part where it was.
+func TestNearMissesInAMessageCannotMakeTheSearchQuadratic(t *testing.T) {
+	b64 := []byte(base64.StdEncoding.EncodeToString(make([]byte, 60000)))
+	eol := []byte("\r\n")
+	nearMisses := wrapBase64WithEOL(b64[:len(b64)-76], 76, eol)
+	raw := concat(nearMisses, []byte("\r\n!\r\n"), wrapBase64WithEOL(b64, 76, eol))
+	if _, _, ok := soleWrappedAt(raw, b64, 76, eol); ok {
+		t.Fatal("the search ran past its budget and located the part")
+	}
+	compared := 0
+	for from := 0; ; {
+		next := bytes.Index(nearMisses[from:], b64[:76])
+		if next < 0 {
+			break
+		}
+		_, n := foldedAt(nearMisses[from+next:], b64, 76, eol)
+		compared += n
+		from += next + 1
+	}
+	if budget := 2*len(raw) + len(b64); compared <= budget {
+		t.Fatalf("the fixture compares %d bytes, under the %d budget, so it does not exercise the bound", compared, budget)
+	}
+}
