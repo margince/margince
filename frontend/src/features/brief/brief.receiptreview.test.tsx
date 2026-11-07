@@ -17,14 +17,14 @@ import {
   automaticDateReceipt,
   automaticStageReceipt,
 } from "../../testing/worklist.receiptreview.fixtures";
-import { BriefChanges } from "./brief.changes";
+import { DoneForYou } from "./brief.doneforyou";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-it("accepts the exact recorded stage change and shows its persisted answer", async () => {
+it("marks the exact recorded stage change reviewed and keeps its Undo", async () => {
   let accepted = false;
   const change = automaticStageReceipt;
   const path = `/deals/${change.subject?.id}/applied-changes/${change.id}/accept`;
@@ -45,17 +45,20 @@ it("accepts the exact recorded stage change and shows its persisted answer", asy
     },
   });
   const user = userEvent.setup();
-  const { client } = render(<BriefChanges />);
-  client.setQueryData(["magic"], { needs_you: [] });
-  await user.click(await screen.findByRole("button", { name: "Accept" }));
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("heading", { name: en["brief.changes.title"] }),
-    ).toBeNull(),
-  );
-  expect(client.getQueryState(["magic"])?.isInvalidated).toBe(true);
+  render(<DoneForYou completed={null} />);
+  const press = await screen.findByRole("button", { name: "Mark reviewed" });
+  const magicReads = () =>
+    calls.filter((call) => call.method === "GET" && call.path === "/magic")
+      .length;
+  const readBefore = magicReads();
+  await user.click(press);
+  // The row stays with its answer, and a reviewed change still undoes.
+  expect(await screen.findByText(en["brief.changes.reviewed"])).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Mark reviewed" })).toBeNull();
+  // The done lane is read again, so the same act is not left showing there.
+  await waitFor(() => expect(magicReads()).toBeGreaterThan(readBefore));
   expect(writes(calls).map((call) => call.path)).toEqual([path]);
-  expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
 });
 
 it("draws no group at all when no change waits for a word", async () => {
@@ -67,21 +70,22 @@ it("draws no group at all when no change waits for a word", async () => {
         receipts: [],
       }),
   });
-  const { container, client } = render(<BriefChanges />);
-  // It draws nothing while loading too. So both empty answers, the receipts
-  // and Margince's changes, have to come back before "nothing" means anything.
+  const { container, client } = render(<DoneForYou completed={null} />);
+  // It draws nothing while loading too. So every empty answer, the receipts,
+  // Margince's changes and the done lane, has to come back before "nothing"
+  // means anything.
   await waitFor(() =>
     expect(
       client
         .getQueryCache()
         .getAll()
         .map((query) => query.state.status),
-    ).toEqual(["success", "success"]),
+    ).toEqual(["success", "success", "success"]),
   );
   // An empty section would be a heading over nothing.
   expect(container.innerHTML).toBe("");
   expect(
-    screen.queryByRole("heading", { name: en["brief.changes.title"] }),
+    screen.queryByRole("heading", { name: en["brief.done.title"] }),
   ).toBeNull();
 });
 
@@ -102,8 +106,8 @@ it("dates a change from today by its hour and an older one by its day", async ()
     [`GET /deals/${today.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });
-  const { container } = render(<BriefChanges />);
-  await screen.findByRole("list", { name: en["brief.changes.title"] });
+  const { container } = render(<DoneForYou completed={null} />);
+  await screen.findByRole("list", { name: en["brief.done.dealsLabel"] });
   const zone = browserZone();
   expect(
     [...container.querySelectorAll("time")].map((time) => time.textContent),
@@ -148,9 +152,9 @@ it("keeps an undo-only applied change visible until it is reversed", async () =>
     [`GET /deals/${change.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });
-  render(<BriefChanges />);
+  render(<DoneForYou completed={null} />);
   expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Keep date" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Mark reviewed" })).toBeNull();
 });
 
 it("asks before an opened deal's receipt archives the team's work, as the change list does", async () => {

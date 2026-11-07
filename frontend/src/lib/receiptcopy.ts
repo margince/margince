@@ -83,3 +83,33 @@ export function receiptBasis(
     stages: formatNumber(basis.remaining_stages, locale),
   });
 }
+
+/**
+ * What changed, without why. A close-date change is worded here from its
+ * values; any other uses the server's headline, and the summary from an older
+ * server that sends none.
+ */
+export function receiptHeadline(
+  receipt: Receipt,
+  t: Translator,
+  locale: Locale,
+  zone: string,
+): string {
+  if (receipt.close_date_change || !receipt.headline) {
+    return receiptSummary(receipt, t, locale, zone);
+  }
+  return receipt.headline;
+}
+
+/**
+ * Why Margince made the change, as recorded when it acted. A close-date
+ * estimate without one names its sales history instead. Null when the server
+ * sent no reason this reader may read; the caller says so in words.
+ */
+export function receiptReason(
+  receipt: Receipt,
+  t: Translator,
+  locale: Locale,
+): string | null {
+  return receipt.reason ?? receiptBasis(receipt, t, locale);
+}

@@ -14,7 +14,15 @@ import { isReviewableReceipt } from "../lib/receiptreview";
 import { invalidateHandledChange, worklistKey } from "../lib/workkeys";
 import { ReceiptUndo } from "./receiptundo";
 
-export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
+/**
+ * The verbs of one applied change: Mark reviewed, and Undo. Marking it
+ * reviewed only says the reader has seen it, so a reviewed change keeps its
+ * Undo for as long as the server offers one. `onDone` hears either answer.
+ */
+export function ReceiptReview({
+  receipt,
+  onDone,
+}: Readonly<{ receipt: Receipt; onDone?: () => void }>) {
   const t = useT();
   const client = useQueryClient();
   const writable = useCanWrite("deal", "update");
@@ -39,18 +47,29 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
       client.invalidateQueries({ queryKey: worklistKey });
     },
     onSuccess: () => {
+      onDone?.();
       void invalidateHandledChange(client);
     },
   });
   const review = receipt.review;
-  if (!review) return <ReceiptUndo receipt={receipt} />;
+  if (!review) return <ReceiptUndo receipt={receipt} onDone={onDone} />;
   if (review.reversed) return <span>{t("brief.changes.undone")}</span>;
-  if (review.accepted) return <span>{t("brief.changes.accepted")}</span>;
+  const undo = review.can_undo && (
+    <ReceiptUndo receipt={receipt} onDone={onDone} />
+  );
+  if (review.accepted) {
+    return (
+      <div className="card-actions">
+        <span role="status">{t("brief.changes.reviewed")}</span>
+        {undo}
+      </div>
+    );
+  }
   if (!isReviewableReceipt(receipt))
     return <p>{t("brief.changes.superseded")}</p>;
   const subject = receipt.subject;
   if (!writable || !review.writable || subject?.type !== "deal") return null;
-  const accept = () =>
+  const markReviewed = () =>
     decide.mutate({
       id: subject.id,
       changeId: receipt.id,
@@ -58,16 +77,12 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
     });
   return (
     <div className="card-actions">
-      {review.can_undo && <ReceiptUndo receipt={receipt} />}
       {review.can_accept && (
-        <Button pending={decide.isPending} onClick={accept}>
-          {t(
-            review.kind === "close_date"
-              ? "brief.changes.keepDate"
-              : "brief.changes.accept",
-          )}
+        <Button pending={decide.isPending} onClick={markReviewed}>
+          {t("brief.changes.markReviewed")}
         </Button>
       )}
+      {undo}
       <ErrorLine error={decide.error} />
     </div>
   );
