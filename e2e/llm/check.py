@@ -279,13 +279,18 @@ def read_tool_results(path):
     return results
 
 
-# A money figure as an answer writes it: a currency sign or code, then a number
-# with grouping, decimals and an optional k or m.
+# A money figure as an answer writes it: a currency sign, code or word before or
+# after a number. A space groups thousands only before exactly three digits, so
+# "€5 6 deals" is €5 and a count, not €56.
+_DIGITS = r"\d{1,3}(?:[.,\u202f\u00a0 ]\d{3})+(?:[.,]\d{1,2})?(?!\d)|\d+(?:[.,]\d+)?"
+_SCALE = r"(?:\s?(?:[kK]|[mM]|bn|Mio\.?|million|thousand)\b)?"
+_CURRENCY_WORD = r"(?:EUR|USD|GBP|CHF|euros?|dollars?|pounds?)\b"
 _MONEY = re.compile(
-    r"(?:[€$£]|\b(?:EUR|USD|GBP|CHF)\s?)\s?(\d[\d.,\u202f\u00a0 ]*\d|\d)\s?([kKmM]\b)?"
-    r"|(\d[\d.,\u202f\u00a0 ]*\d|\d)\s?([kKmM])?\s?(?:€|\b(?:EUR|USD|GBP|CHF)\b)"
+    rf"(?:[€$£]|\b(?:EUR|USD|GBP|CHF)\s?)\s?({_DIGITS})({_SCALE})"
+    rf"|\b({_DIGITS})({_SCALE})\s?(?:€|{_CURRENCY_WORD})"
 )
 _NUMBER = re.compile(r"\d[\d.,]*\d|\d")
+_SCALES = {"k": 1e3, "thousand": 1e3, "m": 1e6, "million": 1e6, "mio": 1e6, "mio.": 1e6, "bn": 1e9}
 
 
 def _amount(digits, scale):
@@ -299,7 +304,7 @@ def _amount(digits, scale):
         value, step = float(f"{whole}.{decimal.group(1)}"), 10 ** -len(decimal.group(1))
     else:
         value, step = float(re.sub(r"[.,]", "", text)), 1.0
-    factor = {"k": 1e3, "m": 1e6}.get(scale.lower(), 1) if scale else 1
+    factor = _SCALES.get(scale.strip().lower(), 1) if scale.strip() else 1
     return value * factor, step * factor
 
 
@@ -322,7 +327,11 @@ def figure_problems(said, results):
     for text in results:
         for token in _NUMBER.findall(text):
             number = _amount(token, "")[0]
-            held.extend((number, number / 100))
+            held.append(number)
+            # Only a bare integer can be minor units; "1,240,000" is written
+            # for a reader, never as cents.
+            if token.isdigit():
+                held.append(number / 100)
     problems = []
     for match in _MONEY.finditer(said):
         digits = match.group(1) or match.group(3)

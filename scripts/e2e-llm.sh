@@ -514,7 +514,7 @@ else:
     echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
     echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
     echo "  not override; anything else points at the stack or the passport." >&2
-    return 1
+    return 3
   fi
 
   # A NONZERO EXIT IS SCORED ONLY WHEN THE RESULT OWNS IT. The CLI exits nonzero
@@ -632,6 +632,7 @@ done
 PASSED=0
 FAILED=0
 SWEEP_CALLS=0
+PROVISIONAL=()
 # The runs the lane INTENDED, summed as it goes. The sweep total's denominator
 # cannot come from the transcripts it is counting: a run that wrote none would
 # then be missing from both halves and the total would report itself complete.
@@ -817,12 +818,6 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     esac
   done
 
-  if [[ "$SWEEP_CALLS" -eq 0 ]]; then
-    echo
-    echo "HARNESS: no run of this sweep so far called the lane's server, so it may never have attached."
-    echo "  This is not a use-case failure. Nothing was recorded for $name."
-    exit 2
-  fi
   if [[ "$ok" -ge "$pass_at" ]]; then
     PASSED=$((PASSED + 1))
     echo "  $name: PASS ($ok/$made)" | tee -a "$REPORT"
@@ -849,6 +844,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   transcripts=("$WORK/$name".run*.jsonl)
   shopt -u nullglob
 
+  # A verdict written before any run of the sweep reached the server is held
+  # back: the sweep's end decides whether the server ever attached.
+  if [[ "$SWEEP_CALLS" -eq 0 ]]; then
+    PROVISIONAL+=("$name")
+    if [[ -f "$VERDICT_DIR/${name}.json" ]]; then cp "$VERDICT_DIR/${name}.json" "$WORK/${name}.prior.json"; fi
+  fi
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
@@ -865,6 +866,22 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   rm -f "$RECORD_DIR/$name".run*.jsonl
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
+
+# A run that called nothing is scored on its answer, but a sweep in which no run
+# reached the server says it never attached: its verdicts are taken back.
+if [[ "$SWEEP_CALLS" -eq 0 && ${#PROVISIONAL[@]} -gt 0 ]]; then
+  for name in "${PROVISIONAL[@]}"; do
+    if [[ -f "$WORK/${name}.prior.json" ]]; then
+      cp "$WORK/${name}.prior.json" "$VERDICT_DIR/${name}.json"
+    else
+      rm -f "$VERDICT_DIR/${name}.json"
+    fi
+  done
+  echo
+  echo "HARNESS: no run of this sweep called the lane's server, so it may never have attached."
+  echo "  Read one run's answer and its system line. Nothing was recorded."
+  exit 2
+fi
 
 echo
 echo "================ e2e-llm ================"

@@ -104,6 +104,7 @@ _TAG_COUNTS = ("contacts", "companies", "deals", "leads")
 _TEAM, _MEMBER = "team", "member"
 _CONTRACT = "contract"
 _AUTOMATION, _ME = "automation", "me"
+_SAVED_QUESTIONS = "saved_questions"
 _OWN_DRAFT = "own_draft"
 _DRAFT_ANCHORS = ("company", "contact", "deal", "lead", "project")
 
@@ -188,6 +189,11 @@ def _special_wanted(entry, want):
         raise ValueError(f"must_end_with entry {entry!r}: owner is read on a record found by name")
     if want.field == _OWN_DRAFT and (want.record_type not in _DRAFT_ANCHORS or want.parent_type):
         raise ValueError(f"must_end_with entry {entry!r}: a draft is read on a {', '.join(_DRAFT_ANCHORS)}")
+    if want.field == _SAVED_QUESTIONS:
+        least = re.fullmatch(r"(\d+)\+", want.value)
+        # One page holds the answer, so a count past it would need the cursor.
+        if want.record_type != _ME or not least or not 1 <= int(least.group(1)) <= _PAGE_LIMIT:
+            raise ValueError(f"must_end_with entry {entry!r}: saved_questions is read on me, as N+ with N from 1 to {_PAGE_LIMIT}")
 
 
 def _document_wanted(want):
@@ -512,7 +518,7 @@ def _me_problem(session, want):
     # would score that seat's field as this one's.
     if seat.get("email") != want.name:
         raise Unreadable(f"the lane's passport acts for {seat.get('email')!r}, not {want.name!r}")
-    if want.field == "saved_questions":
+    if want.field == _SAVED_QUESTIONS:
         return _saved_questions_problem(session, want)
     actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
     if actual == want.value:
@@ -524,8 +530,6 @@ def _saved_questions_problem(session, want):
     """The problem line for a saved_questions=N+ entry: at least N saved, since a
     run may save one question per figure."""
     least = re.fullmatch(r"(\d+)\+", want.value)
-    if not least:
-        raise Unreadable(f"saved_questions takes N+, not {want.value!r}")
     saved = _data(session, "read_reports", {"kind": "report_runs", "limit": _PAGE_LIMIT}).get("data")
     if not isinstance(saved, list):
         raise Unreadable("read_reports report_runs carries no data list")

@@ -441,6 +441,12 @@ class AgentLimitReadersTest(unittest.TestCase):
         _, problems = self.read(entries)
         self.assertEqual(problems, [f'ended with 0 saved questions on the seat "{self.SEAT}", wanted 1+'])
 
+    def test_a_saved_questions_entry_is_checked_before_any_run(self):
+        for entry in ('me "admin@demo.test" saved_questions=1', 'me "admin@demo.test" saved_questions=51+',
+                      'company "Acme" saved_questions=1+'):
+            with self.assertRaisesRegex(ValueError, "saved_questions is read on me"):
+                endstate.parse(entry)
+
     USERS_DRAFT = {"subject": "Preisworkshop in Köln", "agent_drafted": False}
 
     def test_the_users_own_draft_left_alone_holds(self):

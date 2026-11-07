@@ -27,6 +27,21 @@ class FigureProblemsTest(unittest.TestCase):
         # 174,000 - 164,500: the gap between two figures the run read.
         self.assertEqual(check.figure_problems("The two differ by €9,500.", RESULTS), [])
 
+    def test_a_spelled_out_currency_or_scale_is_still_checked(self):
+        self.assertEqual(check.figure_problems("Weighted: 1,240,000 euros, or €1.24 million.",
+                                               ['{"weighted": "1,240,000 EUR"}']), [])
+        for said in ("1,420,000 euros", "1.42 million euros"):
+            self.assertEqual(len(check.figure_problems(said, ['{"weighted": "1,240,000 EUR"}'])), 1, said)
+
+    def test_a_count_after_an_amount_is_not_part_of_it(self):
+        problems = check.figure_problems("Won €5 6 deals.", ['{"won": 5}'])
+        self.assertEqual(problems, [])
+
+    def test_only_a_bare_integer_counts_as_minor_units(self):
+        # 1,240,000 is written for a reader; reading it as cents would let €12k pass.
+        self.assertEqual(len(check.figure_problems("About €12k.", ['{"weighted": "1,240,000 EUR"}'])), 1)
+        self.assertEqual(check.figure_problems("€12,400.", ['{"weighted_minor": 1240000}']), [])
+
     def test_an_answer_with_no_money_figure_has_nothing_to_check(self):
         self.assertEqual(check.figure_problems("Seven deals are open.", RESULTS), [])
 

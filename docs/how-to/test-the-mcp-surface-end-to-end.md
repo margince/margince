@@ -300,7 +300,7 @@ Before you call a red scenario a product regression, rule out the harness:
 
 | Sign | Cause | Fix |
 |---|---|---|
-| `no run of this sweep so far called the lane's server` | The MCP server never connected: a server name turned off in the config of the claude CLI, or a CLI that could not reach its tools. One run that calls nothing is scored on its answer; only a sweep in which no run called the server stops | Read the system line of the transcript |
+| `no run of this sweep called the lane's server` | The MCP server may never have connected: a server name turned off in the config of the claude CLI, or a CLI that could not reach its tools. Or every case you picked rightly needs no call. The verdicts of that sweep are taken back | Read one run's answer and the system line of its transcript |
 | `did not start clean: …` | The claude CLI loaded more than the server of the lane: a repository folder, `memory_paths`, a plugin, a skill or a hook | Read the `init` line of the transcript, and its `hook_started` lines for a hook. A new CLI version may load from a new place: turn it off in `e2e/llm/clean.py` |
 | `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | section 2 |
 | `the stack refused the reindex (HTTP …)` | The `.env.local` of the checkout has no key for the provider of the preset, so no case is scored | section 2 |
