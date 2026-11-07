@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -48,6 +49,9 @@ func (f *fakeOAuth) Refresh(_ context.Context, _ string, granted []string) (oaut
 }
 
 type fakeAPI struct {
+	// mu guards what GetMIME records: a backfill page fetches concurrently.
+	mu         sync.Mutex
+	fetchedVia map[string]string
 	email      string
 	receivedAt map[string]time.Time
 	// DeltaInit's canned INBOX round (the initial/bounded anchor).
@@ -222,8 +226,14 @@ func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]MessageRef, [
 }
 
 func (f *fakeAPI) GetMIME(_ context.Context, _, folder, id string) ([]byte, error) {
+	f.mu.Lock()
 	f.fetched = append(f.fetched, id)
 	f.fetchedFrom = append(f.fetchedFrom, folder)
+	if f.fetchedVia == nil {
+		f.fetchedVia = map[string]string{}
+	}
+	f.fetchedVia[id] = folder
+	f.mu.Unlock()
 	if f.skipIDs[id] {
 		return nil, fmt.Errorf("graph: message %s exceeds the size cap: %w", id, connector.ErrSkip)
 	}

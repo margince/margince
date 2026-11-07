@@ -103,7 +103,7 @@ func getQuotaCost(path string, q url.Values) int {
 	case path == "/messages":
 		return 5
 	case strings.HasPrefix(path, "/messages/"):
-		format := strings.ToLower(q.Get("format"))
+		format := strings.ToLower(q.Get(paramFormat))
 		if format == "" || format == "raw" || format == "full" || format == "html" {
 			return 60
 		}

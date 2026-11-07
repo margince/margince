@@ -11,6 +11,7 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -76,8 +77,64 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 	if cost.Statements == 0 || cost.Acquires == 0 {
 		t.Fatalf("capture was not metered: %+v", cost)
 	}
-	t.Logf("messages=%d statements=%d acquires=%d db_time=%s pool_wait=%s", count, cost.Statements, cost.Acquires, cost.DBTime, cost.PoolWait)
+	t.Logf("messages=%d statements=%d exchanges=%d transactions=%d acquires=%d db_time=%s pool_wait=%s", count, cost.Statements, cost.Exchanges, cost.Transactions, cost.Acquires, cost.DBTime, cost.PoolWait)
 	t.Logf("contacts=%d", parties)
+}
+
+// The budget is per message. The mailbox holds ten exchanges with each of
+// twenty correspondents, half sent and half received. So it fails a change
+// that adds round trips to every message. Lower it when a change removes
+// some; never raise it to make a change pass.
+const (
+	historyExchangesPerMessage    = 185
+	historyTransactionsPerMessage = 7.15
+)
+
+func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
+	const count, parties = 200, 20
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	pool := e.Pool
+	if os.Getenv("MARGINCE_IMPORT_BENCH_SQL") != "" {
+		pool = profileHistoryPool(e.Admin(), t, pool)
+	}
+	// The live tally write and the page's ownership check both run on wall
+	// time, so their count follows the runner's speed rather than the code.
+	// Holding both off for the page keeps the budget about each message.
+	registry := compose.NewCaptureRegistry(pool, newTestKeyvault(t, e), compose.CaptureConfig{}).
+		WithProgressPacing(24 * time.Hour).WithOwnershipWatch(24 * time.Hour)
+	page := &mailPageConnector{nextToken: "next", sent: make(map[string]bool, count)}
+	for i := range count {
+		messageID, party := fmt.Sprintf("budget-%d@myco.example", i), fmt.Sprintf("budget-%d@globex.example", (i/2)%parties)
+		if i%2 == 1 {
+			page.raws = append(page.raws, email(party, "", captureOwner, messageID, ""))
+			continue
+		}
+		page.raws = append(page.raws, email(captureOwner, "", party, messageID, ""))
+		page.sent[messageID] = true
+	}
+	registry.Register(page)
+	actor := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if _, err := registry.Connect(actor, "gmail", connector.Auth("refresh")); err != nil {
+		t.Fatal(err)
+	}
+	run, err := registry.StartBackfill(actor, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, meter := database.WithStatementMeter(principal.WithWorkspaceID(context.Background(), e.WS))
+	if done, completed, _, err := registry.RunBackfillStep(ctx, run.ID); err != nil || done || completed {
+		t.Fatalf("import: done=%v completed=%v error=%v", done, completed, err)
+	}
+	cost := meter.Cost()
+	if contacts, _ := readBackfillYieldColumns(t, e, run.ID); contacts != parties {
+		t.Fatalf("contacts=%d want %d", contacts, parties)
+	}
+	exchanges, transactions := float64(cost.Exchanges)/count, float64(cost.Transactions)/count
+	t.Logf("per message: exchanges=%.1f transactions=%.2f statements=%.1f", exchanges, transactions, float64(cost.Statements)/count)
+	if exchanges > historyExchangesPerMessage || transactions > historyTransactionsPerMessage {
+		t.Fatalf("per message: %.1f exchanges (budget %d), %.2f transactions (budget %g)", exchanges, historyExchangesPerMessage, transactions, historyTransactionsPerMessage)
+	}
 }
 
 func historyMeasurementSize(t *testing.T, name string, fallback, limit int) int {

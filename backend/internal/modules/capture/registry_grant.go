@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -360,6 +361,7 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		RETURNING id`, args...).Scan(&id); err != nil {
 		return ids.Nil, nil, err
 	}
+	database.Forget(tx, ownerIdentitiesMemo)
 	if err := auditConnectedAccountTx(ctx, tx, id, in, priorStatus, priorLabel); err != nil {
 		return ids.Nil, nil, err
 	}

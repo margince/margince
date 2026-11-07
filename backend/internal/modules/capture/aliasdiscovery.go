@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -170,6 +171,7 @@ func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.U
 	if err != nil {
 		return fmt.Errorf("capture: claiming %s as the seat's own: %w", value, err)
 	}
+	database.Forget(tx, ownerIdentitiesMemo)
 	if err := retirePendingForIdentityTx(ctx, tx, seat, identity); err != nil {
 		return err
 	}

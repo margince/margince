@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/sync/semaphore"
 
+	"github.com/margince/margince/backend/internal/modules/capture/orderedfetch"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -129,96 +130,20 @@ func rateLimited[T any](ctx context.Context, g *rateGate, fn func() (T, error)) 
 	}
 }
 
-type orderedMessage struct {
-	v           Message
-	err         error
-	reservation *rawReservation
-}
-type rawFetch struct {
-	index       int
-	reservation *rawReservation
-}
-
-func queueMessageFetches(ctx context.Context, n int, tokens chan<- struct{}, next chan<- rawFetch, budget *semaphore.Weighted, reservationBytes int64) {
-	defer close(next)
-	for i := range n {
-		select {
-		case tokens <- struct{}{}:
-		case <-ctx.Done():
-			return
-		}
-		// Reserve in listing order, before a later result can occupy the budget.
-		reservation, err := reserveMemory(ctx, budget, reservationBytes)
-		if err != nil {
-			return
-		}
-		select {
-		case next <- rawFetch{index: i, reservation: reservation}:
-		case <-ctx.Done():
-			reservation.release()
-			return
-		}
-	}
-}
-
-// inOrder keeps fetches bounded and delivers each result in listing order.
-// Its budget covers fetch and consumption. A nil budget skips accounting.
+// inOrder walks n messages with backfillFetchWorkers fetches in flight and
+// consumes them in listing order. budget covers fetch and consumption; a nil
+// budget skips accounting.
 func inOrder(
 	ctx context.Context, n int,
 	fetch func(ctx context.Context, i int) (Message, error),
 	consume func(i int, v Message, err error) error,
 	budget *semaphore.Weighted, reservationBytes int64,
 ) error {
-	if n == 0 {
-		return nil
+	walk := orderedfetch.Walk[Message]{
+		Workers: backfillFetchWorkers, Lookahead: backfillLookahead,
+		Budget: budget, Reserve: reservationBytes, Retained: retainedRawBytes,
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	slots := make([]chan orderedMessage, n)
-	for i := range slots {
-		slots[i] = make(chan orderedMessage, 1)
-	}
-	tokens := make(chan struct{}, backfillLookahead)
-	next := make(chan rawFetch)
-	var wg sync.WaitGroup
-	defer func() {
-		cancel()
-		wg.Wait()
-		for _, slot := range slots {
-			select {
-			case remaining := <-slot:
-				remaining.reservation.release()
-			default:
-			}
-		}
-	}()
-	wg.Go(func() { queueMessageFetches(ctx, n, tokens, next, budget, reservationBytes) })
-	for range min(backfillFetchWorkers, n) {
-		wg.Go(func() {
-			for item := range next {
-				v, err := fetch(item.reservation.context(ctx), item.index)
-				item.reservation.shrink(retainedRawBytes(v))
-				slots[item.index] <- orderedMessage{v: v, err: err, reservation: item.reservation}
-			}
-		})
-	}
-	for i := range n {
-		select {
-		case result := <-slots[i]:
-			err := consumeOrderedMessage(i, result, consume)
-			<-tokens
-			if err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-	return nil
-}
-
-func consumeOrderedMessage(index int, result orderedMessage, consume func(int, Message, error) error) error {
-	defer result.reservation.release()
-	return consume(index, result.v, result.err)
+	return walk.InOrder(ctx, n, fetch, consume)
 }
 
 // endsPage reports whether a message's failure is the connection's rather than
