@@ -17,7 +17,7 @@ import (
 
 func newTestServer(t *testing.T, count int) *httptest.Server {
 	t.Helper()
-	s := &server{byOwner: map[string]int{}, now: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)}
+	s := &server{byOwner: map[string]int{}, connected: map[string]bool{}, now: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC)}
 	for i, owner := range []string{"a@demo.test", "b@demo.test"} {
 		s.boxes = append(s.boxes, mailbox{owner: owner, count: count, seed: uint64(i + 7)})
 		s.byOwner[owner] = i
@@ -52,6 +52,65 @@ func getJSON(t *testing.T, srv *httptest.Server, path, token string, out any) {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func consentCode(t *testing.T, srv *httptest.Server, hint string) string {
+	t.Helper()
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	q := url.Values{"redirect_uri": {"http://app.test/cb"}, "state": {"s1"}}
+	if hint != "" {
+		q.Set("login_hint", hint)
+	}
+	resp, err := client.Get(srv.URL + "/o/oauth2/v2/auth?" + q.Encode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeBody(t, resp)
+	back, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return back.Query().Get("code")
+}
+
+func exchange(t *testing.T, srv *httptest.Server, code string) {
+	t.Helper()
+	resp, err := http.PostForm(srv.URL+"/token", url.Values{"code": {code}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeBody(t, resp)
+}
+
+// A consent page opened twice before its code is exchanged offers the same
+// mailbox, so a reload never shifts the seats onto each other's mail.
+func TestAReloadedConsentPageOffersTheSameMailbox(t *testing.T) {
+	srv := newTestServer(t, 5)
+	first, again := consentCode(t, srv, ""), consentCode(t, srv, "")
+	if first != "code-a@demo.test" || again != first {
+		t.Fatalf("consent offered %q then %q, want a@demo.test twice", first, again)
+	}
+	exchange(t, srv, first)
+	if next := consentCode(t, srv, ""); next != "code-b@demo.test" {
+		t.Fatalf("after a@demo.test connected, consent offered %q, want b@demo.test", next)
+	}
+}
+
+func TestAMessageIsServedOnlyToItsOwnMailbox(t *testing.T) {
+	srv := newTestServer(t, 5)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+apiPrefix+"/messages/"+messageID(1, 0)+"?format=RAW", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer at-a@demo.test")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeBody(t, resp)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("mailbox a read a message of mailbox b: status %d, want 404", resp.StatusCode)
 	}
 }
 
@@ -108,8 +167,9 @@ func TestEveryListedMessageIsServedAndRepliesNameAMessageOfTheMailbox(t *testing
 	if len(ids) != count {
 		t.Fatalf("listed %d messages, want %d", len(ids), count)
 	}
-	known := map[string]bool{}
+	known := map[string]string{}
 	replies := map[string]string{}
+	peers := map[string]string{}
 	for _, id := range ids {
 		var msg struct{ Raw string }
 		getJSON(t, srv, apiPrefix+"/messages/"+id+"?format=RAW", "at-a@demo.test", &msg)
@@ -118,15 +178,21 @@ func TestEveryListedMessageIsServedAndRepliesNameAMessageOfTheMailbox(t *testing
 			t.Fatal(err)
 		}
 		head, _, _ := strings.Cut(string(raw), "\r\n\r\n")
+		var self string
 		for line := range strings.SplitSeq(head, "\r\n") {
 			name, value, _ := strings.Cut(line, ": ")
 			switch name {
 			case "Message-ID":
-				known[value] = true
+				self = value
 			case "In-Reply-To":
 				replies[id] = value
+			case "From", "To":
+				if !strings.Contains(value, "a@demo.test") {
+					peers[id] = value
+				}
 			}
 		}
+		known[self] = id
 	}
 	if len(replies) == 0 {
 		t.Fatal("the mailbox has no replies, so no import would build a thread")
@@ -138,8 +204,16 @@ func TestEveryListedMessageIsServedAndRepliesNameAMessageOfTheMailbox(t *testing
 		if _, err := fmt.Sscanf(parent, "<m%d.%d@mx.demo>", &box, &n); err != nil {
 			t.Fatalf("message %s names an unreadable parent %q", id, parent)
 		}
-		if n < count && !known[parent] {
+		if n >= count {
+			continue
+		}
+		parentID, served := known[parent]
+		if !served {
 			t.Errorf("message %s replies to %s, which the mailbox does not serve", id, parent)
+			continue
+		}
+		if peers[id] != peers[parentID] {
+			t.Errorf("message %s with %q replies to %s with %q: one thread, two correspondents", id, peers[id], parentID, peers[parentID])
 		}
 	}
 }

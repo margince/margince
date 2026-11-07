@@ -21,7 +21,8 @@ const apiPrefix = "/gmail/v1/users/me"
 type server struct {
 	boxes    []mailbox
 	byOwner  map[string]int
-	consents atomic.Int64
+	mu        sync.Mutex
+	connected map[string]bool
 	calls    sync.Map
 	rawBytes atomic.Int64
 	now      time.Time
@@ -74,13 +75,14 @@ func writeJSON(w http.ResponseWriter, v any) {
 
 // consent stands in for Google's consent screen: it approves at once and sends
 // the browser back with a code naming the mailbox. login_hint picks the
-// mailbox; without it the mailboxes are handed out in turn.
+// mailbox; without it the first mailbox no code was exchanged for yet, so a
+// reloaded consent page offers the same mailbox again.
 func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 	s.count("auth")
 	q := r.URL.Query()
-	owner := s.boxes[int(s.consents.Add(1)-1)%len(s.boxes)].owner
-	if hint := q.Get("login_hint"); hint != "" {
-		owner = hint
+	owner := q.Get("login_hint")
+	if owner == "" {
+		owner = s.nextUnconnected()
 	}
 	back, err := url.Parse(q.Get("redirect_uri"))
 	if err != nil {
@@ -105,6 +107,11 @@ func (s *server) token(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	owner := strings.TrimPrefix(r.PostForm.Get("code"), "code-")
+	if owner != "" {
+		s.mu.Lock()
+		s.connected[owner] = true
+		s.mu.Unlock()
+	}
 	if refresh := r.PostForm.Get("refresh_token"); refresh != "" {
 		owner = strings.TrimPrefix(refresh, "rt-")
 	}
@@ -113,6 +120,17 @@ func (s *server) token(w http.ResponseWriter, r *http.Request) {
 		scope = "https://www.googleapis.com/auth/gmail.readonly"
 	}
 	writeJSON(w, map[string]any{"access_token": "at-" + owner, "refresh_token": "rt-" + owner, "expires_in": 3600, "token_type": "Bearer", "scope": scope})
+}
+
+func (s *server) nextUnconnected() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, box := range s.boxes {
+		if !s.connected[box.owner] {
+			return box.owner
+		}
+	}
+	return s.boxes[0].owner
 }
 
 func (s *server) mailboxOf(w http.ResponseWriter, r *http.Request) (int, bool) {
@@ -160,8 +178,12 @@ func (s *server) list(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) message(w http.ResponseWriter, r *http.Request) {
+	holder, authorized := s.mailboxOf(w, r)
+	if !authorized {
+		return
+	}
 	box, n, ok := s.parseID(r.PathValue("id"))
-	if !ok {
+	if !ok || box != holder {
 		http.NotFound(w, r)
 		return
 	}

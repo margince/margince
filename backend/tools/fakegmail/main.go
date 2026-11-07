@@ -26,7 +26,7 @@ func main() {
 	big := flag.Bool("big", false, "attachments of realistic size, up to 15 MiB")
 	flag.Parse()
 
-	s := &server{byOwner: map[string]int{}, now: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC), big: *big}
+	s := &server{byOwner: map[string]int{}, connected: map[string]bool{}, now: time.Date(2026, 11, 1, 12, 0, 0, 0, time.UTC), big: *big}
 	for i, owner := range strings.Split(*owners, ",") {
 		digest := sha256.Sum256([]byte(owner))
 		s.boxes = append(s.boxes, mailbox{owner: owner, count: *count, seed: binary.LittleEndian.Uint64(digest[:])})

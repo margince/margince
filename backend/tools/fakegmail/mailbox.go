@@ -72,30 +72,54 @@ func displayName(s string) string {
 	return strings.Join(parts, " ")
 }
 
+// threadSpan is how many neighbouring messages one conversation groups. Its
+// oldest member is the root every other member replies to, so a conversation
+// never reaches into another one.
+const threadSpan = 4
+
+// The kinds a group of threadSpan messages can be: one conversation with one
+// correspondent, single messages, or a newsletter's issues.
+const (
+	groupConversation = iota
+	groupSingles
+	groupNewsletter
+)
+
+func groupKind(group *rand.Rand) int {
+	switch p := group.IntN(10); {
+	case p < 6:
+		return groupConversation
+	case p < 9:
+		return groupSingles
+	default:
+		return groupNewsletter
+	}
+}
+
 // build derives message n of a mailbox from the mailbox seed alone, so the
 // server keeps no state and serves any id in any order.
 func (s *server) build(box, n int) message {
 	owner := s.boxes[box].owner
 	r := s.rng(box, n)
 	date := s.now.Add(-time.Duration(n)*3*time.Hour - time.Duration(r.IntN(3600))*time.Second)
-	root := n
-	if n > 0 && r.IntN(3) > 0 {
-		root = n + 1 + r.IntN(6)
+	group := s.rng(box, n/threadSpan+1_000_000)
+	kind, root, about := groupKind(group), n, r
+	if kind == groupConversation {
+		root, about = n/threadSpan*threadSpan+threadSpan-1, group
 	}
-	thread := s.rng(box, root+1_000_000)
-	peerName, peer := s.correspondent(thread)
-	subject := subjects[thread.IntN(len(subjects))] + " " + strconv.Itoa(root%97)
+	peerName, peer := s.correspondent(about)
+	subject := subjects[about.IntN(len(subjects))] + " " + strconv.Itoa(root%97)
 	from, to, labels := fmt.Sprintf("%s <%s>", peerName, peer), owner, []string{"INBOX"}
 	var extra [][2]string
-	switch kind := r.IntN(100); {
-	case kind < 40:
-		from, to, labels = owner, fmt.Sprintf("%s <%s>", peerName, peer), []string{"SENT"}
-	case kind < 52:
-		list := r.IntN(newsletters)
+	switch pick := r.IntN(100); {
+	case kind == groupNewsletter:
+		list := group.IntN(newsletters)
 		from = fmt.Sprintf("News %d <news@newsletter%02d.example>", list, list)
-		subject, root, labels = "Weekly digest "+strconv.Itoa(n), n, []string{"INBOX", "CATEGORY_PROMOTIONS"}
+		subject, labels = "Weekly digest "+strconv.Itoa(n), []string{"INBOX", "CATEGORY_PROMOTIONS"}
 		extra = [][2]string{{"List-Unsubscribe", fmt.Sprintf("<mailto:unsub@newsletter%02d.example>", list)}, {"Precedence", "bulk"}}
-	case kind < 58:
+	case pick < 45:
+		from, to, labels = owner, fmt.Sprintf("%s <%s>", peerName, peer), []string{"SENT"}
+	case kind == groupSingles && pick < 60:
 		from = s.boxes[(box+1)%len(s.boxes)].owner
 	}
 	if root != n {
