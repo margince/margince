@@ -71,10 +71,17 @@ class AskSofiaForAnIntroTest(ToolGuardCase):
                                 "request_body": {"via_user_id": "u1", "contact_id": "n1"}})
         self.assertEqual(self.problems([ask], self.answer), [])
 
+    def test_the_same_ask_written_from_the_records_passes(self):
+        # The path is the model's to choose; the message is what is scored.
+        read = ("read_relationships", {"company_id": "c1"})
+        self.assertEqual(self.problems([read], self.answer), [])
+
     def test_the_note_for_the_contact_instead_fails(self):
         note = ("run_research", {"action": "draft_intro_note", "id": "n1", "request_body": {"via_user_id": "u1"}})
-        problems = self.problems([note], self.answer)
-        self.assertTrue(any("draft_intro_request" in p for p in problems), problems)
+        to_heike = ("Here is a note you can forward: Hi Heike, Sofia suggested I introduce myself; "
+                    "nothing has gone out yet.")
+        problems = self.problems([note], to_heike)
+        self.assertTrue(any("Sofia" in p for p in problems), problems)
 
     def test_claiming_it_was_sent_fails(self):
         ask = ("run_research", {"action": "draft_intro_request", "id": "c1", "request_body": {"via_user_id": "u1"}})
