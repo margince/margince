@@ -6211,9 +6211,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "assignments.kindTeam": "Team",
   "assignments.who": "Wer",
   "assignments.findColleague": "Teammitglied suchen",
-  "assignments.invited": "Eingeladen, noch nicht angemeldet",
   "assignments.noColleagueFound":
-    "Kein Teammitglied gefunden. Zuweisen kannst du nur Teammitglieder mit Margince-Konto. Frage einen Admin nach einer Einladung.",
+    "Kein aktives Teammitglied gefunden. Prüfe die Schreibweise. Stimmt der Name, frag einen Admin nach einer Einladung oder lass das Konto prüfen.",
   "assignments.findTeam": "Team suchen",
   "assignments.role": "Rolle",
   "assignments.rolePlaceholder": "Rolle wählen",

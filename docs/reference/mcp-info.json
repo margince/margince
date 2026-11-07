@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 232806,
+    "tool_catalog_bytes": 232857,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59607,
+    "approx_wire_tokens_total": 59619,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 54984,
-      "input_schema_bytes": 113876,
+      "input_schema_bytes": 113927,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 168860
+      "description_plus_input_schema_bytes": 168911
     }
   },
   "tools": {
@@ -10674,7 +10674,8 @@
               "type": "boolean"
             },
             "include_invited": {
-              "description": "colleagues only: Also list invited seats that have not signed in yet",
+              "deprecated": true,
+              "description": "colleagues only: Deprecated compatibility option. Also list invited seats that have not signed in yet",
               "type": "boolean"
             },
             "kind": {

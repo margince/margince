@@ -34,7 +34,8 @@ func (d *DB) workKey(ctx context.Context, kind string, id ids.UUID) (string, err
 	return kind + ":" + workspace.String() + ":" + id.String(), nil
 }
 
-// TryWorkLease takes the tenant's lease on one unit of work; false means another holder has it.
+// TryWorkLease takes the session lease on one workspace's piece of work, and
+// reports false when another session holds it.
 func (d *DB) TryWorkLease(ctx context.Context, kind string, id ids.UUID, log *slog.Logger) (*SessionLease, bool, error) {
 	key, err := d.workKey(ctx, kind, id)
 	if err != nil {

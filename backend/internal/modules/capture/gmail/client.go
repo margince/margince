@@ -13,7 +13,6 @@ package gmail
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,7 +20,6 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
@@ -335,7 +333,7 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 
 func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Message, error) {
 	var out struct {
-		Raw          string        `json:"raw"`
+		Raw          webSafeRFC822 `json:"raw"`
 		LabelIDs     messageLabels `json:"labelIds"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 		InternalDate string        `json:"internalDate"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	}
@@ -351,13 +349,8 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 	if err != nil {
 		return Message{}, err
 	}
-	// Gmail encodes the RFC822 as web-safe (URL) base64, padding-optional.
-	decoded, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(out.Raw, "="))
-	if err != nil {
-		return Message{}, fmt.Errorf("gmail: decoding raw message %s: %w", msgID, ErrUnreachable)
-	}
 	return Message{
-		RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
+		RFC822: out.Raw, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
 		ReceivedAt: internalDate(out.InternalDate),
 	}, nil
 }

@@ -86209,9 +86209,11 @@ export interface operations {
                 /** @description Admin management view — include deactivated/suspended members. Honored only for an admin caller. */
                 include_inactive?: boolean;
                 /**
-                 * @description Also list invited seats — members who have not signed in yet. Each row's `status` says so.
-                 *     A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
-                 *     Naming the colleagues a record already points at is `GET /users/names`.
+                 * @deprecated
+                 * @description Deprecated compatibility option. Also lists invited seats that have not signed in yet.
+                 *     Assignment pickers use the default active roster and leave out rows whose `is_agent` is
+                 *     true. Resolve known colleague ids with `GET /users/names`. This option remains accepted
+                 *     throughout the API compatibility window.
                  */
                 include_invited?: boolean;
             };
