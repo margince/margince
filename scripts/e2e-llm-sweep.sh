@@ -50,12 +50,15 @@ finished() {
   local tree verdict
   for tree in $worktrees; do
     verdict="$tree/backend/internal/compose/aicert/records/mcp_e2e/$folder/$1.json"
-    [[ -f "$verdict" && $(stat -f %m "$verdict" 2>/dev/null || stat -c %Y "$verdict") -ge $since ]] && return 0
+    # GNU stat reads -f as file-system mode and prints "?", so -c goes first.
+    [[ -f "$verdict" && $(stat -c %Y "$verdict" 2>/dev/null || stat -f %m "$verdict") -ge $since ]] && return 0
   done
   return 1
 }
 
 stalled=0
+waits=0
+max_waits="${E2E_SWEEP_MAX_WAITS:-8}"
 batch=0
 deferred=()
 while :; do
@@ -75,10 +78,20 @@ while :; do
   grep -E '^  case[0-9]+_[a-z0-9_]+: (PASS|FAIL)' "$log" | sed "s/^ */$slug /"
   stopped="$(grep -m1 -oE '^HARNESS: case[0-9]+_[a-z0-9_]+' "$log" | cut -d' ' -f2)"
   limited=0
-  grep -qiE 'out of credits|usage limit|rate limit|quota reached|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' "$log" && limited=1
+  # Only the harness block names a limit; a case's own answer may say "unavailable".
+  sed -n '/^HARNESS:/,/Nothing was scored/p' "$log" \
+    | grep -qE 'out of credits|usage limit|rate limit|[Qq]uota reached|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' \
+    && limited=1
+  if [[ $limited -eq 1 ]]; then
+    waits=$((waits + 1))
+    if [[ $waits -gt $max_waits ]]; then
+      echo "LANE STOPPED $slug: still limited after $max_waits waits; read $log" >&2
+      exit 1
+    fi
+  fi
   # A limit stops the harness too, and the case it stopped is not at fault.
   if [[ -n "$stopped" && $limited -eq 1 ]]; then
-    echo "LIMIT $slug: $stopped hit a limit; waiting ${wait_seconds}s"
+    echo "LIMIT $slug: $stopped hit a limit; waiting ${wait_seconds}s ($waits/$max_waits)"
     sleep "$wait_seconds"
     continue
   fi
@@ -90,10 +103,11 @@ while :; do
   for name in "${left[@]}"; do finished "$name" || still=$((still + 1)); done
   if [[ $still -lt ${#left[@]} ]]; then
     stalled=0
+    waits=0
     continue
   fi
   if [[ $limited -eq 1 ]]; then
-    echo "LIMIT $slug: waiting ${wait_seconds}s"
+    echo "LIMIT $slug: waiting ${wait_seconds}s ($waits/$max_waits)"
     sleep "$wait_seconds"
     continue
   fi

@@ -727,8 +727,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       echo
       echo "HARNESS: $name run $i could not be run:"
       # A CLI driver files its reason in the transcript, not on stderr.
-      { tail -5 "$transcript.err"; grep -ho '"result": "HARNESS: [^"]*' "$transcript" | cut -d'"' -f4; } \
-        | grep . | sed 's/^/  /'
+      { tail -5 "$transcript.err"; grep -ho '"result": "HARNESS: [^"]*' "$transcript" | cut -d'"' -f4; } 2>/dev/null \
+        | sed '/^$/d; s/^/  /' || true
       echo "  This is not a use-case failure. Nothing was scored."
       keep_transcript "$transcript"
       exit 2
@@ -861,7 +861,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # back: the sweep's end decides whether the server ever attached.
   if [[ "$SWEEP_CALLS" -eq 0 ]]; then
     PROVISIONAL+=("$name")
-    if [[ -f "$VERDICT_DIR/${name}.json" ]]; then cp "$VERDICT_DIR/${name}.json" "$WORK/${name}.prior.json"; fi
+    if [[ -f "$VERDICT_DIR/${name}.json" ]]; then cp -p "$VERDICT_DIR/${name}.json" "$WORK/${name}.prior.json"; fi
   fi
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
@@ -885,7 +885,7 @@ done
 if [[ "$SWEEP_CALLS" -eq 0 && ${#PROVISIONAL[@]} -gt 0 ]]; then
   for name in "${PROVISIONAL[@]}"; do
     if [[ -f "$WORK/${name}.prior.json" ]]; then
-      cp "$WORK/${name}.prior.json" "$VERDICT_DIR/${name}.json"
+      cp -p "$WORK/${name}.prior.json" "$VERDICT_DIR/${name}.json"
     else
       rm -f "$VERDICT_DIR/${name}.json"
     fi

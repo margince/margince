@@ -44,7 +44,7 @@ must_mention:
   - "(?i)introduc"
   # The message is to Sofia: a greeting or a To line names her. A note that
   # greets Heike is the forwardable note, a different message.
-  - "(?i)\b(?:hi|hello|hey|dear|hallo|liebe)\s+Sofia\b|\bTo:\**\s*Sofia\b"
+  - "(?im)\b(?:hi|hello|hey|dear|hallo|liebe|morning|afternoon|evening)\W+Sofia\b|\b(?-i:To)\b\W{0,3}Sofia\b|^\W*Sofia\s*[,—–-]"
 
 must_not_mention:
   - "(?i)\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:sent|emailed|messaged|forwarded)\b"

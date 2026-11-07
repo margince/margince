@@ -212,7 +212,7 @@ _AGY_RESOURCE_HELPERS = {"list_resources", "read_resource"}
 _AGY_SCHEMA_DIR = f"/mcp/{SERVER}/"
 # A long tool result is not put in the model's context: agy writes it to this
 # file of the conversation and the model reads it back.
-_AGY_SPILL = re.compile(r"/brain/([^/]+)/\.system_generated/steps/\d+/[a-z0-9_]+\.txt$")
+_AGY_SPILL = re.compile(r"/\.gemini/antigravity-cli/brain/([^/]+)/\.system_generated/steps/\d+/[a-z0-9_]+\.txt$")
 
 
 # The run's own folder holds nothing but the agent file, so a look into it
@@ -236,7 +236,7 @@ def _agy_tool(out, step, conversation, workspace=""):
         return ""
     if name == "read_file" and _AGY_SCHEMA_DIR in path:
         return ""
-    spill = _AGY_SPILL.search(path)
+    spill = _AGY_SPILL.search(os.path.realpath(path)) if path else None
     # Every step of this conversation is one the lane allows, since any other
     # stops the run, so a file agy spilled for it holds nothing from outside.
     if name == "read_file" and spill and conversation and spill.group(1) == conversation:

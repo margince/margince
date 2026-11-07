@@ -336,3 +336,16 @@ class StopTellingMeTest(GuardCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AskSofiaForAnIntroTest(GuardCase):
+    scenario = "case108-ask-sofia-for-an-intro.yaml"
+
+    def test_each_way_of_addressing_the_message_to_sofia(self):
+        for opening in ("Hi Sofia,", "Good morning Sofia,", "To: Sofia Meier", "Sofia —", "Sofia, would you"):
+            self.assertGreen(f"{opening} could you introduce me to Heike at Nordwind?")
+
+    def test_a_note_that_only_mentions_sofia_is_not_addressed_to_her(self):
+        for answer in ("Hi Heike, Sofia suggested I write so you could introduce us.",
+                       "I'd send a note to Sofia; she can introduce you to Heike."):
+            self.assertMissed(answer, "Sofia\\b")

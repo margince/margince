@@ -130,6 +130,13 @@ class FromAgyTest(unittest.TestCase):
                               tool_step(10, "read_file", Path=SPILL.format(9, "resource_0.txt")))
         self.assertEqual(convert(lines)[0], 0)
 
+    def test_a_spill_shaped_path_outside_agys_home_stops_the_run(self):
+        conversation = SPILL.split("/brain/")[1].split("/")[0]
+        for path in (f"/tmp/elsewhere/brain/{conversation}/.system_generated/steps/5/output.txt",
+                     SPILL.replace(conversation, f"0000-other/../{conversation}/../0000-other").format(5, "output.txt")):
+            lines = before_answer(sample(), tool_step(9, "read_file", Path=path))
+            self.assertEqual(convert(lines)[0], 3, path)
+
     def test_reading_a_spill_of_another_conversation_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "read_file", Path=OTHER_SPILL.format(5, "output.txt")))
         self.assertEqual(convert(lines)[0], 3)
