@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 227.4 KB |
+| Tool catalog | 227.3 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59632 |
+| Approx. wire tokens | 59601 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.8 KB | 23% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.7 KB | 23% | Yes, every step |
 | Input schemas | 111.2 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **165.0 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **164.9 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -96,13 +96,13 @@ descriptions and input schemas are what each step pays for.
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
 | [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2167 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 990 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 314 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2711 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 638 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2674 |
@@ -9210,24 +9210,24 @@ needs the user now, and read_record for a record's own fields.
 **Read the forecast and how it moved**
 
 ```text
-Read the forecast under the installation's fiscal calendar and base currency. A board-pack section
-to keep is a document, which read_analytics writes. readings: what a period is expected to close —
-`won`, `evidence` (Likely), `open` and `weighted` — and `snapshots`, the period's frozen states,
-newest first. movement: why the forecast changed between two snapshots, as named causes that sum to
-the whole difference. input_summary: whether the inputs are sound enough to quote, and how much of
-the pipeline last night's check reached. input_exceptions: the open input problems, most material
-first. input_sources: which connectors the check could read, and how far back. `won` counts deals by
-the day they ACTUALLY closed. `evidence` is Likely: open deals at `likely_threshold` percent or more
-whose close date somebody confirmed. `coverage_note` says what the totals leave out; quote it with
-any total. movement needs `from` then `to`, both from ONE readings answer's `snapshots`; none listed
-means nothing was frozen yet. Reading twice and subtracting is not the same answer: it says nothing
-of where the difference went. In movement, `definition` means the snapshots used different rules and
-`model` a re-scored probability: neither is sales movement. `checks_incomplete` is not a worse
-`needs_review`: one says the pipeline has problems, the other that nobody could look. An empty
-input_exceptions cannot be told from a clean pipeline; input_sources tells them apart, and needs a
-coverage grant sellers lack. read_reports and find_records with engine query also produce numbers,
-and neither is the forecast. For that document, query with save, then compose. To make a call,
-answer an input exception or share a reading, use change_reports. Quote `as_of`, `timezone` and
+Read the forecast under the installation's fiscal calendar and base currency. readings: what a
+period is expected to close — `won`, `evidence` (Likely), `open` and `weighted` — and
+`snapshots`, the period's frozen states, newest first. movement: why the forecast changed between
+two snapshots, as named causes that sum to the whole difference. input_summary: whether the inputs
+are sound enough to quote, and how much of the pipeline last night's check reached.
+input_exceptions: the open input problems, most material first. input_sources: which connectors the
+check could read, and how far back. `won` counts deals by the day they ACTUALLY closed. `evidence`
+is Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed.
+`coverage_note` says what the totals leave out; quote it with any total. movement needs `from` then
+`to`, both from ONE readings answer's `snapshots`; none listed means nothing was frozen yet. Reading
+twice and subtracting is not the same answer: it says nothing of where the difference went. In
+movement, `definition` means the snapshots used different rules and `model` a re-scored probability:
+neither is sales movement. `checks_incomplete` is not a worse `needs_review`: one says the pipeline
+has problems, the other that nobody could look. An empty input_exceptions cannot be told from a
+clean pipeline; input_sources tells them apart, and needs a coverage grant sellers lack.
+read_reports and find_records with engine query also produce numbers, and neither is the forecast.
+For a board-pack section, use read_analytics: query with save, then compose. To make a call, answer
+an input exception or share a reading, use change_reports. Quote `as_of`, `timezone` and
 `base_currency` with the number. A `_display` sits beside a `_minor` figure wherever its object
 names the unit: `base_currency`, or `current_call`'s own `currency`. Quote the `_display`, never the
 `_minor` integer.
@@ -10522,17 +10522,16 @@ guess.
 **Read sales reports**
 
 ```text
-Read sales reports as figures to quote. A written section a reader keeps, such as a board pack, is a
-document: read_analytics writes it. standard reads the standard metrics, saved reports and their
-frozen editions, and the open partner commission liability. run runs one of the named reports,
-grouped and filtered. evidence searches the passages behind a saved run. company_coverage names
-deals with one contact, companies in pipeline nobody has talked to, and won companies gone silent.
-report_run_cell_records, analytics_cell_records and question_card_records name the records behind
-one figure. Read only. Every figure names its coverage and when it was captured; quote both.
-read_workspace topic report_vocabulary names what each run report takes. For that document, use
-read_analytics: query with save, then compose. Use read_forecast for what a period is expected to
-close, and read_forecast with view=input_sources for how complete the data behind a number is. Keep
-a run's id to search its evidence, and quote coverage with each number.
+Read sales reports. standard reads the standard metrics, saved reports and their frozen editions,
+and the open partner commission liability. run runs one of the named reports, grouped and filtered.
+evidence searches the passages behind a saved run. company_coverage names deals with one contact,
+companies in pipeline nobody has talked to, and won companies gone silent. report_run_cell_records,
+analytics_cell_records and question_card_records name the records behind one figure. Read only.
+Every figure names its coverage and when it was captured; quote both. read_workspace topic
+report_vocabulary names what each run report takes. For a written section a reader keeps, such as a
+board pack, use read_analytics: query with save, then compose. Use read_forecast for what a period
+is expected to close, and read_forecast with view=input_sources for how complete the data behind a
+number is. Keep a run's id to search its evidence, and quote coverage with each number.
 ```
 
 <details><summary>Input schema</summary>

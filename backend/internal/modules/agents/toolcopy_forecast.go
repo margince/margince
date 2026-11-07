@@ -126,8 +126,7 @@ var dataCoverageCopy = toolCopy{
 }
 
 var readForecastCopy = toolCopy{
-	Purpose: "Read the forecast under the installation's fiscal calendar and base currency. A " +
-		"board-pack section to keep is a document, which read_analytics writes. " +
+	Purpose: "Read the forecast under the installation's fiscal calendar and base currency. " +
 		"readings: what a period is expected to close — `won`, `evidence` (Likely), `open` and " +
 		"`weighted` — and `snapshots`, the period's frozen states, newest first. movement: why " +
 		"the forecast changed between two snapshots, as named causes that sum to the whole " +
@@ -145,7 +144,8 @@ var readForecastCopy = toolCopy{
 		"look. An empty input_exceptions cannot be told from a clean pipeline; input_sources " +
 		"tells them apart, and needs a coverage grant sellers lack.",
 	Instead: "read_reports and find_records with engine query also produce numbers, and neither " +
-		"is the forecast. For that document, query with save, then compose. To make a call, answer an input exception or share a reading, use change_reports.",
+		"is the forecast. For a board-pack section, use read_analytics: query with save, then " +
+		"compose. To make a call, answer an input exception or share a reading, use change_reports.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number. A `_display` sits beside " +
 		"a `_minor` figure wherever its object names the unit: `base_currency`, or " +
 		"`current_call`'s own `currency`. Quote the `_display`, never the `_minor` integer.",
