@@ -224,7 +224,7 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 			return err
 		}
 		bound := storekit.NewPatch()
-		bound.Set("source_commercial_revision", *current.SourceCommercialRevision, head.Revision)
+		bound.Set(sourceRevisionField, *current.SourceCommercialRevision, head.Revision)
 		if !bound.Empty() {
 			if err := bound.ApplyLocked(ctx, tx, lock); err != nil {
 				return fmt.Errorf("name the deal revision the draft came from: %w", err)
@@ -240,7 +240,11 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 		if err != nil {
 			return fmt.Errorf("audit the refresh from the deal: %w", err)
 		}
-		if err := announceOfferEdit(ctx, tx, auditID, current, lineEditFields(totals.Before, totals.After)); err != nil {
+		changed := lineEditFields(totals.Before, totals.After)
+		if !bound.Empty() {
+			changed = append(changed, sourceRevisionField)
+		}
+		if err := announceOfferEdit(ctx, tx, auditID, current, changed); err != nil {
 			return err
 		}
 		out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly)

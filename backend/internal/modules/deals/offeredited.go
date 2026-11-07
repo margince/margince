@@ -17,6 +17,9 @@ import (
 // offerLineItemsField is what a line edit names among the fields it changed.
 const offerLineItemsField = "line_items"
 
+// sourceRevisionField names the deal revision a draft's lines came from.
+const sourceRevisionField = "source_commercial_revision"
+
 // announceOfferEdit stages offer.updated for a draft edit, in the transaction of
 // the audit row it follows. Every draft edit announces itself this way, header
 // and lines alike, so a subscriber hears each change the audit trail records.

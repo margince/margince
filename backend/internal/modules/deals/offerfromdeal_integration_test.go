@@ -73,6 +73,16 @@ func TestAnOfferCopiesTheDealsLinesAtOneRevision(t *testing.T) {
 	if announced != 1 {
 		t.Errorf("the refresh staged %d offer.updated events, want 1", announced)
 	}
+	var named bool
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT envelope->'payload'->'changed_fields' ? 'source_commercial_revision' FROM event_outbox
+		 WHERE envelope->>'type' = 'offer.updated' AND envelope->'payload'->>'offer_id' = $1`,
+		refreshed.Id.String()).Scan(&named); err != nil {
+		t.Fatalf("reading the outbox: %v", err)
+	}
+	if !named {
+		t.Error("the refresh moved the draft's source revision without naming it")
+	}
 }
 
 // The lines of an offer made from the deal change only through the deal. A

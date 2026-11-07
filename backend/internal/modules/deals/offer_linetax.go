@@ -275,7 +275,11 @@ func (s *Store) auditHeaderEdit(ctx context.Context, tx pgx.Tx, current crmcontr
 	if err != nil {
 		return fmt.Errorf("audit offer update: %w", err)
 	}
-	return announceOfferEdit(ctx, tx, auditID, current, slices.Collect(maps.Keys(after)))
+	changed := slices.Collect(maps.Keys(p.Moved()))
+	if len(retax.Moved) > 0 {
+		changed = append(changed, lineEditFields(retax.Totals.Before, retax.Totals.After)...)
+	}
+	return announceOfferEdit(ctx, tx, auditID, current, changed)
 }
 
 // offerRetax is what reading an offer's category lines again changed.
