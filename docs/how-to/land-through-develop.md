@@ -52,10 +52,12 @@ nightly session fixes it, so it does not need a `claim: main-red` pull request.
    branch. With the default base, the run never asks whether the branch kept what `develop` has.
 3. Open the pull request into `main` from the sync branch, never from `develop` itself. Merge it with
    `gh pr merge <n> --merge` once `ci` and `cla` are green and every review thread is resolved.
-   GitHub deletes the head branch of a merged pull request, so a pull request from `develop` deletes
-   `develop`.
-4. Bring `develop` level: open a pull request into `develop` from a branch at the merged `main`, and
-   merge it with `gh pr merge <n> --merge`.
+   This repository deletes the head branch of a merged pull request, and the merge runs as a
+   maintainer, so the deletion rule on `develop` does not stop it.
+   A fix that lands on `develop` while this pull request is open is not in it. Merge `develop` into
+   the sync branch, and let the checks run again before you merge.
+4. Bring `develop` level: open a pull request into `develop` from a branch at the merged `main`.
+   Merge it with `gh pr merge <n> --merge` once its required checks are green.
 
 A branch that carries `main` commits `develop` lacks is judged by the migration check against the `main`
 it merged, since `main` sets the order an installation applies. It must also keep every migration on
