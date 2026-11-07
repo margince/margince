@@ -44,7 +44,8 @@ var readAttentionCopy = toolCopy{
 }
 
 var readReportsCopy = toolCopy{
-	Purpose: "Read sales reports. standard reads the standard metrics, saved reports and their " +
+	Purpose: "Read sales reports as figures to quote. A written section a reader keeps, such as a " +
+		"board pack, is a document: read_analytics writes it. standard reads the standard metrics, saved reports and their " +
 		"frozen editions, and the open partner commission liability. run runs one of the named " +
 		"reports, grouped and filtered. evidence searches the passages behind a saved run. " +
 		"company_coverage names deals with one contact, companies in pipeline nobody has talked to, " +
@@ -52,8 +53,7 @@ var readReportsCopy = toolCopy{
 		"question_card_records name the records behind one figure.",
 	Limits: "Read only. Every figure names its coverage and when it was captured; quote both. " +
 		"read_workspace topic report_vocabulary names what each run report takes.",
-	Instead: "For a written section a reader keeps, such as a board pack, use read_analytics: " +
-		"query with save, then compose. Use read_forecast for what a period is expected to close, and " +
+	Instead: "For that document, use read_analytics: query with save, then compose. Use read_forecast for what a period is expected to close, and " +
 		"data_coverage for how complete the data behind a number is.",
 	Retain: "Keep a run's id to search its evidence, and quote coverage with each number.",
 }
