@@ -28,7 +28,9 @@ ROOT="$(git rev-parse --show-toplevel)"
 SLUG="${E2E_LLM_SLUG:-e2ellm}"
 SCENARIO_DIR="${E2E_LLM_SCENARIOS:-$ROOT/e2e/llm/scenarios}"
 RECORD_DIR="${E2E_LLM_RECORDS:-$ROOT/e2e/llm/records}"
-ONLY="${SCENARIO:-}"
+# SCENARIO names one scenario or several, separated by spaces: one boot and
+# one seed serve them all, where a loop of single names pays both each time.
+ONLY=" ${SCENARIO:-} "
 
 # THE CANDIDATE AND ITS ROUTE ARE CHOSEN, and the model each names is pinned.
 #
@@ -95,6 +97,15 @@ MSG
 fi
 
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
+
+# A name SCENARIO lists that no scenario carries would run nothing for it and
+# report the sweep as complete, so every listed name is matched before a boot.
+if [[ -n "${ONLY// /}" ]]; then
+  known=" $(for f in "$SCENARIO_DIR"/*.yaml; do python3 "$ROOT/e2e/llm/check.py" --field name "$f"; done | tr '\n' ' ') "
+  for wanted in $ONLY; do
+    [[ "$known" == *" $wanted "* ]] || { echo "SCENARIO names $wanted, which no scenario under $SCENARIO_DIR is" >&2; exit 1; }
+  done
+fi
 
 # MODEL FOLDER WIRE KEY_ENV EFFORT DRIVER, or the reason this candidate has no
 # such route — refused here, before anything boots.
@@ -643,7 +654,7 @@ REPORT="$WORK/report.txt"
 
 for scenario in "$SCENARIO_DIR"/*.yaml; do
   name="$(python3 "$ROOT/e2e/llm/check.py" --field name "$scenario")"
-  if [[ -n "$ONLY" ]] && [[ "$ONLY" != "$name" ]]; then continue; fi
+  if [[ -n "${ONLY// /}" && "$ONLY" != *" $name "* ]]; then continue; fi
 
   runs="$(python3 "$ROOT/e2e/llm/check.py" --field runs "$scenario")"
   pass_at="$(python3 "$ROOT/e2e/llm/check.py" --field pass_at "$scenario")"
