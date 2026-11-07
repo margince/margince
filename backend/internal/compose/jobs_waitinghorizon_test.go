@@ -11,9 +11,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-// The pass reads a year of mail, so it runs as seldom as the readers allow:
-// two missed passes must still leave a value younger than the staleness limit,
-// and a pass twice as often would be work nobody reads.
+// The pass reads a year of mail, so it runs as seldom as readers allow. Two
+// missed passes must still leave a value younger than the staleness limit. A
+// pass twice as often as that is work nobody reads.
 func TestTheRefreshPassRunsAsSeldomAsTheStalenessLimitAllows(t *testing.T) {
 	spec, ok := jobs.SpecFor(WaitingHorizonRefreshArgs{}.Kind())
 	if !ok {
