@@ -83,7 +83,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 
 - Runs on its own `margince_test` namespace, never the dev `margince` DB, so it can run concurrently with `make dev`.
 - Parallel: each package runs on its own throwaway clone db (`CREATE DATABASE … TEMPLATE margince_test`). It also gets a private MinIO bucket and its own Redis logical db (1..63 by slot; db 0 stays reserved for `make dev`). Packages share nothing; within a package the lane still runs `-p 1`.
-- Fails loudly without a database and never skips.
+- Fails loudly without a database and never skips. A declared clone must match its migration ledger and hold no test rows before any schema write. For a ledger that differs, run `make test-db-up` in that worktree, then run the lane again. Other errors name the template or migration fix.
 - Once every package passes, it fails on a statement that carries the activity content gate more than once, unless its sender is in `backend/tools/sql-census/repeated-gates.txt`. `make test-it` runs the same check over its one package.
 - `INTEGRATION_JOBS=N` tunes concurrency.
 - CI slices the lane per test across several runners. `INTEGRATION_SHARD=k/N` runs slice `k` of `N`, always the same slice for one value; use the same value to debug a red CI shard locally. `INTEGRATION_SHARD_OUT=dir` collects the manifests + coverage pods `scripts/test-integration-reconcile.sh` verifies and merges.
