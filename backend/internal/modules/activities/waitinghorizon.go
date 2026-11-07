@@ -234,9 +234,8 @@ func (s *Store) waitingHorizonStatement(ctx context.Context, tx pgx.Tx, asOf tim
 	return query, args, nil
 }
 
-// sampledMessages limits the messages firstResponseSQL judges to the first
-// ones by a hash of their id, after every filter, with limit the placeholder
-// of the sample size.
+// sampledMessages keeps the first messages firstResponseSQL judges by a hash of
+// their id, after every filter. limit is the placeholder of the sample size.
 func sampledMessages(limit int) string {
 	return fmt.Sprintf(`ORDER BY md5(inbound.id::text) LIMIT $%d`, limit)
 }

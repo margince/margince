@@ -73,7 +73,7 @@ var firstResponseSQL = `
 	-- The messages judged come first, so the answer read below runs only over
 	-- them: a sample (%[6]s) must bound that read, not trim its result.
 	WITH judged AS MATERIALIZED (
-	  SELECT inbound.* FROM activity inbound
+	  SELECT inbound.id FROM activity inbound
 	   WHERE inbound.kind IN ('email', 'message')
 	     AND inbound.direction = 'inbound'
 	     AND inbound.archived_at IS NULL
@@ -104,7 +104,7 @@ var firstResponseSQL = `
 	         percentile_cont(%[5]s) WITHIN GROUP (
 	           ORDER BY EXTRACT(EPOCH FROM (reply.occurred_at - inbound.occurred_at)) / 60
 	         )::bigint, 0)
-	  FROM judged inbound
+	  FROM judged JOIN activity inbound ON inbound.id = judged.id
 	  -- The FIRST answer after it, not the newest: what a customer waited is the
 	  -- time to the answer they actually got. Unbounded above, because an answer
 	  -- that came after the window closed still ends a wait the window opened.

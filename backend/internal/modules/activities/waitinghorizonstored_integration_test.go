@@ -124,10 +124,10 @@ func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
 	}
 }
 
-// The measurement judges a bounded, repeatable sample of the year's mail: no
-// more answers than the sample holds, the same reading on every pass, and the
-// answer read run for the sampled messages only, under the generic plan a
-// worker reuses.
+// The measurement judges a bounded, repeatable sample of the year's mail. It
+// reads no more answers than the sample holds, and the same reading on every
+// pass. Under the generic plan a worker reuses, the answer read runs for the
+// sampled messages only.
 func TestTheHorizonMeasurementJudgesABoundedRepeatableSample(t *testing.T) {
 	ctx, tx, store := storedHorizonTx(t)
 	asOf := store.now()
