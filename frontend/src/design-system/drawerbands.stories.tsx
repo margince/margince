@@ -40,10 +40,12 @@ function BandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
         intent={wide ? "drawer-reading" : "drawer"}
       >
         <DrawerHead>
+          {/* The mark comes before the title, which is the shape the activity
+              drawer uses, and the one that cost the title its clearance. */}
+          <Badge>Public sources only</Badge>
           <Heading size="large" id={titleId} className="t-h2 modal-title">
             Research on Anna Brandt
           </Heading>
-          <Badge>Public sources only</Badge>
         </DrawerHead>
         <DrawerBody>
           {claims().map((claim) => (
