@@ -220,16 +220,64 @@ func spliceFor(raw []byte, part StoredPart) (splice, error) {
 // restore that rebuilt an LF-wrapped body with CRLF would produce different
 // bytes and fail the digest this same call recorded.
 func locateEncoded(raw, body []byte) ([]byte, int, []byte, error) {
-	b64 := base64.StdEncoding.EncodeToString(body)
+	b64 := make([]byte, base64.StdEncoding.EncodedLen(len(body)))
+	base64.StdEncoding.Encode(b64, body)
 	for _, width := range candidateWraps {
 		for _, eol := range [][]byte{[]byte("\r\n"), []byte("\n")} {
-			candidate := wrapBase64WithEOL([]byte(b64), width, eol)
-			if bytes.Count(raw, candidate) == 1 {
-				return candidate, width, eol, nil
+			if at, length, ok := soleWrappedAt(raw, b64, width, eol); ok {
+				return raw[at : at+length], width, eol, nil
 			}
 		}
 	}
 	return nil, 0, nil, ErrPartNotLocated
+}
+
+// soleWrappedAt finds b64, folded as wrapBase64WithEOL folds it, exactly once
+// in raw, counted as bytes.Count counts. It compares in place, because a folded
+// copy per candidate width cost several times an attachment's size.
+func soleWrappedAt(raw, b64 []byte, width int, eol []byte) (at, length int, ok bool) {
+	if len(b64) == 0 {
+		return 0, 0, false
+	}
+	if width <= 0 || len(b64) <= width {
+		width = len(b64)
+	}
+	length = len(b64) + len(eol)*((len(b64)-1)/width)
+	at, found := -1, 0
+	for from := 0; from < len(raw); {
+		next := bytes.Index(raw[from:], b64[:width])
+		if next < 0 {
+			break
+		}
+		start := from + next
+		if !foldedAt(raw[start:], b64, width, eol) {
+			from = start + 1
+			continue
+		}
+		if found++; found > 1 {
+			return 0, 0, false
+		}
+		at, from = start, start+length
+	}
+	return at, length, found == 1
+}
+
+// foldedAt reports whether raw begins with b64 folded at width with eol.
+func foldedAt(raw, b64 []byte, width int, eol []byte) bool {
+	for off := 0; off < len(b64); off += width {
+		if off > 0 {
+			if !bytes.HasPrefix(raw, eol) {
+				return false
+			}
+			raw = raw[len(eol):]
+		}
+		line := b64[off:min(off+width, len(b64))]
+		if !bytes.HasPrefix(raw, line) {
+			return false
+		}
+		raw = raw[len(line):]
+	}
+	return true
 }
 
 // headerSpan says where a part's header fields end, just before the blank line
