@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -20,7 +21,7 @@ func TestTheRawFieldDecodesTheMessageGmailSent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	escaped = bytes.Replace(escaped, []byte("="), []byte(`=`), -1)
+	escaped = bytes.Replace(escaped, []byte("="), []byte(`\u003d`), -1)
 	for name, field := range map[string]string{
 		"padded":   `"` + padded + `"`,
 		"unpadded": `"` + unpadded + `"`,
@@ -36,10 +37,25 @@ func TestTheRawFieldDecodesTheMessageGmailSent(t *testing.T) {
 			t.Errorf("%s: decoded %q, want %q", name, out.Raw, message)
 		}
 	}
-	var out struct {
-		Raw webSafeRFC822 `json:"raw"`
-	}
-	if err := json.Unmarshal([]byte(`{"raw":"not base64!"}`), &out); err == nil {
-		t.Error("text that is not web-safe base64 decoded")
+	// Every other spelling decodes as the old string decode did, or fails
+	// where it failed.
+	for _, text := range []string{
+		unpadded[:8] + "=" + unpadded[8:],
+		unpadded[:8] + `\r\n` + unpadded[8:],
+		unpadded[:8] + " " + unpadded[8:],
+		"not base64!",
+	} {
+		var plain string
+		if err := json.Unmarshal([]byte(`"`+text+`"`), &plain); err != nil {
+			t.Fatal(err)
+		}
+		want, wantErr := base64.RawURLEncoding.DecodeString(strings.TrimRight(plain, "="))
+		var out struct {
+			Raw webSafeRFC822 `json:"raw"`
+		}
+		err := json.Unmarshal([]byte(`{"raw":"`+text+`"}`), &out)
+		if (err != nil) != (wantErr != nil) || (err == nil && !bytes.Equal(out.Raw, want)) {
+			t.Errorf("%q: decoded %q (err %v), the string decode gives %q (err %v)", text, out.Raw, err, want, wantErr)
+		}
 	}
 }

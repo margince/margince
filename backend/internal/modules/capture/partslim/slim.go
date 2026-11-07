@@ -222,74 +222,33 @@ func spliceFor(raw []byte, part StoredPart) (splice, error) {
 func locateEncoded(raw, body []byte) ([]byte, int, []byte, error) {
 	b64 := make([]byte, base64.StdEncoding.EncodedLen(len(body)))
 	base64.StdEncoding.Encode(b64, body)
+	var folded []byte
 	for _, width := range candidateWraps {
 		for _, eol := range [][]byte{[]byte("\r\n"), []byte("\n")} {
-			if at, length, ok := soleWrappedAt(raw, b64, width, eol); ok {
-				return raw[at : at+length], width, eol, nil
+			// One buffer serves every candidate, so a large attachment is held
+			// twice while it is located, not once per width tried.
+			folded = foldInto(folded[:0], b64, width, eol)
+			if bytes.Count(raw, folded) == 1 {
+				at := bytes.Index(raw, folded)
+				return raw[at : at+len(folded)], width, eol, nil
 			}
 		}
 	}
 	return nil, 0, nil, ErrPartNotLocated
 }
 
-// soleWrappedAt finds b64, folded as wrapBase64WithEOL folds it, exactly once
-// in raw, counted as bytes.Count counts. It compares in place, because a folded
-// copy per candidate width cost several times an attachment's size.
-//
-// The message is the sender's, so near-misses could make the comparisons
-// quadratic. Past a budget linear in the message the part counts as not
-// located, and the original is kept whole.
-func soleWrappedAt(raw, b64 []byte, width int, eol []byte) (at, length int, ok bool) {
-	if len(b64) == 0 {
-		return 0, 0, false
-	}
+// foldInto appends b64 folded as wrapBase64WithEOL folds it to dst.
+func foldInto(dst, b64 []byte, width int, eol []byte) []byte {
 	if width <= 0 || len(b64) <= width {
-		width = len(b64)
+		return append(dst, b64...)
 	}
-	length = len(b64) + len(eol)*((len(b64)-1)/width)
-	budget := 2*len(raw) + length
-	at, found := -1, 0
-	for from := 0; from < len(raw); {
-		next := bytes.Index(raw[from:], b64[:width])
-		if next < 0 {
-			break
+	for at := 0; at < len(b64); at += width {
+		if at > 0 {
+			dst = append(dst, eol...)
 		}
-		start := from + next
-		matched, compared := foldedAt(raw[start:], b64, width, eol)
-		if budget -= compared; budget < 0 {
-			return 0, 0, false
-		}
-		if !matched {
-			from = start + 1
-			continue
-		}
-		if found++; found > 1 {
-			return 0, 0, false
-		}
-		at, from = start, start+length
+		dst = append(dst, b64[at:min(at+width, len(b64))]...)
 	}
-	return at, length, found == 1
-}
-
-// foldedAt reports whether raw begins with b64 folded at width with eol, and
-// how many bytes it compared to find out.
-func foldedAt(raw, b64 []byte, width int, eol []byte) (matched bool, compared int) {
-	for off := 0; off < len(b64); off += width {
-		if off > 0 {
-			if !bytes.HasPrefix(raw, eol) {
-				return false, compared
-			}
-			raw = raw[len(eol):]
-			compared += len(eol)
-		}
-		line := b64[off:min(off+width, len(b64))]
-		if !bytes.HasPrefix(raw, line) {
-			return false, compared + len(line)
-		}
-		raw = raw[len(line):]
-		compared += len(line)
-	}
-	return true, compared
+	return dst
 }
 
 // headerSpan says where a part's header fields end, just before the blank line
