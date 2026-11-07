@@ -5,9 +5,9 @@ package agents
 
 // `margince://schema/views`: every view read_view reads and the arguments each
 // takes, published as a document rather than recited into the tool's schema.
-// The view names were the largest part of read_view's listing, which every
-// client holds for a whole session. A name outside the catalog is refused with
-// every name that exists, so a caller who skipped the document is still told.
+// Every client holds that listing for a whole session, so it stays small. A
+// name outside the catalog is refused with every name that exists, so a caller
+// who skipped the document is still told.
 
 import (
 	"context"
@@ -28,8 +28,8 @@ const ReadViewsURI = "margince://schema/views"
 // contract and are re-read either way.
 const readViewsVersion = "1"
 
-// ReadViewsResource publishes the views read_view reads. It holds the same
-// []ReadView the tool is registered over, so the document and the tool's
+// ReadViewsResource publishes the views read_view reads. Its views are derived
+// from the table the tool is registered over, so the document and the tool's
 // refusal name one catalog.
 type ReadViewsResource struct{ views []ReadView }
 
@@ -49,7 +49,8 @@ func (ReadViewsResource) Resources(context.Context) []mcp.Resource {
 		RequiredScope: principal.ScopeRead,
 		MIMEType:      mimeApplicationJSON,
 		Description: "Every view read_view reads, with the path arguments it needs and the " +
-			"query arguments it takes, each with its JSON type.",
+			"query arguments it takes: each one's JSON type, and whether it is required, with " +
+			"its allowed words or format. Every view also takes cursor and limit.",
 	}}
 }
 
@@ -66,7 +67,7 @@ func (r ReadViewsResource) ReadResource(ctx context.Context, uri string) (mcp.Re
 	return mcp.ResourceContents{URI: uri, MIMEType: mimeApplicationJSON, Text: string(body)}, nil
 }
 
-// ReadViewsDocument is the one rendering the resource and describe_views serve.
+// ReadViewsDocument is the rendering the resource and describe_views serve.
 func (r ReadViewsResource) ReadViewsDocument(context.Context) (json.RawMessage, error) {
 	body, err := json.Marshal(readViewsDocument(r.views))
 	if err != nil {
@@ -83,7 +84,7 @@ type readViewsDoc struct {
 }
 
 // readViewEntry is one view as a caller names it. Path arguments are required,
-// query arguments optional, and every view also takes cursor and limit.
+// a query argument says whether it is, and every view also takes cursor and limit.
 type readViewEntry struct {
 	View  string      `json:"view"`
 	Path  []string    `json:"path"`
@@ -95,19 +96,10 @@ type readViewEntry struct {
 func readViewsDocument(views []ReadView) readViewsDoc {
 	entries := make([]readViewEntry, 0, len(views))
 	for _, v := range views {
-		entries = append(entries, readViewEntry{View: v.Name, Path: closedList(v.PathParams), Query: closedViewQuery(v.Query)})
+		entries = append(entries, readViewEntry{View: v.Name, Path: closedList(v.PathParams), Query: closedList(v.Query)})
 	}
 	slices.SortFunc(entries, func(a, b readViewEntry) int { return strings.Compare(a.View, b.View) })
 	return readViewsDoc{Version: readViewsVersion, Views: entries}
-}
-
-// closedViewQuery answers an empty list rather than null, so a view with no
-// query arguments reads as taking none.
-func closedViewQuery(query []ViewQuery) []ViewQuery {
-	if query == nil {
-		return []ViewQuery{}
-	}
-	return query
 }
 
 // viewNames lists the views' names in order, for a refusal that names them.

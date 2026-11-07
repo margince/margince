@@ -14507,6 +14507,9 @@ paths:
       - name: product_id
         in: query
         schema: { $ref: '#/components/schemas/ReportingProductId' }
+      - name: initiative_id
+        in: query
+        schema: { $ref: '#/components/schemas/ReportingInitiativeId' }
       - name: country
         in: query
         schema: { $ref: '#/components/schemas/ReportingCountry' }

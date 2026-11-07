@@ -33,14 +33,14 @@ type ReadView struct {
 	Query      []ViewQuery
 }
 
-// ViewQuery is one query parameter of a route. read_view takes its name and
-// type; a route verb also publishes whether it is required and its enum or format.
+// ViewQuery is one query parameter of a route: what read_view binds, and what
+// the views document and a route verb tell a caller about it.
 type ViewQuery struct {
 	Name     string   `json:"name"`
 	Type     string   `json:"type"`
-	Required bool     `json:"-"`
-	Enum     []string `json:"-"`
-	Format   string   `json:"-"`
+	Required bool     `json:"required,omitempty"`
+	Enum     []string `json:"enum,omitempty"`
+	Format   string   `json:"format,omitempty"`
 }
 
 // queryNames are the names of a view's query parameters.
@@ -135,7 +135,7 @@ func (t readView) Spec() mcp.ToolSpec {
 		note("cursor", schemaString, v.Name)
 		note("limit", "integer", v.Name)
 	}
-	properties := []string{strconv.Quote(viewArg) + `:{"type":"string","description":"a view named in ` + ReadViewsURI + `"}`}
+	properties := []string{strconv.Quote(viewArg) + `:{"type":"string","description":"a view named in ` + ReadViewsURI + ` or describe_views"}`}
 	for _, arg := range slices.Sorted(maps.Keys(types)) {
 		properties = append(properties, strconv.Quote(arg)+":"+viewArgSchema(arg, types[arg]))
 	}

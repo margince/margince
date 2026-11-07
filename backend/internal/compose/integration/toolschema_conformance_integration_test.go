@@ -327,6 +327,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// the same for a document whose blocks carry figures and one whose do
 		// not. Both tools take the read scope and neither stages anything.
 		{"describe_report_blocks", `{}`},
+		{"describe_views", `{}`},
 		{"compose_analytics_report", `{"blocks":[{"kind":"title","text":"Pipeline this quarter"}]}`},
 		// The confirm-first queue read back through its own doors.
 		{"list_approvals", `{}`},
