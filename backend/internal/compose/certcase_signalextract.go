@@ -301,9 +301,21 @@ func (c *signalExtractCase) secondReading(
 	// The joined answer cites messages by label, as the model's own replies do.
 	// The judge reads it beside a prompt that names no message by its id.
 	both := append(first.events(), second.events()...)
+	parties := c.thread.partyRefs()
+	asCited := func(key string) string {
+		if ref, ok := parties.RefOf(key); ok {
+			return ref
+		}
+		return key
+	}
 	for i := range both {
 		both[i].MessageID = c.thread.messageLabel(both[i].MessageID)
 		both[i].RestatedMessageID = c.thread.messageLabel(both[i].RestatedMessageID)
+		both[i].PromiserRef = asCited(both[i].PromiserRef)
+		both[i].BuyerRef = asCited(both[i].BuyerRef)
+		for j, key := range both[i].RecipientRefs {
+			both[i].RecipientRefs[j] = asCited(key)
+		}
 	}
 	served, err := json.Marshal(extractPayload{Events: &both})
 	if err != nil {

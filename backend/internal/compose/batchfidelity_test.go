@@ -48,45 +48,43 @@ func answerableIDs(t *testing.T, req model.Request) []string {
 func TestEverySiteLetsTheModelNameOnlyTheIDsItWasSent(t *testing.T) {
 	t.Parallel()
 	first, second := ids.NewV7(), ids.NewV7()
-	both := []string{first.String(), second.String()}
 	for name, tc := range map[string]struct {
 		req  model.Request
 		want []string
 	}{
-		"capture_classify": {classifyRequest([]unlabeledMessage{{ID: first}, {ID: second}}), both},
-		"owed_verdict":     {owedRequest([]owedCandidate{{ID: first}, {ID: second}}), both},
+		"capture_classify": {classifyRequest([]unlabeledMessage{{ID: first}, {ID: second}}), []string{"m1", "m2"}},
+		"owed_verdict":     {owedRequest([]owedCandidate{{ID: first}, {ID: second}}), []string{"m1", "m2"}},
 		"request_settlement": {settleRequest([]settleCandidate{
 			{Request: activities.RepliedRequest{RequestID: first}},
 			{Request: activities.RepliedRequest{RequestID: second}},
-		}), both},
-		"capture_counterparty_verdict":    {verdictRequest(capture.PendingCounterparty{ID: first}), both[:1]},
-		"capture_confidentiality_verdict": {confidentialityRequest(capture.PendingThread{ID: first}), both[:1]},
+		}), []string{first.String(), second.String()}},
+		"capture_counterparty_verdict":    {verdictRequest(capture.PendingCounterparty{ID: first}), []string{first.String()}},
+		"capture_confidentiality_verdict": {confidentialityRequest(capture.PendingThread{ID: first}), []string{first.String()}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			if got := answerableIDs(t, tc.req); !slices.Equal(got, tc.want) {
-				t.Fatalf("the schema lets the model name %v, want exactly the ids sent %v", got, tc.want)
+				t.Fatalf("the schema lets the model name %v, want exactly what it sent %v", got, tc.want)
 			}
 		})
 	}
 }
 
-// The failure the enum exists for: a small model copies the first half of the
-// id it was given and invents the rest. The schema refuses it, so a
-// grammar-constrained decoder cannot write it; the real id still passes.
-func TestTheSchemaRefusesAHalfCopiedID(t *testing.T) {
+// The schema admits the ref this call showed and nothing else, the record id
+// behind it included, so a grammar-constrained decoder cannot write either.
+func TestTheSchemaRefusesAnythingButTheRefItSent(t *testing.T) {
 	t.Parallel()
 	id := ids.NewV7()
-	sent := id.String()
-	halfCopied := sent[:19] + "a171-01bcf53a7b35"
 	req := classifyRequest([]unlabeledMessage{{ID: id}})
 	answer := func(answered string) string {
 		return `{"results":[{"id":"` + answered + `","label":"noise","confidence":0.9,"reply":null}]}`
 	}
-	if err := schema.ValidateJSON(req.ResponseSchema, answer(halfCopied)); err == nil {
-		t.Errorf("the schema admitted %q, an id this call never sent", halfCopied)
+	for _, foreign := range []string{id.String(), "m2"} {
+		if err := schema.ValidateJSON(req.ResponseSchema, answer(foreign)); err == nil {
+			t.Errorf("the schema admitted %q, which this call never sent", foreign)
+		}
 	}
-	if err := schema.ValidateJSON(req.ResponseSchema, answer(sent)); err != nil {
-		t.Errorf("the schema refused the id this call sent: %v", err)
+	if err := schema.ValidateJSON(req.ResponseSchema, answer("m1")); err != nil {
+		t.Errorf("the schema refused the ref this call sent: %v", err)
 	}
 }

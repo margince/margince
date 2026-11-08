@@ -94,6 +94,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 	if thread.Count > len(thread.Messages) {
 		fmt.Fprintf(&prompt, "This excerpt omits %d messages. The shown messages are not necessarily consecutive. Do not infer that an obligation remains open merely because no answer appears here.\n", thread.Count-len(thread.Messages))
 	}
+	parties := thread.partyRefs()
 	for _, message := range thread.Messages {
 		// The sender's own words only, because that is what validateEventEvidence
 		// holds a quote to. Shown the history, the model cites a reply for a
@@ -101,7 +102,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
 			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
 			textlang.CurrentMessage(message.Body))
-		body += "\nVerified participants (reference, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body))
+		body += "\nVerified participants (reference, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body), parties)
 		label := thread.messageLabel(message.ID.String())
 		fmt.Fprintf(&prompt, "Message %s:\n", label)
 		prompt.WriteString(fence.WrapAttr("source_id", label, body) + "\n")
