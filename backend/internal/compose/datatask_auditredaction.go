@@ -16,13 +16,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// The migrations the audit redaction tasks need applied before they run.
+const (
+	auditRedactionMigration = "core/1794074311"
+	retainedEventsMigration = "core/1794074312"
+	legacyErasureMigration  = "core/1794074313"
+)
+
 type auditRedactionPage func(context.Context, pgx.Tx, ids.UUID, ids.UUID, int, privacy.CountryReader) (privacy.HistoricalAuditPage, error)
 
 func auditRedactionDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1794066141_erased_audit_payloads", Version: 2,
 		Title:    "Removing retained payloads from earlier privacy erasures",
-		Requires: []string{"core/1794074311", "core/1794074312"}, Steps: auditRedactionSteps(privacy.RedactHistoricalAuditPageTx),
+		Requires: []string{auditRedactionMigration, retainedEventsMigration}, Steps: auditRedactionSteps(privacy.RedactHistoricalAuditPageTx),
 	}
 }
 
@@ -31,7 +38,7 @@ func linkedAuditRedactionDataTask() datatask.Task {
 	identities := auditRedactionSteps(privacy.RedactLinkedHistoricalIdentitiesPageTx)[0]
 	identities.Name = "request_identity_images"
 	steps = append(steps, identities)
-	return datatask.Task{ID: "core/1794076293_linked_erased_audit_payloads", Version: 1, Title: "Removing linked payloads left by earlier privacy erasures", Requires: []string{"core/1794074311", "core/1794074312", "core/1794074313"}, Steps: steps}
+	return datatask.Task{ID: "core/1794076293_linked_erased_audit_payloads", Version: 1, Title: "Removing linked payloads left by earlier privacy erasures", Requires: []string{auditRedactionMigration, retainedEventsMigration, legacyErasureMigration}, Steps: steps}
 }
 
 func markedAuditRedactionDataTask() datatask.Task {
@@ -41,7 +48,7 @@ func markedAuditRedactionDataTask() datatask.Task {
 	requests := auditRedactionSteps(privacy.RedactRetiredRequestAuditPageTx)[0]
 	requests.Name = "retired_request_images"
 	requests.Limit = privacy.MarkerAuditPageSize
-	return datatask.Task{ID: "core/1794076293_marked_erased_audit_payloads", Version: 1, Title: "Removing copies of already-cleared weekly items and privacy requests", Requires: []string{"core/1794074311", "core/1794074312", "core/1794074313"}, Steps: []datatask.Step{weekly, requests}}
+	return datatask.Task{ID: "core/1794076293_marked_erased_audit_payloads", Version: 1, Title: "Removing copies of already-cleared weekly items and privacy requests", Requires: []string{auditRedactionMigration, retainedEventsMigration, legacyErasureMigration}, Steps: []datatask.Step{weekly, requests}}
 }
 
 func auditRedactionSteps(correct auditRedactionPage) []datatask.Step {
