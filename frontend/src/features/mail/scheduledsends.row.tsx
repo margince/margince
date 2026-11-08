@@ -41,7 +41,12 @@ const STATUS_LABEL: Record<Status, MessageKey> = {
 // Why a human has to look at it, in the contract's own closed set. Rendered as
 // words because `held_reason` is a wire token and a rep cannot act on
 // `timer_exhausted`.
-const HELD_REASON_LABEL: Record<string, MessageKey> = {
+// Keyed by the contract's own type, so a reason the contract adds fails the
+// build here until it has words.
+const HELD_REASON_LABEL: Record<
+  NonNullable<ScheduledSend["held_reason"]>,
+  MessageKey
+> = {
   consent_withdrawn: "sched.held.consentWithdrawn",
   sender_inactive: "sched.held.senderInactive",
   missed_window: "sched.held.missedWindow",
@@ -50,6 +55,8 @@ const HELD_REASON_LABEL: Record<string, MessageKey> = {
   passport_revoked: "sched.held.passportRevoked",
   followup_settled: "sched.held.followupSettled",
   meeting_canceled: "sched.held.meetingCanceled",
+  recipient_stopped: "sched.held.recipientStopped",
+  recipient_replied: "sched.held.recipientReplied",
 };
 
 // Which statuses the server will still let a rep move or withdraw. It mirrors
@@ -280,6 +287,7 @@ export function SendRow({
             preview={permission.preview}
             asking={permission.asking}
             unanswered={permission.unanswered}
+            namesRecipients
           />
         )}
       </div>

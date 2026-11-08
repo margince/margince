@@ -11,9 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 )
 
-// textMaskedAuditTypes are the record types whose audit rows carry mail text or
-// text a user typed about a conversation. audit_log is append-only, so a
-// credential written into it in clear could never be taken out again.
+// Audit images may last until privacy erasure, so conversation credentials must
+// be masked before they enter the log.
 var textMaskedAuditTypes = map[string]bool{"activity": true, "scheduled_send": true, "mail_draft": true}
 
 // AuditedText is text in the form the audit trail of entityType stores it. A

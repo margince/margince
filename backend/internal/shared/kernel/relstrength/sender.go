@@ -51,6 +51,6 @@ const participantNamesSQL = `CASE WHEN %[2]s.address IS NOT NULL
 // colleague's message on a thread the contact only belongs to is not heard
 // from them. The reconnect lane and the colleague edge's last_at both read it.
 func ContactExchangeSQL(activity, contact, now string) string {
-	return InteractionCountsSQL(activity) + " AND " + LastActivityCountsSQL(activity, now) +
+	return InteractionCountsSQL(activity, now) + " AND " + LastActivityCountsSQL(activity, now) +
 		" AND (" + activity + ".direction IS DISTINCT FROM 'inbound' OR " + TheyWroteSQL(contact, activity) + ")"
 }

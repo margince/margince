@@ -137,9 +137,7 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     await screen.findByRole("link", { name: labelOf("account") });
     // Waited on a row a resolved snapshot draws, so this absence is about the
     // grant rather than about a rail that has not loaded.
-    expect(
-      screen.queryByRole("link", { name: labelOf("pipelines") }),
-    ).toBeNull();
+    expect(screen.queryByRole("link", { name: labelOf("deals") })).toBeNull();
   });
 
   it("lists it on the settings home, marked read-only", async () => {
@@ -149,7 +147,7 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     // The row's name runs on into its marker and subtitle, so the match is on
     // the label it starts with.
     const row = await screen.findByRole("link", {
-      name: new RegExp(`^${labelOf("pipelines")}`),
+      name: new RegExp(`^${labelOf("deals")}`),
     });
     expect(
       within(row).getByText(translate("en", "settings.home.readOnly")),
@@ -161,7 +159,7 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     renderHome();
     await expectSnapshotResolved();
     const row = await screen.findByRole("link", {
-      name: new RegExp(`^${labelOf("pipelines")}`),
+      name: new RegExp(`^${labelOf("deals")}`),
     });
     act(() => row.focus());
     expect((await screen.findByRole("tooltip")).textContent).toBe(
@@ -181,7 +179,7 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     renderHome();
     await expectSnapshotResolved();
     const row = await screen.findByRole("link", {
-      name: new RegExp(`^${labelOf("pipelines")}`),
+      name: new RegExp(`^${labelOf("deals")}`),
     });
     const lock = row.querySelector(".settings-home-lock");
     if (!(lock instanceof HTMLElement)) {
@@ -221,12 +219,12 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
     await user.type(screen.getByRole("combobox"), "pipeline");
     expect(
       screen.getAllByRole("option").map((option) => option.textContent),
-    ).toEqual([expect.stringContaining(labelOf("pipelines"))]);
+    ).toEqual([expect.stringContaining(labelOf("deals"))]);
   });
 
   it("opens on its own address, with its own heading and no boundary", async () => {
     vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
-    renderSettings("pipelines");
+    renderSettings("deals");
     expect(
       await screen.findByRole("heading", {
         name: translate("en", "pipeline.catalog"),
@@ -239,20 +237,20 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
 
   it("joins the rail while open, inside its own group", async () => {
     vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
-    render(<SettingsRail route={settingsHref("pipelines")} />);
+    render(<SettingsRail route={settingsHref("deals")} />);
     const group = await screen.findByRole("group", {
       name: translate("en", "settings.group.sales"),
     });
     expect(
       within(group)
-        .getByRole("link", { name: labelOf("pipelines") })
+        .getByRole("link", { name: labelOf("deals") })
         .getAttribute("aria-current"),
     ).toBe("page");
   });
 
   it("says once that it is theirs to read and not to change", async () => {
     vi.stubGlobal("fetch", settingsNavBackend(consultingRep));
-    renderSettings("pipelines");
+    renderSettings("deals");
     expect(
       await screen.findByText(translate("en", "settings.readOnlyPage")),
     ).toBeTruthy();
@@ -268,7 +266,7 @@ describe("a page the rail does not carry is still the reader's to reach", () => 
         allow: { pipeline: ["read", "create", "update"] },
       }),
     );
-    renderSettings("pipelines");
+    renderSettings("deals");
     await screen.findByRole("heading", {
       name: translate("en", "pipeline.catalog"),
     });

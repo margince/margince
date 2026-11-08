@@ -3,6 +3,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { type KeyboardEvent, type RefObject, useEffect } from "react";
+import { AppLink } from "../design-system/applink";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -31,13 +32,11 @@ const REQUEST_SEAT = 1;
 const RESOURCES_SEAT = 2;
 const SHORTCUTS_SEAT = 3;
 const RELEASE_NOTES_SEAT = 4;
-const SEAT_COUNT = 5;
+const LICENCES_SEAT = 5;
+const SEAT_COUNT = 6;
 
-/**
- * A menu item that leaves the app. It opens a new tab, and says so twice: a
- * glyph for the eye and a clipped sentence for a screen reader.
- */
-function OffsiteRow({
+// Help documents open in a new tab, named in text and by the external-link glyph.
+function HelpLinkRow({
   href,
   labelKey,
   seat,
@@ -49,6 +48,30 @@ function OffsiteRow({
   onLeave: () => void;
 }>) {
   const t = useT();
+  const content = (
+    <>
+      <span className="acctrowlabel">
+        {t(labelKey)}
+        <span className="sr-only"> {t("common.opensNewTab")}</span>
+      </span>
+      <ExternalLink size={14} className="acctmore" aria-hidden />
+    </>
+  );
+  if (href.startsWith("/")) {
+    return (
+      <AppLink
+        className="acctrow"
+        href={href}
+        role="menuitem"
+        {...seat}
+        onClick={onLeave}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {content}
+      </AppLink>
+    );
+  }
   return (
     <OffsiteLink
       className="acctrow"
@@ -57,11 +80,7 @@ function OffsiteRow({
       {...seat}
       onClick={onLeave}
     >
-      <span className="acctrowlabel">
-        {t(labelKey)}
-        <span className="sr-only"> {t("common.opensNewTab")}</span>
-      </span>
-      <ExternalLink size={14} className="acctmore" aria-hidden />
+      {content}
     </OffsiteLink>
   );
 }
@@ -113,19 +132,19 @@ export function HelpSubmenu({
       ref={panel}
       onKeyDown={onKeyDown}
     >
-      <OffsiteRow
+      <HelpLinkRow
         href={reportProblemHref()}
         labelKey="shell.help.report"
         seat={seat(REPORT_SEAT)}
         onLeave={onLeave}
       />
-      <OffsiteRow
+      <HelpLinkRow
         href={REQUEST_FEATURE_HREF}
         labelKey="shell.help.request"
         seat={seat(REQUEST_SEAT)}
         onLeave={onLeave}
       />
-      <OffsiteRow
+      <HelpLinkRow
         href={RESOURCES_HREF}
         labelKey="shell.help.resources"
         seat={seat(RESOURCES_SEAT)}
@@ -141,10 +160,16 @@ export function HelpSubmenu({
       >
         {t("shell.help.shortcuts")}
       </button>
-      <OffsiteRow
+      <HelpLinkRow
         href={RELEASE_NOTES_HREF}
         labelKey="shell.help.releaseNotes"
         seat={seat(RELEASE_NOTES_SEAT)}
+        onLeave={onLeave}
+      />
+      <HelpLinkRow
+        href="/licenses/THIRD-PARTY-NOTICES.txt"
+        labelKey="shell.help.licenses"
+        seat={seat(LICENCES_SEAT)}
         onLeave={onLeave}
       />
       <hr />

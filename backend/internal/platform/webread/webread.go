@@ -160,6 +160,9 @@ func newFetcher(transport http.RoundTripper) *Fetcher {
 			if len(via) >= 5 {
 				return errors.New("webread: too many redirects")
 			}
+			if err := RedirectAllowed(req.Context(), req.URL); err != nil {
+				return err
+			}
 			if via[0].URL.Path == "/robots.txt" || req.URL.Path == "/robots.txt" {
 				return nil
 			}

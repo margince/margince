@@ -6,7 +6,6 @@ package forecasting
 import (
 	"math"
 	"testing"
-	"time"
 )
 
 func entries(won, lost, open int, days float64) []StageEntry {
@@ -144,7 +143,7 @@ func TestAWeightedReadingUsesTheChanceInUseWithTheRiskEffect(t *testing.T) {
 	deal.BaseMinor = new(int64(10_000))
 	deal.StageProbability = 40
 	deal.Effect = &half
-	got, err := Compute(testPeriod(t), *day(t, time.May, 14), []Deal{deal})
+	got, err := Compute(testPeriod(t), []Deal{deal}, testRules)
 	if err != nil {
 		t.Fatal(err)
 	}

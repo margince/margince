@@ -2,6 +2,8 @@ import { extensionCopy } from "@composition/copy";
 import {
   createContext,
   type ReactNode,
+  Suspense,
+  use,
   useCallback,
   useContext,
   useEffect,
@@ -9,17 +11,26 @@ import {
   useState,
 } from "react";
 import { pluralCategory } from "../format/plural";
-import { useDateTimePreferences } from "../format/preferences";
+import {
+  type DateTimePreferences,
+  dateTimePreferences,
+  useDateTimePreferences,
+} from "../format/preferences";
 import { STORAGE_KEYS, writeStored } from "../lib/storage";
-import { de } from "./de";
-import { en, type MessageKey } from "./en";
+import {
+  type CatalogLevel,
+  catalogs,
+  localeLoaded,
+  localeReady,
+} from "./catalogs";
+import type { MessageKey } from "./en";
+
 import {
   DEFAULT_LOCALE,
   isLocale,
   type Locale,
   preferredLocale,
 } from "./locale";
-import { vi } from "./vi";
 
 export {
   DEFAULT_LOCALE,
@@ -45,13 +56,16 @@ export {
 // here: it governs what AI writes for the whole team, not what any one contact
 // reads the interface in.
 
-// `Locale` is written in ./locale, which must load without the catalogs. The
-// annotation fails the build when a locale is added to only one of the two.
-export const catalogs: Record<Locale, Record<MessageKey, string>> = {
-  en,
-  de,
-  vi,
-};
+export { catalogs, loadLocale } from "./catalogs";
+
+function LocaleReady({
+  locale,
+  children,
+  level = "complete",
+}: Readonly<{ locale: Locale; children: ReactNode; level?: CatalogLevel }>) {
+  if (!localeLoaded(locale, level)) use(localeReady(locale, level));
+  return children;
+}
 
 /**
  * A key an extension unit's own copy supplies, namespaced to the unit the way
@@ -128,7 +142,9 @@ export type PluralBase = BaseOfPluralKey<MessageKey> &
 // catalogue may not carry (e.g. a scope token) and needs to fall back to the
 // raw value rather than render whatever `translate` does with a miss.
 export function isMessageKey(value: string): value is MessageKey {
-  return value in en;
+  return Object.values(catalogs).some((catalog) =>
+    Object.hasOwn(catalog, value),
+  );
 }
 
 /**
@@ -209,17 +225,22 @@ type LocaleContextValue = {
   adoptLocale: (locale: Locale) => void;
 };
 
-const LocaleContext = createContext<LocaleContextValue>({
+const LocaleContext = createContext<
+  LocaleContextValue & { formats: DateTimePreferences }
+>({
   locale: DEFAULT_LOCALE,
+  formats: dateTimePreferences(),
   setLocale: () => {},
   adoptLocale: () => {},
 });
 
 export function LocaleProvider({
   initial,
+  initialEssential = false,
   children,
 }: Readonly<{
   initial?: Locale;
+  initialEssential?: boolean;
   children: ReactNode;
 }>) {
   // Three sources, in falling order of authority: the server's answer for this
@@ -246,6 +267,9 @@ export function LocaleProvider({
   // Adopted only when it DIFFERS from the last adopted value, so a reader who
   // switches language mid-session is not dragged back to their saved one while
   // the write is still in flight.
+  const [level, setLevel] = useState<CatalogLevel>(
+    initialEssential ? "essential" : "complete",
+  );
   const [adopted, setAdopted] = useState<Locale | undefined>(initial);
   const adoptLocale = useCallback(
     (next: Locale) => {
@@ -270,16 +294,18 @@ export function LocaleProvider({
       if (usable === adopted) {
         return;
       }
+      if (usable !== locale) setLevel("complete");
       setAdopted(usable);
       setLocaleState(usable);
     },
-    [adopted],
+    [adopted, locale],
   );
   // A pick is remembered where a detected default is not, so the two cannot be
   // confused later. Wrapped rather than persisted in an effect: an effect would
   // also fire for the detected value on first render and store a choice nobody
   // made.
   const setLocale = useCallback((next: Locale) => {
+    setLevel("complete");
     rememberLocale(next);
     setLocaleState(next);
   }, []);
@@ -297,17 +323,23 @@ export function LocaleProvider({
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
+  const formats = useDateTimePreferences();
   const value = useMemo(
-    () => ({ locale, setLocale, adoptLocale }),
-    [locale, setLocale, adoptLocale],
+    () => ({ locale, setLocale, adoptLocale, formats }),
+    [locale, setLocale, adoptLocale, formats],
   );
   return (
-    <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
+    <LocaleContext.Provider value={value}>
+      <Suspense fallback={null}>
+        <LocaleReady locale={locale} level={level}>
+          {children}
+        </LocaleReady>
+      </Suspense>
+    </LocaleContext.Provider>
   );
 }
 
 export function useLocale(): LocaleContextValue {
-  useDateTimePreferences();
   return useContext(LocaleContext);
 }
 
@@ -360,4 +392,22 @@ export type Words = Readonly<{
 export function usePluralKey() {
   const { locale } = useLocale();
   return (base: PluralBase, count: number) => pluralKey(locale, base, count);
+}
+
+export function LocaleBoundary({
+  children,
+  level,
+}: Readonly<{ children: ReactNode; level: CatalogLevel }>) {
+  const { locale } = useContext(LocaleContext);
+  return (
+    <LocaleReady locale={locale} level={level}>
+      {children}
+    </LocaleReady>
+  );
+}
+
+export function CompleteLocale({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return <LocaleBoundary level="complete">{children}</LocaleBoundary>;
 }

@@ -21,7 +21,6 @@ import { contactPageState, contactQuery } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
 import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { BriefQueue } from "../brief/brief.queue";
@@ -41,6 +40,7 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   navigateKeepingReturn,
   WorklistReturnLink,
@@ -82,7 +82,9 @@ function refusalsOf(
       {readOnlyReason && <span id={readOnlyReasonId}>{readOnlyReason}</span>}
       {readOnlyReason && activityRefused && " "}
       {activityRefused && (
-        <span id={activity.sentenceId}>{t("record.logActivityRefused")}</span>
+        <span id={activity.sentenceId}>
+          {t(activity.refusalKey ?? "record.logActivityRefused")}
+        </span>
       )}
     </>
   );
@@ -97,7 +99,7 @@ export function ContactPageV2({
   // the aside and a row in the body lead to the same place.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const record = useQuery(contactQuery(id));
   // The server refuses the 360 and the guard for an archived row. The 360
   // runs beside the row read; the guard waits for its answer.
@@ -108,7 +110,7 @@ export function ContactPageV2({
   const view = useContact360(id, !record.data?.archived_at);
 
   const guard = useConsentGuard(id, live);
-  const activity = useActivityGate();
+  const activity = useActivityGate(record.data ?? null);
   const latest = useLatestInbound("contact", id);
   const writeRefusalId = useId();
 
@@ -139,9 +141,13 @@ export function ContactPageV2({
   // left behind, or it inherits a subject nobody asked for; and a composer
   // already on screen keeps what it holds, because a reader mid-sentence is not
   // asking to have their words replaced.
-  const openComposer = (intent: string, drafts = false) => {
+  const openComposer = (
+    intent: string,
+    drafts = false,
+    activityId?: string,
+  ) => {
     if (drawer !== "composer") {
-      setComposerAsk({ intent, drafts });
+      setComposerAsk({ intent, drafts, activityId });
     }
     setDrawer("composer");
   };
@@ -283,7 +289,7 @@ export function ContactPageV2({
                 refusedReasonId={refusedReasonId}
               />
             }
-            zone={recordZone}
+            zone={readerZone}
             // Stated once for the page, where both columns and every tab can see
             // it. Every control the record refuses points at its reason by id.
             band={band}
@@ -308,6 +314,11 @@ export function ContactPageV2({
                     onAction={runAction}
                     onOpenEmail={setOpenEmail}
                     onOpenTab={openTab}
+                    onAddTask={
+                      !activity.pending && activity.refusedId === undefined
+                        ? () => setDrawer("activity_task")
+                        : undefined
+                    }
                   />
                 </ContactLatestInbound>
               </>
@@ -328,7 +339,7 @@ export function ContactPageV2({
           aside and one who finds it in the body land in the same place. */}
             <OpenEmailDrawer
               activityId={openEmail}
-              zone={recordZone}
+              zone={readerZone}
               onClose={() => setOpenEmail(null)}
             />
             <ContactMailDrawer

@@ -64,13 +64,20 @@ async function startRun(
   provider: Provider,
   window: ImportWindow,
   startOver: boolean,
+  internalMailToken?: string,
 ): Promise<BackfillStatus> {
   return unwrap(
     await api.POST("/connectors/{provider}/backfill", {
       params: { path: { provider } },
       // Without start_over the server continues a run that stopped on an error
       // whose window covers this one, so only an explicit "start over" sends it.
-      body: startOver ? { window, start_over: true } : { window },
+      body: {
+        window,
+        ...(startOver ? { start_over: true } : {}),
+        ...(internalMailToken
+          ? { internal_mail_preview_token: internalMailToken }
+          : {}),
+      },
     }),
   );
 }
@@ -157,8 +164,12 @@ export function useBackfillRun({
     // The start-over choice travels with the call rather than being read from
     // state inside the function, so a press always sends the choice that was
     // on screen when it was made.
-    mutationFn: (pick: { window: ImportWindow; startOver: boolean }) =>
-      startRun(provider, pick.window, pick.startOver),
+    mutationFn: (pick: {
+      window: ImportWindow;
+      startOver: boolean;
+      internalMailToken?: string;
+    }) =>
+      startRun(provider, pick.window, pick.startOver, pick.internalMailToken),
     onSuccess: () => {
       // The new run is what the reader watches now, so the pick they started it
       // from stands down with it.
@@ -201,8 +212,15 @@ export function useBackfillRun({
     /** Start the import on the picked window, from the top when the reader
      *  chose "start over", otherwise continuing a run that can be continued.
      *  `onStarted` is for a surface that steps aside once the run is queued. */
-    begin: (pick: ImportWindow, onStarted?: () => void) =>
-      start.mutate({ window: pick, startOver }, { onSuccess: onStarted }),
+    begin: (
+      pick: ImportWindow,
+      onStarted?: () => void,
+      internalMailToken?: string,
+    ) =>
+      start.mutate(
+        { window: pick, startOver, internalMailToken },
+        { onSuccess: onStarted },
+      ),
     /** The window the picker is on. */
     window,
     setWindow,

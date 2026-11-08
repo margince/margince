@@ -53,6 +53,15 @@ llm_route_credential() {
       echo "codex is not logged in: run \`codex login\`" >&2
       return 1
       ;;
+    gemini/cli)
+      # agy lists its models only to a signed-in account.
+      if agy models >/dev/null 2>&1; then
+        echo "agy login"
+        return
+      fi
+      echo "agy is not signed in: run \`agy\` once and sign in" >&2
+      return 1
+      ;;
     claude/api) name=ANTHROPIC_API_KEY ;;
     gpt/api) name=OPENAI_API_KEY ;;
     mistral/api) name=MISTRAL_API_KEY ;;

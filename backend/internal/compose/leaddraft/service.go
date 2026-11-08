@@ -54,6 +54,7 @@ type ActivityLister interface {
 // recipient, which is what makes this the same shape contactdraft writes for and
 // not a second kind of request.
 type Request struct {
+	Subject string
 	// Intent is the caller's own steering ("shorter", "ask for Tuesday"). The
 	// one input they typed, and the one input outside the fence.
 	Intent string
@@ -131,7 +132,7 @@ func (s *Service) Draft(
 	}
 	zone := s.envelope.Zone(ctx)
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		draftfloor.Written{Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject},
 		ConversationState(activities, s.envelope.Now(), zone)).InZone(zone)
 	in := FromLead(lead, activities, req, envelope)
 	grounding, err := in.Grounding()

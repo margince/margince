@@ -1,0 +1,23 @@
+{
+  "scenario": "case82_keep_that_newsletter_out",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 854,
+    "cache_creation_input_tokens": 3599,
+    "cache_read_input_tokens": 359482,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.0589
+  }
+}

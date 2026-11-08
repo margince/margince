@@ -63,14 +63,16 @@ fi
 # code: the craftsmanship gate, the license header test and the tree-wide gofmt gate all
 # cover fixtures/, and none of the three needs to typecheck to do its job.
 
+# The root module (.) and core's instance/ hold no Go package: the first ships
+# files a client fetches, the second lists the extensions a checkout composes.
+#
 # Two plain substitutions rather than one optional-slash pattern: `\?` is a GNU
 # extension, and the BSD sed macOS ships reads it as a literal `?`, so a pattern
 # that strips the suffix on CI leaves it in place on a laptop. Both dialects
 # agree on these two.
 modules="$(git ls-files '*go.mod' \
   | sed -e 's#/go\.mod$##' -e 's#^go\.mod$#.#' \
-  | grep -v '^backend$' \
-  | grep -v '^fixtures/' \
+  | awk '$0 != "backend" && $0 != "." && $0 != "instance" && $0 !~ /^fixtures\// { print }' \
   | sort)"
 if [[ -z "$modules" ]]; then
   echo "FAIL: lint-modules — found no modules to lint; this gate cannot pass by scanning nothing"

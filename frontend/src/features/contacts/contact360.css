@@ -276,20 +276,24 @@
   max-width: 22rem;
 }
 
-/* The Meetings tab: three panels, each a list of meetings as rows. The tab
+/* The Meetings tab: a head of figures, then three panels of meetings as rows. The tab
    is the container its rows measure, so a narrow work column folds a row's
    verbs under its text whatever the viewport around it. */
 .pe-meetings {
   container-type: inline-size;
 }
 
-/* The tab's two ways to start a meeting, as the Upcoming panel's toolbar: in
-   the body rather than the head, whose one band cannot hold both verbs and
-   the title at a phone's width. */
+/* The tab's head: its figures, then its two ways to start a meeting, above
+   the panels rather than in one, so the booking verb is not a second filled
+   button beside the next meeting's brief. */
+.pe-meetings-head {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-4) var(--space-2);
+}
 .pe-meetings-toolbar {
   display: grid;
   gap: var(--space-3);
-  padding-block: var(--space-3);
 }
 .pe-meetings-verbs {
   display: flex;
@@ -461,11 +465,6 @@
 /* Nor its track, whose column gap would otherwise pad the row's far edge. */
 .pe-meeting:has(> .pe-meeting-verbs:empty) {
   grid-template-columns: auto minmax(0, 1fr);
-}
-/* Folded, a held row's verbs may shrink to the line, so three German labels
-   wrap inside it instead of running past the panel's edge. */
-.pe-meetings .table-scroll-fold [data-fold="end"] {
-  flex-shrink: 1;
 }
 
 /* An invitation still waiting on the contact has no date to hang a page on (a

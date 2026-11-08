@@ -27,10 +27,11 @@ package gates
 
 import (
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // upwardLink matches a markdown link whose target is a rulebook, with or without
@@ -54,14 +55,14 @@ func TestNothingUnderDocsLinksUpToARulebook(t *testing.T) {
 	const docsRoot = "../docs"
 
 	scanned := 0
-	err := filepath.WalkDir(docsRoot, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(docsRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
 			return nil
 		}
-		raw, readErr := os.ReadFile(path)
+		raw, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

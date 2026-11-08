@@ -183,6 +183,22 @@ func TestBriefRankReproducesAKnownQueueOnAFixedSeedAndClock(t *testing.T) {
 // Warmth rides the injected contacts §4 seam: with an engaged stakeholder
 // the factor equals the seam's own answer and the contributing
 // interactions join the evidence.
+func TestBriefWinnabilityIsTheDealsOwnProbability(t *testing.T) {
+	b := setupBrief(t)
+	if _, err := b.Deals.UpdateDeal(b.Admin(), ids.DealID{UUID: b.dealB}, deals.UpdateDealInput{WinProbability: new(60)}); err != nil {
+		t.Fatal(err)
+	}
+	ranking, err := b.engine.Rank(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range ranking.Queue {
+		if item.DealID == b.dealB && item.Features.Winnability != 0.60 {
+			t.Fatalf("Deal B winnability = %.2f, want the 0.60 set on the deal over its stage's 0.25", item.Features.Winnability)
+		}
+	}
+}
+
 func TestBriefWarmthComesFromTheStrengthSeam(t *testing.T) {
 	b := setupBrief(t)
 	owner := integration.OwnerConn(t)

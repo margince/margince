@@ -32,7 +32,6 @@ func TestAnAccountScanIsQueuedOnceOnTheTranscriptLane(t *testing.T) {
 // nothing behind it — the strand the re-arm exists to end.
 func TestARearmableReadingDedupesItsJobOnlyWhileOneIsStillActive(t *testing.T) {
 	for name, opts := range map[string]*river.InsertOpts{
-		"document extract":   documentExtractInsertOpts(),
 		"account scan":       accountScanInsertOpts(),
 		"transcript propose": transcriptProposeInsertOpts(),
 	} {

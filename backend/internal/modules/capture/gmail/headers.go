@@ -12,6 +12,7 @@ package gmail
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -37,18 +38,22 @@ var _ HeaderFetcher = (*httpAPI)(nil)
 // GetHeaders reads one message's headers and labels.
 func (a *httpAPI) GetHeaders(ctx context.Context, accessToken, msgID string) (Message, error) {
 	var out struct {
-		LabelIDs []string `json:"labelIds"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
-		Payload  struct {
-			Headers []struct {
+		InternalDate string        `json:"internalDate"` //nolint:tagliatelle // Google's wire format uses camelCase.
+		LabelIDs     messageLabels `json:"labelIds"`     //nolint:tagliatelle // Google's wire format uses camelCase.
+		Payload      struct {
+			Headers boundedJSONList[struct {
 				Name  string `json:"name"`
 				Value string `json:"value"`
-			} `json:"headers"`
+			}] `json:"headers"`
 		} `json:"payload"`
 	}
-	q := url.Values{"format": {"metadata"}}
+	q := url.Values{paramFormat: {formatMetadata}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxJSONResponseBytes)
 	if status == http.StatusNotFound {
 		return Message{}, ErrMessageGone
+	}
+	if errors.Is(err, errResponseArrayLimit) {
+		return Message{}, errMetadataNeedsRaw
 	}
 	if err != nil {
 		return Message{}, err
@@ -58,7 +63,7 @@ func (a *httpAPI) GetHeaders(ctx context.Context, accessToken, msgID string) (Me
 		b.WriteString(headerLine(h.Name, h.Value))
 	}
 	b.WriteString("\r\n")
-	return Message{RFC822: []byte(b.String()), FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs}, nil
+	return Message{RFC822: []byte(b.String()), FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs, ReceivedAt: internalDate(out.InternalDate)}, nil
 }
 
 // headerLine renders one header as an RFC822 line. Gmail answers each header

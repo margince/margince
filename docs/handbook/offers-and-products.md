@@ -1,10 +1,24 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
 
 An offer starts in the deal's currency, and while it is a draft you can change it. The currency belongs to the offer; changing the deal's currency later does not change it.
+
+### How do I price a deal from its products?
+To price a deal from its products in Margince, open the deal and click **Price from products** on the **Products** card of its **Overview** tab.
+1. Pick a product under **Add a product**, or type a **Custom item** and click **Add item**.
+2. Fill **Quantity** and **Selling price** on each line, and say whether it is paid once or repeats.
+3. Click **Save products**.
+
+The deal's value is then the net of its lines, without tax: 100 pieces at €2 make a deal worth €200. A line that repeats counts once for each period agreed. Once a deal has lines, **Edit products** on the same card changes them.
+
+If the deal held a value somebody typed, the editor says: "Saving replaces the typed value of …". The old value stays in the deal's history and is not added to the lines.
+
+While a line has no quantity or price, the card says "Pricing incomplete", with the part that has a price so far. The deal then has no value, not zero, and cannot be won until every line is complete.
+A deal priced from its products refuses a typed value and a hand-set product list. Change its lines instead.
+Also called: line items on a deal, deal products, quote lines before the quote.
 
 ### How do I create an offer for a customer?
 To create an offer in Margince, open the deal and click **New offer** in the **Offers** panel on its **Overview** tab.
@@ -14,6 +28,14 @@ To create an offer in Margince, open the deal and click **New offer** in the **O
 4. Add lines under **Line items** (see the next question).
 If the deal has no currency yet, the button is turned off and says: "Set the deal value first. An offer uses the deal’s currency."
 Also called: quote, quotation, proposal, estimate.
+
+### How do I make an offer from the deal's products?
+On a deal priced from its products, **New offer** copies the deal's lines into a new draft. You do not type them again. Each product takes its name in the offer's language. The offer says "Made from the deal's products", and its lines change only through the deal.
+
+When the deal changes later, the offer says "The deal changed since this offer was created". A draft then shows **Refresh from deal**, which takes the deal's lines again and keeps the header. A sent offer stays as it was: use **Regenerate revision** for the new terms.
+
+**Accept** on such an offer records the buyer's answer and leaves the deal's value to its lines.
+The deal's value has no tax. The offer works out its tax on the day you send it, so the two can show a different gross.
 
 ### How do I add a product or a line to an offer?
 To add a line to an offer in Margince, open the draft offer and fill the **Add line** row in the **Line items** panel.
@@ -28,6 +50,8 @@ Also called: line item, position, add an item to a quote.
 To send an offer in Margince, open the draft offer and click **Send**, then confirm "Send this offer to the buyer?". Sending marks the offer as sent and locks it: "The offer becomes read-only until the buyer responds."
 
 **Send does not email anything.** Nothing leaves Margince when you click it; it records that this version is the one you are sending. To get the offer to the buyer, click **Render PDF** and open it with **View PDF**. Then send that file yourself: added to an email, or uploaded to the deal and added to its [Deal Room](deal-rooms.md). You cannot send an offer with no lines.
+
+Send removes a PDF made from the draft, so make it again after sending; the new file shows what was sent.
 Also called: email the proposal, issue the quote.
 
 ### How do I print or download an offer?
@@ -83,17 +107,21 @@ A line with no price is marked "unpriced, excluded from total". It is not counte
 
 ## Send, accept, reject and revise
 
-**Send** fixes the exchange rate on the offer and records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
+**Send** fixes the exchange rate and the tax rates on the offer. It also records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
 
 **Accept** sets the deal's amount and currency to the offer's gross total, so the deal shows what the buyer agreed to. It needs permission to change both the offer and the deal.
 
 **Reject** takes a reason you may leave empty. The reason is kept in the audit log, not on the offer.
 
-**Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent.
+**Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent. A line with a **Tax category** takes today's rate in the new version; a typed rate stays as it was.
 
 You can make an offer **PDF** at any point, draft included. Where your Margince has no file storage set up, it says "PDF rendering is not available on this installation."
 
 The PDF prints the offer's own **Intro text** above the lines and its **Terms text** under the totals. It leaves either part out when it is empty. The terms always come from the offer, never from the template.
+
+Every offer PDF prints who issues it. That is the name, address, VAT ID, register entry, **Bank details** and logo of the company on the offer's **Issued by** line. A new offer is issued by the company its writer works for, set on the **Legal entities** card. While the offer is a draft you can choose another under **Edit**; once sent, it stays. The send keeps what it printed, so a later change to that company does not change a sent offer. If your template's footer already lists your address or account, the PDF prints them twice until you take them out of the footer.
+
+Each offer has a **Language**. A new offer takes the language of the company that issues it, and else the language of its template. A line you add from the rate card takes the product's name in that language when the product has one, and else its own name. To give a product a name in another language, open the menu on its row and choose **Translations**. A line keeps the name it was added with, so a later change to the product leaves it as it is. The fixed words a template prints, such as its headings, follow the template's own language.
 
 ## What an offer refuses
 
@@ -107,6 +135,9 @@ The PDF prints the offer's own **Intro text** above the lines and its **Terms te
 - **A number too large to store is refused**, not rounded.
 - **No exchange rate for the day stops sending.** Margince never uses
   a rate of 1 in its place.
+- **A missing tax rate stops sending.** It also stops adding the line.
+  Margince never guesses a rate: an Admin or Ops records it on the **Tax
+  rates** card first.
 
 The billing type has its own refusals, and each one states the rule. One says "a one-off price has no billing interval, because there is nothing to repeat". Another says "a commitment covers at least one period".
 
@@ -139,6 +170,20 @@ A product holds a name, a SKU if you want one, a description, a unit, a unit pri
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".
 
 **Kind** says what a product is: **Software**, **Implementation** or **Other**. The commercial mix on Analytics groups won value by it. You can leave it empty, and the mix then shows the product's value as **Unclassified product**.
+
+### How do I keep tax rates?
+<!-- opens: settings/company -->
+An Admin or Ops keeps the **Tax rates** card under **Settings → Company profile**. Choose **Record a rate**, then fill **Country**, **Category** (**Standard** or **Reduced**), **Rate** and **From**. A rate is never changed or removed: to change one, record a new rate from a later day. A **From** day before the first rate of that **Country** adds to its history.
+
+**Tax category** on a product says which rate it takes: **Standard**, **Reduced** or **Exempt**. The first rate you record for a category of your own **Country** sorts the products for you. Each product whose **Default tax rate %** is that rate gets that category. A product with any other rate, 0% included, stays **Not classified** until you choose. The **Tax category** filter on the products list shows those.
+
+### Which tax rate does an offer line take?
+
+A line from a product with a **Tax category** takes the rate of that category from the **Tax rates** card. It is the rate for the **Country** of the company that issues the offer, or your own **Country** when that company names none. The line shows its category under the rate.
+
+A line the AI drafts from a product with a category does the same. A draft takes today's rate. **Send** takes the rate again for the day you send, so a new rate from that day applies. After the send the line does not change. Moving a draft to another company under **Edit** takes that company's rates.
+
+A line from a product with no category takes its **Default tax rate %**. A rate you type on a line is kept as you typed it, also when you send, and the line no longer shows a category.
 
 ### Snapshots, and why a line does not move
 

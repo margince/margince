@@ -873,7 +873,7 @@ func TestAConfirmationSurvivesAnObjectStoreThatWillNotCollect(t *testing.T) {
 	if n := rowsNaming(t, e, parked); n != 0 {
 		t.Fatalf("%d row(s) still name %q — the confirmation's transaction released it", n, parked)
 	}
-	if !strings.Contains(logs.String(), "reclaiming an unreferenced logo object failed") {
+	if !strings.Contains(logs.String(), "reclaiming an unreferenced stored object failed") {
 		t.Fatalf("the refused collection was not observable: %s", logs.String())
 	}
 }

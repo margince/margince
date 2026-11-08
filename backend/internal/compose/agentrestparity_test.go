@@ -40,7 +40,7 @@ func TestEveryToolRunsOnARouteThatDeclaresIt(t *testing.T) {
 	extensionTools := composedToolNames()
 	sort.Slice(specs, func(i, j int) bool { return specs[i].Name < specs[j].Name })
 	for _, spec := range specs {
-		if extensionTools[spec.Name] {
+		if extensionTools[spec.Name] || spec.ProtocolOnly {
 			continue
 		}
 		// A router runs as its targets, each held to its own route in this sweep.
@@ -170,12 +170,15 @@ func TestTheBothDoorsCensusCountsOnlyCallsInATestThatCompares(t *testing.T) {
 	}
 }
 
-// keepsItsOwnShape reports a tool any of whose operations is not served by the
-// registry.
+// keepsItsOwnShape reports a tool any of whose operations is neither served by
+// the registry nor served by its route's own handler. A route-backed verb runs
+// that handler, so the two doors are one engine;
+// TestARouteBackedActionAnswersAsItsRoute holds the mechanism once for all.
 func keepsItsOwnShape(openAPIOp string, byID map[string]passportOperation) bool {
 	for id := range strings.SplitSeq(openAPIOp, "/") {
 		op, known := byID[id]
-		if known && agentPolicies[op.method+" "+op.route].ServedBy != servedByRegistry {
+		served := agentPolicies[op.method+" "+op.route].ServedBy
+		if known && served != servedByRegistry && served != servedByRoute {
 			return true
 		}
 	}

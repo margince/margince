@@ -2,12 +2,14 @@
 // is a script that talks to git and a browser as it loads.
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
+import { startupModules } from "./lib/uat-entry.mjs";
 import {
+  baseRefFor,
   changesSince,
   needsStory,
   scopeFor,
@@ -57,10 +59,45 @@ describe("needsStory", () => {
 });
 
 describe("scopeFor", () => {
+  it("renders the whole catalog when shared Storybook configuration changes", () => {
+    expect(scopeFor([], ["frontend/.storybook/preview.tsx"])).toBe("all");
+    expect(scopeFor([], ["frontend/src/app.tsx"])).toBe("diff");
+  });
   it("renders what the diff reaches unless asked for every story", () => {
     expect(scopeFor(["node", "fe-uat.mjs"])).toBe("diff");
     expect(scopeFor(["node", "fe-uat.mjs", "--allow-missing"])).toBe("diff");
     expect(scopeFor(["node", "fe-uat.mjs", "--all-stories"])).toBe("all");
+  });
+});
+
+describe("startupModules", () => {
+  it("follows the document bootstrap without excusing its UI imports", () => {
+    const sources = {
+      "bootstrap.ts": 'import "./catalogs"; void import("./main");',
+      "main.tsx": 'import App from "./App"; createRoot(root).render(<App />);',
+    };
+    expect([
+      ...startupModules(
+        "bootstrap.ts",
+        (file) => sources[file],
+        (_file, specifier) => (specifier === "./main" ? "main.tsx" : null),
+      ),
+    ]).toEqual(["bootstrap.ts", "main.tsx"]);
+  });
+
+  it("keeps exported and nested lazy components in story coverage", () => {
+    const sources = {
+      "bootstrap.ts":
+        'function later() { return import("./lazy"); } void import("./screen");',
+      "screen.tsx": "export function Screen() { return <main />; }",
+    };
+    expect([
+      ...startupModules(
+        "bootstrap.ts",
+        (file) => sources[file],
+        (_file, specifier) => specifier.slice(2) + ".tsx",
+      ),
+    ]).toEqual(["bootstrap.ts"]);
   });
 });
 
@@ -397,10 +434,31 @@ describe("renewingBroken", () => {
   });
 });
 
+// The caller's git setup must not reach the fixture: a global commit.gpgsign
+// fails its commits, and an exported GIT_DIR points them at the real repository.
+// scripts/lib-git-fixture.sh holds the same list for the shell tests.
+const fixtureGitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(
+    ([name]) =>
+      !/^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|COMMON_DIR|CEILING_DIRECTORIES|CONFIG|CONFIG_COUNT|CONFIG_PARAMETERS|CONFIG_KEY_\d+|CONFIG_VALUE_\d+|TEMPLATE_DIR)$/.test(
+        name,
+      ),
+  ),
+);
+Object.assign(fixtureGitEnv, {
+  GIT_CONFIG_GLOBAL: "/dev/null",
+  GIT_CONFIG_SYSTEM: "/dev/null",
+  GIT_TERMINAL_PROMPT: "0",
+});
+
 it("includes committed, staged, unstaged and new stories before commit", () => {
   const dir = mkdtempSync(join(tmpdir(), "approval-uat-scope-"));
   const git = (args) =>
-    execFileSync("git", args.split(" "), { cwd: dir, encoding: "utf8" }).trim();
+    execFileSync("git", args.split(" "), {
+      cwd: dir,
+      encoding: "utf8",
+      env: fixtureGitEnv,
+    }).trim();
   const write = (name, text) => writeFileSync(join(dir, name), text);
   try {
     git("init --quiet");
@@ -413,6 +471,8 @@ it("includes committed, staged, unstaged and new stories before commit", () => {
       "removed.tsx",
     ])
       write(name, "before");
+    mkdirSync(join(dir, "frontend/.storybook"), { recursive: true });
+    write("frontend/.storybook/preview.tsx", "export default {};");
     write(".gitignore", "ignored.tsx\n");
     git("add .");
     git("-c core.hooksPath=/dev/null commit --quiet -m fixture");
@@ -426,13 +486,38 @@ it("includes committed, staged, unstaged and new stories before commit", () => {
     write("new.stories.tsx", "new story");
     write("ignored.tsx", "build output");
     rmSync(join(dir, "removed.tsx"));
+    rmSync(join(dir, "frontend/.storybook/preview.tsx"));
+    const includingDeleted = changesSince(git, base, { includeDeleted: true });
+    expect(includingDeleted).toContain("frontend/.storybook/preview.tsx");
+    expect(scopeFor([], includingDeleted)).toBe("all");
     expect(changesSince(git, base).sort()).toEqual([
       "committed.tsx",
       "new.stories.tsx",
       "staged.tsx",
       "unstaged.tsx",
     ]);
+    write("preview.tsx", "export default {};");
+    git("add -A");
+    expect(
+      scopeFor([], changesSince(git, base, { includeDeleted: true })),
+    ).toBe("all");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+describe("baseRefFor", () => {
+  it("defaults to main and permits an explicit develop PR base", () => {
+    expect(baseRefFor({})).toBe("origin/main");
+    expect(baseRefFor({ FE_UAT_BASE_REF: "origin/develop" })).toBe(
+      "origin/develop",
+    );
+  });
+  it("refuses an empty ref or extra git arguments instead of shortening the census", () => {
+    for (const ref of ["", "origin/develop HEAD", "--all"]) {
+      expect(() => baseRefFor({ FE_UAT_BASE_REF: ref })).toThrow(
+        "must name a git ref",
+      );
+    }
+  });
 });

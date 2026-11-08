@@ -17,7 +17,6 @@ package gates
 // place again.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -25,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryAgentRunStatusHasAProjectionState(t *testing.T) {
@@ -65,7 +65,7 @@ func checkValues(t *testing.T, constraint string) []string {
 	}
 	re := regexp.MustCompile(regexp.QuoteMeta(constraint) + `[^(]*\(\s*status IN \(([^)]*)\)`)
 	for _, path := range matches {
-		raw, err := os.ReadFile(path) // #nosec G304 -- the path comes from this test's own glob
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- the path comes from this test's own glob
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

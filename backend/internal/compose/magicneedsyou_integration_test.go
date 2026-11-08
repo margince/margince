@@ -45,7 +45,7 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Weber GmbH — Phase 2", pipeline, open, &e.Rep1)
 
-	queue := approvalsServiceWithEffects(e.Pool)
+	queue := NewApprovalsServiceWithEffects(e.Pool)
 	change, hash, err := diffhash.Canonical(json.RawMessage(`{"summary":"Send revised pricing","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`))
 	if err != nil {
 		t.Fatal(err)
@@ -107,7 +107,7 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Example renewal", pipeline, open, &e.Rep1)
-	queue := approvalsServiceWithEffects(e.Pool)
+	queue := NewApprovalsServiceWithEffects(e.Pool)
 	ctx := e.AgentCtx()
 	actor, ok := principal.Actor(ctx)
 	if !ok {

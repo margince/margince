@@ -106,20 +106,6 @@
 ) {
   overflow: visible;
 }
-/* A link, or a handle's leading link, starts where a plain value does. */
-.factlist-flat .factlist-value > :is(.btn.btn-link, .cell-link, .link-button),
-.factlist-flat
-  .factlist-value
-  .editable-value-face
-  > :is(.btn.btn-link, .cell-link, .link-button),
-.factlist-flat .factlist-value > .fieldgrid-handle > .link-button:first-child,
-.factlist-flat
-  .factlist-value
-  .editable-value-face
-  > .fieldgrid-handle
-  > .link-button:first-child {
-  padding-inline: 0;
-}
 /* A handle spans the column, so a link that runs long shortens inside it
  * and never pushes its glyphs past the card's edge. */
 .factlist-flat .factlist-value > .fieldgrid-handle {

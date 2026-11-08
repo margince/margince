@@ -1,0 +1,74 @@
+/* The view switch sits at the gallery's far edge, above the files. */
+.attachment-gallery-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-end: var(--space-3);
+}
+
+/* A record's files as a gallery of tiles, as many to a row as fit. */
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A tile opened onto its reading takes the whole row: the reading is a form,
+   and a form a quarter of the row wide is a column of wrapped words. */
+.attachment-grid > li:has(.attachment-tile-after) {
+  grid-column: 1 / -1;
+}
+
+.attachment-tile-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+.attachment-tile-after {
+  padding: var(--space-3) var(--padCard) var(--padCard);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+
+/* One file to a row. Its verbs move to the row's far edge, beside the facts. */
+.attachment-list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.attachment-list .board-doc-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.attachment-list .board-doc-body > * {
+  grid-column: 1;
+}
+
+.attachment-list .attachment-tile-verbs {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  justify-content: flex-end;
+}
+
+/* A narrow list keeps its verbs under the facts, as a tile does. */
+.attachment-list {
+  container-type: inline-size;
+}
+
+@container (max-width: 32rem) {
+  .attachment-list .board-doc-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .attachment-list .attachment-tile-verbs {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+  }
+}

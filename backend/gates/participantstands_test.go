@@ -52,6 +52,9 @@ var presenceReadsAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities:RetireGuessedMailboxSeatsTx": "the repair that takes guessed mailbox owners off an " +
 		"activity. It is the one reader whose subject is the rows the rule distrusts, so composing the rule would make " +
 		"it skip every row it exists to remove and quietly repair nothing.",
+	"internal/modules/activities:MeetingCopyCarriedGuestsTx": "compares the survivor's guest rows a fold inserted with the copy's rows, column by " +
+		"column, to tell which rows the fold carried. It concludes nothing about a seat's presence, and a guessed owner " +
+		"row the fold copied is one the split must take back.",
 	"internal/modules/activities:TurnBackColleagueCopyTx": "undoes a stamp this code made, keyed on sent_by_colleague " +
 		"and the stamp's own address rather than on a participant row standing. Only the stamp writes that state, so a " +
 		"guessed owner cannot put a row into it.",
