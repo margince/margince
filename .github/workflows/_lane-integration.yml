@@ -154,13 +154,13 @@ jobs:
       # Dev machines keep the stock settings: their data outlives the session.
       - name: Let the throwaway Postgres skip disk flushes
         run: |
-          bash scripts/dev-psql.sh 15432 postgres -v ON_ERROR_STOP=1 <<'SQL'
+          bash ../scripts/dev-psql.sh 15432 postgres -v ON_ERROR_STOP=1 <<'SQL'
           ALTER SYSTEM SET fsync = off;
           ALTER SYSTEM SET synchronous_commit = off;
           ALTER SYSTEM SET full_page_writes = off;
           SELECT pg_reload_conf();
           SQL
-          test "$(bash scripts/dev-psql.sh 15432 postgres -Atc 'SHOW fsync')" = off
+          test "$(bash ../scripts/dev-psql.sh 15432 postgres -Atc 'SHOW fsync')" = off
       # INTEGRATION_SHARD_OUT collects the slice manifests + binary coverage
       # pods the fan-in reconciles and merges — so the scan is NOT a second
       # Postgres/Redis/MinIO stack running the whole lane a second time.
