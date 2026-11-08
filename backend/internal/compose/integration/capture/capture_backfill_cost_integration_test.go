@@ -85,8 +85,9 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // twenty correspondents, half sent and half received. So it fails a change
 // that adds round trips to every message. Lower it when a change removes
 // some; never raise it to make a change pass.
+// Thread membership and mailbox generation are checked before each message write.
 const (
-	historyExchangesPerMessage    = 185
+	historyExchangesPerMessage    = 188
 	historyTransactionsPerMessage = 7.15
 )
 

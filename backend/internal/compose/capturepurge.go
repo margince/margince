@@ -442,31 +442,7 @@ func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger
 	return NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), blob, log).WithPayloadVault(privacyPayloads(vault)))
 }
 
-// PurgeRemoved acts on the owner deleting a captured message at the provider.
-//
-// The signal is narrow and it is the owner's own: they went to Gmail or Outlook
-// and got rid of a message this CRM had taken a copy of. For mail nobody else
-// has seen, honouring that is the only defensible answer — the product is
-// holding it on their behalf, and it is holding a copy of something they threw
-// away.
-//
-// It is narrow in the other direction too, which is why this does not simply
-// destroy. Three cases keep the message, and each falls out of the selection
-// rather than being special-cased here:
-//
-//   - A colleague also imported it (SharedImports). Their claim is not the
-//     owner's to end, and tidying an inbox must not reach into somebody else's
-//     timeline.
-//   - The statutory floor shields it (Restricted). A Handelsbrief inside its
-//     retention window is a records duty, and inbox housekeeping does not
-//     outrank one.
-//   - An erasure request is still open about it (Restricted, same bucket). The
-//     request has not been answered yet, and destroying the evidence early
-//     would answer it by accident.
-//
-// Either way the outcome is audited: PurgeActivities writes the destruction
-// rows, and a removal that destroyed nothing is logged with what kept it, so
-// "the provider said this was deleted and it is still here" has an answer.
-func (p *CapturePurger) PurgeRemoved(ctx context.Context, seat ids.UUID, sourceSystem, sourceID string) error {
-	return p.PurgeRemovedAdmitted(ctx, nil, seat, sourceSystem, sourceID)
+// PurgeRemoved applies a provider deletion under the caller's maintenance authority.
+func (p *CapturePurger) PurgeRemoved(ctx context.Context, seat ids.UUID, provider, providerMessageID string) error {
+	return p.PurgeRemovedAdmitted(ctx, nil, seat, provider, providerMessageID)
 }

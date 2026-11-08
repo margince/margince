@@ -77,6 +77,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 	if err != nil {
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
+	runCtx = withMailboxConnection(runCtx, connID, generation)
 	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))

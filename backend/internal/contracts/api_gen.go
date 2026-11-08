@@ -49920,8 +49920,8 @@ type InstallationSettings struct {
 
 	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
 	// toward the outcomes of deals recorded entering it in the last two years, weighted
-	// against the typed chance as if that were 20 deals; imported and older moves without
-	// a recorded origin count for nothing. A risk signal changes a deal's weight only
+	// against the typed chance as if that were 20 deals; imported, synced and older moves
+	// without a recorded origin count for nothing. A risk signal changes a deal's weight only
 	// after settled frozen forecasts show its effect. Off, every forecast surface weights
 	// a deal by its stage's typed chance.
 	ForecastSelfCorrecting bool `json:"forecast_self_correcting"`
@@ -58791,9 +58791,9 @@ type ReportingPoint struct {
 	// instant. Every member is in exactly one outcome, so the counts add
 	// up to `observations`. `unresolved` members have not reached an
 	// outcome yet and are never counted as lost; `history_partial`
-	// members left by a move an import brought in, which does not show
-	// how the team sells, or by a move recorded before Margince kept the
-	// stage order, so its direction is unknown.
+	// members left by a move an import brought in or another CRM synced
+	// in, which does not show how the team sells, or by a move recorded
+	// before Margince kept the stage order, so its direction is unknown.
 	Outcomes *[]ReportingCohortCount `json:"outcomes,omitempty"`
 
 	// Status `failed` means the database could not calculate this figure on this
@@ -62843,7 +62843,8 @@ type TeamWeeklyCoveragePeriodKind string
 // TeamWeeklyFunnelDeviation One stage where the rep converts differently from the team. Entries and conversions are
 // attributed to the owner at the time of each move. "Converted" is a later move to a won
 // stage or to a later stage, compared by the stage order as it was configured when the
-// week was assembled. Moves an import brought in neither enter nor convert a deal.
+// week was assembled. Moves an import brought in or another CRM synced in neither enter nor
+// convert a deal.
 type TeamWeeklyFunnelDeviation struct {
 	// DeviationBp The rep's conversion rate less the team's, in basis points.
 	DeviationBp int `json:"deviation_bp" maximum:"10000" minimum:"-10000"`

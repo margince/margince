@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -70,6 +71,9 @@ func (s *Sink) RemoveMessage(ctx context.Context, key connector.NaturalKey) erro
 		// removal acted on under nobody's authority would destroy whichever
 		// copy the query happened to find.
 		return errors.New("capture: a provider-side deletion arrived with no seat on the context")
+	}
+	if key.SourceSystem != deliveringConnector(ctx) {
+		return apperrors.ErrPermissionDenied
 	}
 	admit := func(ctx context.Context, tx pgx.Tx) error {
 		_, err := s.mailboxRunAllowedTx(ctx, tx)

@@ -107,6 +107,7 @@ const includeSpamTrash = "includeSpamTrash"
 // message under SENT (ADR-0072 §1's provider evidence). Both come off the same
 // messages.get response, so the signal costs no extra call.
 type Message struct {
+	ID     string
 	RFC822 []byte
 	// FiledAsSent is the provider half of the T1 evidence and nothing more:
 	// Gmail labelled this message SENT. On its own it does not mean the owner
@@ -350,7 +351,7 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 		return Message{}, err
 	}
 	return Message{
-		RFC822: out.Raw, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
+		ID: msgID, RFC822: out.Raw, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
 		ReceivedAt: internalDate(out.InternalDate),
 	}, nil
 }

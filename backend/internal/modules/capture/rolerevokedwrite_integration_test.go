@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -193,5 +194,36 @@ func TestARunWhoseRoleIsTakenAwayCancelsMovesAndRemovesNothing(t *testing.T) {
 				t.Errorf("the revoked run reached the writer %d times, want never", wrote)
 			}
 		})
+	}
+}
+
+func TestAReboundMailboxCannotWriteFromTheOldSync(t *testing.T) {
+	ctx, connecting, vault, ws := newCaptureRegistryFixture(t)
+	id, err := connecting.Connect(ctx, "gmail", connector.Auth("fixture-token"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, pool := setupCaptureDB(t)
+	db := database.BindTo(pool, ws)
+	reg := capture.NewRegistry(db, capture.NewSink(db), fixtureAuthority{}, vault)
+	reg.Register(verbConnector{act: func(runCtx context.Context, sink connector.Sink) error {
+		if _, err := owner.Exec(ctx, `UPDATE capture_connection SET generation=generation+1 WHERE id=$1`, id); err != nil {
+			return err
+		}
+		source := "old-generation-" + ids.NewV7().String()
+		rec := mailRecord(source, "buyer@customer.example", "buyer@customer.example")
+		rec.CapturedBy, rec.Source, rec.ProviderMessageID = "connector:gmail", "gmail:"+source, source
+		_, err := sink.Upsert(runCtx, rec)
+		return err
+	}})
+	if err := reg.SyncOnce(principal.WithWorkspaceID(context.Background(), ws.UUID), id); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("old generation admitted: %v", err)
+	}
+	var count int
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM capture_import`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatal("stale sync wrote a provider mapping")
 	}
 }
