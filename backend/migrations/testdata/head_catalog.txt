@@ -2834,6 +2834,7 @@ public.communication_review_pkey CREATE UNIQUE INDEX communication_review_pkey O
 public.communication_suppression acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_suppression.address text gen=- def=-
 public.communication_suppression.address_hash text gen=- def=-
+public.communication_suppression.address_key_id text gen=- def=-
 public.communication_suppression.captured_by text NOT NULL gen=- def=-
 public.communication_suppression.carried_from uuid gen=- def=-
 public.communication_suppression.communication_suppression_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES communication_suppression(id) ON DELETE SET NULL
@@ -3556,6 +3557,7 @@ public.contact.address_line2 text gen=- def=-
 public.contact.address_postal_code text gen=- def=-
 public.contact.address_region text gen=- def=-
 public.contact.anonymized_address_hashes text[] gen=- def=-
+public.contact.anonymized_address_key_id text gen=- def=-
 public.contact.archived_at timestamp with time zone gen=- def=-
 public.contact.captured_by text NOT NULL gen=- def=-
 public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
@@ -4809,6 +4811,7 @@ public.erasure_suppression acl=margince_owner=arwdDxt/margince_owner,margince_ap
 public.erasure_suppression.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.erasure_suppression.erasure_suppression_kind_check CHECK ((kind = ANY (ARRAY['email'::text, 'channel_identity'::text])))
 public.erasure_suppression.erasure_suppression_pkey PRIMARY KEY (kind, value_hash)
+public.erasure_suppression.key_id text gen=- def=-
 public.erasure_suppression.kind text NOT NULL gen=- def=-
 public.erasure_suppression.value_hash text NOT NULL gen=- def=-
 public.erasure_suppression_pkey CREATE UNIQUE INDEX erasure_suppression_pkey ON public.erasure_suppression USING btree (kind, value_hash)
@@ -5543,6 +5546,7 @@ public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.cont
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_from_lead CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)
+public.idx_contact_keyed_address_hashes CREATE INDEX idx_contact_keyed_address_hashes ON public.contact USING btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)
 public.idx_contact_last_activity_keyset CREATE INDEX idx_contact_last_activity_keyset ON public.contact USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_merged_into CREATE INDEX idx_contact_merged_into ON public.contact USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)
 public.idx_contact_name_keyset CREATE INDEX idx_contact_name_keyset ON public.contact USING btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -5555,6 +5559,7 @@ public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan 
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
 public.idx_contact_social_linkedin_profile CREATE INDEX idx_contact_social_linkedin_profile ON public.contact_social USING btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)'::text)) WHERE (platform = 'linkedin'::text)
+public.idx_contact_unkeyed_address_hashes CREATE INDEX idx_contact_unkeyed_address_hashes ON public.contact USING btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))
 public.idx_contact_updated_keyset CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_conversation_claim_contact CREATE INDEX idx_conversation_claim_contact ON public.conversation_claim USING btree (contact_id)
 public.idx_conversation_claim_source_activity CREATE INDEX idx_conversation_claim_source_activity ON public.conversation_claim USING btree (source_activity_id)
@@ -5763,6 +5768,7 @@ public.idx_stage_progression_policy_to_stage CREATE INDEX idx_stage_progression_
 public.idx_system_log_action CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC)
 public.idx_system_log_actor CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC)
 public.idx_system_log_time CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC)
+public.idx_system_log_unkeyed_email CREATE INDEX idx_system_log_unkeyed_email ON public.system_log USING btree (id) WHERE ((action = 'login'::text) AND (detail ? 'email_hash'::text) AND (NOT (detail ? 'email_key_id'::text)))
 public.idx_tag_search CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv)
 public.idx_tag_suggestion_company CREATE INDEX idx_tag_suggestion_company ON public.tag_suggestion USING btree (company_id, tag_id, decided_at) WHERE (company_id IS NOT NULL)
 public.idx_tag_suggestion_contact CREATE INDEX idx_tag_suggestion_contact ON public.tag_suggestion USING btree (contact_id, tag_id, decided_at) WHERE (contact_id IS NOT NULL)
@@ -5781,6 +5787,7 @@ public.idx_user_record_view_entity_contact CREATE INDEX idx_user_record_view_ent
 public.idx_voice_corpus_profile CREATE INDEX idx_voice_corpus_profile ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC)
 public.idx_web_form_lead_origin CREATE INDEX idx_web_form_lead_origin ON public.web_form USING btree (lead_origin) WHERE (lead_origin IS NOT NULL)
 public.idx_web_form_owner CREATE INDEX idx_web_form_owner ON public.web_form USING btree (owner_id) WHERE (owner_id IS NOT NULL)
+public.idx_webhook_delivery_body_kept CREATE INDEX idx_webhook_delivery_body_kept ON public.webhook_delivery USING btree (id) WHERE ((payload_pruned_at IS NULL) AND (payload <> ''::text) AND (status = ANY (ARRAY['delivered'::text, 'dead_lettered'::text, 'visibility_revoked'::text])))
 public.idx_webhook_delivery_by_subscription CREATE INDEX idx_webhook_delivery_by_subscription ON public.webhook_delivery USING btree (subscription_id, created_at DESC)
 public.idx_webhook_delivery_due CREATE INDEX idx_webhook_delivery_due ON public.webhook_delivery USING btree (next_retry_at) WHERE (status = 'retrying'::text)
 public.idx_webhook_subscription_live CREATE INDEX idx_webhook_subscription_live ON public.webhook_subscription USING btree (state) WHERE (archived_at IS NULL)
@@ -5799,6 +5806,7 @@ public.idx_withdrawal_credential_contact CREATE INDEX idx_withdrawal_credential_
 public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.idx_withdrawal_credential_live CREATE INDEX idx_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope) WHERE (revoked_at IS NULL)
 public.idx_withdrawal_credential_purpose CREATE INDEX idx_withdrawal_credential_purpose ON public.withdrawal_credential USING btree (purpose_id)
+public.idx_workflow_run_failed_trigger CREATE INDEX idx_workflow_run_failed_trigger ON public.workflow_run USING btree (trigger_event) WHERE (status = 'failed'::text)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_record_map.external_id text NOT NULL gen=- def=-
@@ -7187,9 +7195,11 @@ public.preference_token.preference_token_revoked_reason_check CHECK ((revoked_re
 public.preference_token.preference_token_token_key UNIQUE (token)
 public.preference_token.revoked_at timestamp with time zone gen=- def=-
 public.preference_token.revoked_reason text gen=- def=-
-public.preference_token.token text NOT NULL gen=- def=-
+public.preference_token.token text gen=- def=-
+public.preference_token.token_hash text gen=- def=-
 public.preference_token_contact_email_ix CREATE INDEX preference_token_contact_email_ix ON public.preference_token USING btree (contact_email_id) WHERE (contact_email_id IS NOT NULL)
 public.preference_token_pkey CREATE UNIQUE INDEX preference_token_pkey ON public.preference_token USING btree (id)
+public.preference_token_token_hash_key CREATE UNIQUE INDEX preference_token_token_hash_key ON public.preference_token USING btree (token_hash) WHERE (token_hash IS NOT NULL)
 public.preference_token_token_key CREATE UNIQUE INDEX preference_token_token_key ON public.preference_token USING btree (token)
 public.privacy_notice_case acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.privacy_notice_case.acquisition_id uuid NOT NULL gen=- def=-
@@ -8761,9 +8771,18 @@ public.system_log.system_log_pkey PRIMARY KEY (id)
 public.system_log.trg_system_log_no_mutate CREATE TRIGGER trg_system_log_no_mutate BEFORE DELETE OR UPDATE ON public.system_log FOR EACH ROW EXECUTE FUNCTION system_log_immutable()
 public.system_log_immutable() secdef=false cfg=- acl=- 
 BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.action = 'login'
+     AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'
+     AND NEW.detail->>'email_hash' ~ '^[0-9a-f]{64}$'
+     AND NEW.detail->>'email_key_id' ~ '^[0-9a-f]{16}$'
+     AND (NEW.detail - ARRAY['email_hash','email_key_id']) = (OLD.detail - 'email_hash')
+     AND (to_jsonb(NEW) - 'detail') = (to_jsonb(OLD) - 'detail') THEN
+    RETURN NEW;
+  END IF;
   RAISE EXCEPTION 'system_log is append-only (attempted % on row %)', TG_OP, OLD.id
     USING ERRCODE = 'check_violation';
-END; 
+END;
+
 public.system_log_pkey CREATE UNIQUE INDEX system_log_pkey ON public.system_log USING btree (id)
 public.tag acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.tag.archived_at timestamp with time zone gen=- def=-
@@ -9697,6 +9716,7 @@ public.webhook_delivery.last_error text gen=- def=-
 public.webhook_delivery.last_status_code integer gen=- def=-
 public.webhook_delivery.next_retry_at timestamp with time zone gen=- def=-
 public.webhook_delivery.payload text NOT NULL gen=- def=-
+public.webhook_delivery.payload_pruned_at timestamp with time zone gen=- def=-
 public.webhook_delivery.status text NOT NULL gen=- def=-
 public.webhook_delivery.subscription_id uuid NOT NULL gen=- def=-
 public.webhook_delivery.trg_webhook_delivery_updated CREATE TRIGGER trg_webhook_delivery_updated BEFORE UPDATE ON public.webhook_delivery FOR EACH ROW EXECUTE FUNCTION set_updated_at()

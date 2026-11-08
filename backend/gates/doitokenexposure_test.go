@@ -95,9 +95,8 @@ const tokenParameterName = "token"
 // like any other holder.
 //
 // The preference-centre token is a DIFFERENT credential with its own resolver
-// and its own storage — it is kept in plaintext, where the confirm token is
-// hashed — so ResolvePreferenceToken is ratified here as a consumer and is not
-// otherwise this gate's subject.
+// and its own storage. So ResolvePreferenceToken is ratified here as a consumer
+// and is not otherwise this gate's subject.
 //
 // gatekit:fixture why each destination may receive the plaintext
 var ratifiedDestinations = map[string]string{
@@ -125,6 +124,8 @@ var ratifiedDestinations = map[string]string{
 	"oneClickSubject": "resolves the press to the contact it acts for, trying both credential families, and returns that contact and the withdrawal scope — never the token",
 
 	"publicStopSubject": "resolves a stop request to the contact it acts for, trying both credential families, and returns that contact — never the token",
+
+	"signedPreferenceRow": "checks a signed preference link's MAC and returns the row it names, never the token",
 }
 
 // launderers are the two functions whose OWN BODY this gate does not inspect,
@@ -141,11 +142,14 @@ var ratifiedDestinations = map[string]string{
 // them is exploitable: adding SubmitConfirmation to the ratified set — correct
 // on its own terms, it is what the handler forwards to — silently stopped its
 // body being checked, and it holds the token throughout. A planted
-// fmt.Println(token) inside it then read green. So this map names only the two
+// fmt.Println(token) inside it then read green. So this map names only the
 // functions that end the credential, and receipt is decided separately above.
+// signedPreferenceRow ends one: it answers a row id only after the link's MAC
+// held, and the row id alone opens nothing.
 var launderers = map[string]bool{
-	"hashPublicToken":   true,
-	"Store.confirmLink": true,
+	"hashPublicToken":     true,
+	"Store.confirmLink":   true,
+	"signedPreferenceRow": true,
 }
 
 func TestThePlaintextConfirmTokenReachesNoSinkButTheMail(t *testing.T) {
