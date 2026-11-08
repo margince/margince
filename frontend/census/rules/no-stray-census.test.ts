@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
 import { srcDir } from "../tree";
-import { readWaivers, strayImports } from "./no-stray-census.census";
+import { ownWalks, readWaivers, strayImports } from "./no-stray-census.census";
 
 const planted = join(srcDir, "features", "planted.test.ts");
 const found = (code: string) =>
@@ -47,5 +47,41 @@ describe("a test file outside census/ that walks the tree", () => {
     expect([
       ...readWaivers("# why\n\nsrc/a.test.ts\n  src/b.test.ts  \n"),
     ]).toEqual(["src/a.test.ts", "src/b.test.ts"]);
+  });
+});
+
+describe("a test file that writes its own walk", () => {
+  const walks = (code: string) =>
+    ownWalks(
+      parseSource(
+        planted,
+        `import { readdirSync as ls } from "node:fs";\n${code}`,
+      ),
+    );
+
+  it("is found when a function lists a directory and calls itself", () => {
+    expect(
+      walks(
+        "function sources(dir) { return ls(dir).flatMap((e) => sources(e)); }",
+      ),
+    ).toEqual(["walks the tree itself in sources()"]);
+  });
+
+  it("is found when readdirSync is asked to recurse", () => {
+    expect(walks('ls("src", { recursive: true });')).toEqual([
+      "walks the tree itself with a recursive readdirSync",
+    ]);
+  });
+
+  it("is found when import.meta.glob reaches under **", () => {
+    expect(walks('import.meta.glob(["./a/*.ts", "../**/*.tsx"]);')).toEqual([
+      "walks the tree itself with import.meta.glob over **",
+    ]);
+  });
+
+  it("is not one directory listed once", () => {
+    expect(
+      walks('const pages = ls("docs"); import.meta.glob("./*.json");'),
+    ).toEqual([]);
   });
 });

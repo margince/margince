@@ -5,7 +5,7 @@
 // imports a tree walker parses the tree again in its own module graph.
 //
 // The import is matched in the syntax tree by the exported name, so an alias
-// counts. census/stray-census-waivers.txt lists the files not moved yet. It
+// counts. A walk the file writes itself counts too. census/stray-census-waivers.txt lists the files not moved yet. It
 // only shrinks: an entry that no longer imports a walker is a finding.
 
 import { readFileSync } from "node:fs";
@@ -139,8 +139,109 @@ export function strayImports(path: string, source: ts.SourceFile): string[] {
   return found;
 }
 
+const calleeName = (call: ts.CallExpression): string | undefined =>
+  ts.isIdentifier(call.expression)
+    ? call.expression.text
+    : ts.isPropertyAccessExpression(call.expression)
+      ? call.expression.name.text
+      : undefined;
+
+function callsIn(node: ts.Node): string[] {
+  const names: string[] = [];
+  const visit = (child: ts.Node) => {
+    if (ts.isCallExpression(child)) names.push(calleeName(child) ?? "");
+    ts.forEachChild(child, visit);
+  };
+  ts.forEachChild(node, visit);
+  return names;
+}
+
+function declaredFunction(node: ts.Node): string | undefined {
+  if (ts.isFunctionDeclaration(node)) return node.name?.text;
+  if (
+    ts.isVariableDeclaration(node) &&
+    ts.isIdentifier(node.name) &&
+    node.initializer &&
+    (ts.isArrowFunction(node.initializer) ||
+      ts.isFunctionExpression(node.initializer))
+  ) {
+    return node.name.text;
+  }
+  return undefined;
+}
+
+// The local names `readdirSync` goes by in this file, aliases included.
+function readdirNames(source: ts.SourceFile): Set<string> {
+  const names = new Set(["readdirSync"]);
+  for (const statement of source.statements) {
+    const bindings = ts.isImportDeclaration(statement)
+      ? statement.importClause?.namedBindings
+      : undefined;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+    for (const element of bindings.elements) {
+      if ((element.propertyName ?? element.name).text === "readdirSync") {
+        names.add(element.name.text);
+      }
+    }
+  }
+  return names;
+}
+
+const recurses = (argument: ts.Expression) =>
+  ts.isObjectLiteralExpression(argument) &&
+  argument.properties.some(
+    (property) =>
+      ts.isPropertyAssignment(property) &&
+      property.name.getText() === "recursive" &&
+      property.initializer.kind === ts.SyntaxKind.TrueKeyword,
+  );
+
+const isMetaGlob = (call: ts.CallExpression) =>
+  ts.isPropertyAccessExpression(call.expression) &&
+  call.expression.name.text === "glob" &&
+  ts.isMetaProperty(call.expression.expression);
+
+const globsDeep = (argument: ts.Expression): boolean =>
+  ts.isStringLiteralLike(argument)
+    ? argument.text.includes("**")
+    : ts.isArrayLiteralExpression(argument) &&
+      argument.elements.some((element) => globsDeep(element));
+
+/**
+ * A walk a test file writes for itself: a function that calls `readdirSync`
+ * and itself, a `readdirSync` asked to recurse, or an `import.meta.glob` over
+ * `**`.
+ */
+export function ownWalks(source: ts.SourceFile): string[] {
+  const readdir = readdirNames(source);
+  const found: string[] = [];
+  const visit = (node: ts.Node) => {
+    const name = declaredFunction(node);
+    const calls = name ? callsIn(node) : [];
+    if (name && calls.includes(name) && calls.some((c) => readdir.has(c))) {
+      found.push(`walks the tree itself in ${name}()`);
+    }
+    if (ts.isCallExpression(node)) {
+      if (
+        readdir.has(calleeName(node) ?? "") &&
+        node.arguments.some(recurses)
+      ) {
+        found.push("walks the tree itself with a recursive readdirSync");
+      }
+      if (isMetaGlob(node) && node.arguments.some(globsDeep)) {
+        found.push("walks the tree itself with import.meta.glob over **");
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
 const strays = (file: CensusFile) =>
-  file.source ? strayImports(file.path, file.source) : [];
+  file.source
+    ? [...strayImports(file.path, file.source), ...ownWalks(file.source)]
+    : [];
 
 export const rule: CensusRule = {
   name: "no-stray-census",
@@ -164,7 +265,7 @@ export const rule: CensusRule = {
       })
       .map(
         (rel) =>
-          `${rel} is waived in census/stray-census-waivers.txt and imports no walker; delete its line`,
+          `${rel} is waived in census/stray-census-waivers.txt and walks no tree; delete its line`,
       );
     const found = corpus
       .filter((file) => !waived.has(file.rel))
