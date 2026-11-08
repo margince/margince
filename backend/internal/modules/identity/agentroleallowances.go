@@ -11,6 +11,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -55,9 +56,7 @@ type RoleValues struct {
 // Roles folds the preset into Admin's values, the shape the meter judges by.
 func (r RoleValues) Roles() map[string]agentvolume.Limits {
 	out := make(map[string]agentvolume.Limits, len(r.Own)+1)
-	for role, own := range r.Own {
-		out[role] = own
-	}
+	maps.Copy(out, r.Own)
 	for _, count := range allowanceCounts {
 		if preset := r.Preset.Of(count.counter); preset > 0 {
 			out[adminRoleKey] = out[adminRoleKey].With(count.counter, preset)

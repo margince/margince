@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import { Badge, Button, TextInput } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
@@ -19,7 +20,7 @@ import {
   type RoleDrafts,
   roleDraftOf,
 } from "./agentallowances.draft";
-import "../settings/settings-agents.css";
+import "./agentallowances.css";
 
 // What each role gives per count, and where each value comes from: the role's
 // own, the Admin preset, or the installation value it inherits.
@@ -215,9 +216,7 @@ export function RolesForm({
       />
       {refused && (
         <PanelBody>
-          <p className="t-caption" role="alert">
-            {t("agentAllowances.roles.refusal")}
-          </p>
+          <ErrorLine>{t("agentAllowances.roles.refusal")}</ErrorLine>
         </PanelBody>
       )}
     </>

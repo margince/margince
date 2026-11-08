@@ -9,8 +9,8 @@ import { StoryProviders } from "../../testing/story-utils";
 import { roleDraftsOf } from "./agentallowances.draft";
 import { RolesForm, RolesReadout } from "./agentallowances.roles";
 
-// The By role part of the allowances card on its own: each role's values with
-// their sources at rest, and the boxes an admin types them into.
+// The By role part of the allowances card on its own. At rest it shows each
+// role's values and sources; editing shows the boxes an admin types into.
 
 function Editing() {
   const [drafts, setDrafts] = useState(
