@@ -51,6 +51,7 @@ var PromptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 // Prompt is the user turn: the deal's facts, then every activity fenced by
 // its id. No message can close its span and pose as another.
 func Prompt(fence promptfence.Fence, in Input) string {
+	r := refsFor(in)
 	var b strings.Builder
 	fmt.Fprintf(&b, "Today: %s\nDeal: %s\nStage: %s\n", in.Today.Format(time.DateOnly), in.DealName, in.Stage)
 	fmt.Fprintf(&b, "Amount: %s\n", amountText(in.AmountMinor, in.Currency))
@@ -58,11 +59,12 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	fmt.Fprintf(&b, "Win probability: %d%% (%s)\n", in.Probability, in.ProbabilitySource)
 	fmt.Fprintf(&b, "Raise limit: %d%%\n", raiseCeiling(in))
 	for _, stage := range in.Later {
-		fmt.Fprintf(&b, "Later stage: %s (stage_id %s, probability %d%%)\n", stage.Name, stage.ID, stage.Probability)
+		fmt.Fprintf(&b, "Later stage: %s (stage_id %s, probability %d%%)\n",
+			stage.Name, r.stages.For(stage.ID), stage.Probability)
 	}
 	for _, criterion := range in.ExitCriteria {
 		fmt.Fprintf(&b, "Exit criterion of %s: %s (criterion_id %s, kind %s)%s\n",
-			criterion.Stage, criterion.Label, criterion.ID, criterion.Kind, hintText(criterion.Hint))
+			criterion.Stage, criterion.Label, r.criteria.For(criterion.ID), criterion.Kind, hintText(criterion.Hint))
 	}
 	for _, offer := range in.Offers {
 		fmt.Fprintf(&b, "Offer: %s, %s\n", values.MajorUnits(offer.GrossMinor, offer.Currency)+" "+offer.Currency, offer.Status)
@@ -77,7 +79,7 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	for _, activity := range in.Activities {
 		text := fmt.Sprintf("%s %s on %s | %s\n%s", activity.Kind, activity.Direction,
 			activity.OccurredAt.Format(time.DateOnly), activity.Subject, activity.Body)
-		b.WriteString(fence.WrapAttr("activity_id", activity.ID, text) + "\n")
+		b.WriteString(fence.WrapAttr("activity_id", r.activities.For(activity.ID), text) + "\n")
 	}
 	b.WriteString(`Return JSON: { "actions": [ { "kind", "date", "amount", "currency", "quoted_words", "probability", ` +
 		`"stage_id", "criteria", "cited_activity_ids", "reason", "confidence" } ] }. ` +

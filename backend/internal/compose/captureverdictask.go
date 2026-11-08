@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -46,6 +47,7 @@ import (
 //promptvoice:exempt the reply is one verdict enum value and a confidence number.
 func verdictRequest(row capture.PendingCounterparty) model.Request {
 	fence := promptfence.New()
+	ref := senderRefs(row).For(row.ID.String())
 	var prompt strings.Builder
 	prompt.WriteString("First-time sender (untrusted; judge it by its id):\n")
 	// One span over the whole sender, not one per field: the fields are
@@ -55,16 +57,22 @@ func verdictRequest(row capture.PendingCounterparty) model.Request {
 	// nothing in the sender's own bytes can end it.
 	sender := fmt.Sprintf("%s\nSubject: %s\n%s",
 		addressLine(row), row.Subject, row.Body)
-	prompt.WriteString(fence.WrapAttr("id", row.ID.String(), sender) + "\n")
+	prompt.WriteString(fence.WrapAttr("id", ref, sender) + "\n")
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry for the supplied id, where "verdict" is the sender kind.`)
 
 	return model.Request{
 		System:         verdictSystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: verdictSchema(row.ID.String()),
+		ResponseSchema: verdictSchema(ref),
 		SecretStripper: ai.NewSecretStripper(),
 	}
+}
+
+// senderRefs names the one sender a call judges s1: the id the prompt shows
+// and the reply answers by.
+func senderRefs(row capture.PendingCounterparty) *promptref.Refs {
+	return promptref.New("s", row.ID.String())
 }
 
 // addressLine says WHO REACHED WHOM, which the judgment turns on and the model
@@ -126,7 +134,7 @@ func (e *CounterpartyVerdictEngine) ask(
 	if msg := validateVerdictPayload(payload, row); msg != "" {
 		return nil, "", fmt.Errorf("verdict: %s", msg)
 	}
-	return payload.Results, out.ServedModel, nil
+	return resolveBatchRefs(payload.Results, senderRefs(row)), out.ServedModel, nil
 }
 
 // verdictShapeValid is the generation-time validator: the requested id exactly
@@ -149,7 +157,7 @@ func verdictShapeValid(row capture.PendingCounterparty) ai.Validator {
 // validateVerdictPayload names the first fidelity violation, or "" when the
 // payload is exact.
 func validateVerdictPayload(payload verdictPayload, row capture.PendingCounterparty) string {
-	want := map[string]bool{row.ID.String(): true}
+	want := map[string]bool{senderRefs(row).For(row.ID.String()): true}
 	seen := map[string]bool{}
 	for _, r := range payload.Results {
 		// Every echoed token is MODEL output, and a sender who got the model to

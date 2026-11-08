@@ -165,6 +165,9 @@ one certification run can cover:
    A batch that answers one result per label can use `resolveBatchRefs` in
    `internal/compose/batchfidelity.go`. `TestNoSiteShowsTheModelARecordUUID` builds every request of
    every corpus scenario and fails a site whose prompt, answer schema or tool list carries a UUID.
+   An integration fake that scripts its reply by record ID wraps in `inRefs`, in
+   `internal/compose/refscript_integration_test.go`. It finds each record in the request by text the
+   record shows and writes the ref the request gave it.
    Why a UUID is a bad name for a model:
    [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids).
 
