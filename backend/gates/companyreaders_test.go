@@ -62,6 +62,8 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                    "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
+	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":                        "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/contacts/companyreferrers.go:refuseIfNamedBy":                    "the company's own owner, read to compare with the owners of the deals and contacts that name it, inside a count that only ever KEEPS the company from an owner's archive. No company field leaves the predicate",
 	"internal/modules/contacts/unknownemploymentrepair.go:unknownEmploymentCandidate":  "a company liveness check only narrows the system data task repair and its relationship-authorized size estimate; no company field or identity leaves the predicate",
 	"internal/modules/contacts/sitereadlogo.go:logoUnwornByAnyCompany":                 "the NOT EXISTS that keeps a parked logo key while any company wears it, inside the release UPDATE on site_read. Nothing of a company is selected; removing it could only release more keys",
@@ -101,6 +103,7 @@ var predicateCompanyReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/erasure_manualreview.go:manualMentionSourcesSQL":  "the contact-delete-authorized eraser selects only identifiers of retained text requiring manual review. The compose flagger selects live controllers with unrestricted row scope, no field masks and current object read permission before issuing any notification; no matched text is copied",
 	"internal/modules/contacts/mergeprimaryrepair.go:mergeDroppedHeir":          "the merge-dropped-primary data task asks, as the system principal, whether a contact's archived primary sat at a company merged into its kept employer. Only merged_into_id is compared; no company column leaves the query, and the edge id goes to the audited promotion",
 	"internal/compose/company360/viewbaseline.go:keyVisitsSQL":                  "the visit-mark keying data task, run by KeyVisitsTx behind auth.RequireSystem: `company` appears only in an EXISTS that decides whether a mark's record is gone. It answers user_record_view ids and nothing of a company",
 	"internal/modules/contacts/geocodecopy.go:CopyCompanyPointsTx":              "the same data task's batch: it reads the company's address and old point to copy them onto the side row, under auth.RequireSystem (foldStep). It answers ids and a count; no company column reaches any caller",

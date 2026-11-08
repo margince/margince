@@ -93,12 +93,4 @@ var (
 	// and `MERGE`.
 	writeTarget = regexp.MustCompile(
 		`(?is)\b(?:update|insert\s+into|merge\s+into)\s+(?:only\s+)?(?:"?[a-z_][a-z0-9_]*"?\.)?"?([a-z_][a-z0-9_]*)"?`)
-	// assignmentFmt matches `col = …` and the multi-column form
-	// `(a, col) = (…)`, with or without the identifier quoted.
-	//
-	// Anchored on the whole identifier, so `currency` is not found inside
-	// `base_currency`: the substring reading is the half that survives a
-	// careless escape. The parenthesised branch may not cross a `(` of its own,
-	// so a column list cannot reach forward to an unrelated `=`.
-	assignmentFmt = `(?i)(?:(?:^|[,\s"])%[1]s"?\s*=)|(?:\([^()=]*[,\s"]?%[1]s"?[^()=]*\)\s*=)`
 )

@@ -59,6 +59,7 @@ func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 		t.Fatal("subject erasure no longer calls the seam that empties copies of the erased mail text")
 	}
 	maps.Copy(reached, filesReachableFrom(t, "internal/modules/ai", "EraseSamplesCopiedFromTx"))
+	maps.Copy(reached, filesReachableFrom(t, "internal/platform/database/storekit", "RedactAuditHistory"))
 
 	cascade := map[string]bool{}
 	for _, path := range erasureCascadeFiles {

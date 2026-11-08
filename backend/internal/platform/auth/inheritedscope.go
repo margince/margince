@@ -38,37 +38,7 @@ func ActivityAvailableClause(alias string) string {
 	return alias + ".restricted_at IS NULL"
 }
 
-// ActivityDiscoverClause is the activity analogue of ScopeClause, and the
-// weaker of the two activity gates: it answers whether the caller may learn
-// that an activity EXISTS — its occurred_at, direction, kind, who owns it —
-// without its content. Activities have no owner, but their free-text
-// inherits the sensitivity of the records they attach to. An activity is
-// discoverable when ANY linked contact/company/deal/lead/project is
-// visible under the caller's row scope, or when it has no links at all (a
-// workspace-shared note). It lives here, not in a module: it is the one
-// scope rule that spans the record tables and activity_link rows, and scope
-// policy has exactly one spelling (ADR-0054 §8). alias names the activity
-// table in the outer query.
-//
-// A reader that shows subject, body, participants, thread, attachments or
-// anything derived from them composes ActivityContentClause instead; this
-// clause is for the safe markers alone (a last-touch date, an open-task
-// count, an evidence probe), and a caller that picks it for content is the
-// defect restrictedreaders_test.go and the module census exist to catch.
-//
-// It is never empty: an unbounded principal is spared the link-walk, not the
-// availability test (ActivityAvailableClause). Callers written for the older
-// "empty means unscoped" contract keep working — an always-present clause is
-// what they append when it is present.
-func ActivityDiscoverClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return "", err
-	}
-	return activityDiscoverClause(p, alias, arg), nil
-}
-
-func activityDiscoverClause(p principal.Principal, alias string, arg func(any) int) string {
+func discoverGateFor(p principal.Principal, alias string, arg func(any) int) string {
 	available := ActivityAvailableClause(alias) + " AND " + internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
 		return available
@@ -217,32 +187,12 @@ func activityMembershipArm(p principal.Principal, alias string, arg func(any) in
 		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias))
 }
 
-// ActivityContentClause is the stronger activity gate: discoverable AND the
-// caller is in the activity's AUDIENCE. An activity's audience is
-// `workspace` (the default — everyone who can discover it reads it),
-// `participants` (the humans on it: the capturing mailbox owner, anyone
-// stamped as a participant by seat) or `selected` (the participants plus
-// the users and teams named in activity_audience_member). Every reader that
-// serves content — subject, body, attachments, participants, thread, and
-// everything derived from them: search, embeddings, briefs, exports,
-// webhooks — composes this one.
-//
-// The audience is a property of the ROW a human set, so it does not yield
-// to row_scope=all: an admin reading a colleague's limited mail is the
-// disclosure the limit exists to prevent. Only the system principal — the
-// relay, the privacy engines, the indexers writing on behalf of nobody —
-// reads the audience arm away. The arms sit behind the cheap audience
-// column test, so the EXISTS probes run for limited rows alone.
-func ActivityContentClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return "", err
-	}
-	discover := activityDiscoverClause(p, alias, arg)
+func contentGateFor(p principal.Principal, alias string, arg func(any) int) string {
+	discover := discoverGateFor(p, alias, arg)
 	if p.Type == principal.PrincipalSystem {
-		return discover + " AND " + CommitmentContentRetainedClause(alias), nil
+		return discover + " AND " + CommitmentContentRetainedClause(alias)
 	}
-	return discover + " AND " + activityContentAudienceArm(p, alias, arg), nil
+	return discover + " AND " + activityContentAudienceArm(p, alias, arg)
 }
 
 // Source availability is independent of the task's audience. A reminder cannot
@@ -254,7 +204,7 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
-	source := activityDiscoverClause(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
+	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
 	sourceID := provenance.TaskSourceActivitySQL(alias)
 	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
 	 OR EXISTS (SELECT 1 FROM activity %[4]s

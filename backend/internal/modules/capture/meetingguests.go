@@ -26,7 +26,11 @@ import (
 
 // manualAudienceReason is activities.ReasonManual: a member set the audience.
 // Spelled here because a module never imports a sibling.
-const manualAudienceReason = "manual"
+const (
+	manualAudienceReason = "manual"
+	rosterSeatArg        = "seat"
+	rosterAddressesArg   = "addresses"
+)
 
 // MeetingRoster is the guest list one calendar holds for a meeting on file.
 type MeetingRoster struct {
@@ -38,7 +42,9 @@ type MeetingRoster struct {
 	Complete bool
 	// Current says this is the calendar's copy as of now, so its answers replace
 	// the stored ones. A stored original only fills an answer no row holds.
-	Current bool
+	Current     bool
+	OwnerAnswer *connector.CalendarAnswer
+	Left        bool
 }
 
 // rosterStamp says which calendar roster writes the rows, if any, and whether a
@@ -76,8 +82,16 @@ func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec co
 		return err
 	}
 	crowd, err := stampGuestsPastCap(ctx, tx, id, fields.Kind, attested, rec.WithheldParties, roster)
-	if err != nil || crowd.leftOut == 0 {
+	if err != nil {
 		return err
+	}
+	if roster != nil && rec.CalendarAnswer != nil {
+		if _, err := settleAnswers(ctx, tx, id, MeetingRoster{Seat: *roster, Current: true, OwnerAnswer: rec.CalendarAnswer}, nil); err != nil {
+			return err
+		}
+	}
+	if crowd.leftOut == 0 {
+		return nil
 	}
 	_, err = recordGuestsLeftOut(ctx, tx, id, crowd.leftOut)
 	return err
@@ -93,7 +107,7 @@ func SettleMeetingRosterTx(
 	ctx, decider context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, evidence map[string]any,
 ) (LaterGuests, error) {
 	listed := append(append([]connector.MessageParticipant{}, roster.Parties.Participants...), roster.Parties.Withheld...)
-	if roster.Seat == ids.Nil || len(listed) == 0 {
+	if roster.Seat == ids.Nil || (len(listed) == 0 && !roster.Left && (roster.OwnerAnswer == nil || roster.OwnerAnswer.Response == "")) {
 		return LaterGuests{}, nil
 	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
@@ -139,6 +153,9 @@ func settleRosterRows(
 	if err != nil {
 		return LaterGuests{}, 0, err
 	}
+	if roster.Left {
+		return LaterGuests{Retired: retired}, 0, nil
+	}
 	resolvable, err := addFromTheRoster(ctx, tx, activityID, roster, bindSeats)
 	if err != nil {
 		return LaterGuests{}, 0, err
@@ -182,6 +199,9 @@ func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 func retireOffTheRoster(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, listed []connector.MessageParticipant,
 ) (int, error) {
+	if !roster.Current {
+		return 0, nil
+	}
 	addresses := make([]string, 0, len(listed))
 	declined := make([]string, 0, len(listed))
 	for _, p := range listed {
@@ -192,13 +212,14 @@ func retireOffTheRoster(
 		}
 	}
 	tag, err := tx.Exec(ctx, `
-		DELETE FROM activity_participant ap
-		 USING activity a
-		 WHERE a.id = ap.activity_id AND ap.activity_id = $1 AND ap.roster_seat = $2
-		   AND ap.address IS NOT NULL
-		   AND ap.user_id IS DISTINCT FROM $2 AND ap.user_id IS DISTINCT FROM a.host_user_id
-		   AND ((ap.user_id IS NOT NULL AND ap.address = ANY($3)) OR ($4 AND NOT ap.address = ANY($5)))`,
-		activityID, roster.Seat, declined, roster.Complete, addresses)
+ DELETE FROM activity_participant ap USING activity a
+ WHERE a.id=ap.activity_id AND ap.activity_id=@activity
+ AND ((@left AND ap.roster_seat=@seat AND ap.user_id=@seat)
+ OR (NOT @left AND ap.roster_seat=@seat AND ap.address IS NOT NULL
+ AND ap.user_id IS DISTINCT FROM @seat AND ap.user_id IS DISTINCT FROM a.host_user_id
+ AND ((ap.user_id IS NOT NULL AND ap.address=ANY(@declined)) OR (@complete AND NOT ap.address=ANY(@addresses)))))`, pgx.StrictNamedArgs{
+		capturedActivityObject: activityID, rosterSeatArg: roster.Seat, "left": roster.Left, "declined": declined, "complete": roster.Complete, rosterAddressesArg: addresses,
+	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: retiring the guests a calendar no longer lists: %w", err)
 	}
@@ -325,10 +346,11 @@ func (s *Sink) stampLaterGuests(ctx context.Context, tx pgx.Tx, id ids.ActivityI
 		return nil
 	}
 	roster := MeetingRoster{
-		Seat:     actorUserID(ctx),
-		Parties:  connector.Parties{Participants: rec.Participants, Withheld: rec.WithheldParties},
-		Complete: !rec.PartiesIncomplete,
-		Current:  true,
+		Seat:        actorUserID(ctx),
+		Parties:     connector.Parties{Participants: rec.Participants, Withheld: rec.WithheldParties},
+		Complete:    !rec.PartiesIncomplete,
+		Current:     true,
+		OwnerAnswer: rec.CalendarAnswer,
 	}
 	settled, err := SettleMeetingRosterTx(ctx, ctx, tx, id, roster, nil)
 	if err != nil || settled.Added == 0 || s.nameParticipants == nil || !namesSomebody(rec.Participants) {

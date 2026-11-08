@@ -2392,6 +2392,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.client_check_read": "Lesen des Schalters für die KI-Tool-Prüfung",
   "systemJob.client_registration_read": "Lesen der Registrierung von KI-Tools",
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
+  "systemJob.privacy_review": "Datenschutzprüfung nach einer Löschung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",

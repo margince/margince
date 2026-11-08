@@ -146,6 +146,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_pkey`: `unique, btree (id)`
 - `idx_activity_answer_mail_subject`: `btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''), '^(\s*(re|aw|antw)\s*:)+\s*', '', 'i'), '\s+', ' ', 'g'))), occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_answer_touch`: `btree (id, occurred_at) WHERE (((kind = 'call') OR ((kind = 'meeting') AND (meeting_status = 'held'))) AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
+- `idx_activity_attested_counterparty`: `btree (counterparty_email) WHERE counterparty_outbound_attested`
 - `idx_activity_channel_thread`: `btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)`
 - `idx_activity_counterparty_email`: `btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)`
 - `idx_activity_direction`: `btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))`
@@ -164,6 +165,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_tasks`: `btree (assignee_id, due_at) WHERE ((kind = 'task') AND (is_done = false) AND (archived_at IS NULL))`
 - `idx_activity_thread`: `btree (thread_key) WHERE (thread_key IS NOT NULL)`
 - `idx_activity_thread_reply_seek`: `btree (thread_key, kind, channel_provider, direction, occurred_at, id) WHERE ((thread_key IS NOT NULL) AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL))`
+- `idx_activity_unfolded_counterparty`: `btree (activity_unfolded_counterparty(counterparty_email)) WHERE (activity_unfolded_counterparty(counterparty_email) IS NOT NULL)`
 - `idx_activity_unjudged`: `btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unjudged_reply`: `btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unlabeled`: `btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%') AND (kind = 'email'))`

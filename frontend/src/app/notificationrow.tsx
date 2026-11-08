@@ -4,6 +4,7 @@ import type { NotificationItem } from "../features/settings/notifications.querie
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { opensElsewhere } from "../lib/linkclick";
+import { useSourceOpener } from "../lib/opensource";
 import { useViewerZone } from "../lib/viewerzone";
 import { noticeAction } from "./noticeaction";
 import { noticeHeadline } from "./noticeheadline";
@@ -29,6 +30,11 @@ export function NoticeRow({
   const t = useT();
   const action = noticeAction(notice.target);
   const href = action?.href;
+  const sourceOpener = useSourceOpener();
+  const openActivity =
+    notice.target?.type === "activity"
+      ? sourceOpener({ id: notice.target.id, kind: "note" })
+      : undefined;
   const { locale } = useLocale();
   const settled = notice.read_at !== undefined;
   const { headline, detail } = noticeHeadline(notice, t);
@@ -59,7 +65,7 @@ export function NoticeRow({
         {formatDateTime(notice.created_at, locale, readerZone)}
       </time>
       {/* Reading in a new tab does not settle the notice in this one. */}
-      {(action || !settled) && (
+      {(action || openActivity || !settled) && (
         <div className="notifrow-verb">
           {action && (
             <AppLink
@@ -71,6 +77,17 @@ export function NoticeRow({
             >
               {t(action.label)}
             </AppLink>
+          )}
+          {openActivity && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                onActivate();
+                openActivity();
+              }}
+            >
+              {t("tasks.openSource")}
+            </Button>
           )}
           {!settled && (
             <Button

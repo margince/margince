@@ -54229,11 +54229,15 @@ type NotificationItem struct {
 	Target *struct {
 		Id openapi_types.UUID `json:"id"`
 
-		// Type A record's class, as its own endpoint spells it, or one of two non-record targets:
+		// Type A record's class, as its own endpoint spells it, or a non-record review target:
 		// `approval` (a pending decision, `id` is the approval) and `data_task` (a
 		// background correction run, `id` is the `run_id` that failed). A client opens the
 		// corrections list rather than that run: a manual re-run replaces the `run_id`, so the
-		// one a notice names may no longer be listed.
+		// one a notice names may no longer be listed. Manual privacy reviews use
+		// `knowledge_document` (download the retained file), `email_signature` (the
+		// recipient's own account settings), `activity` (open the retained note in its
+		// drawer), `legal_entity` (Company settings), or `signature_template` (Company
+		// settings; `id` identifies the erasure whose review flagged the workspace template).
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
 }
