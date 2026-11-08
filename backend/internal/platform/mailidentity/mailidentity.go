@@ -143,6 +143,13 @@ func machineShape(address string) bool {
 		notificationHosts[host] || technicalDestinationHost(host)
 }
 
+// IsRecruitingRelayAddress identifies a routing address that must stay available
+// for review when correcting old contacts, rather than being auto-archived.
+func IsRecruitingRelayAddress(address string) bool {
+	local, host, found := strings.Cut(strings.ToLower(address), "@")
+	return found && isRecruitingRelay(local, host)
+}
+
 func isRecruitingRelay(local, host string) bool {
 	if host != "hire.lever.co" {
 		return false

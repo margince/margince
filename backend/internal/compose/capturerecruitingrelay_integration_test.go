@@ -7,14 +7,17 @@ package compose
 
 import (
 	"errors"
-	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/datatask"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/datatask"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -110,6 +113,35 @@ func TestRelayRepairRevisitsFinishedTasksAndPreservesHumanRecords(t *testing.T) 
 		if contactArchived(t, e, contact.UUID) || machineTagged(t, e, contact.UUID) != 1 {
 			t.Error("relay contact must stay available and be tagged for review")
 		}
+	}
+	runMachineAddressTask(ctx, t, e, technicalAddressDataTask(e.Pool))
+	for _, contact := range []ids.ContactID{relay, human} {
+		if contactArchived(t, e, contact.UUID) {
+			t.Fatal("technical repair archived a relay awaiting review")
+		}
+	}
+	tags := collections.NewStore(e.DB())
+	tagUUID, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM tag WHERE name='machine-address'`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tagID := ids.From[ids.TagKind](tagUUID)
+	if _, err := tags.RemoveTag(e.Admin(), tagID, "contact", human.UUID); err != nil {
+		t.Fatal(err)
+	}
+	replay := machineAddressDataTask()
+	replay.Version++
+	runMachineAddressTask(ctx, t, e, replay)
+	if machineTagged(t, e, human.UUID) != 0 {
+		t.Fatal("repair reversed a human tag removal")
+	}
+	if _, err := tags.ArchiveTag(e.Admin(), tagID); err != nil {
+		t.Fatal(err)
+	}
+	replay.Version++
+	runMachineAddressTask(ctx, t, e, replay)
+	if got := e.WsCount(t, `SELECT count(*) FROM tag WHERE id=$1 AND archived_at IS NULL`, tagID); got != 0 {
+		t.Fatal("repair restored an archived review tag")
 	}
 	runMachineAddressTask(ctx, t, e, task)
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'relationship' AND entity_id = $1 AND action = 'archive'`, inferred); got != 1 {
