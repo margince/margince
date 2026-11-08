@@ -27073,11 +27073,19 @@ export interface components {
             /**
              * @description Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
              *     Admin preset, which binds the built-in Admin role for a count while nobody saved an
-             *     Admin value for it and the installation value is still the default, set by no boot
-             *     source. `installation` is the installation value, which the role inherits.
+             *     Admin value for it and nobody chose the installation value. `installation` is the
+             *     installation value, which the role inherits. `installation_kept` is the installation
+             *     value saved for the role as `0`, which keeps Admin off the preset for that count.
              * @enum {string}
              */
-            source: "role" | "admin_preset" | "installation";
+            source: "role" | "admin_preset" | "installation" | "installation_kept";
+            if_unset: components["schemas"]["AgentRoleAllowanceFallback"];
+        };
+        /** @description What the count would give once the role's own value is given up (`unset`). */
+        AgentRoleAllowanceFallback: {
+            value: number;
+            /** @enum {string} */
+            source: "admin_preset" | "installation";
         };
         /**
          * @description One role's changes in a save. A count sent is saved for the role; `0` saves the
@@ -53689,9 +53697,10 @@ export interface components {
             resets_at: string;
         };
         /**
-         * @description One user's agents in the running window. Each count and allowance is the sum over
-         *     their live passports and connections, so a user with two passports has twice the
-         *     allowance. `state` is the worst state of any one of them.
+         * @description One user's agents in the running window. Each count is the sum over their live
+         *     passports and connections, so a user with two passports has twice the limit there.
+         *     `allowance` is what one of those passports may do, and is not summed. `state` is the
+         *     worst state of any one of them.
          */
         AgentUserUsage: {
             /** Format: uuid */

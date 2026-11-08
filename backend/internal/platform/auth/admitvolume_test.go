@@ -339,6 +339,33 @@ func TestAnUnreadableCountRefusesWithoutClaimingALimit(t *testing.T) {
 	}
 }
 
+// unreachableReserver reads headroom but cannot reserve: the counter store
+// failed between admission and the bulk change.
+type unreachableReserver struct{}
+
+func (unreachableReserver) Read(_ context.Context, c agentvolume.Counter) agentvolume.Reading {
+	return agentvolume.Reading{Counter: c, Limit: 100}
+}
+
+func (unreachableReserver) Reserve(context.Context, agentvolume.Counter, int) (agentvolume.Reading, bool, error) {
+	return agentvolume.Reading{}, false, errors.New("counter store unreachable")
+}
+
+func (unreachableReserver) Refund(context.Context, agentvolume.Counter, int, int64) error { return nil }
+
+// A bulk change whose reservation cannot reach the counter is refused as a
+// short wait, like an unreadable count, never as a limit reached.
+func TestABulkChangeTheCounterCannotReserveIsAShortWait(t *testing.T) {
+	gate := NewGate(&stubAuthority{seat: principal.SeatFull}, WithVolumeMeter(unreachableReserver{}))
+
+	_, err := gate.ReserveRecordWrites(agentCtx(principal.ScopeWrite), "update_records", 10)
+
+	unanswered, ok := errors.AsType[*VolumeUnansweredError](err)
+	if !ok || unanswered.Counter != agentvolume.Writes {
+		t.Errorf("an unreachable reservation answered %v, want an unanswered writes count", err)
+	}
+}
+
 func TestARestReadOnAGateWithNoBoundIsAdmitted(t *testing.T) {
 	if err := fullSeatGate().AdmitRead(agentCtx(principal.ScopeRead)); err != nil {
 		t.Fatalf("a REST read on a gate with no meter → %v", err)

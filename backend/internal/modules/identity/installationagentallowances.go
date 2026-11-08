@@ -19,8 +19,9 @@ import (
 
 // AgentAllowancePatch is a sparse write of the agent allowances: a nil field is
 // left as it is. WindowHours is scheduled, never written straight
-// (scheduleAgentWindowTx), and Roles replaces every role's values at once
-// against the live roles (saveRoleAllowancesTx).
+// (scheduleAgentWindowTx). Roles is sparse too: each set changes only the
+// counts it names, and a role or count no set names keeps its value
+// (saveRoleAllowancesTx).
 type AgentAllowancePatch struct {
 	WritesPerWindow *int
 	EgressPerWindow *int

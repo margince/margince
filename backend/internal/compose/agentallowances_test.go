@@ -4,10 +4,14 @@
 package compose
 
 import (
+	"errors"
+	"net/http"
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func TestTheAllowanceAnswerNamesAWaitingChangeAndItsStart(t *testing.T) {
@@ -37,5 +41,18 @@ func TestAChangeThatTookOverReadsAsTheLengthInForce(t *testing.T) {
 	}
 	if want := time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC); !out.AgentWindowResetsAt.Equal(want) {
 		t.Errorf("resets at %v, want %v", out.AgentWindowResetsAt, want)
+	}
+}
+
+// An unset naming no count is refused rather than dropped, which would answer
+// a save that never happened as a success.
+func TestAnUnsetNamingNoCountIsRefused(t *testing.T) {
+	unset := []crmcontracts.AgentRoleAllowanceSetUnset{"agent_reads_per_window"}
+
+	_, err := roleAllowanceSets([]crmcontracts.AgentRoleAllowanceSet{{RoleKey: "rep", Unset: &unset}})
+
+	refused, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok || refused.Status != http.StatusUnprocessableEntity {
+		t.Errorf("an unknown unset answered %v, want a 422 validation refusal", err)
 	}
 }

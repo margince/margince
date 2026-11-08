@@ -985,6 +985,24 @@ func (e AgentContextItemOccurredPrecision) Valid() bool {
 	}
 }
 
+// Defines values for AgentRoleAllowanceFallbackSource.
+const (
+	AgentRoleAllowanceFallbackSourceAdminPreset  AgentRoleAllowanceFallbackSource = "admin_preset"
+	AgentRoleAllowanceFallbackSourceInstallation AgentRoleAllowanceFallbackSource = "installation"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceFallbackSource enum.
+func (e AgentRoleAllowanceFallbackSource) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceFallbackSourceAdminPreset:
+		return true
+	case AgentRoleAllowanceFallbackSourceInstallation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentRoleAllowanceSetUnset.
 const (
 	AgentRoleAllowanceSetUnsetAgentCallsPerWindow  AgentRoleAllowanceSetUnset = "agent_calls_per_window"
@@ -1008,9 +1026,10 @@ func (e AgentRoleAllowanceSetUnset) Valid() bool {
 
 // Defines values for AgentRoleAllowanceValueSource.
 const (
-	AgentRoleAllowanceValueSourceAdminPreset  AgentRoleAllowanceValueSource = "admin_preset"
-	AgentRoleAllowanceValueSourceInstallation AgentRoleAllowanceValueSource = "installation"
-	AgentRoleAllowanceValueSourceRole         AgentRoleAllowanceValueSource = "role"
+	AgentRoleAllowanceValueSourceAdminPreset      AgentRoleAllowanceValueSource = "admin_preset"
+	AgentRoleAllowanceValueSourceInstallation     AgentRoleAllowanceValueSource = "installation"
+	AgentRoleAllowanceValueSourceInstallationKept AgentRoleAllowanceValueSource = "installation_kept"
+	AgentRoleAllowanceValueSourceRole             AgentRoleAllowanceValueSource = "role"
 )
 
 // Valid indicates whether the value is a known member of the AgentRoleAllowanceValueSource enum.
@@ -1019,6 +1038,8 @@ func (e AgentRoleAllowanceValueSource) Valid() bool {
 	case AgentRoleAllowanceValueSourceAdminPreset:
 		return true
 	case AgentRoleAllowanceValueSourceInstallation:
+		return true
+	case AgentRoleAllowanceValueSourceInstallationKept:
 		return true
 	case AgentRoleAllowanceValueSourceRole:
 		return true
@@ -31633,6 +31654,15 @@ type AgentRoleAllowance struct {
 	System bool `json:"system"`
 }
 
+// AgentRoleAllowanceFallback What the count would give once the role's own value is given up (`unset`).
+type AgentRoleAllowanceFallback struct {
+	Source AgentRoleAllowanceFallbackSource `json:"source"`
+	Value  int                              `json:"value" minimum:"1"`
+}
+
+// AgentRoleAllowanceFallbackSource defines model for AgentRoleAllowanceFallback.Source.
+type AgentRoleAllowanceFallbackSource string
+
 // AgentRoleAllowanceSet One role's changes in a save. A count sent is saved for the role; `0` saves the
 // installation value, which for the built-in Admin role turns the preset off for that count.
 // A count named in `unset` loses the role's value: the role uses the installation value
@@ -31659,10 +31689,14 @@ type AgentRoleAllowanceSetUnset string
 
 // AgentRoleAllowanceValue defines model for AgentRoleAllowanceValue.
 type AgentRoleAllowanceValue struct {
+	// IfUnset What the count would give once the role's own value is given up (`unset`).
+	IfUnset AgentRoleAllowanceFallback `json:"if_unset"`
+
 	// Source Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
 	// Admin preset, which binds the built-in Admin role for a count while nobody saved an
-	// Admin value for it and the installation value is still the default, set by no boot
-	// source. `installation` is the installation value, which the role inherits.
+	// Admin value for it and nobody chose the installation value. `installation` is the
+	// installation value, which the role inherits. `installation_kept` is the installation
+	// value saved for the role as `0`, which keeps Admin off the preset for that count.
 	Source AgentRoleAllowanceValueSource `json:"source"`
 
 	// Value The allowance this role gives for the count.
@@ -31671,8 +31705,9 @@ type AgentRoleAllowanceValue struct {
 
 // AgentRoleAllowanceValueSource Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
 // Admin preset, which binds the built-in Admin role for a count while nobody saved an
-// Admin value for it and the installation value is still the default, set by no boot
-// source. `installation` is the installation value, which the role inherits.
+// Admin value for it and nobody chose the installation value. `installation` is the
+// installation value, which the role inherits. `installation_kept` is the installation
+// value saved for the role as `0`, which keeps Admin off the preset for that count.
 type AgentRoleAllowanceValueSource string
 
 // AgentRoleResolvedAllowance What each one of this user's passports or connections may do per window, before any release,
@@ -31765,9 +31800,10 @@ type AgentUserRole struct {
 	RoleName string `json:"role_name"`
 }
 
-// AgentUserUsage One user's agents in the running window. Each count and allowance is the sum over
-// their live passports and connections, so a user with two passports has twice the
-// allowance. `state` is the worst state of any one of them.
+// AgentUserUsage One user's agents in the running window. Each count is the sum over their live
+// passports and connections, so a user with two passports has twice the limit there.
+// `allowance` is what one of those passports may do, and is not summed. `state` is the
+// worst state of any one of them.
 type AgentUserUsage struct {
 	// Allowance What each one of this user's passports or connections may do per window, before any release,
 	// and the role each count comes from.

@@ -283,8 +283,7 @@ func (g *Gate) ReserveRecordWrites(ctx context.Context, tool string, n int) (*Wr
 	reading, admitted, err := reserver.Reserve(ctx, agentvolume.Writes, n)
 	if err != nil {
 		slog.ErrorContext(ctx, "reserving a bulk change against the write budget failed", "tool", tool, "err", err)
-		return nil, fmt.Errorf("gate: %s could not be counted against this agent's write budget, so it was not run: %w",
-			tool, apperrors.ErrBudgetExceeded)
+		return nil, &VolumeUnansweredError{Tool: tool, Counter: agentvolume.Writes}
 	}
 	if reading.Unanswered {
 		return nil, refusalOf(tool, reading)

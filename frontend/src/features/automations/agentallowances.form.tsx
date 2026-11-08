@@ -30,8 +30,9 @@ import {
   type RoleAllowanceSet,
   type RoleDrafts,
   roleChangesOf,
+  roleDraftOf,
 } from "./agentallowances.draft";
-import { RolesForm, roleDiffLines } from "./agentallowances.roles";
+import { keepLocked, RolesForm, roleDiffLines } from "./agentallowances.roles";
 
 // The edit form of the allowances card: the installation value, the window,
 // every role's values, and what a save will do.
@@ -82,6 +83,8 @@ export function AllowanceForm({
   const lockOf = (property: keyof Draft): FieldLock =>
     lockFor(locks, `installation.${property}`, t);
   const windowLock = lockOf("agent_window_hours");
+  const roleLockOf = (property: Counts): FieldLock =>
+    lockFor(locks, `installation.${roleMapProperty(property)}`, t);
   const parsed = parseDraft(draft);
   const roles = roleChangesOf(allowances, roleDrafts);
   const patch: AllowancePatch = {
@@ -168,9 +171,7 @@ export function AllowanceForm({
         allowances={allowances}
         drafts={roleDrafts}
         busy={busy}
-        lockOf={(property) =>
-          lockFor(locks, `installation.${roleMapProperty(property)}`, t)
-        }
+        lockOf={roleLockOf}
         onDrafts={onRoleDrafts}
       />
       <PanelBody className="form-stack">
@@ -203,7 +204,9 @@ export function AllowanceForm({
                   (property) => lockOf(property).disabled,
                 ),
               );
-              onRoleDrafts(defaultRoleDrafts(allowances));
+              onRoleDrafts(
+                defaultRoleDrafts(allowances, roleDrafts, roleLockOf),
+              );
             }}
           >
             {t("agentAllowances.useDefaults")}
@@ -215,9 +218,20 @@ export function AllowanceForm({
 }
 
 // Every role's values given up: each role inherits, and Admin takes its preset.
-function defaultRoleDrafts(allowances: Allowances): RoleDrafts {
+function defaultRoleDrafts(
+  allowances: Allowances,
+  drafts: RoleDrafts,
+  lockOf: (property: Counts) => FieldLock,
+): RoleDrafts {
   return Object.fromEntries(
-    allowances.roles.map((role) => [role.role_key, EMPTY_ROLE_DRAFT]),
+    allowances.roles.map((role) => [
+      role.role_key,
+      keepLocked(
+        EMPTY_ROLE_DRAFT,
+        drafts[role.role_key] ?? roleDraftOf(role),
+        lockOf,
+      ),
+    ]),
   );
 }
 

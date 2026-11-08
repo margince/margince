@@ -108,8 +108,16 @@ export type RoleDrafts = Readonly<Record<string, RoleDraft>>;
 // Only a value the role holds starts typed. A preset or inherited value is not
 // one the admin saved, so it shows as the box's placeholder and is never sent.
 export function roleDraftOf(role: RoleAllowance): RoleDraft {
-  const box = (property: Counts) =>
-    role[property].source === "role" ? String(role[property].value) : "";
+  const box = (property: Counts) => {
+    switch (role[property].source) {
+      case "role":
+        return String(role[property].value);
+      case "installation_kept":
+        return "0";
+      default:
+        return "";
+    }
+  };
   return {
     agent_writes_per_window: box("agent_writes_per_window"),
     agent_egress_per_window: box("agent_egress_per_window"),

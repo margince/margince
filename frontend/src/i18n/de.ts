@@ -16112,8 +16112,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.source.role": "Für diese Rolle festgelegt",
   "agentAllowances.roles.source.admin_preset": "Admin-Vorgabe",
   "agentAllowances.roles.source.installation": "Installation",
+  "agentAllowances.roles.source.installation_kept":
+    "Bei der Installation gehalten",
   "agentAllowances.roles.editHelp":
-    "Lass ein Feld leer, um den Wert der Installation zu übernehmen; ein leeres Feld bei Admin nutzt die Admin-Vorgabe. Gib 0 ein, damit Admin beim Wert der Installation bleibt. Aufrufe 50 bis 20.000, Änderungen 10 bis 5.000, Sendungen 1 bis 200.",
+    "Lass ein Feld leer, um den Wert der Rolle aufzugeben; sein Platzhalter zeigt den Wert, der dann gilt. Gib 0 ein, damit Admin beim Wert der Installation bleibt. Aufrufe 50 bis 20.000, Änderungen 10 bis 5.000, Sendungen 1 bis 200.",
   "agentAllowances.roles.preset":
     "Admin beginnt bei {calls} Aufrufen und {changes} Änderungen, solange der Wert der Installation der Standard ist. Sendungen bleiben beim Wert der Installation.",
   "agentAllowances.roles.inherits": "Übernimmt {value}",

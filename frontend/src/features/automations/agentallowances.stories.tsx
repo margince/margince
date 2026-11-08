@@ -103,7 +103,11 @@ export const AdminOnAChosenInstallationValue: Story = {
         "admin",
         "Admin",
         {
-          agent_calls_per_window: { value: 5_000, source: "installation" },
+          agent_calls_per_window: {
+            value: 5_000,
+            source: "installation",
+            if_unset: { value: 5_000, source: "installation" },
+          },
           agent_writes_per_window: { value: 2_000, source: "admin_preset" },
         },
         true,

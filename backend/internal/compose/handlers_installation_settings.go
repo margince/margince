@@ -229,7 +229,14 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		EgressPerWindow: req.AgentEgressPerWindow,
 		CallsPerWindow:  req.AgentCallsPerWindow,
 		WindowHours:     req.AgentWindowHours,
-		Roles:           roleAllowanceSets(req.AgentRoleAllowances),
+	}
+	if req.AgentRoleAllowances != nil {
+		roles, err := roleAllowanceSets(*req.AgentRoleAllowances)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		patch.AgentAllowances.Roles = &roles
 	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {

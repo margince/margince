@@ -4,37 +4,52 @@
 import type { components } from "../api/schema";
 
 type RoleAllowance = components["schemas"]["AgentRoleAllowance"];
-type Source = components["schemas"]["AgentRoleAllowanceValue"]["source"];
+type Value = components["schemas"]["AgentRoleAllowanceValue"];
+type Count =
+  | "agent_writes_per_window"
+  | "agent_egress_per_window"
+  | "agent_calls_per_window";
 
-const inherited = (value: number) => ({
-  value,
-  source: "installation" as Source,
-});
+const INSTALLATION: Record<Count, number> = {
+  agent_writes_per_window: 200,
+  agent_egress_per_window: 20,
+  agent_calls_per_window: 1_000,
+};
+const PRESET: Partial<Record<Count, number>> = {
+  agent_writes_per_window: 2_000,
+  agent_calls_per_window: 20_000,
+};
 
-// A role row as the server answers it: each count its own value, the Admin
-// preset, or the installation value it inherits.
+// A role row as the server answers it. Each count holds its own value, the
+// Admin preset or the installation value, and what an emptied box gives.
 export function roleAllowance(
   role_key: string,
   role_name: string,
-  values: Partial<
-    Record<
-      | "agent_writes_per_window"
-      | "agent_egress_per_window"
-      | "agent_calls_per_window",
-      { value: number; source: Source }
-    >
-  > = {},
+  values: Partial<Record<Count, Omit<Value, "if_unset"> & Partial<Value>>> = {},
   system = true,
   holds_preset = false,
 ): RoleAllowance {
+  const cell = (count: Count): Value => {
+    const preset = holds_preset ? PRESET[count] : undefined;
+    const fallback: Value["if_unset"] =
+      preset === undefined
+        ? { value: INSTALLATION[count], source: "installation" }
+        : { value: preset, source: "admin_preset" };
+    const given = values[count];
+    return {
+      value: given?.value ?? INSTALLATION[count],
+      source: given?.source ?? "installation",
+      if_unset: given?.if_unset ?? fallback,
+    };
+  };
   return {
     role_key,
     role_name,
     system,
     holds_preset,
-    agent_writes_per_window: values.agent_writes_per_window ?? inherited(200),
-    agent_egress_per_window: values.agent_egress_per_window ?? inherited(20),
-    agent_calls_per_window: values.agent_calls_per_window ?? inherited(1_000),
+    agent_writes_per_window: cell("agent_writes_per_window"),
+    agent_egress_per_window: cell("agent_egress_per_window"),
+    agent_calls_per_window: cell("agent_calls_per_window"),
   };
 }
 

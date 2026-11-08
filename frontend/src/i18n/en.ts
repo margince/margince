@@ -16008,8 +16008,9 @@ export const en = {
   "agentAllowances.roles.source.role": "Set for this role",
   "agentAllowances.roles.source.admin_preset": "Admin preset",
   "agentAllowances.roles.source.installation": "Installation",
+  "agentAllowances.roles.source.installation_kept": "Kept on installation",
   "agentAllowances.roles.editHelp":
-    "Leave a box empty to inherit the installation value; Admin’s empty box takes the Admin preset. Type 0 to keep Admin on the installation value. Calls 50 to 20,000, changes 10 to 5,000, sends 1 to 200.",
+    "Leave a box empty to give the role’s value up; its placeholder shows the value that then applies. Type 0 to keep Admin on the installation value. Calls 50 to 20,000, changes 10 to 5,000, sends 1 to 200.",
   "agentAllowances.roles.preset":
     "Admin starts at {calls} calls and {changes} changes where the installation value is still the default. Sends stay at the installation value.",
   "agentAllowances.roles.inherits": "Inherits {value}",

@@ -68,6 +68,25 @@ describe("roleChangesOf", () => {
   });
 });
 
+describe("a kept installation value", () => {
+  const admin = roleAllowance(
+    "admin",
+    "Admin",
+    { agent_calls_per_window: { value: 1_000, source: "installation_kept" } },
+    true,
+    true,
+  );
+  const allowances = { ...defaultAgentAllowances, roles: [admin] };
+
+  it("starts as 0 and, emptied, is given up so Admin takes its preset again", () => {
+    const drafts = roleDraftsOf(allowances.roles);
+    expect(drafts.admin.agent_calls_per_window).toBe("0");
+    expect(roleChangesOf(allowances, { admin: EMPTY_ROLE_DRAFT })).toEqual([
+      { role_key: "admin", unset: ["agent_calls_per_window"] },
+    ]);
+  });
+});
+
 describe("parseRoleCell", () => {
   it("reads empty as no value, 0 as the installation value, and refuses one out of range", () => {
     expect(parseRoleCell("agent_calls_per_window", "")).toBeUndefined();

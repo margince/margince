@@ -127,14 +127,18 @@ func TestAdminSentWithZeroUsesTheInstallationValue(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("saving Admin at zero → %d", code)
 	}
-	wantValue(t, "Admin calls", roleRow(t, saved, "admin").AgentCallsPerWindow, agentvolume.DefaultCalls, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
+	calls := roleRow(t, saved, "admin").AgentCallsPerWindow
+	wantValue(t, "Admin calls", calls, agentvolume.DefaultCalls, crmcontracts.AgentRoleAllowanceValueSourceInstallationKept)
+	if calls.IfUnset.Value != 20000 || calls.IfUnset.Source != crmcontracts.AgentRoleAllowanceFallbackSourceAdminPreset {
+		t.Errorf("Admin calls would fall back to %+v once unset, want the 20000 preset", calls.IfUnset)
+	}
 
 	if code, saved = patchAllowances(installationAdminCtx(e), t, h,
 		`{"agent_role_allowances":[{"role_key":"admin","unset":["agent_calls_per_window"]}]}`); code != http.StatusOK {
 		t.Fatalf("unsetting Admin's calls → %d", code)
 	}
 	wantValue(t, "Admin calls once unset", roleRow(t, saved, "admin").AgentCallsPerWindow, 20000, crmcontracts.AgentRoleAllowanceValueSourceAdminPreset)
-	wantValue(t, "Admin changes, still saved at zero", roleRow(t, saved, "admin").AgentWritesPerWindow, agentvolume.DefaultWrites, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
+	wantValue(t, "Admin changes, still saved at zero", roleRow(t, saved, "admin").AgentWritesPerWindow, agentvolume.DefaultWrites, crmcontracts.AgentRoleAllowanceValueSourceInstallationKept)
 }
 
 // The preset binds changes while an operator chose calls. Saving another role

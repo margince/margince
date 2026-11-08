@@ -23,9 +23,11 @@ import { useUpdateInstallationSettings } from "../sign-in/installation-settings"
 import {
   type Allowances,
   COUNTS,
+  type Counts,
   chosenWindow,
   type Draft,
   draftOf,
+  type RoleAllowance,
   type RoleDrafts,
   roleDraftsOf,
 } from "./agentallowances.draft";
@@ -108,6 +110,9 @@ function AllowancesBody({
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [roleDrafts, setRoleDrafts] = useState<RoleDrafts>({});
+  // The allowances the form opened on. A save sends what moved from these,
+  // so a refresh mid-edit cannot turn another admin's new value into a change.
+  const [openedOn, setOpenedOn] = useState<Allowances | null>(null);
   useUnsavedGuard(draft !== null);
   // A new allowance is the limit every usage bar is drawn against.
   const update = useUpdateInstallationSettings(() => {
@@ -126,7 +131,7 @@ function AllowancesBody({
         </>
       ) : (
         <AllowanceForm
-          allowances={allowances}
+          allowances={openedOn ?? allowances}
           locks={locks}
           draft={draft}
           roleDrafts={roleDrafts}
@@ -162,6 +167,7 @@ function AllowancesBody({
                 update.reset();
                 setDraft(draftOf(allowances));
                 setRoleDrafts(roleDraftsOf(allowances.roles));
+                setOpenedOn(allowances);
               }}
             >
               {t("agentAllowances.edit")}
@@ -217,6 +223,19 @@ function AllowanceReadout({
   );
 }
 
+// A role is at its shipped value for a count when it holds none of its own.
+// The preset's role also needs the preset to bind where it has one.
+function atShippedValue(role: RoleAllowance, property: Counts): boolean {
+  const { source } = role[property];
+  if (source === "role" || source === "installation_kept") {
+    return false;
+  }
+  // Sends have no preset; the preset's role is at its shipped value for the
+  // other counts only while the preset binds.
+  const hasPreset = role.holds_preset && property !== "agent_egress_per_window";
+  return !hasPreset || source === "admin_preset";
+}
+
 // Says in words whether any value is off its default, so a reader of the plain
 // numbers knows if they are looking at what ships. A role's own value is one.
 function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
@@ -225,7 +244,7 @@ function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
     COUNTS.every(
       (row) =>
         allowances[row.property] === allowances.defaults[row.property] &&
-        allowances.roles.every((role) => role[row.property].source !== "role"),
+        allowances.roles.every((role) => atShippedValue(role, row.property)),
     ) && chosenWindow(allowances) === allowances.defaults.agent_window_hours;
   return (
     <Callout

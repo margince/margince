@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -53,6 +54,11 @@ type RoleValues struct {
 	Own map[string]agentvolume.Limits
 	// Preset is the Admin preset where it binds, zero where it does not.
 	Preset agentvolume.Limits
+	// Kept is each role's counts saved at 0, kept on the installation value.
+	Kept map[string][]agentvolume.Counter
+	// PresetIfUnset is the preset where nobody chose the installation value:
+	// what Admin takes for a count once it gives its own value up.
+	PresetIfUnset agentvolume.Limits
 }
 
 // Roles folds the preset into Admin's values, the shape the meter judges by.
@@ -73,13 +79,18 @@ type savedRoleMaps map[agentvolume.Counter]map[string]int
 // roleValuesOf folds the saved role maps into each role's values and applies
 // the preset where it binds.
 func roleValuesOf(chosen installationChosen, maps savedRoleMaps) RoleValues {
-	out := RoleValues{Own: map[string]agentvolume.Limits{}}
+	out := RoleValues{Own: map[string]agentvolume.Limits{}, Kept: map[string][]agentvolume.Counter{}}
 	for i, count := range allowanceCounts {
 		saved := maps[count.counter]
 		for role, value := range saved {
 			if value > 0 {
 				out.Own[role] = out.Own[role].With(count.counter, value)
+			} else {
+				out.Kept[role] = append(out.Kept[role], count.counter)
 			}
+		}
+		if !chosen[i] {
+			out.PresetIfUnset = out.PresetIfUnset.With(count.counter, AdminAllowancePreset.Of(count.counter))
 		}
 		if presetBinds(chosen[i], saved) {
 			out.Preset = out.Preset.With(count.counter, AdminAllowancePreset.Of(count.counter))
@@ -119,6 +130,13 @@ func (s *InstallationSettingsStore) saveRoleAllowancesTx(ctx context.Context, tx
 	roles, err := liveRolesTx(ctx, tx)
 	if err != nil {
 		return err
+	}
+	// Locked in one order before the read, so two saves of different roles
+	// apply one after the other instead of the later dropping the earlier.
+	for _, count := range allowanceCounts {
+		if err := settings.LockForWrite(ctx, tx, count.byRole.Key()); err != nil {
+			return err
+		}
 	}
 	saved, err := readRoleMapsTx(ctx, tx, s.config)
 	if err != nil {
@@ -199,6 +217,10 @@ type RoleAllowance struct {
 	HoldsPreset bool
 	Own         agentvolume.Limits
 	Preset      agentvolume.Limits
+	// Kept is the counts saved at 0; PresetIfUnset is what each count takes
+	// once the role gives its value up, where that is the preset.
+	Kept          []agentvolume.Counter
+	PresetIfUnset agentvolume.Limits
 }
 
 // liveRole is a role a user can hold, in the order the role list shows them.
@@ -240,9 +262,9 @@ func seedRank(seeded []string, key string) int {
 func roleAllowances(roles []liveRole, held RoleValues) []RoleAllowance {
 	out := make([]RoleAllowance, 0, len(roles))
 	for _, r := range roles {
-		allowance := RoleAllowance{Key: r.key, Name: r.name, System: r.system, Own: held.Own[r.key]}
+		allowance := RoleAllowance{Key: r.key, Name: r.name, System: r.system, Own: held.Own[r.key], Kept: held.Kept[r.key]}
 		if r.key == adminRoleKey {
-			allowance.HoldsPreset, allowance.Preset = true, held.Preset
+			allowance.HoldsPreset, allowance.Preset, allowance.PresetIfUnset = true, held.Preset, held.PresetIfUnset
 		}
 		out = append(out, allowance)
 	}

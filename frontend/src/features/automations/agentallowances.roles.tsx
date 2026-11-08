@@ -114,29 +114,48 @@ export function RolesReadout({
   );
 }
 
-// What an empty box gives, said in its placeholder: the preset where it binds,
-// else the installation value.
+// What an empty box gives, said in its placeholder. The server works out the
+// value a count takes once the role's own is given up.
 function emptyBoxSays(
   role: RoleAllowance,
-  allowances: Allowances,
   property: Counts,
   t: Translator,
   locale: Locale,
 ): string {
-  const { value, source } = role[property];
-  return source === "admin_preset"
-    ? t("agentAllowances.roles.presetValue", {
-        value: formatNumber(value, locale),
-      })
-    : t("agentAllowances.roles.inherits", {
-        value: formatNumber(allowances[property], locale),
-      });
+  const { value, source } = role[property].if_unset;
+  return t(
+    source === "admin_preset"
+      ? "agentAllowances.roles.presetValue"
+      : "agentAllowances.roles.inherits",
+    { value: formatNumber(value, locale) },
+  );
 }
 
-// The draft "Use the installation value" leaves: for the preset's role, the
-// installation value saved, since an empty box would take the preset.
-function installationDraft(role: RoleAllowance): RoleDraft {
-  return role.holds_preset ? INSTALLATION_ROLE_DRAFT : EMPTY_ROLE_DRAFT;
+// The draft "Use the installation value" leaves. For the preset's role that is
+// the installation value saved, since an empty box would take the preset. A
+// count a boot source locks keeps its box, so the save is not refused for it.
+function installationDraft(
+  role: RoleAllowance,
+  current: RoleDraft,
+  lockOf: (property: Counts) => FieldLock,
+): RoleDraft {
+  const target = role.holds_preset ? INSTALLATION_ROLE_DRAFT : EMPTY_ROLE_DRAFT;
+  return keepLocked(target, current, lockOf);
+}
+
+// keepLocked is next with every locked count's box left as it is in current.
+export function keepLocked(
+  next: RoleDraft,
+  current: RoleDraft,
+  lockOf: (property: Counts) => FieldLock,
+): RoleDraft {
+  const out = { ...next };
+  for (const { property } of COUNTS) {
+    if (lockOf(property).disabled) {
+      out[property] = current[property];
+    }
+  }
+  return out;
 }
 
 export function RolesForm({
@@ -181,7 +200,7 @@ export function RolesForm({
           })}
           aria-invalid={refused ? true : undefined}
           data-testid={`role-${role.role_key}-${property}`}
-          placeholder={emptyBoxSays(role, allowances, property, t, locale)}
+          placeholder={emptyBoxSays(role, property, t, locale)}
           value={draft[property]}
           disabled={busy || lockOf(property).disabled}
           onChange={(e) => set(role, { ...draft, [property]: e.target.value })}
@@ -196,8 +215,16 @@ export function RolesForm({
       render: (role) => (
         <Button
           variant="link"
-          disabled={busy || sameDraft(draftOf(role), installationDraft(role))}
-          onClick={() => set(role, installationDraft(role))}
+          disabled={
+            busy ||
+            sameDraft(
+              draftOf(role),
+              installationDraft(role, draftOf(role), lockOf),
+            )
+          }
+          onClick={() =>
+            set(role, installationDraft(role, draftOf(role), lockOf))
+          }
         >
           {t("agentAllowances.roles.useInstallation")}
         </Button>
@@ -268,9 +295,9 @@ export function roleDiffLines(
   t: Translator,
   locale: Locale,
 ): string[] {
-  const shown = (role: RoleAllowance, text: string) => {
+  const shown = (role: RoleAllowance, property: Counts, text: string) => {
     const trimmed = text.trim();
-    if (trimmed === "" && role.holds_preset) {
+    if (trimmed === "" && role[property].if_unset.source === "admin_preset") {
       return t("agentAllowances.diff.preset");
     }
     return trimmed === "" || trimmed === "0"
@@ -287,8 +314,8 @@ export function roleDiffLines(
             t("agentAllowances.diff.role", {
               role: role.role_name,
               label: t(`agentAllowances.${row.copy}.label`),
-              from: shown(role, before[row.property]),
-              to: shown(role, after[row.property]),
+              from: shown(role, row.property, before[row.property]),
+              to: shown(role, row.property, after[row.property]),
             }),
           ],
     );

@@ -6,6 +6,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -14,6 +15,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider, translate } from "../../i18n";
 import {
   defaultAgentAllowances,
+  roleAllowance,
   roleTunedAgentAllowances,
 } from "../../testing/agentallowances.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -528,6 +530,100 @@ describe("AgentAllowancesCard by role", () => {
         },
       ],
     });
+  });
+
+  it("shows what an emptied box gives, the preset where it would bind", async () => {
+    const adminOwn = {
+      ...defaultAgentAllowances,
+      roles: [
+        roleAllowance(
+          "admin",
+          "Admin",
+          { agent_calls_per_window: { value: 30_000, source: "role" } },
+          true,
+          true,
+        ),
+      ],
+    };
+    vi.stubGlobal("fetch", backendFor(EDITOR, adminOwn).fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    const box = await screen.findByTestId("role-admin-agent_calls_per_window");
+    await user.clear(box);
+
+    expect(box).toHaveAttribute("placeholder", "Admin preset 20,000");
+    expect(
+      screen.getByText(/Admin, Calls in total 30,000 → Admin preset/),
+    ).toBeTruthy();
+  });
+
+  it("leaves a locked count alone when a row goes back to the installation value", async () => {
+    const locks = [
+      {
+        key: "installation.agent_role_calls_per_window",
+        origin: {
+          source: "env",
+          name: "MARGINCE_INSTALLATION_AGENT_ROLE_CALLS_PER_WINDOW",
+        },
+      },
+    ];
+    const { fetchMock, patches } = backendFor(
+      EDITOR,
+      roleTunedAgentAllowances,
+      locks,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    const opsRow = await screen.findByTestId("role-allowance-ops");
+    await user.click(
+      within(opsRow).getByRole("button", {
+        name: translate("en", "agentAllowances.roles.useInstallation"),
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    );
+
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0]).toEqual({
+      agent_role_allowances: [
+        { role_key: "ops", unset: ["agent_writes_per_window"] },
+      ],
+    });
+  });
+
+  it("says the allowances changed once Admin is kept off its preset", async () => {
+    const kept = {
+      ...defaultAgentAllowances,
+      roles: [
+        roleAllowance(
+          "admin",
+          "Admin",
+          {
+            agent_calls_per_window: {
+              value: 1_000,
+              source: "installation_kept",
+            },
+            agent_writes_per_window: { value: 2_000, source: "admin_preset" },
+          },
+          true,
+          true,
+        ),
+      ],
+    };
+    vi.stubGlobal("fetch", backendFor(EDITOR, kept).fetchMock);
+    render(<AgentAllowancesCard />);
+
+    expect(
+      await screen.findByText(translate("en", "agentAllowances.state.changed")),
+    ).toBeTruthy();
   });
 
   it("refuses a role value outside its range in the box", async () => {
