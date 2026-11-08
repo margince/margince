@@ -108,7 +108,7 @@ func Parse(raw string) (Reply, error) {
 
 // Patterns for the spans a rendering must carry over unchanged. A date or an
 // amount may be written another way in the target language, and its digit
-// runs survive every such spelling.
+// runs survive every such spelling but a month's name; spelledAsMonth reads that.
 var (
 	digitRun = regexp.MustCompile(`\d+`)
 	emailRun = regexp.MustCompile(`[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}`)

@@ -57,6 +57,10 @@ func TestTheValidatorRefusesARenderingAReaderMustNotSee(t *testing.T) {
 		Body: "The offer for 48.500 EUR is valid until 15.12.2026. Questions to mara.keller@example.com " +
 			"or https://example.com/angebot.",
 	}
+	vietnamese := Input{
+		Body:   "Chúng tôi sẽ gửi bản hợp đồng sửa đổi trước ngày 20 tháng 11.",
+		Source: textlang.Vietnamese, Target: textlang.German,
+	}
 	cases := []struct {
 		name  string
 		in    Input
@@ -64,6 +68,12 @@ func TestTheValidatorRefusesARenderingAReaderMustNotSee(t *testing.T) {
 		ok    bool
 	}{
 		{"a faithful rendering", german, good, true},
+		{"a month written by its name", vietnamese, Reply{Body: "Wir senden den geänderten Vertrag bis zum 20. November."}, true},
+		{"a dotted date with its month named", Input{Body: "Das Angebot gilt bis 15.12.2026.", Target: textlang.English},
+			Reply{Body: "The offer is valid until 15 December 2026."}, true},
+		{"a month named as another month", vietnamese, Reply{Body: "Wir senden den geänderten Vertrag bis zum 20. Dezember."}, false},
+		{"a dropped count beside a named month", Input{Body: "Wir brauchen 11 Lizenzen bis zum 20.11.", Target: textlang.English},
+			Reply{Body: "We need the licences by 20 November."}, false},
 		{"a lost amount", german, Reply{Subject: good.Subject, Body: strings.Replace(good.Body, "48.500", "48,000", 1)}, false},
 		{"a lost date", german, Reply{Subject: good.Subject, Body: strings.Replace(good.Body, "15.12.2026", "mid December", 1)}, false},
 		{"a lost address", german, Reply{Subject: good.Subject, Body: strings.Replace(good.Body, "mara.keller@example.com", "Mara", 1)}, false},

@@ -7,13 +7,20 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 var (
 	sentenceEnd = regexp.MustCompile(`[.!?]+(?:\s+|$)`)
 	initial     = regexp.MustCompile(`(^|[\s(])\p{L}\.`)
+	// The month of "tháng 11", of "20.11." or "20/11", and of "2026-11-20".
+	monthPosition = regexp.MustCompile(`tháng\s+(\d{1,2})\b|\b\d{1,2}[./](\d{1,2})\b|\b\d{4}-(\d{2})-\d{2}\b`)
 )
 
 func checkSection(source, rendered string) error {
@@ -21,11 +28,13 @@ func checkSection(source, rendered string) error {
 	if (source == "") != (rendered == "") {
 		return errors.New("keep each section present or absent as in the original")
 	}
-	for _, pattern := range []*regexp.Regexp{digitRun, emailRun, linkRun} {
-		if lost := missingSpans(pattern, source, rendered); len(lost) > 0 {
-			return fmt.Errorf("the rendering lost %s; keep every number, email address and link exactly",
-				strings.Join(lost, ", "))
-		}
+	lost := slices.DeleteFunc(missingSpans(digitRun, source, rendered), func(run string) bool {
+		return spelledAsMonth(run, source, rendered)
+	})
+	lost = append(lost, missingSpans(emailRun, source, rendered)...)
+	if lost = append(lost, missingSpans(linkRun, source, rendered)...); len(lost) > 0 {
+		return fmt.Errorf("the rendering lost %s; keep every number, email address and link exactly",
+			strings.Join(lost, ", "))
 	}
 	// Native phrasing varies across languages; allow threefold expansion or
 	// contraction and a short greeting's fixed overhead, but reject summaries.
@@ -41,6 +50,41 @@ func checkSection(source, rendered string) error {
 		return errors.New("the open questions disappeared; keep them as questions")
 	}
 	return nil
+}
+
+// spelledAsMonth reports whether a digit run the rendering dropped is a month
+// it wrote by name: every place the source holds the run is a month position,
+// and the rendering names that month. A count that shares the digits still
+// has to survive as digits.
+func spelledAsMonth(run, source, rendered string) bool {
+	number, err := strconv.Atoi(run)
+	if err != nil || number < 1 || number > 12 {
+		return false
+	}
+	asMonth := 0
+	for _, match := range monthPosition.FindAllStringSubmatch(source, -1) {
+		if slices.Contains(match[1:], run) {
+			asMonth++
+		}
+	}
+	if asMonth < countRuns(source, run) {
+		return false
+	}
+	words := strings.FieldsFunc(strings.ToLower(rendered), func(r rune) bool { return !unicode.IsLetter(r) })
+	return slices.ContainsFunc(words, func(word string) bool {
+		month, ok := textlang.MonthWord(word)
+		return ok && int(month) == number
+	})
+}
+
+func countRuns(text, run string) int {
+	count := 0
+	for _, found := range digitRun.FindAllString(text, -1) {
+		if found == run {
+			count++
+		}
+	}
+	return count
 }
 
 func sentenceCount(text string) int {
