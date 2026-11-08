@@ -28,12 +28,12 @@ const (
 	webhookBodyRetainDays = 7
 )
 
-// WithOutboxReaders returns a service that keeps every event of unreadTypes
-// until the assurance check has read it. Without them the pass leaves the
-// outbox alone rather than remove input the check has not read.
-func (s *RetentionService) WithOutboxReaders(unreadTypes []string) *RetentionService {
+// WithOutboxReaders returns a service that keeps every published event a
+// reader still needs. Without them the pass leaves the outbox alone rather
+// than remove input a reader has not used.
+func (s *RetentionService) WithOutboxReaders(readers storekit.OutboxReaders) *RetentionService {
 	out := *s
-	out.unreadOutboxTypes = unreadTypes
+	out.outboxReaders = &readers
 	return &out
 }
 
@@ -57,8 +57,8 @@ func (s *RetentionService) pruneRecordCopies(ctx context.Context, retainOnly boo
 		name: "webhook bodies", days: webhookBodyRetainDays,
 		past: s.purgeRawCaptures.DeliveryCopiesPastTx, clear: s.purgeRawCaptures.ClearDeliveryCopiesTx,
 	}}
-	if s.unreadOutboxTypes == nil {
-		s.log.Warn("retention: published events are kept, because the assurance check's input types were not supplied")
+	if s.outboxReaders == nil {
+		s.log.Warn("retention: published events are kept, because the outbox's readers were not supplied")
 	} else {
 		stores = append(stores, copyStore{
 			name: "published events", days: outboxRetainDays,
@@ -112,7 +112,7 @@ func (s *RetentionService) pruneCopies(ctx context.Context, store copyStore) err
 // each envelope names. An envelope naming no readable record id is held by
 // nothing.
 func (s *RetentionService) publishedEventsPast(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int) ([]RecordCopy, error) {
-	events, err := storekit.PublishedOutboxCopies(ctx, tx, cutoff, after, limit, s.unreadOutboxTypes)
+	events, err := storekit.PublishedOutboxCopies(ctx, tx, cutoff, after, limit, *s.outboxReaders)
 	if err != nil {
 		return nil, err
 	}

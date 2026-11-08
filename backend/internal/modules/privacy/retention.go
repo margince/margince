@@ -167,8 +167,8 @@ type RetentionService struct {
 	// fallback path, so the erase action refuses when it is nil rather than
 	// skipping it.
 	purgeRawCaptures RawCapturePurger
-	// unreadOutboxTypes are the outbox event types the assurance check reads.
-	unreadOutboxTypes []string
+	// outboxReaders are the modules that still read published events.
+	outboxReaders *storekit.OutboxReaders
 }
 
 // NewRetentionService wires the nightly evaluator.

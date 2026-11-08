@@ -6,11 +6,16 @@
 package compose
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertest"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -215,5 +220,66 @@ func TestAKeyedExportRemovesTheUnkeyedJournalAndStillCatchesARestore(t *testing.
 	}
 	if live := liveEmails(t, e, resurrected); live != 0 {
 		t.Fatalf("the restored subject kept %d address(es)", live)
+	}
+}
+
+func TestAKeyedAnonymizedContactAloneRefusesAnotherRootKey(t *testing.T) {
+	e := integration.Setup(t)
+	useRootKey(t, "")
+	anonymized := keyedRecipient(t, e, "Anonymized Subject", "anonymized@rekey.test")
+	// The hashes an anonymize kept before the installation had a root key.
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `UPDATE contact
+		SET anonymized_address_hashes = ARRAY[$2::text] WHERE id = $1`,
+		anonymized, strings.Repeat("ab", 32)); err != nil {
+		t.Fatal(err)
+	}
+	useRootKey(t, firstRootKey)
+	runMachineAddressTask(principal.SystemActing(e.Admin(), "system:datatask-test"), t, e, keyedIdentifiersDataTask())
+	if n := e.WsCount(t, `SELECT count(*) FROM erasure_suppression WHERE key_id IS NOT NULL`) +
+		e.WsCount(t, `SELECT count(*) FROM communication_suppression WHERE address_key_id IS NOT NULL`); n != 0 {
+		t.Fatalf("%d keyed rows outside the contact table; the test needs the contact alone", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM contact WHERE anonymized_address_key_id IS NOT NULL`); n != 1 {
+		t.Fatalf("%d contacts hold keyed hashes, want the anonymized one", n)
+	}
+	useRootKey(t, secondRootKey)
+	if err := storekit.RefuseForeignSuppressionKey(e.Admin(), e.Pool); err == nil {
+		t.Fatal("a process under another root key would start over kept hashes it cannot match")
+	}
+}
+
+func TestTheRekeyQueuesTheJournalExportThatRemovesUnkeyedNames(t *testing.T) {
+	e := integration.Setup(t)
+	store := blobstore.NewMemory()
+	exporter := suppressionJournalExporterFor(e.Pool, store, slog.New(slog.DiscardHandler))
+	useRootKey(t, "")
+	seedSuppressedEmail(t, resurrectedAddress)
+	unkeyedEntry := "erasure-suppression/email/" + storekit.SuppressionHash(resurrectedAddress)
+	if err := exporter.Work(t.Context(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := store.Get(t.Context(), unkeyedEntry); err != nil {
+		t.Fatalf("the export without a key wrote no unkeyed entry: %v", err)
+	}
+
+	useRootKey(t, firstRootKey)
+	client, err := river.NewClient(riverpgxv5.New(e.Pool), &river.Config{
+		Logger: slog.New(slog.DiscardHandler), SkipUnknownJobCheck: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := rivertest.WorkContext(principal.SystemActing(e.Admin(), "system:datatask-test"), client)
+	runMachineAddressTask(ctx, t, e, keyedIdentifiersDataTask())
+	if n := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind = $1 AND state = 'available'`,
+		SuppressionJournalArgs{}.Kind()); n != 1 {
+		t.Fatalf("the finished re-key queued %d journal exports, want one", n)
+	}
+
+	if err := exporter.Work(t.Context(), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := store.Get(t.Context(), unkeyedEntry); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatalf("an unkeyed journal name survived the queued export: %v", err)
 	}
 }

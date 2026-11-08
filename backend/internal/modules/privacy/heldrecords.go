@@ -46,6 +46,10 @@ func heldRecordRule(kind string) (heldRecord, bool) {
 		return heldRecord{from: " FROM lead a", predicate: "a.legal_hold"}, true
 	case reportingDeal:
 		return heldRecord{from: " FROM deal a", predicate: "a.legal_hold"}, true
+	case "company":
+		return heldRecord{from: " FROM company a", predicate: "a.legal_hold"}, true
+	case "project":
+		return heldRecord{from: " FROM project a", predicate: "a.legal_hold"}, true
 	case rightsRequestEntity:
 		return heldRecord{from: " FROM data_subject_request a", predicate: "a.dispute_open"}, true
 	case "activity":

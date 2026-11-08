@@ -14,6 +14,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,6 +49,16 @@ func TestPublishedEventsLeaveTheOutboxAfterTheirWindowUnlessSomethingStillNeedsT
 	placeLegalHold(t, heldContact)
 	held := agedEvent(t, owner, heldContact, 31, true)
 	unread := agedEvent(t, owner, keyedRecipient(t, e, "Unread Input", "unread@window.test"), 31, true)
+	retryable := agedEvent(t, owner, keyedRecipient(t, e, "Failed Trigger", "failed@window.test"), 31, true)
+	settled := agedEvent(t, owner, keyedRecipient(t, e, "Applied Trigger", "applied@window.test"), 31, true)
+	for event, status := range map[ids.UUID]string{retryable: "failed", settled: "applied"} {
+		if _, err := owner.Exec(context.Background(), `INSERT INTO workflow_run
+			(handler, idempotency_key, trigger_event, status, planned, created_at)
+			VALUES ('route_lead', $1, $2, $3, '[]', now() - interval '31 days')`,
+			event.String(), event, status); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err := owner.Exec(context.Background(), `UPDATE event_outbox
 		SET envelope = jsonb_set(envelope, '{type}', to_jsonb($2::text)), assurance_inputs_read = false WHERE id = $1`,
 		unread, assurance.MarkingEventTypes()[0]); err != nil {
@@ -56,12 +68,13 @@ func TestPublishedEventsLeaveTheOutboxAfterTheirWindowUnlessSomethingStillNeedsT
 	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
-	if eventKept(t, e, ordinary) {
+	if eventKept(t, e, ordinary) || eventKept(t, e, settled) {
 		t.Error("a published event 31 days old stayed in the outbox")
 	}
 	for name, event := range map[string]ids.UUID{
 		"an event inside its window": recent, "an unpublished event": unpublished,
 		"an event about a held contact": held, "input the assurance check has not read": unread,
+		"the trigger of a failed run, which a retry reads": retryable,
 	} {
 		if !eventKept(t, e, event) {
 			t.Errorf("the pass removed %s", name)
@@ -69,18 +82,24 @@ func TestPublishedEventsLeaveTheOutboxAfterTheirWindowUnlessSomethingStillNeedsT
 	}
 }
 
-// seedDelivery plants one delivery about contact whose state changed days ago.
+// seedDelivery plants one delivery about a contact whose state changed days ago.
 func seedDelivery(t *testing.T, owner *pgx.Conn, sub, contact ids.UUID, status string, days int) ids.UUID {
+	t.Helper()
+	return seedDeliveryAbout(t, owner, sub, "contact", contact, status, days)
+}
+
+// seedDeliveryAbout plants one delivery about any record.
+func seedDeliveryAbout(t *testing.T, owner *pgx.Conn, sub ids.UUID, entityType string, record ids.UUID, status string, days int) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := owner.Exec(context.Background(), `INSERT INTO webhook_delivery
 		(id, subscription_id, event_id, event_type, payload, status, attempts, entity_type, entity_id,
 		 delivered_at, dead_lettered_at, created_at, updated_at)
-		VALUES ($1, $2, $3, 'contact.created', '{"name":"Personal Name"}', $4, 1, 'contact', $5,
+		VALUES ($1, $2, $3, 'contact.created', '{"name":"Personal Name"}', $4, 1, $7, $5,
 		 CASE WHEN $4 = 'delivered' THEN now() - make_interval(days => $6) END,
 		 CASE WHEN $4 = 'dead_lettered' THEN now() - make_interval(days => $6) END,
 		 now() - make_interval(days => $6), now() - make_interval(days => $6))`,
-		id, sub, ids.NewV7(), status, contact, days); err != nil {
+		id, sub, ids.NewV7(), status, record, days, entityType); err != nil {
 		t.Fatal(err)
 	}
 	return id
@@ -156,5 +175,41 @@ func TestErasingASubjectClearsItsWebhookBodiesAndCancelsWhatIsStillToSend(t *tes
 	if n := e.WsCount(t, `SELECT count(*) FROM webhook_delivery WHERE id = $1 AND status = 'visibility_revoked'
 		AND next_retry_at IS NULL`, retrying); n != 1 {
 		t.Fatal("a retry about the erased subject is still scheduled")
+	}
+}
+
+func TestCopiesAboutAHeldCompanyOrProjectOutliveTheirWindow(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Held Company", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
+		Name: "Held Project", CompanyID: ids.From[ids.CompanyKind](ids.UUID(company.Id)), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub := seedSubscription(t, e, owner)
+	events := map[string]ids.UUID{}
+	bodies := map[string]ids.UUID{}
+	for kind, record := range map[string]ids.UUID{"company": ids.UUID(company.Id), "project": ids.UUID(project.Id)} {
+		if _, err := owner.Exec(context.Background(), `UPDATE `+kind+` SET legal_hold = true WHERE id = $1`, record); err != nil {
+			t.Fatal(err)
+		}
+		events[kind] = agedEvent(t, owner, record, 31, true)
+		bodies[kind] = seedDeliveryAbout(t, owner, sub, kind, record, "delivered", 8)
+	}
+
+	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+		t.Fatal(err)
+	}
+	for kind := range events {
+		if !eventKept(t, e, events[kind]) {
+			t.Errorf("the pass removed a published event about a held %s", kind)
+		}
+		if !bodyKept(t, e, bodies[kind]) {
+			t.Errorf("the pass cleared a webhook body about a held %s", kind)
+		}
 	}
 }

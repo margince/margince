@@ -101,6 +101,9 @@ func suppressionListStep() datatask.Step {
 			if len(page) > 0 {
 				out.Cursor, err = json.Marshal(page[len(page)-1])
 			}
+			if err == nil && out.Done && storekit.SuppressionKeyID() != nil {
+				err = queueKeyedJournalExport(ctx, tx)
+			}
 			return out, err
 		},
 	}

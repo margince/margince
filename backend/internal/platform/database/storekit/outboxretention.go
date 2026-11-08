@@ -6,6 +6,7 @@ package storekit
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,19 +23,31 @@ type OutboxCopy struct {
 	EntityID   string
 }
 
+// OutboxReaders are the modules that still read published events. The
+// assurance check needs an event of a type in UnreadTypes until it has read it.
+// Each of NeededBy is true when its module still needs the event aliased by its
+// argument. Modules sit above storekit, so compose supplies both.
+type OutboxReaders struct {
+	UnreadTypes []string
+	NeededBy    []func(alias string) string
+}
+
 // PublishedOutboxCopies is up to limit events after the cursor that were
-// published before cutoff and that no reader of the outbox still needs. The
-// assurance check needs an event of a type in unreadTypes until it has read
-// it. The intake rule needs the event an imported follow-up was caused by. An
-// unpublished event is never answered.
-func PublishedOutboxCopies(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int, unreadTypes []string) ([]OutboxCopy, error) {
+// published before cutoff and that no reader of the outbox still needs. Besides
+// readers, the intake rule needs the event an imported follow-up was caused by.
+// An unpublished event is never answered.
+func PublishedOutboxCopies(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int, readers OutboxReaders) ([]OutboxCopy, error) {
+	var needed strings.Builder
+	for _, reader := range readers.NeededBy {
+		needed.WriteString("\n\t\t  AND NOT " + reader("o"))
+	}
 	rows, err := tx.Query(ctx, `SELECT o.id, coalesce(o.envelope->'entity'->>'type', ''), coalesce(o.envelope->'entity'->>'id', '')
 		FROM event_outbox o
 		WHERE o.published_at IS NOT NULL AND o.published_at < @cutoff AND o.id > @after
 		  AND NOT (NOT o.assurance_inputs_read AND o.envelope->>'type' = ANY(@unread::text[]))
-		  AND NOT `+auth.ImportedFollowupEvidenceSQL("o")+`
+		  AND NOT `+auth.ImportedFollowupEvidenceSQL("o")+needed.String()+`
 		ORDER BY o.id LIMIT @limit`,
-		pgx.StrictNamedArgs{"cutoff": cutoff, "after": after, "unread": unreadTypes, "limit": limit})
+		pgx.StrictNamedArgs{"cutoff": cutoff, "after": after, "unread": readers.UnreadTypes, "limit": limit})
 	if err != nil {
 		return nil, fmt.Errorf("store: reading published events past their window: %w", err)
 	}

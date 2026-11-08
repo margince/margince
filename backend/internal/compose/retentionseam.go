@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -37,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -50,7 +52,9 @@ import (
 func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Logger) *privacy.RetentionService {
 	return privacy.NewRetentionService(db, blob, log, RawCapturePurgerFor(db)).
 		WithCountry(identity.CountryForDecision).
-		WithOutboxReaders(assurance.MarkingEventTypes()).
+		WithOutboxReaders(storekit.OutboxReaders{
+			UnreadTypes: assurance.MarkingEventTypes(), NeededBy: []func(string) string{automation.RetryableTriggerSQL},
+		}).
 		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 		})
