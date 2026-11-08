@@ -18848,6 +18848,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "In diesem Abschnitt ist noch nichts. Beim Scrollen lädt mehr.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
+  "worklist.clearOfUrgent": "Keine dringende Arbeit.",
   "worklist.clearOfTasksToday":
     "Keine Aufgaben fällig heute oder überfällig. Spätere Aufgaben stehen unter Anstehend und Rückstand.",
   "worklist.clearOfWhatWasRead": "Keine Einträge in den geladenen Quellen.",

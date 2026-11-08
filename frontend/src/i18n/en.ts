@@ -18662,6 +18662,7 @@ export const en = {
   "worklist.emptyPage": "Nothing in this batch yet. More loads as you scroll.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
+  "worklist.clearOfUrgent": "No urgent work.",
   "worklist.clearOfTasksToday":
     "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
   "worklist.clearOfWhatWasRead": "No items in the sources that loaded.",
