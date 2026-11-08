@@ -79,6 +79,8 @@ public.activity.claims_host_slot boolean NOT NULL gen=- def=false
 public.activity.counterparty_email text gen=- def=-
 public.activity.counterparty_outbound_attested boolean NOT NULL gen=- def=false
 public.activity.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity.deal_topic_checked_at timestamp with time zone gen=- def=-
+public.activity.deal_topic_digest text gen=- def=-
 public.activity.direction text gen=- def=-
 public.activity.domain_evidence_version bigint NOT NULL gen=- def=0
 public.activity.done_at timestamp with time zone gen=- def=-

@@ -7924,7 +7924,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt aus einer Zusage, die aus einem Gespräch gelesen wurde.",
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
   "tasks.origin.which_deal":
-    "Erstellt, weil eine erfasste E-Mail zu mehr als einem offenen Deal passt. Wähle den Deal, zu dem sie gehört.",
+    "Erstellt, weil eine erfasste E-Mail zu mehr als einem offenen Deal passt. Wähle den Deal, zu dem sie gehört, oder „Keiner dieser Deals“.",
+  "tasks.whichDeal.none": "Keiner dieser Deals",
+  "tasks.whichDeal.noneDone": "E-Mail keinem dieser Deals zugeordnet",
   "tasks.origin.system":
     "Von einer Automatisierung erstellt, nicht von einem Teammitglied eingegeben.",
 
@@ -20760,6 +20762,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.notObject": "muss ein Objekt sein: der Text zwischen { und }.",
   "aiServing.previewFailed":
     "Der Server konnte diesen Wert nicht prüfen: {reason} Speichern bleibt deaktiviert, bis der Server den Wert prüfen kann.",
+  "dealDecline.action": "Gehört nicht zu diesem Deal",
+  "dealDecline.title": "E-Mail von diesem Deal lösen?",
+  "dealDecline.body":
+    "Die E-Mail wird von diesem Deal gelöst, und Margince ordnet sie ihm nicht wieder zu. Eine Projektzuordnung, die sie über diesen Deal bekommen hat, wird ebenfalls gelöst.",
+  "dealDecline.confirm": "Vom Deal lösen",
+  "dealDecline.done": "E-Mail vom Deal gelöst",
+  "dealDecline.doneProjectKept":
+    "E-Mail vom Deal gelöst. Die Projektzuordnung bleibt.",
   "projectFiling.action": "Ablage rückgängig machen",
   "projectFiling.title": "Projektablage rückgängig machen?",
   "projectFiling.loading":

@@ -9537,6 +9537,48 @@ paths:
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /activities/{id}/deal-decline:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: declineActivityDeal
+      x-mcp-tool: { verb: decline_activity_deal, router: change_activities, action: decline_deal, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Say a captured message is not about a deal, or about none of the deals its question offered.
+      description: |
+        With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
+        automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
+        deals stay open to it, and a colleague's own relink still files it anywhere.
+
+        A project link that came from the deal comes off with it, through the same rules as the
+        project-filing undo. It stays when the project was filed some other way, when a retention
+        rule keeps it, or when an agent declines: only a member takes a project filing back.
+        `project_kept` says so.
+
+        Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
+        question of the message's conversation. Each deal the question offered is declined on the
+        message and on each unfiled message of the conversation, and the question is done. A
+        message with no open question answers 422.
+
+        Declining a deal already declined is the same success and writes nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclineActivityDealRequest' }
+      responses:
+        '200':
+          description: What the decline did.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityDealDecline' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '423': { $ref: '#/components/responses/RetentionHeld' }
+
   /activities/{id}/project-filing:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -55844,6 +55886,35 @@ components:
             date; the reader resumes it with the DELETE verb. A colleague, or a later
             owner, keeps their own choice.
 
+    DeclineActivityDealRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: The deal the message is not about. Leave it out to answer "none of them".
+    ActivityDealDecline:
+      type: object
+      required: [declined_deal_ids, unlinked, project_unfiled, project_kept, questions_closed]
+      properties:
+        declined_deal_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: The deals this call declined on the message. A deal declined before is not listed again.
+        unlinked:
+          type: boolean
+          description: A deal link came off the message.
+        project_unfiled:
+          type: boolean
+          description: The project link that came from a declined deal came off the message.
+        project_kept:
+          type: boolean
+          description: A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it.
+        questions_closed:
+          type: integer
+          minimum: 0
+          description: The open deal questions of the conversation this call marked done.
     SetActivityDispositionRequest:
       type: object
       additionalProperties: false

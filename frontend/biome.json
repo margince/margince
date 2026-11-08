@@ -93,7 +93,13 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.sweep.ts", "e2e/**"],
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.sweep.ts",
+        "e2e/**",
+        "census/**"
+      ],
       "linter": {
         "rules": {
           "complexity": {

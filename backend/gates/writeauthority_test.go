@@ -100,6 +100,8 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/activities:DeclineDeal":              "a decline changes the activity, behind its own write probe in lockForFilingChange. The deal only names what the message is not about and nothing on it changes; the visibility probe hides a deal the caller cannot see",
+	"internal/modules/activities:offeredDeals":             "reads which deals a deal question offered, to decline them on the message. Nothing on a deal changes; the scope only leaves out a deal the caller cannot see",
 	"internal/modules/activities:RecentTaskCompletions":    "Reads completion receipts and visible contact names; it changes no record. WritableTasks separately controls the offered Undo.",
 	"internal/modules/privacy:sarRetainedCopySections":     "This pure subject-export query builder uses read predicates only in SELECT subqueries over the subject contact and lead twins. It performs no database writes, even when a notice caller builds its sections inside a write transaction. Domain mutations retain their own write gates.",
 	"internal/modules/consent:holdReviewedContact":         "a source review writes the notice case, not the contact. When the answer records a meeting on the contact it takes auth.HoldWritableLive instead; this visibility probe only hides a contact the reviewer cannot see",

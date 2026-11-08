@@ -184,6 +184,9 @@ var erasureColumnBaseline = map[string][]string{
 		// declined.
 		"capture_label_declined_ruleset",
 		"owed_verdict_declined_ruleset",
+		// The deal topic memo: a digest of candidate deal ids and the prompt.
+		// Nothing the subject wrote.
+		"deal_topic_digest",
 		"captured_by",
 		"channel_provider",
 		"direction",

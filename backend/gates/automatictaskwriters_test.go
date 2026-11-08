@@ -129,7 +129,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/lasttouch.go:openReminderHoldsEntity":             "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/requestreminderreach.go:openReminderClause":       "names the reminder a reach recompute may move, where the waiting horizon would skip a stale one instead of correcting it",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
-	"modules/activities/whichdealanswer.go:answerWhichDealTx":             "closes the deal questions a colleague's filing has just answered; it creates no work",
+	"modules/activities/whichdealanswer.go:openWhichDealQuestions":        "closes the deal questions a colleague's filing or decline has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/taskreminder.go:dueReminderClause":                "narrows a list the caller already gates with the worklist clauses",
 	"modules/contacts/claimrecord.go:SetClaimTaskTx":                      "links a promise to its own task row",

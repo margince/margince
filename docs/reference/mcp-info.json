@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 233432,
+    "tool_catalog_bytes": 233489,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59763,
+    "approx_wire_tokens_total": 59777,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 55116,
-      "input_schema_bytes": 114370,
+      "description_bytes": 55130,
+      "input_schema_bytes": 114413,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 169486
+      "description_plus_input_schema_bytes": 169543
     }
   },
   "tools": {
@@ -888,7 +888,7 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. ready says the user is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user before you file under a project, which only a member can undo from the activity. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach, bring_back, cancel_send, check_new_send, check_send, discard_draft, hide_document, log, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the action archive_document, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. ready says the user is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user before you file under a project, which only a member can undo from the activity. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach, bring_back, cancel_send, check_new_send, check_send, decline_deal, discard_draft, hide_document, log, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; the user's yes is needed for the action archive_document, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -901,6 +901,7 @@
                 "cancel_send",
                 "check_new_send",
                 "check_send",
+                "decline_deal",
                 "discard_draft",
                 "hide_document",
                 "log",
@@ -1048,7 +1049,7 @@
               "type": "object"
             },
             "id": {
-              "description": "accept_document_fields, archive_document, bring_back, cancel_send, check_send, discard_draft, hide_document, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+              "description": "accept_document_fields, archive_document, bring_back, cancel_send, check_send, decline_deal, discard_draft, hide_document, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
               "type": "string"
             },
             "idempotency_key": {
@@ -1134,7 +1135,7 @@
               "type": "boolean"
             },
             "request_body": {
-              "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "accept_document_fields, check_new_send, check_send, decline_deal, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "scope": {

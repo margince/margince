@@ -19,7 +19,7 @@ both lanes, plus the craftsmanship gate, the license gate and the frontend lane,
 - an error that code drops without a trace;
 - a UI regression.
 
-Three lanes run without blocking: `vuln`, the SonarCloud scan and `live-boot`. `scheduled.yml` checks
+Four lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot` and `home-budget`. `scheduled.yml` checks
 `vuln` and the scan again daily on `main`. See [the workflows beside the merge gate](../reference/ci-workflows.md)
 for why a gate that does not block needs that second check. Why they do not block yet is under
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
@@ -237,7 +237,7 @@ changes ──┬─> deterministic-gates
           │                  fe-unit (×4) ├─> fan-in (+ merge)   │   │
           │                  fe-bundle    ┘                     │   │
           ├─> uat  (`frontend` scope, beside the lane)          │   │
-          ├─> live-boot                                         │   │
+          ├─> live-boot, home-budget                            │   │
           v                                                     v   v
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
@@ -246,8 +246,8 @@ changes ──┬─> deterministic-gates
   ci  ── the ONE required context. needs: deterministic-gates,
          test-budget, backend-lint, craftsmanship, craft-residue,
          secret-scan, integration, frontend, uat, license-gate, images
-         (eleven — vuln and live-boot stay advisory and are NOT in the
-         fan-in)
+         (eleven — vuln, live-boot and home-budget stay advisory and are
+         NOT in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -304,8 +304,6 @@ job links each package's test binary with the shards' flags, and each shard runs
 the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
 start-up, the fetch and its own template, so size the matrix from `scripts/integration-test-timing.txt`.
 
-
-
 ### The `ci` aggregate is the only required build context
 
 A **ruleset** requires two checks: **`ci`**, and **`cla`**, which asks an author outside the Margince
@@ -338,8 +336,8 @@ These jobs are not in `needs`:
 - `fe-quality`, `fe-unit`, `fe-bundle`: taken in by the `frontend` fan-in.
 - `integration-build`, `integration-shards`, `integration-unit-coverage`: the `integration` fan-in checks them.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
-- `vuln`, `live-boot`: advisory. They are the plain next ones to add, since each runs on every change
-  that counts, and a red one does not stop a merge.
+- `vuln`, `live-boot`, `home-budget`: advisory. They are the plain next ones to add, since each runs on every change
+  that counts, and a red one does not stop a merge. `home-budget` waits for runs that show its budgets hold.
   - The batch is the reason to wait. Under a merge queue, a flaky job does not cost one more run. It
     fails the whole group it was checked in, and every entry in that group is queued again.
   - Nothing has tested these two under a blocking gate. Make them block once the queue has a measured
@@ -498,7 +496,7 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   level makes a path skip report as passing. The copy of the gate in `sbom.yml` fires just before a
   signing run.
 - **`fe-quality`** is the only frontend job with a Go toolchain, because the composed lane needs the
-  output of `gen-composition`, which nothing else makes.
+  output of `gen-composition`, which nothing else makes. It also runs `make fe-census`.
 - **`fe-unit` uploads a blob report, not an lcov.** One part measures only the part of the tree its
   tests loaded, until the four are added up. Four is where the measure stops paying off; the comment
   above the job holds the math. The parts are cut by expected cost, not by a hash of the path. A few
@@ -507,6 +505,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
   Without it, the seed that runs through the API and the boot proof would break with no one seeing.
+- **`home-budget`** holds Home to its fixed budgets on every PR that can reach Home, `develop` included.
+  What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### What `secret-scan` runs
 

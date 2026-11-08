@@ -7727,7 +7727,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc này được tạo từ một cam kết đọc được trong một cuộc trao đổi.",
   "tasks.origin.email_request": "Việc này được tạo từ một yêu cầu trong email.",
   "tasks.origin.which_deal":
-    "Việc này được tạo vì một email đã thu thập khớp với nhiều deal đang mở. Chọn deal mà email này thuộc về.",
+    "Việc này được tạo vì một email đã thu thập khớp với nhiều deal đang mở. Chọn deal mà email này thuộc về, hoặc chọn “Không thuộc deal nào”.",
+  "tasks.whichDeal.none": "Không thuộc deal nào",
+  "tasks.whichDeal.noneDone": "Đã để email ngoài các deal này",
   "tasks.origin.system":
     "Một quy trình tự động đã tạo việc này, không phải đồng nghiệp nhập vào.",
 
@@ -20220,6 +20222,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.notObject": "phải là một đối tượng: phần văn bản giữa { và }.",
   "aiServing.previewFailed":
     "Máy chủ không thể kiểm tra giá trị này: {reason} Nút Lưu sẽ tắt cho đến khi kiểm tra được.",
+  "dealDecline.action": "Không thuộc deal này",
+  "dealDecline.title": "Gỡ email khỏi deal này?",
+  "dealDecline.body":
+    "Email rời khỏi deal này và Margince sẽ không gắn lại vào đây. Liên kết dự án có từ deal này cũng bị gỡ.",
+  "dealDecline.confirm": "Gỡ khỏi deal",
+  "dealDecline.done": "Đã gỡ email khỏi deal",
+  "dealDecline.doneProjectKept":
+    "Đã gỡ email khỏi deal. Liên kết dự án vẫn giữ nguyên.",
   "projectFiling.action": "Hoàn tác xếp vào dự án",
   "projectFiling.title": "Hoàn tác xếp vào dự án?",
   "projectFiling.loading": "Đang kiểm tra căn cứ lưu trữ hoạt động này…",
