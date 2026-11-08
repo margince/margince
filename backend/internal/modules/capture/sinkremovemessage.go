@@ -22,6 +22,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -34,7 +36,8 @@ import (
 //
 // Nil is a Sink that captures mail and acts on no deletions: what every fixture
 // is until it says otherwise.
-type MessagePurger func(ctx context.Context, seat ids.UUID, sourceSystem, sourceID string) error
+// admit runs first in the transaction that selects what to destroy.
+type MessagePurger func(ctx context.Context, admit func(context.Context, pgx.Tx) error, seat ids.UUID, sourceSystem, sourceID string) error
 
 // WithMessagePurger returns a copy that acts on provider-side deletions.
 func (s *Sink) WithMessagePurger(purge MessagePurger) *Sink {
@@ -68,5 +71,9 @@ func (s *Sink) RemoveMessage(ctx context.Context, key connector.NaturalKey) erro
 		// copy the query happened to find.
 		return errors.New("capture: a provider-side deletion arrived with no seat on the context")
 	}
-	return s.purgeRemoved(ctx, actor.UserID, key.SourceSystem, key.SourceID)
+	admit := func(ctx context.Context, tx pgx.Tx) error {
+		_, err := s.mailboxRunAllowedTx(ctx, tx)
+		return err
+	}
+	return s.purgeRemoved(ctx, admit, actor.UserID, key.SourceSystem, key.SourceID)
 }

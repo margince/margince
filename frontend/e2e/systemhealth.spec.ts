@@ -7,7 +7,7 @@ import {
   HEALTH_AT,
 } from "../src/features/settings/systemhealth.fixtures";
 import { meFixture } from "../src/testing/mefixture";
-import { mockApi } from "./seed";
+import { mockApi, servePrincipal } from "./seed";
 
 test.use({
   locale: "en-US",
@@ -15,17 +15,16 @@ test.use({
 });
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
-  await page.route("**/v1/me", (route) =>
-    route.fulfill({
-      json: meFixture({
-        allow: {
-          job_health: ["read"],
-          installation_settings: ["read", "update"],
-          embedding_reindex: ["read"],
-          data_task: ["read"],
-          ai_diagnostics: ["read"],
-        },
-      }),
+  await servePrincipal(
+    page,
+    meFixture({
+      allow: {
+        job_health: ["read"],
+        installation_settings: ["read", "update"],
+        embedding_reindex: ["read"],
+        data_task: ["read"],
+        ai_diagnostics: ["read"],
+      },
     }),
   );
   await page.route("**/v1/admin/system-health", (route) =>

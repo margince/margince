@@ -49,6 +49,8 @@ type ControllerMessage struct {
 	TextBody  string
 	HTMLBody  string
 	MessageID string
+	// Inline is the company logo HTMLBody's letterhead shows, when it shows one.
+	Inline []connector.InlineImage
 }
 
 // PayloadVault holds the one-time material a controller message carries, so the
@@ -84,6 +86,10 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 	if err != nil {
 		return sendSeam{}, err
 	}
+	inline, err := d.letterheadFor(ctx, del)
+	if err != nil {
+		return sendSeam{}, err
+	}
 
 	return sendSeam{
 		// No granted scopes and no carriage: a controller message carries no
@@ -98,8 +104,9 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 				To:        to,
 				Subject:   del.Subject,
 				TextBody:  bodies.text,
-				HTMLBody:  bodies.html,
+				HTMLBody:  letterheadMarkupFor(del, bodies.html, inline),
 				MessageID: del.MessageID,
+				Inline:    inline,
 			}); err != nil {
 				return connector.SendReceipt{}, err
 			}

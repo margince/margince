@@ -32,7 +32,7 @@ type bookedInvitation struct {
 func TestABookersAgendaStaysOnTheRecordAndOffTheInvitation(t *testing.T) {
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	deliver := startMeetingDelivery(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	monday := nextMonday()
@@ -94,7 +94,7 @@ func TestABookersAgendaStaysOnTheRecordAndOffTheInvitation(t *testing.T) {
 func TestAnAcceptedProposalStillSendsTheDescriptionItsHostWrote(t *testing.T) {
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	deliver := startMeetingDelivery(t, e)
 	var contact struct {
 		ID string `json:"id"`
@@ -132,7 +132,7 @@ func TestAnAcceptedProposalStillSendsTheDescriptionItsHostWrote(t *testing.T) {
 // assertInvitationOmitsAgenda reads the last invitation body the host's calendar
 // was sent. The management link arrives, the agenda does not, and no blank line
 // stands where it was.
-func assertInvitationOmitsAgenda(t *testing.T, provider *bookingProviderTransport, booked bookedInvitation, agenda string) {
+func assertInvitationOmitsAgenda(t *testing.T, provider *apptest.BookingProvider, booked bookedInvitation, agenda string) {
 	t.Helper()
 	description := deliveredDescription(t, provider, booked.Invitation.ID)
 	if strings.Contains(description, agenda) {
@@ -148,12 +148,12 @@ func assertInvitationOmitsAgenda(t *testing.T, provider *bookingProviderTranspor
 
 // deliveredDescription is the description field of the event the host's calendar
 // was last sent for one invitation.
-func deliveredDescription(t *testing.T, provider *bookingProviderTransport, invitationID string) string {
+func deliveredDescription(t *testing.T, provider *apptest.BookingProvider, invitationID string) string {
 	t.Helper()
 	var event struct {
 		Description string `json:"description"`
 	}
-	if err := json.Unmarshal(provider.deliveredEvent(t, invitationID), &event); err != nil {
+	if err := json.Unmarshal(provider.DeliveredEvent(t, invitationID), &event); err != nil {
 		t.Fatal(err)
 	}
 	return event.Description

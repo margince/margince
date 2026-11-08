@@ -12,8 +12,9 @@ package gates
 // an unrecorded meeting, so this refuses a status comparison elsewhere in the
 // module.
 //
-// Go comparisons are read through the AST and SQL as literal text. A status
-// word held in a variable, or SQL split between literals, is not seen.
+// Go comparisons are read through the AST and SQL as literal text, and a use of
+// the shared meetingoutcome rule counts as a judgement. A status word held in a
+// variable, or SQL split between literals, is not seen.
 
 import (
 	"go/ast"
@@ -80,8 +81,13 @@ func TestOnlyLeadMeetingProofJudgesAMeetingOnALead(t *testing.T) {
 func meetingStatusJudgements(fset *token.FileSet, file *ast.File) []string {
 	var out []string
 	mark := func(n ast.Node) { out = append(out, strconv.Itoa(fset.Position(n.Pos()).Line)) }
+	outcomePkg := meetingOutcomeImportName(file)
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
+		case *ast.SelectorExpr:
+			if pkg, ok := node.X.(*ast.Ident); ok && outcomePkg != "" && pkg.Name == outcomePkg {
+				mark(node)
+			}
 		case *ast.BinaryExpr:
 			if (node.Op == token.EQL || node.Op == token.NEQ) && (isStatusWord(node.X) || isStatusWord(node.Y)) {
 				mark(node)
@@ -100,6 +106,22 @@ func meetingStatusJudgements(fset *token.FileSet, file *ast.File) []string {
 		return true
 	})
 	return out
+}
+
+// meetingOutcomeImportName is the name file uses for the meetingoutcome
+// package, "" when file does not import it.
+func meetingOutcomeImportName(file *ast.File) string {
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || !strings.HasSuffix(path, "/kernel/meetingoutcome") {
+			continue
+		}
+		if spec.Name != nil {
+			return spec.Name.Name
+		}
+		return "meetingoutcome"
+	}
+	return ""
 }
 
 func isStatusWord(expr ast.Expr) bool {

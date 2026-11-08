@@ -98,7 +98,7 @@ func floorWindowEnd(currentArg, carriedArg int) string {
 	return fmt.Sprintf(`GREATEST(%s,
 		           CASE WHEN a.occurred_at < ($%[2]d::jsonb->>'before')::timestamptz -- occurred_at raw: before the floor changed, a retention age
 		                  OR a.created_at < ($%[2]d::jsonb->>'before')::timestamptz THEN %[3]s END)`,
-		windowEndUnder(currentArg), carriedArg, windowEndUnder(carriedArg))
+		ownerWindowEnd(currentArg), carriedArg, windowEndOf(fmt.Sprintf("$%d::jsonb", carriedArg)))
 }
 
 // rawCaptureUnshielded keeps the provider original, aliased `r`, of an activity
@@ -110,11 +110,12 @@ func rawCaptureUnshielded(currentArg, carriedArg int) string {
 		    AND ` + handelsbriefShielded(currentArg, carriedArg) + `)`
 }
 
-// windowEndUnder is one floor's window end over the activity aliased `a`.
-func windowEndUnder(arg int) string {
-	return fmt.Sprintf(`CASE WHEN ($%[1]d::jsonb->>'year_end')::boolean
-		                THEN date_trunc('year', a.occurred_at) + interval '1 year' + ($%[1]d::jsonb->>'keep')::interval
-		                ELSE a.occurred_at + ($%[1]d::jsonb->>'keep')::interval END`, arg)
+// windowEndOf is one floor's window end over the activity aliased `a`. floor
+// is a jsonb expression holding the floor's keep and year_end.
+func windowEndOf(floor string) string {
+	return fmt.Sprintf(`CASE WHEN (%[1]s->>'year_end')::boolean
+		                THEN date_trunc('year', a.occurred_at) + interval '1 year' + (%[1]s->>'keep')::interval
+		                ELSE a.occurred_at + (%[1]s->>'keep')::interval END`, floor)
 }
 
 // handelsbriefArm answers whether an activity is a Handelsbrief — correspondence
@@ -185,9 +186,21 @@ func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
 // The class name and the period, and no citation: the packs carry neither a
 // section number nor a statute name. The handbook is where the citation
 // belongs, and it carries it.
+//
+// A further entity's floor counts too, so the answer never names a shorter
+// floor than the one that kept the message.
 func (p FloorPolicy) StrictestClass(ref time.Time) jurisdiction.RetentionClass {
-	if p.Carried != nil && p.Carried.Class.ProtectedSince(ref).Before(p.Current.ProtectedSince(ref)) {
-		return p.Carried.Class
+	strictest := p.Current
+	stricter := func(class jurisdiction.RetentionClass) {
+		if class.ProtectedSince(ref).Before(strictest.ProtectedSince(ref)) {
+			strictest = class
+		}
 	}
-	return p.Current
+	if p.Carried != nil {
+		stricter(p.Carried.Class)
+	}
+	for _, class := range p.ByEntity {
+		stricter(class)
+	}
+	return strictest
 }

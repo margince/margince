@@ -244,7 +244,7 @@ func TestAnIntroRouteNamesBothTheColleagueAndTheContact(t *testing.T) {
 func TestTheAtRiskSweepReportsThatItWasCappedRatherThanLookingClean(t *testing.T) {
 	// A capped sweep presented as a complete one is how a model comes to tell a
 	// sales lead their pipeline is fine when it read a quarter of it.
-	tool := atRiskTool{list: func(context.Context) (AtRiskReport, error) {
+	tool := atRiskTool{list: func(context.Context, *ids.UUID) (AtRiskReport, error) {
 		return AtRiskReport{Deals: nil, DealsScanned: 25, Truncated: true}, nil
 	}}
 	out, err := tool.Handle(context.Background(), json.RawMessage(`{}`))
@@ -347,7 +347,7 @@ func TestAnOrdinaryCoverageAnswerClaimsNothingWasWithheld(t *testing.T) {
 // deal with nothing wrong — the one reading a partly blind sweep must not
 // support.
 func TestASweepThatCouldNotAssessADealSaysSo(t *testing.T) {
-	tool := atRiskTool{list: func(context.Context) (AtRiskReport, error) {
+	tool := atRiskTool{list: func(context.Context, *ids.UUID) (AtRiskReport, error) {
 		return AtRiskReport{Deals: []AtRiskDeal{}, DealsScanned: 3, CoverageWithheld: true}, nil
 	}}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))

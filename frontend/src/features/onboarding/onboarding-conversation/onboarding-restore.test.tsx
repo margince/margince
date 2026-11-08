@@ -154,7 +154,12 @@ function stubApi(options: StubOptions = {}) {
   let wordsNow = options.corpusWords ?? 0;
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (request: Request) => {
+    vi.fn(async (input: Request | string, init?: RequestInit) => {
+      // The connector discovery read passes a path, not a Request.
+      const request =
+        typeof input === "string"
+          ? new Request(new URL(input, "http://localhost"), init)
+          : input;
       calls.push(request);
       const path = new URL(request.url).pathname;
       if (path.endsWith("/ai/profile")) {
@@ -298,6 +303,13 @@ function stubApi(options: StubOptions = {}) {
       // that lands on that step always fires this — none of these fixtures
       // arrive with a mailbox already connected.
       if (path.endsWith("/connectors") && request.method === "GET") {
+        return jsonResponse({ data: [] });
+      }
+      // AI connections are off here, so the connect step offers no AI tool row.
+      if (path.endsWith("/.well-known/oauth-protected-resource")) {
+        return jsonResponse({ code: "not_found" }, 404);
+      }
+      if (path.endsWith("/passports") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
       // No grants, so the reporting basis stays unchangeable. The role is

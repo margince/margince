@@ -11,7 +11,10 @@ package privacy
 // data and why" — every other section says what is HELD, and these say what was
 // DONE.
 
-import "github.com/margince/margince/backend/internal/shared/kernel/ids"
+import (
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // sarCommunicationSections gather the outbound record: why each message was
 // permitted, the non-consent basis behind it, and what the subject asked to
@@ -82,8 +85,8 @@ func sarCommunicationSections(
 		   FROM communication_suppression s
 		   LEFT JOIN consent_purpose p ON p.id = s.purpose_id
 		   WHERE s.contact_id = ANY($1) OR s.lead_id = ANY($2)
-		      OR lower(s.address) = ANY($3)`,
-			[]any{identities, leads, lowerAll(emails)},
+		      OR ` + storekit.StopOnAddressesSQL("s", "$3", "$4"),
+			append([]any{identities, leads}, stopAddressArgs(emails)...),
 		},
 		// A rep vouching that a machine refusal may be overruled for this
 		// subject. No address arm, unlike the suppression above: an override
@@ -120,4 +123,11 @@ func identityStrings(identities []ids.UUID) []string {
 		out = append(out, id.String())
 	}
 	return out
+}
+
+// stopAddressArgs is storekit.StopAddressArgs as query arguments, so a kept
+// stop that holds only the hash of the subject's address is exported too.
+func stopAddressArgs(emails []string) []any {
+	lowered, hashes := storekit.StopAddressArgs(emails...)
+	return []any{lowered, hashes}
 }

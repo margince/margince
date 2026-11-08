@@ -19,7 +19,6 @@ package gates
 // wedged consumer group rather than as a validation error.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -29,6 +28,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The wire's state vocabulary is the projection's PLUS one value nothing
@@ -103,7 +103,7 @@ func crmYAMLSchemas(t *testing.T) map[string]crmYAMLSchema {
 			Schemas map[string]crmYAMLSchema `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -142,7 +142,7 @@ func aiTaskPayloadEnum(t *testing.T, property string) []string {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/internal-events.yaml")
+	raw, err := gatekit.ReadFile("api/internal-events.yaml")
 	if err != nil {
 		t.Fatalf("reading the internal payload contract: %v", err)
 	}
@@ -173,7 +173,7 @@ func aiTaskRunCheckValues(t *testing.T, column string) []string {
 	if err != nil || len(matches) != 1 {
 		t.Fatalf("expected exactly one ai_task_run migration, found %v (err %v)", matches, err)
 	}
-	raw, err := os.ReadFile(matches[0]) // #nosec G304 -- the path comes from this test's own glob
+	raw, err := gatekit.ReadFile(matches[0]) // #nosec G304 -- the path comes from this test's own glob
 	if err != nil {
 		t.Fatalf("reading %s: %v", matches[0], err)
 	}

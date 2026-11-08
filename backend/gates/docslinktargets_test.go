@@ -31,6 +31,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // markdownLink captures the target of an inline markdown link, stopping at the
@@ -72,14 +74,14 @@ func TestEveryRelativeLinkUnderDocsResolves(t *testing.T) {
 func checkRelativeLinksUnder(t *testing.T, root string) int {
 	t.Helper()
 	scanned := 0
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
 			return nil
 		}
-		raw, readErr := os.ReadFile(path)
+		raw, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

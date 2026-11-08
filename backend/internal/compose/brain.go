@@ -103,6 +103,9 @@ type ModelPath struct {
 	// OwedVerdict because it reads a CONVERSATION rather than a message, and
 	// only ever runs on threads the workspace has already answered.
 	RequestSettlement completer
+	// DealVerdict reads one open deal's evidence at night and proposes a new
+	// close date, amount or win probability.
+	DealVerdict completer
 	// TagSuggest reads captured items against the workspace's suggestible tags
 	// and names the ones each item shows interest in. Without it the tag scout
 	// matches description phrases.
@@ -172,6 +175,9 @@ type ModelPath struct {
 	// floor: a sentence has no deterministic reading, so its endpoint answers
 	// 409 without a lane rather than guessing one.
 	NlSearch completer
+	// ReaderRendering shows one activity in its reader's language. No floor:
+	// without it the endpoint answers 409 rather than the original unchanged.
+	ReaderRendering completer
 	// ReportInterpret writes the Sales review's assessment over measured
 	// figures. Its floor is the page's own deterministic summary, so a role
 	// without this lane still answers the panel.
@@ -335,6 +341,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		AccountScan:                   brain(ai.TaskAccountScan),
 		ProposeRoles:                  brain(ai.TaskProposeRoles),
 		NlSearch:                      brain(ai.TaskNlSearch),
+		ReaderRendering:               brain(ai.TaskReaderRendering),
 		ReportInterpret:               brain(ai.TaskReportInterpret),
 		ReportSetup:                   brain(ai.TaskReportSetup),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
@@ -344,6 +351,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),
 		RequestSettlement:             brain(ai.TaskRequestSettlement),
+		DealVerdict:                   brain(ai.TaskDealVerdict),
 		TagSuggest:                    brain(ai.TaskTagSuggest),
 		CaptureCounterpartyVerdict:    brain(ai.TaskCaptureCounterpartyVerdict),
 		CaptureConfidentialityVerdict: brain(ai.TaskCaptureConfidentialityVerdict),

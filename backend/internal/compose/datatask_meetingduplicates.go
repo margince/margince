@@ -45,7 +45,7 @@ func meetingDuplicatesDataTask(pool *pgxpool.Pool) datatask.Task {
 const calendarOriginalsSQL = `
 	FROM raw_capture rc
 	JOIN activity own ON own.source_system = rc.source_system AND own.source_id = rc.source_id
-	WHERE rc.source_system = $1
+	WHERE rc.source_system = ANY($1)
 	  AND own.kind = 'meeting' AND own.archived_at IS NULL AND own.restricted_at IS NULL
 	  AND NOT EXISTS (SELECT 1 FROM meeting_invitation booked WHERE booked.activity_id = own.id)`
 
@@ -68,7 +68,7 @@ func retireCalendarCopiesBatch(
 		return datatask.BatchOut{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT rc.id, own.id, `+auth.ConnectorSeatSQL("own")+`::uuid, rc.payload `+selection+`
-		  AND rc.id > $2 ORDER BY rc.id LIMIT $3`, sourceGCal, after, in.Limit)
+		  AND rc.id > $2 ORDER BY rc.id LIMIT $3`, googleCalendar, after, in.Limit)
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("compose: listing calendar copies of meetings: %w", err)
 	}
@@ -145,14 +145,24 @@ func meetingTheCopyBindsTo(ctx context.Context, tx pgx.Tx, seat ids.UUID, payloa
 
 // estimateCalendarCopies counts what the selection would scan, up to maximum.
 func estimateCalendarCopies(selection string) func(context.Context, datatask.Querier, int64) (int64, bool, error) {
+	return estimateStoredOriginals(selection, googleCalendar)
+}
+
+// googleCalendar is the sources argument for a selection that reads Google
+// Calendar originals alone.
+var googleCalendar = []string{sourceGCal}
+
+// estimateStoredOriginals counts what a selection over the stored originals of
+// sources ($1) would scan, up to maximum.
+func estimateStoredOriginals(selection string, sources []string) func(context.Context, datatask.Querier, int64) (int64, bool, error) {
 	return func(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
 		if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
 			return 0, false, err
 		}
 		var count int64
 		if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 `+selection+` LIMIT $2) capped`,
-			sourceGCal, maximum+1).Scan(&count); err != nil {
-			return 0, false, fmt.Errorf("compose: estimating calendar copies of meetings: %w", err)
+			sources, maximum+1).Scan(&count); err != nil {
+			return 0, false, fmt.Errorf("compose: estimating stored calendar originals: %w", err)
 		}
 		return min(count, maximum), count > maximum, nil
 	}

@@ -112,7 +112,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 		return err
 	}
 	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, followUps, dismissed))
-	momentaction.Withhold(ctx, string(said.Lang()), &moment)
+	momentaction.WithholdContact(ctx, string(said.Lang()), &moment, out.Contact.Attachable != nil && *out.Contact.Attachable)
 	out.Moment = &moment
 	return nil
 }
@@ -126,20 +126,13 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 // the page stays silent about the thing that just changed. Keyed on the
 // evidence, the dismissal re-arms.
 func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (map[string]string, error) {
-	// A dismissal belongs to a contact's screen, so a call carrying no user has
-	// none to honour. An agent reading through a passport must not consume the
-	// granting human's: it sees every moment. This is a fact about the caller,
-	// not a failure to read.
-	//
-	// The agent arm is the one that needs saying, because a passport carries
-	// its granting human's UserID: a check for a non-zero id admits an agent
-	// and reads the human's dismissals, which is what this paragraph promises
-	// it does not do. auth.RequireHuman is what tells the two apart.
+	// A dismissal belongs to a colleague, shared with their agent, so a call
+	// with neither behind it has none to honour and sees every moment.
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {
 		return map[string]string{}, nil
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return map[string]string{}, nil
 		}
@@ -346,20 +339,12 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 		//
 		// The interval itself is real; only its owner was wrong. It is the age
 		// of OUR last message, which is the fact this rung fires on anyway.
-		Headline:    fmt.Sprintf(said.Say(momentWords.Replied), sinceWeWrote),
-		WhyNow:      said.Say(momentWords.RepliedWhy),
-		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
-		Evidence:    evidence,
-		FreshnessAt: &inbound,
-		RecommendedAction: crmcontracts.ContactMomentAction{
-			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: said.Say(momentWords.Reply),
-			State: crmcontracts.ContactMomentActionStateWillConfirm,
-			Destination: &crmcontracts.ContactMomentDestination{
-				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: new(map[string]string{prefillIntent: "reply"}),
-			},
-		},
+		Headline:          fmt.Sprintf(said.Say(momentWords.Replied), sinceWeWrote),
+		WhyNow:            said.Say(momentWords.RepliedWhy),
+		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
+		Evidence:          evidence,
+		FreshnessAt:       &inbound,
+		RecommendedAction: said.replyAction(said.Say(momentWords.Reply), "reply", page.LastLiveInboundActivityId),
 	}, true
 }
 
@@ -391,19 +376,11 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), waiting),
 		WhyNow: fmt.Sprintf(said.Say(momentWords.QuietWhy),
 			waiting, goneQuietAfterDays),
-		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
-		Evidence:    evidence,
-		FreshnessAt: &outbound,
-		RecommendedAction: crmcontracts.ContactMomentAction{
-			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: said.Say(momentWords.FollowUp),
-			State: crmcontracts.ContactMomentActionStateWillConfirm,
-			Destination: &crmcontracts.ContactMomentDestination{
-				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: new(map[string]string{prefillIntent: "follow_up"}),
-			},
-		},
-		SecondaryActions: &[]crmcontracts.ContactMomentAction{said.askColleague()},
+		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
+		Evidence:          evidence,
+		FreshnessAt:       &outbound,
+		RecommendedAction: said.replyAction(said.Say(momentWords.FollowUp), "follow_up", page.LastOutboundActivityId),
+		SecondaryActions:  &[]crmcontracts.ContactMomentAction{said.askColleague()},
 	}, true
 }
 

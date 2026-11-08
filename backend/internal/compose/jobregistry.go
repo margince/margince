@@ -54,8 +54,9 @@ import (
 // and jobs.MustBeTotal needs the set THIS process intends to work in order to
 // name a kind the contract has never heard of.
 type jobRegistry struct {
-	workers *river.Workers
-	kinds   []string
+	sessionSlots chan struct{}
+	workers      *river.Workers
+	kinds        []string
 	// wired is what this build put in, keyed by kind. MustBeTotal needs only
 	// the kind list above; the census needs the two things a kind string
 	// cannot carry — the args value its type parameter named, whose fields the
@@ -149,5 +150,5 @@ func addGovernedWorker[T river.JobArgs](reg *jobRegistry, w jobs.WorkOnly[T]) {
 	// River's one-minute default — away from a running job.
 	spec, _ := jobs.SpecFor(kind)
 	//nolint:forbidigo // the ONE sanctioned registration: every kind reaches River through this line, already wrapped in jobs.Govern and already recorded for MustBeTotal
-	river.AddWorker(reg.workers, jobs.Govern[T](w, spec))
+	river.AddWorker(reg.workers, jobs.Govern[T](sessionBudgetWorker[T]{work: w, slots: reg.sessionSlots}, spec))
 }

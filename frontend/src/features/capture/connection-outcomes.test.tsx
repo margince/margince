@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -38,7 +39,7 @@ function routes(overrides: RouteMap = {}): RouteMap {
     "GET /me": () => jsonResponse(meFixture()),
     "GET /capture/senders": () => jsonResponse({ data: [] }),
     "GET /capture/contacts-awaiting-decision": () => jsonResponse({ data: [] }),
-    "GET /capture/held-threads": () => jsonResponse({ data: [] }),
+    "GET /capture/held-threads": () => jsonResponse(heldThreadList()),
     "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
     ...overrides,
   };
@@ -117,7 +118,7 @@ it("returns focus to the card when the drawer's list empties before it closes", 
   let held = [HELD];
   installFetchStub(
     routes({
-      "GET /capture/held-threads": () => jsonResponse({ data: held }),
+      "GET /capture/held-threads": () => jsonResponse(heldThreadList(held)),
     }),
   );
   const user = userEvent.setup();
@@ -149,7 +150,7 @@ it("returns focus to the card while the drawer's list is still re-reading", asyn
       "GET /capture/held-threads": () => {
         reads += 1;
         return reads === 1
-          ? jsonResponse({ data: [HELD] })
+          ? jsonResponse(heldThreadList([HELD]))
           : new Promise<Response>(() => {});
       },
     }),
@@ -175,7 +176,7 @@ it("opens the held-mail controls from health and clears only the review paramete
   window.location.hash = "#/settings/capture-activity?review=held&keep=1";
   installFetchStub(
     routes({
-      "GET /capture/held-threads": () => jsonResponse({ data: [HELD] }),
+      "GET /capture/held-threads": () => jsonResponse(heldThreadList([HELD])),
     }),
   );
   const user = userEvent.setup();

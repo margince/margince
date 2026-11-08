@@ -22,13 +22,7 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailParty = components["schemas"]["EmailParty"];
 type EmailAttachmentSummary = components["schemas"]["EmailAttachmentSummary"];
 
-/**
- * The key a message's read is cached under. The audience writes refresh it
- * after changing who may read the message, so it is spelled once.
- */
-export function emailDetailKey(activityId: string) {
-  return ["email-presentation", activityId] as const;
-}
+export { emailPresentationKey as emailDetailKey } from "../lib/activitykeys";
 
 /**
  * One message's canonical read. A message's content is an authorization

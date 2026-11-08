@@ -31,7 +31,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -190,7 +189,7 @@ func constValuesAt(fset *token.FileSet, file *ast.File, line int) map[string]str
 // declaration's own.
 func rawSpellingsOf(t *testing.T, c claimedConst) []string {
 	t.Helper()
-	entries, err := os.ReadDir(c.dir)
+	entries, err := gatekit.ReadDir(c.dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", c.dir, err)
 	}

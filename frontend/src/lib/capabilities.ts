@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { unwrap } from "./problem";
+import { releaseSkew } from "./release";
 
 /**
  * The anonymous capability probe, read by everything that needs it.
@@ -27,4 +28,10 @@ export function useAuthCapabilities() {
     staleTime: 60_000,
     retry: 1,
   });
+}
+
+export function useSkewedApiRelease(mine: string): string | null {
+  const capabilities = useAuthCapabilities();
+  const server = capabilities.data?.release_version;
+  return server !== undefined && releaseSkew(mine, server) ? server : null;
 }

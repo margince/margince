@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -98,6 +99,9 @@ func (s *Sink) heldParentTx(
 // one it left, before the reply's audience is decided. A pending question is not
 // carried: it names the old conversation's message, and the new one opens its own.
 func carryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
+	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict
 		       (thread_key, user_id, status, kind, confidence, disposition_reason, seen_addresses,

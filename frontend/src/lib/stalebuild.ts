@@ -21,6 +21,13 @@ export function isStaleChunkError(error: unknown): boolean {
   return error instanceof Error && STALE_CHUNK.test(error.message);
 }
 
+// An explicit retry may reload even after the automatic loop guard fired.
+export function retryStaleChunk(error: unknown): boolean {
+  if (!isStaleChunkError(error)) return false;
+  window.location.reload();
+  return true;
+}
+
 /** Reloads the page onto the build now being served, unless this tab already
  *  did so in the last minute. Reports whether it reloaded. */
 export function reloadForNewBuild(now: number = Date.now()): boolean {

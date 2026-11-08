@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/editablevalue.tsx frontend/src/design-system/fieldeditdialog.tsx frontend/src/components/railfield.tsx backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/promoteexistingdeal.go backend/internal/compose/leadqualifydeal.go backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
+<!-- describes: frontend/src/components/relationships.tsx frontend/src/lib/relationshipcandidates.ts frontend/src/design-system/editablevalue.tsx frontend/src/design-system/fieldeditdialog.tsx frontend/src/components/railfield.tsx backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/promoteexistingdeal.go backend/internal/compose/leadqualifydeal.go backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -8,8 +8,7 @@ A lead is someone you may sell to. A deal is one opportunity with one company, a
 
 > "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it."
 
-A lead needs no origin. Email and LinkedIn address are the fields used to
-find copies of one lead; a second live lead with the same email is refused.
+A lead needs no origin. Email and LinkedIn address are the fields used to find copies of one lead; a second live lead with the same email is refused.
 
 ### How do I create a lead?
 To create a lead in Margince, open **Leads** in the sidebar and choose **New lead**.
@@ -27,8 +26,7 @@ Someone is either a lead or a contact, never both. Open a deal when an existing 
 
 When a new lead carries an email or LinkedIn profile already held by a contact,
 Margince creates no lead. It opens the contact when you enter the lead by hand.
-An automatic request is filed on the contact. Its owner gets a task to review
-it.
+An automatic request is filed on the contact. Its owner gets a task to review it.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
@@ -43,8 +41,9 @@ A lead has five statuses. The first three are open, the last two are final.
 
 Captured activity sets Contacted and Engaged automatically. An imported reply already older than 30 days, or a meeting the lead declined, does not set Engaged. You can also set them by hand; the record tells you which.
 
-You may move an open lead to any open step, forward or back, on its **Lead
-status** ladder. Margince itself only ever moves it forward.
+You may move an open lead to any open step, forward or back, on its **Lead status** ladder. Margince itself only ever moves it forward.
+
+On the leads board, the **Qualified** and **Disqualified** columns follow the board's filters, both their counts and their cards. When a filter cannot be counted, such as a search or tags, the count is withheld and the column says why. An open column lists a page of matching leads, and **Load more** at its foot adds the next page. If the owner filter names someone whose figures you may not see, it says "No count for this owner’s leads. Only an administrator can let you measure them." If the counts or the leads fail to load, the board offers **Retry**.
 
 ### How do I qualify a lead or convert it into a deal?
 To qualify a lead in Margince, open the lead and choose **Qualify**. The dialog offers deal choices.
@@ -201,7 +200,7 @@ To edit a deal in Margince, open it from **Deals** and press the value to change
 1. If the panel is hidden, choose **Show details**.
 2. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. **Value**, **Company** and **Referring partner** open a dialog with several fields.
 
-Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **Referring partner**, **Forecast category**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
+Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **Referring partner**, **Probability**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
 Also called: update an opportunity, rename a deal, change deal details.
 
 ### How do I change a deal's value or currency?
@@ -228,7 +227,7 @@ Also called: move a deal to another account, attach a deal to a project.
 To reassign a deal to a colleague in Margince, open the deal and press the **Owner** row of its **Details** panel. Pick the colleague in the dialog and press **Save**.
 
 To reassign many, switch **Deals** to **Table** and tick them. Use **Pick an owner** → **Assign owner** in the bulk bar, then **Change owner**.
-The new owner must be "an active colleague you may assign work to". That is a user on a full seat, not an agent, within your own reach.
+The new owner must be "an active colleague you may assign work to". That is any active colleague on a full seat, not an agent, even one whose records you cannot change. You may reassign only a deal you may change, or one with no owner.
 Also called: hand over a deal, change deal owner, transfer an opportunity.
 
 ### Can I edit a closed or archived deal?
@@ -241,8 +240,9 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-To change the role, choose **Edit** on the row. To take someone off, choose **Remove** ("Remove this relationship? There is no undo.").
-From a contact's **Deals** tab, **Add to a deal** does the same from the other end.
+To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit** on the row to change the role, or **Remove** to take the contact off ("Remove this relationship? There is no undo.").
+
+From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
 
 ### Can I move a deal to another pipeline?
@@ -250,7 +250,7 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-No. Win probability in Margince belongs to the stage (**Settings → Pipelines**, **Win probability**), not to a single deal. To say how likely one deal is, set its **Forecast category** in **Details**: Commit, Best case, Pipeline or Omitted.
+Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Pipelines**, **Win probability**). Moving the deal to another stage also sets it back to that stage's.
 Also called: deal probability, likelihood, confidence.
 
 ## Projects

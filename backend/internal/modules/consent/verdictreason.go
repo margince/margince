@@ -31,6 +31,7 @@ const (
 	ReasonConsentWithdrawn             = "consent_withdrawn"
 	ReasonNoConsentExceptionNotOffered = "no_consent_exception_not_offered"
 	ReasonNoConsent                    = "no_consent"
+	ReasonExistingCustomer             = "existing_customer"
 )
 
 // said fills a verdict's sentence from its code.
@@ -77,8 +78,9 @@ var reasonSentences = map[string]string{
 	ReasonNoConnection:                 "they have never written to you and no deal or inquiry connects you",
 	ReasonConsentConfirmed:             "they gave consent, with the confirmation on file",
 	ReasonConsentWithdrawn:             "they withdrew consent for this purpose",
-	ReasonNoConsentExceptionNotOffered: "no consent recorded, and the existing-customer exception is not offered",
+	ReasonNoConsentExceptionNotOffered: "no consent recorded, and no purchase of theirs is covered by a declared collection notice",
 	ReasonNoConsent:                    "no consent recorded",
+	ReasonExistingCustomer:             "they bought from you and were told then that they may object to advertising",
 }
 
 func reasonSentence(v Verdict) string {
@@ -88,6 +90,9 @@ func reasonSentence(v Verdict) string {
 			v.ReasonAt.Format("2 Jan 2006"))
 	case v.ReasonCode == ReasonQualifyingEvent && v.Qualifying != nil:
 		return qualifyingReason(*v.Qualifying)
+	case v.ReasonCode == ReasonExistingCustomer && v.ExistingCustomer != nil:
+		return fmt.Sprintf("they bought from you on %s and were told then that they may object to advertising",
+			v.ExistingCustomer.SoldAt.Format("2 Jan 2006"))
 	}
 	return reasonSentences[v.ReasonCode]
 }

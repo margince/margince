@@ -42,7 +42,7 @@ func TestEveryBenchFileSaysSoInItsName(t *testing.T) {
 	t.Parallel()
 	var found int
 	var misnamed []string
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 			return walkErr
 		}

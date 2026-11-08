@@ -92,6 +92,10 @@ func (s *Sink) CancelIdentifiedMeeting(
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, err := s.mailboxRunAllowedTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		id, _, err := s.cancelMeeting(ctx, tx, key, at)
 		if err != nil || !id.IsZero() || s.cancelMeetingByID == nil {
 			// An error, a row found under the key (cancelled or already

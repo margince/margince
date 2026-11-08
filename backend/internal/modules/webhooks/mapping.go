@@ -17,6 +17,7 @@ func wireSubscription(s Subscription) crmcontracts.WebhookSubscription {
 	return crmcontracts.WebhookSubscription{
 		Id:              openapi_types.UUID(s.ID),
 		OwnerId:         openapi_types.UUID(s.OwnerID),
+		OwnerActive:     &s.OwnerActive,
 		TargetUrl:       s.TargetURL,
 		EventTypes:      s.EventTypes,
 		State:           crmcontracts.WebhookSubscriptionState(s.State),

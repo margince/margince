@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactElement } from "react";
 import type { components } from "../../api/schema";
 import {
-  installFetchStub,
   jsonResponse,
+  type RouteMap,
   StoryProviders,
+  stubWithSession,
 } from "../../testing/story-utils";
 import { ContactProviderSection } from "./contactprovider";
 import {
@@ -37,18 +39,19 @@ function profile(overrides: Partial<Profile> = {}): Profile {
 const meta: Meta<typeof ContactProviderSection> = {
   title: "Records/Contact 360/Bought data",
   component: ContactProviderSection,
+  beforeEach: () => installProviderStub({}),
   parameters: { layout: "padded" },
 };
 export default meta;
 type Story = StoryObj<typeof ContactProviderSection>;
 
-// The buy verb is gated on the RUN's state (`canEnrichNow`) rather than on a
-// grant, so this card reads no session and the stories route none. The run read
-// is routed because the section polls it while a run is moving, and an unrouted
-// request would leave the page instead of answering.
+function installProviderStub(routes: RouteMap) {
+  stubWithSession(routes, { contact: ["read", "update"] });
+}
+
 function section(value: Profile | undefined) {
   return () => {
-    installFetchStub({
+    installProviderStub({
       "GET /contacts/p-1/enrichment-runs/run-1": () =>
         jsonResponse(completedProviderRun),
     });
@@ -68,7 +71,7 @@ export const Completed: Story = { render: section(profile()) };
  *  a translated sentence meet, so it is the line worth reading here. */
 export const CompletedGerman: Story = {
   render: () => {
-    installFetchStub({
+    installProviderStub({
       "GET /contacts/p-1/enrichment-runs/run-1": () =>
         jsonResponse(completedProviderRun),
     });
@@ -310,7 +313,7 @@ export const Phone: Story = {
  */
 export const TwoProviders: Story = {
   render: () => {
-    installFetchStub({
+    installProviderStub({
       "GET /contacts/p-1/enrichment-runs/run-1": () =>
         jsonResponse(completedProviderRun),
     });
@@ -360,7 +363,7 @@ export const TwoProviders: Story = {
  */
 export const BuyMobileWithEmailHeld: Story = {
   render: () => {
-    installFetchStub({
+    installProviderStub({
       "GET /provider-connections": () =>
         jsonResponse({
           data: [
@@ -406,4 +409,69 @@ export const BuyMobileWithEmailHeld: Story = {
       </StoryProviders>
     );
   },
+};
+
+const neverRunProfile = profile({
+  state: "never_run",
+  provider: "surfe",
+  retrieved_at: null,
+  emails: [],
+  mobile_phones: [],
+  linkedin_url: null,
+  current_employment: undefined,
+  job_history: [],
+  location: null,
+  departments: [],
+  seniorities: [],
+  latest_run: undefined,
+  contributing_runs: undefined,
+  categories_not_requested: [],
+});
+
+/** The section over a contact this reader holds as `record` says. */
+function heldAs(
+  record: Record<string, unknown>,
+  lookup?: () => Response,
+): () => ReactElement {
+  return () => {
+    installProviderStub({
+      "GET /contacts/p-1/360": () =>
+        jsonResponse({
+          as_of: "2026-08-20T09:00:00Z",
+          contact: { id: "p-1", full_name: "Dana Ruiz", ...record },
+          sections_omitted: [],
+        }),
+      ...(lookup ? { "POST /contacts/p-1/enrichment-runs": lookup } : {}),
+    });
+    return (
+      <StoryProviders>
+        <ContactProviderSection contactId="p-1" profiles={[neverRunProfile]} />
+      </StoryProviders>
+    );
+  };
+}
+
+/**
+ * A contact this reader may not edit. A lookup writes onto the contact, so the
+ * plate offers no button and says why, instead of a verb that can only fail.
+ */
+export const RefusedNotYours: Story = { render: heldAs({ writable: false }) };
+
+/** An archived contact takes no lookup, and the plate says it is archived. */
+export const RefusedArchived: Story = {
+  render: heldAs({ writable: true, archived_at: "2026-08-01T00:00:00Z" }),
+};
+
+/**
+ * A lookup the server refused after the press, the race the plate cannot see
+ * coming. Press the button: the refusal stands above the plate with space
+ * between them, and the plate keeps its own padding.
+ */
+export const RefusedAfterThePress: Story = {
+  render: heldAs({ writable: true }, () =>
+    jsonResponse(
+      { title: "Forbidden", status: 403, detail: "You may not change this." },
+      403,
+    ),
+  ),
 };

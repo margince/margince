@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 type Handlers struct {
@@ -37,6 +38,9 @@ type Handlers struct {
 	// calendars answers whether a host's own diary reaches this product, which
 	// decides what an empty availability window may claim. Nil answers no.
 	calendars CalendarConnected
+	// listCalendar says whether the reader's calendar feeds a list read as
+	// their diary. Nil leaves the list's calendar absent, which reads unknown.
+	listCalendar ListCalendar
 	// preview answers what the engine WOULD decide, for a message nobody has
 	// written. Separate from consent because it is a different question asked
 	// of the same authority: the gate is the send path's default-deny door,
@@ -159,5 +163,16 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 // reach us", which the availability door publishes as calendar_backing.
 func (h Handlers) WithCalendarConnected(connected CalendarConnected) Handlers {
 	h.calendars = connected
+	return h
+}
+
+// ListCalendar is what an activity list owes about the reader's own calendar,
+// and whether it owes anything. compose owns it, because the connections live in
+// capture, and the list_records tool reads the same function.
+type ListCalendar func(ctx context.Context, scope datasource.ActivityListScope) (calendar crmcontracts.ReaderCalendar, owed bool, err error)
+
+// WithListCalendar binds the answer GET /activities publishes as `calendar`.
+func (h Handlers) WithListCalendar(calendar ListCalendar) Handlers {
+	h.listCalendar = calendar
 	return h
 }

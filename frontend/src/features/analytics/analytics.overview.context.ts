@@ -18,7 +18,7 @@ import {
   OVERVIEW_DIAL,
   type OverviewView,
 } from "./analytics.overview.choice";
-import { REPORTING_PERIODS } from "./reporting.filters";
+import { REPORTING_PERIODS } from "./reporting.selection";
 
 /** The address dials that make up one view's question. */
 export const CONTEXT_DIALS = [

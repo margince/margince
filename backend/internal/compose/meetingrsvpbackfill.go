@@ -3,24 +3,8 @@
 
 package compose
 
-// Closing meetings captured before the calendar's RSVP was read.
-//
-// Live capture now closes a meeting the calendar says is off — cancelled by its
-// organizer, or declined by the seat whose calendar it is. Every meeting
-// captured before that carries `meeting_status` NULL, which every surface reads
-// as booked, and no later sync will correct it: a provider stops listing an
-// event once it is off, so the pull that would have carried the news has long
-// since passed.
-//
-// The evidence is already here. Each meeting's raw original is stored verbatim,
-// and the RSVP was always in it — nothing looked. So this re-reads what we hold
-// rather than asking the provider again, which also means it works for a
-// calendar since disconnected.
-//
-// It asks meetingmap the SAME question live capture asks (SettlementOf over the
-// stored bytes). A pass that re-derived "is this meeting off" from the payload
-// would be a second answer to a question that package owns, and the two would
-// part company the first time a provider changed how it says no.
+// Stored originals use the same cancellation decision as live capture. A local
+// calendar removal or an attendee's answer never cancels the shared meeting.
 
 import (
 	"context"

@@ -24,7 +24,7 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // CUT rather than a length.
 //
 // `format/calendarday.ts` is where the question is answered — in a named zone,
-// from the parts — and `viewerZone()` / `useRecordZone()` say whose calendar the
+// from the parts — and `browserZone()` / `useCompanyZone()` say whose calendar the
 // answer belongs to.
 //
 // WHAT IT CANNOT SEE: an ISO string sliced through a variable
@@ -54,10 +54,6 @@ const deliberateUtcDays: Record<string, { sites: number; why: string }> = {
   "format/timezone.ts#shifted": {
     sites: 1,
     why: "the same round trip as adjacentMonth's: the date is built with Date.UTC(...) from a day this function was GIVEN, and the components read back are the ones just written. It is arithmetic on a named day, not a reading of the clock, and the zoned question is answered by startOfDayInstant on the next line",
-  },
-  "components/taskactions.tsx#next": {
-    sites: 1,
-    why: "the same round trip as shifted's: the date is built with Date.UTC(...) from a day calendarDay just named in the record's zone, and the parts read back are the ones just written. A snooze steps to the NEXT CALENDAR DAY, and doing it here rather than by adding 86_400_000 is the point — a local day is not always that long, and the old arithmetic skipped Berlin's 29 March. dueInstant answers the zoned question on the next line",
   },
   "mcp-apps/values.ts#day": {
     sites: 1,

@@ -113,6 +113,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	// is no redelivery left for the key to deduplicate.
 	rows, err := tx.Query(ctx, `
 		UPDATE activity a SET subject = $5, body = NULL, raw = NULL, agenda_fingerprint = NULL,
+ internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it
 		  -- read. A verdict saying a subject replied negatively is a claim about

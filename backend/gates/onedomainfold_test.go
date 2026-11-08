@@ -14,7 +14,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -68,11 +67,11 @@ func TestOnlyMailIdentitySpellsTheCorrespondenceLockKey(t *testing.T) {
 	owned, judged := 0, 0
 	var findings []string
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 				return walkErr
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from the trusted source tree
 			if readErr != nil {
 				return readErr
 			}

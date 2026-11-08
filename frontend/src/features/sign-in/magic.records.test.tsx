@@ -213,6 +213,20 @@ async function openTheLine() {
   return screen.findByRole("dialog");
 }
 
+describe("a done line's opener", () => {
+  it("marks its label as data and aligns it to the start", async () => {
+    stubOpenedLine();
+    renderMagic();
+
+    const opener = await screen.findByRole("button", {
+      name: "GEM and 1 more",
+    });
+
+    expect(opener.classList).toContain("btn-valuelabel");
+    expect(opener.dataset.align).toBe("start");
+  });
+});
+
 describe("a grouped record with a reviewed change", () => {
   it("keeps the review verbs its receipt offers on its own", async () => {
     stubOpenedLine(reviewedRecords(), () =>
@@ -225,9 +239,8 @@ describe("a grouped record with a reviewed change", () => {
     const dialog = await openTheLine();
 
     expect(
-      await within(dialog).findByRole("button", { name: "Keep date" }),
-    ).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: "Accept" })).toBeTruthy();
+      await within(dialog).findAllByRole("button", { name: "Mark reviewed" }),
+    ).toHaveLength(2);
     expect(
       within(dialog).getAllByRole("button", { name: "Undo" }),
     ).toHaveLength(2);
@@ -240,9 +253,8 @@ describe("a grouped record with a reviewed change", () => {
     const dialog = await openTheLine();
 
     expect(await within(dialog).findByText("Deal 1")).toBeTruthy();
-    expect(within(dialog).queryByRole("button", { name: "Accept" })).toBeNull();
     expect(
-      within(dialog).queryByRole("button", { name: "Keep date" }),
+      within(dialog).queryByRole("button", { name: "Mark reviewed" }),
     ).toBeNull();
   });
 });
