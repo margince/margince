@@ -40,6 +40,7 @@ import { useMagic } from "../../lib/magic.queries";
 import {
   type MarginceChangeBundle,
   type MarginceChangeSummary,
+  shownUndoable,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
 import { receiptHeadline, receiptReason } from "../../lib/receiptcopy";
@@ -137,14 +138,14 @@ export function undoableShown(
   bundle: MarginceChangeBundle | undefined,
 ): string[] {
   if (!bundle) return [];
-  const shown = new Set(
-    group.receipts
-      .filter(isReviewableReceipt)
-      .map(receiptAuditId)
-      .filter((id): id is string => id !== undefined),
-  );
-  return (bundle.undoable_audit_log_ids ?? bundle.audit_log_ids).filter((id) =>
-    shown.has(id),
+  return shownUndoable(
+    bundle,
+    new Set(
+      group.receipts
+        .filter(isReviewableReceipt)
+        .map(receiptAuditId)
+        .filter((id): id is string => id !== undefined),
+    ),
   );
 }
 
