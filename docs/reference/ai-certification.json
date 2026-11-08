@@ -22767,8 +22767,11 @@
             "invalid": 15,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
           "stale_cause": {
+            "case_changed": [
+              "sales_assessment_names_the_deal_no_decision_covers"
+            ],
             "prompt_changed": [
               "sales_assessment_acknowledges_an_open_decision",
               "sales_assessment_names_the_deal_no_decision_covers"
@@ -22801,8 +22804,11 @@
             "invalid": 12,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
           "stale_cause": {
+            "case_changed": [
+              "sales_assessment_names_the_deal_no_decision_covers"
+            ],
             "prompt_changed": [
               "sales_assessment_acknowledges_an_open_decision",
               "sales_assessment_names_the_deal_no_decision_covers"
@@ -22834,8 +22840,11 @@
             "invalid": 12,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
           "stale_cause": {
+            "case_changed": [
+              "sales_assessment_names_the_deal_no_decision_covers"
+            ],
             "prompt_changed": [
               "sales_assessment_acknowledges_an_open_decision",
               "sales_assessment_names_the_deal_no_decision_covers"

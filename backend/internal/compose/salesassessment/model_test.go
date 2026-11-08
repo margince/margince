@@ -148,7 +148,7 @@ func TestParagraphsKeepSentencesThatReadADecisionAndADealAmount(t *testing.T) {
 		`[{"text":"Nothing is won yet against {{metric:open_pipeline}} open.","kind":"observation","cells":["metric:bookings_won","metric:open_pipeline"]}],` +
 		`[{"text":"An open decision to call the buyer about the budget owner, due 2026-11-17, still covers the Globex renewal.","kind":"claim","cells":["metric:open_pipeline"],"records":["decision-1"]}],` +
 		`[{"text":"The Globex renewal at 25000 EUR carries most of the open pipeline.","kind":"hypothesis","cells":["metric:open_pipeline"],"records":["deal-globex"]},` +
-		`{"text":"Its {{deal-globex}} is the figure to protect.","kind":"hypothesis","cells":["metric:open_pipeline"],"records":["deal-globex"]}]` +
+		`{"text":"The Globex renewal's {{deal-globex}} is the figure to protect.","kind":"hypothesis","cells":["metric:open_pipeline"],"records":["deal-globex"]}]` +
 		`],"next_decision":null}`
 	written, err := Parse(reply, decisionInput())
 	if err != nil {
@@ -199,5 +199,32 @@ func TestParseKeepsADecisionQuotingItsDealsAmount(t *testing.T) {
 	}
 	if written.Next == nil || !strings.Contains(written.Next.Text, "25,000 EUR") {
 		t.Fatalf("the decision was %+v, want it kept with the deal's display amount", written.Next)
+	}
+}
+
+func TestADealQuantityStandsOnlyForTheAmountOfADealTheSentenceNames(t *testing.T) {
+	cited := `,"cells":["metric:open_pipeline"],"records":["decision-1","deal-globex"]}`
+	for text, kept := range map[string]bool{
+		"The Globex renewal at {{deal-globex}} carries most of the pipeline.":                     true,
+		"You have an open decision regarding {{deal-globex}} valued at {{deal-globex}}.":          false,
+		"The open pipeline also includes {{deal-globex}}.":                                        false,
+		"The Globex renewal at {{deal-globex}} is worth {{deal-globex}}.":                         false,
+		"The Globex renewal still owes the decision to {{decision-1}}.":                           false,
+		"The Globex renewal at {{deal-globex}} sits inside {{metric:open_pipeline}} of pipeline.": true,
+	} {
+		written, err := Parse(`{"sentences":[{"text":"Nothing is won yet at 0 EUR.","cells":["metric:bookings_won"]},{"text":"`+text+`"`+cited+`],"next_decision":null}`, decisionInput())
+		if err != nil {
+			t.Fatalf("%q: %v", text, err)
+		}
+		if got := len(written.Sentences) == 2; got != kept {
+			t.Errorf("%q: kept %v, want %v", text, got, kept)
+		}
+	}
+	written, err := Parse(`{"sentences":[{"text":"Nothing is won yet at 0 EUR.","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-globex","text":"Ask {{deal-globex}} for the budget owner."}}`, decisionInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if written.Next != nil {
+		t.Fatalf("a decision printing the amount where the deal's name belongs was kept: %+v", written.Next)
 	}
 }

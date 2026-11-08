@@ -56,8 +56,10 @@ func (s *salesAssessments) upcomingFacts(ctx context.Context, evaluation crmcont
 	return cells, err
 }
 
-func displayAssessmentCells(in *salesassessment.Input, evaluation crmcontracts.ReportingEvaluation) {
-	language := string(reporting.ExplanationCopy(evaluation.Context).Lang())
+// displayAssessmentFigures writes each figure the way the page prints it in
+// this language. The certification case calls it too, so a model is graded
+// on the figures production shows it.
+func displayAssessmentFigures(in *salesassessment.Input, language string) {
 	for i := range in.Cells {
 		cell := &in.Cells[i]
 		number := strings.TrimSpace(strings.TrimSuffix(cell.Value, " "+cell.Unit))
