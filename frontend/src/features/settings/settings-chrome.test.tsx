@@ -164,20 +164,10 @@ describe("the scope a settings page publishes", () => {
     return <PageTitle route={route} section={useSettingsSection(route)} />;
   }
 
-  // `company` is deliberately not among these: it opens on the installation
-  // write or the rate read, which the default fixture grants neither of, so the
-  // page is shut and has no heading to carry a scope. The installation scope is
-  // covered by the pure catalog test instead.
-  // `account` and `connections` are deliberately NOT here. Both open on
-  // `always`, so their heading and badge render while `/me` is still in flight
-  // — `findByText` would resolve on the loading paint, and a regression that
-  // showed the badge during loading and dropped it once the snapshot arrived
-  // would still pass. Their scope values are held by the pure catalog cases
-  // instead, where there is no in-flight state to race.
-  //
-  // `deals` is safe for the opposite reason: it opens on a GRANT, every
-  // grant predicate reads false against an unresolved snapshot, so its row
-  // cannot appear until /me has answered.
+  // The default fixture grants nothing that opens `company`. `account` and
+  // `connections` render before `/me` answers, so they would pass on the
+  // loading paint. The pure catalog cases hold those scopes. `deals` opens on
+  // a grant, so it waits for `/me`.
   it.each([["deals", "settings.scope.workspace"]] as const)(
     "says whose state %s changes",
     async (page, key) => {

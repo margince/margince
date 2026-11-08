@@ -373,9 +373,8 @@ export function settingsSearch(
     const sections = sectionKeys.map((key) => t(key));
     const aliases = settingsPageAliases(page.id, reader);
     const tabWords = tabAliases(page.id, reader.opensTab);
-    // Order is the ranking: the page's own name, its group, the words it
-    // answers to, the words one of its tabs answers to, the settings it draws,
-    // and last its description.
+    // Order is the ranking: name, group, the page's words, its tabs' words,
+    // the settings it draws, and last its description.
     const named = [
       fold(label),
       fold(group),

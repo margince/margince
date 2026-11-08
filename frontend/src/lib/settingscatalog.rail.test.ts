@@ -55,9 +55,8 @@ describe("what the rail carries and what it leaves behind", () => {
   it("gives a rep the pages they work in, and only those", () => {
     const reach = settingsReach(seededRep);
     expect(reach.acts.map((page) => page.id)).toEqual([
-      // Their own six, Voice included — a rep holds voice_profile create and
-      // update, so Voice IS theirs; it is here for that reason and not because
-      // the page sits under their own heading.
+      // Their own six, Voice included. A rep holds voice_profile create and
+      // update, so Voice is theirs by grant, not by its heading.
       "account",
       "notifications",
       "meetings",

@@ -239,17 +239,16 @@ export type SettingsPageRow = {
 };
 
 /**
- * One tab of a page. `requires` narrows the page's own: a tab that was a page
- * of its own keeps that page's grant, so merging pages hides nothing that was
- * hidden and opens nothing that was closed. A tab without one is a part of a
- * page that was always one page, and shows to whoever may open it.
+ * One tab of a page. `requires` narrows the page's own. A tab that was a page
+ * keeps that page's grant, so a merge opens nothing that was closed. A tab
+ * without one shows to whoever may open the page.
  */
 export type SettingsTabRow = {
   id: string;
   requires?: CapabilityExpression;
-  // Whether the reader can act on this tab, when that differs from the page:
-  // a merged page is actionable if any tab is, and a tab that was its own page
-  // still says it is read-only by its own verbs.
+  // Whether the reader can act on this tab, when that differs from the page.
+  // A merged page is actionable if any tab is. A tab that was a page keeps
+  // its own verbs for read-only.
   changes?: CapabilityExpression;
 };
 

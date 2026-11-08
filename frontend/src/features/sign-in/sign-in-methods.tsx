@@ -100,8 +100,8 @@ export function SignInMethodsCard({
   // An answer that failed is no proof the admin holds a factor, so it warns.
   const selfLockedOut = !ownMfa.isPending && ownMfa.data?.confirmed !== true;
 
-  // The group map reads the same policy and locks, so it is drawn from here
-  // on its own tab rather than fetching them a second time.
+  // The group map reads the same policy and locks. It is drawn from here, on
+  // its own tab, so they are not fetched twice.
   if (part === "grants")
     return settings.data ? (
       <GroupRoleGrants

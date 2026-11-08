@@ -136,8 +136,8 @@ async function healthNames(Story: (typeof pageStories)[number]) {
 }
 
 // Every tab the stories' admin may open, or the page itself when it has none.
-// A tab offering composed units opens only in a build that composed some, and
-// this build's context decides it exactly as the strip does.
+// A tab offering composed units opens only in a build that composed some. This
+// build's context decides it as the strip does.
 function tabsOf(page: SettingsPageId): readonly (string | undefined)[] {
   const row = SETTINGS_PAGES.find((each) => each.id === page);
   if (row === undefined || !("tabs" in row)) return [undefined];

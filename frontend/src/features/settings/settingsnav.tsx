@@ -368,8 +368,8 @@ export function useVisibleSettingsTabs(
   return page === undefined ? [] : visibleSettingsTabs(page, snapshot, context);
 }
 
-// A tab can also ask whether the company-context card draws, which is a query
-// rather than a fact of the build, so only the tab hooks carry it.
+// A tab can ask whether the company-context card draws. That is a query, not a
+// fact of the build, so only the tab hooks carry it.
 function useTabContext(): CatalogContext {
   return {
     ...catalogContext(),
@@ -377,7 +377,7 @@ function useTabContext(): CatalogContext {
   };
 }
 
-// Which extension units this build composed. Read HERE rather than inside the
+// Which extension units this build composed. Read here rather than inside the
 // catalog: the extensions registry reaches `@composition/screens`, and
 // importing it there would drag React into a module importable from anywhere.
 export function catalogContext(): CatalogContext {

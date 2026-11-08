@@ -29,8 +29,8 @@ export type SettingsDestination =
  * Resolve an address against what this reader may open, and rewrite a legacy
  * spelling to the current one.
  *
- * An address the reader may not open, a tab included, is a boundary with the
- * URL left exactly as typed, so they can quote it to the colleague who has it.
+ * An address the reader may not open, a tab included, is a boundary. The URL
+ * stays as typed, so they can quote it to the colleague who has it.
  */
 export function useSettingsDestination(route: Route): SettingsDestination {
   const target = settingsRouteTarget(route);

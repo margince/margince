@@ -88,9 +88,8 @@ export const BUSINESS_PAGES = [
     // is asked as the update: every seeded role reads it for the base currency,
     // and only admin and ops may change it.
     //
-    // The company profile adds no arm. Its read and write both ask the admin
-    // role, which no grant here can spell, so its tab opens on the card's own
-    // answer rather than standing empty for everyone else.
+    // The company profile adds no arm. Its read and write ask the admin role,
+    // which no grant here can spell. Its tab opens on the card's own answer.
     requires: anyOf(
       writes("installation_settings", ["update"]),
       reads("fx_rate"),

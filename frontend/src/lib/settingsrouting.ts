@@ -23,19 +23,17 @@ export const SETTINGS_SCREEN = "settings";
 type RenamedPage = Readonly<{ page: SettingsPageId; tab?: string }>;
 
 /**
- * Old ids that are GENUINELY renamed or merged, and where each now lands.
+ * Old ids that were renamed or merged, and where each now lands.
  *
- * Most old ids are still CANONICAL page ids (`account`, `privacy`, `capture`
- * and the rest). They are not aliases and must not resolve as legacy, or each
- * would rewrite the address bar on arrival for no reason.
+ * Most old ids are still page ids (`account`, `privacy`, `capture`). They must
+ * not resolve as legacy, or each would rewrite the address bar for no reason.
  *
- * The rest lost their names. A page merged into another lands on the tab that
- * holds what it was; a split one lands on the part its id was named for.
+ * A page merged into another lands on the tab that holds what it was. A split
+ * one lands on the part its id was named for.
  */
 const RENAMED_PAGES: Readonly<Record<string, RenamedPage>> = Object.assign(
-  // Prototype-free, because the lookups below take an id straight off the
-  // address bar: on an ordinary object `#/settings/constructor` would resolve
-  // to an inherited function rather than to undefined.
+  // Prototype-free, because the lookups take an id off the address bar. On an
+  // ordinary object `#/settings/constructor` would find an inherited function.
   Object.create(null) as Record<string, RenamedPage>,
   {
     general: { page: "company" },

@@ -283,7 +283,7 @@ function connectionsTab(tab: string): ReactNode {
     case "linkedin":
       return <LinkedInNetworkPanel />;
     case "accounts":
-      // Units whose credential is the member's OWN, offered here rather than
+      // Units whose credential is the member's own, offered here rather than
       // from the rail because enabling one adds something to configure.
       return <ExtensionUnitsCard scope="user" />;
     case "activity":
