@@ -6,7 +6,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 
 ## webhook_delivery
 
-18 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -24,6 +24,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 | `last_status_code` | `integer` |  |  |
 | `next_retry_at` | `timestamp with time zone` |  |  |
 | `payload` | `text` | yes |  |
+| `payload_pruned_at` | `timestamp with time zone` |  |  |
 | `status` | `text` | yes | One of `pending`, `delivered`, `retrying`, `dead_lettered`, `visibility_revoked`. |
 | `subscription_id` | `uuid` | yes | Points at `webhook_subscription.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -42,6 +43,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `idx_webhook_delivery_body_kept`: `btree (id) WHERE ((payload_pruned_at IS NULL) AND (payload <> '') AND (status = ANY (ARRAY['delivered', 'dead_lettered', 'visibility_revoked'])))`
 - `idx_webhook_delivery_by_subscription`: `btree (subscription_id, created_at DESC)`
 - `idx_webhook_delivery_due`: `btree (next_retry_at) WHERE (status = 'retrying')`
 - `webhook_delivery_dedupe_key`: `unique, btree (subscription_id, event_id)`
@@ -62,7 +64,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 | `body_template` | `text` |  | The body template every delivery is rendered from; null sends the standard envelope. |
 | `custom_headers` | `jsonb`, default `'[]'::jsonb` | yes | The headers sent with every delivery, by name. |
 | `event_types` | `text[]` | yes | The subscribed event types, each from the published event catalog. |
-| `owner_id` | `uuid` | yes | Points at `app_user.id`. |
+| `owner_id` | `uuid` | yes | The member every delivery runs under: an event goes out only when they may see its record. |
 | `signing_secret_ref` | `text` | yes |  |
 | `state` | `text`, default `'active'::text` | yes | One of `active`, `paused`. |
 | `target_url` | `text` | yes | HTTPS-only delivery endpoint. |

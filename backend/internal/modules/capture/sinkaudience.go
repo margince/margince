@@ -140,7 +140,8 @@ const (
 	audienceReasonConfidentialMarker = "explicitly_confidential"
 	// Every party to the mail is a member of the workspace. No verdict clears
 	// it; the mailbox owner sharing the thread does.
-	audienceReasonMembersOnly = "members_only"
+	audienceReasonMembersOnly         = "members_only"
+	audienceReasonInternalOperational = "internal_operational"
 	// The thread already carried a holding verdict — a classifier's, or the
 	// owner's own. Never the audience's DECIDING reason, because a holding
 	// verdict already narrows through verdict_status; recorded so a widening
@@ -155,7 +156,7 @@ const audienceWorkspace = "workspace"
 // question a classifier answers. activities' rowCarriedHold keeps the same four.
 var verdictProofReasons = []string{
 	audienceReasonWorkspaceFloor, audienceReasonCounterparty,
-	audienceReasonConfidentialMarker, audienceReasonMembersOnly,
+	audienceReasonConfidentialMarker, audienceReasonMembersOnly, audienceReasonInternalOperational,
 }
 
 func verdictProofHold(reason string) bool { return slices.Contains(verdictProofReasons, reason) }

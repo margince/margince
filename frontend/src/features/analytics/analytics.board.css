@@ -1,0 +1,127 @@
+/* An Analytics page: the work column beside the rail.
+   The rail takes a third, enough for a written outlook to keep its lines. */
+.analytics-board {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  align-items: start;
+  gap: var(--gapCards);
+}
+.analytics-board-main,
+.analytics-board-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+/* With nothing for the rail the column takes the page. A rail whose parts
+   all drew nothing is gone too, its landmark with it. */
+.analytics-board-rail:empty {
+  display: none;
+}
+.analytics-board:not(:has(> .analytics-board-rail:not(:empty))) {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  .analytics-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The work column's sections as one pane: the sheet wears the pane's edge,
+   corner and resting shadow, and each panel inside gives up its own. A
+   hairline parts two sections. A results part has no box of its own
+   (reporting.css), so these rules reach through it to its sections. */
+.analytics-sheet {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  overflow: hidden;
+}
+.analytics-sheet > :where(*) + :where(*),
+.analytics-sheet > .reporting-results-part > :where(*) + :where(*),
+.analytics-sheet > :where(*) + .reporting-results-part > :where(:first-child) {
+  border-top: 1px solid var(--groundEdge);
+}
+/* Each panel is a section on the sheet's own ground. */
+.analytics-sheet .panel {
+  border: 0;
+  border-top: 1px solid var(--groundEdge);
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+.analytics-sheet > .panel:first-child,
+.analytics-sheet > .reporting-results-part:first-child > .panel:first-child,
+.analytics-sheet > .stat-strip[data-density="plate"]:first-child {
+  border-top: 0;
+}
+/* A section's foot is its last line, not a band: the seam between sections
+   already closes it. */
+.analytics-sheet .panel > .panel-foot {
+  border-top: 0;
+  padding-top: 0;
+  padding-bottom: var(--padPanel);
+}
+/* A plate of figures inside the sheet stands on the sheet's own ground. */
+.analytics-sheet .stat-strip[data-density="plate"] {
+  background: none;
+}
+.analytics-sheet > :where(:not(.panel, section, div)),
+.analytics-sheet
+  > .reporting-results-part
+  > :where(:not(.panel, section, div)) {
+  margin: 0;
+  padding: var(--space-3) var(--padPanel);
+}
+/* A line of words or verbs on the sheet keeps the sections' inset. */
+.analytics-sheet .reporting-written,
+.analytics-sheet .reporting-share-bar {
+  margin: 0;
+  padding: var(--space-3) var(--padPanel);
+}
+/* A notice on the sheet is a tinted section of its own, its words on the
+   sections' inset. A margin here would add to a host's row gap. */
+.analytics-sheet > .callout,
+.analytics-sheet > .reporting-results-part > .callout {
+  border-radius: 0;
+  padding: var(--space-3) var(--padPanel); /* ds:ignore the sheet's section inset */
+}
+/* In the rail a plate is one column: each reading a row of its own. */
+.analytics-board-rail .stat-strip[data-density="plate"] {
+  grid-template-columns: minmax(0, 1fr);
+  background: none;
+}
+.analytics-board-rail .stat-strip[data-density="plate"] > * + * {
+  border-block-start: 1px solid var(--groundEdge);
+}
+
+/* Before the first decision its card is one line and its step, side by side. */
+.analytics-decision-start .panel-actions {
+  align-items: center;
+  justify-content: space-between;
+}
+/* In the rail a bar has no room beside a name: each member's name and amount
+   share a line, with the bar under them. */
+.analytics-board-rail .report-chart-rows:has(> li > .report-chart-row) {
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+.analytics-board-rail .report-chart .btn.report-chart-row {
+  row-gap: var(--space-1);
+  padding-block: var(--space-1);
+}
+.analytics-board-rail .report-chart-row > .report-chart-row-name {
+  grid-area: 1 / 1;
+}
+.analytics-board-rail .report-chart-row > .report-chart-row-amount {
+  grid-area: 1 / 2;
+}
+.analytics-board-rail .report-chart-row > .report-chart-bullet {
+  grid-area: 2 / 1 / 3 / -1;
+  height: 0.5rem;
+}
+.analytics-board-rail .report-chart-row .report-chart-bullet-fill {
+  inset-block: 0;
+  height: 100%;
+}

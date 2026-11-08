@@ -43,7 +43,8 @@ func expectLockedWrites(t *testing.T, e *apptest.AppEnv, writes []lockedWrite) {
 }
 
 // The follow-up window the api's environment sets reads as that value and
-// refuses a change, even an invalid one; resending it is accepted.
+// refuses a change; resending it is accepted. A window outside the contract's
+// bounds is refused at decode, before any lock is read.
 func TestFollowUpWindowSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS=6"})
 	e.BootstrapWorkspace(t)
@@ -57,7 +58,7 @@ func TestFollowUpWindowSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	}
 	expectLockedWrites(t, e, []lockedWrite{
 		{"a changed window", http.MethodPatch, path, map[string]any{"follow_up_after_days": 3}, http.StatusConflict},
-		{"a window past its bounds", http.MethodPatch, path, map[string]any{"follow_up_after_days": 45}, http.StatusConflict},
+		{"a window past its bounds", http.MethodPatch, path, map[string]any{"follow_up_after_days": 45}, http.StatusUnprocessableEntity},
 		{"the locked window resent", http.MethodPatch, path, map[string]any{"follow_up_after_days": 6}, http.StatusOK},
 	})
 	if rows := settingRows(t, e, activities.FollowUpAfterDays.Key()); rows != 0 {
@@ -93,7 +94,8 @@ func TestControllerParticularsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 }
 
 // The lead settings the api's environment sets read as those values and refuse
-// a change, even an invalid one; resending them is accepted.
+// a change, even an invalid one; resending them is accepted. A target outside
+// the contract's bounds is refused at decode, before any lock is read.
 func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 	seat := ids.NewV7().String()
 	e := apptest.SetupAppWithEnv(t, []string{
@@ -111,7 +113,7 @@ func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 	}
 	expectLockedWrites(t, e, []lockedWrite{
 		{"a changed target", http.MethodPatch, path, map[string]any{"first_response_target_minutes": 90}, http.StatusConflict},
-		{"a target below its bounds", http.MethodPatch, path, map[string]any{"first_response_target_minutes": 5}, http.StatusConflict},
+		{"a target below its bounds", http.MethodPatch, path, map[string]any{"first_response_target_minutes": 5}, http.StatusUnprocessableEntity},
 		{"another seat, which is no colleague", http.MethodPatch, path, map[string]any{"unassigned_escalation_user_id": ids.NewV7().String()}, http.StatusConflict},
 		{
 			"the locked values resent beside the switch", http.MethodPatch, path,

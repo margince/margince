@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -243,10 +245,10 @@ var plainPools = []struct{ prefix, list string }{
 // must equal its list's size, so a list that shrinks pins its cap lower with it.
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
-	"docs/how-to/plain-words.txt":      1374,
-	"docs/explanation/plain-words.txt": 1643,
-	"docs/handbook/plain-words.txt":    1391,
-	"docs/reference/plain-words.txt":   1722,
+	"docs/how-to/plain-words.txt":      1366,
+	"docs/explanation/plain-words.txt": 1642,
+	"docs/handbook/plain-words.txt":    1385,
+	"docs/reference/plain-words.txt":   1715,
 	plainProjectFile:                   1779,
 }
 
@@ -339,7 +341,7 @@ func loadPlainPool(t *testing.T, rel string, names []string) plainVocab {
 
 func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 	t.Parallel()
-	glossary, err := os.ReadFile(filepath.Join(docsTreeRoot, glossaryFile))
+	glossary, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, glossaryFile))
 	if err != nil {
 		t.Fatalf("read %s: %v", glossaryFile, err)
 	}
@@ -371,7 +373,7 @@ func TestPlainPagesUseFewerThanAThousandWords(t *testing.T) {
 		if f.symlink || !strings.HasSuffix(f.path, ".md") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(docsTreeRoot, f.path))
+		raw, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, f.path))
 		if err != nil {
 			t.Fatalf("read %s: %v", f.path, err)
 		}
@@ -486,6 +488,7 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 		"docs/handbook/records.md":                               "docs/handbook/plain-words.txt",
 		"backend/internal/modules/knowledge/handbook/records.md": "docs/handbook/plain-words.txt",
 		"docs/how-to/add-a-job.md":                               "docs/how-to/plain-words.txt",
+		"docs/operations/observability.md":                       "docs/reference/plain-words.txt",
 		"docs/tutorials/getting-started.md":                      "docs/how-to/plain-words.txt",
 		"README.md":                                              plainWordsFile,
 		"docs/README.md":                                         plainWordsFile,

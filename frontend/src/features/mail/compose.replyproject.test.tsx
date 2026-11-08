@@ -172,10 +172,7 @@ describe("the project a reply files under", () => {
     const subject = await openReply();
 
     await draftButton();
-    // A list whose only entry is None asks a question with one answer.
-    expect(screen.getByLabelText("Project").hasAttribute("disabled")).toBe(
-      true,
-    );
+    expect(screen.queryByLabelText("Project")).toBeNull();
     expect(subject().value).toBe("");
   });
 

@@ -74,7 +74,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
 		WithRequireMFA(authPolicy.MFARequired).
-		WithGroupRoleMap(authPolicy.GroupRoleMap)
+		WithGroupRoleMap(authPolicy.GroupRoleMap).
+		WithMailCapture(mailCaptureSeam{})
 	// The standing-grant edge: identity mints the credential, agents/runner
 	// stores the answer, and neither may import the other. Both halves of one
 	// fact, committed in one transaction — agentgrantseam.go says why.
@@ -82,7 +83,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	authH := identity.NewHandlers(identitySvc).
 		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames()).
 		WithInstallationDescribed(installationDescribed(anchor)).
-		WithInstallationBrand(installationBrand(anchor))
+		WithInstallationBrand(installationBrand(anchor)).
+		WithEntityMembership(anchor.AssignLegalEntityMemberTx)
 
 	// The transport directory, loaded on the REAL assembly path rather than in
 	// newServer: route-level tests construct that one directly with a pool that
@@ -100,6 +102,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	}
 	srv.applySendPath(pool)
 	srv.publishListsAvailability(pool)
+	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
 	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
 	// The tool registry is built HERE, after the options, on the Server that is
@@ -107,9 +110,13 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// reach. The rebuild each option performs keeps a half-configured Server
 	// coherent while the loop runs; this one is what the surface ends up with.
 	srv.rebuildToolRegistry(pool)
+	srv.authHandlers = srv.WithReachableAreas(reachableAreasOf(srv.toolRegistry))
 	// Bound here for the same reason, and on the same Server: deactivation has
 	// to be able to destroy the provider secrets it withdrew.
 	installCaptureCredentialReaper(&srv, log)
+	// After the options too, because WithBlobstore decides whether a picture
+	// has anywhere to live.
+	installAvatarPictures(&srv, pool, log)
 	// Wired unconditionally, not inside WithKeyvault: a role composed with no
 	// vault still serves /installation/setup (every step reads "not
 	// configured"), and the anonymous capabilities probe must report the same
@@ -132,6 +139,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 
 	api := contractAPI(srv, pool, identitySvc)
 	srv.views.api = api
+	ceiling := bodyCeilingFor(uploadCeilings(srv.uploadLimits), api)
+	srv.views.ceiling = ceiling
 	// ONE identity.Service for the whole process: contractAPI's admission
 	// gate and the connector's authenticate closure share this instance, so
 	// they share its singleton cache and its clock.
@@ -149,7 +158,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// decided rather than on whichever proxy the request happened to arrive by.
 	return httpserver.RecoverPanics(log,
 		httpserver.ResolveClientIP(srv.trustedProxies,
-			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
+			httpserver.LimitBodies(ceiling,
 				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
 }
 
@@ -196,14 +205,13 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// deliberately left unbounded here.
 		searchHandlers: search.NewHandlers(
 			rankedSearchDB(pool),
-			collections.CountTagReachBatch, activities.EmailSummariesByIDBatch, contacts.LivePartnerCompaniesBatch,
+			collections.CountTagReachBatch, searchEmailSummaries, contacts.LivePartnerCompaniesBatch,
 			contacts.CompanyLogoURLsBatch),
 		// Constructed, not merely embedded: the handler carries no nil-pool
 		// branch, so the zero value would panic on the first authenticated
 		// read rather than answer anything at all.
 		jobHealthHandlers:             jobHealthHandlers{pool: pool},
 		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
-		dealViabilityHandlers:         dealViabilityHandlers{pool: pool},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
 		extensionSettingsHandlers:     extensionSettingsHandlers{store: NewSettingsStore(pool)},
@@ -255,7 +263,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
 		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
-			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)),
+			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)).WithVoiceSentMail(voiceSentMail(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
 		// unwired because a tool answers in ids.
@@ -280,16 +288,16 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// ForecastDeals, where the caller's authority already sits.
 		// The assurance surface reads what last night's pass found. Its scan
 		// is a job rather than a request, so the handler set is a read.
-		assuranceHandlers: assurance.NewHandlers(answeringAssuranceStore(pool), AssuranceExceptionsIn,
+		assuranceHandlers: assurance.NewHandlers(
+			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal), AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
-		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks).WithPreview(EnforcementPreview(pool)),
+		),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
 		// 409 after it.
 		Reads:                  NewContactGraphReads(pool, InstallationDB(pool)),
 		companyRollupHandlers:  companyRollupHandlers{pool: pool, now: time.Now},
-		reviewAnswerHandlers:   newReviewAnswerHandlers(pool),
 		companyOfferedHandlers: companyOfferedHandlers{store: newContactsStore(InstallationDB(pool))},
 		receiptHandlers: receiptHandlers{
 			contacts: newContactsStore(InstallationDB(pool)), pool: pool, now: time.Now,
@@ -316,6 +324,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
 		accept: NewExtractionAccept(pool),
+		file:   NewChatCaptureFile(pool),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
 		reviews:    NewOutcomeReviews(pool),

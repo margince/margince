@@ -74,7 +74,7 @@ func (s *Store) waitingQueueSlots(
 	}
 	// The horizon this installation's own answering implies, read once so
 	// every row is judged by one cutoff (waitingHorizonFor).
-	horizon, err := s.waitingHorizonFor(ctx, tx)
+	horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
 	if err != nil {
 		return waitingSlots{}, err
 	}

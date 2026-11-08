@@ -95,7 +95,7 @@ func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.Slipping
 			CloseOverdue:         deal.CloseOverdue,
 			ExpectedCloseDate:    deal.ExpectedCloseDate,
 			CloseDateProvisional: deal.CloseDateProvisional,
-			ForecastCategory:     deal.ForecastCategory,
+			WinProbability:       deal.WinProbability,
 			NoChampion:           cover.noChampion(deal.DealID),
 			ChampionUnknown:      cover.championUnknown(deal.DealID),
 			NoNextStep:           deal.NoOpenNextStep,

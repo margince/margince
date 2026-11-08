@@ -895,7 +895,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review
 
-28 columns · primary key `(id)` · referenced by 4 foreign keys
+29 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -912,6 +912,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `leads_answered_in_target` | `integer`, default `0` | yes |  |
 | `leads_breached` | `integer`, default `0` | yes |  |
 | `leads_routed` | `integer`, default `0` | yes |  |
+| `leads_withheld` | `boolean`, default `false` | yes | True when lead figures were not measured with lead-read authority, or the reader lacks that authority now. |
 | `local_week_start` | `date` | yes |  |
 | `meetings_held` | `integer`, default `0` | yes |  |
 | `meetings_with_next_step` | `integer`, default `0` | yes |  |
@@ -945,7 +946,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review_coverage
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -953,6 +954,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `absent` | `text` |  | One of `insufficient_basis`, `insufficient_history`, `not_authorized`. |
 | `base_currency` | `currency_code` | yes |  |
 | `basis` | `text` |  | One of `manager_call`, `historical_median`. |
+| `call_needs_review` | `boolean` |  |  |
 | `coverage_bp` | `bigint` |  |  |
 | `current_open_minor` | `bigint` |  |  |
 | `needed_open_minor` | `bigint` |  |  |
@@ -1030,7 +1032,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `closing_landing_minor` | `bigint` |  |  |
 | `closing_snapshot_id` | `uuid` |  |  |
 | `commit_minor` | `bigint` |  |  |
-| `forward_measure` | `text` |  | One of `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted`, `manager_call`. |
+| `forward_measure` | `text` |  | One of `likely`, `qualified_likely`, `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted` and 1 more. |
 | `opening_landing_minor` | `bigint` |  |  |
 | `opening_snapshot_id` | `uuid` |  |  |
 | `period_end` | `date` | yes |  |
@@ -1052,7 +1054,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `team_weekly_review_outlook_closing_landing_minor_js_safe`: `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_commit_minor_js_safe`: `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_currency_present`: `CHECK ((btrim((base_currency)) <> ''))`
-- `team_weekly_review_outlook_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
+- `team_weekly_review_outlook_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely', 'qualified_likely', 'commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
 - `team_weekly_review_outlook_measure_with_landing`: `CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))`
 - `team_weekly_review_outlook_opening_landing_minor_js_safe`: `CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_opening_whole`: `CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))`
@@ -1220,7 +1222,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review
 
-35 columns · primary key `(id)` · referenced by 7 foreign keys
+37 columns · primary key `(id)` · referenced by 7 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1231,6 +1233,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `brief_items_dismissed` | `integer`, default `0` | yes |  |
 | `commitments_due` | `integer`, default `0` | yes |  |
 | `commitments_kept` | `integer`, default `0` | yes |  |
+| `daily_activity` | `jsonb` |  | What the rep did on each day of the week, Monday first, frozen with the review. |
 | `deals_lost` | `integer`, default `0` | yes |  |
 | `deals_moved` | `integer`, default `0` | yes |  |
 | `deals_won` | `integer`, default `0` | yes |  |
@@ -1238,6 +1241,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `leads_answered_in_target` | `integer`, default `0` | yes |  |
 | `leads_breached` | `integer`, default `0` | yes |  |
 | `leads_routed` | `integer`, default `0` | yes |  |
+| `leads_withheld` | `boolean`, default `false` | yes | True when lead figures were not measured with lead-read authority, or the reader lacks that authority now. |
 | `learned_at` | `timestamp with time zone` |  |  |
 | `learnings_state` | `text`, default `'not_run'::text` | yes | One of `not_run`, `insufficient_evidence`, `synthesized`. |
 | `local_week_start` | `date` | yes | The Monday of the week under review, in the installation reporting timezone. |
@@ -1453,7 +1457,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `base_currency` | `currency_code` | yes |  |
-| `best_case_minor` | `bigint` |  | Inclusive of commit, which is what the label on the surface must say. |
+| `best_case_minor` | `bigint` |  |  |
 | `closing_landing_minor` | `bigint` |  | What the window was landing on when the week closed. |
 | `closing_snapshot_id` | `uuid` |  |  |
 | `commit_minor` | `bigint` |  |  |
@@ -1479,7 +1483,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `weekly_review_outlook_closing_landing_minor_js_safe`: `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_commit_minor_js_safe`: `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_currency_present`: `CHECK ((btrim((base_currency)) <> ''))`
-- `weekly_review_outlook_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
+- `weekly_review_outlook_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely', 'qualified_likely', 'commit_evidence', 'qualified_commit_evidence', 'weighted', 'qualified_weighted', 'manager_call']))))`
 - `weekly_review_outlook_measure_with_landing`: `CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))`
 - `weekly_review_outlook_opening_landing_minor_js_safe`: `CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_opening_whole`: `CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL))))`

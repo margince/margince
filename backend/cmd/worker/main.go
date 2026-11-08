@@ -35,7 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -82,16 +82,17 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
-	pool, err := database.NewPool(ctx, cfg.dsn)
+	pool, err := openWorkerPool(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
 	// Registered before the lanes' join below, so LIFO closes the pool after it.
 	defer pool.Close()
-	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
-		return err
-	}
 	resolveVault := workerVault(ctx, pool, cfg.settings)
+	// Before any subcommand too: replay-erasures matches the erasure list.
+	if err := storekit.RefuseForeignSuppressionKey(ctx, pool); err != nil {
+		return fmt.Errorf("worker: %w", err)
+	}
 	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, cfg.settings, args, stdout); handled {
 		return err
 	}
@@ -138,12 +139,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	rdb, err := openBus(ctx, cfg)
+	rdb, coordination, err := openBus(ctx, cfg)
 	if err != nil {
 		return err
 	}
-	// Same ordering obligation as pool.Close above: the lanes read this client.
-	defer closeBus(rdb, logger)
+	// Same ordering obligation as pool.Close above: the lanes read these clients.
+	defer closeBus(logger, rdb, coordination)
 
 	// Before the lanes and the runner: a listener started after them reports
 	// nothing during exactly the window a slow boot needs explaining. /readyz
@@ -189,7 +190,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
-	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, logger)
+	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, lanes.blob, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,

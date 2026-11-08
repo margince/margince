@@ -107,7 +107,12 @@ type ToolSpec struct {
 	// OpenAPIOp names the crm.yaml operations this tool runs as, operationIds
 	// joined by "/"; each declares this tool as its x-mcp-tool verb.
 	OpenAPIOp string
-	Egress    bool // true if the tool reaches outside the workspace (send_email, webhooks)
+	// Areas are the work areas a call lands in (platform/workarea). The registry
+	// fills them from the generated placement. It narrows them to one where a
+	// call's record type picks the operation. A passport limited to some areas
+	// is admitted when one of them is on.
+	Areas  []string
+	Egress bool // true if the tool reaches outside the workspace (send_email, webhooks)
 	// WaitsEvenForItsUser keeps a confirm-first tool waiting for a human when an
 	// agent acts as its user. Set where the model, not the colleague, picks the
 	// address the call reaches, and where a call cannot name the rows it changes.
@@ -123,6 +128,13 @@ type ToolSpec struct {
 	// listed tool replaces it. It still runs when called by name. Its name is
 	// the approval kind it stages and the key of its tier floor and retry claims.
 	Unlisted bool
+	// Gated marks an Unlisted tool that the registry's tool gate offers to some
+	// callers. For every other caller it does not exist: it is not listed and a
+	// call by its name gets the unknown-tool answer.
+	Gated bool
+	// ProtocolOnly marks a tool that measures the MCP protocol itself and has no
+	// REST route, because REST callers cannot answer what it asks.
+	ProtocolOnly bool
 	// ConfirmsInConversation marks a tool whose confirmation happens in the
 	// conversation that asked for it, never in the approval inbox. An exhausted
 	// volume budget refuses such a call outright instead of asking the connecting

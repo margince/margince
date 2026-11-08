@@ -74,7 +74,7 @@ func TestABootSetTemplateIsTheOneASendSignsWith(t *testing.T) {
 	}
 	configtest.Bind(t, configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"))
 
-	signature, err := e.store.SignatureFor(e.ctx, e.user)
+	signature, err := e.store.SignatureFor(e.ctx, e.user, ids.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}

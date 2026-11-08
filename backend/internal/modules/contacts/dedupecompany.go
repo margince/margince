@@ -186,7 +186,8 @@ func exactCompanyByDomain(ctx context.Context, tx pgx.Tx, domains []string, excl
 // from mail is filed under its domain, so that name is a claim on the domain
 // even when no company_domain row says so. It never routes: two records on one
 // domain are a human's call, and the own company is never a rival.
-// It answers at most one: a live domain belongs to one company.
+// Both spellings, as every reader of a domain asks. It answers at most one
+// rival, which is all a review row carries.
 func nameDomainClaimant(ctx context.Context, tx pgx.Tx, c CompanyCandidate) ([]CompanyCandidateScore, error) {
 	domain, ok := displayNameDomain(c.DisplayName)
 	if !ok {
@@ -195,9 +196,9 @@ func nameDomainClaimant(ctx context.Context, tx pgx.Tx, c CompanyCandidate) ([]C
 	owners, err := exactOwners[ids.CompanyID](ctx, tx, entityCompany, `
 		SELECT d.company_id FROM company_domain d
 		  JOIN company c ON c.id = d.company_id
-		 WHERE d.domain = $1 AND d.archived_at IS NULL
+		 WHERE d.domain = ANY($1) AND d.archived_at IS NULL
 		   AND NOT c.is_anchor
-		   AND ($2::uuid IS NULL OR d.company_id <> $2)`, domain, c.ExcludeID)
+		   AND ($2::uuid IS NULL OR d.company_id <> $2)`, owndomain.Spellings(domain), c.ExcludeID)
 	if err != nil || len(owners) == 0 {
 		return nil, err
 	}

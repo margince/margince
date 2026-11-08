@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -24,11 +25,11 @@ func contactImportMapping() map[string]string {
 // the run's report.
 func importContactFile(t *testing.T, e *apptest.AppEnv, file string) (string, importReportDTO) {
 	t.Helper()
-	profile, status := uploadCSV(t, e, "contact", file)
+	profile, status := importjobtest.UploadCSV(t, e, "contact", file)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, contactImportMapping())
+	run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, contactImportMapping())
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}

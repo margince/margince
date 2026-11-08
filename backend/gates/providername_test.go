@@ -34,12 +34,12 @@ package gates
 // and report a confident wrong answer about a rule it was no longer reading.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -79,7 +79,7 @@ func TestEveryRegisteredNameRuleIsTheContractsOwn(t *testing.T) {
 // publishedNameRule reads one schema's own constraints.
 func publishedNameRule(t *testing.T, schemaName string) (pattern string, maxLength int) {
 	t.Helper()
-	document, err := os.ReadFile(providerNameContract)
+	document, err := gatekit.ReadFile(providerNameContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

@@ -132,7 +132,7 @@ describe("a reader who cannot register the app", () => {
     // A link to Settings is a dead end: the onboarding gate sends it back.
     expect(screen.queryByRole("link")).toBeNull();
     const request =
-      "Could you register the company’s Google app in Margince, in Settings under Sign-in and apps? Then I can connect my mail and calendar.";
+      "Could you register the company’s Google app in Margince, in Settings under Sign-in and security? Then I can connect my mail and calendar.";
     // The reader sees what they are about to send before they copy it.
     expect(screen.getByText(request)).toBeVisible();
 
@@ -320,4 +320,47 @@ describe("an administrator", () => {
     expect(screen.queryByText("Waiting for an administrator")).toBeNull();
     expect(assign).not.toHaveBeenCalled();
   });
+});
+
+describe("a role or seat that cannot capture", () => {
+  it.each([
+    {
+      missing: "contact" as const,
+      says: "Your role cannot create contacts, so Margince cannot capture your mail. Ask an admin to change your role.",
+    },
+    {
+      missing: "seat" as const,
+      says: "Your seat is read-only, so Margince cannot capture your mail. Ask an admin for a full seat.",
+    },
+  ])(
+    "offers no account when $missing is missing, names it, and keeps the way on",
+    async ({ missing, says }) => {
+      const refused = (["gmail", "graph", "imap"] as const).map((provider) => ({
+        provider,
+        reason: "role_cannot_capture" as const,
+      }));
+      stubWithSession(
+        {
+          "GET /connectors": () =>
+            jsonResponse({
+              data: [],
+              providers: refused,
+              seat_capture: {
+                allowed: false,
+                reason: "role_cannot_capture",
+                missing,
+              },
+            }),
+        },
+        {},
+      );
+      renderAct();
+
+      expect(await screen.findByText(says)).toBeInTheDocument();
+      expect(screen.queryByRole("radio")).toBeNull();
+      expect(
+        await screen.findByRole("button", { name: "Skip for now" }),
+      ).toBeInTheDocument();
+    },
+  );
 });

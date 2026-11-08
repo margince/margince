@@ -130,7 +130,7 @@ async function openRowEditor() {
 describe("a refused write does not survive the dialog that earned it", () => {
   it("leaves the create dialog's next opening clean", async () => {
     refusing("POST", "an automation with that name already exists");
-    render(<AutomationsAdmin />);
+    render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Stalled-deal nudge")).toBeTruthy(),
     );

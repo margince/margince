@@ -223,6 +223,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 		},
 		RelationshipDecay: lane(item("decay", "relationship_decay")),
 		CaptureHealth:     lane(item("capture", "capture_health")),
+		BookingHealth:     lane(item("booking", "booking_health")),
 		DomainQuestions:   lane(item("example.com", "domain_question")),
 		AiWorkHealth:      lane(item("ai", "ai_work_health")),
 		AutomationHealth:  lane(item("automation", "automation_run")),
@@ -252,6 +253,7 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"undelivered":          "the same per-user read as the bounce beside it",
 		"notice":               "a notice is addressed to one contact",
 		"capture_health":       "a mailbox belongs to one contact",
+		"booking_health":       "a booking page belongs to its host",
 		"domain_question":      "OpenDomainQuestionsForOwner asks only the acting human's decider rule: the sole direct recipient of current mail",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})

@@ -27,7 +27,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -53,7 +52,7 @@ func TestEveryExportedReferenceToARowScopedTableIsWithheld(t *testing.T) {
 	}
 
 	want := map[string][]string{}
-	catalog, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

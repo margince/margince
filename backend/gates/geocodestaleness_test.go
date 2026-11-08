@@ -20,11 +20,12 @@ package gates
 // that a seventh writer could skip.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // geocodeMigrationFile finds where the rule lives.
@@ -73,7 +74,7 @@ func lastStatement(t *testing.T, pattern string) string {
 	}
 	var found []string
 	for _, file := range files {
-		body, err := os.ReadFile(file)
+		body, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}
@@ -135,7 +136,7 @@ func TestOnlyResolvedCoordinatesAreQueryable(t *testing.T) {
 func TestTheAddressWritersAreStillTheOnesTheTriggerCovers(t *testing.T) {
 	t.Parallel()
 	root := filepath.Join("internal", "modules", "contacts")
-	entries, err := os.ReadDir(root)
+	entries, err := gatekit.ReadDir(root)
 	if err != nil {
 		t.Fatalf("reading %s: %v", root, err)
 	}
@@ -146,7 +147,7 @@ func TestTheAddressWritersAreStillTheOnesTheTriggerCovers(t *testing.T) {
 		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(root, name))
+		body, err := gatekit.ReadFile(filepath.Join(root, name))
 		if err != nil {
 			t.Fatalf("reading %s: %v", name, err)
 		}

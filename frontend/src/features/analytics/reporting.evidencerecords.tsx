@@ -9,7 +9,7 @@ import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
@@ -27,6 +27,9 @@ import { reloadReportingFigures } from "./reporting.queries";
 const metricDateHeading: Partial<
   Record<ReportingEvidenceRef["metric"], MessageKey>
 > = {
+  open_pipeline: "reporting.expectedCloseOn",
+  stage_age: "reporting.expectedCloseOn",
+  leads_qualified: "reporting.qualifiedOn",
   bookings_won: "reporting.closedOn",
   meetings_held: "reporting.meetingOn",
   accepted_opportunities: "reporting.acceptedOn",
@@ -35,6 +38,7 @@ const metricDateHeading: Partial<
   lead_status_moves: "reporting.movedOn",
   lead_first_response: "reporting.arrivedOn",
   leads_awaiting_response: "reporting.arrivedOn",
+  leads_awaiting_response_now: "reporting.arrivedOn",
   partner_pipeline: "reporting.createdOn",
   partner_won: "reporting.closedOn",
   partner_commission: "reporting.accruedOn",
@@ -72,6 +76,7 @@ export function EvidenceRecords({
   zero,
   unit,
   selectedValue,
+  knownTotal,
   onClose,
 }: Readonly<{
   evaluation: ReportingEvaluation;
@@ -80,6 +85,7 @@ export function EvidenceRecords({
   zero: boolean;
   unit: string;
   selectedValue: number | null | undefined;
+  knownTotal?: number;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -114,7 +120,10 @@ export function EvidenceRecords({
   });
   const rowUnit = COHORT_METRICS.includes(reference.metric) ? "days" : unit;
   const dateHeading = t(
-    metricDateHeading[reference.metric] ?? "reporting.period",
+    reference.context_id.startsWith("forecast_") &&
+      reference.context_id !== "forecast_won"
+      ? "reporting.expectedCloseOn"
+      : (metricDateHeading[reference.metric] ?? "reporting.period"),
   );
   if (isVersionSkewOf(query.error))
     return (
@@ -151,9 +160,14 @@ export function EvidenceRecords({
         {(evidence) => (
           <>
             <p role="status">
-              {plural("reporting.pageRecords", evidence.rows.length, {
-                count: formatNumber(evidence.rows.length, locale),
-              })}
+              {knownTotal != null && knownTotal > evidence.rows.length
+                ? plural("reporting.pageRecordsOf", evidence.rows.length, {
+                    count: formatAnalyticsNumber(evidence.rows.length, locale),
+                    total: formatAnalyticsNumber(knownTotal, locale),
+                  })
+                : plural("reporting.pageRecords", evidence.rows.length, {
+                    count: formatAnalyticsNumber(evidence.rows.length, locale),
+                  })}
             </p>
             <DataTable
               label={t("reporting.evidence")}
@@ -181,19 +195,43 @@ export function EvidenceRecords({
                     );
                   },
                 },
-                {
-                  key: "date",
-                  header: dateHeading,
-                  render: (row) =>
-                    row.occurred_at
-                      ? formatActivityWhen(
-                          row.occurred_at,
-                          row.occurred_precision ?? "instant",
-                          locale,
-                          evidence.context.timezone,
-                        )
-                      : "—",
-                },
+                ...(evidence.rows.some((row) => row.owner_label)
+                  ? [
+                      {
+                        key: "owner",
+                        header: t("reporting.owner"),
+                        render: (row: (typeof evidence.rows)[number]) =>
+                          row.restricted ? "—" : (row.owner_label ?? "—"),
+                      },
+                    ]
+                  : []),
+                ...(evidence.rows.some((row) => row.stage_label)
+                  ? [
+                      {
+                        key: "stage",
+                        header: t("deals.stage"),
+                        render: (row: (typeof evidence.rows)[number]) =>
+                          row.restricted ? "—" : (row.stage_label ?? "—"),
+                      },
+                    ]
+                  : []),
+                ...(evidence.rows.some((row) => row.occurred_at)
+                  ? [
+                      {
+                        key: "date",
+                        header: dateHeading,
+                        render: (row: (typeof evidence.rows)[number]) =>
+                          row.occurred_at
+                            ? formatActivityWhen(
+                                row.occurred_at,
+                                row.occurred_precision ?? "instant",
+                                locale,
+                                evidence.context.timezone,
+                              )
+                            : "—",
+                      },
+                    ]
+                  : []),
                 {
                   key: "amount",
                   header: valueHeading(reference, rowUnit, t),

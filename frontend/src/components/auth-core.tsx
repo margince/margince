@@ -1,3 +1,4 @@
+import "./auth-core.css";
 import type { ReactNode } from "react";
 import { AmbientWaves } from "../design-system/ambient-waves";
 import { AppLink } from "../design-system/applink";

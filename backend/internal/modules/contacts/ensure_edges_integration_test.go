@@ -29,9 +29,9 @@ func (e *dedupeEnv) ensureInput(ctx context.Context, t *testing.T, email, displa
 	activityID := ids.New[ids.ActivityKind]()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by)
-			VALUES ($1, 'email', 'hi', 'inbound', 'gmail', $2, 'gmail:seed', 'connector:gmail')`,
-			activityID, activityID.String())
+			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by, occurred_at)
+			VALUES (@activity, 'email', 'hi', 'inbound', 'gmail', @source, 'gmail:seed', 'connector:gmail', @at)`,
+			pgx.StrictNamedArgs{"activity": activityID, "source": activityID.String(), "at": e.store.clock()})
 		if err != nil {
 			return err
 		}

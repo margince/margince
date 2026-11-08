@@ -71,9 +71,10 @@ func (h ownDomainHandlers) CreateWorkspaceEmailDomain(w http.ResponseWriter, r *
 		httperr.NotImplemented(w, r, "CreateWorkspaceEmailDomain")
 		return
 	}
-	// Human-only (x-agent-access). The set decides what the CRM may hold, so an
-	// agent must not widen it; the store re-checks the admin/ops grant.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	// Automatic work never widens what the CRM may hold. A user's agent may, as
+	// its user could. The store re-checks the admin/ops grant, and the tool asks
+	// the user first because the effect cannot be reversed.
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -105,7 +106,7 @@ func (h ownDomainHandlers) DeleteWorkspaceEmailDomain(w http.ResponseWriter, r *
 		httperr.NotImplemented(w, r, "DeleteWorkspaceEmailDomain")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

@@ -4,8 +4,11 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
+import { formatMoneyCompact } from "../../format/format";
 import { forgetSeat } from "../../lib/storage";
+import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
   isSetup,
   OVERVIEW_SCENARIOS,
@@ -52,15 +55,23 @@ async function card(label: string) {
 }
 const money = (value: number) =>
   reportingCompactAmount(value, "EUR", "EUR", "en");
+const short = (value: number) => formatMoneyCompact(value, "EUR", "en");
+// A figure's receipt opens on a press, and holds what the figure rests on.
+async function openReceipt(
+  user: ReturnType<typeof userEvent.setup>,
+  card: ReturnType<typeof within>,
+) {
+  await user.click(card.getByRole("button", { name: "Evidence" }));
+}
 
 it("keeps committed business and modelled outcomes in different labelled readings", async () => {
   openScenario("modelCommitDivergence");
-  const finish = await card("Won + confirmed commit");
+  const finish = await card("Won + Likely deals");
   expect(finish.getByText("€0")).toBeVisible();
-  expect(finish.queryByText(/€1.4m/)).toBeNull();
+  expect(finish.queryByText(/€1,400,000/)).toBeNull();
   const model = await card("Modelled quarter finish");
   expect(
-    model.getByText(`${money(140000000)} – ${money(260000000)}`),
+    model.getByText(formatMoneyCompactRange(140000000, 260000000, "EUR", "en")),
   ).toBeVisible();
   expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
 });
@@ -80,7 +91,7 @@ it("keeps a measured zero distinct from a missing model range", async () => {
         : m,
     ),
   });
-  expect((await card("Won + confirmed commit")).getByText("€0")).toBeVisible();
+  expect((await card("Won + Likely deals")).getByText("€0")).toBeVisible();
   expect((await card("Modelled quarter finish")).getByText("—")).toBeVisible();
   expect(
     screen.queryByText("No modelled range was drawn for this period."),
@@ -90,21 +101,22 @@ it("keeps a measured zero distinct from a missing model range", async () => {
 it("does not invent a forecast basis for an older response", async () => {
   openScenario("legacyLanding");
   const finish = await card("Landing");
-  expect(finish.getByText("€760k")).toBeVisible();
-  expect(finish.queryByText("Won + confirmed commit")).toBeNull();
+  expect(finish.getByText("€760,000")).toBeVisible();
+  expect(finish.queryByText("Won + Likely deals")).toBeNull();
 });
 
 it.each([
   {
-    measure: "commit_evidence",
+    measure: "likely",
     amount: 14000,
-    label: "Won + confirmed commit",
+    label: "Won + Likely deals",
   },
   { measure: "weighted", amount: 17000, label: "Won + weighted open deals" },
   { measure: "manager_call", amount: 19000, label: "Manager’s call" },
 ] as const)(
   "labels $measure without adding the manager call to won sales",
   async ({ measure, amount, label }) => {
+    const user = userEvent.setup({ delay: null });
     openEvaluation(
       salesEvaluation({
         metrics: [
@@ -143,14 +155,17 @@ it.each([
     expect(
       (await card("Pipeline due this quarter")).getByText(money(11000)),
     ).toBeVisible();
-    expect(screen.getByText(`${money(10000)} still to win`)).toBeVisible();
+    await openReceipt(user, await card("Sales won"));
+    expect(
+      await screen.findByText(`${money(10000)} still to win`),
+    ).toBeVisible();
     if (measure === "manager_call") {
       const call = await card(label);
-      expect(call.getByText("Called 30 Oct 2026")).toBeVisible();
       expect(
-        call.getByText(`Projected shortfall ${money(20000 - amount)}`),
+        call.getByText(`${short(20000 - amount)} short of target`),
       ).toBeVisible();
-      expect(call.getByRole("button", { name: "Evidence" })).toBeVisible();
+      await openReceipt(user, call);
+      expect(await screen.findByText("Called 30 Oct 2026")).toBeVisible();
     }
   },
 );
@@ -160,8 +175,12 @@ it("keeps current-quarter pipeline separate from explicitly labelled all-open st
   expect(
     (await card("Pipeline due this quarter")).queryByText(money(520000000)),
   ).toBeNull();
+  // Said in the stage chart's head, with the deals it counts after it.
   expect(
-    screen.getByText(`All open pipeline: ${money(520000000)}`),
+    await screen.findByText(
+      `All open pipeline: ${money(520000000)} · 61 deals`,
+      { selector: ".reporting-meta" },
+    ),
   ).toBeVisible();
 });
 

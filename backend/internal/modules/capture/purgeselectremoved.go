@@ -22,39 +22,42 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SelectRemovedPurgeTx answers what a provider-side deletion may destroy: the
-// one message this seat imported under a natural key, sorted into the same
-// three buckets every other purge uses.
-//
-// The mailbox owner deleting a message in Gmail or Outlook is the clearest
-// signal available about mail nobody else has seen, and the narrowest: it says
-// something about THAT message and about no other. So the selection is keyed on
-// the natural key rather than on a rule, and scoped to the seat whose
-// connection reported the removal — a colleague who imported the same message
-// keeps it, which falls out of SharedImports without a special case.
-//
-// A removal reaching a message under the statutory floor lands in Restricted
-// and is kept, for the reason the floor exists: an owner's inbox housekeeping
-// does not outrank a commercial-records duty, and a Handelsbrief that vanished
-// because somebody tidied up would be a records failure wearing a privacy
-// control's clothes.
+// SelectRemovedPurgeTx matches the current mailbox's provider id. Colleague
+// copies and statutory duties shield the captured activity from destruction.
 func SelectRemovedPurgeTx(
-	ctx context.Context, tx pgx.Tx, user ids.UUID, sourceSystem, sourceID string, floor StatutoryFloor,
+	ctx context.Context, tx pgx.Tx, user ids.UUID, provider, providerMessageID string, floor StatutoryFloor,
 ) (PurgeSubject, error) {
 	var subject PurgeSubject
-	if user == ids.Nil || sourceSystem == "" || sourceID == "" {
+	if user == ids.Nil || provider == "" || providerMessageID == "" {
 		return subject, nil
 	}
-	args := []any{user, sourceSystem, sourceID}
+	var args []any
+	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
+	seatParam, providerParam, messageParam := arg(user), arg(provider), arg(providerMessageID)
+	keys := providerMessageKeysSQL(seatParam, providerParam, messageParam)
+	// Another provider copy keeps the activity. Consume only the removed alias.
+	_, err := tx.Exec(ctx, `UPDATE capture_import i SET provider_message_ids = array_remove(i.provider_message_ids, (`+keys+`)[1])
+        WHERE i.user_id = `+seatParam+` AND i.provider_message_ids @> `+keys+`
+          AND cardinality(`+keys+`) > 0
+ AND EXISTS (SELECT 1 FROM unnest(i.provider_message_ids) alias
+ JOIN capture_connection c ON c.user_id = i.user_id AND c.archived_at IS NULL
+ AND c.status IN ('connected','error')
+ AND starts_with(alias, c.provider || ':' || c.generation || ':')
+ WHERE alias <> (`+keys+`)[1])`, args...)
+	if err != nil {
+		return subject, fmt.Errorf("capture: removing a mailbox message alias: %w", err)
+	}
 	shielded, args := floor.column(len(args), args)
 	rows, err := tx.Query(ctx, `
-		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
-		       `+importersOfActivity+` AS importers
-		  FROM activity a
-		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
-		 WHERE a.source_system = $2 AND a.source_id = $3
-		 ORDER BY a.id`, args...)
+        SELECT a.id,
+               `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
+               `+importersOfActivity+` AS importers
+          FROM activity a
+          JOIN capture_import i ON i.activity_id = a.id AND i.user_id = `+seatParam+`
+         WHERE i.provider_message_ids @> `+keys+` AND cardinality(`+keys+`) > 0
+ AND a.sent_by_colleague IS NULL
+ AND (starts_with(a.captured_by, 'connector:') OR a.captured_by = 'agent:capture_counterparty_verdict')
+         ORDER BY a.id`, args...)
 	if err != nil {
 		return subject, fmt.Errorf("capture: selecting what a mailbox-side deletion would destroy: %w", err)
 	}

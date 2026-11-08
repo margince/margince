@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -146,7 +145,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
 		// Erasure must reach the attachment bytes, not only the rows, so the
 		// DSR erase path gets a blob-aware eraser (Art. 17).
-		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithBlobstore(store))
+		s.consentHandlers = s.WithEraser(ComposedEraser(pool, store, nil))
 		// The controller's release on the retention surface is an erasure too,
 		// and reaches the same bytes.
 		s.privacyHandlers = s.privacyHandlers.WithBlobstore(store)

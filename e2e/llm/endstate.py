@@ -28,6 +28,12 @@ human sees. Four more are not stored fields either:
     - deal "Rheinufer Netzmodernisierung" stage=Negotiation   the stage's name
     - company "Dom Digital GmbH" tagged=K5 Conference 2026    or untagged=, by read_tags
     - tag "Strategic Account" records=3   contacts, companies, deals and leads carrying it
+    - team "Fleet Accounts" member=Sofia Meier   the colleague of that name is on the team
+    - company "Aachener Metallwerke GmbH" contract=Wartungsvertrag 2027   a contract of that whole title
+    - contact "Greta Lindqvist" own_draft=Preisworkshop   the user's own unsent draft there, by subject
+    - automation "Stage-change notify" status=enabled   a rule by name, read_view's automations
+    - me "admin@demo.test" timezone=Europe/Lisbon   the passport's own seat, as whoami answers it
+    - me "admin@demo.test" saved_questions=1+   at least that many questions the seat saved
 
 It runs after the run and before the lane restores the snapshot, through the
 lane's own passport, and only through tools the server LISTS: a router is called
@@ -72,7 +78,7 @@ _ENTRY = re.compile(r'^([a-z_]+) "([^"]+)" (?:on ([a-z_]+) "([^"]+)" )?([A-Za-z_
 # a scenario asks about today; a new one is a line here and a name it can be
 # found by.
 _NAME_FIELD = {"company": "display_name", "project": "name", "deal": "name",
-               "contact": "full_name", "lead": "full_name"}
+               "contact": "full_name", "lead": "full_name", "deal_room": "title"}
 
 # The types found ON a parent rather than by a list of their own, and the
 # parent's type: list_records has no activity, and read_project's overview carries the
@@ -95,6 +101,12 @@ _TAGGED, _UNTAGGED = "tagged", "untagged"
 _TAG = "tag"
 _TAGGABLE = ("company", "contact", "deal", "lead")
 _TAG_COUNTS = ("contacts", "companies", "deals", "leads")
+_TEAM, _MEMBER = "team", "member"
+_CONTRACT = "contract"
+_AUTOMATION, _ME = "automation", "me"
+_SAVED_QUESTIONS = "saved_questions"
+_OWN_DRAFT = "own_draft"
+_DRAFT_ANCHORS = ("company", "contact", "deal", "lead", "project")
 
 # commit_import answers while the import is still writing. A four-row file
 # lands in about a second; a run still going after this long is a stuck stack.
@@ -142,6 +154,13 @@ def parse(entry):
     if record_type == _TAG:
         if parent_type is not None or field != _RECORD_COUNT:
             raise ValueError(f"must_end_with entry {entry!r}: a tag is read only as records=<count>")
+    elif record_type == _TEAM:
+        if parent_type is not None or field != _MEMBER:
+            raise ValueError(f"must_end_with entry {entry!r}: a team is read only as member=<colleague's name>")
+    elif record_type in (_AUTOMATION, _ME):
+        if parent_type is not None or field in (_RECORD_COUNT, _OWN_DRAFT, _STAGE, _TAGGED, _UNTAGGED, _CONTRACT) \
+                or field in _DOCUMENT_FIELDS or (record_type == _ME and field == _OWNER):
+            raise ValueError(f"must_end_with entry {entry!r}: a {record_type} is read only by its own fields")
     elif parent_type is None and record_type not in _NAME_FIELD:
         raise ValueError(f"must_end_with entry {entry!r} names a type this reader cannot find by name")
     _special_wanted(entry, found)
@@ -164,8 +183,17 @@ def _special_wanted(entry, want):
         raise ValueError(f"must_end_with entry {entry!r}: read_tags reads the words on a {', '.join(_TAGGABLE)}")
     if want.field == _STAGE and want.record_type != "deal":
         raise ValueError(f"must_end_with entry {entry!r}: only a deal has a stage")
+    if want.field == _CONTRACT and (want.record_type != "company" or want.parent_type):
+        raise ValueError(f"must_end_with entry {entry!r}: read_details lists the contracts of a company")
     if want.field == _OWNER and want.parent_type is not None:
         raise ValueError(f"must_end_with entry {entry!r}: owner is read on a record found by name")
+    if want.field == _OWN_DRAFT and (want.record_type not in _DRAFT_ANCHORS or want.parent_type):
+        raise ValueError(f"must_end_with entry {entry!r}: a draft is read on a {', '.join(_DRAFT_ANCHORS)}")
+    if want.field == _SAVED_QUESTIONS:
+        least = re.fullmatch(r"(\d+)\+", want.value)
+        # One page holds the answer, so a count past it would need the cursor.
+        if want.record_type != _ME or not least or not 1 <= int(least.group(1)) <= _PAGE_LIMIT:
+            raise ValueError(f"must_end_with entry {entry!r}: saved_questions is read on me, as N+ with N from 1 to {_PAGE_LIMIT}")
 
 
 def _document_wanted(want):
@@ -412,6 +440,129 @@ def _tag_count_problem(session, want):
     return f'ended with tag "{want.name}" on {carrying} records, wanted {want.value}'
 
 
+def _team_problem(session, want):
+    """The problem line for a team "Name" member=Colleague entry, or "" when it holds."""
+    listing = _data(session, "read_view", {"view": "teams", "q": want.name, "limit": _PAGE_LIMIT}).get("data")
+    if not isinstance(listing, list):
+        raise Unreadable("read_view teams answered with no data list")
+    named = [team for team in listing if team.get("name") == want.name]
+    if len(named) != 1:
+        return f'ended with {len(named)} teams named "{want.name}"'
+    roster = _data(session, "read_workspace", {"topic": "colleagues", "q": want.value}).get("colleagues")
+    if not isinstance(roster, list):
+        raise Unreadable("read_workspace answered with no colleagues list")
+    colleague = [c.get("user_id") for c in roster if c.get("display_name") == want.value]
+    if len(colleague) != 1:
+        raise Unreadable(f'the seed holds {len(colleague)} colleagues named "{want.value}"')
+    member = _data(session, "read_workspace", {"topic": "member", "id": colleague[0]})
+    if not isinstance(member.get("team_ids"), list):
+        raise Unreadable(f'read_workspace member carries no team_ids for "{want.value}"')
+    if named[0].get("id") in member["team_ids"]:
+        return ""
+    return f'ended with {want.value} not on team "{want.name}"'
+
+
+def _contract_on_company_problem(session, want, record_id):
+    """The problem line for a company "Name" contract=Title entry, or "" when it holds."""
+    listing = _data(session, "read_details", {"action": "company_contracts", "id": record_id}).get("data")
+    if not isinstance(listing, list):
+        raise Unreadable("read_details company_contracts answered with no data list")
+    found = sum(1 for contract in listing if contract.get("title") == want.value)
+    if found == 1:
+        return ""
+    return f'ended with {found} contracts titled "{want.value}" on {_where(want)}'
+
+
+def _automation_problem(session, want):
+    """The problem line for an automation "Name" field=value entry, or "" when it holds."""
+    rules, cursor = [], None
+    for _ in range(_MAX_PAGES):
+        arguments = {"view": "automations", "limit": _PAGE_LIMIT}
+        if cursor:
+            arguments["cursor"] = cursor
+        page = _data(session, "read_view", arguments)
+        if not isinstance(page.get("data"), list):
+            raise Unreadable("read_view automations answered with no data list")
+        rules += page["data"]
+        cursor = (page.get("page") or {}).get("next_cursor")
+        if not cursor:
+            break
+    else:
+        raise Unreadable(f"read_view automations was still paging after {_MAX_PAGES} pages")
+    named = [rule for rule in rules if rule.get("name") == want.name]
+    if len(named) != 1:
+        return f'ended with {len(named)} automations named "{want.name}"'
+    if want.field == _OWNER:
+        actual = _member_name(session, named[0].get("owner_id"))
+    else:
+        actual = _rendered(named[0][want.field]) if named[0].get(want.field) is not None else "(empty)"
+    if actual == want.value:
+        return ""
+    return f"ended with {_where(want)} {want.field}={actual}, wanted {want.value}"
+
+
+def _member_name(session, user_id):
+    """A rule's owner by display name; "(none)" for the product's own rule, which has none."""
+    if not user_id:
+        return "(none)"
+    member = _data(session, "read_workspace", {"topic": "member", "id": user_id})
+    if not isinstance(member.get("display_name"), str):
+        raise Unreadable(f"read_workspace member carries no display_name for {user_id}")
+    return member["display_name"]
+
+
+def _me_problem(session, want):
+    """The problem line for a me "email" field=value entry, read through whoami."""
+    seat = _data(session, "whoami", {})
+    # The entry names the seat it means; a lane passport acting for another one
+    # would score that seat's field as this one's.
+    if seat.get("email") != want.name:
+        raise Unreadable(f"the lane's passport acts for {seat.get('email')!r}, not {want.name!r}")
+    if want.field == _SAVED_QUESTIONS:
+        return _saved_questions_problem(session, want)
+    actual = _rendered(seat[want.field]) if seat.get(want.field) not in (None, "") else "(empty)"
+    if actual == want.value:
+        return ""
+    return f'ended with {want.field}={actual} on the seat "{want.name}", wanted {want.value}'
+
+
+def _saved_questions_problem(session, want):
+    """The problem line for a saved_questions=N+ entry: at least N saved, since a
+    run may save one question per figure."""
+    least = re.fullmatch(r"(\d+)\+", want.value)
+    saved = _data(session, "read_reports", {"kind": "report_runs", "limit": _PAGE_LIMIT}).get("data")
+    if not isinstance(saved, list):
+        raise Unreadable("read_reports report_runs carries no data list")
+    if len(saved) >= int(least.group(1)):
+        return ""
+    return f'ended with {len(saved)} saved questions on the seat "{want.name}", wanted {want.value}'
+
+
+def _own_draft_problem(session, want, record_id):
+    """The problem line for an own_draft=<subject> entry, or "" when it holds.
+
+    An agent's words on the anchor in place of the user's are a failure even
+    under the user's subject, so the agent's mark is read beside the subject.
+    """
+    arguments = {"action": "mail_draft", "anchor_type": want.record_type, "anchor_id": record_id}
+    text, is_error = session.call("read_details", arguments)
+    if is_error and "not_found" in text:
+        return f"ended with no unsent draft of the user's own on {_where(want)}"
+    if is_error:
+        raise Unreadable(f"read_details refused the end-state read: {text[:200]}")
+    try:
+        draft = json.loads(text).get("data")
+    except (ValueError, AttributeError) as err:
+        raise Unreadable(f"read_details answered in a shape the reader cannot read: {text[:200]}") from err
+    if not isinstance(draft, dict) or not isinstance(draft.get("agent_drafted"), bool):
+        raise Unreadable(f"read_details mail_draft carries no agent_drafted mark: {text[:200]}")
+    if draft["agent_drafted"]:
+        return f"ended with an agent's draft on {_where(want)} ({draft.get('subject')!r}), wanted the user's own"
+    if draft.get("subject") == want.value:
+        return ""
+    return f"ended with the user's draft on {_where(want)} under {draft.get('subject')!r}, wanted {want.value!r}"
+
+
 def _bare(name):
     return str(name).rsplit("__", 1)[-1]
 
@@ -444,6 +595,12 @@ def _problem(session, want):
     """The problem line for one entry, or "" when it holds."""
     if want.record_type == _TAG:
         return _tag_count_problem(session, want)
+    if want.record_type == _TEAM:
+        return _team_problem(session, want)
+    if want.record_type == _AUTOMATION:
+        return _automation_problem(session, want)
+    if want.record_type == _ME:
+        return _me_problem(session, want)
     if want.field == _RECORD_COUNT:
         found = len(_matching(session, want.record_type, want.name))
         if found == int(want.value):
@@ -456,6 +613,10 @@ def _problem(session, want):
         return _document_problem(session, want, record_id, view)
     if want.field in (_TAGGED, _UNTAGGED):
         return _tags_problem(session, want, record_id)
+    if want.field == _CONTRACT:
+        return _contract_on_company_problem(session, want, record_id)
+    if want.field == _OWN_DRAFT:
+        return _own_draft_problem(session, want, record_id)
     return _field_problem(session, want, record_id)
 
 

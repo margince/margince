@@ -27,12 +27,14 @@ func suggestionScanFixture(t *testing.T) (*integration.Env, *capture.Sink, datas
 	return e, newCaptureSink(e.Pool, CaptureConfig{}), datasource.EntityRef{Type: datasource.EntityContact, ID: ids.UUID(alice.Id)}
 }
 
-func captureSuggestionCopy(t *testing.T, e *integration.Env, sink *capture.Sink, address string) {
+func captureSuggestionCopy(t *testing.T, e *integration.Env, sink *capture.Sink, address string) ids.ActivityID {
 	t.Helper()
 	rec := partiesMailRecord(t, e, partyMailProof{outbound: false, sentByOwner: false}, "Buyer <"+address+">", "", "Could we discuss the product requirements?")
-	if _, err := sink.Upsert(threadConnectorCtx(e, e.AdminUser), rec); err != nil {
+	ref, err := sink.Upsert(threadConnectorCtx(e, e.AdminUser), rec)
+	if err != nil {
 		t.Fatal(err)
 	}
+	return ids.From[ids.ActivityKind](ref.ID)
 }
 
 func TestConversationSuggestionsFillTheVisiblePageAfterFilteringNewerMessages(t *testing.T) {
@@ -89,9 +91,14 @@ func TestConversationSuggestionsDiscloseNoAddressFromUnreadableMessageContent(t 
 func TestConversationSuggestionsReportTheExhaustedScanBudget(t *testing.T) {
 	e, sink, anchor := suggestionScanFixture(t)
 	captureSuggestionCopy(t, e, sink, "older@buyer.test")
-	for range 200 {
-		captureSuggestionCopy(t, e, sink, "blocked@private.test")
-	}
+	// One copy is captured and the rest are copies of its rows. Each is a
+	// moment newer than the last, so the scan reads them in a fixed order.
+	blocked := captureSuggestionCopy(t, e, sink, "blocked@private.test")
+	e.CloneActivity(t, blocked, 199, map[string]string{
+		"created_at":   "r.created_at + n.ord * interval '1 millisecond'",
+		"source_id":    "r.source_id || '-' || n.ord",
+		"identity_key": "r.identity_key || '-' || n.ord",
+	})
 	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, "blocked@private.test"); err != nil {
 		t.Fatal(err)
 	}

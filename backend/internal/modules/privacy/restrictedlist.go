@@ -66,16 +66,16 @@ type RestrictedPage struct {
 // ListRestrictedActivities reads the held records, oldest obligation first.
 //
 // Gated on the retention-policy authority's READ, the same object that governs
-// the ladder — held admin-only by the seeded roles. Human-only like every
-// governance read beside it: which records an erasure could not destroy is not
-// reconnaissance to hand an agent, even one carrying an admin's passport.
+// the ladder, held admin-only by the seeded roles. An agent reads it only on the
+// passport of a user who holds that grant. Releasing a held record stays with the
+// user, so an agent can see what an erasure could not destroy and cannot free it.
 //
 // The keyset is (restricted_at, id): the cursor codec's created_at slot carries
 // the restriction instant, which is what the page is ordered by.
 func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *string, limit *int) (RestrictedPage, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return RestrictedPage{}, fmt.Errorf("human-only compliance read: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return RestrictedPage{}, fmt.Errorf("this compliance read is for a user or their agent: %w", apperrors.ErrPermissionDenied)
 	}
 	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionRead); err != nil {
 		return RestrictedPage{}, err

@@ -61,15 +61,12 @@ func (e *deepReadEngine) getCompanySiteReadLogo(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, err)
 		return
 	}
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	// A parked mark changes only when the read resolves another, and the
 	// review polls the dossier while it draws this: a short private cache
 	// spares the repeat fetches without holding a stale mark for long.
-	w.Header().Set("Cache-Control", "private, max-age=300")
-	httperr.StreamObject(w, r, httperr.StreamedObject{
-		ContentType: imagenorm.ContentType, Inline: true, Size: obj.Size,
-		Body: rc,
+	httperr.StreamOwnImage(w, r, httperr.OwnImage{
+		ContentType: imagenorm.ContentType, CacheControl: "private, max-age=300",
+		Size: obj.Size, Body: rc,
 	}, "site read logo "+readID.String())
 }
 

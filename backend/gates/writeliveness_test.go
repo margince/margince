@@ -47,7 +47,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -126,22 +125,21 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
-	"internal/modules/privacy:deleteNoticeActivities":   "deletes the notice mail of a website lead whose notice bounced. An archived notice holds the same recipient address a live one does, so refusing it would leave the address behind",
-	"internal/modules/privacy:deleteLeadRecordsTx":      "deletes a website lead whose notice failed. An archived lead holds the same name and address, and the failed notice, not the row's state, is what decides it goes",
-	"internal/modules/contacts:RestoreContactTx":        "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
-	"internal/modules/contacts:RestoreCompanyTx":        "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
-	"internal/modules/activities:SetCalendarMethodTx":   "the calendar-method re-read writes an archived message on purpose: the method is a fact of the message, and an archived decline brought back must still read as a reply rather than as mail owed an answer. The row stays archived; only calendar_method changes, and only from NULL",
-	"internal/modules/activities:AssessMailBodiesTx":    "the completeness assessment writes an archived mail on purpose: completeness is a fact of the stored body, and an archived message brought back must not be read as complete when it is not. The row stays archived; only body_completeness changes, and only from unassessed",
-	"internal/modules/activities:WithholdStoredFilesTx": "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
-	"internal/modules/identity:countFailure":            "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
-	"internal/modules/identity:resetLockoutStreak":      "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
-	"internal/modules/capture:releaseSyncAnchor":        "the second half of the watermark write beside it in one transaction, which matches on id and generation alone so a round that already ran keeps its cursor. A release that refused an archived connection would leave the anchor held behind a stored cursor, and the next attempt would read that stale point as one somebody chose",
+	"internal/modules/privacy:deleteNoticeActivities":        "deletes the notice mail of a website lead whose notice bounced. An archived notice holds the same recipient address a live one does, so refusing it would leave the address behind",
+	"internal/modules/privacy:deleteLeadRecordsTx":           "deletes a website lead whose notice failed. An archived lead holds the same name and address, and the failed notice, not the row's state, is what decides it goes",
+	"internal/modules/contacts:RestoreContactLeavingTwinsTx": "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
+	"internal/modules/contacts:RestoreCompanyTx":             "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
+	"internal/modules/activities:SetCalendarMethodTx":        "the calendar-method re-read writes an archived message on purpose: the method is a fact of the message, and an archived decline brought back must still read as a reply rather than as mail owed an answer. The row stays archived; only calendar_method changes, and only from NULL",
+	"internal/modules/activities:AssessMailBodiesTx":         "the completeness assessment writes an archived mail on purpose: completeness is a fact of the stored body, and an archived message brought back must not be read as complete when it is not. The row stays archived; only body_completeness changes, and only from unassessed",
+	"internal/modules/activities:WithholdStoredFilesTx":      "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
+	"internal/modules/identity:countFailure":                 "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
+	"internal/modules/identity:resetLockoutStreak":           "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
+	"internal/modules/capture:releaseSyncAnchor":             "the second half of the watermark write beside it in one transaction, which matches on id and generation alone so a round that already ran keeps its cursor. A release that refused an archived connection would leave the anchor held behind a stored cursor, and the next attempt would read that stale point as one somebody chose",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that
 	// sentence: an erasure stamps archived_at itself, so its own subject is
 	// archived by the time the statement beside it runs.
-	"internal/modules/privacy:anonymizeSubjectRows":    "Art. 17 erasure of the subject row, and it is the statement that SETS archived_at — coalesced, so a subject already archived keeps the instant they were retired. A liveness filter here would make erasure refuse every already-archived subject, which is the population most likely to ask for it",
 	"internal/modules/privacy:anonymizeLeadTwins":      "the lead half of the same erasure, reaching the twins a promotion left behind. They are found by promoted_contact_id and by address, and an archived twin holds the same personal data a live one does",
 	"internal/modules/privacy:archiveActivity":         "the retention sweep retiring a message whose window closed. The write IS the archive transition, chosen by a clock rather than by a caller",
 	"internal/modules/privacy:archiveDeal":             "the deal arm of the same sweep, and the same transition: a deal past its window is archived because of when it closed",
@@ -181,6 +179,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 
 	// THE WRITE CANNOT REACH A RETIRED ROW, because of what it is rather than
 	// because of a predicate. Each says which fact makes that true.
+	"internal/modules/capture:storeDeferredOriginalTx":    "the activity was INSERTed by this same transaction before its files were stored, so there is no archived row for it to find",
 	"internal/modules/capture:limitLinkLessAudience":      "the activity was INSERTed by this same transaction a few statements earlier, so there is no archived row for it to find — the function's own check is that exactly one row moved",
 	"internal/modules/capture:AdvanceChannelPollOffsetTx": "the poller's watermark for a connection its own live selection handed it, and the statement only ever moves the offset FORWARD (`poll_offset < $3`), so a late write from a retired cycle matches nothing",
 	"internal/modules/capture:backfillWorkspace":          "a one-time relocation of credential material out of the `auth` column and into the vault. It MUST reach withdrawn connections: leaving their secrets in a column the vault was introduced to empty is the defect, and the row is claimed with `credential_ref IS NULL` so two boots relocate once",
@@ -195,7 +194,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/signals:resolveToCompany":                 "the resolver stamping the single-candidate match on a signal its own pass selected; the contact link it may write is separately consent-gated and never creates a record",
 	"internal/modules/signals:flagAmbiguous":                    "the resolver flagging a signal for review when several companies are plausible, on a row from the same pass. It links nobody and resolves nothing",
 	"internal/modules/contacts:setDedupeDispositionTx":          "disposing a duplicate-candidate row, not either record it names. `disposition = 'open'` is the guard, and a candidate is closed rather than archived",
-	"internal/modules/contacts:reopenDedupeCandidateTx":         "the undo of the same disposition, read and written under the candidate's own lock; nothing writes dedupe_candidate.archived_at",
+	"internal/modules/contacts:reopenDedupeCandidateTx":         "the disposition is read and written under the candidate lock; user undo also locks both live subjects, while failed merge compensation restores the original decision",
 	"internal/modules/contacts:rewriteFullNameTx":               "moves a display name only after its two callers locked the row and decided the display may change: the display refresh, which refuses a name anyone but capture chose and fails the both-halves check on an erased subject, and the signature apply, which holds the subject live before it writes",
 	"internal/modules/contacts:completeContactName":             "filling first and last from a confident parse, and only into columns that are both still empty. The predicate is also the concurrency guard, and an erased subject has had them nulled with the row's other identity columns",
 	"internal/modules/contacts:absorbCompanyReferences":         "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",
@@ -218,11 +217,11 @@ func retirableTables(t *testing.T) map[string]bool {
 	t.Helper()
 	tables := map[string]bool{}
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}
@@ -350,7 +349,7 @@ func TestEveryByIDWriteOfARetirableRowAnswersForLiveness(t *testing.T) {
 	heldCache := map[string]map[string][]string{}
 	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
 				isIntegrationTagged(path) {
 				return err

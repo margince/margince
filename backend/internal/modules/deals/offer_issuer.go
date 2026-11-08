@@ -107,16 +107,13 @@ func offerAuthor(ctx context.Context) ids.UserID {
 	}
 }
 
-// offerEntity is the entity a new or edited offer names: the one asked for,
-// which must be live, else the author's.
+// offerEntity is the entity a new or edited offer names. That is the live one
+// asked for, else the one its author sends mail for. A chosen issuer
+// may differ from the sender's entity. The mail that carries the offer is still
+// judged under the sender's entity.
 func (s *Store) offerEntity(ctx context.Context, tx pgx.Tx, asked *ids.LegalEntityID) (ids.LegalEntityID, error) {
 	if asked == nil {
-		author := offerAuthor(ctx)
-		if author.IsZero() {
-			entity, err := s.installation.IssuerEntity(ctx, tx, nil)
-			return entity.ID, err
-		}
-		return s.installation.AuthorEntity(ctx, tx, author)
+		return s.installation.AuthorEntity(ctx, tx, offerAuthor(ctx))
 	}
 	entity, err := s.installation.IssuerEntity(ctx, tx, asked)
 	if errors.Is(err, apperrors.ErrNotFound) || (err == nil && !entity.Live) {

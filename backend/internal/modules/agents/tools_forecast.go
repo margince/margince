@@ -92,9 +92,10 @@ type ForecastReadingsResult struct {
 
 	WonMinor      int64 `json:"won_minor"`
 	EvidenceMinor int64 `json:"evidence_minor"`
-	BestCaseMinor int64 `json:"best_case_minor"`
 	OpenMinor     int64 `json:"open_minor"`
 	WeightedMinor int64 `json:"weighted_minor"`
+	// LikelyThreshold is the probability evidence_minor counted Likely from.
+	LikelyThreshold int `json:"likely_threshold"`
 
 	EligibleCount      int `json:"eligible_count"`
 	PricedCount        int `json:"priced_count"`
@@ -124,16 +125,6 @@ type ForecastReadingsResult struct {
 	// Snapshots are this period's frozen states, newest first — the ids
 	// forecast_movement takes. Empty is a real answer: nothing was frozen.
 	Snapshots []ForecastSnapshotRefResult `json:"snapshots"`
-
-	// Qualified is the readings restricted to deals the customer still
-	// supports. Absent while the installation does not enforce viability
-	// reviews, which means no qualified reading exists, not that it equals the
-	// figures above.
-	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
-	// QualificationMode is "enforcing" while viability reviews gate the
-	// qualified block, else "off". An enforced scope with no deals sends a zero
-	// block rather than none.
-	QualificationMode string `json:"qualification_mode"`
 
 	// Landing is where the period finishes, the answer GET /forecast gives. The
 	// range below sits beside it. Absent for managed teams, as on the endpoint.
@@ -179,36 +170,19 @@ type ForecastContributionResult struct {
 	DealName           string                 `json:"deal_name"`
 	OwnerID            *string                `json:"owner_id,omitempty"`
 	StageID            *string                `json:"stage_id,omitempty"`
-	Category           *string                `json:"category,omitempty"`
+	ProbabilitySource  *string                `json:"probability_source,omitempty"`
 	BaseMinor          *int64                 `json:"base_minor,omitempty"`
 	ExclusionReason    *string                `json:"exclusion_reason,omitempty"`
 	WeightedMinor      int64                  `json:"weighted_minor"`
 	InWon              bool                   `json:"in_won"`
 	InOpen             bool                   `json:"in_open"`
 	InEvidence         bool                   `json:"in_evidence"`
-	InBestCase         bool                   `json:"in_best_case"`
 	TypedProbability   *int                   `json:"typed_probability,omitempty"`
 	ChanceInUse        int                    `json:"chance_in_use"`
 	EvidenceN          *int                   `json:"evidence_n,omitempty"`
 	Signals            []ForecastSignalResult `json:"signals"`
 	Effect             *float64               `json:"effect,omitempty"`
 	AppliedProbability int                    `json:"applied_probability"`
-}
-
-// ForecastQualifiedResult mirrors the qualified readings on GET /forecast.
-type ForecastQualifiedResult struct {
-	EvidenceMinor int64 `json:"evidence_minor"`
-	BestCaseMinor int64 `json:"best_case_minor"`
-	WeightedMinor int64 `json:"weighted_minor"`
-	ExcludedMinor int64 `json:"excluded_minor"`
-	UnknownMinor  int64 `json:"unknown_minor"`
-	ExcludedCount int   `json:"excluded_count"`
-	UnknownCount  int   `json:"unknown_count"`
-	// The part of the excluded money with no review behind it.
-	UnsupportedMinor int64 `json:"unsupported_minor"`
-	UnsupportedCount int   `json:"unsupported_count"`
-	// AmountsPartial says some left-out deal had no amount the reader can see.
-	AmountsPartial bool `json:"amounts_partial"`
 }
 
 // ForecastSnapshotRefResult is one frozen state a movement can start or end at.
@@ -249,7 +223,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
 			"to":{"type":"string","format":"uuid","description":"The closing snapshot."},
-			"reading":{"type":"string","enum":["open","weighted","evidence","best_case","qualified_evidence","qualified_best_case","qualified_weighted"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports."}},
+			"reading":{"type":"string","enum":["open","weighted","evidence"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastMovementResult](),
 	}
@@ -266,7 +240,10 @@ func (t forecastMovement) Handle(ctx context.Context, in json.RawMessage) (json.
 
 // ForecastMovementResult is what forecast_movement answers with.
 type ForecastMovementResult struct {
-	Reading      string `json:"reading"`
+	Reading string `json:"reading"`
+	// BaseCurrency is what every amount here, the buckets' and deals' too, was
+	// converted to when the snapshots were frozen.
+	BaseCurrency string `json:"base_currency"`
 	OpeningMinor int64  `json:"opening_minor"`
 	ClosingMinor int64  `json:"closing_minor"`
 	// Buckets is a COMPLETE account: opening plus every entry equals closing.
@@ -351,8 +328,8 @@ type ForecastAssuranceResult struct {
 
 // ForecastAssuranceFreshnessResult is what changed after the run read it.
 type ForecastAssuranceFreshnessResult struct {
-	// State is current, out_of_date, or unknown when no run has recorded what
-	// it read since changes were first tracked.
+	// State is current, out_of_date, or unknown while committed inputs
+	// have not been read by a complete check or the freshness consumer.
 	State            string `json:"state"`
 	ChangedDeals     int    `json:"changed_deals"`
 	ChangedSignals   int    `json:"changed_signals"`

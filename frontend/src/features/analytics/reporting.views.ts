@@ -37,6 +37,7 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   leads_qualified: "leads",
   lead_first_response: "leads",
   leads_awaiting_response: "leads",
+  leads_awaiting_response_now: "leads",
   partner_pipeline: "partners",
   partner_won: "partners",
   partner_commission: "partners",
