@@ -250,6 +250,17 @@ func (s *Store) revertStageCorrection(
 	return nil
 }
 
+// stageCorrectionKinds are the corrections whose Undo moves the deal back
+// along its stage history, so only the newest move of the deal can be undone.
+var stageCorrectionKinds = []string{CloseLostCorrection, VerdictStageMoveCorrection, DealReviveCorrection}
+
+// newestStageMoveSQL selects the id of the deal's newest stage-history row.
+// The writer and the review read ask the same question through it.
+func newestStageMoveSQL(dealIDColumn string) string {
+	return "SELECT h.id FROM deal_stage_history h WHERE h.deal_id = " + dealIDColumn +
+		" ORDER BY h.changed_at DESC, h.id DESC LIMIT 1"
+}
+
 // stageMoveToReverse is the stage Margince's move took the deal from, while
 // that move is still the deal's newest.
 func stageMoveToReverse(ctx context.Context, tx pgx.Tx, c DealCorrection, movedSince string) (ids.StageID, error) {
@@ -261,8 +272,7 @@ func stageMoveToReverse(ctx context.Context, tx pgx.Tx, c DealCorrection, movedS
 	err := tx.QueryRow(ctx, `
 		SELECT latest.id, closing.from_stage_id
 		  FROM deal_stage_history closing,
-		       LATERAL (SELECT h.id FROM deal_stage_history h WHERE h.deal_id = closing.deal_id
-		                 ORDER BY h.changed_at DESC, h.id DESC LIMIT 1) latest
+		       LATERAL (`+newestStageMoveSQL("closing.deal_id")+`) latest
 		 WHERE closing.id = $1 AND closing.deal_id = $2`, *c.StageHistoryID, c.DealID).Scan(&newest, &from)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.StageID{}, &CorrectionReversalError{Reason: movedSince, MovedSince: true}

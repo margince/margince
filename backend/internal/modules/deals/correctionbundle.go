@@ -63,15 +63,19 @@ func (s *Store) RevertBundle(
 		if err := storekit.EnsureIfMatch(ctx, tx, dealTable, dealID, &ifVersion); err != nil {
 			return err
 		}
+		movedByBundle := false
 		for i, undo := range undos {
+			var reverted DealCorrection
 			_, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
-				_, err := s.revertCorrectionTx(ctx, nested, undo.CorrectionID, nil, undo.Evidence, active, archiveConfirmedFor)
+				var err error
+				reverted, err = s.revertCorrectionTx(ctx, nested, undo.CorrectionID, nil, undo.Evidence, active, archiveConfirmedFor)
 				return true, err
 			})
-			if err != nil && !keepsOneChange(err) {
+			if err != nil && !keepsOneChange(err) && !(movedByBundle && movedSince(err)) {
 				return err
 			}
 			out.Refusals[i] = err
+			movedByBundle = movedByBundle || (err == nil && slices.Contains(stageCorrectionKinds, reverted.Correction))
 		}
 		return nil
 	})
@@ -108,6 +112,14 @@ func keepsOneChange(err error) bool {
 	}
 	conflict, ok := errors.AsType[*CorrectionReversalError](err)
 	return ok && !conflict.MovedSince
+}
+
+// movedSince reports a stage refusal because the deal moved after the change.
+// When this bundle's own earlier Undo made that move, the older change stays
+// and the newer Undo still goes.
+func movedSince(err error) bool {
+	conflict, ok := errors.AsType[*CorrectionReversalError](err)
+	return ok && conflict.MovedSince
 }
 
 // revertCorrectionTx takes one correction back in the caller's transaction and

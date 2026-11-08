@@ -286,6 +286,20 @@ func (j magicUndoJudge) judgeCorrection(
 	if correction.Reversed() {
 		return magicRefusal(string(ReasonAlreadyUndone)), true, nil
 	}
+	key := deals.AppliedChangeKey{DealID: correction.DealID, ChangeID: auditID}
+	reviews, err := j.corrections.AppliedChangeReviewsTx(ctx, tx, []deals.AppliedChangeKey{key})
+	if err != nil {
+		return nil, false, err
+	}
+	review, ok := reviews[key]
+	switch {
+	case !ok:
+		return magicRefusal(string(ReasonNotRestorableByThisPath)), true, nil
+	case !review.Writable:
+		return magicRefusal(string(ReasonNotWritableByCaller)), true, nil
+	case !review.CanUndo:
+		return magicRefusal(string(ReasonSuperseded)), true, nil
+	}
 	return magicOffer(auditID), true, nil
 }
 
