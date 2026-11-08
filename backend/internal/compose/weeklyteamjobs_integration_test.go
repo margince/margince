@@ -57,7 +57,7 @@ func seedManagerRoles(t *testing.T, e *integration.Env, users ...ids.UUID) {
 	e.WsExec(t, `INSERT INTO role (key, name, permissions)
 	             VALUES ('manager', 'Team Lead', $1::jsonb)
 	             ON CONFLICT (key) DO UPDATE SET permissions = EXCLUDED.permissions`,
-		`{"objects":{"deal":{"read":true},"contact":{"read":true},`+
+		`{"objects":{"deal":{"read":true},"contact":{"read":true},"lead":{"read":true},`+
 			`"activity":{"read":true},"weekly_plan":{"read":true,"update":true},"installation_settings":{"read":true},`+
 			`"team_lead":{"read":true,"create":true}},`+
 			`"row_scope":"team"}`)

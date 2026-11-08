@@ -26,6 +26,7 @@ const (
 // instead of becoming a silent dead end.
 var remedies = map[string][]Remedy{
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
+	ReasonDealNotRequested:               {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonLegacyTransactionalUnevidenced: {RemedyAnswer, RemedyFact, RemedyException},
 	// Absolute for rollout modes (absoluteDenials), yet a sender's answer can
 	// correct the request that caused it. The two are different axes.
@@ -34,16 +35,26 @@ var remedies = map[string][]Remedy{
 	// No answer or fact supplies marketing consent.
 	ReasonNoMarketingConsent: {RemedyException},
 
-	// The subject's own stop, a dead mailbox, an unconfirmed opt-in, a rolling
-	// cap and an unresolvable recipient: only an admin may send past these.
-	ReasonObjection:           {RemedyAdminException},
-	ReasonRestricted:          {RemedyAdminException},
-	ReasonSubjectRequest:      {RemedyAdminException},
-	ReasonConsentWithdrawn:    {RemedyAdminException},
-	ReasonHardBounce:          {RemedyAdminException},
-	ReasonUnconfirmedDOI:      {RemedyAdminException},
-	ReasonFrequencyCapReached: {RemedyAdminException},
-	ReasonNoSubject:           {RemedyAdminException},
+	// The subject's own stop: nobody sends past it, an admin included. A stop
+	// recorded by mistake is corrected on the record, which lifts the refusal.
+	ReasonObjection:        {},
+	ReasonRestricted:       {},
+	ReasonSubjectRequest:   {},
+	ReasonConsentWithdrawn: {},
+	// A request recorded after the objection lifts it, which is the rep
+	// confirming with the contact, not anybody sending past it.
+	ReasonOptedOutAfterRequest: {},
+	// Prior consent is the only route where the recipient's country says so
+	// (messaging.Rules.ConsentOnly), and the advertising ceiling of such a
+	// country clears with time. Nobody sends past either.
+	ReasonMarketingConsentRequired: {},
+	ReasonFrequencyCapReached:      {},
+
+	// A dead mailbox, an unconfirmed opt-in and an unresolvable recipient:
+	// only an admin may send past these.
+	ReasonHardBounce:     {RemedyAdminException},
+	ReasonUnconfirmedDOI: {RemedyAdminException},
+	ReasonNoSubject:      {RemedyAdminException},
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},
@@ -59,4 +70,22 @@ func RemediesFor(reason string) []Remedy {
 // HasRemedy reports whether the reason declares the remedy.
 func HasRemedy(reason string, remedy Remedy) bool {
 	return slices.Contains(remedies[reason], remedy)
+}
+
+// ExceptionMayAnswer reports whether a recorded one-message exception may stand
+// over every refusal in this set. Staging and dispatch both ask it, so a stop
+// or an admin-only refusal recorded after the exception was given still stops
+// the message. givenByAdmin is the exception's own record of who gave it, never
+// the authority of whoever is sending now.
+func (s DecisionSet) ExceptionMayAnswer(givenByAdmin bool) bool {
+	for _, d := range s.Decisions {
+		if d.Verdict == VerdictAllow || HasRemedy(d.ReasonCode, RemedyException) {
+			continue
+		}
+		if givenByAdmin && HasRemedy(d.ReasonCode, RemedyAdminException) {
+			continue
+		}
+		return false
+	}
+	return true
 }

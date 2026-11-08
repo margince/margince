@@ -336,10 +336,9 @@ func TestVoiceTranscriptIngestRequiresTheOwnersSpeakerLabel(t *testing.T) {
 	}
 }
 
-// An agent passport cannot touch a voice profile: the corpus is the
-// human's consented personal material and the derived voice is their
-// identity asset (the ADR-0055 human-only class).
-func TestVoiceProfileMutationsRejectAgents(t *testing.T) {
+// A voice profile an agent creates is its user's one profile, so a second is a
+// conflict whichever door made the first.
+func TestAnAgentsVoiceProfileIsItsUsersOne(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -353,8 +352,11 @@ func TestVoiceProfileMutationsRejectAgents(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	if status := e.Call(t, "POST", "/v1/voice-profiles", AnyMap{}, bearer, nil); status != http.StatusForbidden {
-		t.Fatalf("agent create voice profile → %d, want 403", status)
+	if status := e.Call(t, "POST", "/v1/voice-profiles", AnyMap{}, bearer, nil); status != http.StatusCreated {
+		t.Fatalf("agent create voice profile → %d, want 201", status)
+	}
+	if status := e.Call(t, "POST", "/v1/voice-profiles", AnyMap{}, nil, nil); status != http.StatusConflict {
+		t.Fatalf("the user creating a second voice profile → %d, want 409", status)
 	}
 }
 

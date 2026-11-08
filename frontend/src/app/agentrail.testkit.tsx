@@ -227,6 +227,10 @@ export const openPanel = async (user: UserEvent, container: HTMLElement) => {
   const trigger = container.querySelector(".arhit");
   if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
   await user.click(trigger);
+  await waitFor(() => {
+    if (!document.querySelector(".arpanel"))
+      throw new Error("The agent panel has not loaded");
+  });
 };
 
 // The panel is portalled to document.body once open, so its content is never

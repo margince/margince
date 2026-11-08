@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // PassportRow is one passport's metadata for the Settings list. The
@@ -27,6 +28,7 @@ type PassportRow struct {
 	ID        ids.PassportID
 	Label     *string
 	Scopes    []string
+	Areas     principal.WorkAreas
 	CreatedAt time.Time
 	ExpiresAt time.Time
 	RevokedAt *time.Time
@@ -85,11 +87,11 @@ type PassportConnectionRow struct {
 // a connection is personal — which clients act for this human — and the
 // Settings page that reads it is the human's own.
 const listPassportsSQL = `
-	SELECT id, label, scopes, created_at, expires_at, revoked_at, last_used_at,
+	SELECT id, label, scopes, work_areas, created_at, expires_at, revoked_at, last_used_at,
 	       grant_id, client_id, client_name, connected_at, renewable
 	FROM (
 		SELECT DISTINCT ON (p.oauth_grant_id IS NULL, COALESCE(p.oauth_grant_id, p.id))
-		       p.id, p.label, p.scopes, p.created_at, p.expires_at, p.revoked_at,
+		       p.id, p.label, p.scopes, p.work_areas, p.created_at, p.expires_at, p.revoked_at,
 		       CASE WHEN p.oauth_grant_id IS NULL THEN p.last_used_at
 		            ELSE (SELECT max(sibling.last_used_at) FROM passport sibling
 		                   WHERE sibling.oauth_grant_id = p.oauth_grant_id) END AS last_used_at,
@@ -133,11 +135,13 @@ func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow
 				clientName  *string
 				connectedAt *time.Time
 				renewable   *bool
+				areas       []string
 			)
-			if err := rows.Scan(&p.ID, &p.Label, &p.Scopes, &p.CreatedAt, &p.ExpiresAt, &p.RevokedAt, &p.LastUsedAt,
+			if err := rows.Scan(&p.ID, &p.Label, &p.Scopes, &areas, &p.CreatedAt, &p.ExpiresAt, &p.RevokedAt, &p.LastUsedAt,
 				&grantID, &clientID, &clientName, &connectedAt, &renewable); err != nil {
 				return err
 			}
+			p.Areas = areasFromColumn(areas)
 			if grantID != nil && clientID != nil && clientName != nil && connectedAt != nil && renewable != nil {
 				p.Connection = &PassportConnectionRow{
 					GrantID:     *grantID,

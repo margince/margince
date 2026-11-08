@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   company,
   company360,
@@ -41,9 +41,9 @@ function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={RECORD_ZONE}>
+        <ViewerZoneProvider zone={RECORD_ZONE}>
           <RecordShell>{ui}</RecordShell>
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

@@ -65,6 +65,9 @@ const (
 	// conclusion a reader draws from that — and did, in three runs out of three
 	// — is that a meeting they were just told about is not in the diary.
 	warningNoCalendarConnected = "no_calendar_connected"
+	// warningCalendarUnreadable marks a meeting list for a user whose calendar
+	// connection exists but is not syncing, so recent diary meetings may be absent.
+	warningCalendarUnreadable = "calendar_unreadable"
 	// warningUntrustedContent rides every T2 answer, raised at sealing time from
 	// the folded tier rather than by any handler — so it cannot be forgotten by
 	// one, and cannot be spoofed into an answer by content that wants to look
@@ -83,3 +86,15 @@ const captureGapMessage = "A colleague on this contact's threads has not connect
 
 const rowScopeFilteredMessage = "This answer covers only the records your access allows. " +
 	"Others may exist that you cannot see, so report what you found rather than what exists."
+
+// The two diary caveats a meeting list carries. Each names the conclusion an
+// empty day invites. A reader drew it unprompted: "nothing is dated tomorrow",
+// said of a meeting the user had just described.
+const meetingListNoCalendarMessage = "No calendar is connected for the user, so this list is the " +
+	"meetings somebody recorded in this CRM, NOT their diary. A meeting missing here may still be in " +
+	"their calendar, and a day with nothing listed is not a free day. Say the calendar is not " +
+	"connected rather than that a meeting is missing or the day is clear."
+
+const meetingListCalendarUnreadableMessage = "The user's calendar connection is not syncing, so this " +
+	"list may lack meetings from their diary. A meeting missing here may still be in their calendar. " +
+	"Say the calendar is not syncing rather than that a meeting is missing or the day is clear."

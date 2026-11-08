@@ -25,13 +25,13 @@ package privacy
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // subjectApprovalMatch is the WHERE clause naming every staging that holds the
@@ -148,7 +148,7 @@ func addressPatterns(emails []string) []string {
 			continue
 		}
 		patterns = append(patterns,
-			`(^|[^a-z0-9._%+-])`+regexp.QuoteMeta(strings.ToLower(email))+`($|[^a-z0-9.-])`)
+			values.EmailTextPattern(strings.ToLower(email)))
 	}
 	return patterns
 }
@@ -185,6 +185,11 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID
 	leadIDs := leads
 	if leadIDs == nil {
 		leadIDs = []ids.UUID{}
+	}
+
+	matched, err := scrubbedIDs(ctx, tx, `SELECT id FROM approval WHERE `+subjectApprovalMatch+` FOR UPDATE`, subject.UUID, leadIDs, addresses)
+	if err != nil {
+		return err
 	}
 
 	if err := eraseApprovalNoticesMatching(ctx, tx, subjectWithdrawal, causeContactErasure, subjectApprovalMatch, subject.UUID, leadIDs, addresses); err != nil {
@@ -277,7 +282,7 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID
 		subject.UUID, leadIDs, addresses); err != nil {
 		return fmt.Errorf("emptying the decided approvals naming the subject: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "approval", matched, subjectRedactionReason, subjectRedactionCause)
 }
 
 // evidenceArray is the evidence column read as the array it always is when a
@@ -365,16 +370,17 @@ func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities 
 	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, evidenceCitesActivity, cited); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
+	matched, err := scrubbedIDs(ctx, tx, `
 		UPDATE approval
 		   SET `+blankStagedProposal+`,
 		       status          = CASE WHEN status = 'pending' THEN 'expired' ELSE status END,
 		       decision_reason = CASE WHEN status = 'pending' THEN $2 ELSE decision_reason END,
 		       decided_at      = CASE WHEN status = 'pending' THEN now() ELSE decided_at END
-		 WHERE `+evidenceCitesActivity, cited, reason); err != nil {
+		 WHERE `+evidenceCitesActivity+` RETURNING id`, cited, reason)
+	if err != nil {
 		return fmt.Errorf("emptying the proposals quoting the destroyed records: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "approval", matched, reason, cause)
 }
 
 // redactWorkflowRuns empties what an automation planned and produced for the

@@ -29,11 +29,12 @@ package gates
 // This gate is what makes the two-catalog arrangement survivable until then.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // Where each catalog keeps the question.
@@ -71,7 +72,7 @@ var theQuestionsLanguages = []struct {
 func TestThePublishedQuestionIsTheOneTheScreenAsks(t *testing.T) {
 	t.Parallel()
 
-	server, err := os.ReadFile(serverCopyFile)
+	server, err := gatekit.ReadFile(serverCopyFile)
 	if err != nil {
 		t.Fatalf("reading the published copy: %v", err)
 	}
@@ -118,7 +119,7 @@ func publishedRenderings(t *testing.T, source, field string) [3]string {
 // screenRendering pulls one key's value out of a frontend catalog.
 func screenRendering(t *testing.T, file, key string) string {
 	t.Helper()
-	raw, err := os.ReadFile(frontendCopyRoot + file)
+	raw, err := gatekit.ReadFile(frontendCopyRoot + file)
 	if err != nil {
 		t.Fatalf("reading %s: %v", file, err)
 	}

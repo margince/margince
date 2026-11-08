@@ -186,6 +186,7 @@ func (h Handlers) exchangeAuthCode(r *http.Request, clientID, code, verifier str
 			Scopes:         passportScopes,
 			RefreshAllowed: refreshAllowed,
 			Resource:       redeemed.Resource,
+			Areas:          redeemed.Areas,
 		})
 		if err != nil {
 			return err
@@ -201,7 +202,7 @@ func (h Handlers) exchangeAuthCode(r *http.Request, clientID, code, verifier str
 		}
 		issued, err = mintPassport(ctx, tx,
 			Identity{UserID: redeemed.UserID, WorkspaceID: redeemed.WorkspaceID},
-			IssuePassportInput{Label: &label, Scopes: passportScopes, TTL: &ttl}, &grantID)
+			IssuePassportInput{Label: &label, Scopes: passportScopes, TTL: &ttl, Areas: areasFromColumn(redeemed.Areas)}, &grantID)
 		return err
 	})
 	if err != nil {
@@ -219,6 +220,8 @@ type redeemedCode struct {
 	Scopes      []string
 	ClientID    string
 	Resource    *string
+	// Areas is the code's stored column, NULL for all areas.
+	Areas []string
 }
 
 // consumeAuthCode validates the exchange against the stored authorization
@@ -250,14 +253,14 @@ func (h Handlers) consumeAuthCode(r *http.Request, tx pgx.Tx, clientID, code, ve
 	}
 	out.WorkspaceID = wsID
 	err = tx.QueryRow(r.Context(), `
-		SELECT a.user_id, a.scopes, a.code_challenge, a.client_id, a.redirect_uri, a.resource
+		SELECT a.user_id, a.scopes, a.code_challenge, a.client_id, a.redirect_uri, a.resource, a.work_areas
 		FROM oauth_authorization_code a
 		JOIN oauth_client c ON c.client_id = a.client_id
 		WHERE a.code_hash = $1 AND a.consumed_at IS NULL AND a.expires_at > now()
 		  AND `+liveClientPredicate,
 		hashOAuthCode(code)).
 		Scan(&out.UserID, &out.Scopes, &challenge, &out.ClientID, &redirectURI,
-			&out.Resource)
+			&out.Resource, &out.Areas)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return redeemedCode{}, errCodeSpent
 	}

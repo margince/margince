@@ -39,7 +39,7 @@ func setupMeetingWeeks(t *testing.T) meetingWeeks {
 	}
 	at := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
 	clock := func() time.Time { return at }
-	customer, err := contacts.NewStore(InstallationDB(e.Pool)).WithClock(clock).CreateContact(human, contacts.CreateContactInput{FullName: "Harbour Buyer", Source: "manual"})
+	customer, err := contacts.NewStore(InstallationDB(e.Pool)).SetClock(clock).CreateContact(human, contacts.CreateContactInput{FullName: "Harbour Buyer", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}

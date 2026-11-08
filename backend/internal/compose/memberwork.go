@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -29,21 +30,25 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, loc
 	tally := handoverTally(counts)
 	tally[string(recordTypeActivity)] = &counts.Task
 	tally["signal"] = &report.Signals
+	seen := map[string]bool{}
 	for _, reference := range slices.Sorted(maps.Keys(memberReferences)) {
 		policy := memberReferences[reference]
 		if policy.disposition != referenceHandover {
 			continue
 		}
-		table, column, valid := strings.Cut(reference, ".")
+		table, _, valid := strings.Cut(reference, ".")
 		if !valid {
 			return report, fmt.Errorf("invalid handover reference %q", reference)
 		}
-		args := []any{source}
-		query := fmt.Sprintf("SELECT id, version FROM %s WHERE %s = $%d AND (%s) ORDER BY id", pgx.Identifier{table}.Sanitize(), pgx.Identifier{column}.Sanitize(), len(args), policy.live)
+		if seen[table] {
+			continue
+		}
+		seen[table] = true
+		query := fmt.Sprintf("SELECT id, version FROM %s WHERE %s ORDER BY id", pgx.Identifier{table}.Sanitize(), memberHandoverPredicate(table))
 		if lock {
 			query += " FOR UPDATE"
 		}
-		rows, err := tx.Query(ctx, query, args...)
+		rows, err := tx.Query(ctx, query, pgx.StrictNamedArgs{memberSourceArgument: source})
 		if err != nil {
 			return report, err
 		}
@@ -73,6 +78,18 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, loc
 	return report, err
 }
 
+func memberHandoverPredicate(table string) string {
+	var clauses []string
+	for _, reference := range slices.Sorted(maps.Keys(memberReferences)) {
+		policy := memberReferences[reference]
+		name, column, valid := strings.Cut(reference, ".")
+		if valid && name == table && policy.disposition == referenceHandover {
+			clauses = append(clauses, "("+pgx.Identifier{column}.Sanitize()+" = @source_id AND ("+policy.live+"))")
+		}
+	}
+	return strings.Join(clauses, " OR ")
+}
+
 func (s memberWork) Retire(ctx context.Context, tx pgx.Tx, source ids.UUID, target *ids.UUID, merge bool) error {
 	if merge && target != nil {
 		ctx = auth.WithConsolidatedMembers(ctx, source, *target)
@@ -83,6 +100,9 @@ func (s memberWork) Retire(ctx context.Context, tx pgx.Tx, source ids.UUID, targ
 	}
 	work := before.Owned
 	if err := s.transferMemberWork(ctx, tx, source, target, merge, work); err != nil {
+		return err
+	}
+	if err := collections.ArchiveMemberSavedViewsTx(ctx, tx, ids.From[ids.UserKind](source)); err != nil {
 		return err
 	}
 
@@ -101,14 +121,14 @@ func (s memberWork) Retire(ctx context.Context, tx pgx.Tx, source ids.UUID, targ
 	if err != nil {
 		return err
 	}
-	if left.Contact+left.Company+left.Lead+left.Deal+left.Project+left.Task+after.Signals > 0 {
+	if left.Contact+left.Company+left.Lead+left.Deal+left.Project+left.Task+left.List+after.Signals > 0 {
 		return fmt.Errorf("%w: some work could not be transferred; nothing was removed", apperrors.ErrConflict)
 	}
 	return nil
 }
 
 func (s memberWork) transferMemberWork(ctx context.Context, tx pgx.Tx, source ids.UUID, target *ids.UUID, merge bool, work crmcontracts.HandoverCounts) error {
-	if work.Contact+work.Company+work.Lead+work.Deal+work.Project+work.Task == 0 {
+	if work.Contact+work.Company+work.Lead+work.Deal+work.Project+work.Task+work.List == 0 {
 		return nil
 	}
 	if target == nil {

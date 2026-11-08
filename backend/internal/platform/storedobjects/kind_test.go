@@ -5,6 +5,10 @@ package storedobjects
 
 import (
 	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -62,7 +66,7 @@ func TestTheKindVocabularyIsCompleteAndDistinct(t *testing.T) {
 		}
 		seen[kind] = true
 	}
-	for _, kind := range []Kind{KindAttachment, KindKnowledge, KindLogo, KindOffer, KindImport} {
+	for _, kind := range declaredKindConstants(t) {
 		if !seen[kind] {
 			t.Errorf("%q is a declared constant and AllKinds omits it, so nothing holds the "+
 				"sweep to having an owner for it", kind)
@@ -76,4 +80,45 @@ func TestRecordTxRefusesAnUndeclaredKind(t *testing.T) {
 	if err := RecordTx(context.Background(), nil, Kind("nobody's"), "ws/x/1"); err == nil {
 		t.Fatal("an undeclared kind was accepted")
 	}
+}
+
+// declaredKindConstants reads every Kind constant this package declares, so a new one is
+// held to AllKinds without anybody adding it to a second list.
+func declaredKindConstants(t *testing.T) []Kind {
+	t.Helper()
+	file, err := parser.ParseFile(token.NewFileSet(), "storedobjects.go", nil, 0)
+	if err != nil {
+		t.Fatalf("parsing the kind vocabulary: %v", err)
+	}
+	var kinds []Kind
+	for _, decl := range file.Decls {
+		general, ok := decl.(*ast.GenDecl)
+		if !ok || general.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range general.Specs {
+			value, ok := spec.(*ast.ValueSpec)
+			if !ok || len(value.Values) != len(value.Names) {
+				continue
+			}
+			if typed, ok := value.Type.(*ast.Ident); !ok || typed.Name != "Kind" {
+				continue
+			}
+			for i, literal := range value.Values {
+				text, ok := literal.(*ast.BasicLit)
+				if !ok {
+					t.Fatalf("Kind constant %s is not a string literal, so this test cannot read it", value.Names[i])
+				}
+				unquoted, err := strconv.Unquote(text.Value)
+				if err != nil {
+					t.Fatalf("Kind constant %s: %v", value.Names[i], err)
+				}
+				kinds = append(kinds, Kind(unquoted))
+			}
+		}
+	}
+	if len(kinds) < 2 {
+		t.Fatalf("read %d Kind constants, so the walk is reading the wrong shape", len(kinds))
+	}
+	return kinds
 }

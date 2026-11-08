@@ -258,8 +258,7 @@ func readContactSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (contactSide, 
 	var side contactSide
 	err := tx.QueryRow(ctx, `
 		SELECT p.full_name,
-		       coalesce((SELECT array_agg(pe.email) FROM contact_email pe
-		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL), '{}'),
+		       `+storekit.RequestAddressesSQL("p.id")+`,
 		       coalesce((SELECT s.handle FROM contact_social s
 		                  WHERE s.contact_id = p.id AND s.platform = '`+SocialLinkedIn+`'), '')
 		  FROM contact p

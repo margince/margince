@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -306,5 +308,53 @@ func TestAReloseCountsOnceUnderItsLastLoss(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM deal_stage_history
 		WHERE lost_reason_code_at_change IN ('price', 'competitor')`); got != 2 {
 		t.Errorf("the stage history holds %d coded losses, want both", got)
+	}
+}
+
+// An apply an agent starts runs as that agent, on a worker with no one signed in,
+// so each deal's audit row names the agent.
+func TestAnApplyByAnAgentNamesTheAgentOnEachDeal(t *testing.T) {
+	e := integration.Setup(t)
+	operator := lossAdmin(t, e)
+	seedLosses(operator, t, e)
+	runner := newLossTaskRunner(t, e)
+	decided := decideShared(operator, t, e)
+	human, _ := principal.Actor(operator)
+	owner := integration.OwnerConn(t)
+	passport := e.SeedPassportFor(t, owner, "loss-apply", human.UserID)
+	agent := e.AgentOnPassport(t, human.UserID, []ids.UUID{e.Team1}, human.Permissions, ids.From[ids.PassportKind](passport))
+	if status, deals := runner.apply(agent, t, decided); status != http.StatusAccepted || deals != 2 {
+		t.Fatalf("the agent's apply answered %d for %d deals, want 2 deals", status, deals)
+	}
+	var agentRows, userRows int
+	if err := owner.QueryRow(context.Background(), `
+		SELECT count(*) FILTER (WHERE actor_type = 'agent'), count(*) FILTER (WHERE actor_type = 'human')
+		FROM audit_log WHERE entity_type = 'deal' AND after->>'lost_reason_basis' = 'mapped'`).Scan(&agentRows, &userRows); err != nil {
+		t.Fatalf("reading the audit rows: %v", err)
+	}
+	if agentRows != 2 || userRows != 0 {
+		t.Errorf("the mapped deals' audit rows name the agent %d times and a user %d times, want 2 and 0", agentRows, userRows)
+	}
+	if got := askWinLoss(t, e, "loss_reason_state")["mapped"]; got != "2/5000" {
+		t.Errorf("mapped losses = %q, want both deals the note covers", got)
+	}
+}
+
+// A passport that no longer lends write ends the run its agent started.
+func TestAnActivationOnAReadOnlyPassportDoesNotRun(t *testing.T) {
+	e := integration.Setup(t)
+	operator := lossAdmin(t, e)
+	human, _ := principal.Actor(operator)
+	owner := integration.OwnerConn(t)
+	passport := e.SeedPassportFor(t, owner, "loss-downgraded", human.UserID)
+	activation := datatask.Activation{Operator: "agent:loss", Agent: &datatask.ActingAgent{UserID: human.UserID, PassportID: passport, OnBehalfOf: human.UserID}}
+	if _, err := activationActor(operator, e.Pool, activation); err != nil {
+		t.Fatalf("a passport that lends write answered %v", err)
+	}
+	if _, err := owner.Exec(context.Background(), `UPDATE passport SET scopes = ARRAY['read'] WHERE id = $1`, passport); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := activationActor(operator, e.Pool, activation); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a read-only passport answered %v", err)
 	}
 }

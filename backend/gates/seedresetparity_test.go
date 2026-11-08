@@ -22,7 +22,6 @@ package gates_test
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"slices"
 	"strconv"
@@ -158,7 +157,7 @@ func preservedKeyName(t *testing.T, key ast.Expr) string {
 // constantString finds a `const <name> = "..."` in the compose package.
 func constantString(t *testing.T, name string) string {
 	t.Helper()
-	entries, err := os.ReadDir("internal/compose")
+	entries, err := gatekit.ReadDir("internal/compose")
 	if err != nil {
 		t.Fatalf("reading internal/compose: %v", err)
 	}
@@ -193,7 +192,7 @@ func constantString(t *testing.T, name string) string {
 // sqlPreservedTables reads the names out of seed-reset.sql's preserved ARRAY.
 func sqlPreservedTables(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(seedResetFile)
+	source, err := gatekit.ReadFile(seedResetFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", seedResetFile, err)
 	}

@@ -2,24 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { newGroup, newLeaf } from "../../lib/segmentpredicate";
 import { listsMe, liveList } from "../../testing/lists.fixtures";
-import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../../testing/story-utils";
-import { useFilterExport } from "./filterexport";
+import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { FilterFoot, type FootMode } from "./filterfoot";
 import { SaveToListAction } from "./filterlistedit";
 
 // The filter Panel's footer band. The leading edge says what state the filter
-// is in. The trailing edge holds the one accent way to keep it, with the rarer
-// verbs in More beside it. A new filter, an opened view and a Live
-// List's filter each keep it their own way.
+// is in. The trailing edge holds the ways to keep it, the one accent last. A
+// new filter, an opened view and a Live List's filter each keep it their own
+// way.
 const meta: Meta = {
   title: "Patterns/Filters and views/Filter footer",
   parameters: { layout: "padded" },
@@ -45,7 +39,6 @@ function Footed({
   changed = false,
 }: Readonly<{ kind?: Kind; changed?: boolean }>) {
   const t = useT();
-  const run = useFilterExport();
   const modes: Record<Kind, FootMode> = {
     new: { kind: "new" },
     view: {
@@ -75,11 +68,9 @@ function Footed({
       title={t("filters.builderTitle")}
       footer={
         <FilterFoot
-          resource="company"
           tree={COMPLETE}
           mode={modes[kind]}
           onSave={() => undefined}
-          exportRun={run}
         />
       }
     >
@@ -90,39 +81,8 @@ function Footed({
   );
 }
 
-type ExportAnswer = "file" | "refused" | "held";
-
-function routes(answer: ExportAnswer = "file") {
-  installFetchStub({
-    "GET /me": listsMe(true),
-    "POST /exports": () => {
-      if (answer === "held") {
-        return new Promise<Response>(() => undefined);
-      }
-      return answer === "refused"
-        ? jsonResponse(
-            {
-              title: "Export refused",
-              status: 403,
-              detail: "Bulk record read is human-only.",
-            },
-            403,
-          )
-        : new Response("id\n", { status: 200 });
-    },
-  });
-}
-
-type User = ReturnType<typeof userEvent.setup>;
-
-/** More's items are portalled to the body, outside the story's root. */
-async function openMore(user: User, canvasElement: HTMLElement) {
-  await user.click(
-    within(canvasElement).getByRole("button", {
-      name: "More for this filter",
-    }),
-  );
-  return within(canvasElement.ownerDocument.body);
+function routes() {
+  installFetchStub({ "GET /me": listsMe(true) });
 }
 
 export const UnsavedFilter: Story = {
@@ -132,53 +92,12 @@ export const UnsavedFilter: Story = {
   },
 };
 
-export const MoreOpen: Story = {
-  render: () => {
-    routes();
-    return <Footed />;
-  },
-  play: async ({ canvasElement }) => {
-    await openMore(userEvent.setup(), canvasElement);
-  },
-};
-
-// The menu that asked has closed, so the server's reason lands in the band.
-export const ExportRefused: Story = {
-  render: () => {
-    routes("refused");
-    return <Footed />;
-  },
-  play: async ({ canvasElement }) => {
-    const user = userEvent.setup();
-    const page = await openMore(user, canvasElement);
-    await user.click(page.getByRole("button", { name: "Export CSV" }));
-    await within(canvasElement).findByRole("alert");
-  },
-};
-
-// The menu closed on the press, so the band says a file is coming.
-export const Exporting: Story = {
-  render: () => {
-    routes("held");
-    return <Footed />;
-  },
-  play: async ({ canvasElement }) => {
-    const user = userEvent.setup();
-    const page = await openMore(user, canvasElement);
-    await user.click(page.getByRole("button", { name: "Export CSV" }));
-    await within(canvasElement).findByText("Exporting…");
-  },
-};
-
 // A Live List's filter opened for editing: "Save to {name}" takes Save's
-// place, and saving as a new view moves into More beside the exports.
+// place, and saving as a new view stands beside it.
 export const SavingToAList: Story = {
   render: () => {
     routes();
     return <Footed kind="list" changed />;
-  },
-  play: async ({ canvasElement }) => {
-    await openMore(userEvent.setup(), canvasElement);
   },
 };
 

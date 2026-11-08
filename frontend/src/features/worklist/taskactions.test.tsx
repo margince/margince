@@ -18,6 +18,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
@@ -74,21 +75,27 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   });
 }
 
+// The reader's zone is named, so the due day and hour do not move with the
+// machine the suite runs on.
+const READER_ZONE = "Europe/Berlin";
+
 function openTask() {
   return render(
     <StoryProviders>
       <SourceHost>
-        <TaskDetailModal
-          activityId="task-1"
-          readOnly={false}
-          onClose={() => {}}
-          update={
-            {
-              mutate: () => {},
-              isPending: false,
-            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-          }
-        />
+        <ViewerZoneProvider zone={READER_ZONE}>
+          <TaskDetailModal
+            activityId="task-1"
+            readOnly={false}
+            onClose={() => {}}
+            update={
+              {
+                mutate: () => {},
+                isPending: false,
+              } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+            }
+          />
+        </ViewerZoneProvider>
       </SourceHost>
     </StoryProviders>,
   );
@@ -127,6 +134,52 @@ test("a task logged with its date alone says when without a time", async () => {
   const logged = await screen.findByText(new RegExp(`^${en["tasks.logged"]}`));
   expect(logged.textContent).toMatch(/08\/09\/2026/);
   expect(logged.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+});
+
+// The record zone here is the fallback, Berlin. The flag decides whether the
+// caption carries a time; the clock reading does not.
+function stubDue(dueAt: string, dueHasTime: boolean) {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Call back the buyer",
+        due_at: dueAt,
+        due_has_time: dueHasTime,
+        occurred_at: "2026-09-08T10:00:00Z",
+        is_done: false,
+        captured_by: "human:u-1",
+      }),
+  });
+}
+
+test("a task with a callback time says when it is due to the hour", async () => {
+  stubDue("2026-09-11T13:00:00Z", true);
+  openTask();
+
+  const due = await screen.findByText(/^Due /);
+  expect(due.textContent).toMatch(/11\/09\/2026/);
+  expect(due.textContent).toMatch(/15:00/);
+});
+
+test("a task due by its day says the date alone, whatever its stored hour", async () => {
+  stubDue("2026-09-11T13:00:00Z", false);
+  openTask();
+
+  const due = await screen.findByText(/^Due /);
+  expect(due.textContent).toMatch(/11\/09\/2026/);
+  expect(due.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+});
+
+test("a task due by the end of its day says the date alone", async () => {
+  stubDue("2026-09-11T21:59:59Z", false);
+  openTask();
+
+  const due = await screen.findByText(/^Due /);
+  expect(due.textContent).toMatch(/11\/09\/2026/);
+  expect(due.textContent).not.toMatch(/\d{1,2}:\d{2}/);
 });
 
 test("a task nobody read out of a meeting offers no way back", async () => {
@@ -595,25 +648,22 @@ test.each([
   ["typed by hand", null],
   ["read out of a note", { kind: "note", content_state: "available" }],
   ["read out of a withheld call", { kind: "call", content_state: "withheld" }],
-])(
-  "a task %s offers Email and Open contact, and no Call",
-  async (_, source) => {
-    stubNextSteps({ source });
-    openTaskWith();
+])("a task %s offers Call, Email and Open contact", async (_, source) => {
+  stubNextSteps({ source });
+  openTaskWith();
 
-    await waitFor(() => expect(openContact()).not.toBeNull());
-    // The source has answered, so a missing Call is the decision and not a wait.
-    if (source?.content_state === "withheld") {
-      await screen.findByText(en["email.detail.withheldReason"]);
-    } else if (source) {
-      await screen.findByRole("button", { name: "Open original" });
-    }
-    expect(
-      screen.getByRole("link", { name: en["record.verb.email"] }),
-    ).toBeTruthy();
-    expect(call()).toBeNull();
-  },
-);
+  await waitFor(() => expect(openContact()).not.toBeNull());
+  // Source visibility does not change the contact's callable number.
+  if (source?.content_state === "withheld") {
+    await screen.findByText(en["email.detail.withheldReason"]);
+  } else if (source) {
+    await screen.findByRole("button", { name: "Open original" });
+  }
+  expect(
+    screen.getByRole("link", { name: en["record.verb.email"] }),
+  ).toBeTruthy();
+  expect(call()?.getAttribute("href")).toBe("tel:+49301234567");
+});
 
 test("a contact with no phone gets no Call", async () => {
   stubNextSteps({ contact: { ...ALICE, phones: [] } });

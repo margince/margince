@@ -22,7 +22,7 @@ package gates
 
 import (
 	"go/ast"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -38,7 +38,7 @@ import (
 // reason is absent exactly when the entry IS undoable.
 func contractReasonEnum(t *testing.T) []string {
 	t.Helper()
-	contract, err := os.ReadFile(filepath.Join("api", "crm.yaml"))
+	contract, err := gatekit.ReadFile(filepath.Join("api", "crm.yaml"))
 	if err != nil {
 		t.Fatalf("read the contract: %v", err)
 	}
@@ -143,7 +143,7 @@ func readFrontendReasonCopy(t *testing.T) string {
 	t.Helper()
 	root := filepath.Join("..", "frontend", "src")
 	var found strings.Builder
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -156,7 +156,7 @@ func readFrontendReasonCopy(t *testing.T) string {
 		if strings.HasSuffix(path, ".test.ts") || strings.HasSuffix(path, ".test.tsx") {
 			return nil
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ type reasonsReturned struct {
 func theEvaluatorsSources(t *testing.T) []*ast.File {
 	t.Helper()
 	dir := filepath.Join("internal", "compose")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("read the evaluator's package: %v", err)
 	}

@@ -33,13 +33,14 @@ const theirAsk = "Before we go further my team wants to see a sample of the driv
 
 // seedInboundAsk is one message they sent, linked to the account, whose
 // words the model may quote — or may not, when its audience excludes the
-// reader.
-func seedInboundAsk(t *testing.T, e *integration.Env, company ids.UUID, audience string) ids.UUID {
+// reader. It is dated from scanAt, the instant the scan reads, so it stays
+// inside the scan's window whatever the calendar says.
+func seedInboundAsk(t *testing.T, e *integration.Env, company ids.UUID, audience string, scanAt time.Time) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
+	at := scanAt.AddDate(0, 0, -12).UTC().Truncate(time.Second)
 	sent := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, created_at, source, captured_by, audience)
-		VALUES ($1, 'email', 'inbound', 'Telematics — next steps', $2,
-		        '2026-05-20T10:00:00Z', '2026-05-20T10:00:00Z', 'manual', 'human:x', $3)`, theirAsk, audience)
+		VALUES ($1, 'email', 'inbound', 'Telematics — next steps', $2, $4, $4, 'manual', 'human:x', $3)`, theirAsk, audience, at)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
 		VALUES ($1, 'company', $2)`, sent, company)
 	return sent
@@ -86,7 +87,7 @@ func scanFor(e *integration.Env, lane companyscan.Completer, queued *[]companysc
 func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", company360Clock)
 	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
 	svc, view := scanFor(e, lane, &queued)
@@ -174,7 +175,7 @@ func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *test
 func TestAMessageOutsideTheReadersAudienceIsNeverQuoted(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	hidden := seedInboundAsk(t, e, company.UUID, "selected")
+	hidden := seedInboundAsk(t, e, company.UUID, "selected", company360Clock)
 	lane := &quotingLane{messageID: hidden.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
 	svc, _ := scanFor(e, lane, &queued)

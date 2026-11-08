@@ -116,7 +116,7 @@ func TestNoGoSourceHidesWhereThisCensusCannotSeeIt(t *testing.T) {
 			"in a package under internal/, cmd/ or pkg/", path, gateDir)
 	}
 
-	err = filepath.WalkDir(gateDir, func(path string, entry fs.DirEntry, walkErr error) error {
+	err = gatekit.WalkDir(gateDir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -172,7 +172,7 @@ func TestTheGateInventoryPageIsCurrent(t *testing.T) {
 		}
 		return
 	}
-	got, err := os.ReadFile(gateInventoryPage)
+	got, err := gatekit.ReadFile(gateInventoryPage)
 	if err != nil {
 		t.Fatalf("reading %s: %v\nRegenerate it from the backend directory with:\n"+
 			"  go test ./gates -run GateInventory -update-gate-inventory", gateInventoryPage, err)
@@ -199,7 +199,7 @@ func readGateDeclarations(t *testing.T) (gates []gate, untagged []string) {
 		t.Fatalf("listing this package's test files: %v", err)
 	}
 	for _, path := range paths {
-		source, readErr := os.ReadFile(path)
+		source, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}
@@ -447,7 +447,7 @@ The eight shapes, what each is for, and how each one silently passes:
 // where a doc rots. Review caught it, which is the thing a gate is for.
 func TestGatePatternsCitesGatesThatExist(t *testing.T) {
 	t.Parallel()
-	page, err := os.ReadFile(gatePatternsPage)
+	page, err := gatekit.ReadFile(gatePatternsPage)
 	if err != nil {
 		t.Fatalf("reading %s: %v", gatePatternsPage, err)
 	}

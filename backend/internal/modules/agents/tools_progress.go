@@ -111,7 +111,7 @@ func (t progressDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err != nil {
 		return nil, err
 	}
-	if _, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
+	moved, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
 		DealID:                   args.DealID,
 		ToStageID:                args.ToStageID,
 		LostReason:               args.LostReason,
@@ -120,10 +120,11 @@ func (t progressDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		WonWithoutContractDetail: args.WonWithoutContractDetail,
 		Source:                   ToolSource,
 		IfVersion:                pin,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
-	var result ProgressDealResult
+	result := ProgressDealResult{ProbabilityNote: moved.ProbabilityNote}
 	if args.Note != nil && strings.TrimSpace(*args.Note) != "" {
 		fields, err := json.Marshal(map[string]any{
 			"kind": "note",

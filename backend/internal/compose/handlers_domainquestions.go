@@ -47,8 +47,7 @@ type domainQuestionHandlers struct {
 // which is the same name the pre-triage path always produced — worse than a
 // site would have given, never invented.
 func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
-	// Human-only (x-agent-access): capture posture, not record data.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -93,11 +92,10 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 		Domain:    base,
 		CompanyID: companyID,
 		Status:    contacts.DomainCompany,
-		// HUMAN, not heuristic: a colleague looked at the domain and said it is
-		// a company. The triage reads this too — a human answer is not withheld
-		// for stale evidence, because a human is exactly who that withholding
-		// was waiting for.
-		Source: contacts.DomainSourceHuman,
+		// Not heuristic: a colleague, or their agent, said it is a company. The
+		// triage reads this too: a user's answer is not withheld for stale
+		// evidence, because that withholding waited for a user.
+		Source: contacts.DomainDecisionSource(r.Context()),
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -114,14 +112,11 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 			base, apperrors.ErrConflict))
 		return
 	}
-	// ADMITTED, recorded as a human decision. Two things hang on this beyond
-	// the response: the sticky rule in setDomainAdmissionTx guards on
-	// admission_source, so without it the next automatic bulk-sender verdict
-	// may suppress the domain a colleague just kept; and settleDisposition
-	// writes none of the admission columns, so the row would answer with an
-	// empty admission and an empty source — neither of which the contract
-	// publishes. It carries the company-update gate the contract promises for
-	// this endpoint, which RequireHuman alone does not.
+	// Admitted, recorded as a user's decision. The sticky rule in
+	// setDomainAdmissionTx guards on admission_source, so without it the next
+	// bulk-sender verdict may suppress the domain a colleague just kept. And
+	// settleDisposition writes no admission column, so the row would answer an
+	// empty admission and source, which the contract does not publish.
 	stored, err := h.contacts.KeepDomainAsCompany(r.Context(), base)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -133,7 +128,7 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 // KeepDomainAsVendor answers a vendor question by agreeing with the triage:
 // the domain stays a vendor and no company is created.
 func (h domainQuestionHandlers) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -166,7 +161,7 @@ func (h domainQuestionHandlers) KeepDomainAsVendor(w http.ResponseWriter, r *htt
 // It does not destroy mail already captured — purging what a rule matched is
 // its own irreversible endpoint.
 func (h domainQuestionHandlers) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

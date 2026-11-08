@@ -407,23 +407,6 @@
         "null"
       ]
     },
-    "assurance": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "qualified_forecast_enforced": {
-          "description": "Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": false
-        }
-      }
-    },
     "auth": {
       "type": [
         "object",
@@ -564,6 +547,38 @@
           "items": {
             "type": "string"
           }
+        },
+        "gmail_mailbox_quota": {
+          "description": "Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 6000
+        },
+        "gmail_project_quota": {
+          "description": "Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1200000
+        },
+        "history_concurrency": {
+          "description": "Limit on history imports running at once across the installation. Use the same value in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1
+        },
+        "history_hold": {
+          "description": "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
         },
         "mail_sharing": {
           "description": "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
@@ -847,6 +862,31 @@
         }
       }
     },
+    "database": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "worker_max_connections": {
+          "description": "Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 12
+        },
+        "worker_statement_cache_capacity": {
+          "description": "Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN default_query_exec_mode.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 256
+        }
+      }
+    },
     "deals": {
       "type": [
         "object",
@@ -870,13 +910,23 @@
           ],
           "default": true
         },
+        "silent_close_days": {
+          "description": "Days without word from the customer after which Margince closes an open deal as lost.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 60,
+          "maximum": 730,
+          "default": 120
+        },
         "stage_autopilot_enabled": {
-          "description": "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
+          "description": "Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move.",
           "type": [
             "boolean",
             "null"
           ],
-          "default": false
+          "default": true
         }
       }
     },
@@ -1100,6 +1150,14 @@
             "type": "string"
           }
         },
+        "mcp_client_check": {
+          "description": "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        },
         "oauth_dynamic_registration": {
           "description": "AI tools may register their own OAuth client (DCR) for new sign-ins.",
           "type": [
@@ -1299,7 +1357,15 @@
             "string",
             "null"
           ],
-          "default": "commit_evidence"
+          "default": "likely"
+        },
+        "forecast_likely_threshold": {
+          "description": "The level, 1 to 100, from which the Likely forecast counts an open deal with a confirmed close date.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 90
         },
         "forecast_self_correcting": {
           "description": "Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage.",

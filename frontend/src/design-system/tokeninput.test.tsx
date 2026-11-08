@@ -165,6 +165,152 @@ describe("removing a value", () => {
   });
 });
 
+describe("a field with no parse", () => {
+  it("keeps a semicolon as text", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(box(), "DE;AT");
+
+    expect(box().value).toBe("DE;AT");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("leaves a paste in the box until a commit", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(box());
+    await user.paste("DE, AT");
+
+    expect(box().value).toBe("DE, AT");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+// Two capital letters are a value; the rest is refused. Splits on comma,
+// semicolon and white space, as an address line does.
+const REGIONS = {
+  keys: [",", ";"],
+  read: (raw: string) => {
+    const parts = raw.split(/[\s,;]+/).filter((part) => part !== "");
+    return {
+      values: parts.filter((part) => /^[A-Z]{2}$/.test(part)),
+      refused: parts.filter((part) => !/^[A-Z]{2}$/.test(part)),
+    };
+  },
+};
+
+function Parsing({ start = [] }: Readonly<{ start?: readonly string[] }>) {
+  const [values, setValues] = useState<readonly string[]>(start);
+  const [refused, setRefused] = useState<readonly string[]>([]);
+  return (
+    <>
+      <TokenInput
+        values={values}
+        onChange={setValues}
+        parse={{ ...REGIONS, onRefuse: setRefused }}
+        aria-label="Region"
+      />
+      <output>{refused.join("|")}</output>
+    </>
+  );
+}
+
+const refusedOut = () => screen.getByRole("status").textContent;
+
+describe("a field with a parse", () => {
+  it("commits on each of its keys", async () => {
+    const user = userEvent.setup();
+    render(<Parsing />);
+
+    await user.type(box(), "DE;AT,");
+
+    expect(screen.getByRole("button", { name: "Remove DE" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove AT" })).toBeTruthy();
+    expect(box().value).toBe("");
+  });
+
+  it("splits a paste into tokens at once and keeps the refused part typed", async () => {
+    const user = userEvent.setup();
+    render(<Parsing />);
+
+    await user.click(box());
+    await user.paste("DE AT;nope\tCH");
+
+    for (const region of ["DE", "AT", "CH"]) {
+      expect(
+        screen.getByRole("button", { name: `Remove ${region}` }),
+      ).toBeTruthy();
+    }
+    expect(box().value).toBe("nope");
+    expect(refusedOut()).toBe("nope");
+  });
+
+  it("joins a paste to the text already typed before reading it", async () => {
+    const user = userEvent.setup();
+    render(<Parsing />);
+
+    await user.type(box(), "D");
+    await user.paste("E AT");
+
+    expect(screen.getByRole("button", { name: "Remove DE" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove AT" })).toBeTruthy();
+  });
+
+  it("leaves a paste that holds no value to the box", async () => {
+    const user = userEvent.setup();
+    render(<Parsing />);
+
+    await user.click(box());
+    await user.paste("nope");
+
+    expect(box().value).toBe("nope");
+    expect(refusedOut()).toBe("");
+  });
+
+  it("refuses on Enter and on blur, and adds no token twice", async () => {
+    const user = userEvent.setup();
+    render(<Parsing start={["DE"]} />);
+
+    await user.type(box(), "DE nope nope AT{Enter}");
+
+    expect(screen.getAllByRole("button", { name: /^Remove/ })).toHaveLength(2);
+    expect(box().value).toBe("nope");
+    expect(refusedOut()).toBe("nope");
+
+    await user.tab();
+    expect(box().value).toBe("nope");
+    expect(refusedOut()).toBe("nope");
+  });
+
+  it("reports nothing refused once the box is emptied or the text is fixed", async () => {
+    const user = userEvent.setup();
+    render(<Parsing />);
+
+    await user.type(box(), "ch{Enter}");
+    expect(refusedOut()).toBe("ch");
+
+    await user.clear(box());
+    expect(refusedOut()).toBe("");
+    await user.type(box(), "CH{Enter}");
+
+    expect(screen.getByRole("button", { name: "Remove CH" })).toBeTruthy();
+    expect(refusedOut()).toBe("");
+  });
+
+  it("removes the last token on Backspace in an empty box", async () => {
+    const user = userEvent.setup();
+    render(<Parsing start={["DE", "AT"]} />);
+
+    await user.click(box());
+    await user.keyboard("{Backspace}");
+
+    expect(screen.queryByRole("button", { name: "Remove AT" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove DE" })).toBeTruthy();
+  });
+});
+
 // The same token without the text box: a set built somewhere else, drawn as a
 // set. What matters is that each remove control names its OWN token and that a
 // reader who may not change the set is not shown controls that refuse.

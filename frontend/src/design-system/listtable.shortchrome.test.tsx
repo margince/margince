@@ -72,14 +72,16 @@ describe("a short list that hides its chrome", () => {
   it("keeps the archived switch while it hides the other dials", () => {
     render(<Short rows={[]} />);
     expect(
-      screen.getByRole("checkbox", { name: "Show archived" }),
-    ).toBeTruthy();
+      screen
+        .getByRole("button", { name: "Show archived" })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
     expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
   it("draws no switch for a list that offers no archiving", () => {
     render(<Short rows={testRows(3)} archivable={false} />);
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show archived" })).toBeNull();
   });
 
   it("says it is empty in one line, with no table of headings", () => {

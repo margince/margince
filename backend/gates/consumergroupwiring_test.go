@@ -21,7 +21,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -74,7 +73,7 @@ func TestEveryWorkerLaneNamesADeclaredConsumerGroup(t *testing.T) {
 func subscribedGroupNames(t *testing.T) map[string]string {
 	t.Helper()
 	dir := filepath.Join(repoRoot, "backend", "cmd", "worker")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the worker package: %v", err)
 	}

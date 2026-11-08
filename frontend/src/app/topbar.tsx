@@ -1,10 +1,13 @@
 import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, Suspense, useEffect, useRef } from "react";
+import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
+import { SilentCardBoundary } from "../design-system/cardboundary";
 import { IconAction } from "../design-system/iconaction";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
+import { lazy } from "../i18n/lazy";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import {
   leaveRecord,
@@ -12,6 +15,7 @@ import {
   rememberListAddress,
 } from "../lib/listreturn";
 import { type Route, routeHash, useHash } from "../lib/router";
+import { usePhoneViewport } from "../lib/viewport";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
 import { sidebarHotkeyCaps } from "./hotkeys";
@@ -25,9 +29,15 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
-import { paletteHotkeyCaps } from "./palette";
-import { SetupReminder } from "./setup-reminder";
+import { paletteHotkeyCaps } from "./palettehotkey";
+import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";
+
+const SetupReminder = lazy(
+  async () => ({ default: (await import("./setup-reminder")).SetupReminder }),
+  "essential",
+  SilentCardBoundary,
+);
 
 // The top bar: the one strip that is true of the whole session rather than of
 // the page under it — where you are (the trail), how you reach anything (the
@@ -136,7 +146,7 @@ export function TopBarSearch({
         aria-label={label}
         onClick={onOpenSearch}
       >
-        <Search size={15} strokeWidth={1.8} aria-hidden />
+        <Search size={16} strokeWidth={1.8} aria-hidden />
         <span className="topbar-searchlabel">{label}</span>
         {/* One cap per KEY, which is how a keyboard shortcut is read: "⌘ then K",
             not the four-character string "⌘K" in one box. The caps come from the
@@ -155,6 +165,26 @@ export function TopBarSearch({
   );
 }
 
+/** The trail, mounted only where it is drawn, so a phone reads no names for it. */
+function TopBarTrail({
+  route,
+  section,
+}: Readonly<{ route: Route; section?: NavSection }>) {
+  const t = useT();
+  const crumbs = useCrumbs(route, section);
+  return <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />;
+}
+
+/** The company's mark leading home, where a phone has no room for the trail. */
+function TopBarHome() {
+  const label = useHomeLinkLabel();
+  return (
+    <AppLink className="topbar-home" href="#/home" aria-label={label}>
+      <WorkspaceChip />
+    </AppLink>
+  );
+}
+
 export function TopBar({
   route,
   section,
@@ -169,13 +199,15 @@ export function TopBar({
   onOpenSearch: () => void;
 }>) {
   const t = useT();
-  const crumbs = useCrumbs(route, section);
   const hash = useHash();
   // Every list the bar stands over is noted, so a record opened from it can
   // lead back to it with the same filter.
   useEffect(() => rememberListAddress(hash), [hash]);
   const toggleLabel = collapsed ? t("shell.expand") : t("shell.collapse");
   const searchRef = useRef<HTMLButtonElement>(null);
+  // The page heading under the bar already names the page, and the account
+  // menu carries the setup reminder at this width.
+  const phone = usePhoneViewport();
   return (
     <header className="topbar">
       <div className="topbar-lead">
@@ -207,7 +239,11 @@ export function TopBar({
             onClick={() => leaveRecord(route)}
           />
         )}
-        <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />
+        {phone ? (
+          <TopBarHome />
+        ) : (
+          <TopBarTrail route={route} section={section} />
+        )}
       </div>
       <TopBarSearch onOpenSearch={onOpenSearch} buttonRef={searchRef} />
       <div className="topbar-trail">
@@ -217,10 +253,14 @@ export function TopBar({
             wants their attention stacks up before it. */}
         {/* Keyed on the route: a step's action navigates, and the new page
             should not open under a panel left over from the last one. */}
-        <SetupReminder
-          key={routeHash(route)}
-          onHide={() => searchRef.current?.focus()}
-        />
+        {!phone && (
+          <Suspense fallback={null}>
+            <SetupReminder
+              key={routeHash(route)}
+              onHide={() => searchRef.current?.focus()}
+            />
+          </Suspense>
+        )}
         <OutboxButton />
         <NotificationBell />
         <AccountMenu />

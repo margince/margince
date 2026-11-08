@@ -73,7 +73,7 @@ type slippingWire struct {
 
 func TestWhatsSlippingReturnsRankedEvidencedSetAndDropsTheUngrounded(t *testing.T) {
 	older, richer, flagNoIdle, overdueNoDate := slippingFixture()
-	tool := whatsSlippingThisWeek{list: func(context.Context, int) ([]SlippingDeal, error) {
+	tool := whatsSlippingThisWeek{list: func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 		return []SlippingDeal{richer, flagNoIdle, older, overdueNoDate}, nil
 	}}
 
@@ -111,7 +111,7 @@ func TestWhatsSlippingReturnsRankedEvidencedSetAndDropsTheUngrounded(t *testing.
 
 func TestWhatsSlippingLimitCapsTheRankedSet(t *testing.T) {
 	older, richer, _, _ := slippingFixture()
-	tool := whatsSlippingThisWeek{list: func(context.Context, int) ([]SlippingDeal, error) {
+	tool := whatsSlippingThisWeek{list: func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 		return []SlippingDeal{richer, older}, nil
 	}}
 	raw, err := tool.Handle(context.Background(), json.RawMessage(`{"limit":1}`))
@@ -133,10 +133,10 @@ func TestWhatsSlippingLimitCapsTheRankedSet(t *testing.T) {
 func TestWhatsSlippingAsksAtTheWindowTheCallerNames(t *testing.T) {
 	var asked []int
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterSlippingTools(registry, func(_ context.Context, quietDays int) ([]SlippingDeal, error) {
+	RegisterSlippingTools(registry, func(_ context.Context, quietDays int, _ *ids.UUID) ([]SlippingDeal, error) {
 		asked = append(asked, quietDays)
 		return nil, nil
-	}, nil, testStalledDays)
+	}, nil, testStalledDays, testStalledDays)
 	ctx := scopedAgentCtx(principal.ScopeRead)
 
 	for _, args := range []string{`{}`, `{"quiet_days":19}`, `{"quiet_days":365}`} {
@@ -156,12 +156,34 @@ func TestWhatsSlippingAsksAtTheWindowTheCallerNames(t *testing.T) {
 	}
 }
 
+// Inside a scheduled run an omitted window asks at the sweep's window, the one
+// its preflight read. A window the run names is still the run's.
+func TestAScheduledRunsOmittedWindowIsTheSweepsWindow(t *testing.T) {
+	const sweepDays = 14
+	var asked []int
+	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	RegisterSlippingTools(registry, func(_ context.Context, quietDays int, _ *ids.UUID) ([]SlippingDeal, error) {
+		asked = append(asked, quietDays)
+		return nil, nil
+	}, nil, testStalledDays, sweepDays)
+	run := principal.WithAgentRunID(scopedAgentCtx(principal.ScopeRead), ids.NewV7())
+
+	for _, args := range []string{`{}`, `{"quiet_days":30}`} {
+		if _, err := registry.Invoke(run, "whats_slipping_this_week", json.RawMessage(args)); err != nil {
+			t.Fatalf("Invoke with %s = %v, want the tool to run", args, err)
+		}
+	}
+	if want := []int{sweepDays, 30}; !slices.Equal(asked, want) {
+		t.Errorf("the lister was asked at %v, want %v", asked, want)
+	}
+}
+
 func TestDraftFollowUpsForDraftsOnlyTheEvidencedSegmentAndNeverSends(t *testing.T) {
 	older, _, flagNoIdle, _ := slippingFixture()
 	var drafted []ids.UUID
 	draftID := ids.MustParse("00000000-0000-7000-8000-0000000000ff")
 	tool := draftFollowUpsFor{
-		list: func(context.Context, int) ([]SlippingDeal, error) {
+		list: func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 			return []SlippingDeal{older, flagNoIdle}, nil
 		},
 		draft: func(_ context.Context, deal SlippingDeal) (ids.UUID, string, error) {
@@ -207,7 +229,7 @@ func TestDraftFollowUpsForDraftsOnlyTheEvidencedSegmentAndNeverSends(t *testing.
 
 func TestDraftFollowUpsForRefusesAnUnknownSegment(t *testing.T) {
 	tool := draftFollowUpsFor{
-		list: func(context.Context, int) ([]SlippingDeal, error) {
+		list: func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 			t.Fatal("the lister must not run for a segment the tool does not serve")
 			return nil, nil
 		},
@@ -224,7 +246,7 @@ func TestDraftFollowUpsForRefusesAnUnknownSegment(t *testing.T) {
 
 func TestRegisterSlippingToolsWithoutAListerRegistersNothing(t *testing.T) {
 	r := NewRegistry(nil, nil)
-	RegisterSlippingTools(r, nil, nil, testStalledDays)
+	RegisterSlippingTools(r, nil, nil, testStalledDays, testStalledDays)
 	if got := len(r.Specs()); got != 0 {
 		t.Fatalf("a surface without a lister must stay empty, got %d tools", got)
 	}
@@ -260,7 +282,7 @@ func TestDraftFollowUpsForCapsTheWriteSetServerSide(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var drafted int
 			tool := draftFollowUpsFor{
-				list: func(context.Context, int) ([]SlippingDeal, error) {
+				list: func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 					return wideSlippingSet(maxFollowUpDrafts * 4), nil
 				},
 				draft: func(_ context.Context, deal SlippingDeal) (ids.UUID, string, error) {
@@ -280,7 +302,7 @@ func TestDraftFollowUpsForCapsTheWriteSetServerSide(t *testing.T) {
 
 func TestDraftFollowUpsForRefusesANegativeLimit(t *testing.T) {
 	tool := draftFollowUpsFor{
-		list: func(context.Context, int) ([]SlippingDeal, error) {
+		list: func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) {
 			t.Fatal("the lister must not run for a limit the tool refuses")
 			return nil, nil
 		},

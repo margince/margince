@@ -27,11 +27,12 @@ package gates
 
 import (
 	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // dateColumnLine matches one `date`-typed column in the head catalog, e.g.
@@ -60,7 +61,7 @@ const dateColumnFloor = 8
 // table the undo path compares images for.
 func undoReadableDateColumns(t *testing.T) map[string][]string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -208,7 +209,7 @@ func TestTheConstantResolverFindsTheNamesItRulesFrom(t *testing.T) {
 // added there without being added here would carry date columns nothing checks.
 func TestThisGateRulesOverEveryTypeTheUndoPathCompares(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("internal/compose/undoability.go")
+	raw, err := gatekit.ReadFile("internal/compose/undoability.go")
 	if err != nil {
 		t.Fatalf("reading the undo path's record types: %v", err)
 	}
@@ -238,14 +239,14 @@ func TestThisGateRulesOverEveryTypeTheUndoPathCompares(t *testing.T) {
 func goSourcesUnder(t *testing.T, root string) map[string]string {
 	t.Helper()
 	sources := map[string]string{}
-	if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+	if err := gatekit.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

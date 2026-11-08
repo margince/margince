@@ -36,6 +36,17 @@ type confidentialityFixture struct {
 	Subject     string   `json:"subject"`
 	Body        string   `json:"body"`
 	Attachments []string `json:"attachments"`
+	// Documents are the excerpts the engine would have read off the files.
+	Documents []confidentialityFixtureDocument `json:"documents"`
+}
+
+// confidentialityFixtureDocument is one read document, in the fields the
+// engine fills after the claim.
+type confidentialityFixtureDocument struct {
+	Name       string `json:"name"`
+	Excerpt    string `json:"excerpt"`
+	Truncated  bool   `json:"truncated"`
+	Unreadable bool   `json:"unreadable"`
 }
 
 // confidentialityCases serves the one site that judges a thread.
@@ -76,12 +87,19 @@ func (confidentialityCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 		return nil, fmt.Errorf(
 			"capture_confidentiality_verdict/thread: the scenario expects %q, which is not a thread kind", want)
 	}
+	documents := make([]capture.ThreadDocument, 0, len(f.Documents))
+	for _, d := range f.Documents {
+		documents = append(documents, capture.ThreadDocument{
+			Filename: d.Name, Excerpt: d.Excerpt, Truncated: d.Truncated, Unreadable: d.Unreadable,
+		})
+	}
 	return &confidentialityCase{
 		row: capture.PendingThread{
 			ID:          ids.NewV7(),
 			Subject:     f.Subject,
 			Body:        f.Body,
 			Attachments: f.Attachments,
+			Documents:   documents,
 		},
 		expected: want,
 	}, nil

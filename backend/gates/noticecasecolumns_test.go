@@ -19,7 +19,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -87,7 +86,7 @@ func assertOneSpelling(t *testing.T, table string, wholeRowColumns int, spelling
 	t.Helper()
 	selectOver := wholeRowSelect(table)
 	dir := filepath.Join(repoRoot, "backend", "internal", "modules", "consent")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the consent package: %v", err)
 	}

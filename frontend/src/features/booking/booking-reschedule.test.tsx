@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { startOfDayInZone, viewerZone } from "../../format/timezone";
+import { browserZone, startOfDayInZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { BookingReschedule } from "./booking-reschedule";
 
@@ -63,7 +63,7 @@ it("asks for the times from the start of the day picked on the calendar", async 
   );
 
   await waitFor(() =>
-    expect(asked.at(-1)).toBe(startOfDayInZone("2026-10-08", viewerZone())),
+    expect(asked.at(-1)).toBe(startOfDayInZone("2026-10-08", browserZone())),
   );
   expect(startingDate().value).toBe("08/10/2026");
 });

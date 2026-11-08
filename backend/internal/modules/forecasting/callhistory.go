@@ -136,6 +136,11 @@ func (h Handlers) ListForecastCalls(
 		if resolved.Kind == ScopeManagedTeams {
 			return nil
 		}
+		// Totals are open to every seat, and a call is not. Each entry asserts
+		// about the population, so the history is refused as recording one is.
+		if _, err := h.resolve(ctx, tx, resolved); err != nil {
+			return err
+		}
 		calls, err = h.store.callHistoryTx(ctx, tx, period, resolved)
 		return err
 	})

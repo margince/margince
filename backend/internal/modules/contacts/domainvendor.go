@@ -75,10 +75,10 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 		}
 		var args []any
 		arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
-		status, source, row, reason := arg(DomainProvider), arg(DomainSourceHuman), arg(base), arg(PendingVendorVerdict)
+		status, source, row, reason := arg(DomainProvider), arg(DomainDecisionSource(ctx)), arg(base), arg(PendingVendorVerdict)
 		var id ids.UUID
 		err = tx.QueryRow(ctx, `UPDATE company_domain_disposition
-   SET status = `+status+`, source = `+source+`, pending_reason = NULL, next_attempt_at = NULL, updated_at = now()
+   SET status = `+status+`, source = `+source+`, pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false, next_attempt_at = NULL, updated_at = now()
  WHERE domain = `+row+` AND status = 'pending' AND pending_reason = `+reason+` RETURNING id`, args...).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The row is locked, so only its own state refuses: no open vendor question.
@@ -89,7 +89,7 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 		}
 		_, err = storekit.Audit(ctx, tx, "update", entityCompany, id,
 			map[string]any{auditKeyDomain: base, auditKeyStatus: prior.Status, auditKeySource: prior.Source, domainPendingReasonKey: prior.PendingReason},
-			map[string]any{auditKeyDomain: base, auditKeyStatus: DomainProvider, auditKeySource: DomainSourceHuman, domainPendingReasonKey: ""})
+			map[string]any{auditKeyDomain: base, auditKeyStatus: DomainProvider, auditKeySource: DomainDecisionSource(ctx), domainPendingReasonKey: ""})
 		return err
 	})
 }

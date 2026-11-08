@@ -184,7 +184,7 @@ func (s *Store) waitingCandidates(
 			return nil, false, err
 		}
 	}
-	horizon, err := s.waitingHorizonFor(ctx, tx)
+	horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
 	if err != nil {
 		return nil, false, err
 	}

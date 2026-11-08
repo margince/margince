@@ -74,6 +74,10 @@ describe("CompanyHeadLines", () => {
     const { container } = renderInApp(<CompanyHeadLines company={COMPANY} />);
     expect(container.textContent).not.toContain("·");
     expect(screen.getByText("Automotive")).toBeTruthy();
-    expect(screen.getByText("brandt.example").tagName).toBe("A");
+    const website = screen.getByRole("link", { name: "brandt.example" });
+    expect(website.getAttribute("target")).toBe("_blank");
+    expect(website.getAttribute("rel")?.split(/\s+/)).toEqual(
+      expect.arrayContaining(["noopener", "noreferrer"]),
+    );
   });
 });

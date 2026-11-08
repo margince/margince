@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Modal } from "../design-system/atoms";
 import { DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
@@ -100,11 +100,10 @@ export const DismissedPair: Story = {
   render: () => review(() => jsonResponse(contactCase())),
   play: async () => {
     const body = within(document.body);
-    await expect(
-      await body.findByRole("button", {
-        name: "Undo: Mira Kovac and Mira Kovacs",
-      }),
-    ).toBeVisible();
+    const undo = await body.findByRole("button", {
+      name: "Undo: Mira Kovac and Mira Kovacs",
+    });
+    await waitFor(() => expect(undo).toBeVisible());
   },
 };
 
@@ -148,9 +147,11 @@ export const TooLargePairMerge: Story = {
         name: "Merge these two: Mira Kovac and Mira Kovač",
       }),
     );
-    await expect(
-      body.getByRole("button", { name: "Keep Mira Kovač" }),
-    ).toBeVisible();
+    await waitFor(() =>
+      expect(
+        body.getByRole("button", { name: "Keep Mira Kovač" }),
+      ).toBeVisible(),
+    );
   },
 };
 
@@ -174,11 +175,10 @@ export const Stale: Story = {
     await userEvent.click(
       await body.findByRole("button", { name: "Preview merge" }),
     );
-    await expect(
-      await body.findByText(
-        "The duplicates changed while you reviewed them. Check the selection again.",
-      ),
-    ).toBeVisible();
+    const notice = await body.findByText(
+      "The duplicates changed while you reviewed them. Check the selection again.",
+    );
+    await waitFor(() => expect(notice).toBeVisible());
   },
 };
 
@@ -193,7 +193,8 @@ export const Preview: Story = {
     await userEvent.click(
       await body.findByRole("button", { name: "Preview merge" }),
     );
-    await expect(await body.findByText("Cleo Reader, can view")).toBeVisible();
+    const reader = await body.findByText("Cleo Reader, can view");
+    await waitFor(() => expect(reader).toBeVisible());
   },
 };
 
