@@ -122,7 +122,7 @@ it("dates a change from today by its hour and an older one by its day", async ()
   ]);
 });
 
-it("offers no write for a superseded change", () => {
+it("says a superseded change changed since, and offers no write", () => {
   stubApi({});
   render(
     <ReceiptReview
@@ -141,6 +141,7 @@ it("offers no write for a superseded change", () => {
     />,
   );
   expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.getByText(en["brief.changes.superseded"])).toBeTruthy();
 });
 
 it("keeps an undo-only applied change visible until it is reversed", async () => {

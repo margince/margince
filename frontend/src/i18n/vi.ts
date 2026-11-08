@@ -2202,8 +2202,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
-  "brief.changes.superseded":
-    "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
+  "brief.changes.superseded": "Đã thay đổi sau lần cập nhật này",
   "brief.changes.undone": "Đã hoàn tác",
   "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
