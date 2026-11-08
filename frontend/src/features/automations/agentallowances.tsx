@@ -113,6 +113,7 @@ function AllowancesBody({
   // The allowances the form opened on. A save sends what moved from these,
   // so a refresh mid-edit cannot turn another admin's new value into a change.
   const [openedOn, setOpenedOn] = useState<Allowances | null>(null);
+  const [toDefaults, setToDefaults] = useState(false);
   useUnsavedGuard(draft !== null);
   // A new allowance is the limit every usage bar is drawn against.
   const update = useUpdateInstallationSettings(() => {
@@ -137,8 +138,16 @@ function AllowancesBody({
           roleDrafts={roleDrafts}
           locale={locale}
           busy={update.isPending}
-          onDraft={setDraft}
-          onRoleDrafts={setRoleDrafts}
+          toDefaults={toDefaults}
+          onDraft={(next) => {
+            setDraft(next);
+            setToDefaults(false);
+          }}
+          onRoleDrafts={(next) => {
+            setRoleDrafts(next);
+            setToDefaults(false);
+          }}
+          onToDefaults={() => setToDefaults(true)}
           onSave={(patch) => update.mutate(patch)}
           onCancel={() => {
             setDraft(null);
@@ -168,6 +177,7 @@ function AllowancesBody({
                 setDraft(draftOf(allowances));
                 setRoleDrafts(roleDraftsOf(allowances.roles));
                 setOpenedOn(allowances);
+                setToDefaults(false);
               }}
             >
               {t("agentAllowances.edit")}

@@ -559,6 +559,60 @@ describe("AgentAllowancesCard by role", () => {
     ).toBeTruthy();
   });
 
+  it("follows an installation value typed in the same save", async () => {
+    const adminOwn = {
+      ...defaultAgentAllowances,
+      roles: [
+        roleAllowance(
+          "admin",
+          "Admin",
+          { agent_calls_per_window: { value: 30_000, source: "role" } },
+          true,
+          true,
+        ),
+      ],
+    };
+    vi.stubGlobal("fetch", backendFor(EDITOR, adminOwn).fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    const installation = await screen.findByTestId(
+      "allowance-agent_calls_per_window",
+    );
+    await user.clear(installation);
+    await user.type(installation, "2000");
+    const box = screen.getByTestId("role-admin-agent_calls_per_window");
+    await user.clear(box);
+
+    expect(box).toHaveAttribute("placeholder", "Inherits 2,000");
+  });
+
+  it("puts every allowance back as nobody's choice with Use defaults", async () => {
+    const { fetchMock, patches } = backendFor(EDITOR, roleTunedAgentAllowances);
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    await user.click(
+      await screen.findByRole("button", {
+        name: translate("en", "agentAllowances.useDefaults"),
+      }),
+    );
+    expect(
+      screen.getByText(translate("en", "agentAllowances.diff.toDefaults")),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    );
+
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0]).toEqual({ agent_allowances_to_defaults: true });
+  });
+
   it("leaves a locked count alone when a row goes back to the installation value", async () => {
     const locks = [
       {

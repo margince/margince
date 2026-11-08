@@ -117,6 +117,29 @@ type RoleAllowanceSet struct {
 	Unset   []agentvolume.Counter
 }
 
+// resetAgentAllowancesTx removes the stored installation counts and role
+// maps, so each reads as shipped and the Admin preset binds again. A stored
+// default is a choice that keeps the preset off; removing the row is what makes
+// it nobody's choice. A key a boot source sets is left to that source.
+func (s *InstallationSettingsStore) resetAgentAllowancesTx(ctx context.Context, tx pgx.Tx, reset bool) error {
+	if !reset {
+		return nil
+	}
+	keys := []string{AgentWritesPerWindow.Key(), AgentEgressPerWindow.Key(), AgentCallsPerWindow.Key()}
+	for _, count := range allowanceCounts {
+		keys = append(keys, count.byRole.Key())
+	}
+	for _, key := range keys {
+		if _, locked := s.config.Locked(key); locked {
+			continue
+		}
+		if _, err := s.settings.DeleteRawTx(ctx, tx, key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // roleAllowancesField is the patch field a refused role names.
 const roleAllowancesField = "agent_role_allowances"
 

@@ -202,6 +202,54 @@ function roleChange(
   return Object.keys(set).length > 1 ? set : undefined;
 }
 
+export type Fallback = RoleAllowance["agent_calls_per_window"]["if_unset"];
+
+// The save being drafted beside the role values: back to defaults, or the
+// installation counts as typed.
+export type PendingInstallation = Readonly<{
+  toDefaults: boolean;
+  installation: Parsed;
+}>;
+
+// What an emptied role box gives once this save lands. The server's answer
+// holds unless the same save moves the installation value, which then binds.
+// Putting everything back brings the preset back.
+export function fallbackOf(
+  allowances: Allowances,
+  role: RoleAllowance,
+  property: Counts,
+  pending: PendingInstallation,
+): Fallback {
+  if (pending.toDefaults) {
+    const preset = role.holds_preset
+      ? presetOf(allowances, property)
+      : undefined;
+    return preset === undefined
+      ? { value: allowances.defaults[property], source: "installation" }
+      : { value: preset, source: "admin_preset" };
+  }
+  const next = pending.installation[property];
+  if (next !== null && next !== allowances[property]) {
+    return { value: next, source: "installation" };
+  }
+  return role[property].if_unset;
+}
+
+// The Admin preset for a count; sends have none.
+function presetOf(
+  allowances: Allowances,
+  property: Counts,
+): number | undefined {
+  switch (property) {
+    case "agent_calls_per_window":
+      return allowances.defaults.admin_calls_per_window;
+    case "agent_writes_per_window":
+      return allowances.defaults.admin_writes_per_window;
+    default:
+      return undefined;
+  }
+}
+
 export function hasRoleRefusal(drafts: RoleDrafts): boolean {
   return Object.values(drafts).some((draft) =>
     COUNTS.some(

@@ -231,3 +231,25 @@ func roledAgent(e *integration.Env, roles ...string) context.Context {
 		Permissions: principal.Permissions{RoleKeys: roles},
 	})
 }
+
+// Back to defaults removes the stored values rather than saving the shipped
+// numbers, so a chosen installation value stops keeping Admin off its preset.
+func TestBackToDefaultsRestoresTheAdminPreset(t *testing.T) {
+	e := integration.Setup(t)
+	h := allowanceHandlers(t, e, wallClock(t))
+	if code, _ := patchAllowances(installationAdminCtx(e), t, h,
+		`{"agent_calls_per_window":2000,"agent_role_allowances":[{"role_key":"manager","agent_calls_per_window":3000}]}`); code != http.StatusOK {
+		t.Fatalf("choosing values → %d", code)
+	}
+
+	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{"agent_allowances_to_defaults":true}`)
+	if code != http.StatusOK {
+		t.Fatalf("back to defaults → %d", code)
+	}
+
+	if saved.AgentCallsPerWindow != agentvolume.DefaultCalls {
+		t.Errorf("the installation reads %d calls, want the shipped %d", saved.AgentCallsPerWindow, agentvolume.DefaultCalls)
+	}
+	wantValue(t, "Admin calls", roleRow(t, saved, "admin").AgentCallsPerWindow, 20000, crmcontracts.AgentRoleAllowanceValueSourceAdminPreset)
+	wantValue(t, "Team Lead calls", roleRow(t, saved, "manager").AgentCallsPerWindow, agentvolume.DefaultCalls, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
+}

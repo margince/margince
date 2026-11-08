@@ -22,6 +22,7 @@ function Editing() {
       drafts={drafts}
       busy={false}
       lockOf={() => ({ disabled: false })}
+      fallback={(role, property) => role[property].if_unset}
       onDrafts={setDrafts}
     />
   );

@@ -28,6 +28,9 @@ type AgentAllowancePatch struct {
 	CallsPerWindow  *int
 	WindowHours     *int
 	Roles           *[]RoleAllowanceSet
+	// ToDefaults removes the stored counts and role values first, so they read
+	// as shipped and nobody's choice (resetAgentAllowancesTx).
+	ToDefaults bool
 }
 
 func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {

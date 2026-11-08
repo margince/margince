@@ -25943,6 +25943,13 @@ export interface components {
             /** @description Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window. */
             agent_calls_per_window?: number;
             /**
+             * @description Put the agent counts and every role's values back to what Margince ships: their stored
+             *     values are removed, so they read as the defaults and the built-in Admin role takes its
+             *     preset again. A value a boot source sets stays. Applied before the other fields of the
+             *     same patch, so a count sent beside it is saved as a choice again.
+             */
+            agent_allowances_to_defaults?: boolean;
+            /**
              * @description Change some roles' own allowances. Each item names a live role by its `role_key` and
              *     says which counts it sets and which it gives up; everything else is left as it is,
              *     the values of a role that is archived now included. Applies within a minute, in the

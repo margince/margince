@@ -33,10 +33,12 @@ function Form() {
       locks={[]}
       draft={draft}
       roleDrafts={roleDrafts}
+      toDefaults={false}
       locale="en"
       busy={false}
       onDraft={setDraft}
       onRoleDrafts={setRoleDrafts}
+      onToDefaults={() => undefined}
       onSave={() => undefined}
       onCancel={() => undefined}
     />

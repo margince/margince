@@ -16126,6 +16126,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib eine ganze Zahl im Bereich ein oder lass das Feld leer.",
   "agentAllowances.diff.role": "{role}, {label} {from} → {to}",
   "agentAllowances.diff.inherited": "Wert der Installation",
+  "agentAllowances.diff.toDefaults":
+    "Alle Kontingente gehen auf die Werte zurück, mit denen Margince ausgeliefert wird, die Admin-Vorgabe eingeschlossen.",
   "agentAllowances.diff.preset": "Admin-Vorgabe",
   "agentAllowances.diff.roles":
     "Was Agenten in diesem Zeitfenster schon genutzt haben, zählt weiter. Nichts wird zurückgesetzt.",

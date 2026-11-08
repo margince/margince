@@ -120,3 +120,24 @@ func roleAllowanceSets(sets []crmcontracts.AgentRoleAllowanceSet) ([]identity.Ro
 	}
 	return out, nil
 }
+
+// agentAllowancePatch carries the request's agent counts and role values onto
+// the store's patch.
+func agentAllowancePatch(req *crmcontracts.UpdateInstallationSettingsRequest) (identity.AgentAllowancePatch, error) {
+	patch := identity.AgentAllowancePatch{
+		WritesPerWindow: req.AgentWritesPerWindow,
+		EgressPerWindow: req.AgentEgressPerWindow,
+		CallsPerWindow:  req.AgentCallsPerWindow,
+		WindowHours:     req.AgentWindowHours,
+		ToDefaults:      req.AgentAllowancesToDefaults != nil && *req.AgentAllowancesToDefaults,
+	}
+	if req.AgentRoleAllowances == nil {
+		return patch, nil
+	}
+	roles, err := roleAllowanceSets(*req.AgentRoleAllowances)
+	if err != nil {
+		return identity.AgentAllowancePatch{}, err
+	}
+	patch.Roles = &roles
+	return patch, nil
+}

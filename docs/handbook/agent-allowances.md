@@ -44,6 +44,9 @@ installation already had its own value, Admin keeps that value until you set one
 for Admin. An empty Admin box takes the **Admin preset**. To keep Admin on the
 installation value, press **Use the installation value** on its row.
 
+**Use defaults** puts every value back as Margince ships it, the **Admin preset**
+included.
+
 A role chooses how much, never what: an Admin's agent still needs the same
 permissions and the same approvals. A change of role or value resets nothing.
 An agent keeps what it used this window, and a lower value refuses it on its

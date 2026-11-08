@@ -15,6 +15,7 @@ import {
   COUNTS,
   type Counts,
   EMPTY_ROLE_DRAFT,
+  type Fallback,
   hasRoleRefusal,
   INSTALLATION_ROLE_DRAFT,
   parseRoleCell,
@@ -117,17 +118,15 @@ export function RolesReadout({
 // What an empty box gives, said in its placeholder. The server works out the
 // value a count takes once the role's own is given up.
 function emptyBoxSays(
-  role: RoleAllowance,
-  property: Counts,
+  fallback: Fallback,
   t: Translator,
   locale: Locale,
 ): string {
-  const { value, source } = role[property].if_unset;
   return t(
-    source === "admin_preset"
+    fallback.source === "admin_preset"
       ? "agentAllowances.roles.presetValue"
       : "agentAllowances.roles.inherits",
-    { value: formatNumber(value, locale) },
+    { value: formatNumber(fallback.value, locale) },
   );
 }
 
@@ -163,6 +162,7 @@ export function RolesForm({
   drafts,
   busy,
   lockOf,
+  fallback,
   onDrafts,
 }: Readonly<{
   allowances: Allowances;
@@ -170,6 +170,8 @@ export function RolesForm({
   busy: boolean;
   // The lock on one count's role values, keyed by the count's property.
   lockOf: (property: Counts) => FieldLock;
+  // What an emptied box gives once the save being drafted lands.
+  fallback: (role: RoleAllowance, property: Counts) => Fallback;
   onDrafts: (next: RoleDrafts) => void;
 }>) {
   const t = useT();
@@ -200,7 +202,7 @@ export function RolesForm({
           })}
           aria-invalid={refused ? true : undefined}
           data-testid={`role-${role.role_key}-${property}`}
-          placeholder={emptyBoxSays(role, property, t, locale)}
+          placeholder={emptyBoxSays(fallback(role, property), t, locale)}
           value={draft[property]}
           disabled={busy || lockOf(property).disabled}
           onChange={(e) => set(role, { ...draft, [property]: e.target.value })}
@@ -294,10 +296,11 @@ export function roleDiffLines(
   drafts: RoleDrafts,
   t: Translator,
   locale: Locale,
+  fallback: (role: RoleAllowance, property: Counts) => Fallback,
 ): string[] {
   const shown = (role: RoleAllowance, property: Counts, text: string) => {
     const trimmed = text.trim();
-    if (trimmed === "" && role[property].if_unset.source === "admin_preset") {
+    if (trimmed === "" && fallback(role, property).source === "admin_preset") {
       return t("agentAllowances.diff.preset");
     }
     return trimmed === "" || trimmed === "0"

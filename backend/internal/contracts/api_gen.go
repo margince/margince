@@ -64245,6 +64245,12 @@ type UpdateImportRunRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
+	// AgentAllowancesToDefaults Put the agent counts and every role's values back to what Margince ships: their stored
+	// values are removed, so they read as the defaults and the built-in Admin role takes its
+	// preset again. A value a boot source sets stays. Applied before the other fields of the
+	// same patch, so a count sent beside it is saved as a choice again.
+	AgentAllowancesToDefaults *bool `json:"agent_allowances_to_defaults,omitempty"`
+
 	// AgentCallsPerWindow Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.
 	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty" maximum:"20000" minimum:"50"`
 

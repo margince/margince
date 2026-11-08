@@ -16021,6 +16021,8 @@ export const en = {
     "Enter a whole number in the range, or leave the box empty.",
   "agentAllowances.diff.role": "{role}, {label} {from} → {to}",
   "agentAllowances.diff.inherited": "installation value",
+  "agentAllowances.diff.toDefaults":
+    "Every allowance goes back to what Margince ships, the Admin preset included.",
   "agentAllowances.diff.preset": "Admin preset",
   "agentAllowances.diff.roles":
     "What agents already used in this window still counts. Nothing resets.",

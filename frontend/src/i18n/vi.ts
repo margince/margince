@@ -15714,6 +15714,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhập một số nguyên trong khoảng cho phép, hoặc để trống ô.",
   "agentAllowances.diff.role": "Vai trò {role}, {label} {from} → {to}",
   "agentAllowances.diff.inherited": "giá trị của hệ thống",
+  "agentAllowances.diff.toDefaults":
+    "Mọi hạn mức trở về giá trị Margince có sẵn, kể cả mức sẵn của Quản trị.",
   "agentAllowances.diff.preset": "mức sẵn của Quản trị",
   "agentAllowances.diff.roles":
     "Những gì agent đã dùng trong khung này vẫn được tính. Không có gì bị đặt lại.",

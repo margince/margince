@@ -24,9 +24,12 @@ import {
   type Draft,
   defaultsDraft,
   EMPTY_ROLE_DRAFT,
+  type Fallback,
+  fallbackOf,
   hasRefusal,
   hasRoleRefusal,
   parseDraft,
+  type RoleAllowance,
   type RoleAllowanceSet,
   type RoleDrafts,
   roleChangesOf,
@@ -40,6 +43,7 @@ import { keepLocked, RolesForm, roleDiffLines } from "./agentallowances.roles";
 type Locks = components["schemas"]["InstallationSettings"]["locks"];
 type AllowancePatch = Partial<Record<Counts | "agent_window_hours", number>> & {
   agent_role_allowances?: RoleAllowanceSet[];
+  agent_allowances_to_defaults?: boolean;
 };
 
 // The lengths an admin picks from. The one already saved is added when it is
@@ -61,10 +65,12 @@ export function AllowanceForm({
   locks,
   draft,
   roleDrafts,
+  toDefaults,
   locale,
   busy,
   onDraft,
   onRoleDrafts,
+  onToDefaults,
   onSave,
   onCancel,
 }: Readonly<{
@@ -72,10 +78,14 @@ export function AllowanceForm({
   locks: Locks;
   draft: Draft;
   roleDrafts: RoleDrafts;
+  // Use defaults was pressed and nothing typed since: the save removes the
+  // stored values instead of saving the shipped numbers as a choice.
+  toDefaults: boolean;
   locale: Locale;
   busy: boolean;
   onDraft: (next: Draft) => void;
   onRoleDrafts: (next: RoleDrafts) => void;
+  onToDefaults: () => void;
   onSave: (patch: AllowancePatch) => void;
   onCancel: () => void;
 }>) {
@@ -87,10 +97,21 @@ export function AllowanceForm({
     lockFor(locks, `installation.${roleMapProperty(property)}`, t);
   const parsed = parseDraft(draft);
   const roles = roleChangesOf(allowances, roleDrafts);
-  const patch: AllowancePatch = {
-    ...changesOf(allowances, parsed),
-    ...(roles === undefined ? {} : { agent_role_allowances: roles }),
-  };
+  const window = changesOf(allowances, parsed).agent_window_hours;
+  const patch: AllowancePatch = toDefaults
+    ? {
+        agent_allowances_to_defaults: true,
+        ...(window === undefined ? {} : { agent_window_hours: window }),
+      }
+    : {
+        ...changesOf(allowances, parsed),
+        ...(roles === undefined ? {} : { agent_role_allowances: roles }),
+      };
+  const fallback = (role: RoleAllowance, property: Counts) =>
+    fallbackOf(allowances, role, property, {
+      toDefaults,
+      installation: parsed,
+    });
   const changed = Object.keys(patch).length > 0;
   const refused = hasRefusal(parsed) || hasRoleRefusal(roleDrafts);
   return (
@@ -172,6 +193,7 @@ export function AllowanceForm({
         drafts={roleDrafts}
         busy={busy}
         lockOf={roleLockOf}
+        fallback={fallback}
         onDrafts={onRoleDrafts}
       />
       <PanelBody className="form-stack">
@@ -181,6 +203,8 @@ export function AllowanceForm({
             patch={patch}
             roleDrafts={roleDrafts}
             locale={locale}
+            fallback={fallback}
+            toDefaults={toDefaults}
           />
         )}
         <div className="form-actions">
@@ -207,6 +231,7 @@ export function AllowanceForm({
               onRoleDrafts(
                 defaultRoleDrafts(allowances, roleDrafts, roleLockOf),
               );
+              onToDefaults();
             }}
           >
             {t("agentAllowances.useDefaults")}
@@ -257,14 +282,20 @@ function Diff({
   patch,
   roleDrafts,
   locale,
+  fallback,
+  toDefaults,
 }: Readonly<{
   allowances: Allowances;
   patch: AllowancePatch;
   roleDrafts: RoleDrafts;
   locale: Locale;
+  fallback: (role: RoleAllowance, property: Counts) => Fallback;
+  toDefaults: boolean;
 }>) {
   const t = useT();
-  const roleLines = roleDiffLines(allowances, roleDrafts, t, locale);
+  const roleLines = toDefaults
+    ? [t("agentAllowances.diff.toDefaults")]
+    : roleDiffLines(allowances, roleDrafts, t, locale, fallback);
   const lines = COUNTS.flatMap((row) => {
     const next = patch[row.property];
     return next === undefined

@@ -38274,6 +38274,13 @@ components:
         agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.' }
         agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.' }
         agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.' }
+        agent_allowances_to_defaults:
+          type: boolean
+          description: |
+            Put the agent counts and every role's values back to what Margince ships: their stored
+            values are removed, so they read as the defaults and the built-in Admin role takes its
+            preset again. A value a boot source sets stays. Applied before the other fields of the
+            same patch, so a count sent beside it is saved as a choice again.
         agent_role_allowances:
           type: array
           maxItems: 256

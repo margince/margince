@@ -224,20 +224,12 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
 		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
 	}
-	patch.AgentAllowances = identity.AgentAllowancePatch{
-		WritesPerWindow: req.AgentWritesPerWindow,
-		EgressPerWindow: req.AgentEgressPerWindow,
-		CallsPerWindow:  req.AgentCallsPerWindow,
-		WindowHours:     req.AgentWindowHours,
+	allowances, err := agentAllowancePatch(&req)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
 	}
-	if req.AgentRoleAllowances != nil {
-		roles, err := roleAllowanceSets(*req.AgentRoleAllowances)
-		if err != nil {
-			httperr.Write(w, r, err)
-			return
-		}
-		patch.AgentAllowances.Roles = &roles
-	}
+	patch.AgentAllowances = allowances
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
