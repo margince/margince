@@ -15,12 +15,15 @@ package compose
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path"
 	"strings"
 	"testing"
 
@@ -85,11 +88,31 @@ func primedViews(t *testing.T, titles map[string]string) *apps.Provider {
 	if err != nil {
 		t.Fatalf("parsing the stand-in origin: %v", err)
 	}
+	linkViewDigests(t, titles)
 	views := apps.NewProvider(apps.NewFetcher(base), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := views.Prime(t.Context()); err != nil {
 		t.Fatalf("priming the view provider: %v", err)
 	}
 	return views
+}
+
+// linkViewDigests sets apps.ViewDigests to the digests of the stand-in
+// documents, as the linker sets it from the web build's manifest, so the
+// provider runs pinned.
+func linkViewDigests(t *testing.T, titles map[string]string) {
+	t.Helper()
+	byFile := map[string]string{}
+	for uri, title := range titles {
+		sum := sha256.Sum256([]byte(viewDocument(title)))
+		byFile[path.Base(uri)] = hex.EncodeToString(sum[:])
+	}
+	manifest, err := json.Marshal(byFile)
+	if err != nil {
+		t.Fatalf("encoding the stand-in digests: %v", err)
+	}
+	linked := apps.ViewDigests
+	apps.ViewDigests = string(manifest)
+	t.Cleanup(func() { apps.ViewDigests = linked })
 }
 
 // everyDeclaredView is the titles map for a deployment serving everything this
