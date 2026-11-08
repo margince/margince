@@ -77,6 +77,21 @@ it("moves an unserved address onto the base, keeping the fragment", async () => 
   expect(location.hash).toBe("#/deals");
 });
 
+// Nor is an address the web tier serves the shell at. Each one is restored to
+// its fragment, so it must reach that screen rather than the not-found page.
+it("answers a record, booking or consent address from its fragment", () => {
+  for (const address of [
+    "/r/deals/01a1b8fe-a09d-75a0-95a0-381dd3331413#/deals/01a1b8fe-a09d-75a0-95a0-381dd3331413",
+    "/book/Ab3_x-9QrStUvWxYz0123456789abcd#/book/Ab3_x-9QrStUvWxYz0123456789abcd",
+    "/consent#/oauth-consent",
+  ]) {
+    history.replaceState(null, "", address);
+    const { result } = renderHook(() => useRoute());
+    expect(result.current.screen, address).not.toBe("not-found");
+    cleanup();
+  }
+});
+
 // And the base itself is not an unknown page, however it is spelled.
 it("still answers the base path from its fragment", () => {
   for (const address of ["/", "/#/home", "/index.html#/home"]) {

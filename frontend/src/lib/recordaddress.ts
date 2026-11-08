@@ -14,13 +14,14 @@ const RECORD_PATH = new RegExp(
 );
 
 /**
- * Whether a pathname is the record address this module publishes.
+ * Whether a pathname is one this module publishes or restores: a record, a
+ * booking page or the consent screen.
  *
  * Exported so the served-path check reads this notion rather than keeping a
- * second copy. Two copies disagree the first time one gains a record kind.
+ * second copy. Two copies disagree the first time one gains an address.
  */
-export function namesARecordAddress(pathname: string): boolean {
-  return RECORD_PATH.test(pathname);
+export function namesAnAppAddress(pathname: string): boolean {
+  return isMirroredPath(pathname) || pathname === CONSENT_PATH;
 }
 
 export function appHref(href: string): string;
