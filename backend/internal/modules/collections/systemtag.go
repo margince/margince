@@ -35,12 +35,12 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 		return 0, nil
 	}
 	// Maintenance must not reverse a user's explicit removal.
-	rows, err := tx.Query(ctx, `SELECT candidate FROM unnest(@ids::uuid[]) candidate
+	rows, err := tx.Query(ctx, `SELECT candidate FROM unnest(@entity_ids::uuid[]) candidate
  WHERE NOT EXISTS (SELECT 1 FROM audit_log a WHERE a.entity_type = 'tag'
  AND a.entity_id = @tag AND a.actor_type NOT IN ('system', 'connector')
  AND a.after -> 'removed' ->> 'entity_type' = @entity_type
  AND a.after -> 'removed' ->> 'entity_id' = candidate::text)`,
-		pgx.NamedArgs{"ids": entityIDs, "tag": tagID, "entity_type": entityType})
+		pgx.NamedArgs{"entity_ids": entityIDs, "tag": tagID, "entity_type": entityType})
 	if err != nil {
 		return 0, fmt.Errorf("collections: reading prior tag decisions: %w", err)
 	}
