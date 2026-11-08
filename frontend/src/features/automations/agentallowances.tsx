@@ -140,8 +140,14 @@ function AllowancesBody({
           busy={update.isPending}
           toDefaults={toDefaults}
           onDraft={(next) => {
+            // A new window length rides along with the reset; a typed count
+            // is a choice of its own.
+            if (
+              COUNTS.some((row) => next[row.property] !== draft[row.property])
+            ) {
+              setToDefaults(false);
+            }
             setDraft(next);
-            setToDefaults(false);
           }}
           onRoleDrafts={(next) => {
             setRoleDrafts(next);

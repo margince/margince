@@ -209,6 +209,8 @@ export type Fallback = RoleAllowance["agent_calls_per_window"]["if_unset"];
 export type PendingInstallation = Readonly<{
   toDefaults: boolean;
   installation: Parsed;
+  // A count a boot source sets, which going back to defaults leaves in force.
+  locked: (property: Counts) => boolean;
 }>;
 
 // What an emptied role box gives once this save lands. The server's answer
@@ -220,6 +222,9 @@ export function fallbackOf(
   property: Counts,
   pending: PendingInstallation,
 ): Fallback {
+  if (pending.toDefaults && pending.locked(property)) {
+    return { value: allowances[property], source: "installation" };
+  }
   if (pending.toDefaults) {
     const preset = role.holds_preset
       ? presetOf(allowances, property)

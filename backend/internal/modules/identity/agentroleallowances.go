@@ -121,14 +121,18 @@ type RoleAllowanceSet struct {
 // maps, so each reads as shipped and the Admin preset binds again. A stored
 // default is a choice that keeps the preset off; removing the row is what makes
 // it nobody's choice. A key a boot source sets is left to that source.
+//
+// The role maps go before the installation counts. A save of both locks them
+// in that order too, so the two never wait on each other.
 func (s *InstallationSettingsStore) resetAgentAllowancesTx(ctx context.Context, tx pgx.Tx, reset bool) error {
 	if !reset {
 		return nil
 	}
-	keys := []string{AgentWritesPerWindow.Key(), AgentEgressPerWindow.Key(), AgentCallsPerWindow.Key()}
+	keys := make([]string, 0, 2*len(allowanceCounts))
 	for _, count := range allowanceCounts {
 		keys = append(keys, count.byRole.Key())
 	}
+	keys = append(keys, AgentWritesPerWindow.Key(), AgentEgressPerWindow.Key(), AgentCallsPerWindow.Key())
 	for _, key := range keys {
 		if _, locked := s.config.Locked(key); locked {
 			continue

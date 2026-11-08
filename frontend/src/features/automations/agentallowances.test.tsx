@@ -613,6 +613,60 @@ describe("AgentAllowancesCard by role", () => {
     expect(patches[0]).toEqual({ agent_allowances_to_defaults: true });
   });
 
+  it("keeps Use defaults when the window changes after it", async () => {
+    const { fetchMock, patches } = backendFor(EDITOR, roleTunedAgentAllowances);
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    await user.click(
+      await screen.findByRole("button", {
+        name: translate("en", "agentAllowances.useDefaults"),
+      }),
+    );
+    await pickOption(
+      user,
+      screen.getByTestId("allowance-agent_window_hours"),
+      "12 hours",
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    );
+
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0]).toEqual({
+      agent_allowances_to_defaults: true,
+      agent_window_hours: 12,
+    });
+  });
+
+  it("previews a role's change from the value it holds now", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, roleTunedAgentAllowances).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    const installation = await screen.findByTestId(
+      "allowance-agent_calls_per_window",
+    );
+    await user.clear(installation);
+    await user.type(installation, "2000");
+    await user.type(
+      screen.getByTestId("role-admin-agent_calls_per_window"),
+      "3000",
+    );
+
+    expect(
+      screen.getByText("Admin, Calls in total Admin preset → 3,000"),
+    ).toBeTruthy();
+  });
+
   it("leaves a locked count alone when a row goes back to the installation value", async () => {
     const locks = [
       {

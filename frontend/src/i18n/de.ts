@@ -16115,10 +16115,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.diff.window":
     "Zeitfenster {from} → {to}, ab dem nächsten Zurücksetzen.",
   "agentAllowances.installation.title": "Wert der Installation",
-  "agentAllowances.installation.sub": "Gilt für jede Rolle ohne eigenen Wert.",
+  "agentAllowances.installation.sub":
+    "Gilt für jede Rolle ohne eigenen Wert, außer wo die Admin-Vorgabe gilt.",
   "agentAllowances.roles.title": "Nach Rolle",
   "agentAllowances.roles.rule":
-    "Für jede Art bekommt ein Agent den höchsten Wert unter den Rollen seines Mitglieds. Eine Rolle ohne eigenen Wert nutzt den Wert der Installation.",
+    "Für jede Art bekommt ein Agent den höchsten Wert unter den Rollen seines Mitglieds. Eine Rolle ohne eigenen Wert nutzt den Wert der Installation, Admin kann stattdessen seine Vorgabe bekommen.",
   "agentAllowances.roles.col.role": "Rolle",
   "agentAllowances.roles.builtIn": "Mitgeliefert",
   "agentAllowances.roles.source.role": "Für diese Rolle festgelegt",
@@ -16129,7 +16130,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.editHelp":
     "Lass ein Feld leer, um den Wert der Rolle aufzugeben; sein Platzhalter zeigt den Wert, der dann gilt. Gib 0 ein, damit Admin beim Wert der Installation bleibt. Aufrufe 50 bis 20.000, Änderungen 10 bis 5.000, Sendungen 1 bis 200.",
   "agentAllowances.roles.preset":
-    "Admin beginnt bei {calls} Aufrufen und {changes} Änderungen, solange der Wert der Installation der Standard ist. Sendungen bleiben beim Wert der Installation.",
+    "Admin bekommt {calls} Aufrufe und {changes} Änderungen, solange weder Admin noch die Installation einen Wert für diese Art hat. Sendungen bleiben beim Wert der Installation.",
   "agentAllowances.roles.inherits": "Übernimmt {value}",
   "agentAllowances.roles.presetValue": "Admin-Vorgabe {value}",
   "agentAllowances.roles.inputLabel": "{kind} für {role}",
@@ -16139,7 +16140,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.diff.role": "{role}, {label} {from} → {to}",
   "agentAllowances.diff.inherited": "Wert der Installation",
   "agentAllowances.diff.toDefaults":
-    "Alle Kontingente gehen auf die Werte zurück, mit denen Margince ausgeliefert wird, die Admin-Vorgabe eingeschlossen.",
+    "Alle Kontingente gehen auf die Werte zurück, mit denen Margince ausgeliefert wird, die Admin-Vorgabe eingeschlossen. Ein Wert aus der Serverkonfiguration bleibt.",
   "agentAllowances.diff.preset": "Admin-Vorgabe",
   "agentAllowances.diff.roles":
     "Was Agenten in diesem Zeitfenster schon genutzt haben, zählt weiter. Nichts wird zurückgesetzt.",
@@ -16170,9 +16171,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentUsage.stopped.calls":
     "Gestoppt durch die Grenze für Aufrufe insgesamt: {used} von {limit}. Er kann wieder aufrufen, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "agentUsage.stopped.egress":
-    "Gestoppt durch die Grenze für Sendungen: {used} von {limit}. Sendungen warten, bis das Zeitfenster am {date} UTC zurückgesetzt wird.",
+    "Gestoppt durch die Grenze für Sendungen: {used} von {limit}. E-Mails und andere Aufrufe, die Margince verlassen, auch das Lesen von Websites, warten, bis das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "agentUsage.stopped.writes":
-    "Gestoppt durch die Grenze für Änderungen: {used} von {limit}. Das zuständige Mitglied kann mehr freigeben, sonst ändert er wieder, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
+    "Gestoppt durch die Grenze für Änderungen: {used} von {limit}. Seine nächste Änderung bittet das zuständige Mitglied um mehr. Sonst ändert er wieder, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "settings.passportColWindow": "Dieses Zeitfenster",
   "settings.passportUsageToggle":
     "Nutzung dieses Zeitfensters für {name} anzeigen",

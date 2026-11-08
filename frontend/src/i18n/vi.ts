@@ -15704,10 +15704,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khung thời gian {from} → {to}, bắt đầu từ lần đặt lại kế tiếp.",
   "agentAllowances.installation.title": "Giá trị của hệ thống",
   "agentAllowances.installation.sub":
-    "Dùng cho mọi vai trò không có giá trị riêng.",
+    "Dùng cho mọi vai trò không có giá trị riêng, trừ khi mức sẵn của Quản trị áp dụng.",
   "agentAllowances.roles.title": "Theo vai trò",
   "agentAllowances.roles.rule":
-    "Với mỗi loại, agent nhận giá trị cao nhất trong các vai trò của thành viên. Vai trò không có giá trị riêng dùng giá trị của hệ thống.",
+    "Với mỗi loại, agent nhận giá trị cao nhất trong các vai trò của thành viên. Vai trò không có giá trị riêng dùng giá trị của hệ thống, còn Quản trị có thể nhận mức sẵn của Quản trị.",
   "agentAllowances.roles.col.role": "Vai trò",
   "agentAllowances.roles.builtIn": "Có sẵn",
   "agentAllowances.roles.source.role": "Đặt cho vai trò này",
@@ -15717,7 +15717,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.editHelp":
     "Để trống một ô để bỏ giá trị của vai trò; chữ gợi ý trong ô cho biết giá trị sẽ áp dụng khi đó. Nhập 0 để Quản trị giữ giá trị của hệ thống. Lệnh gọi từ 50 đến 20.000, thay đổi từ 10 đến 5.000, lượt gửi từ 1 đến 200.",
   "agentAllowances.roles.preset":
-    "Quản trị bắt đầu ở {calls} lệnh gọi và {changes} thay đổi khi giá trị của hệ thống còn là mặc định. Lượt gửi giữ giá trị của hệ thống.",
+    "Quản trị nhận {calls} lệnh gọi và {changes} thay đổi khi cả Quản trị lẫn hệ thống đều chưa đặt giá trị cho loại đó. Lượt gửi giữ giá trị của hệ thống.",
   "agentAllowances.roles.inherits": "Theo {value}",
   "agentAllowances.roles.presetValue": "Mức sẵn của Quản trị {value}",
   "agentAllowances.roles.inputLabel": "{kind} cho {role}",
@@ -15727,7 +15727,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.diff.role": "Vai trò {role}, {label} {from} → {to}",
   "agentAllowances.diff.inherited": "giá trị của hệ thống",
   "agentAllowances.diff.toDefaults":
-    "Mọi hạn mức trở về giá trị Margince có sẵn, kể cả mức sẵn của Quản trị.",
+    "Mọi hạn mức trở về giá trị Margince có sẵn, kể cả mức sẵn của Quản trị. Giá trị đặt trong cấu hình máy chủ được giữ nguyên.",
   "agentAllowances.diff.preset": "mức sẵn của Quản trị",
   "agentAllowances.diff.roles":
     "Những gì agent đã dùng trong khung này vẫn được tính. Không có gì bị đặt lại.",
@@ -15758,9 +15758,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentUsage.stopped.calls":
     "Đã dừng vì giới hạn tổng số lệnh gọi: {used} / {limit}. Có thể gọi lại khi khung thời gian đặt lại lúc {date} UTC.",
   "agentUsage.stopped.egress":
-    "Đã dừng vì giới hạn lượt gửi: {used} / {limit}. Việc gửi chờ đến khi khung thời gian đặt lại lúc {date} UTC.",
+    "Đã dừng vì giới hạn lượt gửi: {used} / {limit}. Email và các lệnh gọi khác ra khỏi Margince, kể cả việc đọc trang web, chờ đến khi khung thời gian đặt lại lúc {date} UTC.",
   "agentUsage.stopped.writes":
-    "Đã dừng vì giới hạn thay đổi: {used} / {limit}. Chủ sở hữu có thể cho phép thêm, hoặc agent thay đổi lại được khi khung thời gian đặt lại lúc {date} UTC.",
+    "Đã dừng vì giới hạn thay đổi: {used} / {limit}. Lần thay đổi tiếp theo sẽ xin chủ sở hữu cho phép thêm. Nếu không, agent thay đổi lại được khi khung thời gian đặt lại lúc {date} UTC.",
   "settings.passportColWindow": "Khung này",
   "settings.passportUsageToggle": "Xem mức dùng khung này của {name}",
   "settings.passportsShowRevoked_one": "Hiện {count} passport đã thu hồi",

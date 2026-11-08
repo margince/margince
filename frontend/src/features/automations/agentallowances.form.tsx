@@ -111,6 +111,7 @@ export function AllowanceForm({
     fallbackOf(allowances, role, property, {
       toDefaults,
       installation: parsed,
+      locked: (count) => lockOf(count).disabled,
     });
   const changed = Object.keys(patch).length > 0;
   const refused = hasRefusal(parsed) || hasRoleRefusal(roleDrafts);

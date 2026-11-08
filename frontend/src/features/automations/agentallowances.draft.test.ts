@@ -9,7 +9,10 @@ import {
 } from "../../testing/agentallowances.fixtures";
 import {
   defaultsDraft,
+  draftOf,
   EMPTY_ROLE_DRAFT,
+  fallbackOf,
+  parseDraft,
   parseRoleCell,
   roleChangesOf,
   roleDraftsOf,
@@ -124,5 +127,30 @@ describe("defaultsDraft", () => {
       agent_calls_per_window: "1000",
       agent_window_hours: "24",
     });
+  });
+});
+
+describe("fallbackOf", () => {
+  const bootCalls = {
+    ...defaultAgentAllowances,
+    agent_calls_per_window: 4_000,
+  };
+  const admin = bootCalls.roles[0];
+  const pending = (locked: boolean) => ({
+    toDefaults: true,
+    installation: parseDraft(draftOf(bootCalls)),
+    locked: () => locked,
+  });
+
+  it("keeps a boot-set count in force when everything goes back", () => {
+    expect(
+      fallbackOf(bootCalls, admin, "agent_calls_per_window", pending(true)),
+    ).toEqual({ value: 4_000, source: "installation" });
+  });
+
+  it("brings the Admin preset back for a count nothing fixes", () => {
+    expect(
+      fallbackOf(bootCalls, admin, "agent_calls_per_window", pending(false)),
+    ).toEqual({ value: 20_000, source: "admin_preset" });
   });
 });

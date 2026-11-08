@@ -417,10 +417,10 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		if err := s.changeCalendarTx(ctx, tx, in.Timezone, in.FiscalYearStartMonth); err != nil {
 			return err
 		}
-		if err := s.resetAgentAllowancesTx(ctx, tx, in.AgentAllowances.ToDefaults); err != nil {
+		if err := s.scheduleAgentWindowTx(ctx, tx, in.AgentAllowances.WindowHours); err != nil {
 			return err
 		}
-		if err := s.scheduleAgentWindowTx(ctx, tx, in.AgentAllowances.WindowHours); err != nil {
+		if err := s.resetAgentAllowancesTx(ctx, tx, in.AgentAllowances.ToDefaults); err != nil {
 			return err
 		}
 		if err := s.saveRoleAllowancesTx(ctx, tx, in.AgentAllowances.Roles); err != nil {

@@ -298,9 +298,9 @@ export function roleDiffLines(
   locale: Locale,
   fallback: (role: RoleAllowance, property: Counts) => Fallback,
 ): string[] {
-  const shown = (role: RoleAllowance, property: Counts, text: string) => {
+  const shown = (text: string, emptyGives: Fallback) => {
     const trimmed = text.trim();
-    if (trimmed === "" && fallback(role, property).source === "admin_preset") {
+    if (trimmed === "" && emptyGives.source === "admin_preset") {
       return t("agentAllowances.diff.preset");
     }
     return trimmed === "" || trimmed === "0"
@@ -317,8 +317,8 @@ export function roleDiffLines(
             t("agentAllowances.diff.role", {
               role: role.role_name,
               label: t(`agentAllowances.${row.copy}.label`),
-              from: shown(role, row.property, before[row.property]),
-              to: shown(role, row.property, after[row.property]),
+              from: shown(before[row.property], role[row.property].if_unset),
+              to: shown(after[row.property], fallback(role, row.property)),
             }),
           ],
     );
