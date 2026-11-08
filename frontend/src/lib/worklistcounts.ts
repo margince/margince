@@ -110,3 +110,17 @@ function unreadEntries(
           : entry.category === filter),
     );
 }
+
+/**
+ * Whether a page says the list it ends is whole: no source failed to answer,
+ * the scope was not cut short, and no kind of work holds more than it showed.
+ * An absent next cursor alone does not say this.
+ */
+export function listIsComplete(page: Worklist | undefined): boolean {
+  if (!page) return false;
+  return (
+    page.scope_truncated !== true &&
+    (page.sources_unavailable ?? []).length === 0 &&
+    !(page.counts ?? []).some((count) => count.more_available)
+  );
+}
