@@ -20,6 +20,7 @@ package gates
 // found no such table, and dropped the site with no census entry and no waiver.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"path/filepath"
@@ -338,9 +339,11 @@ func TestTheModulesTierIsMeasuredForTheWideningItIsOwed(t *testing.T) {
 			len(sites), modulesTier, wantMinimumModuleSites)
 	}
 	unscoped := 0
+	var unscopedSites []string
 	for _, site := range sites {
 		if !reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, site.table, map[string]bool{}) {
 			unscoped++
+			unscopedSites = append(unscopedSites, fmt.Sprintf("%s:%d:%s -> %s", site.dir, site.line, site.fn, site.table))
 		}
 	}
 	if unscoped > modulesTierUnscopedCeiling {
@@ -348,6 +351,7 @@ func TestTheModulesTierIsMeasuredForTheWideningItIsOwed(t *testing.T) {
 			"recorded %d. A new one is a read handing back a reference it never bounded: bound it, or lower "+
 			"nothing and explain here why this tier grew one",
 			unscoped, len(sites), modulesTier, modulesTierUnscopedCeiling)
+		t.Logf("Unscoped references:\n%s", strings.Join(unscopedSites, "\n"))
 	}
 }
 

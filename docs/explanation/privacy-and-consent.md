@@ -330,47 +330,47 @@ category refusing mail the old gate would have allowed.
 `data_subject_request` rows and their HTTP surface). The composition root injects privacy's engines
 into consent's handlers.
 
-- **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place, and deletes raw capture, embeddings and attachment bytes. It clears personal audit values and cancels kept outbox copies of the erased records.
-  Audit IDs, actors, actions and times stay fixed. A proof in the same transaction allows
-  payload erasure, and an audit marker records that erasure. All of this runs in **one transaction
-  per record**. It refuses a subject under `legal_hold`.
+- **Article 17 erasure** (`Eraser.EraseContact`) clears personal values from domain rows and audit
+  images, removes raw capture, embeddings and attachment bytes, and cancels kept outbox copies.
+  Audit IDs, actors, actions and times stay fixed. One transaction per subject records the proof
+  and audit marker. A subject under `legal_hold` cannot be erased.
 
-  A background data task clears payloads left by earlier erasures. It stops at each earlier
-  proof, keeps later edits and skips current holds. Held records keep their data until the hold ends.
-- **The suppression list** holds a hash of each erased address and handle. No later capture, import
-  or typed create can store one again. A booking on the public booking page still can, because a
-  refusal there would show which addresses were erased.
-- **Article 15 subject access** (`AssembleSAR`) is one read that needs more rights. It needs the
-  `contact.delete` grant **and** a row scope with no limit. It puts the contact’s records into one export package. That includes channels, deals, leads,
-  activities, attachments, consent, raw capture, field sources and kept audit payloads. It also includes the subject’s linked
-  room comments, introduction notes and other kept copies.
+  Background tasks use earlier proofs and stored links to clear old copies while keeping later
+  edits and held content. Request references go after their linked copies.
 
-  Private mailbox content stays hidden.
-  The export is itself audited (`action=export`).
+  Weekly items cleared in full also match their erased label. A user can edit that label, so it
+  can match the wrong copy. Closed requests whose identifiers the machine retired match too. Any hold, a case with
+  `dispute_open` set, or a conflicting CRM write defers these fixes. Nightly retention retries them.
+
+  Full names and addresses are removed from notes without contact or lead links. Other text stays.
+  Restricted or held notes, possible name matches, descriptions, signatures and matching uploaded
+  files get a notice for a human review. Files and search copies are kept as they are. Possible text
+  matches do not go into subject exports. If no one can review them, an admin must restore review
+  access before retrying.
+- **The suppression list** hashes each erased address and handle. Capture, import and typed creates
+  refuse a later match. Public booking can still create one; refusal there would reveal erasures.
+- **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
+  One audited export (`action=export`) includes the subject's records, channels, deals, leads,
+  activities, attachments and consent. It also includes raw capture, field sources, kept audit
+  payloads, linked room comments, introduction notes and other kept copies. Private mailbox content stays hidden.
 - **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
-  workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it, by default every `24h`. It
-  checks **one** workspace's live policies. It takes each policy's single action on records past
-  their time, in **one audited transaction per record**.
+  workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it every `24h` by default.
+  Each enabled policy takes its single action in one audited transaction per overdue record.
 
-  A tenant whose pass fails fails its own job
-  row. The machine never acts on `legal_hold` rows. An activity is held too when any linked contact,
-  company or deal is held. A policy whose scope the engine does not understand is **skipped, with an
-  error in the log**, never run in part.
+  Each workspace's failure stays on its own job. Held records and activities linked to held
+  contacts, companies or deals are kept as they are. An unknown policy scope is skipped with a logged error.
 
-  The policies a new installation starts with come from `consent.SeedDefaultRetentionTx`. None of
-  them destroys a record because it is old. Each one archives, and an archived record can be brought
-  back. Or it erases a second copy, or data built from a record. Those are the raw provider original
-  (`raw_capture`, 90 days from import), AI call payloads and the deal-risk day rows.
+  `consent.SeedDefaultRetentionTx` supplies the defaults. Time alone archives rather than destroys
+  domain records, so they can be restored. Other defaults erase copies or derived data: raw provider
+  originals (`raw_capture`, 90 days from import), AI call payloads and deal-risk day rows.
 
-  `activity/transcript` and `contact/no_consent_no_deal` start with no row, and an admin can still
-  write one. So a transcript is archived under the `activity` row, and only an Article 17 request
-  destroys a contact's data. `backend/gates/retentionseedcoverage_test.go` records why each scope
-  with no row has none.
+  `activity/transcript` and `contact/no_consent_no_deal` start with no policy row; an admin can add
+  one. Transcripts follow the activity archive policy. Only Article 17 destroys contact data.
+  `backend/gates/retentionseedcoverage_test.go` records why each scope without a row has none.
 
-  No retention action deletes a stop. `anonymize` pins each stop and withdrawal to the hashes of its
-  addresses (`address_hash`, `privacy/retentionstops.go`) and keeps none of the addresses themselves. A
-  merge binds it to its own record's addresses first. A later stop lands on the kept hashes (`contact.anonymized_address_hashes`).
+  Retention never deletes a stop. `anonymize` binds stops and withdrawals to address hashes
+  (`address_hash`, `privacy/retentionstops.go`), keeping no addresses. A merge first binds each stop
+  to its own record's addresses. Later stops use `contact.anonymized_address_hashes`.
 
 ## The single-transaction cross-store exception
 

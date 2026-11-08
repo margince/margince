@@ -11,10 +11,10 @@ func TestAFullNameIsMatchedAsWholeWordsAndAOneWordNameNotAtAll(t *testing.T) {
 		name, want string
 		ok         bool
 	}{
-		{"Anna Berg", `\mAnna\s+Berg\M`, true},
-		{"  Jean-Luc   O.Neil ", `\mJean-Luc\s+O\.Neil\M`, true},
-		{"Mary J Blige", `\mMary\s+J\s+Blige\M`, true},
-		{"Li X", `\mLi\s+X\M`, true},
+		{"Anna Berg", `(?<![[:alnum:]_])Anna\s+Berg(?![[:alnum:]_])`, true},
+		{"  Jean-Luc   O.Neil ", `(?<![[:alnum:]_])Jean-Luc\s+O\.Neil(?![[:alnum:]_])`, true},
+		{"Mary J Blige", `(?<![[:alnum:]_])Mary\s+J\s+Blige(?![[:alnum:]_])`, true},
+		{"Li X", `(?<![[:alnum:]_])Li\s+X(?![[:alnum:]_])`, true},
 		{"Anna", "", false},
 		{"", "", false},
 	}
@@ -28,7 +28,7 @@ func TestAFullNameIsMatchedAsWholeWordsAndAOneWordNameNotAtAll(t *testing.T) {
 
 func TestAnAddressIsBoundedOnlyByWhatWouldMakeItAnotherAddress(t *testing.T) {
 	t.Parallel()
-	want := `(^|[^[:alnum:].+-])ann@example\.com($|[^[:alnum:].-]|\.($|[^[:alnum:]]))`
+	want := `(?<![[:alnum:].+-])ann@example\.com(?=$|[^[:alnum:].-]|\.(?:$|[^[:alnum:]]))`
 	if got := wholeAddressPattern("ann@example.com"); got != want {
 		t.Errorf("wholeAddressPattern = %q, want %q", got, want)
 	}

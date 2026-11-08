@@ -10,6 +10,7 @@ import type { MessageKey } from "../i18n/en";
 import { approvalHref } from "../lib/approvalhref";
 import { type EntityKind, isEntityKind, recordRoute } from "../lib/entity";
 import { routeHash } from "../lib/router";
+import { settingsHref } from "../lib/settingsrouting";
 
 type NoticeTarget = NonNullable<
   components["schemas"]["NotificationItem"]["target"]
@@ -46,6 +47,24 @@ export function noticeAction(
     return {
       href: settingsHealthHref(healthSectionForSource("updates")),
       label: "notifications.action.systemHealth",
+    };
+  }
+  if (target.type === "knowledge_document") {
+    return {
+      href: `/v1/knowledge/documents/${encodeURIComponent(target.id)}`,
+      label: "corpusAsk.openFile",
+    };
+  }
+  if (target.type === "legal_entity" || target.type === "signature_template") {
+    return {
+      href: routeHash(settingsHref("company")),
+      label: "signatureTemplate.title",
+    };
+  }
+  if (target.type === "email_signature") {
+    return {
+      href: routeHash(settingsHref("account")),
+      label: "settings.signatureEdit",
     };
   }
   const route = recordRoute(target.type, target.id);

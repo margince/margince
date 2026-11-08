@@ -4,6 +4,9 @@
 package privacy
 
 import (
+	"context"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -11,10 +14,29 @@ import (
 // sarRetainedCopySections reads the copies that still name the subject.
 // identities is the survivor and every record merged into it, because a
 // predecessor's history stays keyed to its own id.
-func sarRetainedCopySections(pkg *SARPackage, identities []ids.UUID, emails []string, leads []ids.UUID) []sarSection {
+func sarRetainedCopySections(ctx context.Context, pkg *SARPackage, identities []ids.UUID, emails []string, leads []ids.UUID) ([]sarSection, error) {
 	subjects := []any{identities}
 	records := []any{identities, leads}
 	addresses := []any{loweredAddresses(emails)}
+	dedupeArgs := append([]any(nil), records...)
+	arg := func(v any) int { dedupeArgs = append(dedupeArgs, v); return len(dedupeArgs) }
+	contactScope, err := auth.ScopeClauseFor(ctx, "contact", "sc", arg)
+	if err != nil {
+		return nil, err
+	}
+	leadScope, err := auth.ScopeClauseFor(ctx, "lead", "sl", arg)
+	if err != nil {
+		return nil, err
+	}
+	contactRows := storekit.SQLf("SELECT sc.id FROM contact sc WHERE sc.id=ANY($%d::uuid[])", len(subjects))
+	leadRows := storekit.SQLf("SELECT sl.id FROM lead sl WHERE sl.id=ANY($%d::uuid[])", len(records))
+	if contactScope != "" {
+		contactRows += " AND (" + contactScope + ")"
+	}
+	if leadScope != "" {
+		leadRows += " AND (" + leadScope + ")"
+	}
+
 	subjectArg, leadArg, addressArg := len(subjects), len(records), len(addresses)
 	return []sarSection{
 		{&pkg.AuditHistory, storekit.SQLf(`SELECT action, entity_type, entity_id, before, after, evidence, occurred_at
@@ -34,13 +56,13 @@ func sarRetainedCopySections(pkg *SARPackage, identities []ids.UUID, emails []st
 		{&pkg.Introductions, storekit.SQLf(`SELECT id, contact_id, through_contact_id, forwardable_note, value_for_target,
 		 internal_reason, decision_reason, status, created_at FROM intro_request
 		 WHERE contact_id=ANY($%[1]d::uuid[])`, subjectArg), subjects},
-		{&pkg.DuplicateEvidence, storekit.SQLf(`SELECT id, entity_type, confidence, disposition,
+		{&pkg.DuplicateEvidence, `SELECT id, entity_type, confidence, disposition,
           (SELECT coalesce(jsonb_agg(jsonb_build_object('field', item->'field',
-            'left_value', CASE WHEN left_contact_id=ANY($%[1]d::uuid[]) OR left_lead_id=ANY($%[2]d::uuid[]) THEN item->'left_value' END,
-            'right_value', CASE WHEN right_contact_id=ANY($%[1]d::uuid[]) OR right_lead_id=ANY($%[2]d::uuid[]) THEN item->'right_value' END)), '[]'::jsonb)
+            'left_value', CASE WHEN left_contact_id IN (` + contactRows + `) OR left_lead_id IN (` + leadRows + `) THEN item->'left_value' END,
+            'right_value', CASE WHEN right_contact_id IN (` + contactRows + `) OR right_lead_id IN (` + leadRows + `) THEN item->'right_value' END)), '[]'::jsonb)
            FROM jsonb_array_elements(CASE WHEN jsonb_typeof(evidence)='array' THEN evidence ELSE '[]'::jsonb END) item) AS evidence
-         FROM dedupe_candidate WHERE left_contact_id=ANY($%[1]d::uuid[]) OR right_contact_id=ANY($%[1]d::uuid[])
-		 OR left_lead_id=ANY($%[2]d::uuid[]) OR right_lead_id=ANY($%[2]d::uuid[])`, subjectArg, leadArg), records},
+         FROM dedupe_candidate WHERE left_contact_id IN (` + contactRows + `) OR right_contact_id IN (` + contactRows + `)
+		 OR left_lead_id IN (` + leadRows + `) OR right_lead_id IN (` + leadRows + `)`, dedupeArgs},
 		{&pkg.PlannedCommitments, storekit.SQLf(`SELECT label, help_requested, manager_response, state
 		 FROM weekly_plan_commitment WHERE linked_record_type='contact' AND linked_record_id=ANY($%[1]d::uuid[])`, subjectArg), subjects},
 		{&pkg.TestMailboxMessages, storekit.SQLf(`SELECT message_id, sent_at, user_id AS withheld_from_mailbox_of
@@ -53,5 +75,5 @@ func sarRetainedCopySections(pkg *SARPackage, identities []ids.UUID, emails []st
 		 FROM capture_thread_verdict v JOIN activity a ON a.id=v.first_activity_id
 		 WHERE a.restricted_at IS NULL AND `+sarContentDisclosed+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) address
 		 WHERE lower(btrim(address))=ANY($%[1]d::text[]))`, addressArg), addresses},
-	}
+	}, nil
 }

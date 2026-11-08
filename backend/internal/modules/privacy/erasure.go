@@ -137,27 +137,11 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
-		// Before the timeline is JUDGED, not merely before it is written: the
-		// erase-or-hold decision reads a column another transaction stamps, so
-		// the lock has to precede the read that decides.
-		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
-			return err
-		}
-		activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, reason)
-		if err != nil {
-			return err
-		}
-		// What the floor shielded from the statement above is held instead
-		// (erasure_restrict.go): the same three id sets, selected BY the
-		// floor rather than against it, so every row is one of the two.
-		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, e.payloads)
-		if err != nil {
-			return err
-		}
 		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
 			return err
 		}
-		if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
+		activitiesRedacted, activitiesHeld, err := e.redactSubjectActivities(ctx, tx, subject, keys, floor, reason)
+		if err != nil {
 			return err
 		}
 		// The messages nobody has sent yet — scheduled, or still a draft. They
@@ -186,6 +170,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		// an automation's run, a colleague's voice sample or weekly plan
 		// (erasure_commitments.go).
 		if err := e.redactWorkingRecords(ctx, tx, subject, keys); err != nil {
+			return err
+		}
+		if err := e.flagManualSubjectMentions(ctx, tx, subject, keys); err != nil {
 			return err
 		}
 		// Purge the subject's attachment bytes and rows together, inside the

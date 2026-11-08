@@ -2231,6 +2231,7 @@ export const en = {
   // a colleague who left years ago is on a row this installation holds.
   "trust.loggedInByVia": "Logged in {via} by {name}",
   "trust.loggedInBy": "Logged by {name}",
+  "contact.readFromARecord": "Read from a record.",
   "trust.sourceUnknown": "Source not recorded",
   "trust.imported": "Imported",
   "trust.importedFrom": "Imported from {uploadName}",
@@ -2305,6 +2306,7 @@ export const en = {
   "systemJob.client_check_read": "AI tool check switch read",
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
+  "systemJob.privacy_review": "Privacy review after an erasure",
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",

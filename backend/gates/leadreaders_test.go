@@ -57,6 +57,8 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":          "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
+	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":              "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/consent/ruleselectors.go:leadCountryCandidates":        "the marketing rule selector's lead arm: the country of the company a recipient lead is filed under picks which country's messaging rules judge the send. No lead column is selected beyond the join key; what leaves is a pack choice and the pack code a decision records",
 	"internal/modules/consent/gateaddress.go:AddressHasSubject":              "whether any contact or lead holds a calendar guest's address. A boolean that only ever sends the address to the consent gate; nothing of the lead is selected",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx": "An exact-address existence predicate only removes already held identities from a content-gated conversation suggestion. No lead id or column leaves the query, and a missing lead read grant must not suggest a duplicate contact.",
@@ -85,6 +87,7 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":          "The subject export follows only its authenticated contact and lead twins. AssembleSAR requires a human with contact.delete and unbounded scope; this private builder returns SELECT queries, not lead rows or mutations.",
 	"internal/modules/privacy/historicalaudit.go:historicalAuditUnderHold":           "the system-only audit cleanup locks a lead and reads only its legal-hold flag. The entry point requires system authority, and the flag prevents destruction rather than disclosing a lead",
 	"internal/modules/contacts/linkedinrepair.go:NormalizeLeadLinkedInTx":            "the bounded data task reads stored profile values under auth.RequireSystem so it can rewrite old LinkedIn host spellings through the ordinary audit and event shape. The values leave only as the corrected lead row and its audit image",
 	"internal/modules/weeklyplan/linkedkeys.go":                                      "the backfill of the per-type record keys asks only whether the lead its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no lead column leaves the statement",

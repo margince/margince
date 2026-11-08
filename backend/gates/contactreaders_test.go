@@ -68,6 +68,8 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                   "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
+	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":                       "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/privacy/entityfloor.go:activityRecordOwnersSQL":                 "the owner_id, a USER id, of the contacts a message is filed under, so the retention floor follows that user's legal entity. Nothing of the contact leaves the statement; it only picks which floor keeps the message",
 	"internal/modules/search/graphedgetargets.go:liveContactSQL":                      "whether the contact an edge names is archived, so an edge fold skips it. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only fold more edges for readers already gated on the graph",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx":          "An existence-only uniqueness check suppresses already registered addresses from a content-authorized suggestion. No contact identity or field leaves it, including when a different owner holds the existing contact.",
@@ -130,6 +132,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":       "Builds subject-bound SELECT queries for AssembleSAR, which requires a human with contact.delete and unbounded row scope. The public notice path uses only its selected read sections under system authority. This builder executes no queries and returns no unrelated contact data.",
 	"internal/modules/privacy/historicalaudit.go:historicalAuditUnderHold":        "the system-only audit cleanup locks the contact and reads only its legal-hold flag. RedactHistoricalAuditPageTx requires system authority; this guard returns a keep decision, never a contact field to an outward caller",
 	"internal/modules/contacts/signaturework.go:QueueSignatureEventTx":            "System-only maintenance locks live contact identities before recording pending signature work. It returns a changed flag, never contact fields or identities to a caller.",
 	"internal/modules/contacts/mergeprimaryrepair.go:restoreMergeDroppedPrimary":  "the merge-dropped-primary data task re-reads one contact under its employment lock as the system principal, after ReconcileMergeDroppedPrimariesTx asked contact update. Only the heir edge id and version leave the read, for the audited promotion",

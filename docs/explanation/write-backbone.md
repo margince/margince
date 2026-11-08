@@ -124,7 +124,7 @@ Set up in `backend/migrations/core/0001_baseline.up.sql`; later migrations only 
 
 The row's ID, actor, action and time cannot change. The app role cannot delete an audit row.
 It can update only `before`, `after` and `evidence`, and the trigger allows only a fixed change.
-The trigger and column grants are in [the audit change](../../backend/migrations/core/1794066141_privacy_certificates_allow_payload_redaction.up.sql).
+The trigger and column grants are in [the audit change](../../backend/migrations/core/1794074311_privacy_certificates_allow_payload_redaction.up.sql).
 
 `storekit.RedactAuditHistory` needs a privacy proof written in the same transaction.
 It keeps fixed states and dates, removes personal fields and marks the erasure. A proof keeps typed
@@ -134,6 +134,8 @@ while their event names a parent record.
 
 The background task uses each earlier proof as its last entry to erase. Its new audit entry records
 payload erasure on that proof, so later allowed edits keep their values and history.
+A task for linked copies names one audit row. Its proof keeps the domain boundary fixed.
+It removes the first request audit entry's private values last, after that entry has guided the other changes.
 
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.

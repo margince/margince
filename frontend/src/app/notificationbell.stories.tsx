@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { OpenSourceProvider } from "../lib/opensource";
 import {
   installFetchStub,
   jsonResponse,
@@ -68,7 +69,9 @@ function story(notices: Notice[]) {
           <div className="topbar-lead" />
           <div />
           <div className="topbar-trail">
-            <NotificationBell />
+            <OpenSourceProvider openSource={() => undefined}>
+              <NotificationBell />
+            </OpenSourceProvider>
           </div>
         </div>
       </StoryProviders>
@@ -238,4 +241,36 @@ export const CentreOpenDark: Story = {
     }),
   ]),
   play: openIt,
+};
+
+export const ManualPrivacyReview: Story = {
+  render: story([
+    notice("privacy-note", "Manual privacy review needed", {
+      kind: "privacy_review_required",
+      body: "A one-word name may match this note. Review it manually.",
+      target: { type: "activity", id: "11111111-1111-4111-8111-111111111111" },
+    }),
+    notice("privacy-file", "Manual privacy review needed", {
+      kind: "privacy_review_required",
+      body: "An uploaded document may mention an erased contact. Keep the file and review its text.",
+      target: {
+        type: "knowledge_document",
+        id: "22222222-2222-4222-8222-222222222222",
+      },
+    }),
+    notice("privacy-signature", "Manual privacy review needed", {
+      kind: "privacy_review_required",
+      body: "Review your email signature before deciding what to remove.",
+      target: {
+        type: "email_signature",
+        id: "33333333-3333-4333-8333-333333333333",
+      },
+    }),
+  ]),
+  play: openIt,
+};
+
+export const ManualPrivacyReviewDark: Story = {
+  ...ManualPrivacyReview,
+  globals: { theme: "dark" },
 };

@@ -792,6 +792,9 @@ public.activity_sales_state.set_by text NOT NULL gen=- def=-
 public.activity_sales_state.thread_key text NOT NULL gen=- def=-
 public.activity_sales_state_pkey CREATE UNIQUE INDEX activity_sales_state_pkey ON public.activity_sales_state USING btree (thread_key, kind, channel_provider)
 public.activity_ts_config(lang text) secdef=false cfg=- acl=- 
+public.activity_unfolded_counterparty(address text) secdef=false cfg=- acl=- 
+    SELECT CASE WHEN address <> lower(address) THEN lower(address) END
+
 public.activity_waiting_horizon acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_waiting_horizon.activity_waiting_horizon_days_check CHECK ((horizon_days > 0))
 public.activity_waiting_horizon.activity_waiting_horizon_pkey PRIMARY KEY (singleton)
@@ -1646,6 +1649,9 @@ public.attachment_extraction.status_detail text gen=- def=-
 public.attachment_extraction_pkey CREATE UNIQUE INDEX attachment_extraction_pkey ON public.attachment_extraction USING btree (id)
 public.attachment_pkey CREATE UNIQUE INDEX attachment_pkey ON public.attachment USING btree (id)
 public.attachment_supersedes_ix CREATE INDEX attachment_supersedes_ix ON public.attachment USING btree (supersedes_id) WHERE (supersedes_id IS NOT NULL)
+public.audit_evidence_after_erasure(verb text, before_image jsonb, after_image jsonb, payload jsonb) secdef=false cfg=- acl=- SELECT audit_redacted_evidence(
+ (verb=ANY(audit_redaction_actions()) OR verb IN ('pin','restrict'))
+ AND before_image IS NULL AND after_image IS NULL,payload,verb)
 public.audit_log acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
@@ -1674,8 +1680,7 @@ BEGIN
   IF TG_OP = 'UPDATE'
      AND NEW.before IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.before)
      AND NEW.after IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.after)
-     AND NEW.evidence = audit_redacted_evidence(
-       OLD.action IN ('erase','anonymize','expire','release','pin','restrict') AND OLD.before IS NULL AND OLD.after IS NULL, OLD.evidence, OLD.action)
+     AND NEW.evidence = audit_evidence_after_erasure(OLD.action,OLD.before,OLD.after,OLD.evidence)
      AND (to_jsonb(NEW) - ARRAY['before','after','evidence']) =
          (to_jsonb(OLD) - ARRAY['before','after','evidence'])
      AND EXISTS (
@@ -1684,14 +1689,22 @@ BEGIN
          AND certificate.source_xid = pg_current_xact_id()
          AND ((certificate.entity_type = OLD.entity_type
                AND certificate.entity_id = OLD.entity_id
-               AND certificate.action IN ('erase','anonymize','expire','release'))
+               AND certificate.action=ANY(audit_redaction_actions()))
+           OR (certificate.action = 'update' AND certificate.entity_type = 'audit_log'
+               AND certificate.entity_id = OLD.id
+               AND EXISTS(SELECT 1 FROM audit_log boundary
+                WHERE boundary.id=audit_redaction_boundary(certificate.evidence)
+                AND certificate.evidence=jsonb_build_object('payload_redaction',true,'legacy_erased_record',true,'boundary',boundary.id::text)
+                AND boundary.action=ANY(audit_redaction_actions()) AND boundary.before IS NULL AND boundary.after IS NULL
+                AND (boundary.evidence ? 'cause' OR boundary.evidence ? 'retention_action' OR boundary.evidence ? 'emails_suppressed')
+                AND (OLD.occurred_at,OLD.id)<=(boundary.occurred_at,boundary.id)))
            OR (certificate.action = 'update' AND certificate.entity_type = 'audit_log'
                AND certificate.evidence = '{"payload_redaction":true}'::jsonb
                AND EXISTS (
                  SELECT 1 FROM audit_log boundary
                  WHERE boundary.id = certificate.entity_id
                    AND boundary.entity_type = OLD.entity_type AND boundary.entity_id = OLD.entity_id
-                   AND boundary.action IN ('erase','anonymize','expire','release')
+                   AND boundary.action=ANY(audit_redaction_actions())
                    AND boundary.before IS NULL AND boundary.after IS NULL
                    AND (OLD.occurred_at, OLD.id) <= (boundary.occurred_at, boundary.id))))
      ) THEN
@@ -1773,6 +1786,10 @@ BEGIN
   RETURN nullif(kept, '{}'::jsonb);
 END;
 
+public.audit_redaction_actions() secdef=false cfg=- acl=- SELECT ARRAY['erase','anonymize','expire','release']::text[]
+public.audit_redaction_boundary(payload jsonb) secdef=false cfg=- acl=- SELECT CASE WHEN jsonb_typeof(payload->'boundary')='string'
+ AND payload->>'boundary' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+ THEN (payload->>'boundary')::uuid END
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
 public.auth_token.auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))
@@ -2588,6 +2605,11 @@ public.comms_outbound.template_key text gen=- def=-
 public.comms_outbound.template_version integer gen=- def=-
 public.comms_outbound.thread_key text gen=- def=-
 public.comms_outbound.user_id uuid gen=- def=-
+public.comms_outbound_addressed(recipients jsonb, cc jsonb) secdef=false cfg=- acl=- 
+    SELECT array_agg(lower(address))
+      FROM jsonb_array_elements_text(
+          CASE WHEN jsonb_typeof(recipients || cc) = 'array' THEN recipients || cc END) address
+
 public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- acl=- 
   SELECT jsonb_typeof(files) = 'array'
      AND NOT EXISTS (
@@ -3536,6 +3558,7 @@ public.contact.anonymized_address_hashes text[] gen=- def=-
 public.contact.archived_at timestamp with time zone gen=- def=-
 public.contact.captured_by text NOT NULL gen=- def=-
 public.contact.contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES lead(id) ON DELETE SET NULL (converted_from_lead_id)
+public.contact.contact_created_from_activity_id_fkey FOREIGN KEY (created_from_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.contact.contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES contact(id) ON DELETE SET NULL (merged_into_id)
 public.contact.contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text])))
 public.contact.contact_narrowing_reason_only_when_owner CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner'::text)))
@@ -3553,6 +3576,7 @@ public.contact.contact_version_js_safe CHECK (((version >= '-9007199254740991'::
 public.contact.contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.contact.converted_from_lead_id uuid gen=- def=-
 public.contact.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact.created_from_activity_id uuid gen=- def=-
 public.contact.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.first_name text gen=- def=-
 public.contact.full_name text NOT NULL gen=- def=-
@@ -5358,6 +5382,7 @@ public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.i
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
 public.idx_activity_answer_mail_subject CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_answer_touch CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
+public.idx_activity_attested_counterparty CREATE INDEX idx_activity_attested_counterparty ON public.activity USING btree (counterparty_email) WHERE counterparty_outbound_attested
 public.idx_activity_channel_thread CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)
 public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)
 public.idx_activity_direction CREATE INDEX idx_activity_direction ON public.activity USING btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))
@@ -5378,6 +5403,7 @@ public.idx_activity_source_activity CREATE INDEX idx_activity_source_activity ON
 public.idx_activity_tasks CREATE INDEX idx_activity_tasks ON public.activity USING btree (assignee_id, due_at) WHERE ((kind = 'task'::text) AND (is_done = false) AND (archived_at IS NULL))
 public.idx_activity_thread CREATE INDEX idx_activity_thread ON public.activity USING btree (thread_key) WHERE (thread_key IS NOT NULL)
 public.idx_activity_thread_reply_seek CREATE INDEX idx_activity_thread_reply_seek ON public.activity USING btree (thread_key, kind, channel_provider, direction, occurred_at, id) WHERE ((thread_key IS NOT NULL) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL))
+public.idx_activity_unfolded_counterparty CREATE INDEX idx_activity_unfolded_counterparty ON public.activity USING btree (activity_unfolded_counterparty(counterparty_email)) WHERE (activity_unfolded_counterparty(counterparty_email) IS NOT NULL)
 public.idx_activity_unjudged CREATE INDEX idx_activity_unjudged ON public.activity USING btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_unjudged_reply CREATE INDEX idx_activity_unjudged_reply ON public.activity USING btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text))
@@ -5459,6 +5485,7 @@ public.idx_capture_watch_renew CREATE INDEX idx_capture_watch_renew ON public.ca
 public.idx_close_date_run_member_deal CREATE INDEX idx_close_date_run_member_deal ON public.close_date_run_member USING btree (deal_id)
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
+public.idx_comms_outbound_addressed CREATE INDEX idx_comms_outbound_addressed ON public.comms_outbound USING gin (comms_outbound_addressed(recipients, cc)) WHERE ((sender_kind = 'user'::text) AND (status = 'sent'::text) AND (user_id IS NOT NULL) AND (channel_user_id IS NULL))
 public.idx_comms_outbound_parked CREATE INDEX idx_comms_outbound_parked ON public.comms_outbound USING btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)
 public.idx_communication_basis_contact CREATE INDEX idx_communication_basis_contact ON public.communication_basis USING btree (contact_id)
 public.idx_communication_basis_lead CREATE INDEX idx_communication_basis_lead ON public.communication_basis USING btree (lead_id)
@@ -5499,6 +5526,7 @@ public.idx_consent_event_contact CREATE INDEX idx_consent_event_contact ON publi
 public.idx_consent_event_lead CREATE INDEX idx_consent_event_lead ON public.consent_event USING btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL)
 public.idx_contact_channel_identity_contact CREATE INDEX idx_contact_channel_identity_contact ON public.contact_channel_identity USING btree (contact_id)
 public.idx_contact_confirm_submission_token CREATE INDEX idx_contact_confirm_submission_token ON public.contact_confirm_submission USING btree (token_id)
+public.idx_contact_created_from CREATE INDEX idx_contact_created_from ON public.contact USING btree (created_from_activity_id) WHERE (created_from_activity_id IS NOT NULL)
 public.idx_contact_created_keyset CREATE INDEX idx_contact_created_keyset ON public.contact USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_dedupe_scan CREATE INDEX idx_contact_dedupe_scan ON public.contact USING btree (updated_at, id) WHERE (archived_at IS NULL)
 public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON public.contact_email USING btree (contact_id)
