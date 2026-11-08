@@ -106,7 +106,7 @@ func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
 }
 
 // A decline holds for its one deal. Once a second deal fits the mail better,
-// the repair files it there, and the declined deal stays off.
+// the refile pass files it there, and the declined deal stays off.
 func TestADeclineLeavesTheMailOpenToAnotherDeal(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -121,9 +121,7 @@ func TestADeclineLeavesTheMailOpenToAnotherDeal(t *testing.T) {
 	}
 	second := w.deal(t, "Acme reporting")
 	w.stakeholder(t, alice, second)
-	if changed := newRepairer(e, w).run(t); changed != 1 {
-		t.Fatalf("the repair changed %d mails, want the declined mail filed on the other deal", changed)
-	}
+	refile(t, refiler(env, w), ids.From[ids.ActivityKind](activityOf(t, e, "dec2@acme.example")))
 	wantDeals(t, e, "dec2@acme.example", second)
 }
 

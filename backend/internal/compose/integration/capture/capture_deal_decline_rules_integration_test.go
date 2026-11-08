@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -116,46 +115,49 @@ func compareIDs(a, b ids.UUID) int { return strings.Compare(a.String(), b.String
 
 // The latest decision about a deal counts. After a decline, a relink and a
 // second decline, the mail is declined on that deal and kept by nobody. The
-// refile pass and the repair both file it on the deal that now fits.
+// refile pass and the repair both file it on the deal its project now names.
 func TestTheLatestDecisionAboutADealHolds(t *testing.T) {
 	for _, pass := range []struct {
 		name string
-		run  func(*testing.T, repairer, ids.ActivityID) capturemod.DealOutcome
+		run  func(*testing.T, captureEnv, dealWorld, ids.ActivityID)
 	}{
-		{"the refile pass", refile},
-		{"the repair", func(t *testing.T, r repairer, _ ids.ActivityID) capturemod.DealOutcome {
-			if r.run(t) != 1 {
-				return capturemod.DealNone
-			}
-			return capturemod.DealLinked
+		{"the refile pass", func(t *testing.T, env captureEnv, w dealWorld, mail ids.ActivityID) {
+			refile(t, refiler(env, w), mail)
+		}},
+		{"the repair", func(t *testing.T, env captureEnv, w dealWorld, _ ids.ActivityID) {
+			newRepairer(env.e, w).run(t)
 		}},
 	} {
 		t.Run(pass.name, func(t *testing.T) {
 			env := newCaptureEnv(t)
 			e := env.e
 			w := newDealWorld(t, e)
-			alice := w.employee(t, "alice@acme.example", w.customer)
+			w.employee(t, "alice@acme.example", w.customer)
 			first := w.deal(t, "Acme rollout")
 			env.sync(t, mailFrom("alice@acme.example", "late1@acme.example", "", "status"))
 			wantDeals(t, e, "late1@acme.example", first)
 			mail := activityOf(t, e, "late1@acme.example")
 
 			mustDecline(w.ctx, t, e, mail, first)
-			if _, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, ids.From[ids.ActivityKind](mail),
-				activities.RelinkActivityInput{EntityType: "deal", EntityID: first}); err != nil {
-				t.Fatalf("relinking the declined deal as a human: %v", err)
-			}
+			relinkAsColleague(t, e, w, mail, "deal", first)
 			if again := mustDecline(w.ctx, t, e, mail, first); len(again.DeclinedDealIds) != 1 {
 				t.Fatalf("the decline after a relink answered %+v, want the deal declined anew", again)
 			}
-			second := w.deal(t, "Acme reporting")
-			w.stakeholder(t, alice, second)
+			reporting := w.project(t, "Reporting")
+			second := w.dealOnProject(t, "Acme reporting", reporting.ID)
+			relinkAsColleague(t, e, w, mail, "project", reporting.ID)
 
-			if got := pass.run(t, newRepairer(e, w), ids.From[ids.ActivityKind](mail)); got != capturemod.DealLinked {
-				t.Fatalf("%s answered %s, want the mail filed on the deal that fits", pass.name, got)
-			}
+			pass.run(t, env, w, ids.From[ids.ActivityKind](mail))
 			wantDeals(t, e, "late1@acme.example", second)
 		})
+	}
+}
+
+func relinkAsColleague(t *testing.T, e *integration.SearchEnv, w dealWorld, mail ids.UUID, entityType string, target ids.UUID) {
+	t.Helper()
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, ids.From[ids.ActivityKind](mail),
+		activities.RelinkActivityInput{EntityType: entityType, EntityID: target}); err != nil {
+		t.Fatalf("relinking the mail to a %s as a colleague: %v", entityType, err)
 	}
 }
 
@@ -169,17 +171,11 @@ func mustDecline(ctx context.Context, t *testing.T, e *integration.SearchEnv, ma
 }
 
 // refile runs the refile pass's per-mail step as its worker does.
-func refile(t *testing.T, r repairer, mail ids.ActivityID) capturemod.DealOutcome {
+func refile(t *testing.T, r repairer, mail ids.ActivityID) {
 	t.Helper()
-	var outcome capturemod.DealOutcome
-	if err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
-		var err error
-		outcome, err = r.repair.RefileTx(r.system, tx, mail, captureNow)
-		return err
-	}); err != nil {
+	if _, err := r.repair.Refile(r.system, r.e.DB(), mail, captureNow); err != nil {
 		t.Fatalf("running the refile pass: %v", err)
 	}
-	return outcome
 }
 
 // A project the reply took from its thread stays when its deal is declined.

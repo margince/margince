@@ -109,6 +109,10 @@ type CaptureConfig struct {
 	// Now is the clock the deal question judges a mail's currentness by. Nil
 	// is the wall clock.
 	Now func() time.Time
+	// DealTopicBrain is the capture_classify lane the deal topic check asks
+	// before capture files a mail on a suggested deal. Nil files no suggested
+	// deal; the worker's refile pass files it once a model answers.
+	DealTopicBrain completer
 	// SkipReservedDomainProposals is capture.skip_reserved_domain_proposals,
 	// already resolved: the review sweep raises no contact proposal for a
 	// sender on an RFC 2606 reserved name. ON for a booted role; the zero value
@@ -312,6 +316,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 				now:   cfg.clock(),
 			}.Ask,
 			Filer: ActivityDealFiler{},
+			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain),
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives

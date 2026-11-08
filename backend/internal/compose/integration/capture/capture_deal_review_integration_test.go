@@ -561,12 +561,10 @@ func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
 				RowScope: principal.RowScopeAll,
 			},
 		})
-		ruled <- database.WithWorkspaceTx(connectorCtx, e.Pool, func(tx pgx.Tx) error {
-			_, err := capturemod.AttributeDealTx(connectorCtx, tx, mail, capturemod.DealAttribution{
-				Candidates: w.store, Filer: compose.ActivityDealFiler{},
-			})
-			return err
+		_, err := capturemod.FileOnDealChecked(connectorCtx, e.DB(), mail, capturemod.DealAttribution{
+			Candidates: w.store, Filer: compose.ActivityDealFiler{}, Check: compose.NewDealTopicCheck(e.Pool, &topicModel{}),
 		})
+		ruled <- err
 	}()
 	waitForLockWaiters(t, e, pid, 2)
 	if err := holder.Rollback(context.Background()); err != nil {

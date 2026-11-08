@@ -173,6 +173,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/compose/capturedealtopicread.go:readDealTopicDeals":           "the names, projects and recent mail subjects of the deals a topic check weighs, under the deal row scope. Its one caller, readDealTopicInput, asks auth.Require(ctx, \"deal\", read) first",
 	"internal/modules/activities/dealdecline.go:offeredDeals":               "the ids of the open deals a deal question offered, under the deal row scope. Its one caller, DeclineDeal, asks auth.Require(ctx, \"deal\", read) first. No deal column but the id leaves",
 	"internal/modules/activities/dealdeclineproject.go:projectCameFromDeal": "reads one deal's project_id to test the message's project link; only a boolean leaves. Its one caller chain starts at DeclineDeal, which asks auth.Require(ctx, \"deal\", read) and auth.EnsureVisibleExisting on that deal first",
 	"internal/modules/deals/correctionreceipts.go:correctionReceiptSelect":  "the SELECT list and joins every change report shares; it has no WHERE of its own. Its three callers, RecentCorrectionsOwnedBy, DealChanges and TeamChanges, ask auth.Require(ctx, \"deal\", read) first and add the row scope",
