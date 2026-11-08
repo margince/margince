@@ -20,7 +20,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Product and protocol names, an example address and an example header name.
   "webhooks.body.preset.slack",
   "webhooks.body.preset.teams",
-  "settings.tab.mcp",
+  "settings.part.connections.linkedin",
   "webhooks.eventGroup.voice_dna",
   "webhooks.field.targetUrlPlaceholder",
   "webForms.sender.typeform",

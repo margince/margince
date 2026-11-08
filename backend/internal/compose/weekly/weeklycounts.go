@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -231,12 +232,20 @@ func meetingIsTheirsSQL(seat string) string {
 	return storekit.MeetingCreditSQL("m", seat)
 }
 
-// NextStepTaskSQL is "task is a next step recorded from meeting": a live task
-// made from it once the meeting began (occurredday.StartSQL). Each caller adds
-// its own upper bound and scope.
+// NextStepTaskSQL is NextStepTaskAtSQL for the meeting as it reads today.
 func NextStepTaskSQL(task, meeting string) string {
+	return NextStepTaskAtSQL(task, meeting, occurredday.StartSQL(meeting))
+}
+
+// NextStepTaskAtSQL is "task is a next step recorded from meeting": a live task
+// made from it once the meeting began at start. Each caller adds its own upper
+// bound and scope.
+//
+// A caller counting a meeting in its held week passes the start that week was
+// read from. The meeting's current time would strand the follow-up.
+func NextStepTaskAtSQL(task, meeting, start string) string {
 	return task + ".source_activity_id = " + meeting + ".id AND " + task + ".kind = 'task' AND " +
-		task + ".archived_at IS NULL AND " + task + ".created_at >= " + occurredday.StartSQL(meeting)
+		task + ".archived_at IS NULL AND " + task + ".created_at >= " + start
 }
 
 func countWeekMeetings(
@@ -246,6 +255,15 @@ func countWeekMeetings(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos := arg(start), arg(end)
 	hostPos := arg(userID)
+	// The reader Analytics counts a held meeting through. So a meeting redated
+	// after it was held stays in its held week on both surfaces.
+	//
+	// Analytics reads history as of its evaluation, so it reads the same way
+	// twice for its receipts. A week is assembled once and its figure stored,
+	// so it reads the history as it stands. An assembly clock behind the
+	// database's would otherwise miss a transition and fall back to the date
+	// somebody edited the meeting to.
+	transition := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz", activities.ReversedCancellationSQL)
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
 		return 0, 0, err
@@ -254,23 +272,32 @@ func countWeekMeetings(
 	if err != nil {
 		return 0, 0, err
 	}
-	// Only a recorded held outcome counts (meetingoutcome.HeldSQL). A synced
-	// meeting nobody reported is awaiting its outcome, and the review must not
-	// call it held when the record page does not.
+	// Only a recorded held outcome counts, as meetingoutcome.HeldSQL reads one.
+	// A synced meeting nobody reported is awaiting its outcome, and the review
+	// must not call it held when the record page does not. The status is the
+	// transition's when it recorded one, so a meeting marked held and later
+	// reopened is not still counted.
+	status := "COALESCE(held.status,m.meeting_status)"
+	// A start whose day cannot be settled is read under either day, as the
+	// Analytics reader reads it.
+	within := "(" + occurredday.WithinAtSQL(transition.Start, transition.Precision, "$%[1]d", "$%[2]d") +
+		" OR (" + transition.UnknownDay + " AND (" +
+		occurredday.WithinAtSQL(transition.Start, "'instant'", "$%[1]d", "$%[2]d") + " OR " +
+		occurredday.WithinAtSQL(transition.Start, "'day'", "$%[1]d", "$%[2]d") + ")))"
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND ` + meetingoutcome.HeldSQL("m") + `
+		      AND ` + status + ` = '` + meetingoutcome.Held + `'
 		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
-		      AND ` + occurredday.WithinSQL("m", "$%[1]d", "$%[2]d") + `
+		      AND ` + within + `
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
-		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`),
-		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`
+		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`),
+		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`
 		      AND EXISTS (
 		        SELECT 1 FROM activity task
 		         WHERE %[6]s
 		           AND task.created_at < $%[2]d AND (%[5]s)))`,
-		startPos, endPos, hostPos, scope, taskScope, NextStepTaskSQL("task", "m")), args...).
+		startPos, endPos, hostPos, scope, taskScope, NextStepTaskAtSQL("task", "m", transition.Began)), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)

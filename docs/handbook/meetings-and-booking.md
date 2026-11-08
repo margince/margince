@@ -83,7 +83,7 @@ The guest's link stops working at once. The tab lists only your own links that a
 Also called: cancel a proposal, revoke a booking link, withdraw an invitation.
 
 ### How do I get a reminder email before a meeting?
-To send your guest a reminder in Margince, open **Settings → Meetings** and, under **What guests see**, turn on **Reminder email**. It saves at once.
+To send your guest a reminder in Margince, open **Settings → Meetings**, then **Guest page**, and turn on **Reminder email**. It saves at once.
 The reminder goes from your connected mailbox, an hour before each future meeting. It gives the time in your time zone and names that zone. The meeting page shows "Email reminder scheduled.", "Email reminder queued for delivery." or "The reminder could not be sent."
 Also called: meeting reminder, remind the guest, notification before a call.
 

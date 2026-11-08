@@ -1523,3 +1523,10 @@
 .co-name-control {
   align-self: center;
 }
+
+/* A fact's provenance names its kind with a glyph before its words, on one line. */
+.pe-source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}

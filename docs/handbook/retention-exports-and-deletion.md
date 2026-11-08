@@ -227,7 +227,7 @@ A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an 
 
 To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
 
-**Margince works out the due date.** It counts from the day the request arrived, under the law chosen on **Settings → Governance → Jurisdiction**. With none chosen, it is one calendar month.
+**Margince works out the due date.** It counts from the day the request arrived, under the law chosen on **Settings → Compliance → Jurisdiction**. With none chosen, it is one calendar month.
 
 Set **Received on** for a request you log late. You may choose an earlier due date, never a later one. The request then says which rule set its date.
 

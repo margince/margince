@@ -46,7 +46,7 @@ function served(stage: Stage) {
 }
 
 const meta: Meta<typeof StageMenu> = {
-  title: "Settings/Sales/Pipelines/Stage row menu",
+  title: "Settings/Sales/Deals/Stage row menu",
   component: StageMenu,
   parameters: { layout: "padded" },
 };

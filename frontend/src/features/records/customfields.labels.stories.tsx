@@ -21,7 +21,7 @@ function CatalogLabels() {
   );
 }
 const meta: Meta = {
-  title: "Settings/Sales/Fields/Catalog labels",
+  title: "Settings/Sales/Records and fields/Catalog labels",
   decorators: [
     (Story) => (
       <LocaleProvider initial="en">

@@ -91,7 +91,7 @@ func maskForViewer(ctx context.Context, approval crmcontracts.Approval, preview 
 // viewerMaskedFields collects the fields the viewer's role masks on the target
 // and on the objects the preview read.
 func viewerMaskedFields(viewer principal.Principal, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched) []string {
-	return maskedFieldsFor(viewer, approvalTargetType(approval), previewMaskObjects(approval, previewReferences(approval, preview, touched)))
+	return maskedFieldsFor(viewer, approvalTargetType(approval), true, previewMaskObjects(approval, previewReferences(approval, preview, touched)))
 }
 
 // previewMaskObjects names the objects whose masks reach a plan: those of the
@@ -105,12 +105,12 @@ func previewMaskObjects(approval crmcontracts.Approval, refs *previewTouched) []
 }
 
 // maskedFieldsFor collects the fields the viewer's role masks on target and on
-// objects. Only the target, which the viewer may decide, lifts a mask
-// conditioned on write authority.
-func maskedFieldsFor(viewer principal.Principal, target string, objects []string) []string {
+// objects. Only the target lifts a mask conditioned on write authority, and
+// only when targetWritable says the viewer still holds it.
+func maskedFieldsFor(viewer principal.Principal, target string, targetWritable bool, objects []string) []string {
 	var masked []string
 	if target != "" {
-		masked = auth.MaskedFields(viewer, target, true)
+		masked = auth.MaskedFields(viewer, target, targetWritable)
 	}
 	for _, object := range objects {
 		if object != target {

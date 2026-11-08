@@ -33,6 +33,12 @@ type bulkTarget interface {
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 }
 
+// bulkRestoreSettler is a record type whose restores owe one more step. It runs
+// once every row of the run is back, since it takes locks after the row locks.
+type bulkRestoreSettler interface {
+	settleRestores(ctx context.Context, tx pgx.Tx, restored []ids.UUID) error
+}
+
 // bulkReassigner is the share of a record type that has an owner to hand on.
 // version is the one the caller was shown; the write is conditioned on it.
 type bulkReassigner interface {
@@ -90,8 +96,18 @@ func (t contactBulkTarget) archive(ctx context.Context, tx pgx.Tx, id ids.UUID, 
 func (t contactBulkTarget) restore(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind,
 ) (storekit.RestoreReport, error) {
-	return t.store.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](id), &version,
+	return t.store.RestoreContactLeavingTwinsTx(ctx, tx, ids.From[ids.ContactKind](id), &version,
 		unarchiveWith(pending))
+}
+
+// settleRestores files the employer twins of the contacts this run restored.
+// It runs after every row is locked, so the lanes are taken last.
+func (t contactBulkTarget) settleRestores(ctx context.Context, tx pgx.Tx, restored []ids.UUID) error {
+	contactIDs := make([]ids.ContactID, 0, len(restored))
+	for _, id := range restored {
+		contactIDs = append(contactIDs, ids.From[ids.ContactKind](id))
+	}
+	return t.store.FileRestoredEmployerTwinsTx(ctx, tx, contactIDs)
 }
 
 type companyBulkTarget struct{ store *contacts.Store }

@@ -77,15 +77,18 @@ func TestRelayRepairRevisitsFinishedTasksAndPreservesHumanRecords(t *testing.T) 
 	if _, err := e.Contacts.UpdateRelationship(e.Admin(), humanEdge, contacts.UpdateRelationshipInput{Role: new("Recruiter")}); err != nil {
 		t.Fatal(err)
 	}
+	phoned, phonedEdge := capturedEmployee(t, e, "phoned@hire.lever.co")
 	conn := integration.OwnerConn(t)
-	for i, contact := range []ids.ContactID{relay, human} {
-		address := recruitingRelay
-		if i == 1 {
-			address = strings.Replace(recruitingRelay, "11111111", "aaaaaaaa", 1)
-		}
+	for i, contact := range []ids.ContactID{relay, human, phoned} {
+		address := strings.Replace(recruitingRelay, "11111111", []string{"11111111", "aaaaaaaa", "bbbbbbbb"}[i], 1)
 		if _, err := conn.Exec(ctx, `UPDATE contact_email SET email = $2 WHERE contact_id = $1`, contact, address); err != nil {
 			t.Fatal(err)
 		}
+	}
+	// A live phone may name the human behind the relay, so that employer stays.
+	if _, err := conn.Exec(ctx, `INSERT INTO contact_phone (contact_id, phone, source, captured_by)
+		VALUES ($1, '+4930123456', 'manual', 'user:test')`, phoned); err != nil {
+		t.Fatal(err)
 	}
 	task := machineAddressDataTask()
 	for i := range task.Steps {
@@ -107,6 +110,9 @@ func TestRelayRepairRevisitsFinishedTasksAndPreservesHumanRecords(t *testing.T) 
 	}
 	if !edgeLive(t, e, humanEdge) {
 		t.Error("human-edited employment was retired")
+	}
+	if !edgeLive(t, e, phonedEdge) {
+		t.Error("the employment of a relay contact with a live phone was retired")
 	}
 	for _, contact := range []ids.ContactID{relay, human} {
 		if contactArchived(t, e, contact.UUID) || machineTagged(t, e, contact.UUID) != 1 {

@@ -12,7 +12,7 @@ import { attentionReport, HEALTH_AT } from "./systemhealth.fixtures";
 import Diagnostics from "./systemhealthdiagnostics";
 
 const meta = {
-  title: "Settings/Governance/System health/Diagnostics",
+  title: "Settings/System/System health/Diagnostics",
   component: Diagnostics,
 } satisfies Meta<typeof Diagnostics>;
 export default meta;

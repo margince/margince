@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 233320,
+    "tool_catalog_bytes": 233489,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59735,
+    "approx_wire_tokens_total": 59777,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55130,
-      "input_schema_bytes": 114244,
+      "input_schema_bytes": 114413,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 169374
+      "description_plus_input_schema_bytes": 169543
     }
   },
   "tools": {
@@ -2840,6 +2840,14 @@
             "request_body": {
               "description": "correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, record_project_health, request_legal_review, review_outcome, set_lead_signal, transfer_projects only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
+            },
+            "settle": {
+              "description": "move_deal only: What becomes of the deal's open tasks when this move closes it. Omitted keeps them",
+              "enum": [
+                "complete",
+                "keep"
+              ],
+              "type": "string"
             },
             "source_id": {
               "description": "merge_member_accounts only",

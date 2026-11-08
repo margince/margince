@@ -141,11 +141,11 @@ Only the owner can offer a record. A manager who does not own it changes the own
 Also called: give away a record, hand over an account, offer a contact, reassign to a colleague.
 
 ### How do I stop Margince making automatic changes?
-To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
+To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
 ### How do I hide a kind of proposal from my own queue?
-Open **Settings → AI access**, then **For developers**, then **Agent rules**, then
+Open **Settings → AI assistants**, then **For developers**, then **Agent rules**, then
 **Personal approval mutes**.
 Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
 
@@ -235,7 +235,7 @@ probabilities**, **Stage moves**, **New deals**, **Reopened deals**,
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
-are at **Settings → AI access**, on the **Agent rules** tab under **For developers**. The **Automatic
+are at **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. The **Automatic
 changes** card says: "Each switch
 lets one kind of change run without your review. It applies to your work, not
 the whole team."

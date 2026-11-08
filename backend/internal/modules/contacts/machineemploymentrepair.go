@@ -14,8 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// RetireMachineEmploymentEdgesTx preserves human assertions and retires inferred
-// employers only when every live address belongs to a sending system.
+// RetireMachineEmploymentEdgesTx preserves human assertions. It retires an
+// inferred employer only when every live address belongs to a sending system.
+// A live phone or channel identity, which may name a human, keeps it.
 func RetireMachineEmploymentEdgesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, runID string) (SeatEmploymentPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return SeatEmploymentPage{}, err
@@ -51,14 +52,14 @@ func machineOnlyContactTx(ctx context.Context, tx pgx.Tx, contact ids.ContactID)
 		return false, err
 	}
 	var emails []string
-	var held bool
+	var held, otherIdentity bool
 	args := []any{contact}
 	query := fmt.Sprintf(`SELECT legal_hold, ARRAY(
-  SELECT email FROM contact_email WHERE contact_id = c.id AND archived_at IS NULL)
-  FROM contact c WHERE id = $%d FOR UPDATE`, len(args))
-	err := tx.QueryRow(ctx, query, args...).Scan(&held, &emails)
+  SELECT email FROM contact_email WHERE contact_id = c.id AND archived_at IS NULL), %s
+  FROM contact c WHERE id = $%d FOR UPDATE`, otherLiveIdentitySQL, len(args))
+	err := tx.QueryRow(ctx, query, args...).Scan(&held, &emails, &otherIdentity)
 	if err != nil {
 		return false, fmt.Errorf("contacts: checking a sending system's addresses: %w", err)
 	}
-	return !held && len(emails) > 0 && len(technicalAddresses(emails)) == len(emails), nil
+	return !held && !otherIdentity && len(emails) > 0 && len(technicalAddresses(emails)) == len(emails), nil
 }
