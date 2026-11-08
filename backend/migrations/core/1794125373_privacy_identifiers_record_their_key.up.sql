@@ -17,14 +17,15 @@ ALTER TABLE preference_token ALTER COLUMN token DROP NOT NULL;
 ALTER TABLE webhook_delivery ADD COLUMN payload_pruned_at timestamptz;
 
 -- The log stays append-only, with one exception: a failed-login row's
--- unkeyed address hash may be replaced once by its keyed form.
+-- unkeyed address hash may be replaced once by its keyed form, a 64-digit
+-- hex HMAC stamped with the 16-digit hex id of its key.
 CREATE OR REPLACE FUNCTION system_log_immutable() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-  IF TG_OP = 'UPDATE'
+  IF TG_OP = 'UPDATE' AND OLD.action = 'login'
      AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'
-     AND jsonb_typeof(NEW.detail->'email_hash') = 'string'
-     AND jsonb_typeof(NEW.detail->'email_key_id') = 'string'
+     AND NEW.detail->>'email_hash' ~ '^[0-9a-f]{64}$'
+     AND NEW.detail->>'email_key_id' ~ '^[0-9a-f]{16}$'
      AND (NEW.detail - ARRAY['email_hash','email_key_id']) = (OLD.detail - 'email_hash')
      AND (to_jsonb(NEW) - 'detail') = (to_jsonb(OLD) - 'detail') THEN
     RETURN NEW;

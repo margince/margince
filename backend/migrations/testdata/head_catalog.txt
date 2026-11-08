@@ -5546,6 +5546,7 @@ public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.cont
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_from_lead CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)
+public.idx_contact_keyed_address_hashes CREATE INDEX idx_contact_keyed_address_hashes ON public.contact USING btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)
 public.idx_contact_last_activity_keyset CREATE INDEX idx_contact_last_activity_keyset ON public.contact USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_contact_merged_into CREATE INDEX idx_contact_merged_into ON public.contact USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)
 public.idx_contact_name_keyset CREATE INDEX idx_contact_name_keyset ON public.contact USING btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -5805,6 +5806,7 @@ public.idx_withdrawal_credential_contact CREATE INDEX idx_withdrawal_credential_
 public.idx_withdrawal_credential_lead CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.idx_withdrawal_credential_live CREATE INDEX idx_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope) WHERE (revoked_at IS NULL)
 public.idx_withdrawal_credential_purpose CREATE INDEX idx_withdrawal_credential_purpose ON public.withdrawal_credential USING btree (purpose_id)
+public.idx_workflow_run_failed_trigger CREATE INDEX idx_workflow_run_failed_trigger ON public.workflow_run USING btree (trigger_event) WHERE (status = 'failed'::text)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_record_map.external_id text NOT NULL gen=- def=-
@@ -8769,10 +8771,10 @@ public.system_log.system_log_pkey PRIMARY KEY (id)
 public.system_log.trg_system_log_no_mutate CREATE TRIGGER trg_system_log_no_mutate BEFORE DELETE OR UPDATE ON public.system_log FOR EACH ROW EXECUTE FUNCTION system_log_immutable()
 public.system_log_immutable() secdef=false cfg=- acl=- 
 BEGIN
-  IF TG_OP = 'UPDATE'
+  IF TG_OP = 'UPDATE' AND OLD.action = 'login'
      AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'
-     AND jsonb_typeof(NEW.detail->'email_hash') = 'string'
-     AND jsonb_typeof(NEW.detail->'email_key_id') = 'string'
+     AND NEW.detail->>'email_hash' ~ '^[0-9a-f]{64}$'
+     AND NEW.detail->>'email_key_id' ~ '^[0-9a-f]{16}$'
      AND (NEW.detail - ARRAY['email_hash','email_key_id']) = (OLD.detail - 'email_hash')
      AND (to_jsonb(NEW) - 'detail') = (to_jsonb(OLD) - 'detail') THEN
     RETURN NEW;

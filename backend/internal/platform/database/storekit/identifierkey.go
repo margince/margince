@@ -149,7 +149,8 @@ func RefuseForeignSuppressionKey(ctx context.Context, pool *pgxpool.Pool) error 
 	var foreign bool
 	if err := pool.QueryRow(ctx, `SELECT
 		EXISTS (SELECT 1 FROM erasure_suppression WHERE key_id IS NOT NULL AND key_id <> $1)
-		OR EXISTS (SELECT 1 FROM communication_suppression WHERE address_key_id IS NOT NULL AND address_key_id <> $1)`,
+		OR EXISTS (SELECT 1 FROM communication_suppression WHERE address_key_id IS NOT NULL AND address_key_id <> $1)
+		OR EXISTS (SELECT 1 FROM contact WHERE anonymized_address_key_id IS NOT NULL AND anonymized_address_key_id <> $1)`,
 		current).Scan(&foreign); err != nil {
 		return fmt.Errorf("store: checking which key hashed the erasure list: %w", err)
 	}
