@@ -44,9 +44,9 @@ var (
 		Vi: "Thư này thuộc về thương vụ nào?",
 	}
 	whichDealBody = langcopy.Phrase{
-		En: "Several open deals fit this mail, so Margince filed it on none of them. Open the mail and use Relink to put it on the right deal.",
-		De: "Mehrere offene Deals passen zu dieser Mail, deshalb hat Margince sie keinem zugeordnet. Öffnen Sie die Mail und ordnen Sie sie mit Neu verknüpfen dem richtigen Deal zu.",
-		Vi: "Nhiều thương vụ đang mở phù hợp với thư này, nên Margince chưa gắn thư vào thương vụ nào. Hãy mở thư và dùng Liên kết lại để gắn vào đúng thương vụ.",
+		En: "Several open deals fit this mail, so Margince filed it on none of them. Open the mail and use Relink to put it on the right deal, or choose None of these deals.",
+		De: "Mehrere offene Deals passen zu dieser Mail, deshalb hat Margince sie keinem zugeordnet. Öffnen Sie die Mail und ordnen Sie sie mit Neu verknüpfen dem richtigen Deal zu, oder wählen Sie Keiner dieser Deals.",
+		Vi: "Nhiều thương vụ đang mở phù hợp với thư này, nên Margince chưa gắn thư vào thương vụ nào. Hãy mở thư và dùng Liên kết lại để gắn vào đúng thương vụ, hoặc chọn Không thuộc deal nào.",
 	}
 )
 

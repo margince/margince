@@ -39,6 +39,7 @@ import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
 import type { useTaskUpdate } from "./taskwrite";
+import { WhichDealDecline } from "./whichdealdecline";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -420,6 +421,7 @@ function TaskDetailActions({
             update={update}
             showDuePicker
           />
+          <WhichDealDecline task={task} />
         </div>
       )}
       {canAct && (
