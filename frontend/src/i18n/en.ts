@@ -21198,6 +21198,7 @@ export const en = {
   "brief.done.undoChanges_other": "Undo {count} changes",
   "brief.done.viewChanges_one": "View {count} change",
   "brief.done.viewChanges_other": "View {count} changes",
+  "brief.done.showNew": "Show new changes",
   "brief.done.history": "View change history",
   "brief.done.dealsLabel": "Deals Margince changed",
   "brief.done.noReason": "Reason unavailable",

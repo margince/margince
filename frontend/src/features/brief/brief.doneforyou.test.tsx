@@ -251,7 +251,8 @@ it("reviews all by sending only the shown changes the server still allows", asyn
   });
 });
 
-it("claims no total when the server's count could not be read", async () => {
+it("says the changes did not load and retries both reads when the count fails", async () => {
+  let summaryReads = 0;
   stubApi({
     "GET /me": () =>
       jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
@@ -261,14 +262,20 @@ it("claims no total when the server's count could not be read", async () => {
         truncated: false,
         receipts: [change(1)],
       }),
-    "GET /deal-corrections/pending": () =>
-      jsonResponse({ title: "unavailable" }, 503),
+    "GET /deal-corrections/pending": () => {
+      summaryReads += 1;
+      return jsonResponse({ title: "unavailable" }, 503);
+    },
   });
+  const user = userEvent.setup();
   render(<DoneForYou completed={null} />);
-  expect(
-    await screen.findByRole("heading", { name: en["brief.done.dealsLabel"] }),
-  ).toBeTruthy();
+  const retry = await screen.findByRole("button", { name: en["state.retry"] });
+  // No partial list stands in for the one the server could not count.
+  expect(screen.queryByText("reason 1.0")).toBeNull();
   expect(screen.queryByText(/wait.? for your review/)).toBeNull();
+  const before = summaryReads;
+  await user.click(retry);
+  await waitFor(() => expect(summaryReads).toBeGreaterThan(before));
 });
 
 it("names each deal a review-all left partly undone, linked to it", async () => {
@@ -317,4 +324,26 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
   });
   const links = within(list).getAllByRole("link");
   expect(links.map((link) => link.textContent)).toEqual(["Deal 1"]);
+});
+
+it("keeps the drawer's list and its Undo together until the reader asks for new changes", async () => {
+  const receipts = [change(1), change(2)];
+  const bundles = [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])];
+  routes(receipts, bundles);
+  const user = userEvent.setup();
+  const { client } = render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Review all 2 deals" }),
+  );
+  const drawer = await screen.findByRole("dialog");
+  // A third change lands while the drawer is open.
+  receipts.push(change(3));
+  bundles.push(bundle(3, [auditId(3)]));
+  await client.invalidateQueries();
+  const showNew = await within(drawer).findByRole("button", {
+    name: en["brief.done.showNew"],
+  });
+  expect(within(drawer).queryByText("reason 3.0")).toBeNull();
+  await user.click(showNew);
+  expect(await within(drawer).findByText("reason 3.0")).toBeTruthy();
 });

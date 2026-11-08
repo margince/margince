@@ -249,3 +249,17 @@ it("separates the next meeting's people with one comma each", () => {
   expect(row?.textContent).toContain("Anna Weber, Ben Ortiz, Rita Rep");
   expect(row?.textContent).not.toMatch(/,\s*,|,\s*$/);
 });
+
+it("opens today's meeting from its title, not the record it is about", () => {
+  const opened: string[] = [];
+  const day = readingsDay({}, [meetingRow("m-today", true)]);
+  draw(
+    <SchedulePanel
+      day={day}
+      state="ready"
+      onOpenMeeting={(id) => opened.push(id)}
+    />,
+  );
+  screen.getByRole("button", { name: /Weber GmbH · quarterly review/ }).click();
+  expect(opened).toEqual(["m-today"]);
+});

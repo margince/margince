@@ -21449,6 +21449,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.undoChanges_other": "{count} Änderungen rückgängig machen",
   "brief.done.viewChanges_one": "{count} Änderung ansehen",
   "brief.done.viewChanges_other": "{count} Änderungen ansehen",
+  "brief.done.showNew": "Neue Änderungen zeigen",
   "brief.done.history": "Änderungsverlauf ansehen",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
   "brief.done.noReason": "Grund nicht verfügbar",

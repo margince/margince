@@ -120,7 +120,7 @@ export function SchedulePanel({
                   reading as a schedule rather than as a list of sentences. */}
             <span className="rail-schedule-dot" aria-hidden="true" />
             <span className="rail-schedule-what">
-              <Title item={item} />
+              <Title item={item} onOpenMeeting={onOpenMeeting} />
               {isUnprepared(item) && (
                 <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
               )}
@@ -263,10 +263,21 @@ function NextMeetingRow({
 }
 
 /** The row's own words, linked where the row names a record. */
-function Title({ item }: Readonly<{ item: WorklistItem }>) {
+function Title({
+  item,
+  onOpenMeeting,
+}: Readonly<{ item: WorklistItem; onOpenMeeting?: (id: string) => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const title = itemTitle(item, t, locale);
+  // A meeting row's title opens the meeting itself; its record is a click on.
+  if (item.source === MEETING && onOpenMeeting) {
+    return (
+      <Button variant="link" onClick={() => onOpenMeeting(item.id)}>
+        {title}
+      </Button>
+    );
+  }
   const href = rowHref(item) ?? (item.move ? moveHref(item) : undefined);
   return href ? (
     <AppLink className="entity-link t-body" href={href}>

@@ -20888,6 +20888,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.undoChanges_other": "Hoàn tác {count} thay đổi",
   "brief.done.viewChanges_one": "Xem {count} thay đổi",
   "brief.done.viewChanges_other": "Xem {count} thay đổi",
+  "brief.done.showNew": "Hiện các thay đổi mới",
   "brief.done.history": "Xem lịch sử thay đổi",
   "brief.done.dealsLabel": "Các giao dịch Margince đã thay đổi",
   "brief.done.noReason": "Không có lý do",

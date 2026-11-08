@@ -168,19 +168,16 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   const { locale } = useLocale();
   const titleId = useId();
   const handled = useHandledForYou();
-  const pending = usePendingMarginceChanges().data;
+  const summary = usePendingMarginceChanges();
+  const pending = summary.data;
   const magic = useMagic();
   const [settled, setSettled] = useState<ReadonlySet<string>>(new Set());
   const settle = (id: string) => setSettled((last) => new Set([...last, id]));
   const receipts = handled.data?.receipts;
   const groups = dealChanges(receipts, settled, pending?.bundles);
-  // The server's summary decides what waits; without it the receipts read so
-  // far are all there is, and their count is no total.
-  const state = pending
-    ? groups.length > 0
-      ? "ready"
-      : "empty"
-    : listReadState(handled, receipts ? groups : undefined);
+  // The server's summary decides what waits, so its own read is the panel's
+  // state: a failed summary is a failed panel, never a quieter list.
+  const state = listReadState(summary, pending ? groups : undefined);
   const doneLines = rowsOf(magic.data?.done).length > 0;
   if (
     state === "loading" ||
@@ -211,7 +208,12 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
               state={state}
               emptyLabel=""
               loadingLabel={t("worklist.handled.loading")}
-              detail={{ onRetry: () => void handled.refetch() }}
+              detail={{
+                onRetry: () => {
+                  void summary.refetch();
+                  void handled.refetch();
+                },
+              }}
             >
               <DealChangeList
                 groups={groups.slice(0, DONE_PREVIEW_DEALS)}
@@ -255,14 +257,17 @@ function ReviewAll({
   handled: ReturnType<typeof useHandledForYou>;
   onSettled: (id: string) => void;
 }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const titleId = useId();
   const triggerId = useId();
   const [open, setOpen] = useState(false);
-  // The deals on screen when the drawer opened. A deal that arrives later is
-  // drawn but never taken back by the Undo below unless it is opened again.
+  // The deals and the Undo frozen together when the drawer opened, so the
+  // list drawn is the list the Undo sends. New changes wait for the reader's
+  // own refresh.
   const [chosen, setChosen] = useState<readonly MarginceChangeBundle[]>([]);
+  const [shown, setShown] = useState<readonly DealChanges[]>([]);
   // Each deal's Undo names only the changes this list shows and the server
   // still allows, frozen when the drawer opens.
   const bundles = groups.flatMap((group) => {
@@ -281,6 +286,7 @@ function ReviewAll({
         variant="link"
         onClick={() => {
           setChosen(bundles);
+          setShown(groups);
           setOpen(true);
         }}
       >
@@ -300,8 +306,19 @@ function ReviewAll({
             </Heading>
           </DrawerHead>
           <DrawerBody>
+            {changedSince(shown, groups) && (
+              <Button
+                variant="link"
+                onClick={() => {
+                  setChosen(bundles);
+                  setShown(groups);
+                }}
+              >
+                {t("brief.done.showNew")}
+              </Button>
+            )}
             <DealChangeList
-              groups={groups}
+              groups={shown}
               pending={pending}
               asOf={asOf}
               onSettled={onSettled}
@@ -472,4 +489,17 @@ function changeWhen(
     sameCalendarDay(new Date(iso), new Date(asOf), zone)
     ? formatTimeOfDay(iso, locale, zone)
     : formatDayMonth(iso, locale, zone);
+}
+
+// Whether the live list holds changes the frozen one does not, or lost some.
+function changedSince(
+  shown: readonly DealChanges[],
+  live: readonly DealChanges[],
+): boolean {
+  const ids = (groups: readonly DealChanges[]) =>
+    groups
+      .flatMap((group) => group.receipts.map((receipt) => receipt.id))
+      .sort()
+      .join(",");
+  return ids(shown) !== ids(live);
 }
