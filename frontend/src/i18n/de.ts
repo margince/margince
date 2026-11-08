@@ -5,6 +5,8 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
   "homeRepair.reason.taskChanged":
     "Die Aufgabe wurde während der Vorschau geändert. Erstelle die Vorschau erneut.",
   "homeRepair.normalize": "Quelle oder erzeugtes Datum berichtigen",
@@ -1631,7 +1633,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.left_pipeline": "Andere Pipeline",
   "reporting.cohortOutcome.unresolved": "Noch offen",
   "reporting.cohortOutcome.history_partial":
-    "Nächster Wechsel importiert oder unbekannt",
+    "Nächster Wechsel importiert, synchronisiert oder unbekannt",
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",
@@ -1640,7 +1642,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortStillOpenNote":
     "Noch offen heißt: beim Abruf dieser Zahlen gab es noch kein Ergebnis. Diese zählen nicht als verloren und fließen nicht in die Quote ein.",
   "reporting.cohortPartialNote":
-    "Nächster Wechsel importiert oder unbekannt heißt: Der Deal hat die Phase durch einen Wechsel verlassen, den ein Import mitgebracht hat, oder durch einen Wechsel, der gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat. Diese fließen nicht in die Quote ein.",
+    "Nächster Wechsel importiert, synchronisiert oder unbekannt heißt: Der Deal hat die Phase durch einen Wechsel verlassen, den ein Import mitgebracht oder ein anderes CRM synchronisiert hat, oder durch einen Wechsel, der gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat. Diese fließen nicht in die Quote ein.",
   "reporting.cohortStageDaysNote":
     "Die Tage neben einem Ergebnis sind die mittlere Zeit, die ein Deal davor in der Phase war. Die Tage neben Noch offen sind die mittlere Zeit in der Phase bis jetzt.",
   "reporting.cohortLeadDaysNote":
@@ -2854,6 +2856,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.help.resources": "Hilfe und Ressourcen",
   "shell.help.shortcuts": "Tastenkürzel",
   "shell.help.releaseNotes": "Versionshinweise",
+  "shell.help.licenses": "Lizenzen der Web-App",
   "shell.help.devBuild": "Entwicklungs-Build",
   "shell.shortcuts.anywhere": "Überall",
   "shell.shortcuts.search": "Suche öffnen",
@@ -6633,6 +6636,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
+  "brief.pager.label": "Aufgaben",
+  "brief.pager.previous": "Vorherige Aufgabe",
+  "brief.pager.next": "Nächste Aufgabe",
+  "brief.pager.hint":
+    "Nach links oder rechts wischen, um Aufgaben anzusehen. Auf den Navigationsschaltflächen funktionieren auch die Pfeiltasten.",
   "brief.first.title": "Braucht dich",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
@@ -7881,6 +7889,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.complete": "Erledigt",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
+  "tasks.log.action": "Ergebnis erfassen",
+  "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
+  "tasks.log.chooseRecord": "Anderen Datensatz wählen",
+  "tasks.log.leftOpen":
+    "Die Aktivität wurde erfasst. Die Aufgabe bleibt offen, bis alle Dateien angehängt sind. Versuche es erneut.",
+  "tasks.log.markDone": "Aufgabe erledigen",
   "tasks.detail": "Aufgabe",
   "tasks.sourceEmail": "Ursprungs-E-Mail",
   "tasks.openSource": "Original öffnen",
@@ -11465,24 +11479,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "heldThreads.statusFilter": "Status",
   "heldThreads.statusAll": "Jeder Status",
   "heldThreads.noMatch": "Kein zurückgehaltener Thread passt.",
-  "heldThreads.showMore": "Mehr anzeigen",
   "heldThreads.count.pending": "zur Einstufung ausstehend",
   "heldThreads.count.unsure": "unklar",
   "heldThreads.count.held": "zurückgehalten",
   "heldThreads.count.heldByOwner": "von dir zurückgehalten",
-  "heldThreads.title": "Zurückgehaltene Threads",
+  "heldThreads.reasonFilter": "Grund",
+  "heldThreads.anyReason": "Alle Gründe",
+  "heldThreads.from": "Von Datum",
+  "heldThreads.to": "Bis Datum",
+  "heldThreads.browse": "Neueste Unterhaltungen ansehen",
+  "heldThreads.preview": "Ansehen und Freigabe ändern",
+  "heldThreads.loadMore": "Mehr laden",
+  "senders.search": "Adresse, Name oder Domain suchen",
+  "senders.decisionFilter": "Entscheidung",
+  "senders.allDecisions": "Alle Entscheidungen",
+  "senders.myOverrides": "Meine Vorgaben",
+  "senders.browse": "Neueste E-Mail-Adressen ansehen",
+  "heldThreads.title": "Nicht mit dem Team geteilte E-Mails",
   "heldThreads.sub":
-    "Threads, die dein Postfach zurückhält. Gibst du einen Thread frei, können alle Teammitglieder ihn lesen. Nur du kannst deine Threads freigeben.",
-  "heldThreads.empty": "Dein Postfach hält keine Threads zurück.",
+    "Margince teilt diese Unterhaltungen nicht mit dem Team. Du musst nichts tun. Suche hier, wenn eine Unterhaltung in der Teamansicht fehlt.",
   "heldThreads.colThread": "Thread",
-  "heldThreads.colParties": "Beteiligte",
   "heldThreads.colWhy": "Grund",
   "heldThreads.colWhen": "Eingegangen",
-  "heldThreads.release": "Mit dem Team teilen",
-  "heldThreads.released": "Mit dem Team geteilt",
-  "heldThreads.noSubject": "Erste Nachricht gelöscht",
-  "heldThreads.nothingToShare":
-    "Keine Nachricht mehr zum Teilen. Die erste Nachricht wurde gelöscht, und der Thread bleibt zurückgehalten, damit eine spätere Antwort nicht geteilt eintrifft.",
   "heldThreads.pending": "Wartet auf Einstufung",
   "heldThreads.attempts_one": "{count}-mal angefragt",
   "heldThreads.attempts_other": "{count}-mal angefragt",
@@ -11490,12 +11508,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für {count} Thread kam auf wiederholte Anfragen keine Antwort. Es geht nichts verloren. Die E-Mails bleiben zurückgehalten, bis der Klassifikator wieder antwortet.",
   "heldThreads.backlogStalled_other":
     "Für {count} Threads kam auf wiederholte Anfragen keine Antwort. Es geht nichts verloren. Die E-Mails bleiben zurückgehalten, bis der Klassifikator wieder antwortet.",
-  "heldThreads.heldByOthers_one":
-    "{count} weiteres Postfach hat diese Nachricht importiert und nicht geteilt. Ein Thread wird erst geöffnet, wenn alle Empfangenden zustimmen.",
-  "heldThreads.heldByOthers_other":
-    "{count} weitere Postfächer haben diese Nachricht importiert und nicht geteilt. Ein Thread wird erst geöffnet, wenn alle Empfangenden zustimmen.",
-  "heldThreads.releaseFailed": "Der Thread wurde nicht geteilt",
-  "heldThreads.stillHeldTitle": "Wartet auf andere Postfächer",
   "heldThreads.backlogStalledTitle": "Klassifikator antwortet nicht",
   "heldThreads.kind.legal": "Rechtliches",
   "heldThreads.kind.financialCorporate": "Unternehmensfinanzen",
@@ -11507,9 +11519,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "heldThreads.kind.other": "Anderer Grund",
   "heldThreads.moreParticipants_one": "+{count} weitere",
   "heldThreads.moreParticipants_other": "+{count} weitere",
-  "senders.title": "Absendeadressen",
+  "senders.title": "Einstufung von E-Mail-Adressen",
   "senders.sub":
-    "Die Entscheidung zu jeder Adresse, die über dein Postfach eingegangen ist, und deine eigene Antwort, sofern gegeben. Nur du siehst diese Liste.",
+    "Margince sortiert E-Mail-Adressen automatisch. Suche hier, um eine Entscheidung zu korrigieren oder deine Ausnahme zu entfernen. Es besteht kein Handlungsbedarf.",
   "senders.emptyBody":
     "Sobald E-Mails in deinem Postfach eingehen, erscheint hier jede Absendeadresse mit ihrem Ergebnis.",
   "senders.colSender": "Absendeadresse",
@@ -20307,6 +20319,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.acceptNeedsChoice":
     "Verfügbar, sobald unter Kalender ein Kalender für Buchungen gespeichert ist.",
   "scheduling.col.link": "Link",
+  "scheduling.offeredLengths": "Weitere Besprechungsdauern",
+  "scheduling.offeredLengthsHelp":
+    "Minuten durch Kommas trennen, zum Beispiel 30, 45, 60. Die Standarddauer bleibt verfügbar.",
   "scheduling.col.length": "Dauer",
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Aktionen",

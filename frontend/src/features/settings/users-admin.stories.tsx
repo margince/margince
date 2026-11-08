@@ -141,8 +141,8 @@ const ENTITY_ROUTES = {
   "GET /legal-entities": () =>
     jsonResponse({
       data: [
-        { id: "le-default", is_default: true, display_name: "Brandt" },
-        { id: "le-vienna", is_default: false, display_name: "Brandt Wien" },
+        { id: "le-default", is_default: true, display_name: "Example Germany" },
+        { id: "le-vienna", is_default: false, display_name: "Example Vietnam" },
       ].map((entity) => ({
         ...entity,
         address: {},
@@ -358,6 +358,25 @@ export const RowMenuOpen: Story = {
 export const TwoLegalEntities: Story = {
   render: story(
     roster(ROSTER),
+    {
+      roles: ["admin"],
+      allow: {
+        user_admin: ["read", "create", "update", "delete"],
+        legal_entity: ["read", "update"],
+      },
+    },
+    false,
+    ENTITY_ROUTES,
+  ),
+};
+
+export const LongLabelsAndDeactivatedMember: Story = {
+  render: story(
+    roster([
+      LARS,
+      { ...LONG, roles: ["ops"] },
+      { ...RETIRED, team_ids: TEAMS.map((team) => team.id) },
+    ]),
     {
       roles: ["admin"],
       allow: {

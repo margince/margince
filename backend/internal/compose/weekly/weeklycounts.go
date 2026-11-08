@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -262,7 +263,7 @@ func countWeekMeetings(
 	// so it reads the history as it stands. An assembly clock behind the
 	// database's would otherwise miss a transition and fall back to the date
 	// somebody edited the meeting to.
-	transition := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz")
+	transition := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz", activities.ReversedCancellationSQL)
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
 		return 0, 0, err

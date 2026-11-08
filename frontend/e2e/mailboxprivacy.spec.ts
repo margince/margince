@@ -119,7 +119,12 @@ async function openSenders(page: Page) {
       ),
     })
     .click();
-  return page.getByRole("dialog", { name: de["senders.title"] });
+  const drawer = page.getByRole("dialog", { name: de["senders.title"] });
+  await expect(
+    drawer.getByRole("searchbox", { name: de["senders.search"] }),
+  ).toBeVisible();
+  await drawer.getByRole("button", { name: de["senders.browse"] }).click();
+  return drawer;
 }
 
 // A sender's verbs sit in its row's menu, named by the address.

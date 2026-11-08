@@ -204,7 +204,7 @@ func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Conte
 	if leads == nil {
 		leads = []ids.UUID{}
 	}
-	args := pgx.StrictNamedArgs{"contact_id": contactID, "leads": leads}
+	args := pgx.StrictNamedArgs{"contact_id": contactID, leadsParameter: leads}
 	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, args); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list history: %w", err)
 	}
@@ -335,9 +335,9 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	}
 	for _, email := range emails {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)
-			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email)); err != nil {
+			INSERT INTO erasure_suppression (kind, value_hash, key_id)
+			VALUES ('email', $1, $2)
+			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email), storekit.SuppressionKeyID()); err != nil {
 			return 0, 0, err
 		}
 	}

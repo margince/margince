@@ -69,8 +69,9 @@ type Store struct {
 	// default: a role that transmits without one files every sent message
 	// under an identity that exists nowhere on the wire, and duplicates it on
 	// the timeline, silently.
-	identity       MessageIdentityReconciler
-	partyAdmission func(context.Context, ids.ActivityID) error
+	identity        MessageIdentityReconciler
+	partyAdmission  func(context.Context, ids.ActivityID) error
+	partySettlement func(context.Context, pgx.Tx, ids.ActivityID) error
 	// bounce is told when a delivery dies permanently, so the module owning
 	// communication policy can stop writing to the address. An OPTION rather
 	// than a required parameter, unlike identity beside it: a store without one

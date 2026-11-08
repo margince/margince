@@ -9,7 +9,7 @@ expects these papers before a company reads the mailboxes of its own team, and
 holding them is your company's duty.
 
 What Margince gives you is a way to check what the papers describe. The AI
-egress reference says what leaves your installation. The Senders card says what
+egress reference says what leaves your installation. The Sender decisions card says what
 was decided, and the audit log says who read what.
 
 ### How do I make Margince GDPR compliant before connecting mailboxes?
@@ -88,7 +88,7 @@ passing around inside the company; the German versions are the ones to sign.
 | --- | --- |
 | Does mail leave the company's systems? | The AI egress reference, which lists every AI task and whether its text can leave your installation |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
-| What was decided about the senders who write to me? | Settings → Connections → Activity → Senders, per seat |
+| What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
 | Can a manager see each colleague's sales figures? | Not in reports and forecasts while **Show individual performance** is off. Each member sees their own figures. The compliance answer above lists what the switch does not cover |

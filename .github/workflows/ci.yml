@@ -246,6 +246,7 @@ jobs:
               - 'SECURITY.md'
               - 'SUPPORT.md'
             frontend:
+              - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
@@ -359,6 +360,10 @@ jobs:
               # Its corpus is the build's own package list, so a dependency
               # change can add a binary without either file being touched; the
               # `deps` filter below covers that side.
+              - 'third-party-files.txt'
+              - 'scripts/third_party_files.py'
+              - 'scripts/third-party-files.sh'
+              - 'scripts/test-third-party-files.sh'
               - 'embedded-binaries.txt'
               - 'scripts/embedded-binary-licenses.sh'
               - 'scripts/test-embedded-binary-licenses.sh'
@@ -870,6 +875,12 @@ jobs:
         run: make embedded-binary-licenses
       - name: the embedded-binary check still refuses each way
         run: make test-embedded-binary-licenses
+      # The backend lane runs this too, but a change to third-party-files.txt
+      # alone does not start it, and only this check reads the allowed licences.
+      - name: every copied file declares provenance and an allowed licence
+        run: make third-party-files
+      - name: the copied-file check still refuses each way
+        run: make test-third-party-files
       # syft and grant run through digest-pinned Docker images (see the Makefile),
       # so the runner needs only Docker — pre-installed on ubuntu-latest.
       # One step, because the retry has to wrap BOTH: `.syft.yaml` sets

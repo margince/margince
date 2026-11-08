@@ -385,7 +385,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -395,6 +395,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
+| `provider_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
 | `provider_received_at` | `timestamp with time zone` |  |  |
 | `source_occurred_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -420,6 +421,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_import_activity_user_key`: `unique, btree (activity_id, user_id)`
 - `capture_import_pkey`: `unique, btree (id)`
 - `capture_import_user_idx`: `btree (user_id, activity_id)`
+- `idx_capture_import_provider_messages`: `gin (provider_message_ids)`
 
 **Triggers**
 

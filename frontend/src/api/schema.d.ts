@@ -7038,7 +7038,10 @@ export interface paths {
     };
     "/public/booking/{host_slug}/profile": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                l?: number;
+            };
             header?: never;
             path: {
                 host_slug: string;
@@ -7394,7 +7397,10 @@ export interface paths {
     };
     "/public/booking/{host_slug}/availability": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                l?: number;
+            };
             header?: never;
             path: {
                 /** @description The host's unguessable public booking slug (not the user uuid). */
@@ -7418,7 +7424,10 @@ export interface paths {
     };
     "/public/booking/{host_slug}": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                l?: number;
+            };
             header?: never;
             path: {
                 host_slug: string;
@@ -25679,8 +25688,8 @@ export interface components {
             /**
              * @description Let the forecast correct itself. On by default. On, each open stage's chance moves
              *     toward the outcomes of deals recorded entering it in the last two years, weighted
-             *     against the typed chance as if that were 20 deals; imported and older moves without
-             *     a recorded origin count for nothing. A risk signal changes a deal's weight only
+             *     against the typed chance as if that were 20 deals; imported, synced and older moves
+             *     without a recorded origin count for nothing. A risk signal changes a deal's weight only
              *     after settled frozen forecasts show its effect. Off, every forecast surface weights
              *     a deal by its stage's typed chance.
              */
@@ -27771,6 +27780,8 @@ export interface components {
             captured_at: string;
         };
         CaptureSenderListResponse: {
+            next_cursor?: string;
+            total?: number;
             data: components["schemas"]["CaptureSenderDecision"][];
         };
         /** @description One sender your mailbox produced, and what became of them. */
@@ -39599,6 +39610,8 @@ export interface components {
             calendar_id: string;
             blocking_calendars?: string[];
             duration_minutes: number;
+            /** @description Additional meeting lengths offered by this host. The default duration is always offered. */
+            offered_lengths?: number[];
             notice_minutes: number;
             horizon_days: number;
             buffer_minutes: number;
@@ -40245,7 +40258,7 @@ export interface components {
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
              * Format: uuid
-             * @description The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+             * @description For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
              */
             source_activity_id?: string;
             /** @description Meeting, call or note only. Create this task and its source activity in one transaction. The task inherits the source links and audience. Replaying a source identity returns the original activity without adding another task. */
@@ -44682,9 +44695,9 @@ export interface components {
              *     instant. Every member is in exactly one outcome, so the counts add
              *     up to `observations`. `unresolved` members have not reached an
              *     outcome yet and are never counted as lost; `history_partial`
-             *     members left by a move an import brought in, which does not show
-             *     how the team sells, or by a move recorded before Margince kept the
-             *     stage order, so its direction is unknown.
+             *     members left by a move an import brought in or another CRM synced
+             *     in, which does not show how the team sells, or by a move recorded
+             *     before Margince kept the stage order, so its direction is unknown.
              */
             outcomes?: components["schemas"]["ReportingCohortCount"][];
             /**
@@ -54159,7 +54172,8 @@ export interface components {
          * @description One stage where the rep converts differently from the team. Entries and conversions are
          *     attributed to the owner at the time of each move. "Converted" is a later move to a won
          *     stage or to a later stage, compared by the stage order as it was configured when the
-         *     week was assembled. Moves an import brought in neither enter nor convert a deal.
+         *     week was assembled. Moves an import brought in or another CRM synced in neither enter nor
+         *     convert a deal.
          */
         TeamWeeklyFunnelDeviation: {
             /** Format: uuid */
@@ -69823,7 +69837,10 @@ export interface operations {
     };
     getPublicSchedulingProfile: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                l?: number;
+            };
             header?: never;
             path: {
                 host_slug: string;
@@ -69841,6 +69858,7 @@ export interface operations {
                     "application/json": components["schemas"]["PublicSchedulingProfile"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description The operation could not be completed. */
             default: {
                 headers: {
@@ -70689,6 +70707,8 @@ export interface operations {
     getPublicAvailability: {
         parameters: {
             query: {
+                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                l?: number;
                 from: string;
                 to: string;
                 duration_minutes?: number;
@@ -70733,7 +70753,10 @@ export interface operations {
     };
     bookPublicMeeting: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                l?: number;
+            };
             header?: {
                 /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -79094,6 +79117,9 @@ export interface operations {
                 status?: "pending" | "unsure" | "held" | "held_by_owner";
                 /** @description Only the threads with this contact. A contact you may not read, or one that is archived, answers 404. */
                 contact_id?: string;
+                from?: string;
+                to?: string;
+                reason?: string;
             };
             header?: never;
             path?: never;
@@ -79118,7 +79144,14 @@ export interface operations {
     };
     listCaptureSenders: {
         parameters: {
-            query?: never;
+            query?: {
+                q?: string;
+                decision?: string;
+                overrides?: boolean;
+                cursor?: string;
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -79136,6 +79169,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listCaptureContactsAwaitingDecision: {

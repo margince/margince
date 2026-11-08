@@ -1582,7 +1582,7 @@
       "default": "20s"
     },
     "keyvault_root_key": {
-      "description": "Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault.",
+      "description": "Standard Base64 of the 32-byte root key that seals connector credentials and keys the erasure list and preference links; unset disables the vault.",
       "type": [
         "string",
         "null"

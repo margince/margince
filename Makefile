@@ -33,7 +33,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes test-release-bundle embedded-binary-licenses \
+  test-release-notes test-release-bundle embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
@@ -1765,8 +1765,7 @@ sbom:
 ## lives in sbom-schemas/license-supplement.json (key = purl without version,
 ## so every pinned action version matches — and that directory is in the
 ## license gate's classifier scope, so editing the map re-runs the gate); it
-## sets the license on the CycloneDX doc the gate reads and on the SPDX 2.2 doc,
-## and leaves the SPDX 3.0 doc as syft wrote it. SonarSource's action is left
+## sets the license in all three documents. SonarSource's action is left
 ## unset on purpose — it is LGPL-3.0-only and ignored in .grant.yaml, not shipped.
 ## Idempotent; keep the map in step with the workflows and the SPDX-tools deps.
 sbom-supplement:
@@ -1776,6 +1775,7 @@ sbom-supplement:
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .components |= map(((.purl // "") | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then .licenses = [{"license": {"id": $$map[$$k]}}] else . end)' "$$cdx" > "$$cdx.tmp" && mv "$$cdx.tmp" "$$cdx"; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22" ; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json -f sbom-schemas/spdx30-licenses.jq "$$s30" > "$$s30.tmp" && mv "$$s30.tmp" "$$s30"
+	@python3 scripts/third_party_files.py supplement $(SBOM_DIR) third-party-files.txt
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
 ## tree, the invariant the constellation dist gate enforces. syft scans the export
@@ -1957,3 +1957,13 @@ SBOM_GATE_ATTEMPTS ?= 3
 ## into the answer the network would have given.
 sbom-gate:
 	@set -e; 	  for attempt in $$(seq 1 $(SBOM_GATE_ATTEMPTS)); do 	    echo "license gate: attempt $$attempt of $(SBOM_GATE_ATTEMPTS)"; 	    $(MAKE) sbom >/dev/null; 	    if $(MAKE) sbom-check; then exit 0; fi; 	    if [ "$$attempt" -eq "$(SBOM_GATE_ATTEMPTS)" ]; then 	      echo "license gate: denied on every one of $(SBOM_GATE_ATTEMPTS) attempts — this is a licence, not a lookup"; 	      exit 1; 	    fi; 	    echo "license gate: retrying — a denial that moves between runs is a failed registry lookup, not a missing licence"; 	  done
+
+.PHONY: third-party-files test-third-party-files
+
+## third-party-files — require provenance and licence text for copied third-party files.
+third-party-files:
+	@bash scripts/third-party-files.sh
+
+## test-third-party-files — prove missing provenance and copied-file SBOM drift fail.
+test-third-party-files:
+	@bash scripts/test-third-party-files.sh

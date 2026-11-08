@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // identityOf names the external identity a create states, if it states one.
@@ -51,7 +53,9 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	if key == "" {
 		return crmcontracts.Activity{}, false, nil
 	}
-	incumbent, found, err := ResolveBindableIdentity(ctx, tx, kind, key)
+	stated := append([]string{in.EmailFrom}, in.EmailTo...)
+	stated = append(stated, in.EmailCc...)
+	incumbent, found, err := bindableIdentityUnder(ctx, tx, kind, key, in.identityProver, stated)
 	if err != nil || !found {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -101,6 +105,13 @@ func recognizedMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crm
 	if err != nil || !found {
 		return crmcontracts.Activity{}, false, err
 	}
+	if err := attachImportedIdentityLinks(ctx, tx, bound, in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	bound, err = readActivityAt(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(bound.Id)), storekit.LiveOnly, orWallClock(in.recordedAt))
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	moved, err := replayMovedTheMeeting(ctx, tx, bound, in)
 	return moved, true, err
 }
@@ -139,4 +150,61 @@ func sameKindAs(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, kind s
 		return false, err
 	}
 	return have == kind, nil
+}
+
+func attachImportedIdentityLinks(ctx context.Context, tx pgx.Tx, bound crmcontracts.Activity, in LogActivityInput) error {
+	var missing []ActivityLinkInput
+	for _, link := range in.Links {
+		if bound.Links != nil && slices.ContainsFunc(*bound.Links, func(existing crmcontracts.ActivityLink) bool {
+			return string(existing.EntityType) == link.EntityType && ids.UUID(existing.EntityId) == link.EntityID
+		}) {
+			continue
+		}
+		if err := mayAttach(ctx, tx, link); err != nil {
+			return err
+		}
+		if err := CheckActivityLinkKind(in.Kind, link); err != nil {
+			return err
+		}
+		missing = append(missing, link)
+	}
+	// Ownership was proved before binding; each destination still needs the importer's attach authority.
+	binding := principal.SystemActing(ctx, "system:import-identity-links")
+	for _, link := range missing {
+		if _, err := RelinkActivityInTx(binding, tx, ids.From[ids.ActivityKind](ids.UUID(bound.Id)), RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func importNamesIncumbentSeat(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, proved AddressProver, incoming []string) (bool, error) {
+	if proved == nil {
+		return false, nil
+	}
+	var stamp string
+	args := schedulingArgs{}
+	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE archived_at IS NULL AND restricted_at IS NULL AND id=`+args.add(incumbent), args...).Scan(&stamp); errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	human := actingHumanOf(stamp)
+	if human == "" {
+		return false, nil
+	}
+	seat, err := ids.Parse(human)
+	if err != nil {
+		return false, err
+	}
+	for _, address := range incoming {
+		owned, err := proved(ctx, tx, seat, address)
+		if err != nil {
+			return false, err
+		}
+		if owned {
+			return true, nil
+		}
+	}
+	return false, nil
 }

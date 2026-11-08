@@ -253,13 +253,14 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_suppression
 
-15 columns · primary key `(id)` · referenced by 1 foreign key
+16 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `address` | `text` |  |  |
 | `address_hash` | `text` |  |  |
+| `address_key_id` | `text` |  |  |
 | `carried_from` | `uuid` |  | Points at `communication_suppression.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `decided_by_level` | `text` | yes | One of `machine`, `user`, `admin`, `subject`. |
@@ -761,7 +762,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## preference_token
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -771,7 +772,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `revoked_reason` | `text` |  | One of `rotated`, `expired`, `erasure`, `compromise`, `merged_predecessor`, `merged_into_survivor`. |
-| `token` | `text` | yes |  |
+| `token` | `text` |  |  |
+| `token_hash` | `text` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -792,6 +794,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `idx_preference_token_contact`: `btree (contact_id)`
 - `preference_token_contact_email_ix`: `btree (contact_email_id) WHERE (contact_email_id IS NOT NULL)`
 - `preference_token_pkey`: `unique, btree (id)`
+- `preference_token_token_hash_key`: `unique, btree (token_hash) WHERE (token_hash IS NOT NULL)`
 - `preference_token_token_key`: `unique, btree (token)`
 - `uq_preference_token_contact_address`: `unique, btree (contact_id, contact_email_id) NULLS NOT DISTINCT WHERE (revoked_at IS NULL)`
 

@@ -242,7 +242,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `graph_tenant` | `MARGINCE_GRAPH_TENANT` | `--graph-tenant` | `string` | — | api, worker | Microsoft identity tenant of the capture consent endpoint and token refresh; unset means common. |
 | `inline_relay` | `MARGINCE_INLINE_RELAY` | `--inline-relay` | `bool` | `true` | api | Run the outbox relay in this process; false when cmd/worker runs it. |
 | `job_drain_window` | `MARGINCE_JOB_DRAIN_WINDOW` | `--job-drain-window` | `duration` | `20s` | worker | How long a running job gets to finish at shutdown; the grace period must cover it, five more seconds and the shutdown steps. |
-| `keyvault_root_key` | `MARGINCE_KEYVAULT_ROOT_KEY` | — | `string`, secret | — | api, worker | Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault. |
+| `keyvault_root_key` | `MARGINCE_KEYVAULT_ROOT_KEY` | — | `string`, secret | — | api, migrate, worker | Standard Base64 of the 32-byte root key that seals connector credentials and keys the erasure list and preference links; unset disables the vault. |
 | `log_format` | `MARGINCE_LOG_FORMAT` | `--log-format` | `enum(text\|json)` | `text` | api, worker | Log format. |
 | `log_level` | `MARGINCE_LOG_LEVEL` | `--log-level` | `enum(debug\|info\|warn\|error)` | `info` | api, worker | Log level. |
 | `mcp_apps_base_url` | `MARGINCE_MCP_APPS_BASE_URL` | `--mcp-apps-base-url` | `string` | — | api | Origin the api reads the MCP App view documents from; defaults to `--public-base-url`. |

@@ -116,8 +116,22 @@ export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
           bleed
           fold
           label={t("scheduling.linksTitle")}
-          rows={[profile]}
-          rowKey={(row) => row.slug ?? ""}
+          rows={[
+            ...new Set([
+              profile.duration_minutes,
+              ...(profile.offered_lengths ?? []),
+            ]),
+          ].map((minutes) => ({
+            ...profile,
+            duration_minutes: minutes,
+            public_url:
+              minutes === profile.duration_minutes
+                ? profile.public_url
+                : profile.public_url
+                  ? `${profile.public_url}?l=${minutes}`
+                  : undefined,
+          }))}
+          rowKey={(row) => `${row.slug}-${row.duration_minutes}`}
           columns={[
             {
               key: "link",
