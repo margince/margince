@@ -130,13 +130,22 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 // redeeming, so the approval is spent and is never re-driven.
 var ErrEffectUnconfirmed = errors.New("approvals: the released write was not confirmed")
 
+// ErrEffectFollowUpFailed is an effect whose change landed and whose later
+// bookkeeping did not. It too is returned only after redeeming.
+var ErrEffectFollowUpFailed = errors.New("approvals: the released change landed and a later step failed")
+
 // effectFailureSentence is what the decider reads about a failed effect.
 func effectFailureSentence(err error) string {
-	if errors.Is(err, ErrEffectUnconfirmed) {
+	switch {
+	case errors.Is(err, ErrEffectFollowUpFailed):
+		return "this was approved and the change was made, but the automation that asked for it " +
+			"could not be marked finished"
+	case errors.Is(err, ErrEffectUnconfirmed):
 		return "this was approved and sent on, but the system it went to never confirmed it, " +
 			"so it may have happened. Check the record before you ask for it again"
+	default:
+		return "this was approved, but the work it released did not run"
 	}
-	return "this was approved, but the work it released did not run"
 }
 
 // recordEffectFailure marks an approved row whose effect did not run, and

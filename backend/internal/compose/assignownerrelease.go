@@ -46,10 +46,9 @@ import (
 // a later human edit must still read as stronger than it.
 const assignOwnerReleaseActor = "system:assign-owner-release"
 
-// runFailureMarkTimeout bounds marking a run failed after a remote write. The
-// mark is detached from the request, because a timed-out request is the case
-// it records.
-const runFailureMarkTimeout = 30 * time.Second
+// runSettleTimeout bounds settling a run after a remote write. The step
+// is detached from the request, because the write it follows cannot be undone.
+const runSettleTimeout = 30 * time.Second
 
 // assignOwnerReleaseEffect executes an approved at-scale reassignment and
 // finishes its run. The write carries the approval's version pin.
@@ -130,7 +129,15 @@ func releaseThenWrite(ctx, execCtx context.Context, r ownerRelease, provider dat
 	if _, err := provider.Update(execCtx, r.pinnedTo(version, pinned)); err != nil {
 		return r.remoteWriteFailed(execCtx, err)
 	}
-	return automation.CompleteApprovedRun(execCtx, r.db, r.approvalID)
+	// The change has landed, so a cancelled request must not leave the run
+	// waiting, and a failure here must not read as "did not run".
+	runCtx, cancel := context.WithTimeout(context.WithoutCancel(execCtx), runSettleTimeout)
+	defer cancel()
+	if err := automation.CompleteApprovedRun(runCtx, r.db, r.approvalID); err != nil {
+		return fmt.Errorf("compose: the approved reassignment landed and its run was not completed: %w: %w",
+			approvals.ErrEffectFollowUpFailed, err)
+	}
+	return nil
 }
 
 // remoteWriteFailed records a write that failed after its approval was spent.
@@ -142,7 +149,7 @@ func (r ownerRelease) remoteWriteFailed(execCtx context.Context, cause error) er
 		failure = fmt.Errorf("compose: the approved reassignment was sent and not confirmed: %w: %w",
 			approvals.ErrEffectUnconfirmed, cause)
 	}
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(execCtx), runFailureMarkTimeout)
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(execCtx), runSettleTimeout)
 	defer cancel()
 	if err := automation.FailApprovedRun(ctx, r.db, r.approvalID, cause); err != nil {
 		return errors.Join(failure, fmt.Errorf("compose: marking the reassignment's run failed: %w", err))
