@@ -130,7 +130,9 @@ func TestAReplyToAnIsolatedMessageKeepsItsConversation(t *testing.T) {
 	}
 }
 
-func TestAConversationWithAnUnheldPrivateReplyStaysSeparate(t *testing.T) {
+// A colleague's private reply does not split the seat off a conversation it
+// shares. Its later mail joins, and the private reply stays private.
+func TestAConversationWithAnUnheldPrivateReplyStaysOneConversation(t *testing.T) {
 	e := integration.Setup(t)
 	both := seatAddress(t, e, e.Rep1) + ", " + seatAddress(t, e, e.Rep2)
 	raw := threadMail(both, "shared@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", "")
@@ -139,10 +141,14 @@ func TestAConversationWithAnUnheldPrivateReplyStaysSeparate(t *testing.T) {
 	}
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "private@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", "shared@example.test", "shared@example.test"))
 	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "later@example.test", "Wed, 03 Jun 2026 08:00:00 +0000", "shared@example.test", "shared@example.test"))
-	if threadKeyOfMessage(t, e, "shared@example.test") == threadKeyOfMessage(t, e, "later@example.test") {
-		t.Fatal("a partial member joined the whole conversation")
+	shared := threadKeyOfMessage(t, e, "shared@example.test")
+	if got := threadKeyOfMessage(t, e, "later@example.test"); got != shared {
+		t.Errorf("the seat's later mail is filed under %q, want the shared conversation %q", got, shared)
+	}
+	if got := threadKeyOfMessage(t, e, "private@example.test"); got != shared {
+		t.Errorf("the private reply moved to %q", got)
 	}
 	if threadReadableBy(t, e, e.Rep1, "private@example.test") {
-		t.Fatal("partial membership exposed the private reply")
+		t.Fatal("joining the conversation exposed the private reply")
 	}
 }
