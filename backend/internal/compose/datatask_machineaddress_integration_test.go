@@ -117,9 +117,9 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 	}
 }
 
-// A user who archived the word gets it back with the records filed under it,
-// rather than a second tag of the same name.
-func TestTheMachineAddressTaskRestoresAnArchivedTagOfItsName(t *testing.T) {
+// A user who archived the word keeps it retired. The task neither restores it
+// nor coins a second tag of the same name.
+func TestTheMachineAddressTaskLeavesAnArchivedTagOfItsNameRetired(t *testing.T) {
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
@@ -131,10 +131,14 @@ func TestTheMachineAddressTaskRestoresAnArchivedTagOfItsName(t *testing.T) {
 	runMachineAddressTask(ctx, t, e, machineAddressDataTask())
 
 	if got := e.WsCount(t, `SELECT count(*) FROM tag WHERE name = $1`, machineAddressTag); got != 1 {
-		t.Errorf("tags named %s = %d, want the archived one restored", machineAddressTag, got)
+		t.Errorf("tags named %s = %d, want only the archived one", machineAddressTag, got)
 	}
-	if got := machineTagged(t, e, receipts); got != 1 {
-		t.Errorf("the receipts@ contact carries the restored tag %d times, want once", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM tag WHERE name = $1 AND archived_at IS NULL`, machineAddressTag); got != 0 {
+		t.Errorf("the task restored the archived %s tag", machineAddressTag)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM taggable g JOIN tag ON tag.id = g.tag_id
+		WHERE tag.name = $1 AND g.entity_type = 'contact' AND g.entity_id = $2`, machineAddressTag, receipts); got != 0 {
+		t.Errorf("the receipts@ contact was filed under the retired tag %d times, want none", got)
 	}
 }
 
