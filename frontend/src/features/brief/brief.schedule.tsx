@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId } from "react";
+import { Fragment, useId } from "react";
 import { EntityRef } from "../../components/entityref";
 import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
@@ -242,13 +242,15 @@ function NextMeetingRow({
             {t("brief.schedule.nextAt", { time })}
           </span>
         )}
-        {next.participants?.map((participant) => (
-          <EntityRef
-            key={participant.contact_id}
-            kind="contact"
-            id={participant.contact_id}
-            name={participant.full_name}
-          />
+        {next.participants?.map((participant, index) => (
+          <Fragment key={participant.contact_id}>
+            {index > 0 && ", "}
+            <EntityRef
+              kind="contact"
+              id={participant.contact_id}
+              name={participant.full_name}
+            />
+          </Fragment>
         ))}
         <MeetingOthers
           others={next.other_participants}

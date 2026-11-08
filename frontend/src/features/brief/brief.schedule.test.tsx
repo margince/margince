@@ -230,3 +230,22 @@ describe("the schedule panel", () => {
     expect(screen.getByText(en["state.failed"])).toBeTruthy();
   });
 });
+
+it("separates the next meeting's people with one comma each", () => {
+  const day = {
+    ...readingsDay({}, []),
+    calendar: "connected" as const,
+    next_meeting: {
+      ...NEXT,
+      participants: [
+        { contact_id: "c-1", full_name: "Anna Weber" },
+        { contact_id: "c-2", full_name: "Ben Ortiz" },
+      ],
+      other_participants: [{ kind: "colleague" as const, name: "Rita Rep" }],
+    },
+  };
+  draw(<SchedulePanel day={day} state="ready" />);
+  const row = screen.getByRole("region").querySelector(".rail-schedule-what");
+  expect(row?.textContent).toContain("Anna Weber, Ben Ortiz, Rita Rep");
+  expect(row?.textContent).not.toMatch(/,\s*,|,\s*$/);
+});
