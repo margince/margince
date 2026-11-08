@@ -6744,6 +6744,8 @@ export const en = {
   "brief.report.chapter.closed": "Closed deals",
   "brief.report.chapter.movement": "Pipeline movement",
   "brief.report.chapter.figures": "Figures",
+  "brief.report.breakdown": "Scorecard and all figures",
+  "brief.report.howCounted": "How this is counted",
   "brief.report.chapter.observations": "What the week taught",
   "brief.report.closedTotal": "Won {won} · Lost {lost}",
   "brief.report.weeks": "Weeks",

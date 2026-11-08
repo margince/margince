@@ -6593,6 +6593,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.report.chapter.closed": "Deal đã đóng",
   "brief.report.chapter.movement": "Biến động pipeline",
   "brief.report.chapter.figures": "Số liệu",
+  "brief.report.breakdown": "Bảng điểm tuần và mọi số liệu",
+  "brief.report.howCounted": "Cách tính",
   "brief.report.chapter.observations": "Điều tuần qua cho thấy",
   "brief.report.closedTotal": "Thắng {won} · Thua {lost}",
   "brief.report.weeks": "Các tuần",

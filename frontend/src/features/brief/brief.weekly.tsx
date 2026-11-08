@@ -4,7 +4,6 @@
 import {
   Activity,
   ArrowRight,
-  ChartColumn,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -16,7 +15,7 @@ import {
 import type { ReactNode } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card, Disclosure } from "../../design-system/atoms";
-import { PanelBody, PanelRow } from "../../design-system/panel";
+import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
@@ -37,7 +36,7 @@ import {
 import { ReportCard } from "./brief.reportcard";
 import { OutlookPanel } from "./brief.waterfall";
 import { ActivityTotal, WeekActivity } from "./brief.weekly.activity";
-import { FiguresTable } from "./brief.weekly.figures";
+import { FiguresTable, HeadlineFigures } from "./brief.weekly.figures";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
@@ -177,8 +176,16 @@ function WeeklyBody({
       </SurfaceState>
     );
   }
+  const numeric = weeklyNumericStatus(
+    review.numeric_summary,
+    review.leads_withheld,
+  );
   return (
     <>
+      {/* The week's outcomes once, at the head of the report. */}
+      <Panel className="brief-report-summary">
+        <HeadlineFigures review={review} figures={numeric.figures} />
+      </Panel>
       {reportSections(review).map((section) =>
         section.icon ? (
           <ReportCard
@@ -258,18 +265,6 @@ function reportSections(review: WeeklyReview): readonly Section[] {
       aside: <AiTag />,
       body: <LearningsPanel learnings={learnings} />,
     }),
-    ...optional(scorecardRows(review), {
-      key: "scorecard",
-      icon: ChartColumn,
-      title: "brief.weekly.scorecard.title",
-      body: (
-        <ScorecardPanel
-          scorecard={review.scorecard}
-          weekStart={review.local_week_start}
-          meetingsWithheld={review.meetings_withheld}
-        />
-      ),
-    }),
     {
       key: "forecast",
       icon: TrendingUp,
@@ -287,12 +282,7 @@ function reportSections(review: WeeklyReview): readonly Section[] {
       footer: (
         <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
       ),
-      body: (
-        <>
-          <FiguresTable review={review} figures={numeric.figures} />
-          <WeeklyWorkings counts={review.counts} figures={numeric.figures} />
-        </>
-      ),
+      body: <FiguresBreakdown review={review} figures={numeric.figures} />,
     },
   ];
 }
@@ -460,16 +450,57 @@ function Forecast({ review }: Readonly<{ review: WeeklyReview }>) {
   );
 }
 
-/** What the figures rest on, once, under them. */
+/**
+ * The scorecard, every figure beside the week before, and the workings, in one
+ * breakdown the reader opens. The headline above already says how the week
+ * went.
+ */
+function FiguresBreakdown({
+  review,
+  figures,
+}: Readonly<{
+  review: WeeklyReview;
+  figures: ReturnType<typeof weeklyNumericStatus>["figures"];
+}>) {
+  const t = useT();
+  return (
+    <PanelBody>
+      <Disclosure summary={t("brief.report.breakdown")}>
+        {scorecardRows(review) && (
+          <ScorecardPanel
+            scorecard={review.scorecard}
+            weekStart={review.local_week_start}
+            meetingsWithheld={review.meetings_withheld}
+          />
+        )}
+        <FiguresTable review={review} figures={figures} />
+        <WeeklyWorkings counts={review.counts} figures={figures} />
+      </Disclosure>
+    </PanelBody>
+  );
+}
+
+/**
+ * What the figures rest on, behind its own opener. A partial read stays in
+ * view: it changes how far the figures can be trusted.
+ */
 function FiguresFootnote({
   partial,
   basis,
 }: Readonly<{ partial: boolean; basis: MessageKey }>) {
   const t = useT();
   return (
-    <p className="t-caption brief-report-footnote">
-      {t("brief.weekly.basis")} {t(basis)}
-      {partial && <> {t("brief.weekly.numericPartial")}</>}
-    </p>
+    <>
+      {partial && (
+        <p className="t-caption brief-report-footnote">
+          {t("brief.weekly.numericPartial")}
+        </p>
+      )}
+      <Disclosure summary={t("brief.report.howCounted")}>
+        <p className="t-caption brief-report-footnote">
+          {t("brief.weekly.basis")} {t(basis)}
+        </p>
+      </Disclosure>
+    </>
   );
 }
