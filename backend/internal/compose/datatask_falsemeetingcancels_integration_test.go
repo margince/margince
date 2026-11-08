@@ -84,11 +84,15 @@ func TestTheRepairReopensOnlyAMeetingAGuestsCalendarCancelled(t *testing.T) {
 				t.Errorf("the meeting a guest's calendar cancelled reads %s, want its unanswered status back", status)
 			}
 			if n := e.WsCount(t, `SELECT count(*) FROM activity_meeting_history WHERE activity_id=$1 AND status='booked'
- AND source_system=$2 AND source_id='evt-2'`, reopened, provider); n != 1 {
+ AND source_id=$2`, reopened, provider+":evt-2"); n != 1 {
 				t.Errorf("the reopen recorded %d transitions naming the cancelled event, want 1", n)
 			}
 			if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND evidence->>'reopened'=$2`, reopened, activities.CalendarCancellationReopened); n != 1 {
 				t.Errorf("the reopen wrote %d audit rows naming the repair, want 1", n)
+			}
+			if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text
+ AND envelope->'payload'->'changed_fields'->>'meeting_status_cleared' = 'true'`, reopened); n != 1 {
+				t.Errorf("%d events say the reopened meeting's status was cleared, want 1", n)
 			}
 			if got := meetingStatusOf(t, e, kept); got != "canceled" {
 				t.Errorf("the organizer's cancellation reads %q, want canceled", got)
@@ -132,6 +136,112 @@ func TestTheRepairKeepsACancellationAGuestsCalendarSawWithoutDeclining(t *testin
 	for _, id := range []ids.UUID{accepted, cancelledFirst} {
 		if got := meetingStatusOf(t, e, id); got != "canceled" {
 			t.Errorf("a cancellation a guest's calendar saw without declining reads %q, want canceled", got)
+		}
+	}
+}
+
+// An organizer's cancellation after the guest's writes nothing. So anything the
+// meeting recorded after the guest's cancellation keeps it cancelled.
+func TestTheRepairKeepsACancellationSomethingLaterFollowed(t *testing.T) {
+	o := setupOwnership(t, sourceGCal)
+	e := o.e
+	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
+	declined := map[string]string{guest: "declined", "buyer@customer.test": "accepted"}
+	meeting := o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}})
+	o.sync(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: organizer, guests: declined})
+	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: organizer, guests: declined})
+	o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: map[string]string{
+		guest: "declined", "buyer@customer.test": "accepted", "second@customer.test": "accepted",
+	}})
+
+	runFalseCancelTask(t, e, falseCancelTask())
+
+	if got := meetingStatusOf(t, e, meeting); got != "canceled" {
+		t.Fatalf("a cancellation the organizer's calendar synced after reads %q, want canceled", got)
+	}
+}
+
+// A candidate read is pinned: a status set between the read and the reopen
+// leaves the reopen writing nothing.
+func TestTheReopenWritesNothingWhenTheMeetingMovedAfterItWasRead(t *testing.T) {
+	o := setupOwnership(t, sourceGCal)
+	e := o.e
+	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
+	declined := map[string]string{guest: "declined", "buyer@customer.test": "accepted"}
+	meeting := o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}})
+	o.sync(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: organizer, guests: declined})
+	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: organizer, guests: declined})
+	repair := datatask.Acting(e.Admin(), falseCancelTask().ID)
+	var read []activities.CalendarCancellation
+	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		read, err = activities.CalendarCancellationsAfterTx(repair, tx, time.Date(2029, 1, 1, 0, 0, 0, 0, time.UTC), ids.Nil, 10)
+		return err
+	}); err != nil || len(read) != 1 {
+		t.Fatalf("reading the candidate: %v, %d found", err, len(read))
+	}
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	for _, status := range []string{"booked", "canceled"} {
+		if _, err := activities.NewStore(e.DB()).UpdateActivity(human, ids.From[ids.ActivityKind](meeting),
+			activities.UpdateActivityInput{MeetingStatus: &status}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
+		reopened, err := activities.ReopenCalendarCancellationTx(repair, tx, read[0], ids.NewV7())
+		if err == nil && reopened {
+			err = errors.New("a stale candidate reopened the meeting")
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := meetingStatusOf(t, e, meeting); got != "canceled" {
+		t.Fatalf("the human's cancellation reads %q, want canceled", got)
+	}
+}
+
+// A meeting that enters the scope behind the walk is reached by its second
+// pass over the scope.
+func TestTheRepairRechecksTheScopeItWalkedPast(t *testing.T) {
+	o := setupOwnership(t, sourceGraphCal)
+	e := o.e
+	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
+	declined := map[string]string{guest: "declined", "buyer@customer.test": "accepted"}
+	var meetings []ids.UUID
+	for i, uid := range []string{"behind@calendar.test", "ahead@calendar.test"} {
+		listed := map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}
+		meetings = append(meetings, o.sync(t, e.Rep1, mailboxCopy{id: "evt-own-" + uid, uid: uid, organizer: organizer, guests: listed, day: i}))
+		o.sync(t, e.Rep2, mailboxCopy{id: "evt-guest-" + uid, uid: uid, organizer: organizer, guests: declined, day: i})
+	}
+	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-guest-ahead@calendar.test", uid: "ahead@calendar.test", organizer: organizer, guests: declined, day: 1})
+
+	task := falseCancelTask()
+	ctx := datatask.Acting(e.Admin(), task.ID)
+	in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
+	for batch := 0; ; batch++ {
+		if batch == 20 {
+			t.Fatal("the walk never finished")
+		}
+		var out datatask.BatchOut
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			out, err = task.Steps[0].Batch(ctx, tx, in)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if batch == 0 {
+			o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-guest-behind@calendar.test", uid: "behind@calendar.test", organizer: organizer, guests: declined})
+		}
+		if out.Done {
+			break
+		}
+		in.Cursor = out.Cursor
+	}
+	for _, id := range meetings {
+		if status, set := readMeetingStatus(t, e, id); set {
+			t.Errorf("a meeting reads %s after the walk, want it reopened", status)
 		}
 	}
 }

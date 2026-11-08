@@ -10,6 +10,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -60,22 +62,40 @@ func falseMeetingCancelsDataTask(now func() time.Time) datatask.Task {
 	}
 }
 
+// falseCancelCursor walks the scope by id, then once more from the start. A
+// meeting cancelled behind the first walk, by a sync still running older code,
+// is reached by the second.
+type falseCancelCursor struct {
+	After   ids.UUID `json:"after"`
+	Recheck bool     `json:"recheck"`
+}
+
+func readFalseCancelCursor(raw json.RawMessage) (falseCancelCursor, error) {
+	var cursor falseCancelCursor
+	if len(raw) == 0 {
+		return cursor, nil
+	}
+	if err := json.Unmarshal(raw, &cursor); err != nil {
+		return falseCancelCursor{}, &storekit.MalformedCursorError{}
+	}
+	return cursor, nil
+}
+
 func reopenFalseCancellationsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn, since time.Time) (datatask.BatchOut, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return datatask.BatchOut{}, err
 	}
-	after, err := datatask.UUIDCursor(in.Cursor)
+	cursor, err := readFalseCancelCursor(in.Cursor)
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	found, err := activities.CalendarCancellationsAfterTx(ctx, tx, since, after, in.Limit)
+	found, err := activities.CalendarCancellationsAfterTx(ctx, tx, since, cursor.After, in.Limit)
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	scanned := make([]ids.UUID, 0, len(found))
 	reopened := 0
 	for _, c := range found {
-		scanned = append(scanned, c.ID)
+		cursor.After = c.ID
 		guest, err := cancelledForAGuestTx(ctx, tx, c)
 		if err != nil {
 			return datatask.BatchOut{}, err
@@ -91,12 +111,24 @@ func reopenFalseCancellationsBatch(ctx context.Context, tx pgx.Tx, in datatask.B
 			reopened++
 		}
 	}
-	return datatask.AdvanceUUID(in, scanned, reopened)
+	out := datatask.BatchOut{Scanned: len(found), Changed: reopened}
+	if len(found) < in.Limit {
+		out.Done = cursor.Recheck
+		cursor = falseCancelCursor{Recheck: true}
+	}
+	if out.Cursor, err = json.Marshal(cursor); err != nil {
+		return datatask.BatchOut{}, err
+	}
+	return out, nil
 }
 
 // cancelledForAGuestTx answers whether the evidence shows a guest's calendar
 // cancelled the meeting rather than its organizer.
 func cancelledForAGuestTx(ctx context.Context, tx pgx.Tx, c activities.CalendarCancellation) (bool, error) {
+	newest, err := cancellationIsTheLastSignTx(ctx, tx, c)
+	if err != nil || !newest {
+		return false, err
+	}
 	switch {
 	case c.ActorType == string(principal.PrincipalConnector) && c.Seat != nil:
 		return declinedBySeatTx(ctx, tx, c, *c.Seat)
@@ -175,8 +207,9 @@ func seatDeclinedTx(
 	ctx context.Context, tx pgx.Tx, c activities.CalendarCancellation, seat ids.UUID, owner string, payload []byte,
 ) (bool, error) {
 	var declined bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity_participant
- WHERE activity_id = $1 AND user_id = $2 AND response = $3)`, c.ID, seat, connector.ResponseDeclined).Scan(&declined); err != nil || declined {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity_participant p JOIN activity a ON a.id = p.activity_id
+ WHERE p.activity_id = $1 AND p.user_id = $2 AND p.response = $3
+ AND a.archived_at IS NULL AND a.restricted_at IS NULL AND `+auth.ParticipantStandsSQL("p", "a")+`)`, c.ID, seat, connector.ResponseDeclined).Scan(&declined); err != nil || declined {
 		return declined, wrapFalseCancellation(err)
 	}
 	return storedAnswer(c.Key.SourceSystem, owner, payload) == connector.ResponseDeclined, nil
