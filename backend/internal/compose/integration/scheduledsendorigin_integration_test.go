@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -38,7 +39,7 @@ func TestAScheduledMessageCarryingAnUnsubscribeLinkStillFires(t *testing.T) {
 	p := setupPreflight(t)
 	// Without the send grant the schedule refuses at the pre-flight, and this
 	// case would fail before it reached the origin it is about.
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.seedConsentedRecipient(t, "Link Recipient", "linked@preflight.test")
 	// The recipient wrote to us first, which is the qualifying event a
 	// correspondence send derives its basis from. The purpose matters here only

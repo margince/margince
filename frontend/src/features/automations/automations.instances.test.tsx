@@ -21,7 +21,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { AutomationsAdmin } from "./automations";
+import { AutomationsAdmin, type AutomationsView } from "./automations";
 import {
   AUTOMATION_CATALOG,
   configuredAutomations,
@@ -41,7 +41,11 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-function mount(allow: GrantSpec = OPERATOR, routes: RouteMap = {}) {
+function mount(
+  allow: GrantSpec = OPERATOR,
+  routes: RouteMap = {},
+  view: AutomationsView = "mine",
+) {
   installFetchStub({
     "GET /me": meRoute(allow),
     "GET /automations/catalog": () =>
@@ -55,7 +59,7 @@ function mount(allow: GrantSpec = OPERATOR, routes: RouteMap = {}) {
   });
   render(
     <StoryProviders>
-      <AutomationsAdmin />
+      <AutomationsAdmin view={view} />
     </StoryProviders>,
   );
 }
@@ -275,7 +279,7 @@ describe("a rule's run history", () => {
 describe("the starter library", () => {
   it("opens a template's create dialog from a press anywhere on its row", async () => {
     const user = userEvent.setup();
-    mount();
+    mount(OPERATOR, {}, "library");
     const template = await screen.findByTestId("template-renewal_reminder");
     expect(template).not.toHaveTextContent(/clock:|create_task|->/);
     expect(template).toHaveTextContent(en["auto.trigger.renewal"]);
@@ -290,7 +294,7 @@ describe("the starter library", () => {
 
   it("reaches the same verb from the keyboard, and Escape puts it away", async () => {
     const user = userEvent.setup();
-    mount();
+    mount(OPERATOR, {}, "library");
     const template = await screen.findByTestId("template-post_meeting_recap");
     within(template)
       .getByRole("button", { name: "Use template: Post-meeting recap draft" })
@@ -305,7 +309,7 @@ describe("the starter library", () => {
   // so no description is ever cut off mid-sentence.
   it("reads a template's whole description in the dialog its row opens", async () => {
     const user = userEvent.setup();
-    mount();
+    mount(OPERATOR, {}, "library");
     const template = await screen.findByTestId("template-stage_change_notify");
     expect(template).not.toHaveTextContent(/deal history|…/);
     await user.click(
@@ -320,7 +324,7 @@ describe("the starter library", () => {
 
   it("stays readable without the create grant, but no row opens", async () => {
     const user = userEvent.setup();
-    mount({ automation: ["read"] });
+    mount({ automation: ["read"] }, {}, "library");
     const template = await screen.findByTestId("template-renewal_reminder");
     expect(template.className).not.toContain("rowlink");
     expect(within(template).queryByRole("button")).toBeNull();

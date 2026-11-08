@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { INTL_LOCALE } from "../format/format";
 import type { Locale } from "../i18n";
@@ -32,23 +32,17 @@ export const INSTALLATION_SETTINGS_KEY = ["installation-settings"] as const;
  * gets undefined either way — no second request, and no second opinion about
  * what a failure means.
  */
+export const installationSettingsOptions = queryOptions({
+  queryKey: INSTALLATION_SETTINGS_KEY,
+  queryFn: async () => {
+    const { data, error, response } = await api.GET("/installation/settings");
+    if (error || !response.ok) throwProblem(error);
+    return data;
+  },
+});
+
 export function useInstallationSettings(enabled = true) {
-  return useQuery({
-    queryKey: INSTALLATION_SETTINGS_KEY,
-    // Every caller but one leaves this alone: a screen that reads a setting is
-    // already behind the session gate. The exception is the record-zone
-    // provider, which mounts AT that gate and must not fire an unauthenticated
-    // request whose 401 would report a failure for a session nobody has
-    // claimed yet.
-    enabled,
-    queryFn: async () => {
-      const { data, error, response } = await api.GET("/installation/settings");
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  return useQuery({ ...installationSettingsOptions, enabled });
 }
 
 /**

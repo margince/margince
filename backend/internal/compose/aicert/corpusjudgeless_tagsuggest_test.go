@@ -36,7 +36,8 @@ func tagSuggestProofs() map[string]judgelessProof {
 	none := []int{}
 	return map[string]judgelessProof{
 		"interest_in_words_the_description_does_not_use": {
-			correct: tagPicks([]int{0}), wrong: tagPicks(none), wantWrong: aitasks.OutcomeWrongAnswer,
+			correct: tagPicks([]int{0}, []int{0}), wrong: tagPicks(none, []int{0}),
+			alsoWrong: []func([]string) string{tagPicks([]int{0}, none)}, wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"a_mention_or_our_own_footer_is_not_interest": {
 			correct: tagPicks(none, none), wrong: tagPicks([]int{0}, none),
@@ -49,9 +50,6 @@ func tagSuggestProofs() map[string]judgelessProof {
 			correct:   tagPicks([]int{0, 1}, []int{1}, none, []int{0}),
 			wrong:     tagPicks([]int{0, 1}, []int{0, 1}, none, []int{0, 1}),
 			wantWrong: aitasks.OutcomeWrongAnswer,
-		},
-		"a_german_mail_shows_interest_against_an_english_description": {
-			correct: tagPicks([]int{0}), wrong: tagPicks(none), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}
 }

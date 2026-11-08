@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,7 +29,11 @@ import (
 // that reads stored settings calls it once, after Load and before it composes.
 // It binds the process's configuration, which the modules' package-level
 // readers take their locks from too.
-func UseConfig(c *config.Config) { config.Bind(c) }
+// The keys derived from its root key are bound with it.
+func UseConfig(c *config.Config) {
+	config.Bind(c)
+	storekit.UseSuppressionKey(keyvault.DerivedKey(c, storekit.SuppressionKeyLabel))
+}
 
 // loadedConfig is the program's configuration, or for a process that loaded
 // none, such as a test composing stores, one where no boot source sets anything.

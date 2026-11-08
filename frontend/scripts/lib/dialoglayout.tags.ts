@@ -261,12 +261,21 @@ export const definedName = (def: ts.Node) =>
 export const keyOf = (def: ts.Node) =>
   `${def.getSourceFile().fileName}#${definedName(def)}`;
 
+// A tree does not change once parsed, so an element names one definition.
+const definedAt = new WeakMap<ts.Node, { def: ts.Node | undefined }>();
+
 export const defOf = (n: ts.Node) => {
+  const known = definedAt.get(n);
+  if (known) return known.def;
   const name = opening(n)?.tagName;
-  if (!upper(n) || !name) return undefined;
-  return ts.isIdentifier(name)
-    ? definitionOf(name)
-    : definition(n.getSourceFile(), tag(n));
+  const def =
+    !upper(n) || !name
+      ? undefined
+      : ts.isIdentifier(name)
+        ? definitionOf(name)
+        : definition(n.getSourceFile(), tag(n));
+  definedAt.set(n, { def });
+  return def;
 };
 
 // What a name means where it is written: its own scope first, then the file's

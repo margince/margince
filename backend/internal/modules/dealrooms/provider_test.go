@@ -138,7 +138,8 @@ func TestARoomsRecordsAreListedOneRoomAtATime(t *testing.T) {
 	}
 }
 
-func TestASeamWriteNamesTheRoomAndThreadItGoesIn(t *testing.T) {
+// A thread or a reply is written on its route, where an agent spends send.
+func TestASeamWriteOpensOnlyARoom(t *testing.T) {
 	p := offlineProvider()
 	ctx := ungrantedSeller()
 	create := func(entity datasource.EntityType, fields any) error {
@@ -146,25 +147,23 @@ func TestASeamWriteNamesTheRoomAndThreadItGoesIn(t *testing.T) {
 		return err
 	}
 	wantFieldRefusal(t, create(datasource.EntityDealRoom, json.RawMessage(`[1]`)), "fields")
-	wantFieldRefusal(t, create(datasource.EntityDealRoomThread, map[string]any{"body": "Terms?"}), "deal_room_id")
-	wantFieldRefusal(t, create(datasource.EntityDealRoomThread, map[string]any{"deal_room_id": ids.Nil.String()}), "deal_room_id")
-	wantFieldRefusal(t, create(datasource.EntityDealRoomComment, map[string]any{
-		"deal_room_id": ids.NewV7().String(), "body": "Agreed.",
-	}), "thread_id")
+	for _, entity := range []datasource.EntityType{datasource.EntityDealRoomThread, datasource.EntityDealRoomComment} {
+		var unsupported *datasource.UnsupportedEntityError
+		if err := create(entity, map[string]any{"deal_room_id": ids.NewV7().String(), "body": "Agreed."}); !errors.As(err, &unsupported) {
+			t.Errorf("a %s through the seam answered %v, want it unsupported", entity, err)
+		}
+	}
 }
 
 func TestASeamWriteDecodesStrictlyAndThenPassesTheWriteGate(t *testing.T) {
 	p := offlineProvider()
 	ctx := ungrantedSeller()
-	room, thread := ids.NewV7().String(), ids.NewV7().String()
 	for _, tc := range []struct {
 		entity   datasource.EntityType
 		fields   map[string]any
 		required string
 	}{
 		{datasource.EntityDealRoom, map[string]any{"deal_id": ids.NewV7().String(), "title": "Acme rollout"}, "title"},
-		{datasource.EntityDealRoomThread, map[string]any{"deal_room_id": room, "body": "Any questions?"}, "body"},
-		{datasource.EntityDealRoomComment, map[string]any{"deal_room_id": room, "thread_id": thread, "body": "None."}, "body"},
 	} {
 		in := datasource.CreateInput{EntityType: tc.entity, Fields: tc.fields, Source: "agent"}
 		if _, err := p.Create(ctx, in); !errors.Is(err, apperrors.ErrPermissionDenied) {

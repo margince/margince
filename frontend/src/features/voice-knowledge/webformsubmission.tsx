@@ -76,13 +76,11 @@ export function WebFormSubmission({
     });
   }
   return (
-    <>
-      <Panel title={t("activity.webForm.title")}>
-        <PanelBody>
-          <FactList facts={facts} flat />
-        </PanelBody>
-      </Panel>
-    </>
+    <Panel title={t("activity.webForm.title")}>
+      <PanelBody>
+        <FactList facts={facts} flat />
+      </PanelBody>
+    </Panel>
   );
 }
 

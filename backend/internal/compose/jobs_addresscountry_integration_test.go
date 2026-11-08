@@ -219,7 +219,7 @@ func stampCountryCheck(t *testing.T, e *integration.Env, record contacts.Country
 		if check.ID != id {
 			continue
 		}
-		written, err := e.Contacts.WithClock(func() time.Time { return clocktest.Now(t) }).
+		written, err := e.Contacts.SetClock(func() time.Time { return clocktest.Now(t) }).
 			RecordAddressCountries(e.Admin(), check, []string{"DE"})
 		if err != nil || !written {
 			t.Fatalf("stamping the country check: written=%v err=%v", written, err)

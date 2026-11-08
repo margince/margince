@@ -19,7 +19,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -214,7 +213,7 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 	skipped := ignoredTrees(t)
 	var claims []string
 	checked := 0
-	err := filepath.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -236,7 +235,7 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 		if slashed == "../backend/"+gateDir+"/rlsclaimsprose_test.go" || strings.HasSuffix(slashed, "/rlsclaims_test.go") {
 			return nil
 		}
-		b, err := os.ReadFile(path) // #nosec G304 G122 -- a text file from walking the trusted source tree
+		b, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a text file from walking the trusted source tree
 		if err != nil {
 			return err
 		}
@@ -252,7 +251,7 @@ func TestNoProseClaimsRLSStillScopesARead(t *testing.T) {
 			return nil
 		}
 		for i, line := range strings.Split(string(b), "\n") {
-			if !proseRLSClaim.MatchString(line) || deniesTheControl(line) {
+			if !mayHoldFolded(line, "rls", "level security") || !proseRLSClaim.MatchString(line) || deniesTheControl(line) {
 				continue
 			}
 			// Asked about the OFFENCE and not the file, so an exemption covers

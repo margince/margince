@@ -136,7 +136,7 @@
    other heading on this page takes — the claim it makes ("this is what
    Margince knows") belongs to the whole page, not to one section of it. */
 .pdigest-hero-eyebrow {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .pdigest-hero-row {

@@ -9,6 +9,7 @@ package compose
 import (
 	"log/slog"
 	"net/http"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -16,7 +17,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // captureSenderHandlers serves one seat's own view of what was decided about
@@ -32,14 +35,22 @@ type captureSenderHandlers struct {
 }
 
 // ListCaptureSenders answers every decision made about the caller's senders.
-func (h captureSenderHandlers) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
-	decisions, err := capture.SendersFor(r.Context(), h.db, capture.DefaultPersonalPurgeWindows())
+func (h captureSenderHandlers) ListCaptureSenders(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCaptureSendersParams) {
+	decisions, err := capture.SendersFor(r.Context(), h.db, capture.DefaultPersonalPurgeWindows(), captureSenderQuery(params))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	out := crmcontracts.CaptureSenderListResponse{
 		Data: make([]crmcontracts.CaptureSenderDecision, 0, len(decisions)),
+	}
+	if len(decisions) > 0 {
+		out.Total = new(decisions[0].Total)
+	}
+	limit := storekit.ClampLimit(params.Limit)
+	if (params.Limit != nil || params.Cursor != nil) && len(decisions) > limit {
+		out.NextCursor = new(decisions[limit-1].Address)
+		decisions = decisions[:limit]
 	}
 	for _, d := range decisions {
 		out.Data = append(out.Data, toContractSenderDecision(d))
@@ -74,19 +85,31 @@ func (h captureSenderHandlers) ListCaptureContactsAwaitingDecision(w http.Respon
 
 // ListHeldThreads answers what the caller's mailbox is withholding.
 //
-// It sits beside the senders list rather than in a file of its own: both are
-// this seat's view of what the capture posture decided on their behalf, both
-// are human-only and owner-scoped, and both are read from the same db.
-func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Request) {
-	threads, err := capture.HeldThreadsFor(r.Context(), h.db)
+// It sits beside the senders list rather than in a file of its own. Both are
+// this seat's view of what the capture posture decided on their behalf. Both
+// are owner-scoped and read from the same db.
+func (h captureSenderHandlers) ListHeldThreads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListHeldThreadsParams) {
+	if params.Q != nil && utf8.RuneCountInString(*params.Q) > capture.HeldSearchMax {
+		httperr.Write(w, r, httperr.Validation("q", "too_long", "Search for at most 200 characters."))
+		return
+	}
+	page, err := capture.HeldThreadsFor(r.Context(), h.db, heldThreadQuery(params))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	out := crmcontracts.HeldThreadListResponse{
-		Data: make([]crmcontracts.HeldThread, 0, len(threads)),
+		Data: make([]crmcontracts.HeldThread, 0, len(page.Threads)),
+		Page: crmcontracts.PageInfo{HasMore: page.Next != ""},
+		Counts: crmcontracts.HeldThreadCounts{
+			Pending: page.Counts.Pending, Unsure: page.Counts.Unsure, Held: page.Counts.Held,
+			HeldByOwner: page.Counts.HeldByOwner, Stalled: page.Counts.Stalled,
+		},
 	}
-	for _, t := range threads {
+	if page.Next != "" {
+		out.Page.NextCursor = &page.Next
+	}
+	for _, t := range page.Threads {
 		out.Data = append(out.Data, toContractHeldThread(t))
 	}
 	if h.threadPass != nil {
@@ -211,6 +234,46 @@ func toContractSenderDecision(d capture.SenderDecision) crmcontracts.CaptureSend
 	if d.OverruledKind != "" {
 		overruled := d.OverruledKind
 		out.OverruledKind = &overruled
+	}
+	return out
+}
+
+// heldThreadQuery reads the list's query off the request.
+func heldThreadQuery(params crmcontracts.ListHeldThreadsParams) capture.HeldThreadQuery {
+	query := capture.HeldThreadQuery{From: params.From, To: params.To}
+	if params.Reason != nil {
+		query.Reason = *params.Reason
+	}
+	if params.Cursor != nil {
+		query.Cursor = *params.Cursor
+	}
+	query.Limit = params.Limit
+	if params.Q != nil {
+		query.Q = *params.Q
+	}
+	if params.Status != nil {
+		query.Status = string(*params.Status)
+	}
+	if params.ContactId != nil {
+		contact := ids.UUID(*params.ContactId)
+		query.ContactID = &contact
+	}
+	return query
+}
+
+func captureSenderQuery(params crmcontracts.ListCaptureSendersParams) capture.SenderQuery {
+	out := capture.SenderQuery{Limit: params.Limit}
+	if params.Q != nil {
+		out.Q = *params.Q
+	}
+	if params.Decision != nil {
+		out.Decision = *params.Decision
+	}
+	if params.Cursor != nil {
+		out.After = *params.Cursor
+	}
+	if params.Overrides != nil {
+		out.Overrides = *params.Overrides
 	}
 	return out
 }

@@ -102,7 +102,7 @@ function drawer(routes: RouteMap, message?: TraceEntry) {
 }
 
 const meta: Meta<typeof CaptureActivityDrawer> = {
-  title: "Settings/You/Capture activity/Pipeline drawer",
+  title: "Settings/You/Connections/Pipeline drawer",
   component: CaptureActivityDrawer,
 };
 export default meta;

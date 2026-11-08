@@ -63,10 +63,17 @@ func (u Usage) State() UsageState {
 // one release key each.
 var usageCounters = []Counter{Writes, Egress, Calls}
 
-// Usage reads the running window of every subject (SubjectOf) in one round
-// trip. Like Release it names its subjects, because the caller is the human
-// looking at them and not the agents being counted.
-func (m *Meter) Usage(ctx context.Context, ws ids.UUID, subjects []string) (map[string]Usage, error) {
+// Holder is one counter subject (SubjectOf) and the live roles of the human
+// whose passports are charged to it, which choose its limits.
+type Holder struct {
+	Subject string
+	Roles   []string
+}
+
+// Usage reads the running window of every holder in one round trip, each
+// against the allowance its own roles give. Like Release it names its subjects,
+// because the caller is the human looking at them and not the agents counted.
+func (m *Meter) Usage(ctx context.Context, ws ids.UUID, subjects []Holder) (map[string]Usage, error) {
 	if m.unbounded || m.rdb == nil {
 		return nil, ErrUnanswerable
 	}
@@ -78,7 +85,7 @@ func (m *Meter) Usage(ctx context.Context, ws ids.UUID, subjects []string) (map[
 	keys := make([]string, 0, 2*len(usageCounters)*len(subjects))
 	for _, subject := range subjects {
 		for _, c := range usageCounters {
-			keys = append(keys, m.countKey(ws, subject, c, w.bucket), m.releaseKey(ws, subject, c, w.bucket))
+			keys = append(keys, m.countKey(ws, subject.Subject, c, w.bucket), m.releaseKey(ws, subject.Subject, c, w.bucket))
 		}
 	}
 	values, err := m.rdb.MGet(ctx, keys...).Result()
@@ -92,15 +99,16 @@ func (m *Meter) Usage(ctx context.Context, ws ids.UUID, subjects []string) (map[
 	resetsAt := ResetAfter(m.now(), w.length)
 	for i, subject := range subjects {
 		usage := Usage{ResetsAt: resetsAt}
+		held := w.heldBy(subject.Roles)
 		for j, c := range usageCounters {
 			slot := 2 * (i*len(usageCounters) + j)
-			counter, err := w.counterUsage(c, values[slot], values[slot+1])
+			counter, err := held.counterUsage(c, values[slot], values[slot+1])
 			if err != nil {
 				return nil, err
 			}
 			*usage.of(c) = counter
 		}
-		out[subject] = usage
+		out[subject.Subject] = usage
 	}
 	return out, nil
 }
@@ -129,6 +137,12 @@ func (u *Usage) of(c Counter) *CounterUsage {
 	default:
 		panic(fmt.Sprintf("agentvolume: %s is not a counter Usage reports", c))
 	}
+}
+
+// AllowanceFor is the allowance in force for the agents of a human holding
+// roles, for a reader showing a user what their agents may do.
+func (m *Meter) AllowanceFor(ctx context.Context, roles []string) Allowance {
+	return m.window(ctx).policy.For(roles)
 }
 
 // ResetsAt is when the running window resets.

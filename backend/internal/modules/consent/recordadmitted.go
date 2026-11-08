@@ -32,6 +32,12 @@ func (s *Store) recordAdmittedTx(
 	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, state ConsentState,
 ) (State, error) {
 	actor, _ := principal.Actor(ctx)
+	// The request's source is the caller's claim. An agent cannot claim to be a
+	// form or a user, so its proof row and captured_by both name it.
+	if actor.Type == principal.PrincipalAgent {
+		named := sourceKindAgent
+		in.Source = &named
+	}
 
 	var out State
 	probe, err := rowProbeFor(state)

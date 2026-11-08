@@ -59,10 +59,10 @@ func TestAChangeEmailNamesTheRecordAndEachFieldBeforeAndAfter(t *testing.T) {
 		"Margince CRM build",
 		"Proposal: " + summary,
 		"Value: 25,000.00 USD → 27,036.00 USD",
-		"Expected close: — → 2026-10-11",
+		"Expected close: Not set → 2026-10-11",
 		"Lifecycle: Customer → Former customer",
-		"Closed at: — → " + words.MailSetOnApproval,
-		`Address: — → {"city":"Hanoi"}`,
+		"Closed on: Not set → Set when applied",
+		`Address: Not set → {"city":"Hanoi"}`,
 		"Why you: " + words.MailReasonOnBehalf,
 	} {
 		if !strings.Contains(message.Text, want) {
@@ -125,7 +125,7 @@ func TestAChangeEmailSaysWhatThePromotionWillDo(t *testing.T) {
 	}
 	text := factsText(changeMailFacts(approval, words))
 	for _, want := range []string{
-		"Promotion contact name: Pat Typed",
+		"Contact name: Pat Typed",
 		words.MailAlsoChanges + ": " + agents.EffectSentence(textlang.English, "promote_lead_archive_source"),
 		words.MailAlsoChanges + ": " + agents.EffectSentence(textlang.English, "promote_create_contact"),
 		"Why you: " + words.MailReasonOnBehalf,

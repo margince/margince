@@ -39,8 +39,8 @@ type annotatedBriefItemRow struct {
 func seedRunWithItems(t *testing.T, e *apptest.AppEnv) annotatedBrief {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	createDealClosingThisWeek(t, e, stages, "Closing this week")
-	createDealClosingThisWeek(t, e, stages, "Also closing")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Also closing")
 
 	var run annotatedBrief
 	if status := e.Call(t, "POST", "/v1/brief", nil, nil, &run); status != http.StatusCreated {

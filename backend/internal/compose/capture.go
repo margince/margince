@@ -18,12 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -38,7 +38,7 @@ import (
 // grant would mean a second connection for the same mailbox.
 //
 // The send scope permits transmission only; it cannot read, modify, or delete.
-// The pair is still least-privilege: no gmail.modify, no settings, no delete.
+// The list is least-privilege: no gmail.modify, no settings, no delete.
 // The calendar connector owns its own calendar-read scope inside the gcal
 // package.
 //
@@ -50,6 +50,7 @@ import (
 var gmailScopes = []string{
 	"https://www.googleapis.com/auth/gmail.readonly",
 	gmail.SendScope,
+	googleconn.ProfileScope,
 }
 
 // graphScopes are the Microsoft identity platform permissions a Graph mailbox
@@ -100,7 +101,11 @@ type CaptureConfig struct {
 	// resolved against its default by CaptureConfigFromDeploy. Zero is no cap,
 	// which is both the shipped behaviour and what the zero-value
 	// constructions below mean.
-	MaxBackfillMonths int
+	MaxBackfillMonths  int
+	HistoryConcurrency int
+	HistoryHold        bool
+	GmailMailboxQuota  int
+	GmailProjectQuota  int
 	// Now is the clock the deal question judges a mail's currentness by. Nil
 	// is the wall clock.
 	Now func() time.Time
@@ -177,6 +182,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 		// leaves the product's own ceiling, which is what an enumerate-only
 		// construction and every deployment that has not set one get.
 		WithMaxBackfillMonths(cfg.MaxBackfillMonths).
+		WithBackfillAdmission(cfg.HistoryConcurrency, cfg.HistoryHold).
 		// The digest's projects section is answered here because its reads
 		// span the deals module's tables (digestprojects.go).
 		WithDigestProjects(digestProjectsSource)
@@ -254,11 +260,11 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	// anything the power to destroy mail.
 	var purgeRemoved capture.MessagePurger
 	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger(), cfg.bookingVault); purger != nil {
-		purgeRemoved = purger.PurgeRemoved
+		purgeRemoved = purger.PurgeRemovedAdmitted
 	}
 	return capture.NewSink(InstallationDB(pool)).
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
-		WithPartyReceiptSettlement(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).SettlePartyAdmission).
+		WithPartyReceiptSettlement(sentPartySettlement(pool)).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
@@ -309,6 +315,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// briefly readable before a later pass narrows it has already been
 		// readable.
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
+		WithInternalMailRecorder(activities.MarkInternalMailTx).
 		// The attendee naming, from the module that owns `contact`. Inside the
 		// capture transaction for a plainer reason than the audience above: the
 		// name it completes is read off the participant rows this same
@@ -317,10 +324,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// The opening score and its history point, from the module that owns
 		// `lead`, so a captured lead scores as a hand-created one does.
 		WithLeadScorer(contacts.ScoreCapturedLead).
-		// Closing a meeting the calendar says is off — called off by its
-		// organizer, or declined by the seat whose calendar it is. From the
-		// module that owns `activity` and its status history, for the reason
-		// every seam above travels this way.
+		// The activity module owns organizer cancellations and their history.
 		//
 		// Without it a cancelled meeting stays on the timeline as booked: the
 		// provider stops listing an event once it is off, so the pull that
@@ -335,6 +339,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		).
 		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
 		WithMeetingFolder(foldCapturedMeeting(activities.NewStore(InstallationDB(pool)))).
+		WithMeetingHostKeeper(keepOrganizerHost(activities.NewStore(InstallationDB(pool)))).
 		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every

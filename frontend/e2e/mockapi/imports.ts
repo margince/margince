@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  formatFixture,
-  recentRunsFixture,
-} from "../../src/testing/import.fixtures";
 import type {
   ImportProfile,
   ImportReport,
   ImportRun,
 } from "../../src/features/import/importtypes";
+import {
+  formatFixture,
+  recentRunsFixture,
+} from "../../src/testing/import.fixtures";
 import { type Handler, type MockRoute, page, reply } from "./server";
 
 // The import screens' calls: the hub's list, and one CSV taken from upload to

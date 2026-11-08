@@ -72,7 +72,6 @@ import (
 	"go/token"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -254,11 +253,11 @@ func identParts(name string) []string {
 func goSources(t testing.TB, dir string) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(dir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 			return walkErr
 		}
-		src, readErr := os.ReadFile(path) // #nosec G304 -- path from walking the trusted source tree
+		src, readErr := gatekit.ReadFile(path) // #nosec G304 -- path from walking the trusted source tree
 		if readErr != nil {
 			return readErr
 		}

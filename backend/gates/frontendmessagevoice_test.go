@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var updateMessageVoice = flag.Bool("update-messagevoice", false, "rewrite the frontend's author-side cases from the activity engine")
@@ -71,7 +72,7 @@ func TestTheFrontendReadsTheSameAuthorSideAsTheActivityEngine(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	committed, err := os.ReadFile(name)
+	committed, err := gatekit.ReadFile(name)
 	if err != nil {
 		t.Fatal(err)
 	}

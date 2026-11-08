@@ -69,6 +69,7 @@ async function sha256Hex(file: File): Promise<string> {
 async function settleUnanswered(
   activityId: string,
   unanswered: readonly Readonly<{ file: File; error: unknown }>[],
+  completed?: Set<File>,
 ): Promise<UnattachedFile[]> {
   const unsettled = unanswered.map(({ file, error }) => ({
     filename: file.name,
@@ -90,6 +91,8 @@ async function settleUnanswered(
     for (const { file, error } of unanswered) {
       if (!checksums.has(await sha256Hex(file))) {
         missing.push({ filename: file.name, error, uncertain: false });
+      } else {
+        completed?.add(file);
       }
     }
     return missing;
@@ -106,15 +109,18 @@ async function settleUnanswered(
 export async function attachLoggedFiles(
   activityId: string,
   files: readonly File[],
+  completed?: Set<File>,
 ): Promise<UnattachedFile[]> {
   const refused: UnattachedFile[] = [];
   const unanswered: { file: File; error: unknown }[] = [];
   for (const file of files) {
+    if (completed?.has(file)) continue;
     try {
       await uploadAttachment(
         { entityType: "activity", entityId: activityId },
         file,
       );
+      completed?.add(file);
     } catch (error) {
       if (refusedByServer(error)) {
         refused.push({ filename: file.name, error, uncertain: false });
@@ -124,7 +130,10 @@ export async function attachLoggedFiles(
     }
   }
   if (unanswered.length === 0) return refused;
-  return [...refused, ...(await settleUnanswered(activityId, unanswered))];
+  return [
+    ...refused,
+    ...(await settleUnanswered(activityId, unanswered, completed)),
+  ];
 }
 
 /**

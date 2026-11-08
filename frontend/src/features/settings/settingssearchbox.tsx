@@ -9,7 +9,7 @@ import { useCompanyContextShown } from "../../lib/companycontextreach";
 import { isImeCommit } from "../../lib/imecommit";
 import { opensElsewhere } from "../../lib/linkclick";
 import { navigate, routeHash } from "../../lib/router";
-import type { SettingsPage } from "../../lib/settingscatalog";
+import type { SettingsPage, SettingsPageId } from "../../lib/settingscatalog";
 import {
   hashWithParams,
   NO_URL_PARAMS,
@@ -24,11 +24,9 @@ import {
   CONFIGURATION_PAGE,
   type SettingsHit,
   settingsSearch,
-} from "./settingssearch";
-import {
-  healthSectionKey,
   settingsSearchRoute,
-} from "./systemhealthnavigation";
+} from "./settingssearch";
+import { healthSectionKey } from "./systemhealthnavigation";
 
 // The dials a hit opens its page with: the filter, when a setting's name found it.
 function hitDials(hit: SettingsHit, t: Translator): UrlParams {
@@ -58,9 +56,13 @@ function hitDials(hit: SettingsHit, t: Translator): UrlParams {
  */
 export function SettingsSearchBox({
   pages,
+  opensTab,
   onPick,
 }: Readonly<{
   pages: readonly SettingsPage[];
+  /** Which tabs of a page this reader may open, so a hit never lands on one
+   *  they cannot. */
+  opensTab?: (page: SettingsPageId, tab: string) => boolean;
   /**
    * Called after the box has navigated, for a host that has to get out of the
    * way — the phone-width section drawer is the one, since it is a full-screen
@@ -112,7 +114,7 @@ export function SettingsSearchBox({
     typed,
     pages,
     t,
-    { seesCompanyContext },
+    { seesCompanyContext, opensTab },
     configuration.data,
   );
   // Whether the popup is ON SCREEN, which is what `aria-expanded` must report.
@@ -156,9 +158,9 @@ export function SettingsSearchBox({
     setActive(-1);
     const dials = hitDials(hit, t);
     if (dials.size === 0) {
-      navigate(settingsSearchRoute(hit, t));
+      navigate(settingsSearchRoute(hit));
     } else {
-      navigate(settingsSearchRoute(hit, t), dials);
+      navigate(settingsSearchRoute(hit), dials);
     }
     onPick?.();
   }
@@ -260,7 +262,7 @@ export function SettingsSearchBox({
                       : "settingssearch-hit"
                   }
                   href={hashWithParams(
-                    routeHash(settingsSearchRoute(hit, t)),
+                    routeHash(settingsSearchRoute(hit)),
                     hitDials(hit, t),
                   )}
                   onMouseDown={(event) => {

@@ -122,7 +122,7 @@ func (w *assuranceSweepWorker) rescanDeal(ctx context.Context, args AssuranceDea
 		return err
 	}
 	minted, bundleErr := bundleRunFindings(ctx, bundleDeps{
-		bundles: store, activities: w.activities, exceptions: bundleableFindings, now: w.now,
+		bundles: store, activities: w.activities, exceptions: bundleableFindings,
 	}, result.RunID)
 	if bundleErr != nil {
 		w.log.ErrorContext(ctx, "the deal's findings were recorded but not bundled into tasks",

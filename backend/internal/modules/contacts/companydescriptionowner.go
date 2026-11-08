@@ -75,14 +75,10 @@ func describedDifferently(before, after map[string]any) bool {
 // paths call it — the header's inline edit and the company form — rather than
 // each spelling the stamp its own way.
 //
-// WHO is carried by `by`, not by the source: it is the authenticated principal,
-// so an agent editing through update_record stamps agent:<id> and does not hold
-// the column, while a contact stamps human:<id> and does. The source names the
-// CHANNEL, which for both callers is a contact's form on this surface — the
-// agent case is a governed write against the same endpoint, and reporting it as
-// a different channel would say something about the request that is not true.
+// A user and their agent both hold the column. The source says which of them
+// wrote it, as every company fact does.
 func stampDescriptionAuthor(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string) error {
-	return storekit.StampFields(ctx, tx, "company", companyID.UUID, CompanySourceHuman, by,
+	return storekit.StampFields(ctx, tx, "company", companyID.UUID, companyAuthorSource(ctx), by,
 		[]storekit.FieldStamp{{Field: descriptionField}})
 }
 
@@ -125,5 +121,5 @@ func carryFieldAuthors(ctx context.Context, tx pgx.Tx, from, to ids.CompanyID, f
 // the description stamps it too — so the field's own answer is the whole test,
 // which is where it differs from the logo one screen over.
 func descriptionHeldByHuman(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (bool, error) {
-	return companyFieldHeldByHuman(ctx, tx, companyID, descriptionField)
+	return companyFieldHeldByAUser(ctx, tx, companyID, descriptionField)
 }

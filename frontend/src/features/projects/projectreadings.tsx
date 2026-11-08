@@ -5,8 +5,8 @@ import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { reveal } from "../../lib/reveal";
+import { useViewerZone } from "../../lib/viewerzone";
 import { type Project360, stateOf } from "./projectsections";
 import { commitmentsReading, phaseTimes } from "./projectstanding";
 import { commitmentsPeek, documentsPeek } from "./projectstanding.peeks";
@@ -97,7 +97,7 @@ function OpenCommitmentsCell({ view }: Readonly<{ view: Project360 }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const label = t("project.openTasks");
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const reading = commitmentsReading(view);
   if (!reading) {
     return <StatCard label={label} value={t("state.withheld")} />;
@@ -141,7 +141,7 @@ function DocumentsCell({
   const plural = usePlural();
   const { locale } = useLocale();
   const label = t("project.documents.title");
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const documents = view.documents?.data ?? [];
   const state = stateOf(
     view,

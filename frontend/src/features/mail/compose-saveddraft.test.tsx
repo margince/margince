@@ -7,6 +7,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
@@ -22,6 +23,7 @@ import {
   ToastRegion,
   useToast,
 } from "../../design-system/toast";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import {
   allowedPreview,
@@ -171,6 +173,29 @@ describe("a saved draft", () => {
     expect(new URLSearchParams(read?.query).get("anchor_id")).toBe("p-1");
   });
 
+  it("keeps an address being typed in To when the saved draft lands", async () => {
+    let answer: (response: Response) => void = () => {};
+    stubRoutes({
+      "GET /mail-drafts": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const user = userEvent.setup();
+    render(composer(vi.fn()));
+    const to = await screen.findByRole<HTMLInputElement>("combobox", {
+      name: "To",
+    });
+    await user.type(to, "ada@br");
+
+    act(() => answer(jsonResponse(SAVED)));
+
+    expect(await screen.findByText("Saved draft restored")).toBeTruthy();
+    expect(
+      screen.getByRole<HTMLInputElement>("combobox", { name: "To" }).value,
+    ).toBe("ada@br");
+  });
+
   it("is read for the message a reply answers", async () => {
     const sent = stubRoutes();
     render(composer(vi.fn(), "act-1"));
@@ -228,8 +253,17 @@ describe("a saved draft", () => {
       subject: "Pricing for 40 seats",
       body: "Finished after lunch",
       html_body: "<p>Finished after lunch</p>",
+      editor_state: {
+        intent: "",
+        ai_generated: false,
+        voice_degraded: false,
+        served_body: "",
+      },
+      attachment_ids: [],
     });
-    expect(await screen.findByText("Draft saved")).toBeTruthy();
+    expect(
+      await screen.findByText("Draft saved", { selector: ".toast-said" }),
+    ).toBeTruthy();
   });
 
   it("is written when the composer closes over words nobody saved", async () => {
@@ -478,10 +512,11 @@ describe("a saved draft", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(await screen.findByRole("alert")).toHaveProperty(
-      "textContent",
-      "The draft was not saved. Save again, or close again to discard the text.",
+    const line = await screen.findByRole("alert");
+    expect(line.firstChild?.textContent).toBe(
+      "The draft was not saved. Retry, or close again to discard the text.",
     );
+    expect(within(line).getByRole("button", { name: "Retry" })).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     expect(messageText("Body")).toBe("Half written before lunch");
 
@@ -524,6 +559,37 @@ describe("a saved draft", () => {
         false,
       ),
     );
+  });
+
+  it("keeps its refused save and Retry in view beside a refused send", async () => {
+    stubRoutes({
+      "PUT /mail-drafts": () => problem("internal", 503),
+      "POST /emails": () => problem("internal", 500),
+    });
+    const user = userEvent.setup();
+    render(composer(vi.fn()));
+    await screen.findByRole("combobox", { name: "Reason for contact" });
+    writeMessage("Body", "Half written before lunch");
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    await screen.findByText(/The draft was not saved/);
+    await user.type(screen.getByLabelText("Subject"), "Pricing");
+    await user.type(
+      screen.getByRole("combobox", { name: "To" }),
+      "buyer@acme.test{Enter}",
+    );
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Reason for contact" }),
+      "Follow-up they requested",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(2));
+    const saveLine = screen.getByText(/The draft was not saved/);
+    expect(
+      within(saveLine).getByRole("button", { name: "Retry" }),
+    ).toBeTruthy();
   });
 
   it("is named to the send, which discards it", async () => {
@@ -584,6 +650,9 @@ describe("a saved draft", () => {
             subject: "",
             body: "Half written before lunch",
             html: "<p>Half written before lunch</p>",
+            files: [],
+            context: "",
+            sendAt: "",
           },
           replyTo: undefined,
           offeredRecipient: undefined,
@@ -600,7 +669,7 @@ describe("a saved draft", () => {
     );
     await waitFor(() => expect(result.current.enabled).toBe(true));
 
-    act(() => result.current.save());
+    act(() => result.current.requestClose());
     await waitFor(() => expect(answer).toBeDefined());
     expect(result.current.saving).toBe(true);
     act(() => result.current.sent());
@@ -611,5 +680,93 @@ describe("a saved draft", () => {
     expect(client.getQueryData(["mail-draft", "contact", "p-1"])).toBeNull();
     expect(result.current.held).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("a saved draft put back whole", () => {
+  const WHOLE: MailDraft = {
+    ...SAVED,
+    attachments: [
+      {
+        id: "f-1",
+        filename: "seat-pricing.pdf",
+        content_type: "application/pdf",
+        byte_size: 48_213,
+      },
+    ],
+    communication_context: "requested_followup",
+    scheduled_at: "2026-11-20T08:00:00Z",
+    scheduled_tz: UTC_ZONE,
+  };
+
+  it("brings back its files, its reason for contact and its send time", async () => {
+    const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(WHOLE) });
+    render(composer(vi.fn()));
+    await screen.findByText("Saved draft restored");
+
+    expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
+    expect(
+      screen.getByRole("combobox", { name: "Reason for contact" }).textContent,
+    ).toContain("Follow-up they requested");
+    expect(screen.getByRole("button", { name: "Schedule send" })).toBeTruthy();
+    expect(screen.getByText(/^Sends /)).toBeTruthy();
+    // What came back is what the draft holds, so nothing is written again.
+    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
+  });
+
+  it("counts the files that could not come back, and names none", async () => {
+    stubRoutes({
+      "GET /mail-drafts": () =>
+        jsonResponse({ ...WHOLE, attachments_unavailable: 2 }),
+    });
+    render(composer(vi.fn()));
+
+    expect(
+      await screen.findByText("2 files could not be restored."),
+    ).toBeTruthy();
+    expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
+  });
+
+  it("marks an agent's draft as the agent's, files and all", async () => {
+    stubRoutes({
+      "GET /mail-drafts": () =>
+        jsonResponse({
+          ...WHOLE,
+          agent_drafted: true,
+          attachments_unavailable: 1,
+        }),
+    });
+    render(composer(vi.fn()));
+
+    expect(
+      await screen.findByText("Agent draft restored. Read it before sending."),
+    ).toBeTruthy();
+    expect(screen.getByText("1 file could not be restored.")).toBeTruthy();
+    expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
+  });
+
+  it("offers Retry under a refused save, and the retry saves and closes", async () => {
+    const onClose = vi.fn();
+    let puts = 0;
+    const sent = stubRoutes({
+      "PUT /mail-drafts": () => {
+        puts += 1;
+        return puts === 1 ? problem("internal", 503) : jsonResponse(SAVED);
+      },
+    });
+    const user = userEvent.setup();
+    render(composer(onClose));
+    await waitFor(() =>
+      expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
+    );
+    writeMessage("Body", "Half written before lunch");
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    const line = await screen.findByRole("alert");
+
+    await user.click(within(line).getByRole("button", { name: "Retry" }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(2);
+    expect(messageText("Body")).toBe("Half written before lunch");
   });
 });

@@ -87,7 +87,7 @@ func TestAWaitingMailedCommitmentIsCountedOnItsAccount(t *testing.T) {
 
 func (m mailedProposal) accept() error {
 	colleague := m.As(m.Rep2, []ids.UUID{m.Team1}, transcriptPerms)
-	_, err := approvalsServiceWithEffects(m.Pool).Decide(colleague, ids.From[ids.ApprovalKind](m.approval), true, nil)
+	_, err := NewApprovalsServiceWithEffects(m.Pool).Decide(colleague, ids.From[ids.ApprovalKind](m.approval), true, nil)
 	return err
 }
 

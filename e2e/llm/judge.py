@@ -244,10 +244,11 @@ def _record(directory, criterion, answer, model):
     return held, reason
 
 
-def _run(argv, prompt, what):
+def _run(argv, prompt, what, cwd=None, env=None):
     try:
         done = subprocess.run(
-            argv, input=prompt, capture_output=True, text=True, timeout=300, check=False
+            argv, input=prompt, capture_output=True, text=True, timeout=300, check=False,
+            cwd=cwd, env=env,
         )
     except subprocess.TimeoutExpired as err:
         raise JudgeUnavailable(f"{what} did not answer within 300s") from err
@@ -305,6 +306,8 @@ _MCP_CONFIG = None
 
 def _cli_asker(model):
     """Ask through the claude CLI, which spends what lib-llm-credential.sh names."""
+    import clean
+
     if shutil.which("claude") is None:
         raise JudgeUnavailable("the claude CLI is not on PATH, so no verdict can be reached")
     _credential()
@@ -323,7 +326,13 @@ def _cli_asker(model):
         "--output-format",
         "text",
     ]
-    return lambda prompt: _run(argv, prompt, f"the judge ({model})")
+
+    def ask(prompt):
+        # The judge reads one answer against one criterion, never the repository's rules.
+        with clean.claude_launch() as (flags, env, empty):
+            return _run([*argv, *flags], prompt, f"the judge ({model})", cwd=empty, env=env)
+
+    return ask
 
 
 def _api_asker(via, model):

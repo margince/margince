@@ -11,11 +11,7 @@ import { DealStatusCardPanel } from "./dealstatus";
 type WrittenBy = components["schemas"]["WrittenBy"];
 type Situation = "task" | "request" | "covered";
 
-function panel(
-  writer: WrittenBy,
-  situation: Situation = "task",
-  coverage?: components["schemas"]["MailCaptureCoverage"]["state"],
-) {
+function panel(writer: WrittenBy, situation: Situation = "task") {
   const request = situation !== "task";
   const next = request
     ? {
@@ -63,16 +59,6 @@ function panel(
       "GET /deals/demo-deal/status": () =>
         jsonResponse({
           deal_id: "demo-deal",
-          ...(coverage
-            ? {
-                mail_coverage: {
-                  channel: "email",
-                  state: coverage,
-                  interval_to: "2026-09-05T09:00:00Z",
-                  evaluated_at: "2026-09-05T09:00:00Z",
-                },
-              }
-            : {}),
           story: {
             sentences: [
               {
@@ -130,11 +116,4 @@ export const RequestAlreadyCovered: Story = {
 export const RequestAlreadyCoveredDark: Story = {
   ...RequestAlreadyCovered,
   globals: { theme: "dark" },
-};
-
-export const CurrentRequestWithUnavailableCapture: Story = {
-  render: panel("deterministic", "covered", "unavailable"),
-};
-export const HistoricalReviewWithPartialCapture: Story = {
-  render: panel("deterministic", "request", "partial"),
 };

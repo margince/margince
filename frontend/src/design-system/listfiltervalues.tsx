@@ -44,19 +44,13 @@ function FilterValueList({
       : chip.options;
   return (
     <>
-      <Radio
-        className="lt-mi"
-        name={group}
-        checked={!value}
-        label={chip.allLabel}
-        onChange={() => onPick("", chip.allLabel)}
-      />
       {chip.filterable && (
         <label className="lt-fsearch">
           <span className="sr-only">
             {t("table.filterValueSearch", { filter: chip.label })}
           </span>
           <input
+            type="search"
             className="lt-fsearch-input"
             value={query}
             placeholder={t("table.filterValueSearch", { filter: chip.label })}
@@ -64,6 +58,13 @@ function FilterValueList({
           />
         </label>
       )}
+      <Radio
+        className="lt-mi"
+        name={group}
+        checked={!value}
+        label={chip.allLabel}
+        onChange={() => onPick("", chip.allLabel)}
+      />
       {chip.filterable && shown.length === 0 && (
         <p className="lt-fvalue-status">{t("table.filterNoMatches")}</p>
       )}
@@ -111,6 +112,18 @@ function AsyncFilterValueList({
 
   return (
     <>
+      <label className="lt-fsearch">
+        <span className="sr-only">
+          {t("table.filterValueSearch", { filter: chip.label })}
+        </span>
+        <input
+          type="search"
+          className="lt-fsearch-input"
+          value={query}
+          placeholder={t("table.filterValueSearch", { filter: chip.label })}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
       <Radio
         className="lt-mi"
         name={group}
@@ -118,17 +131,6 @@ function AsyncFilterValueList({
         label={chip.allLabel}
         onChange={() => onPick("", chip.allLabel)}
       />
-      <label className="lt-fsearch">
-        <span className="sr-only">
-          {t("table.filterValueSearch", { filter: chip.label })}
-        </span>
-        <input
-          className="lt-fsearch-input"
-          value={query}
-          placeholder={t("table.filterValueSearch", { filter: chip.label })}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </label>
       {!query && (
         <p className="lt-fvalue-status">{t("table.filterTypeToSearch")}</p>
       )}

@@ -39,6 +39,7 @@ var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSourceAutomationRun:       true,
 	crmcontracts.WorklistItemSourceAiWorkHealth:        true,
 	crmcontracts.WorklistItemSourceCaptureHealth:       true,
+	crmcontracts.WorklistItemSourceBookingHealth:       true,
 	crmcontracts.WorklistItemSourceBounce:              true,
 	crmcontracts.WorklistItemSourceUndelivered:         true,
 	crmcontracts.WorklistItemSourceDsr:                 true,
@@ -95,7 +96,7 @@ func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDis
 // day with every lane's own grant and row scope. A row on no scope the reader holds is
 // not found.
 func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
-	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+	if actor, ok := principal.Actor(ctx); !ok || !actor.HumanOrItsAgent() {
 		return apperrors.ErrPermissionDenied
 	}
 	if s.marked.store == nil {

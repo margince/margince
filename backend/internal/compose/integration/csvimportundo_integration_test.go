@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 type importUndoKeptDTO struct {
@@ -64,8 +65,8 @@ func leadRows(t *testing.T, e *apptest.AppEnv) []leadRowDTO {
 func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
@@ -92,7 +93,7 @@ func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
 		t.Fatalf("editing the lead as a human → %d, want 200", status)
 	}
 
-	var undone importRunDTO
+	var undone importjobtest.Run
 	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
@@ -141,8 +142,8 @@ func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
 func TestCSVImportUndoRefusesBeforeTheRunCommits(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 
 	if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusConflict {
 		t.Fatalf("undo of an awaiting_approval run → %d, want 409", status)
@@ -170,9 +171,9 @@ func TestCSVImportUndoReversesCompanies(t *testing.T) {
 	e := setupImportApp(t)
 	before := len(companyRows(t, e))
 
-	profile, _ := uploadCSV(t, e, "company", companyProspectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", companyProspectCSV)
 	mapping := map[string]string{"Company": "display_name", "Legal Name": "legal_name", "Industry": "industry"}
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
@@ -183,7 +184,7 @@ func TestCSVImportUndoReversesCompanies(t *testing.T) {
 		t.Fatalf("companies after approval = %d, want %d", got, before+2)
 	}
 
-	var undone importRunDTO
+	var undone importjobtest.Run
 	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
@@ -208,8 +209,8 @@ func TestCSVImportUndoReversesCompanies(t *testing.T) {
 func TestCSVImportUndoKeepsARowAHumanDisqualifiedOutsideTheImport(t *testing.T) {
 	e := setupImportApp(t)
 
-	profile, _ := uploadCSV(t, e, "lead", "Email,Full Name\nada@lovelace.example,Ada Lovelace\n")
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", "Email,Full Name\nada@lovelace.example,Ada Lovelace\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
@@ -227,7 +228,7 @@ func TestCSVImportUndoKeepsARowAHumanDisqualifiedOutsideTheImport(t *testing.T) 
 		t.Fatalf("disqualify → %d, want 200", status)
 	}
 
-	var undone importRunDTO
+	var undone importjobtest.Run
 	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}

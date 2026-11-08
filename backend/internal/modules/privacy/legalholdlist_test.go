@@ -17,9 +17,8 @@ import (
 )
 
 // The list names held contacts and leads, so it discloses somebody's existence
-// to whoever can read it. An agent is refused at the door for that reason, and
-// the refusal has to land BEFORE the read — a nil handle is passed on purpose,
-// so a version that reached the database would panic rather than pass.
+// to whoever reads it. Automatic work is refused at the door, before the read.
+// The nil handle panics if the database is reached.
 func TestTheHoldListRefusesAnAgentBeforeItReadsAnything(t *testing.T) {
 	t.Parallel()
 	for _, k := range []struct {

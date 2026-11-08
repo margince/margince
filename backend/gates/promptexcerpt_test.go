@@ -60,7 +60,7 @@ func TestEverySnippetIndexIsBuiltFromAnExcerpt(t *testing.T) {
 	var raw []string
 	built := 0
 	fset := gatekit.SourceFileSet()
-	err := filepath.WalkDir(promptLanesDir, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(promptLanesDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}

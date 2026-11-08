@@ -287,9 +287,7 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = "true"
-	}
+	scope += " AND " + auth.ActivityExternalEvidenceClause("a")
 	limitPos := arg(receiptsPerEdge)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -404,6 +402,7 @@ func wireEdge(e search.InteractionEdge, from, to string, now time.Time) crmcontr
 		Interactions90d: e.Count90d,
 		Inbound90d:      &in,
 		Outbound90d:     &outCount,
+		Sent90d:         e.SentCount90d,
 		LastAt:          &last,
 	}
 }

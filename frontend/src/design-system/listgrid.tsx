@@ -7,12 +7,13 @@
 
 import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
+import { opensRow } from "../lib/linkclick";
 import { AppLink } from "./applink";
 import { Checkbox, type useScrollRegion } from "./atoms";
-import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
 import { useListFocusHandoff } from "./listfocus";
 import { HeaderCell } from "./listheader";
+import { PageSelectBox, type SelectAll } from "./listselection";
 import type { SortControl } from "./listsurface";
 import { CELL_STRIP_CLASS } from "./listtable.floors";
 import {
@@ -44,7 +45,9 @@ function RowSelect<Row>({
       className="lt-select"
       label={<span className="sr-only">{selection.label(row)}</span>}
       checked={selection.selected.has(rowKey(row))}
-      onChange={() => selection.onToggle(row)}
+      onChange={() =>
+        selection.onChange([row], !selection.selected.has(rowKey(row)))
+      }
       onClick={(event) => event.stopPropagation()}
     />
   );
@@ -133,6 +136,7 @@ export function ListGrid<Row>({
   layout,
   shown,
   sort,
+  all,
   children,
 }: Readonly<{
   scrollerRef: (node: HTMLDivElement | null) => void;
@@ -143,6 +147,8 @@ export function ListGrid<Row>({
   layout: ColumnLayout & ColumnResize;
   shown: readonly ListColumn<Row>[];
   sort?: SortControl;
+  /** The selection's page box, drawn in the identity column's header. */
+  all?: SelectAll;
   children: ReactNode;
 }>) {
   return (
@@ -186,6 +192,9 @@ export function ListGrid<Row>({
                 onResizeStart={layout.onResizeStart}
                 onResize={layout.onResize}
                 onResizeEnd={layout.onResizeEnd}
+                lead={
+                  column.fixed && all ? <PageSelectBox all={all} /> : undefined
+                }
               />
             ))}
             <td className="lt-slack" aria-hidden="true" />

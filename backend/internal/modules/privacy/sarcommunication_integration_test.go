@@ -17,6 +17,7 @@ package privacy
 import (
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -60,5 +61,27 @@ func TestTheExportNamesThePurposeAPerPurposeStopWasNarrowedTo(t *testing.T) {
 	}
 	if label := pkg.CommunicationSuppression[0]["purpose_label"]; label != "Newsletter" {
 		t.Errorf("the export's suppression row labels the purpose %v, want %q", label, "Newsletter")
+	}
+}
+
+// A stop that holds only the hash of one of the subject's addresses is theirs
+// to see in the export, like a plain one.
+//
+// Mutation: put back the plain-address arm alone and this fails.
+func TestTheExportCarriesAStopKeptAsTheHashOfTheSubjectsAddress(t *testing.T) {
+	e := setupSARIdentifiers(t)
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
+		VALUES ($1, 'subject_request', 'kept', 'system', 'user')`,
+		storekit.SuppressionHash(ident(e.contact, liveEmail))); err != nil {
+		t.Fatalf("seeding the kept stop: %v", err)
+	}
+
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
+	if err != nil {
+		t.Fatalf("AssembleSAR: %v", err)
+	}
+	if len(pkg.CommunicationSuppression) != 1 || pkg.CommunicationSuppression[0]["kind"] != "subject_request" {
+		t.Errorf("the export carries %v, want the one kept stop", pkg.CommunicationSuppression)
 	}
 }

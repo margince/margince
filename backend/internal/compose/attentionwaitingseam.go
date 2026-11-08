@@ -249,7 +249,7 @@ func sentBySendingSystem(row activities.WaitingReply) bool {
 // keepWaitingCustomers removes repetitive incidental mail, and shows one card
 // per conversation: a conversation's unanswered requests fold into its newest,
 // which carries how many earlier ones there are and when the first arrived.
-// The store's card tail folds alike (TestTheWaitingTailIsTheFoldOfTheScan).
+// The store's card tail folds alike (assertTailIsTheFold).
 // Folding is presentation only. Each request keeps its own identity and
 // settles on its own; a set-aside on the card reaches the earlier ones too
 // (activities.setReaderState).
