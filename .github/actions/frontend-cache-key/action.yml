@@ -1,0 +1,35 @@
+name: frontend-cache-key
+description: >-
+  Hand back the key of the frontend's incremental state, so the frontend lane
+  that reads it and the scheduled main job that writes it spell it in one place.
+
+outputs:
+  key:
+    description: The primary key, ending in the commit SHA so cache-warm can save a new entry for each main commit.
+    value: ${{ steps.key.outputs.key }}
+  restore-keys:
+    description: The prefix that matches the newest entry with the same dependencies and lint config.
+    value: ${{ steps.key.outputs.restore-keys }}
+  path:
+    description: tsc's build info and the compiler lint's cache, one per line.
+    value: ${{ steps.key.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    # tsc checks each input's hash against its build info, and ESLint checks
+    # each file's hash and its own version, so an old entry is safe. ESLint
+    # does not see a plugin's version, so the lockfile is in the prefix.
+    - name: Compute the frontend cache key
+      id: key
+      shell: bash
+      run: |
+        prefix="frontend-incremental-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml', 'frontend/eslint.config.js') }}"
+        {
+          echo "key=$prefix-${{ github.sha }}"
+          echo "restore-keys=$prefix-"
+          echo "path<<EOF"
+          echo "frontend/node_modules/.tmp"
+          echo "frontend/node_modules/.cache/compiler-lint"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
