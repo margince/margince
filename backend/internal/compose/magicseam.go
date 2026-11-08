@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -67,10 +68,33 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 		out = append(out, magic.DecidedReceipt{
 			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
 			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
-			Approval: !deals.IsCorrectionReceiptKind(receipt.Kind),
+			Approval: receipt.Source == attention.ReceiptFromApproval,
+			Undo:     decidedUndo(receipt),
 		})
 	}
 	return out, more, nil
+}
+
+// decidedUndo is the way back a correction's own review allows, judged as the
+// done-for-you list judges it; an approval has none here.
+func decidedUndo(receipt attention.Receipt) *crmcontracts.MagicUndo {
+	if receipt.Source != attention.ReceiptFromCorrection || receipt.Undo == nil {
+		return nil
+	}
+	review := receipt.Review
+	switch {
+	case receipt.Undo.Reversed || (review != nil && review.Reversed):
+		return magicRefusal(string(ReasonAlreadyUndone))
+	case review == nil:
+		return magicRefusal(string(ReasonNotRestorableByThisPath))
+	case !review.Writable:
+		return magicRefusal(string(ReasonNotWritableByCaller))
+	case !review.CanUndo:
+		return magicRefusal(string(ReasonSuperseded))
+	}
+	undo := magicOffer(receipt.Undo.AuditLogID)
+	undo.Version = &review.Version
+	return undo
 }
 
 // Home uses the owning inbox policy for both authority and explicit responsibility.

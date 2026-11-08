@@ -23,8 +23,8 @@ func TestAVerdictCloseDateKeepsItsOwnReceiptKind(t *testing.T) {
 		if receipt.Kind != want || receipt.Undo == nil {
 			t.Errorf("receipt of a %s change = kind %q undo %v, want kind %q with an Undo", correction, receipt.Kind, receipt.Undo, want)
 		}
-		if !deals.IsCorrectionReceiptKind(receipt.Kind) {
-			t.Errorf("kind %q is not a correction receipt kind, so the sign-in page offers it as an approval", receipt.Kind)
+		if receipt.Source != attention.ReceiptFromCorrection {
+			t.Errorf("a %s receipt is not marked as a correction, so the sign-in page offers it as an approval", receipt.Kind)
 		}
 	}
 }
@@ -109,5 +109,38 @@ func TestAnApprovalReceiptCarriesNoAuditEntry(t *testing.T) {
 	wire := attention.WireReceipt(attention.Receipt{Source: attention.ReceiptFromApproval, ID: ids.NewV7(), Kind: "send_email"})
 	if wire.Source == nil || *wire.Source != crmcontracts.ReceiptSourceApproval || wire.AuditLogId != nil {
 		t.Fatalf("an approval receipt must say approval and name no audit entry: %v %v", wire.Source, wire.AuditLogId)
+	}
+}
+
+func TestADecidedCorrectionOffersTheUndoItsReviewAllows(t *testing.T) {
+	t.Parallel()
+	audit := ids.NewV7()
+	correction := func(review crmcontracts.AppliedDealChangeReview, reversed bool) attention.Receipt {
+		return attention.Receipt{
+			Source: attention.ReceiptFromCorrection, ID: audit, AuditLogID: audit, Review: &review,
+			Undo: &attention.ReceiptUndo{AuditLogID: audit, Version: review.Version, Reversed: reversed},
+		}
+	}
+	live := crmcontracts.AppliedDealChangeReview{Version: 7, CanUndo: true, CanAccept: true, Writable: true}
+	for name, tc := range map[string]struct {
+		receipt attention.Receipt
+		reason  Reason
+	}{
+		"reversed":       {correction(live, true), ReasonAlreadyUndone},
+		"not writable":   {correction(crmcontracts.AppliedDealChangeReview{Version: 7, CanUndo: true, CanAccept: true}, false), ReasonNotWritableByCaller},
+		"edited since":   {correction(crmcontracts.AppliedDealChangeReview{Version: 7, Writable: true}, false), ReasonSuperseded},
+		"without review": {attention.Receipt{Source: attention.ReceiptFromCorrection, Undo: &attention.ReceiptUndo{AuditLogID: audit}}, ReasonNotRestorableByThisPath},
+	} {
+		undo := decidedUndo(tc.receipt)
+		if undo == nil || undo.Undoable || undo.Reason == nil || *undo.Reason != string(tc.reason) {
+			t.Errorf("%s: want a refusal %q, got %+v", name, tc.reason, undo)
+		}
+	}
+	offered := decidedUndo(correction(live, false))
+	if offered == nil || !offered.Undoable || offered.AuditId == nil || offered.Version == nil || *offered.Version != 7 {
+		t.Fatalf("a live correction must offer Undo with its audit entry and version, got %+v", offered)
+	}
+	if decidedUndo(attention.Receipt{Source: attention.ReceiptFromApproval, ID: audit}) != nil {
+		t.Fatal("an approval must carry no Undo on the done lane")
 	}
 }
