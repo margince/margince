@@ -25,10 +25,7 @@ fixture:
 expect:
   outcome: accepted
   answer: []
-  rubric: >
-    The mail names no date, no price and no decision. Score high for an empty
-    list of actions. Score at the floor for any change.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The right answer is no change, and the check fails any proposed action
+    whatever its value, so a judge has nothing left to weigh.

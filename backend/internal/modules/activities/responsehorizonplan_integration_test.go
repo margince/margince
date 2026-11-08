@@ -162,6 +162,12 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 			strings.Contains(n.IndexCond, "regexp_replace") {
 			addressIndexBoundsKind++
 		}
+		// With little attested mail the planner may key on the sender alone.
+		// That reads only the attested mail to them, never a range of the index.
+		if shape == sparseMailbox && alias == "answer_mail" && n.IndexName == "idx_activity_attested_counterparty" &&
+			strings.HasPrefix(n.IndexCond, "(counterparty_email = ") {
+			addressIndexBoundsKind++
+		}
 		// A heap scan of activity under the touch alias, or an index read keyed
 		// on anything but the walked id, is the per-message walk of every
 		// later call and meeting. The lateral's own Subquery Scan carries the

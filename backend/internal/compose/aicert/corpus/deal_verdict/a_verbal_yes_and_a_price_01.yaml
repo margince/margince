@@ -45,8 +45,8 @@ expect:
     raise limit of 70%. The close date at the end of the month already fits.
     Score high for set_amount to 36000 EUR and a set_probability above 50 and
     no higher than 70.
-    Score in the middle when only one of the two is proposed. Score at the
-    floor for a changed close date or an amount the words do not state.
+    Score at the floor for a changed close date or an amount the words do not
+    state.
   bands:
     certified_min: 70
     degraded_min: 50

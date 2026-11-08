@@ -66,8 +66,9 @@ expect:
     cites_label: sandbox
     names_token: sandbox
     # The condition was released in the thread, so reporting it as live is
-    # the failure this case exists to catch.
-    avoids: ["cannot sign", "outside the eu", blocked, blocker]
+    # the failure this case exists to catch. A brief may say the condition
+    # is resolved and no blocker remains, so only the live claim is avoided.
+    avoids: ["cannot sign"]
   bands:
     certified_min: 70
     degraded_min: 50
