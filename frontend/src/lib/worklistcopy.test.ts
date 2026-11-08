@@ -269,7 +269,9 @@ describe("reasonText — day-count plural", () => {
       kind: "quiet_days",
       value: { kind: "days", days: 14 },
     };
-    expect(reasonText(one, t, "en", zone, undefined)).toBe("no activity for 1 day");
+    expect(reasonText(one, t, "en", zone, undefined)).toBe(
+      "no activity for 1 day",
+    );
     expect(reasonText(many, t, "en", zone, undefined)).toBe(
       "no activity for 14 days",
     );

@@ -18853,8 +18853,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.because.below_material.value":
     "{value}, không vượt quá mức thường thấy của deal rủi ro",
   "worklist.because.quiet_days": "đã im lặng",
-  "worklist.because.quiet_days.value_one": "không có hoạt động trong {value} ngày",
-  "worklist.because.quiet_days.value_other": "không có hoạt động trong {value} ngày",
+  "worklist.because.quiet_days.value_one":
+    "không có hoạt động trong {value} ngày",
+  "worklist.because.quiet_days.value_other":
+    "không có hoạt động trong {value} ngày",
   "worklist.because.no_next_step": "chưa ghi nhận bước tiếp theo",
   "worklist.because.no_champion": "chưa có người ủng hộ",
   "worklist.because.champion_unknown": "chưa rõ người ủng hộ",
