@@ -288,7 +288,12 @@ func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) (
 	if msg := validateClassifyPayload(payload, batch); msg != "" {
 		return nil, "", fmt.Errorf("classify: %s", msg)
 	}
-	return payload.Results, judgeOf(resp), nil
+	return resolveClassifyRefs(payload.Results, batch), judgeOf(resp), nil
+}
+
+// resolveClassifyRefs rewrites each validated result's ref to its activity id.
+func resolveClassifyRefs(results []classifyResult, batch []unlabeledMessage) []classifyResult {
+	return resolveBatchRefs(results, capturelabel.Refs(batch))
 }
 
 // judgeOf names what actually answered.
@@ -330,9 +335,10 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 	// This site's own vocabulary, checked here rather than in the shared id
 	// contract: an error naming the wrong closed set sends a reader to the
 	// wrong prompt.
+	refs := capturelabel.Refs(batch)
 	inbound := make(map[string]bool, len(batch))
 	for _, m := range batch {
-		inbound[m.ID.String()] = m.Inbound
+		inbound[refs.For(m.ID.String())] = m.Inbound
 	}
 	for _, r := range payload.Results {
 		if !classifyLabels[r.Label] {
@@ -360,14 +366,13 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 
 func (r classifyResult) answeredID() string { return r.ID }
 
-// classifyIDs is the ids one batch asks about, in the order it sends them: what
-// the schema lets the model name and what the validator requires it to answer.
+func (r classifyResult) answering(id string) classifyResult { r.ID = id; return r }
+
+// classifyIDs is the refs one batch asks about, in the order it sends them:
+// what the schema lets the model name and what the validator requires it to
+// answer.
 func classifyIDs(batch []unlabeledMessage) []string {
-	requested := make([]string, len(batch))
-	for i, m := range batch {
-		requested[i] = m.ID.String()
-	}
-	return requested
+	return capturelabel.Refs(batch).All()
 }
 
 // classifySchema is the generation-time shape guardrail (§2.8).

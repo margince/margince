@@ -141,6 +141,33 @@ one certification run can cover:
    `TestNoModelClientOutsideTheGate` fails a model client built in any other place.
    Keep the builder and the checker in reach: the certification case must call the same two functions.
 
+   Show the model short labels, never a record UUID. Name each record the prompt shows with a
+   `promptref.Refs` table (`backend/internal/shared/kernel/promptref`). Build the table from the
+   records in the order the prompt shows them, in one function that the builder and the parser both
+   call. The parser reads each label of the reply back to its ID, after the shape check has refused
+   any label the call did not show.
+
+   ```go
+   func messageRefs(batch []Message) *promptref.Refs {
+   	refs := promptref.New("m")              // m1, m2, … in batch order
+   	for _, m := range batch {
+   		refs.For(m.ID.String())
+   	}
+   	return refs
+   }
+
+   // builder: the span, the prompt text and the answer enum carry refs
+   fence.WrapAttr("source_id", messageRefs(batch).For(m.ID.String()), body)
+   // parser: after the shape check, read each ref back
+   id, ok := messageRefs(batch).ID(result.ID) // ok is false for a ref never shown
+   ```
+
+   A batch that answers one result per label can use `resolveBatchRefs` in
+   `internal/compose/batchfidelity.go`. `TestNoSiteShowsTheModelARecordUUID` builds every request of
+   every corpus scenario and fails a site whose prompt, answer schema or tool list carries a UUID.
+   Why a UUID is a bad name for a model:
+   [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids).
+
 5. **Register the site and bind its case** with one line in the **census**.
    The census is `compose.NewTaskCensus` in `internal/compose/aitaskregistry.go`.
    It lists every invocation site this build ships, and every start and test run checks it against the
@@ -174,6 +201,7 @@ one certification run can cover:
    | a fixture that is not the shape its site takes | `TestEveryCorpusScenarioPreparesAgainstItsSite` |
    | a closed answer enum with a kind that no accepted corpus scenario names | `TestEveryClosedAnswerKindCarriesAScenario`. Each kind of the enum needs its own accepted scenario; one per site is not enough |
    | a task with no lane, or a lane no role wires | `TestEveryCensusedSiteRidesALaneAProcessRoleWires` |
+   | a prompt, answer schema or tool list that shows a record UUID | `site X shows the model a record UUID` |
    | a new `.go` file with no SPDX header | `TestEveryHandWrittenGoFileCarriesTheLicenseHeader` |
 
 8. **Certify it** once the gates are green. This is the one step that costs money.

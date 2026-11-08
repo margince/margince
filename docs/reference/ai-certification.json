@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 55,
-    "sites_best_current": 45,
+    "sites_best_current": 41,
     "sites_best_partial": 0,
-    "sites_best_stale": 10,
+    "sites_best_stale": 14,
     "sites_absent": 0,
     "scenarios": 291,
     "records": 368,
@@ -131,7 +131,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -141,7 +141,7 @@
             },
             "same_model": false,
             "band": "supported_degraded",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 27,
@@ -1075,7 +1075,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1085,7 +1085,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 21,
@@ -1432,7 +1432,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1442,7 +1442,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 27,
@@ -1634,7 +1634,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 171,
           "passed": 171,
@@ -1814,7 +1814,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 96,
           "passed": 93,
@@ -2076,7 +2076,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2086,7 +2086,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -2562,7 +2562,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2572,7 +2572,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -2839,7 +2839,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 171,
           "passed": 171,
@@ -3085,7 +3085,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "abandoned": 0,
           "runs": 96,
           "passed": 93,
@@ -3348,7 +3348,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -3358,7 +3358,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -4287,7 +4287,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -4297,7 +4297,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 15,
@@ -4635,7 +4635,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -4645,7 +4645,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 30,
@@ -5226,7 +5226,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -5236,7 +5236,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 15,
@@ -6165,7 +6165,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -6175,7 +6175,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 15,
@@ -7104,7 +7104,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -7114,7 +7114,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 15,
@@ -7933,7 +7933,7 @@
       "ready": 41,
       "usable_with_care": 10,
       "not_reliable_yet": 4,
-      "recheck_pending": 10,
+      "recheck_pending": 14,
       "models": [
         {
           "binding": {
@@ -7942,9 +7942,9 @@
             "env": "cloud_frontier"
           },
           "sites": 48,
-          "sites_current": 38,
+          "sites_current": 36,
           "sites_partial": 0,
-          "sites_stale": 10,
+          "sites_stale": 12,
           "runs": 789,
           "passed": 741,
           "reliability": 0.9391634980988594,
@@ -7963,9 +7963,9 @@
             "thinking_level": "low"
           },
           "sites": 47,
-          "sites_current": 37,
+          "sites_current": 35,
           "sites_partial": 0,
-          "sites_stale": 10,
+          "sites_stale": 12,
           "runs": 933,
           "passed": 903,
           "reliability": 0.9678456591639871,
@@ -8043,7 +8043,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 21,
           "passed": 21,
           "records": 1
@@ -8373,7 +8373,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 27,
           "passed": 27,
           "records": 1
@@ -8489,7 +8489,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 171,
           "passed": 171,
           "records": 1
@@ -8679,7 +8679,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 96,
           "passed": 93,
           "records": 1
@@ -8781,7 +8781,7 @@
       "ready": 32,
       "usable_with_care": 10,
       "not_reliable_yet": 7,
-      "recheck_pending": 24,
+      "recheck_pending": 25,
       "models": [
         {
           "binding": {
@@ -8790,9 +8790,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 19,
+          "sites_current": 18,
           "sites_partial": 0,
-          "sites_stale": 22,
+          "sites_stale": 23,
           "runs": 576,
           "passed": 553,
           "reliability": 0.9600694444444444,
@@ -8830,9 +8830,9 @@
             "env": "cloud_frontier"
           },
           "sites": 46,
-          "sites_current": 32,
+          "sites_current": 30,
           "sites_partial": 0,
-          "sites_stale": 14,
+          "sites_stale": 16,
           "runs": 936,
           "passed": 814,
           "reliability": 0.8696581196581197,
@@ -8910,7 +8910,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 15,
           "passed": 15,
           "records": 2
@@ -9541,7 +9541,7 @@
       "ready": 27,
       "usable_with_care": 15,
       "not_reliable_yet": 3,
-      "recheck_pending": 25,
+      "recheck_pending": 26,
       "models": [
         {
           "binding": {
@@ -9550,9 +9550,9 @@
             "env": "sovereign"
           },
           "sites": 44,
-          "sites_current": 17,
+          "sites_current": 16,
           "sites_partial": 0,
-          "sites_stale": 27,
+          "sites_stale": 28,
           "runs": 786,
           "passed": 638,
           "reliability": 0.811704834605598,
@@ -9570,9 +9570,9 @@
             "env": "cloud_frontier"
           },
           "sites": 6,
-          "sites_current": 1,
+          "sites_current": 0,
           "sites_partial": 0,
-          "sites_stale": 5,
+          "sites_stale": 6,
           "runs": 189,
           "passed": 166,
           "reliability": 0.8783068783068783,
@@ -9590,9 +9590,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 20,
+          "sites_current": 19,
           "sites_partial": 0,
-          "sites_stale": 23,
+          "sites_stale": 24,
           "runs": 594,
           "passed": 564,
           "reliability": 0.9494949494949495,
@@ -9670,7 +9670,7 @@
             "env": "sovereign"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 18,
           "records": 3
@@ -10245,7 +10245,7 @@
       "ready": 24,
       "usable_with_care": 12,
       "not_reliable_yet": 8,
-      "recheck_pending": 24,
+      "recheck_pending": 25,
       "models": [
         {
           "binding": {
@@ -10254,9 +10254,9 @@
             "env": "eu_hosted"
           },
           "sites": 39,
-          "sites_current": 19,
+          "sites_current": 18,
           "sites_partial": 0,
-          "sites_stale": 20,
+          "sites_stale": 21,
           "runs": 537,
           "passed": 429,
           "reliability": 0.7988826815642458,
@@ -10274,9 +10274,9 @@
             "env": "eu_hosted"
           },
           "sites": 6,
-          "sites_current": 1,
+          "sites_current": 0,
           "sites_partial": 0,
-          "sites_stale": 5,
+          "sites_stale": 6,
           "runs": 174,
           "passed": 156,
           "reliability": 0.896551724137931,
@@ -10394,7 +10394,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 15,
           "passed": 15,
           "records": 2
@@ -10955,7 +10955,7 @@
       "ready": 9,
       "usable_with_care": 8,
       "not_reliable_yet": 27,
-      "recheck_pending": 31,
+      "recheck_pending": 32,
       "models": [
         {
           "binding": {
@@ -10964,9 +10964,9 @@
             "env": "sovereign"
           },
           "sites": 44,
-          "sites_current": 13,
+          "sites_current": 12,
           "sites_partial": 0,
-          "sites_stale": 31,
+          "sites_stale": 32,
           "runs": 747,
           "passed": 588,
           "reliability": 0.7871485943775101,
@@ -11044,7 +11044,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 15,
           "passed": 12,
           "records": 1
@@ -11606,9 +11606,9 @@
         "env": "cloud_frontier"
       },
       "sites": 51,
-      "sites_current": 40,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 11,
+      "sites_stale": 14,
       "runs": 948,
       "passed": 883,
       "reliability": 0.9314345991561181,
@@ -11667,9 +11667,9 @@
         "env": "cloud_frontier"
       },
       "sites": 40,
-      "sites_current": 19,
+      "sites_current": 18,
       "sites_partial": 0,
-      "sites_stale": 21,
+      "sites_stale": 22,
       "runs": 684,
       "passed": 661,
       "reliability": 0.966374269005848,
@@ -11688,9 +11688,9 @@
         "thinking_level": "low"
       },
       "sites": 47,
-      "sites_current": 37,
+      "sites_current": 35,
       "sites_partial": 0,
-      "sites_stale": 10,
+      "sites_stale": 12,
       "runs": 933,
       "passed": 903,
       "reliability": 0.9678456591639871,
@@ -11708,9 +11708,9 @@
         "env": "sovereign"
       },
       "sites": 44,
-      "sites_current": 17,
+      "sites_current": 16,
       "sites_partial": 0,
-      "sites_stale": 27,
+      "sites_stale": 28,
       "runs": 786,
       "passed": 638,
       "reliability": 0.811704834605598,
@@ -11728,9 +11728,9 @@
         "env": "cloud_frontier"
       },
       "sites": 6,
-      "sites_current": 1,
+      "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 5,
+      "sites_stale": 6,
       "runs": 189,
       "passed": 166,
       "reliability": 0.8783068783068783,
@@ -11748,9 +11748,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 20,
+      "sites_current": 19,
       "sites_partial": 0,
-      "sites_stale": 23,
+      "sites_stale": 24,
       "runs": 594,
       "passed": 564,
       "reliability": 0.9494949494949495,
@@ -11768,9 +11768,9 @@
         "env": "eu_hosted"
       },
       "sites": 41,
-      "sites_current": 19,
+      "sites_current": 18,
       "sites_partial": 0,
-      "sites_stale": 22,
+      "sites_stale": 23,
       "runs": 615,
       "passed": 488,
       "reliability": 0.7934959349593496,
@@ -11788,9 +11788,9 @@
         "env": "eu_hosted"
       },
       "sites": 6,
-      "sites_current": 1,
+      "sites_current": 0,
       "sites_partial": 0,
-      "sites_stale": 5,
+      "sites_stale": 6,
       "runs": 174,
       "passed": 156,
       "reliability": 0.896551724137931,
@@ -11868,9 +11868,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 19,
+      "sites_current": 18,
       "sites_partial": 0,
-      "sites_stale": 24,
+      "sites_stale": 25,
       "runs": 645,
       "passed": 616,
       "reliability": 0.9550387596899225,
@@ -11908,9 +11908,9 @@
         "env": "cloud_frontier"
       },
       "sites": 49,
-      "sites_current": 33,
+      "sites_current": 31,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 18,
       "runs": 1047,
       "passed": 909,
       "reliability": 0.8681948424068768,
@@ -11928,9 +11928,9 @@
         "env": "sovereign"
       },
       "sites": 44,
-      "sites_current": 13,
+      "sites_current": 12,
       "sites_partial": 0,
-      "sites_stale": 31,
+      "sites_stale": 32,
       "runs": 747,
       "passed": 588,
       "reliability": 0.7871485943775101,
@@ -13616,17 +13616,8 @@
       "key": "capture_classify/classify",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_message_that_is_both_is_labelled_commitment",
@@ -13666,9 +13657,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 21,
           "passed": 21,
@@ -13681,7 +13672,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13689,9 +13696,9 @@
             "model": "gemini-3.5-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -13704,7 +13711,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13712,9 +13735,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 18,
           "passed": 18,
@@ -13727,7 +13750,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13735,9 +13774,9 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 27,
           "passed": 21,
@@ -13750,7 +13789,23 @@
             "invalid": 6,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13758,9 +13813,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 24,
           "passed": 21,
@@ -13773,7 +13828,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13781,9 +13852,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -13796,7 +13867,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13804,9 +13891,9 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -13819,7 +13906,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13827,9 +13930,9 @@
             "model": "openai/gpt-6-luna",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 9,
@@ -13842,7 +13945,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13850,9 +13969,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
@@ -13865,7 +13984,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         },
         {
           "binding": {
@@ -13873,9 +14008,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 15,
           "passed": 12,
@@ -13888,7 +14023,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_message_that_is_both_is_labelled_commitment, a_mixed_batch_keeps_every_label_on_its_own_message, a_stated_promise_is_a_commitment, an_auto_reply_carries_no_commitment_and_no_meeting, meeting_request_from_reply",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ],
+            "grader_changed": [
+              "a_message_that_is_both_is_labelled_commitment",
+              "a_mixed_batch_keeps_every_label_on_its_own_message",
+              "a_stated_promise_is_a_commitment",
+              "an_auto_reply_carries_no_commitment_and_no_meeting",
+              "meeting_request_from_reply"
+            ]
+          }
         }
       ]
     },
@@ -21551,17 +21702,8 @@
       "key": "owed_verdict/owed",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_declined_invitation_that_asks_for_another_day_waits_on_us",
@@ -21625,9 +21767,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -21640,7 +21782,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_declined_invitation_that_asks_for_another_day_waits_on_us",
+              "a_declined_invitation_waits_on_nobody",
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "intent_is_separate_from_sales_direction_de",
+              "intent_is_separate_from_sales_direction_en",
+              "intent_is_separate_from_sales_direction_vi",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -21877,9 +22032,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 30,
           "passed": 29,
@@ -21892,7 +22047,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_declined_invitation_that_asks_for_another_day_waits_on_us",
+              "a_declined_invitation_waits_on_nobody",
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "intent_is_separate_from_sales_direction_de",
+              "intent_is_separate_from_sales_direction_en",
+              "intent_is_separate_from_sales_direction_vi",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -23667,18 +23835,8 @@
       "key": "signal_extract/thread_events",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.6-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_focused_reading_does_not_reopen_a_kept_promise",
@@ -24253,9 +24411,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 55,
+          "scenarios_measured": 39,
           "scenarios_total": 55,
           "runs": 171,
           "passed": 171,
@@ -24268,7 +24426,45 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "16 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_promise_for_a_colleague_not_on_the_mail_names_no_promiser, buyer_on_cc_is_not_the_partner, copied_contact_is_not_a_recipient, copied_contact_without_a_request_is_not_a_buyer, event_invitation_is_not_buying_intent, inbound_reports_colleague_promise and 10 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_promise_for_a_colleague_not_on_the_mail_names_no_promiser",
+              "buyer_on_cc_is_not_the_partner",
+              "copied_contact_is_not_a_recipient",
+              "copied_contact_without_a_request_is_not_a_buyer",
+              "event_invitation_is_not_buying_intent",
+              "inbound_reports_colleague_promise",
+              "mail_same_named_promiser_unresolved",
+              "named_copied_colleague_promise",
+              "outbound_report_keeps_customer_as_promiser",
+              "partner_referral_does_not_make_the_partner_the_buyer",
+              "recipient_aliases_keep_one_promiser",
+              "shared_deliverable_named_recipients",
+              "supplier_context_does_not_attribute_our_purchase_to_them",
+              "supplier_offer_is_not_a_buyer_request",
+              "transcript_provider_is_not_the_client_in_the_recording",
+              "unnamed_buyer_stays_unknown"
+            ],
+            "grader_changed": [
+              "a_promise_for_a_colleague_not_on_the_mail_names_no_promiser",
+              "buyer_on_cc_is_not_the_partner",
+              "copied_contact_is_not_a_recipient",
+              "copied_contact_without_a_request_is_not_a_buyer",
+              "event_invitation_is_not_buying_intent",
+              "inbound_reports_colleague_promise",
+              "mail_same_named_promiser_unresolved",
+              "named_copied_colleague_promise",
+              "outbound_report_keeps_customer_as_promiser",
+              "partner_referral_does_not_make_the_partner_the_buyer",
+              "recipient_aliases_keep_one_promiser",
+              "shared_deliverable_named_recipients",
+              "supplier_context_does_not_attribute_our_purchase_to_them",
+              "supplier_offer_is_not_a_buyer_request",
+              "transcript_provider_is_not_the_client_in_the_recording",
+              "unnamed_buyer_stays_unknown"
+            ]
+          }
         },
         {
           "binding": {
@@ -29089,18 +29285,8 @@
       "key": "transcript_propose/next_steps",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.6-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "reliability": 0.96875,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_meeting_that_promised_nothing",
@@ -29290,9 +29476,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 30,
+          "scenarios_measured": 25,
           "scenarios_total": 30,
           "runs": 102,
           "passed": 92,
@@ -29305,7 +29491,23 @@
             "invalid": 7,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): copied_contact_is_not_a_recipient, meeting_speaker_reports_customer_promise, named_third_party_promiser, shared_deliverable_named_recipients, transcript_same_named_promiser_unresolved",
+          "stale_cause": {
+            "prompt_changed": [
+              "copied_contact_is_not_a_recipient",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "shared_deliverable_named_recipients",
+              "transcript_same_named_promiser_unresolved"
+            ],
+            "grader_changed": [
+              "copied_contact_is_not_a_recipient",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "shared_deliverable_named_recipients",
+              "transcript_same_named_promiser_unresolved"
+            ]
+          }
         },
         {
           "binding": {
@@ -29405,9 +29607,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 30,
+          "scenarios_measured": 25,
           "scenarios_total": 30,
           "runs": 96,
           "passed": 93,
@@ -29420,7 +29622,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): copied_contact_is_not_a_recipient, meeting_speaker_reports_customer_promise, named_third_party_promiser, shared_deliverable_named_recipients, transcript_same_named_promiser_unresolved",
+          "stale_cause": {
+            "prompt_changed": [
+              "copied_contact_is_not_a_recipient",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "shared_deliverable_named_recipients",
+              "transcript_same_named_promiser_unresolved"
+            ],
+            "grader_changed": [
+              "copied_contact_is_not_a_recipient",
+              "meeting_speaker_reports_customer_promise",
+              "named_third_party_promiser",
+              "shared_deliverable_named_recipients",
+              "transcript_same_named_promiser_unresolved"
+            ]
+          }
         },
         {
           "binding": {

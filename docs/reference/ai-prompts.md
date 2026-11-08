@@ -1615,7 +1615,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           },
           "id": {
             "enum": [
-              "<id minted for this call>"
+              "m1"
             ],
             "type": "string"
           },
@@ -4916,8 +4916,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           },
           "id": {
             "enum": [
-              "<id minted for this call>",
-              "<id minted for this call>"
+              "m1",
+              "m2"
             ],
             "type": "string"
           },
