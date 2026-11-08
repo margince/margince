@@ -19,7 +19,7 @@ both lanes, plus the craftsmanship gate, the license gate and the frontend lane,
 - an error that code drops without a trace;
 - a UI regression.
 
-Three lanes run without blocking: `vuln`, the SonarCloud scan and `live-boot`. `scheduled.yml` checks
+Four lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot` and `home-budget`. `scheduled.yml` checks
 `vuln` and the scan again daily on `main`. See [the workflows beside the merge gate](../reference/ci-workflows.md)
 for why a gate that does not block needs that second check. Why they do not block yet is under
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
@@ -238,6 +238,7 @@ changes ──┬─> deterministic-gates
           │                  fe-bundle    ┘                     │   │
           ├─> uat  (`frontend` scope, beside the lane)          │   │
           ├─> live-boot                                         │   │
+          ├─> home-budget  (advisory, skips when Home is out of reach)
           v                                                     v   v
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
@@ -246,8 +247,8 @@ changes ──┬─> deterministic-gates
   ci  ── the ONE required context. needs: deterministic-gates,
          test-budget, backend-lint, craftsmanship, craft-residue,
          secret-scan, integration, frontend, uat, license-gate, images
-         (eleven — vuln and live-boot stay advisory and are NOT in the
-         fan-in)
+         (eleven — vuln, live-boot and home-budget stay advisory and are
+         NOT in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -338,6 +339,7 @@ These jobs are not in `needs`:
 - `fe-quality`, `fe-unit`, `fe-bundle`: taken in by the `frontend` fan-in.
 - `integration-build`, `integration-shards`, `integration-unit-coverage`: the `integration` fan-in checks them.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
+- `home-budget`: advisory while the numbers on CI runners show whether its budgets hold.
 - `vuln`, `live-boot`: advisory. They are the plain next ones to add, since each runs on every change
   that counts, and a red one does not stop a merge.
   - The batch is the reason to wait. Under a merge queue, a flaky job does not cost one more run. It
@@ -507,6 +509,14 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
   Without it, the seed that runs through the API and the boot proof would break with no one seeing.
+- **`home-budget`** runs `make home-budget`: the `p95` of Home's reads, cold and warm, on a small
+  corpus of its own, then main-content LCP and CLS of a production bundle against an api booted the
+  way `live-boot` boots it. On a pull request its first step, `scripts/home-budget-scope.sh`, skips
+  the rest unless the diff holds a Go file or migration under `backend/`, a dependency Home shares,
+  a file of the check, or a frontend file Home's first load imports
+  (`frontend/scripts/home-reach.ts`). It runs on every PR, `develop` included, and is not in the
+  `ci` fan-in until its budgets have held on enough runs. The job summary holds each half's wall
+  time, every API row and the vitals line.
 
 ### What `secret-scan` runs
 
