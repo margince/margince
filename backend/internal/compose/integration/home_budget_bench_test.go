@@ -19,7 +19,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Home's fixed-profile API budgets, per read, as p95. A cold read is the first
@@ -73,6 +76,10 @@ func TestHomeBudget(t *testing.T) {
 	}
 }
 
+// homePlannedSamples is how many samples each pass takes per read: one per
+// cold boot, and the daily sampler's count warm.
+var homePlannedSamples = map[string]int{homeColdFlow.Name: homeColdRounds, homeWarmFlow.Name: dailySamples}
+
 // HomeBudgetFailures names every reason the Home check fails. It judges each
 // row on its own p95 with the daily rule, and never asks DailyKnownIssues.
 func HomeBudgetFailures(results []DailyResult) []string {
@@ -81,10 +88,15 @@ func HomeBudgetFailures(results []DailyResult) []string {
 	}
 	var failures []string
 	for _, r := range results {
-		switch judgeP95(r.P95, r.Budget, r.Samples) {
-		case DailyNoData:
+		planned, known := homePlannedSamples[r.Flow]
+		switch verdict := judgeP95(r.P95, r.Budget, r.Samples); {
+		case !known:
+			failures = append(failures, fmt.Sprintf("%s: flow %q is neither Home pass", r.Row, r.Flow))
+		case verdict == DailyNoData:
 			failures = append(failures, fmt.Sprintf("%s: no samples, so no p95 to judge", r.Row))
-		case DailyOver:
+		case r.Samples != planned:
+			failures = append(failures, fmt.Sprintf("%s: %d samples, want %d", r.Row, r.Samples, planned))
+		case verdict == DailyOver:
 			failures = append(failures, fmt.Sprintf("%s: p95 %d ms is at or over its %d ms budget",
 				r.Row, r.P95.Milliseconds(), r.Budget.Milliseconds()))
 		}
@@ -118,6 +130,10 @@ func homeRequired(rows []dailyRow, calls []dailyCall) []DailyResult {
 	return required
 }
 
+// homeCachedReads are the Home reads home_read_cache keeps, by their call's name.
+// That cache lives in the database, so a reboot alone leaves it filled.
+var homeCachedReads = map[string]homecache.Read{"worklist": homecache.Worklist, "magic": homecache.Magic}
+
 // runHomeCold boots the app afresh homeColdRounds times and times each read's
 // first answer on it. The probe on the warm app decides which reads are timed.
 func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
@@ -135,6 +151,7 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 	}
 	samples := make([][]time.Duration, len(timed))
 	for range homeColdRounds {
+		since := forgetHomeAnswers(t, e, s)
 		booted := coldBoot(t, e)
 		for i, call := range timed {
 			status, body, elapsed := s.Get(t, booted, call.Path)
@@ -144,12 +161,53 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 			samples[i] = append(samples[i], elapsed)
 		}
 		booted.Close()
+		if missed := cacheHits(t, e, s, timed, since); len(missed) > 0 {
+			t.Fatalf("cold reads %v were served from home_read_cache, so they timed no assembly", missed)
+		}
 	}
 	for i, call := range timed {
 		spec := dailyRowSpec{flow: f.Name, id: f.ID, name: dailyRowName(f.Name, call), budget: f.Budget, gated: true}
 		rows = append(rows, dailyMeasuredRow(t, s, spec, samples[i], tallies[i]))
 	}
 	return rows
+}
+
+// forgetHomeAnswers ends the seat's kept Home answers through the cache's own
+// Forget, and returns the database clock from before it.
+func forgetHomeAnswers(t *testing.T, e *apptest.AppEnv, s Seat) time.Time {
+	t.Helper()
+	ctx := context.Background()
+	var since time.Time
+	if err := e.Owner.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&since); err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
+	ws := principal.WithWorkspaceID(ctx, apptest.InstallationWorkspaceUUID(ctx, t, e.Pool))
+	if err := homecache.New(e.Pool).Forget(ws, []ids.UUID{ids.MustParse(s.UserID)}); err != nil {
+		t.Fatalf("ending %s's kept Home answers: %v", s.Name, err)
+	}
+	return since
+}
+
+// cacheHits names each timed read the cache keeps that stored no fresh answer
+// since then. A hit stores nothing, so such a read was served from the cache.
+func cacheHits(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall, since time.Time) []string {
+	t.Helper()
+	var hits []string
+	for _, call := range timed {
+		read, cached := homeCachedReads[call.Name]
+		if !cached {
+			continue
+		}
+		var fresh bool
+		if err := e.Owner.QueryRow(context.Background(), `SELECT EXISTS (SELECT 1 FROM home_read_cache
+		      WHERE reader_id = $1 AND read = $2 AND computed_at >= $3)`, s.UserID, string(read), since).Scan(&fresh); err != nil {
+			t.Fatalf("reading what the cold %s stored: %v", call.Name, err)
+		}
+		if !fresh {
+			hits = append(hits, call.Name)
+		}
+	}
+	return hits
 }
 
 // coldBoot opens a new app and pool over the seeded database. One connection
@@ -191,21 +249,33 @@ func assertHomeReadsCovered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the frontend's Home reads: %v", err)
 	}
+	for _, gap := range homeReadsGaps(source, callNames(homeCalls(dailyInput{}))) {
+		t.Errorf("%s: %s", path, gap)
+	}
+}
+
+// homeReadsGaps names what is wrong with the HOME_READS declaration in source,
+// against the read names this check times.
+func homeReadsGaps(source []byte, timed []string) []string {
 	declared := homeReadsDeclaration.FindSubmatch(source)
 	if declared == nil {
-		t.Fatalf("%s declares no HOME_READS list this check can read", path)
+		return []string{"declares no HOME_READS list this check can read"}
 	}
-	names := callNames(homeCalls(dailyInput{}))
-	reads := strings.Split(string(declared[1]), ",")
-	for _, read := range reads {
-		read = strings.Trim(strings.TrimSpace(read), `"`)
-		if read != "" && !slices.Contains(names, read) {
-			t.Errorf("the browser check waits for Home read %q, which homeCalls does not time", read)
+	var reads, gaps []string
+	for _, read := range strings.Split(string(declared[1]), ",") {
+		if read = strings.Trim(strings.TrimSpace(read), `"`); read != "" {
+			reads = append(reads, read)
 		}
 	}
 	if len(reads) == 0 {
-		t.Errorf("HOME_READS in %s is empty", path)
+		return []string{"HOME_READS is empty, so the browser check waits for no read"}
 	}
+	for _, read := range reads {
+		if !slices.Contains(timed, read) {
+			gaps = append(gaps, fmt.Sprintf("the browser check waits for Home read %q, which homeCalls does not time", read))
+		}
+	}
+	return gaps
 }
 
 // withPlantedBriefDelay returns the seat unchanged unless homeBriefDelayEnv

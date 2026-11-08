@@ -174,7 +174,7 @@ func assertHomeProfile(t *testing.T, e *apptest.AppEnv, p HomeProfile) {
 			Source string `json:"source"`
 		} `json:"queue"`
 	}
-	mustCall(t, p.Owner.env(e), "GET", worklistDay+"mine", nil, http.StatusOK, &worklist)
+	mustCall(t, p.Owner.env(e), "GET", worklistDay+"mine&view=today", nil, http.StatusOK, &worklist)
 	awaited := 0
 	for _, row := range worklist.Queue {
 		if row.Source == "awaiting_reply" {
