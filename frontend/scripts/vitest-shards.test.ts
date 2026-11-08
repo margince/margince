@@ -3,12 +3,12 @@
 
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { filesMatching } from "./lib/source-tree";
 import { testCosts } from "./lib/test-cost";
-import { partition } from "./vitest-shards";
+import { compilerTests, partition } from "./vitest-shards";
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -99,5 +99,16 @@ describe("the cost a test file is expected to have", () => {
   it("finds all three kinds in the real suite", () => {
     const kinds = new Set([...suite.values()].map(({ kind }) => kind));
     expect(kinds).toEqual(new Set(["render", "parse", "program"]));
+  });
+});
+
+describe("the unisolated project of compiler-loading files", () => {
+  it("holds every file the cost model reads as parse or program", async () => {
+    const scans = new Set(await compilerTests(frontendRoot));
+    const expected = [...suite]
+      .filter(([, { kind }]) => kind !== "render")
+      .map(([file]) => relative(frontendRoot, file));
+    expect(expected.length).toBeGreaterThan(0);
+    expect(expected.filter((file) => !scans.has(file))).toEqual([]);
   });
 });
