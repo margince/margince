@@ -128,15 +128,20 @@ func (s *Service) pastFootprint(ctx context.Context, subject row) (*approvalplan
 	if subject.Status == statusPending && s.planSight.Footprint != nil {
 		return s.planFootprint(ctx, subject, nil)
 	}
-	if len(subject.PlanFootprint) == 0 {
-		return nil, nil
+	return storedFootprint(subject.PlanFootprint), nil
+}
+
+// storedFootprint decodes what a decided row's writer stored. Nil means none:
+// a footprint that does not decode proves nothing, as a missing one.
+func storedFootprint(raw json.RawMessage) *approvalplan.Footprint {
+	if len(raw) == 0 {
+		return nil
 	}
 	var footprint approvalplan.Footprint
-	if json.Unmarshal(subject.PlanFootprint, &footprint) != nil {
-		// A footprint that does not decode proves nothing, as a missing one.
-		return nil, nil
+	if json.Unmarshal(raw, &footprint) != nil {
+		return nil
 	}
-	return &footprint, nil
+	return &footprint
 }
 
 // withheldPlan is the preview a reader gets for a past plan hidden from them.
