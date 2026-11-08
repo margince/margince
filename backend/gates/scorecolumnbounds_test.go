@@ -70,9 +70,7 @@ var unboundedOnPurpose = gatekit.Waive(map[string]string{
 		"a waiver says so if it ever gains a bound, and prose does not.",
 })
 
-// taxRateCeiling is why a tax rate states a floor and no ceiling. A duty can
-// exceed the price it is charged on, as a vehicle registration tax or an
-// excise duty does, so a ceiling of 100 would refuse a real rate.
+// taxRateCeiling is why a tax rate states a floor and no ceiling.
 const taxRateCeiling = "a CHECK holds it at zero or above. A tax can exceed 100 percent " +
 	"of the price, as some registration and excise duties do, so no ceiling is stated."
 
