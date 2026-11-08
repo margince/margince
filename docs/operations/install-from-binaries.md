@@ -32,20 +32,24 @@ go build -C backend -o ../bin/margince-worker  ./cmd/worker
 `bin/` is not in the repository, so a clean checkout has to be told to make it.
 `go build -C` reads the module in `backend/` without moving the shell.
 
-Those three are the server. They do not carry the web application: that is a
+Those three are the server. They do not carry the web app: that is a
 Vite build served as static files, which
 [how-to/deploy-margince.md](../how-to/deploy-margince.md) covers.
 
 With anything under `extensions/`, build through the composed workspace
 instead, or the binaries resolve the committed stub and leave every enabled
-extension out:
+extension out. `make -C backend composition` writes that workspace, and each
+program is built against it:
 
 ```sh
-make -C backend build
+make -C backend composition
+GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-migrate ./cmd/migrate
+GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-api     ./cmd/api
+GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-worker  ./cmd/worker
 ```
 
-A vanilla installation composes the empty set, and its output is the same
-either way.
+An installation with no extensions composes the empty set, and its output is
+the same either way.
 
 `migrate` writes the schema. `api` answers HTTP. `worker` runs what happens on
 a schedule or off the bus. Nothing else is needed on the host.
@@ -59,10 +63,22 @@ cp config/margince.example.yaml margince.yaml
 ```
 
 That file names the first company and the first admin, which is how an
-installation gets its way in. `config/margince.defaults.yaml` is every setting
-at its default, for reading rather than copying: it names no company, so an
-empty database stays empty, and its secret values point at `/run/secrets`
-paths that a host outside a container does not have. Every setting it can carry, with its variable,
+installation gets its way in. The admin's password comes by reference, from
+`config/margince-admin-password`, a file only `make dev` writes. Write your own,
+at least 12 characters, and keep it out of the repository:
+
+```sh
+umask 077 && printf '%s' 'a password of your own' > config/margince-admin-password
+```
+
+Leave `bootstrap_admin` out instead, and the API prints a one-time setup token
+on its first boot. Whoever claims the installation with it enters the company
+and the first admin.
+
+`config/margince.defaults.yaml` is every setting
+at its default, for reading rather than copying. It names no company, so an
+empty database stays empty. Its secret values point at `/run/secrets` paths,
+which a host outside a container does not have. Every setting it can carry, with its variable,
 its flag and its default, is in
 [reference/configuration.md](../reference/configuration.md). Read
 [what-each-feature-needs.md](../reference/what-each-feature-needs.md) for what
@@ -78,12 +94,13 @@ sources are read.
 `--dsn`, `MARGINCE_OWNER_DSN` or `MARGINCE_DSN`, and refuses to start without
 one.
 
-Two roles are in play, and the serving one has to exist first. The baseline
+Two roles matter here, and the serving one has to exist first. The baseline
 grants to `margince_app` only when that role is already there.
 
-A database that lacks it gets a schema the api and the worker cannot read.
-[explanation/self-hosting.md](../explanation/self-hosting.md) says what each
-role holds.
+A database that lacks it gets a schema the api and the worker cannot read. What
+each role holds is in [explanation/self-hosting.md](../explanation/self-hosting.md).
+The one-time setup of both roles and the database is in
+[how-to/deploy-margince.md](../how-to/deploy-margince.md#bootstrap-the-database-once).
 
 ```sh
 MARGINCE_OWNER_DSN=postgres://... ./bin/margince-migrate up --config margince.yaml
@@ -96,14 +113,16 @@ flags each takes, are in
 ## Start the API and the worker
 
 Both read the same configuration, and each runs until it is stopped. They need
-a terminal each. The API takes the address it listens on:
+a terminal each. Both connect as the serving role, `margince_app`, which they
+read from `MARGINCE_DSN`. The owner DSN the migration used does not carry over.
+The API also takes the address it listens on:
 
 ```sh
-./bin/margince-api --config margince.yaml --addr 127.0.0.1:8080
+MARGINCE_DSN=postgres://margince_app:...@db/margince ./bin/margince-api --config margince.yaml --addr 127.0.0.1:8080
 ```
 
 ```sh
-./bin/margince-worker --config margince.yaml
+MARGINCE_DSN=postgres://margince_app:...@db/margince ./bin/margince-worker --config margince.yaml
 ```
 
 The API prints the address it serves on, the base path, and where the outbox

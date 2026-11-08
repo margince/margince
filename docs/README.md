@@ -9,8 +9,9 @@ for the developer who changes or runs the code. So a product task goes in the ha
 
 These docs explain how to build and run Margince. It is a CRM with one company per installation, and
 the server refuses a second one. The backend is a Go API under `/v1`, and the React web app ships
-on its own. The docs follow [Diátaxis](https://diataxis.fr/), with operations as a fifth kind. Tutorials help you learn, how-to
-guides do tasks, reference pages are to look things up, and explanation pages say why. The
+on its own. The docs follow the four kinds of [Diátaxis](https://diataxis.fr/), and the pages in
+`operations/` say how to install and run Margince. Tutorials help you learn, how-to guides do tasks,
+reference pages are to look things up, and explanation pages say why. The
 [principles](principles/README.md) answer many questions about the shape of this code before they
 start.
 
