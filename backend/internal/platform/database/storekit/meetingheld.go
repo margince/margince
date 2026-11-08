@@ -27,13 +27,17 @@ type MeetingHeldAsOf struct {
 	// Recorded excludes a row whose history has a later entry than the moment
 	// asked about, which is a meeting whose answer is not settled yet.
 	Recorded string
+	// Began is the moment a follow-up must come after. A start whose day is
+	// unknown takes the earlier of its two readings, as the week reads it
+	// under either day.
+	Began string
 }
 
 // MeetingHeldAsOfSQL renders the fragments for the meeting under alias, as its
 // history stood at asOf. Both are SQL the caller renders, so a caller binds
 // asOf however its own statement binds parameters.
 func MeetingHeldAsOfSQL(alias, asOf string) MeetingHeldAsOf {
-	return MeetingHeldAsOf{
+	held := MeetingHeldAsOf{
 		Join: `LEFT JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=` + alias +
 			`.id AND h.effective_at<=` + asOf + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true`,
 		Legacy: "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)",
@@ -51,4 +55,8 @@ func MeetingHeldAsOfSQL(alias, asOf string) MeetingHeldAsOf {
 		Recorded: "(held.id IS NOT NULL OR NOT EXISTS(SELECT 1 FROM activity_meeting_history future WHERE future.activity_id=" +
 			alias + ".id))",
 	}
+	held.Began = "(CASE WHEN " + held.UnknownDay + " THEN LEAST(" +
+		occurredday.StartAtSQL(held.Start, "'instant'") + "," + occurredday.StartAtSQL(held.Start, "'day'") +
+		") ELSE " + occurredday.StartAtSQL(held.Start, held.Precision) + " END)"
+	return held
 }

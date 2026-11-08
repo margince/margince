@@ -248,7 +248,7 @@ func NextStepTaskAtSQL(task, meeting, start string) string {
 }
 
 func countWeekMeetings(
-	ctx context.Context, tx pgx.Tx, userID ids.UUID, now, start, end time.Time,
+	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (held, withNextStep int, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -257,12 +257,12 @@ func countWeekMeetings(
 	// The reader Analytics counts a held meeting through. So a meeting redated
 	// after it was held stays in its held week on both surfaces.
 	//
-	// Analytics also refuses a row whose history has a later entry, so an
-	// evaluation reads the same way twice for its receipts. A week is
-	// assembled once and its figure stored, so there is nothing to reproduce.
-	// Refusing such a row here would drop a meeting whose status was recorded
-	// after the assembly's clock.
-	transition := storekit.MeetingHeldAsOfSQL("m", fmt.Sprintf("$%d", arg(now)))
+	// Analytics reads history as of its evaluation, so it reads the same way
+	// twice for its receipts. A week is assembled once and its figure stored,
+	// so it reads the history as it stands. An assembly clock behind the
+	// database's would otherwise miss a transition and fall back to the date
+	// somebody edited the meeting to.
+	transition := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz")
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
 		return 0, 0, err
@@ -296,7 +296,7 @@ func countWeekMeetings(
 		        SELECT 1 FROM activity task
 		         WHERE %[6]s
 		           AND task.created_at < $%[2]d AND (%[5]s)))`,
-		startPos, endPos, hostPos, scope, taskScope, NextStepTaskAtSQL("task", "m", occurredday.StartAtSQL(transition.Start, transition.Precision))), args...).
+		startPos, endPos, hostPos, scope, taskScope, NextStepTaskAtSQL("task", "m", transition.Began)), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)

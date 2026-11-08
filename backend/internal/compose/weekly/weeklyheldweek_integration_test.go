@@ -19,7 +19,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // heldMeetingWeekCount is the two meeting figures a week's assembly reads.
@@ -28,7 +30,7 @@ func heldMeetingWeekCount(t *testing.T, e *weekEnv, start time.Time) (int, int) 
 	var held, withNextStep int
 	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		held, withNextStep, err = countWeekMeetings(e.repCtx, tx, e.Rep1, afterEveryTransition,
+		held, withNextStep, err = countWeekMeetings(e.repCtx, tx, e.Rep1,
 			start, start.AddDate(0, 0, 7))
 		return err
 	}); err != nil {
@@ -100,5 +102,34 @@ func TestAMeetingRedatedAfterItWasHeldStaysInItsHeldWeek(t *testing.T) {
 	}
 	if moved, _ := heldMeetingWeekCount(t, e, laterWeek); moved != 0 {
 		t.Errorf("the week it was moved into counts %d, want 0", moved)
+	}
+}
+
+// A start recorded before the history said whether it was a time or a date
+// reads under either day. The follow-up cutoff takes the earlier reading, so a
+// follow-up made that morning still counts as coming after the meeting.
+//
+// Read over a row shaped as the old history left it. The CHECK on precision is
+// `NOT VALID`, so no writer can make such a row now, and old ones remain.
+func TestAFollowUpTheMorningOfAnUndatedDayMeetingCounts(t *testing.T) {
+	e := setupWeekly(t)
+	anchor := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	morning := anchor.Add(-4 * time.Hour)
+	held := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz")
+	instant := occurredday.StartAtSQL(held.Start, "'instant'")
+	var counts, wouldHaveCounted bool
+	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.repCtx, `SELECT $2::timestamptz >= `+held.Began+`, $2::timestamptz >= `+instant+`
+			FROM (SELECT gen_random_uuid() AS id, $1::timestamptz AS scheduled_start, NULL::text AS scheduled_precision) held,
+			     (SELECT $1::timestamptz AS occurred_at, 'day'::text AS occurred_precision) m`,
+			anchor, morning).Scan(&counts, &wouldHaveCounted)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !counts {
+		t.Error("a follow-up the morning of an undated day meeting reads as before it, so the meeting shows no next step")
+	}
+	if wouldHaveCounted {
+		t.Fatal("the planted start is not ambiguous: the instant reading already admits the morning follow-up")
 	}
 }
