@@ -45,6 +45,14 @@ func parkedRun(t *testing.T, e *integration.Env, svc *approvals.Service, kind st
 	targetID ids.UUID, patch string,
 ) (ids.ApprovalID, string) {
 	t.Helper()
+	return parkedRunOn(t, e, svc, kind, "contact", targetID, patch)
+}
+
+// parkedRunOn is parkedRun against a record of the given type.
+func parkedRunOn(t *testing.T, e *integration.Env, svc *approvals.Service, kind, targetType string,
+	targetID ids.UUID, patch string,
+) (ids.ApprovalID, string) {
+	t.Helper()
 	// Staged the way a firing stages: the system actor acting on behalf of the
 	// automation's owner, and the owner is the human decider() releases as. A
 	// kind narrowed to its own rep needs that — a held draft sends from the
@@ -54,7 +62,7 @@ func parkedRun(t *testing.T, e *integration.Env, svc *approvals.Service, kind st
 		ProposedChange: json.RawMessage(patch),
 		DiffHash:       "approvedrun-" + ids.NewV7().String(),
 		Summary:        "automation wants to " + kind,
-		TargetType:     "contact",
+		TargetType:     targetType,
 		TargetID:       targetID,
 	})
 	if err != nil {
