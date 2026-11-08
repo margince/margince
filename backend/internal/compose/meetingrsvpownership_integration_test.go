@@ -33,6 +33,8 @@ type mailboxCopy struct {
 	provider, id, uid, owner, organizer string
 	// guests are the listed attendees besides the organizer, with their answers.
 	guests map[string]string
+	// day moves the meeting that many days past its first start.
+	day int
 }
 
 func (c mailboxCopy) record(t *testing.T) connector.NormalizedRecord {
@@ -53,6 +55,10 @@ func (c mailboxCopy) record(t *testing.T) connector.NormalizedRecord {
 	return rec
 }
 
+func (c mailboxCopy) start() time.Time {
+	return time.Date(2030, 1, 7+c.day, 10, 0, 0, 0, time.UTC)
+}
+
 func (c mailboxCopy) event() map[string]any {
 	if c.provider == sourceGCal {
 		attendees := []map[string]any{{"email": c.organizer, "responseStatus": "accepted", "self": c.owner == c.organizer}}
@@ -61,7 +67,7 @@ func (c mailboxCopy) event() map[string]any {
 		}
 		return map[string]any{
 			"id": c.id, "iCalUID": c.uid, "status": "confirmed", "summary": "Customer review",
-			"start": map[string]string{"dateTime": "2030-01-07T10:00:00Z"}, "organizer": map[string]string{"email": c.organizer},
+			"start": map[string]string{"dateTime": c.start().Format(time.RFC3339)}, "organizer": map[string]string{"email": c.organizer},
 			"attendees": attendees,
 		}
 	}
@@ -79,7 +85,7 @@ func (c mailboxCopy) event() map[string]any {
 	}
 	return map[string]any{
 		"id": c.id, "iCalUId": c.uid, "subject": "Customer review",
-		"start":          map[string]string{"dateTime": "2030-01-07T10:00:00", "timeZone": "UTC"},
+		"start":          map[string]string{"dateTime": c.start().Format("2006-01-02T15:04:05"), "timeZone": "UTC"},
 		"organizer":      map[string]any{"emailAddress": map[string]string{"address": c.organizer}},
 		"responseStatus": map[string]string{"response": own},
 		"attendees":      attendees,
@@ -230,6 +236,63 @@ func TestATombstoneFromTheOrganizersOwnMailboxCancelsTheMeeting(t *testing.T) {
 	}
 }
 
+// Event ids are unique only within one mailbox. An id a colleague's mailbox
+// delivered names nothing in this seat's calendar, even on a meeting both hold.
+func TestATombstoneWithAnotherMailboxsEventIDReachesNothing(t *testing.T) {
+	for _, provider := range []string{sourceGCal, sourceGraphCal} {
+		t.Run(provider, func(t *testing.T) {
+			o := setupOwnership(t, provider)
+			e := o.e
+			organizer := o.address[e.Rep2]
+			guests := map[string]string{o.address[e.Rep1]: "accepted", o.address[e.Rep3]: "accepted", "buyer@customer.test": "accepted"}
+			meeting := o.sync(t, e.Rep3, mailboxCopy{id: "evt-first", organizer: organizer, guests: guests})
+			o.sync(t, e.Rep1, mailboxCopy{id: "evt-colleague", organizer: organizer, guests: guests})
+			o.sync(t, e.Rep2, mailboxCopy{id: "evt-organizer", organizer: organizer, guests: guests})
+
+			o.remove(t, e.Rep2, "evt-colleague")
+			if status, set := readMeetingStatus(t, e, meeting); set {
+				t.Fatalf("a colleague's event id set the status %s", status)
+			}
+			if o.ownRows(t, meeting, e.Rep2) == 0 {
+				t.Fatal("a colleague's event id retired the organizer")
+			}
+			o.remove(t, e.Rep2, "evt-organizer")
+			if status, _ := readMeetingStatus(t, e, meeting); status != "canceled" {
+				t.Fatalf("the organizer's own event id left the status %q", status)
+			}
+		})
+	}
+}
+
+// A one-off meeting moved after a seat first synced it is still found by that
+// seat's own event id.
+func TestATombstoneFindsAMeetingMovedAfterItsFirstSync(t *testing.T) {
+	for _, provider := range []string{sourceGCal, sourceGraphCal} {
+		t.Run(provider, func(t *testing.T) {
+			o := setupOwnership(t, provider)
+			e := o.e
+			organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
+			guests := map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}
+			meeting := o.sync(t, e.Rep1, mailboxCopy{id: "evt-organizer", organizer: organizer, guests: guests})
+			o.sync(t, e.Rep2, mailboxCopy{id: "evt-guest", organizer: organizer, guests: guests})
+			for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
+				id := map[ids.UUID]string{e.Rep1: "evt-organizer", e.Rep2: "evt-guest"}[seat]
+				if got := o.sync(t, seat, mailboxCopy{id: id, organizer: organizer, guests: guests, day: 3}); got != meeting {
+					t.Fatal("the moved meeting landed as a second meeting")
+				}
+			}
+
+			o.remove(t, e.Rep2, "evt-guest")
+			if n := o.ownRows(t, meeting, e.Rep2); n != 0 {
+				t.Fatalf("the guest's tombstone kept %d of their rows on the moved meeting", n)
+			}
+			if status, set := readMeetingStatus(t, e, meeting); set {
+				t.Fatalf("a guest's tombstone set the shared status %s", status)
+			}
+		})
+	}
+}
+
 func TestTheOrganizersCompleteRosterRetiresAColleagueItRemoved(t *testing.T) {
 	for _, provider := range []string{sourceGCal, sourceGraphCal} {
 		t.Run(provider, func(t *testing.T) {
@@ -327,5 +390,45 @@ func reconnect(t *testing.T, e *integration.Env, registry *capture.Registry, sea
 	actor.Scopes = principal.NewScopeSet(principal.ScopeRead)
 	if _, err := registry.Connect(principal.WithActor(human, actor), provider, connector.Auth(auth)); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A seat that left its own calendar copy drops the rows another calendar took
+// over while it was disconnected.
+func TestAReconnectedSeatsRemovalRetiresTheRowAnotherCalendarTookOver(t *testing.T) {
+	for _, provider := range []string{sourceGCal, sourceGraphCal} {
+		t.Run(provider, func(t *testing.T) {
+			o := setupOwnership(t, provider)
+			e := o.e
+			organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
+			listed := map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}
+			meeting := o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: listed})
+			own := mailboxCopy{
+				provider: provider, id: "evt-2", uid: sharedMeetingUID, owner: guest, organizer: organizer,
+				guests: map[string]string{guest: "declined", "buyer@customer.test": "accepted"},
+			}
+			o.sync(t, e.Rep2, own)
+
+			registry := NewCaptureRegistry(e.Pool, keyvault.NewMemory(), CaptureConfig{})
+			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), provider); err != nil {
+				t.Fatal(err)
+			}
+			o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: listed})
+			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND roster_seat=$3`, meeting, e.Rep2, e.Rep1); n == 0 {
+				t.Fatal("the organizer's roster did not take over the disconnected guest's row")
+			}
+			reconnect(t, e, registry, e.Rep2, provider, guest)
+
+			rec := own.record(t)
+			if err := o.sink.RemoveCalendarMeeting(connectorOwnerCtx(e, e.Rep2, provider), rec.NaturalKey, rec.CrossDoorIdentity, time.Time{}); err != nil {
+				t.Fatal(err)
+			}
+			if n := o.ownRows(t, meeting, e.Rep2); n != 0 {
+				t.Fatalf("the guest's removal kept %d rows bound to them", n)
+			}
+			if o.ownRows(t, meeting, e.Rep1) == 0 {
+				t.Fatal("the guest's removal retired the organizer")
+			}
+		})
 	}
 }

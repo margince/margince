@@ -28,7 +28,7 @@ func (s *Sink) RemoveCalendarMeeting(ctx context.Context, key connector.NaturalK
 		}
 		id, found, err := s.meetingForSeat(ctx, tx, connector.NormalizedRecord{NaturalKey: key, CrossDoorIdentity: identity})
 		if err == nil && !found {
-			id, found, err = s.meetingOfStoredOriginal(ctx, tx, key)
+			id, found, err = s.meetingOfOwnEventID(ctx, tx, key)
 		}
 		if err != nil || !found {
 			return err
@@ -62,7 +62,7 @@ func SeatOrganizesMeetingTx(ctx context.Context, tx pgx.Tx, meeting ids.Activity
 	}
 	var organizer bool
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM activity_participant organizer_row JOIN activity a ON a.id=organizer_row.activity_id
- WHERE organizer_row.activity_id=@activity AND organizer_row.user_id=@seat AND organizer_row.role=@organizer AND %s)`, auth.ParticipantStandsSQL("organizer_row", "a")), pgx.StrictNamedArgs{
+ WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND organizer_row.activity_id=@activity AND organizer_row.user_id=@seat AND organizer_row.role=@organizer AND %s)`, auth.ParticipantStandsSQL("organizer_row", "a")), pgx.StrictNamedArgs{
 		capturedActivityObject: meeting, rosterSeatArg: seat, "organizer": connector.ParticipantRoleOrganizer,
 	}).Scan(&organizer); err != nil {
 		return false, fmt.Errorf("capture: reading whether a seat organizes a meeting: %w", err)

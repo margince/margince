@@ -76,9 +76,6 @@ type Sink struct {
 	// identity resolved to, when nothing was captured under its natural key.
 	// Nil cancels by natural key alone.
 	cancelMeetingByID MeetingCloserByID
-	// storedEventIdentity reads a stored calendar original's identity. Nil
-	// leaves a tombstone naming only its own event id unresolved.
-	storedEventIdentity StoredEventIdentity
 	// moveMeeting moves a captured meeting the calendar rescheduled. Nil never
 	// moves one.
 	moveMeeting MeetingMover

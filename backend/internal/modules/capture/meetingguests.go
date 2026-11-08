@@ -196,7 +196,9 @@ func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 // retireOffTheRoster removes this calendar's rows the roster no longer grants:
 // a colleague's seat once they declined, and anybody a complete roster dropped.
 // It also retires rows of a disconnected calendar, and colleagues the organizer
-// removed. The syncing seat's own row and the host's are never retired.
+// removed. A seat that left drops every calendar row bound to it, whichever
+// roster wrote it last. The syncing seat's own row and the host's are never
+// retired otherwise.
 func retireOffTheRoster(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, listed []connector.MessageParticipant,
 ) (int, error) {
@@ -215,7 +217,7 @@ func retireOffTheRoster(
 	tag, err := tx.Exec(ctx, `
  DELETE FROM activity_participant ap USING activity a
  WHERE a.id=ap.activity_id AND ap.activity_id=@activity
- AND ((@left AND ap.roster_seat=@seat AND ap.user_id=@seat)
+ AND ((@left AND ap.roster_seat IS NOT NULL AND ap.user_id=@seat)
  OR (NOT @left AND (ap.roster_seat=@seat OR `+rosterOwnerGoneSQL("ap")+`) AND ap.address IS NOT NULL
  AND ap.user_id IS DISTINCT FROM @seat AND ap.user_id IS DISTINCT FROM a.host_user_id
  AND ((ap.user_id IS NOT NULL AND ap.address=ANY(@declined)) OR (@complete AND NOT ap.address=ANY(@addresses)))))`, pgx.StrictNamedArgs{
