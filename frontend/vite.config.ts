@@ -103,7 +103,8 @@ const analytics = entryChunks("analytics", entries.analytics);
 
 // Classifying the suite reads every test file, so only a test run pays for it.
 const sourceScans = process.env.VITEST ? await compilerTests(frontendRoot) : [];
-const testExclude = ["**/node_modules/**", "e2e/**"];
+// census/ is its own lane, `make fe-census`: one parse serves every rule.
+const testExclude = ["**/node_modules/**", "e2e/**", "census/**"];
 
 export default defineConfig({
   build: {
