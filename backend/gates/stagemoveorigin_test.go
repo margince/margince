@@ -20,8 +20,30 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// typedStageOrigin matches a provenance compared to one origin by hand.
-var typedStageOrigin = regexp.MustCompile(`(?is)\bprovenance\s*(=|<>|!=|is\s+(not\s+)?distinct\s+from|(not\s+)?in\s*\()\s*'(imported|synced)'`)
+// An origin is a quoted 'imported' or 'synced'. The column may carry a table
+// alias, and valuation_provenance is another column, so it never matches.
+const (
+	stageOriginColumn  = `(?:\b\w+\.)?\bprovenance\b`
+	stageOriginLiteral = `'(?:imported|synced)'`
+	stageOriginCompare = `(?:=|<>|!=|is\s+(?:not\s+)?distinct\s+from)`
+)
+
+// typedStageOrigin lists each hand-typed spelling: a comparison either way
+// round, an `IN` list, and an `ARRAY` under `ANY` or `ALL`.
+var typedStageOrigin = []*regexp.Regexp{
+	regexp.MustCompile(`(?is)` + stageOriginColumn + `\s*` + stageOriginCompare + `\s*` + stageOriginLiteral),
+	regexp.MustCompile(`(?is)` + stageOriginLiteral + `\s*` + stageOriginCompare + `\s*` + stageOriginColumn),
+	regexp.MustCompile(`(?is)` + stageOriginColumn + `\s*(?:not\s+)?in\s*\([^)]*` + stageOriginLiteral),
+	regexp.MustCompile(`(?is)` + stageOriginColumn + `\s*(?:=|<>|!=)\s*(?:any|all)\s*\(\s*array\s*\[[^\]]*` + stageOriginLiteral),
+}
+
+// stageOriginCase opens a simple `CASE` on the column. Its `WHEN` arms run to
+// the `CASE`'s own `END`, which caseBody finds past any `CASE` nested inside it.
+var (
+	stageOriginCase = regexp.MustCompile(`(?is)\bcase\s+` + stageOriginColumn)
+	caseOrEnd       = regexp.MustCompile(`(?is)\b(?:case|end)\b`)
+	stageOriginWhen = regexp.MustCompile(`(?is)\bwhen\s+` + stageOriginLiteral)
+)
 
 func TestStageReadersNameMovesMadeElsewhereThroughTheKernel(t *testing.T) {
 	t.Parallel()
@@ -45,7 +67,45 @@ func TestStageReadersNameMovesMadeElsewhereThroughTheKernel(t *testing.T) {
 }
 
 func typesStageOrigin(file *ast.File) bool {
-	return slices.ContainsFunc(gatekit.SQLStatementsOf(file), typedStageOrigin.MatchString)
+	return slices.ContainsFunc(gatekit.SQLStatementsOf(file), typesStageOriginIn)
+}
+
+// typesStageOriginIn reports a hand-typed origin anywhere in one statement.
+func typesStageOriginIn(sql string) bool {
+	for _, pattern := range typedStageOrigin {
+		if pattern.MatchString(sql) {
+			return true
+		}
+	}
+	return caseNamesAnOrigin(sql)
+}
+
+// caseNamesAnOrigin reports a `CASE` on the column with an origin among its
+// `WHEN` arms.
+func caseNamesAnOrigin(sql string) bool {
+	for _, open := range stageOriginCase.FindAllStringIndex(sql, -1) {
+		if stageOriginWhen.MatchString(caseBody(sql[open[1]:])) {
+			return true
+		}
+	}
+	return false
+}
+
+// caseBody is the text up to the `END` that closes the `CASE` it starts
+// inside. An unclosed `CASE` runs to the end of the statement.
+func caseBody(rest string) string {
+	depth := 0
+	for _, word := range caseOrEnd.FindAllStringIndex(rest, -1) {
+		if strings.EqualFold(rest[word[0]:word[1]], "case") {
+			depth++
+			continue
+		}
+		if depth == 0 {
+			return rest[:word[0]]
+		}
+		depth--
+	}
+	return rest
 }
 
 func TestTheStageOriginCensusSeesHandTypedOrigins(t *testing.T) {
@@ -58,6 +118,17 @@ func TestTheStageOriginCensusSeesHandTypedOrigins(t *testing.T) {
 		{"equals synced", "var q = `WHERE nx.provenance = 'synced'`", true},
 		{"split literal", "var q = `WHERE nx.provenance = ` + `'imported'`", true},
 		{"in list", "var q = `WHERE provenance IN ('imported', 'synced')`", true},
+		{"in list, origin second", "var q = `WHERE x.provenance NOT IN ('recorded', 'synced')`", true},
+		{"any array", "var q = `WHERE provenance = ANY(ARRAY['imported','synced'])`", true},
+		{"all array, origin second", "var q = `WHERE h.provenance <> ALL (ARRAY['recorded', 'imported'])`", true},
+		{"case on the column", "var q = `CASE provenance WHEN 'imported' THEN 1 ELSE 0 END`", true},
+		{"case, origin in a later arm", "var q = `CASE nx.provenance WHEN 'recorded' THEN 1 WHEN 'synced' THEN 2 END`", true},
+		{"reversed comparison", "var q = `WHERE 'imported' = provenance`", true},
+		{"reversed distinct", "var q = `WHERE 'synced' IS DISTINCT FROM h.provenance`", true},
+		{"case, origin after a nested case", "var q = `CASE provenance WHEN 'recorded' THEN CASE WHEN x THEN 1 END WHEN 'synced' THEN 2 END`", true},
+		{"case on another column", "var q = `CASE provenance WHEN 'recorded' THEN 1 END, CASE reason WHEN 'imported' THEN 2 END`", false},
+		{"valuation provenance", "var q = `WHERE valuation_provenance = 'imported'`", false},
+		{"other column holds the origin", "var q = `WHERE won_without_contract_reason IN ('imported')`", false},
 		{"kernel predicate", `var q = "WHERE " + stagemove.MadeElsewhereSQL("nx.provenance")`, false},
 		{"recorded only", "var q = `WHERE h.provenance = 'recorded'`", false},
 	} {
