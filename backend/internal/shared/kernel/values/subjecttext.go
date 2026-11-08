@@ -11,15 +11,15 @@ import (
 // EmailTextPattern matches an address without matching a longer address.
 // The result is a PostgreSQL regular expression for case-insensitive matching.
 func EmailTextPattern(email string) string {
-	return emailTextPattern(email, `[[:alnum:]._%+-]`)
+	return buildEmailTextPattern(email, `[[:alnum:]._%+-]`)
 }
 
 // MarkdownEmailTextPattern keeps the voice-corpus policy that underscores can delimit formatting.
 func MarkdownEmailTextPattern(email string) string {
-	return emailTextPattern(email, `[[:alnum:].+-]`)
+	return buildEmailTextPattern(email, `[[:alnum:].+-]`)
 }
 
-func emailTextPattern(email, preceding string) string {
+func buildEmailTextPattern(email, preceding string) string {
 	return `(?<!` + preceding + `)` + regexp.QuoteMeta(strings.TrimSpace(email)) + `(?=$|[^[:alnum:].-]|\.(?:$|[^[:alnum:]]))`
 }
 

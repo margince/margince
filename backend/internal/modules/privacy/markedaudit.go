@@ -16,24 +16,32 @@ import (
 // MarkerAuditPageSize keeps the global hold-lock window to one correction.
 const MarkerAuditPageSize = 1
 
+const (
+	weeklyCommitmentEntity = "weekly_plan_commitment"
+	auditKindParameter     = "kind"
+)
+
 const markedWeeklySQL = `record.label=@marker AND record.linked_record_type IS NULL AND record.linked_record_id IS NULL
  AND record.help_requested='' AND record.manager_response='' AND record.manager_user_id IS NULL AND record.responded_at IS NULL`
+
 const markedRequestSQL = `record.subject_ref='erased+'||record.id::text AND record.contact_id IS NULL
  AND record.status IN ('fulfilled','rejected') AND (record.resolution IS NULL OR record.resolution='erased') AND NOT record.dispute_open`
+
 const markerPendingSQL = `(EXISTS(SELECT 1 FROM audit_log history WHERE history.entity_type=@kind AND history.entity_id=record.id AND ` + storekit.AuditRedactionNeededSQL + `)
  OR EXISTS(SELECT 1 FROM event_outbox WHERE envelope->'entity'->>'type'=@kind AND envelope->'entity'->>'id'=record.id::text))`
 
 type markedAuditSource struct{ kind, selectSQL, lockSQL string }
 
 var weeklyAuditSource = markedAuditSource{
-	kind:      "weekly_plan_commitment",
+	kind:      weeklyCommitmentEntity,
 	selectSQL: `SELECT record.id FROM weekly_plan_commitment record WHERE ` + markedWeeklySQL + ` AND ` + markerPendingSQL + ` AND record.id>@after AND record.id<@until ORDER BY record.id LIMIT @limit`,
-	lockSQL:   `SELECT ` + markedWeeklySQL + ` FROM weekly_plan_commitment record WHERE record.id=@id FOR UPDATE`,
+	lockSQL:   `SELECT ` + markedWeeklySQL + ` FROM weekly_plan_commitment record WHERE record.id=@id FOR UPDATE NOWAIT`,
 }
+
 var retiredRequestAuditSource = markedAuditSource{
 	kind:      rightsRequestEntity,
 	selectSQL: `SELECT record.id FROM data_subject_request record WHERE ` + markedRequestSQL + ` AND ` + markerPendingSQL + ` AND record.id>@after AND record.id<@until ORDER BY record.id LIMIT @limit`,
-	lockSQL:   `SELECT ` + markedRequestSQL + ` FROM data_subject_request record WHERE record.id=@id FOR UPDATE`,
+	lockSQL:   `SELECT ` + markedRequestSQL + ` FROM data_subject_request record WHERE record.id=@id FOR UPDATE NOWAIT`,
 }
 
 // RedactMarkedWeeklyAuditPageTx uses the approved editable erasure marker.
@@ -49,8 +57,8 @@ func RedactRetiredRequestAuditPageTx(ctx context.Context, tx pgx.Tx, after, unti
 }
 
 func markerArgs(source markedAuditSource) pgx.StrictNamedArgs {
-	args := pgx.StrictNamedArgs{"kind": source.kind}
-	if source.kind == "weekly_plan_commitment" {
+	args := pgx.StrictNamedArgs{auditKindParameter: source.kind}
+	if source.kind == weeklyCommitmentEntity {
 		args["marker"] = erasedMention
 	}
 	return args
@@ -79,12 +87,8 @@ func redactMarkedAuditPage(ctx context.Context, tx pgx.Tx, source markedAuditSou
 		return page, err
 	}
 	for _, id := range idsToCheck {
-		lockArgs := pgx.StrictNamedArgs{"id": id}
-		if source.kind == "weekly_plan_commitment" {
-			lockArgs["marker"] = erasedMention
-		}
-		var cleared bool
-		if err := tx.QueryRow(ctx, source.lockSQL, lockArgs).Scan(&cleared); err != nil {
+		cleared, err := lockMarkedAuditRecord(ctx, tx, source, id)
+		if err != nil {
 			return HistoricalAuditPage{}, err
 		}
 		if !cleared {
@@ -123,10 +127,25 @@ func markerAuditUnderHold(ctx context.Context, tx pgx.Tx) (bool, error) {
 func certifyMarkedAudit(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) error {
 	var err error
 	switch kind {
-	case "weekly_plan_commitment":
+	case weeklyCommitmentEntity:
 		_, err = certifyCollateralScrub(ctx, tx, "weekly_plan_commitment", id, subjectRedactionReason, subjectRedactionCause)
 	case rightsRequestEntity:
 		_, err = certifyCollateralScrub(ctx, tx, "data_subject_request", id, subjectRedactionReason, subjectRedactionCause)
 	}
 	return err
+}
+
+func lockMarkedAuditRecord(ctx context.Context, tx pgx.Tx, source markedAuditSource, id ids.UUID) (bool, error) {
+	args := pgx.StrictNamedArgs{"id": id}
+	if source.kind == weeklyCommitmentEntity {
+		args["marker"] = erasedMention
+	}
+	return storekit.Savepoint(ctx, tx, func(attempt pgx.Tx) (bool, error) {
+		var cleared bool
+		err := attempt.QueryRow(ctx, source.lockSQL, args).Scan(&cleared)
+		if err == pgx.ErrNoRows || storekit.IsLockTimeout(err) {
+			return false, nil
+		}
+		return cleared, err
+	})
 }

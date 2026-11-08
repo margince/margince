@@ -27,7 +27,7 @@ func TestErasureExplainsMissingReviewerAndRollsBack(t *testing.T) {
 	company := e.SeedCompany(t, "Review company", nil)
 	e.WsExec(t, `UPDATE company SET description='Anna Berg is mentioned here' WHERE id=$1`, company)
 	err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
-	var refusal *PrivacyReviewUnavailableError
+	var refusal *privacyReviewUnavailableError
 	if !errors.As(err, &refusal) || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("missing reviewer must explain a conflict: %v", err)
 	}
@@ -120,5 +120,41 @@ func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *te
 	runMachineAddressTask(ctx, t, e, markedAuditRedactionDataTask())
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`, record); n != 0 {
 		t.Fatalf("retry kept %d old images", n)
+	}
+}
+
+func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
+	e := integration.Setup(t)
+	request := legacyRequestAuditCopies(t, e)
+	company := e.SeedCompany(t, "Ordinary company", nil)
+	ctx := principal.SystemActing(e.Admin(), "system:marker-test")
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(business pgx.Tx) error {
+		var locked ids.UUID
+		if err := business.QueryRow(ctx, `SELECT id FROM data_subject_request WHERE id=$1 FOR UPDATE`, request).Scan(&locked); err != nil {
+			return err
+		}
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(cleanup pgx.Tx) error {
+			if _, err := cleanup.Exec(ctx, `SET LOCAL lock_timeout='200ms'`); err != nil {
+				return err
+			}
+			page, err := privacy.RedactRetiredRequestAuditPageTx(ctx, cleanup, ids.UUID{}, ids.NewV7(), privacy.MarkerAuditPageSize, nil)
+			if err != nil {
+				return err
+			}
+			if page.Changed != 0 {
+				t.Fatal("changed a request another transaction is using")
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+		_, err := business.Exec(ctx, `UPDATE company SET legal_hold=false WHERE id=$1`, company)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	runMachineAddressTask(ctx, t, e, markedAuditRedactionDataTask())
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, request); n != 0 {
+		t.Fatalf("retry kept %d images", n)
 	}
 }

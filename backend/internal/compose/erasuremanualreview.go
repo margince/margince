@@ -17,6 +17,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const (
+	reviewEmailSignature    = "email_signature"
+	reviewSignatureTemplate = "signature_template"
+	reviewLegalEntity       = "legal_entity"
+	reviewSettingsObject    = "installation_settings"
+)
+
 func (p capturedTextPurger) FlagSubjectReviewTx(ctx context.Context, tx pgx.Tx, subject ids.ContactID, sources []privacy.ErasureReviewSource) error {
 	system := principal.SystemActing(ctx, "system:privacy_review")
 	if correlation, ok := principal.CorrelationID(ctx); ok {
@@ -24,42 +31,17 @@ func (p capturedTextPurger) FlagSubjectReviewTx(ctx context.Context, tx pgx.Tx, 
 	}
 	store := notices.NewStore(p.db)
 	for _, source := range sources {
-		target := notices.Target{Type: source.Kind, ID: source.ID}
-		var recipients []ids.UserID
-		if source.Kind == "email_signature" && source.Owner != nil {
-			live, err := identity.LiveReviewRecipientTx(system, tx, *source.Owner)
-			if err != nil {
-				return err
-			}
-			if live {
-				recipients = []ids.UserID{ids.From[ids.UserKind](*source.Owner)}
-			} else {
-				target = notices.Target{}
-			}
-		}
-		if len(recipients) == 0 {
-			object := source.Kind
-			if object == "signature_template" {
-				object = "installation_settings"
-			}
-			if object == "email_signature" {
-				object = "contact"
-			}
-			var err error
-			recipients, err = identity.PrivacyReviewOperatorsTx(system, tx, object)
-			if err != nil {
-				return err
-			}
-		}
-		if len(recipients) == 0 {
-			return &PrivacyReviewUnavailableError{}
+		target, recipients, err := privacyReviewRecipients(system, tx, source)
+		if err != nil {
+			return err
 		}
 		body := manualPrivacyReviewText(source.Kind)
-		if source.Kind == "email_signature" && target.Type == "" && source.Owner != nil {
+		if source.Kind == reviewEmailSignature && target.Type == "" && source.Owner != nil {
 			body = fmt.Sprintf("An inactive member's retained signature needs manual privacy review. Signature reference: %s. Member reference: %s. An administrator must review it before that member is reactivated.", source.ID, *source.Owner)
 		}
 		for _, recipient := range recipients {
-			_, err := store.CreateTx(system, tx, notices.NewNotice{Recipient: recipient, Kind: notices.KindPrivacyReviewRequired,
+			_, err := store.CreateTx(system, tx, notices.NewNotice{
+				Recipient: recipient, Kind: notices.KindPrivacyReviewRequired,
 				Subject: "Manual privacy review needed", Body: body, Target: target,
 				DedupeKey: fmt.Sprintf("privacy-review:%s:%s:%s", subject, source.Kind, source.ID),
 			})
@@ -71,25 +53,56 @@ func (p capturedTextPurger) FlagSubjectReviewTx(ctx context.Context, tx pgx.Tx, 
 	return nil
 }
 
+func privacyReviewRecipients(ctx context.Context, tx pgx.Tx, source privacy.ErasureReviewSource) (notices.Target, []ids.UserID, error) {
+	target := notices.Target{Type: source.Kind, ID: source.ID}
+	if source.Kind == reviewEmailSignature && source.Owner != nil {
+		live, err := identity.LiveReviewRecipientTx(ctx, tx, *source.Owner)
+		if err != nil {
+			return target, nil, err
+		}
+		if live {
+			return target, []ids.UserID{ids.From[ids.UserKind](*source.Owner)}, nil
+		}
+		target = notices.Target{}
+	}
+	object := source.Kind
+	switch object {
+	case reviewSignatureTemplate:
+		object = reviewSettingsObject
+	case reviewEmailSignature:
+		object = string(recordTypeContact)
+	}
+	recipients, err := identity.PrivacyReviewOperatorsTx(ctx, tx, object)
+	if err != nil {
+		return target, nil, err
+	}
+	if len(recipients) == 0 {
+		return target, nil, &privacyReviewUnavailableError{}
+	}
+	return target, recipients, nil
+}
+
 func manualPrivacyReviewText(kind string) string {
 	switch kind {
 	case "knowledge_document":
 		return "An uploaded document may mention an erased contact. Keep the file and open its original to review the text."
-	case "email_signature":
+	case reviewEmailSignature:
 		return "An email signature may mention an erased contact. Review the signature before deciding what to remove."
-	case "activity":
+	case string(recordTypeActivity):
 		return "This retained note may mention an erased contact. Review the possible match manually; its text was kept."
-	case "legal_entity", "signature_template":
+	case reviewLegalEntity, reviewSignatureTemplate:
 		return "A company email signature template may mention an erased contact. Review it in Company settings before deciding what to remove."
 	default:
 		return "This record's description may mention an erased contact. Review its text before deciding what to remove."
 	}
 }
 
-type PrivacyReviewUnavailableError struct{}
+type privacyReviewUnavailableError struct{}
 
-func (*PrivacyReviewUnavailableError) Error() string {
+func (*privacyReviewUnavailableError) Error() string {
 	return "No active privacy reviewer can read the matching retained content. An administrator must grant a human administrator or operations member unrestricted record access and contact deletion permission, then retry erasure."
 }
-func (*PrivacyReviewUnavailableError) Unwrap() error                    { return apperrors.ErrConflict }
-func (e *PrivacyReviewUnavailableError) MessageFault() (string, string) { return "conflict", e.Error() }
+func (*privacyReviewUnavailableError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault tells the caller how an administrator can restore required review access.
+func (e *privacyReviewUnavailableError) MessageFault() (string, string) { return "conflict", e.Error() }

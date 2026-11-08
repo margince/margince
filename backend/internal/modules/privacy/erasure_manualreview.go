@@ -43,7 +43,7 @@ func (e *Eraser) flagManualSubjectMentions(ctx context.Context, tx pgx.Tx, subje
 	}
 	var sources []ErasureReviewSource
 	if len(patterns) > 0 {
-		rows, err := tx.Query(ctx, manualMentionSourcesSQL, pgx.StrictNamedArgs{"pattern": strings.Join(patterns, "|")})
+		rows, err := tx.Query(ctx, manualMentionSourcesSQL, pgx.StrictNamedArgs{textPatternParameter: strings.Join(patterns, "|")})
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (e *Eraser) flagManualSubjectMentions(ctx context.Context, tx pgx.Tx, subje
 		rows, err := tx.Query(ctx, `SELECT 'activity',a.id,NULL::uuid FROM activity a WHERE a.kind='note'
  AND NOT EXISTS(SELECT 1 FROM activity_link l WHERE l.activity_id=a.id AND (l.contact_id IS NOT NULL OR l.lead_id IS NOT NULL))
  AND (@ambiguous OR a.restricted_at IS NOT NULL OR `+retentionscope.HeldThroughAnyLink("a.id")+`)
- AND (a.subject ~* @pattern OR a.body ~* @pattern)`, pgx.StrictNamedArgs{"pattern": strings.Join(patterns, "|"), "ambiguous": !full})
+ AND (a.subject ~* @pattern OR a.body ~* @pattern)`, pgx.StrictNamedArgs{textPatternParameter: strings.Join(patterns, "|"), "ambiguous": !full})
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (e *Eraser) flagManualSubjectMentions(ctx context.Context, tx pgx.Tx, subje
 	}
 	var template bool
 	if len(patterns) > 0 {
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM setting WHERE key='contacts.signature_template' AND value #>> '{}' ~* @pattern)`, pgx.StrictNamedArgs{"pattern": strings.Join(patterns, "|")}).Scan(&template); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM setting WHERE key='contacts.signature_template' AND value #>> '{}' ~* @pattern)`, pgx.StrictNamedArgs{textPatternParameter: strings.Join(patterns, "|")}).Scan(&template); err != nil {
 			return err
 		}
 	}

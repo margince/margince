@@ -16,7 +16,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-const erasedTextMention = "Erased"
+const (
+	erasedTextMention    = "Erased"
+	textPatternParameter = "pattern"
+	erasedTextParameter  = "erased"
+)
 
 func redactUnlinkedNotes(ctx context.Context, tx pgx.Tx, keys subjectKeys) ([]ids.UUID, error) {
 	patterns := addressPatterns(keys.emails)
@@ -41,7 +45,7 @@ func redactUnlinkedNotes(ctx context.Context, tx pgx.Tx, keys subjectKeys) ([]id
  AND NOT `+retentionscope.HeldThroughAnyLink("a.id")+`
  AND (a.subject IS DISTINCT FROM regexp_replace(a.subject,@pattern,@erased,'gi')
  OR a.body IS DISTINCT FROM regexp_replace(a.body,@pattern,@erased,'gi')) RETURNING a.id`,
-		pgx.StrictNamedArgs{"pattern": pattern, "erased": erasedTextMention, "locked": locked})
+		pgx.StrictNamedArgs{textPatternParameter: pattern, erasedTextParameter: erasedTextMention, "locked": locked})
 	if err != nil {
 		return nil, err
 	}

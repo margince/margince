@@ -13,7 +13,7 @@ import (
 
 func lockNoteMentions(ctx context.Context, tx pgx.Tx, pattern string) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `SELECT id FROM activity WHERE kind='note'
- AND (subject ~* @pattern OR body ~* @pattern) ORDER BY id FOR UPDATE`, pgx.StrictNamedArgs{"pattern": pattern})
+ AND (subject ~* @pattern OR body ~* @pattern) ORDER BY id FOR UPDATE`, pgx.StrictNamedArgs{textPatternParameter: pattern})
 	if err != nil {
 		return nil, err
 	}
