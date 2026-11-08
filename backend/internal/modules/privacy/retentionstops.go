@@ -144,22 +144,22 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 	hashes := addressHashes(addresses)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (address, address_hash, kind, source, captured_by, decided_by_level, purpose_id, recorded_at,
-		     carried_from, recorded_through)
-		SELECT CASE WHEN s.kind = $4 THEN u.address END, u.hash, s.kind, s.source, s.captured_by,
+		    (address, address_hash, address_key_id, kind, source, captured_by, decided_by_level, purpose_id,
+		     recorded_at, carried_from, recorded_through)
+		SELECT CASE WHEN s.kind = $4 THEN u.address END, u.hash, $5, s.kind, s.source, s.captured_by,
 		       s.decided_by_level, s.purpose_id, s.recorded_at, s.id, s.recorded_through
 		  FROM communication_suppression s
 		 CROSS JOIN unnest($2::text[], $3::text[]) AS u(address, hash)
 		 WHERE s.id = $1
-		ON CONFLICT DO NOTHING`, stop, addresses[1:], hashes[1:], commsauthz.ReasonHardBounce); err != nil {
+		ON CONFLICT DO NOTHING`, stop, addresses[1:], hashes[1:], commsauthz.ReasonHardBounce, storekit.SuppressionKeyID()); err != nil {
 		return fmt.Errorf("copy the subject's stop onto each address it covers: %w", err)
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE communication_suppression
 		   SET %s = NULL, address = CASE WHEN kind = $4 THEN $2::text END, address_hash = $3,
-		       recorded_for_addresses = NULL
+		       address_key_id = $5, recorded_for_addresses = NULL
 		 WHERE id = $1 AND revoked_at IS NULL`, column),
-		stop, addresses[0], hashes[0], commsauthz.ReasonHardBounce); err != nil {
+		stop, addresses[0], hashes[0], commsauthz.ReasonHardBounce, storekit.SuppressionKeyID()); err != nil {
 		return fmt.Errorf("detach the subject's stop onto its address: %w", err)
 	}
 	return nil
@@ -233,10 +233,11 @@ func keepWithdrawalOn(ctx context.Context, tx pgx.Tx, addresses []string, withdr
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (address_hash, kind, source, captured_by, decided_by_level, recorded_at, recorded_through)
-		SELECT u.hash, $2, $3, $4, $5, $6, $7 FROM unnest($1::text[]) AS u(hash)`,
+		    (address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_at, recorded_through)
+		SELECT u.hash, $8, $2, $3, $4, $5, $6, $7 FROM unnest($1::text[]) AS u(hash)`,
 		addressHashes(addresses), commsauthz.ReasonObjection, sourceKeptFromWithdrawal, by,
-		string(commsauthz.LevelSubject), withdrawnAt, string(commsauthz.RecordedByMachine)); err != nil {
+		string(commsauthz.LevelSubject), withdrawnAt, string(commsauthz.RecordedByMachine),
+		storekit.SuppressionKeyID()); err != nil {
 		return fmt.Errorf("keep the subject's marketing withdrawal on their addresses: %w", err)
 	}
 	return nil

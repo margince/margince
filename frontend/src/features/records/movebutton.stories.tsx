@@ -114,8 +114,8 @@ export const CreateTaskRefused: Story = {
   },
 };
 
-// The press wrote the task. The verb gives way to a line that names it and
-// links to it, so the reader sees what they made.
+// The press wrote the task. The verb gives way to a line naming it, with the
+// way into it, so the reader sees what they made.
 export const CreateTaskCreated: Story = {
   beforeEach: () => {
     installFetchStub({

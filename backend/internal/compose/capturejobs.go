@@ -234,22 +234,8 @@ func (CounterpartyVerdictArgs) Kind() string { return "capture_counterparty_verd
 // workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (CounterpartyVerdictArgs) FleetWide() {}
 
-// counterpartyVerdictWorker drives the disposition ledger's stages in the order
-// they depend on each other: judge what is due, offer to a human what
-// judging could not settle, then redact the noise whose undo window has closed.
-//
-// Judging and staging are separate stages rather than one, so a staging failure
-// never costs a verdict that was already paid for — the rows it missed are
-// picked up by the next tick, because the backlog is a query, not a queue this
-// worker holds.
-// It runs ALL of one workspace's stages, in dependency order, inside ONE job.
-// The stages are not independent — retiring puts a stranded row in front of the
-// review queue, reconciling declines keeps staging from re-asking an answered
-// question, and ageing out runs after staging so a row whose window closed this
-// tick has had its last chance — so splitting them into separate jobs per
-// workspace would break the ordering the pass depends on.
-//
-// One worker where there were two (ADR-0103).
+// Stages share one job because publication and widening depend on settled verdicts.
+// A failed stage is retried from its durable ledger state.
 type counterpartyVerdictWorker struct {
 	pool   *pgxpool.Pool
 	engine *CounterpartyVerdictEngine
@@ -271,30 +257,15 @@ func (w *counterpartyVerdictWorker) Work(ctx context.Context, _ *river.Job[Count
 
 func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	// The judging pass runs whether or not a model is composed, because not all
-	// of it needs one: an owner's own decision and a role mailbox are answered
-	// from the ledger and the address, and skipping the whole stage left those
-	// rows unanswerable. Every row that DOES need a model is retired to `unsure`
-	// inside the pass, which is what puts it in front of a human — a pending row
-	// nobody will ever judge is invisible, because it looks exactly like one
-	// whose turn has not come.
-	//
-	// Every other stage runs for the same reason it always did: rows already on
-	// the ledger must reach a human, declines must close, and mail already
-	// hidden must be redacted on schedule — turning AI off is not consent to
-	// retain the content of messages the workspace already decided were noise.
+	// Owner decisions and address rules settle without a model.
+	// Noise retention still applies when model classification is disabled.
 	if err := w.engine.RunWorkspace(wsCtx, 0); err != nil {
 		return err
 	}
 	if err := w.engine.ReconcileLedgerWorkspace(wsCtx); err != nil {
 		return err
 	}
-	// After the ledger settles, and before anything is offered to a human: a
-	// sender judged on an earlier tick, or by a door whose own release could not
-	// finish, still has mail a posture is holding for a question that has an
-	// answer.
-	// Before the widening, which then releases the mail of a contact this
-	// publishes on the same tick.
+	// Publish answered contacts before widening their mail on the same pass.
 	if err := w.engine.PublishAnsweredContactsWorkspace(wsCtx); err != nil {
 		return err
 	}

@@ -65,12 +65,18 @@ import (
 // The export widens onto evidence instead (sarmessages.go), where
 // over-inclusion is admin-mediated and recoverable and over-destruction is not.
 //
+// A decided plan's footprint names the records it touched, so a contact or
+// lead it names is the subject's too.
+//
 // $1 contact, $2 lead ids, $3 ANCHORED address patterns from addressPatterns.
 const subjectApprovalMatch = `
 	   (target_entity_type = 'contact' AND target_entity_id = $1)
 	OR (target_entity_type = 'lead'   AND target_entity_id = ANY($2::uuid[]))
 	OR proposed_change::text ~* ANY($3::text[])
-	OR summary               ~* ANY($3::text[])`
+	OR summary               ~* ANY($3::text[])
+	OR plan_footprint->'refs'->'contact' @> to_jsonb($1::uuid)
+	OR EXISTS (SELECT 1 FROM unnest($2::uuid[]) AS lead
+	            WHERE plan_footprint->'refs'->'lead' @> to_jsonb(lead))`
 
 // blankStagedProposal is what emptying a staged proposal means. It clears the
 // payload, the summary in both forms, and the name of the record it was about.
@@ -89,7 +95,8 @@ const blankStagedProposal = `proposed_change = '{}'::jsonb,
 	       summary         = '',
 	       summary_parts   = NULL,
 	       target_label    = NULL,
-	       evidence        = NULL`
+	       evidence        = NULL,
+	       plan_footprint  = NULL`
 
 // The reasons this package writes onto a proposal it withdraws. Three, because
 // a colleague finding a card gone is owed the difference between a contact who
@@ -303,6 +310,11 @@ const evidenceCitesActivity = `
 	   WHERE item->>'source_type' = 'activity'
 	     AND item->>'source_id' = ANY($1::text[]))`
 
+// approvalCitesActivity also matches a staging whose stored footprint names
+// one of the activities in $1: its decided summary may repeat their content.
+const approvalCitesActivity = `(` + evidenceCitesActivity + `
+	OR plan_footprint->'refs'->'activity' ?| $1::text[])`
+
 // evidenceCitesSubjectActivity matches a staging whose evidence quotes any
 // activity the subject ($1) is linked to.
 //
@@ -345,6 +357,9 @@ var evidenceCitesSubjectActivity = `
 // is no text left to match against, and the quote is the only place those words
 // still exist.
 //
+// Every matched row's token is spent as the subject scrub spends it, because
+// redemption never reads the blanked payload.
+//
 // Pending rows are expired for the reason the subject scrub expires them — a
 // blanked card left decidable is one a colleague can still approve, and
 // approving it would run its effect against an empty payload.
@@ -367,7 +382,7 @@ func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities 
 	for _, activity := range activities {
 		cited = append(cited, activity.String())
 	}
-	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, evidenceCitesActivity, cited); err != nil {
+	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, approvalCitesActivity, cited); err != nil {
 		return err
 	}
 	matched, err := scrubbedIDs(ctx, tx, `
@@ -375,8 +390,9 @@ func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities 
 		   SET `+blankStagedProposal+`,
 		       status          = CASE WHEN status = 'pending' THEN 'expired' ELSE status END,
 		       decision_reason = CASE WHEN status = 'pending' THEN $2 ELSE decision_reason END,
-		       decided_at      = CASE WHEN status = 'pending' THEN now() ELSE decided_at END
-		 WHERE `+evidenceCitesActivity+` RETURNING id`, cited, reason)
+		       decided_at      = CASE WHEN status = 'pending' THEN now() ELSE decided_at END,
+		       consumed_at     = coalesce(consumed_at, now())
+		 WHERE `+approvalCitesActivity+` RETURNING id`, cited, reason)
 	if err != nil {
 		return fmt.Errorf("emptying the proposals quoting the destroyed records: %w", err)
 	}

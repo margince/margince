@@ -387,6 +387,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/capture/held-threads": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/capture/senders": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/catch-up": {
 		{Name: "max_items", Minimum: 1},
 	},

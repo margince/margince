@@ -74,7 +74,7 @@ type heldMeeting struct {
 func heldMeetingSource(ctx context.Context, b *reportingBindings, at, from, to time.Time) (heldMeeting, bool, error) {
 	// The reader Weekly counts its own held meetings through, so the two place
 	// a meeting on the same day.
-	held := storekit.MeetingHeldAsOfSQL("a", b.add(at))
+	held := storekit.MeetingHeldAsOfSQL("a", b.add(at), activities.ReversedCancellationSQL)
 	legacy, start, precision, unknownDay := held.Legacy, held.Start, held.Precision, held.UnknownDay
 	eligible := "CASE WHEN " + legacy + " THEN " + activities.CustomerMeetingSQL("a") + " ELSE held.customer_eligible_at_change END"
 	visible, err := auth.ActivityContentClause(ctx, "a", b.arg)

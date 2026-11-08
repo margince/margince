@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -88,6 +89,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// Registered before the lanes' join below, so LIFO closes the pool after it.
 	defer pool.Close()
 	resolveVault := workerVault(ctx, pool, cfg.settings)
+	// Before any subcommand too: replay-erasures matches the erasure list.
+	if err := storekit.RefuseForeignSuppressionKey(ctx, pool); err != nil {
+		return fmt.Errorf("worker: %w", err)
+	}
 	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, cfg.settings, args, stdout); handled {
 		return err
 	}

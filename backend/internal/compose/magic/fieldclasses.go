@@ -54,7 +54,7 @@ var internalColumns = map[string]map[string]bool{
 		"won_without_contract_detail", "won_without_contract_reason",
 	),
 	typeContact: setOf(
-		"anonymized_address_hashes", "converted_from_lead_id", "created_from_activity_id",
+		"anonymized_address_hashes", "anonymized_address_key_id", "converted_from_lead_id", "created_from_activity_id",
 		"photo_object_key", "photo_origin", "relationship_mark_set_by",
 	),
 	typeCompany: setOf(

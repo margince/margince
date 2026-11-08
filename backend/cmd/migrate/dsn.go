@@ -20,6 +20,8 @@ import (
 type dsnSettings struct {
 	reg   *config.Registry
 	given *config.CommandFlags
+	// loaded is what resolve read, for a verb that runs product code.
+	loaded *config.Config
 }
 
 // addDSNFlags registers --dsn without a default: one read from the
@@ -43,6 +45,7 @@ func (d *dsnSettings) resolve(environ []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("migrate: %w", err)
 	}
+	d.loaded = loaded
 	return ownerDSN(loaded)
 }
 

@@ -2335,7 +2335,7 @@ type CreateActivityRequest struct {
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
 
-	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.

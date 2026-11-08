@@ -1349,7 +1349,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Brief, worklist, weekly plan and notices | `change_attention.unpin_row` | `unpin_worklist_row` | `activity.read` |
 | Brief, worklist, weekly plan and notices | `change_attention.unsnooze_brief_item` | `unsnooze_brief_item` | `activity.read` `deal.read` |
 | Brief, worklist, weekly plan and notices | `read_context.brief` | `read_brief` | `activity.read` `deal.read` |
-| Brief, worklist, weekly plan and notices | `read_details.handled_for_you` | `get_handled_for_you` | `deal.read` |
+| Brief, worklist, weekly plan and notices | `read_details.handled_for_you` | `get_handled_for_you` | `activity.read` `deal.read` `pipeline.read` |
 | Brief, worklist, weekly plan and notices | `read_details.hidden_backlog` | `get_hidden_backlog` | `activity.read` `scope:team` |
 | Brief, worklist, weekly plan and notices | `read_details.hidden_backlog_rows` | `get_hidden_backlog_rows` | `activity.read` `company.read` `contact.read` `scope:team` |
 | Brief, worklist, weekly plan and notices | `read_details.latest_weekly_review` | `get_latest_weekly_review` | `deal.read` |

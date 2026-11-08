@@ -232,16 +232,16 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		// The attempted address is logged as an irreversible hash, never
 		// plaintext: system_log is widely retained, and the failed-login path
 		// has no resolved user, so the address is the only target identifier.
-		// SuppressionHash (the one identifier hashing rule — trimmed+lowercased
-		// sha256) keeps a brute-force against one target correlatable across
-		// attempts (identical hash) without retaining the PII. A resolved seat
-		// is hashed by its own login, so both spellings of its domain are one
-		// target.
+		// SuppressionHash is the one identifier hashing rule, keyed when the
+		// installation has a root key. It keeps a brute-force against one target
+		// correlatable across attempts (identical hash) without retaining the PII.
+		// A resolved seat is hashed by its own login, so both spellings of its
+		// domain are one target.
 		_, err = tx.Exec(ctx,
 			`INSERT INTO system_log (actor_type, actor_id, action, detail)
-			 VALUES ('human', 'human:unauthenticated', 'login',
-			         jsonb_build_object('outcome', $1::text, 'email_hash', $2::text))`,
-			outcome, storekit.SuppressionHash(target))
+			 VALUES ('human', 'human:unauthenticated', 'login', jsonb_strip_nulls(
+			         jsonb_build_object('outcome', $1::text, 'email_hash', $2::text, 'email_key_id', $3::text)))`,
+			outcome, storekit.SuppressionHash(target), storekit.SuppressionKeyID())
 		return err
 	})
 }

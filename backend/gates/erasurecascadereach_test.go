@@ -59,6 +59,18 @@ func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 		t.Fatal("subject erasure no longer calls the seam that empties copies of the erased mail text")
 	}
 	maps.Copy(reached, filesReachableFrom(t, "internal/modules/ai", "EraseSamplesCopiedFromTx"))
+	scrubbed := false
+	for path := range reached {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		scrubbed = scrubbed || gatekit.CallsAny(file, []string{"ScrubDeliveryCopiesTx"})
+	}
+	if !scrubbed {
+		t.Fatal("subject erasure no longer calls the seam that clears webhook bodies rendered from the subject")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/webhooks", "ScrubSubjectDeliveriesTx"))
 	maps.Copy(reached, filesReachableFrom(t, "internal/platform/database/storekit", "RedactAuditHistory"))
 
 	cascade := map[string]bool{}

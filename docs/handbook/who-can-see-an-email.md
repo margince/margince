@@ -53,6 +53,13 @@ To see who can read an email in Margince, open the message from a timeline. The 
 
 Also called: email privacy, who can read my mail, email permissions.
 
+In Settings, **Mail not shared with the team** is a place to find and correct a sharing decision.
+Leaving mail unshared needs no action. Search by subject or participant, narrow the dates or reason,
+then open a message to see who can read it and change sharing. Another owner's hold still applies.
+
+**Sender decisions** works the same way: find an address, name or domain, then correct the decision.
+**My overrides** shows your own choices. Removing an override does not restore mail already destroyed.
+
 ## Mail between colleagues
 
 Mail between colleagues is not kept by default. An admin can turn on

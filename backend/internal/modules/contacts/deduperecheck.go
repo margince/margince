@@ -37,6 +37,10 @@ const (
 	auditKeyEntityType = "entity_type"
 )
 
+// evidenceKeyDataTaskRun names, in a repair's audit evidence, the data task
+// run that made the change.
+const evidenceKeyDataTaskRun = "data_task_run"
+
 // The reasons an open pair is archived without a decision.
 const (
 	archiveReasonNoLongerFiled  = "no_longer_filed"

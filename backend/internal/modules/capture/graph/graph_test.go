@@ -421,6 +421,9 @@ func TestSyncInitialAnchorIsBoundedAndCaptures(t *testing.T) {
 	if sink.recs[0].Source != "graph:m1@mail.example" {
 		t.Errorf("Source = %q, want graph:m1@mail.example", sink.recs[0].Source)
 	}
+	if got := sink.recs[0].ProviderMessageID; got != "m1" {
+		t.Errorf("provider message id = %q", got)
+	}
 	if sink.recs[0].CapturedBy != "connector:graph" {
 		t.Errorf("CapturedBy = %q, want connector:graph", sink.recs[0].CapturedBy)
 	}
@@ -778,13 +781,13 @@ func (s *graphRemovalSink) RemoveMessage(_ context.Context, key connector.Natura
 	return s.err
 }
 
-// A failure on one removal does not stop the ones behind it. Losing a round of
-// mail because a single deletion could not be acted on trades a small wrong for
-// a larger one.
+// Every removal is attempted, and any failure is returned to the sync.
 func TestAFailedRemovalDoesNotStopTheGraphRemovalsBehindIt(t *testing.T) {
 	sink := &graphRemovalSink{err: errors.New("the copy is held by a legal duty")}
 
-	reportRemovals(context.Background(), sink, []string{"a", "b", "c"})
+	if err := reportRemovals(context.Background(), sink, []string{"a", "b", "c"}); err == nil {
+		t.Fatal("removal failures were lost")
+	}
 
 	if len(sink.removed) != 3 {
 		t.Fatalf("reached %d removals, want all 3 — one failure stopped the rest", len(sink.removed))
@@ -797,7 +800,9 @@ func TestAFailedRemovalDoesNotStopTheGraphRemovalsBehindIt(t *testing.T) {
 func TestAGraphSinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 	plain := &recordingSink{}
 
-	reportRemovals(context.Background(), plain, []string{"gone"})
+	if err := reportRemovals(context.Background(), plain, []string{"gone"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(plain.recs) != 0 {
 		t.Errorf("a removal reached Upsert: %+v", plain.recs)
@@ -808,7 +813,9 @@ func TestAGraphSinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 func TestAnEmptyGraphRemovalListAsksTheSinkNothing(t *testing.T) {
 	sink := &graphRemovalSink{}
 
-	reportRemovals(context.Background(), sink, nil)
+	if err := reportRemovals(context.Background(), sink, nil); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(sink.removed) != 0 {
 		t.Errorf("an empty list reached the sink: %+v", sink.removed)
@@ -820,7 +827,9 @@ func TestAnEmptyGraphRemovalListAsksTheSinkNothing(t *testing.T) {
 func TestEachGraphRemovalNamesThisConnectorsSourceSystem(t *testing.T) {
 	sink := &graphRemovalSink{}
 
-	reportRemovals(context.Background(), sink, []string{"AAMkAGI2"})
+	if err := reportRemovals(context.Background(), sink, []string{"AAMkAGI2"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(sink.removed) != 1 {
 		t.Fatalf("want one removal, got %+v", sink.removed)

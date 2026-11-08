@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 227.7 KB |
+| Tool catalog | 228.0 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59695 |
+| Approx. wire tokens | 59763 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.8 KB | 23% | Yes, every step |
-| Input schemas | 111.4 KB | 48% | Yes, every step |
+| Input schemas | 111.7 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **165.2 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **165.5 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 638 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2687 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2756 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
@@ -11512,12 +11512,16 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "cursor": {
-      "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
+      "description": "ai_calls, audit_log, automation_runs, capture_senders, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
       "type": "string"
     },
     "days": {
       "description": "automatic_work_health only",
       "type": "integer"
+    },
+    "decision": {
+      "description": "capture_senders only",
+      "type": "string"
     },
     "domain": {
       "description": "domain_questions only",
@@ -11553,7 +11557,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "from": {
-      "description": "ai_calls, ai_usage, audit_log, fx_rates only",
+      "description": "ai_calls, ai_usage, audit_log, fx_rates, held_threads only",
       "type": "string"
     },
     "group": {
@@ -11602,7 +11606,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "array"
     },
     "limit": {
-      "description": "ai_calls, audit_log, automation_runs, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legacy_loss_reasons, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
+      "description": "ai_calls, audit_log, automation_runs, capture_senders, confirm_submissions, data_subject_requests, domain_questions, finance_source_customers, held_threads, import_runs, legacy_loss_reasons, legal_holds, my_capture_activity, notice_case_reviews, notice_cases, record_history, restricted_records, voice_profile_deltas, voice_profile_versions, worklist, workspace_capture_activity only",
       "type": "integer"
     },
     "locale": {
@@ -11653,6 +11657,10 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       ],
       "type": "string"
     },
+    "overrides": {
+      "description": "capture_senders only",
+      "type": "boolean"
+    },
     "owner": {
       "description": "worklist only",
       "format": "uuid",
@@ -11663,11 +11671,15 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "q": {
-      "description": "ai_calls, colleagues, consumer_mail_baseline, held_threads only",
+      "description": "ai_calls, capture_senders, colleagues, consumer_mail_baseline, held_threads only",
       "type": "string"
     },
     "readId": {
       "description": "anchor_company_site_read only",
+      "type": "string"
+    },
+    "reason": {
+      "description": "held_threads only",
       "type": "string"
     },
     "received_at": {
@@ -11781,7 +11793,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "to": {
-      "description": "ai_calls, ai_usage, audit_log only",
+      "description": "ai_calls, ai_usage, audit_log, held_threads only",
       "type": "string"
     },
     "to_user_id": {

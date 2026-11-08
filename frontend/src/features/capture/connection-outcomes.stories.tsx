@@ -134,7 +134,9 @@ export const OneListFailed: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("Could not load")).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Retry Held threads" }),
+      canvas.getByRole("button", {
+        name: "Retry Mail not shared with the team",
+      }),
     ).toBeVisible();
   },
 };

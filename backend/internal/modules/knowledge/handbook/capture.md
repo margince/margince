@@ -131,15 +131,14 @@ capture works as normal and only this judging step is skipped.
 ### Low confidence never deletes anything
 
 Below a confidence of 0.7, the sender is asked about once more on its own. If it
-is still below, it becomes **unsure** and goes to a human. A low score costs one
-more question; it never deletes anything by mistake.
+is still below, it stays unsure. There is no task or approval to clear.
+A low score costs one more question; it never deletes anything by mistake.
 
-An unsure sender reaches you as an approval card, **Add contact from mail**.
-Only the colleague whose mailbox the sender wrote to gets the card. If that
-colleague has left, nobody else is asked: the sender stays unsure, and after 30
-days the question closes with no contact created. Accept creates the contact.
-**Reject does nothing at all**: the mail stays where it is. These proposals can
-only add, so rejecting one by mistake deletes nothing.
+Open **Settings** → **Capture activity** → **Sender decisions** to find a sender
+and correct a decision. Search by address, name or domain, or choose **My overrides**.
+You can mark a sender as business, exclude them, or withdraw your own override.
+Withdrawing an override does not restore mail already destroyed. Leaving an unsure
+sender unshared is a valid outcome and needs no action.
 
 ### Two limits on the queue
 

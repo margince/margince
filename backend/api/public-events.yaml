@@ -2364,6 +2364,9 @@ components:
             How the meeting went, once somebody recorded it (absent when this
             update did not touch it). Meeting rows only; the update refuses the
             field on any other kind.
+        meeting_status_cleared:
+          type: boolean
+          description: True when this update removed the meeting's status, so the meeting is unanswered again, as a calendar first captured it.
         call_outcome:
           type: string
           enum: [reached, not_reached, voicemail, call_back_later, put_through]

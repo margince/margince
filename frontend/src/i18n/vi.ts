@@ -14,6 +14,8 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.task_completion": "Hoàn tất công việc sau email",
   "homeRepair.reason.taskChanged":
     "Công việc đã thay đổi trong khi tạo bản xem trước. Hãy xem trước lần nữa.",
   "homeRepair.normalize": "Sửa nguồn hoặc ngày được tạo tự động",
@@ -1600,7 +1602,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.left_pipeline": "Pipeline khác",
   "reporting.cohortOutcome.unresolved": "Vẫn đang mở",
   "reporting.cohortOutcome.history_partial":
-    "Lần chuyển tiếp theo được nhập hoặc không rõ",
+    "Lần chuyển tiếp theo được nhập, đồng bộ hoặc không rõ",
   "reporting.cohortOutcome.accepted": "Bàn giao đã được chấp nhận",
   "reporting.cohortOutcome.qualified": "Đủ điều kiện",
   "reporting.cohortOutcome.disqualified": "Đã loại",
@@ -1609,7 +1611,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortStillOpenNote":
     "Vẫn đang mở nghĩa là chưa có kết quả khi số liệu này được đọc. Các mục này không bị tính là thua và không tính vào tỷ lệ.",
   "reporting.cohortPartialNote":
-    "Lần chuyển tiếp theo được nhập hoặc không rõ nghĩa là deal đã rời giai đoạn bằng một lần chuyển do lần nhập dữ liệu mang vào, hoặc bằng một lần chuyển được lưu trước khi Margince ghi thứ tự giai đoạn. Các mục này không tính vào tỷ lệ.",
+    "Lần chuyển tiếp theo được nhập, đồng bộ hoặc không rõ nghĩa là deal đã rời giai đoạn bằng một lần chuyển do lần nhập dữ liệu mang vào hoặc được đồng bộ từ CRM khác, hoặc bằng một lần chuyển được lưu trước khi Margince ghi thứ tự giai đoạn. Các mục này không tính vào tỷ lệ.",
   "reporting.cohortStageDaysNote":
     "Số ngày bên cạnh một kết quả là thời gian trung vị deal ở trong giai đoạn trước kết quả đó. Số ngày bên cạnh Vẫn đang mở là thời gian trung vị ở trong giai đoạn tính đến nay.",
   "reporting.cohortLeadDaysNote":
@@ -2766,6 +2768,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.help.resources": "Trợ giúp và tài liệu",
   "shell.help.shortcuts": "Phím tắt",
   "shell.help.releaseNotes": "Ghi chú phát hành",
+  "shell.help.licenses": "Giấy phép ứng dụng web",
   "shell.help.devBuild": "Bản dựng phát triển",
   "shell.shortcuts.anywhere": "Mọi nơi",
   "shell.shortcuts.search": "Mở tìm kiếm",
@@ -6474,6 +6477,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
+  "brief.pager.label": "Công việc",
+  "brief.pager.previous": "Công việc trước",
+  "brief.pager.next": "Công việc tiếp theo",
+  "brief.pager.hint":
+    "Vuốt sang trái hoặc phải để xem công việc. Bạn cũng có thể dùng phím mũi tên trên các nút điều hướng.",
   "brief.first.title": "Cần bạn xử lý",
   "brief.intro.waiting": "Đang chờ bạn",
   "brief.intro.meetings": "Cuộc họp hôm nay",
@@ -7684,6 +7692,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.complete": "Xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
+  "tasks.log.action": "Ghi lại kết quả",
+  "tasks.log.record": "Hoạt động này thuộc bản ghi nào?",
+  "tasks.log.chooseRecord": "Chọn bản ghi khác",
+  "tasks.log.leftOpen":
+    "Đã ghi hoạt động. Công việc vẫn mở cho đến khi đính kèm đủ tệp; hãy thử lại để hoàn tất.",
+  "tasks.log.markDone": "Đánh dấu công việc đã xong",
   "tasks.detail": "Việc cần làm",
   "tasks.sourceEmail": "Email nguồn",
   "tasks.openSource": "Mở bản gốc",
@@ -11164,24 +11178,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "heldThreads.statusFilter": "Trạng thái",
   "heldThreads.statusAll": "Mọi trạng thái",
   "heldThreads.noMatch": "Không có chuỗi thư nào khớp.",
-  "heldThreads.showMore": "Xem thêm",
   "heldThreads.count.pending": "đang chờ phân loại",
   "heldThreads.count.unsure": "chưa rõ",
   "heldThreads.count.held": "đang giữ lại",
   "heldThreads.count.heldByOwner": "do bạn giữ lại",
-  "heldThreads.title": "Chuỗi thư đang giữ lại",
+  "heldThreads.reasonFilter": "Lý do",
+  "heldThreads.anyReason": "Mọi lý do",
+  "heldThreads.from": "Từ ngày",
+  "heldThreads.to": "Đến ngày",
+  "heldThreads.browse": "Xem các cuộc trò chuyện gần đây",
+  "heldThreads.preview": "Xem và thay đổi chia sẻ",
+  "heldThreads.loadMore": "Tải thêm",
+  "senders.search": "Tìm theo địa chỉ, tên hoặc tên miền",
+  "senders.decisionFilter": "Quyết định",
+  "senders.allDecisions": "Mọi quyết định",
+  "senders.myOverrides": "Lựa chọn của tôi",
+  "senders.browse": "Xem địa chỉ gửi gần đây",
+  "heldThreads.title": "Thư chưa chia sẻ với nhóm",
   "heldThreads.sub":
-    "Chuỗi thư mà hộp thư của bạn đang giữ lại. Chia sẻ một chuỗi thư thì mọi đồng nghiệp đều đọc được; chỉ bạn mới chia sẻ được chuỗi thư của chính mình.",
-  "heldThreads.empty": "Hộp thư của bạn không giữ lại chuỗi thư nào.",
+    "Margince giữ các cuộc trò chuyện này chưa được chia sẻ. Bạn không cần làm gì. Tìm ở đây nếu một cuộc trò chuyện không xuất hiện trong chế độ xem của nhóm.",
   "heldThreads.colThread": "Chuỗi thư",
-  "heldThreads.colParties": "Bên liên quan",
   "heldThreads.colWhy": "Lý do",
   "heldThreads.colWhen": "Thời gian nhận",
-  "heldThreads.release": "Chia sẻ với nhóm",
-  "heldThreads.released": "Đã chia sẻ với nhóm",
-  "heldThreads.noSubject": "Thư đầu tiên đã bị xóa",
-  "heldThreads.nothingToShare":
-    "Không còn thư nào để chia sẻ. Thư đầu tiên đã bị xóa, và chuỗi thư vẫn bị giữ lại để thư trả lời sau này không đến ở trạng thái đã chia sẻ.",
   "heldThreads.pending": "Đang chờ phân loại",
   "heldThreads.attempts_one": "Đã hỏi {count} lần",
   "heldThreads.attempts_other": "Đã hỏi {count} lần",
@@ -11189,12 +11207,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã hỏi về {count} chuỗi thư nhiều lần mà chưa có trả lời. Thư vẫn bị giữ lại cho đến khi bộ phân loại trả lời trở lại; không mất gì cả.",
   "heldThreads.backlogStalled_other":
     "Đã hỏi về {count} chuỗi thư nhiều lần mà chưa có trả lời. Thư vẫn bị giữ lại cho đến khi bộ phân loại trả lời trở lại; không mất gì cả.",
-  "heldThreads.heldByOthers_one":
-    "{count} hộp thư khác đã nhập thư này và chưa chia sẻ. Chuỗi thư chỉ mở khi mọi người nhận đều đồng ý.",
-  "heldThreads.heldByOthers_other":
-    "{count} hộp thư khác đã nhập thư này và chưa chia sẻ. Chuỗi thư chỉ mở khi mọi người nhận đều đồng ý.",
-  "heldThreads.releaseFailed": "Không thể chia sẻ chuỗi thư",
-  "heldThreads.stillHeldTitle": "Đang chờ các hộp thư khác",
   "heldThreads.backlogStalledTitle": "Bộ phân loại không phản hồi",
   "heldThreads.kind.legal": "Pháp lý",
   "heldThreads.kind.financialCorporate": "Tài chính công ty",
@@ -11206,9 +11218,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "heldThreads.kind.other": "Lý do khác",
   "heldThreads.moreParticipants_one": "+{count} địa chỉ khác",
   "heldThreads.moreParticipants_other": "+{count} địa chỉ khác",
-  "senders.title": "Người gửi",
+  "senders.title": "Quyết định về người gửi",
   "senders.sub":
-    "Quyết định về từng địa chỉ mà hộp thư đã đưa vào, kèm câu trả lời của bạn nếu có. Chỉ bạn thấy danh sách này.",
+    "Margince tự động phân loại địa chỉ gửi. Tìm ở đây để sửa quyết định hoặc gỡ lựa chọn của bạn. Bạn không cần xử lý từng mục.",
   "senders.emptyBody":
     "Sau khi hộp thư đưa thư vào, từng người gửi sẽ hiển thị ở đây cùng kết quả.",
   "senders.colSender": "Người gửi",
@@ -19740,6 +19752,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.acceptNeedsChoice":
     "Dùng được khi đã lưu một lịch cho việc đặt lịch trong mục Lịch.",
   "scheduling.col.link": "Liên kết",
+  "scheduling.offeredLengths": "Thời lượng cuộc họp bổ sung",
+  "scheduling.offeredLengthsHelp":
+    "Số phút cách nhau bằng dấu phẩy, ví dụ 30, 45, 60. Thời lượng mặc định luôn có sẵn.",
   "scheduling.col.length": "Thời lượng",
   "scheduling.col.status": "Trạng thái",
   "scheduling.col.actions": "Thao tác",

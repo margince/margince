@@ -30,6 +30,8 @@ import (
 // and the census walks the struct itself, so a field added here is covered
 // without anybody remembering to list it.
 type approvalSummaryCopy struct {
+	taskCompleted    string
+	taskContact      string
 	signaturePrivate string
 	// draftedReplyWaiting: a follow-up reply is drafted. %q is its subject.
 	draftedReplyWaiting string
@@ -101,6 +103,8 @@ type approvalSummaryCopy struct {
 // walk textlang.Shipped and ask this map directly.
 var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	textlang.English: {
+		taskCompleted:    "Done because you wrote to %s on %s",
+		taskContact:      "the contact",
 		signaturePrivate: "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.",
 		draftedReplyWaiting: "A reply to %q is drafted and waiting to be sent — " +
 			"the conversation left no next step planned",
@@ -145,6 +149,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		acts: agentActsEnglish,
 	},
 	textlang.German: {
+		taskCompleted:    "Erledigt, weil du %s am %s geschrieben hast",
+		taskContact:      "den Kontakt",
 		signaturePrivate: "Die private Signatur des Absenders ist für diese Prüfung nicht freigegeben. Den Absender um Prüfung dieser Nachricht bitten.",
 		draftedReplyWaiting: "Eine Antwort auf %q ist entworfen und wartet auf den Versand: " +
 			"Das Gespräch endete ohne geplanten nächsten Schritt",
@@ -190,6 +196,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		acts: agentActsGerman,
 	},
 	textlang.Vietnamese: {
+		taskCompleted:    "Đã hoàn tất vì bạn đã gửi email cho %s vào %s",
+		taskContact:      "liên hệ",
 		signaturePrivate: "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn.",
 		draftedReplyWaiting: "Một thư trả lời cho %q đã được soạn và đang chờ gửi: " +
 			"cuộc trò chuyện không để lại bước tiếp theo nào được lên kế hoạch",
