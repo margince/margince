@@ -252,7 +252,7 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
             partial = expired.stdout or b""
             lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
             stderr, exited = f"agy overran its {timeout}s wall clock and was killed", "killed"
-    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools])
+    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools], workspace)
     # A non-zero exit, or a kill at the wall clock, is a program failure
     # whatever the stream says.
     if exited:

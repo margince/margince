@@ -77,7 +77,8 @@ var changeActivitiesCopy = toolCopy{
 		"takes it back.",
 	Limits: "relink and relink_many run at once. Tell the user before you file under a project, " +
 		"which only a member can undo from the activity. attach checks the record first; read list_documents before " +
-		"attaching the same file again.",
+		"attaching the same file again. A logged meeting names who takes part: leave off anyone " +
+		"whose invitation did not go out.",
 	Instead: "Use schedule_meeting to book a meeting still to come, change_state with " +
 		"move_deal when the same event moves a deal, so move and note are one change, and " +
 		"change_reports record_decision for a sales review's decision, which a note cannot track.",
@@ -93,7 +94,8 @@ var scheduleMeetingCopy = toolCopy{
 		"choosing a time.",
 	Instead: "Use change_activities with log to record a meeting without inviting anyone, or one " +
 		"that already happened.",
-	Retain: "Keep the invitation id and inspect its status before claiming it was delivered.",
+	Retain: "Keep the invitation id and inspect its status before claiming it was delivered. A " +
+		"refused or failed invite invited nobody.",
 }
 
 var changeStateCopy = toolCopy{
