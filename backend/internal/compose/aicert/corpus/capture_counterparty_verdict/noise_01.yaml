@@ -16,17 +16,8 @@ fixture:
 expect:
   outcome: accepted
   answer: newsletter
-  rubric: >
-    A bulk marketing send with every mass-mail marker present: a digest sender
-    address, promotional subject, a list-membership explanation and unsubscribe
-    footer. Nobody at this business has a relationship with the sender.
-    A kind of "newsletter" scores high. "contact" scores low — it is the
-    junk-record outcome ADR-0072 exists to prevent, though it is the SAFE
-    direction of error: a wrongly created record is visible and deletable, where
-    a wrongly hidden prospect is neither. "spam" is a near miss: the mail is
-    bulk marketing either way and both hide it, so the effect is right even
-    though the label is less precise.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly.
+    The rubric only ranked the other kinds by the harm each does, and
+    "contact", the answer this scenario exists to catch, fails the check outright.
