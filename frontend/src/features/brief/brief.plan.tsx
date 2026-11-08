@@ -13,7 +13,7 @@ import {
 } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { calendarDay, middayInstant } from "../../format/calendarday";
+import { isoDay, middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { formatDayRange } from "../../format/format.dates";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -435,7 +435,7 @@ function HelpExchange({
 // The plan's own seven days, named as dates. A week number makes the reader
 // count, and the report beside it may be about a different week.
 function weekDays(start: string, locale: Locale, zone: string): string {
-  const end = new Date(`${start}T12:00:00Z`);
-  end.setUTCDate(end.getUTCDate() + 6);
-  return formatDayRange(start, calendarDay(end, "UTC"), locale, zone);
+  const end = new Date(`${start}T12:00:00`);
+  end.setDate(end.getDate() + 6);
+  return formatDayRange(start, isoDay(end), locale, zone);
 }
