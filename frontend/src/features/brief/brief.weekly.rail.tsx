@@ -14,14 +14,12 @@ import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useUrlParams } from "../../lib/urlstate";
-import { weeklyNumericStatus } from "./brief.numeric";
 import { usePlanConstraintsShown } from "./brief.plan.contract";
 import {
   useWeeklyReview,
   useWeeklyReviewIndex,
   useWeeklyWins,
 } from "./brief.queries";
-import { HeadlineFigures } from "./brief.weekly.figures";
 
 /**
  * Whether the rail has anything to draw. Held while a read is out, so the
@@ -38,8 +36,8 @@ export function useWeeklyRailShown(): boolean {
 }
 
 /**
- * Beside the report: the week in figures, the weeks to open, what the week
- * is up against, and when the next report comes.
+ * Beside the report: the weeks to open, what the week is up against, and when
+ * the next report comes. The week's figures are the report's own.
  */
 export function WeeklyRail({
   constraints,
@@ -68,15 +66,8 @@ export function WeeklyRail({
         {constraints}
       </>
     );
-  const numeric = weeklyNumericStatus(
-    review.numeric_summary,
-    review.leads_withheld,
-  );
   return (
     <>
-      <Panel className="brief-weekly-summary">
-        <HeadlineFigures review={review} figures={numeric.figures} />
-      </Panel>
       <WeeksPanel weeks={weeks ?? []} shown={review.local_week_start} />
       {constraints}
       {next && Date.parse(next) >= now && (

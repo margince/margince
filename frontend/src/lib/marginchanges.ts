@@ -171,3 +171,17 @@ export function pendingChangesQuery() {
       unwrap(await api.GET("/deal-corrections/pending")),
   };
 }
+
+/**
+ * The changes an Undo of this bundle may send: those the server still allows,
+ * and only those the reader was shown. An older server names no undoable
+ * subset, so every listed change that was shown stands in.
+ */
+export function shownUndoable(
+  bundle: MarginceChangeBundle,
+  shown: ReadonlySet<string>,
+): string[] {
+  return (bundle.undoable_audit_log_ids ?? bundle.audit_log_ids).filter((id) =>
+    shown.has(id),
+  );
+}

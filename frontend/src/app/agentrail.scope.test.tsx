@@ -69,7 +69,7 @@ async function openPanel(locale: "en" | "de") {
   const { container } = render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <AgentRail route={{ screen: "deals" }} />
+        <AgentRail />
       </LocaleProvider>
     </QueryClientProvider>,
   );

@@ -4,11 +4,8 @@
 import { useEffect, useState } from "react";
 import { formatNumber } from "../format/format";
 import type { Locale, PluralTranslator, Translator } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import type { Screen } from "../lib/router";
-import { IDLE_ORDER, type IdleKind, TIPS } from "./agentrail-copy";
-import { aroundTheName, plain, type SpokenLine } from "./ai-activity-speak";
-import { paletteHotkeyCaps } from "./palettehotkey";
+import { IDLE_ORDER, type IdleKind } from "./agentrail-copy";
+import { plain, type SpokenLine } from "./ai-activity-speak";
 
 // What the agent section says while it is at rest, and how long each thing gets
 // to say it.
@@ -22,18 +19,13 @@ import { paletteHotkeyCaps } from "./palettehotkey";
 // TWO RULES SHAPE IT, and the first is the older one.
 //
 // It never invents activity. Every reading here is something the installation
-// was asked and answered, and a reading with nothing to report is ABSENT rather
-// than reworded into a cheerful nothing. Tips do not bend that rule: a tip makes
-// no claim about the agent at all, which is exactly why it is allowed to be
-// standing copy where a reading may not be.
+// was asked and answered. A reading with nothing to report is ABSENT rather
+// than reworded into a cheerful nothing. Nor does it fill a quiet moment with
+// standing advice: help lives where a reader asks for it, not in this rotation.
 //
-// It must not go stale. That is the newer one, and it is what this file was
-// pulled out of `agentrail.tsx` to fix: the rotation carried whichever run
-// settled most recently, forever, so an installation that summarised one contact
-// at nine in the morning spent the rest of the working day with "What I know
-// about Sabine Mayer is ready." in the corner of every screen. Two changes hold
-// it — a settled run ages out of the rotation (`STILL_NEWS_MS`), and the
-// rotation has something to say once the news runs out (`TIPS`).
+// It must not go stale. A run that settled at nine in the morning must not say
+// "What I know about Sabine Mayer is ready." in the corner of every screen all
+// day. So a settled run ages out of the rotation (`STILL_NEWS_MS`).
 
 /**
  * How long a run that has finished stays worth saying.
@@ -64,17 +56,6 @@ const SETTLED_DEPTH = 3;
 
 /** How long a reading holds the line. */
 const READING_HOLD_MS = 6_000;
-
-/**
- * How long a tip holds it.
- *
- * Longer than a reading, because the two are read differently. A reading is
- * mostly a number and a noun a reader already knows the shape of; a tip is a
- * sentence about something they have not seen yet, and a sentence that leaves
- * before it has been read is worse than no sentence — it is a surface that
- * flickers.
- */
-const TIP_HOLD_MS = 9_000;
 
 /**
  * An occurrence, as far as the freshness question is concerned.
@@ -203,70 +184,24 @@ export function restingReadings(
 }
 
 /**
- * The tips this reader can be shown, in the catalog's order.
- *
- * `here` drops the tip that names the screen they are standing on. It is the
- * cheapest possible piece of situational sense and it buys more than it costs:
- * a rail telling somebody on Home to go to Home is the one line that would make
- * a reader stop trusting the other three. `platform` spells the palette's
- * shortcut in the keys this reader's keyboard has, for the tip that names it.
- */
-export function restingTips(
-  here: Screen,
-  t: (key: MessageKey, params?: Record<string, string>) => string,
-  platform: string,
-): readonly SpokenLine[] {
-  const chord = paletteHotkeyCaps(platform).join(" ");
-  return TIPS.flatMap((tip) => {
-    if (tip.to === null) {
-      return [plain(t(tip.key, { chord }))];
-    }
-    if (tip.to.screen === here) {
-      return [];
-    }
-    return [
-      aroundTheName(t(tip.key), t(tip.to.labelKey), { screen: tip.to.screen }),
-    ];
-  });
-}
-
-/**
  * Which line is showing, changing on its own.
  *
  * Slow: this sits at the edge of every screen all day, and a line that changed
  * every second would be movement in the corner of somebody's eye while they were
  * trying to read something else. One line, long enough to read twice.
  *
- * The cycle is EVERY READING AND THEN ONE TIP, and which tip advances with each
- * pass. That shape is the whole pacing decision, and it is what keeps a tip from
- * becoming a fifth reading: on an installation with three things to report a
- * reader meets a tip once a pass and a different one next time round, so the
- * surface stays varied without the news ever having to queue behind advice.
- *
- * A chained timeout rather than an interval, so the two holds can differ. An
- * interval would have to pick one of them, and picking the reading's would cut
- * tips short while picking the tip's would leave a queue count sitting for nine
- * seconds after it changed.
+ * A chained timeout rather than an interval, so each step arms the next and a
+ * reading that changes restarts its own hold.
  */
-export function useRestingLine(
-  readings: readonly SpokenLine[],
-  tips: readonly SpokenLine[],
-): SpokenLine {
+export function useRestingLine(readings: readonly SpokenLine[]): SpokenLine {
   const [tick, setTick] = useState(0);
-  // One tip joins each pass, never the whole catalog: `span` is what the reader
-  // walks before the cycle comes round, and `pass` is what picks which tip they
-  // meet when it does.
-  const span = readings.length + (tips.length > 0 ? 1 : 0);
+  const span = readings.length;
   const at = span === 0 ? 0 : tick % span;
-  const onTip = at >= readings.length;
   useEffect(() => {
     if (span < 2) {
       return;
     }
-    const timer = setTimeout(
-      () => setTick(tick + 1),
-      onTip ? TIP_HOLD_MS : READING_HOLD_MS,
-    );
+    const timer = setTimeout(() => setTick(tick + 1), READING_HOLD_MS);
     return () => clearTimeout(timer);
     // The step it schedules is written out rather than taken from an updater,
     // which is what makes `tick` a real dependency: each step arms the next, so
@@ -274,17 +209,12 @@ export function useRestingLine(
     // that from the dependency list and leave the rotation stopped after one
     // move. The closure cannot go stale for the same reason — the effect is
     // torn down and re-armed by the change it is reading.
-  }, [span, onTip, tick]);
-  if (onTip) {
-    const pass = Math.floor(tick / span);
-    const tip = tips[pass % tips.length] ?? tips[0];
-    if (tip !== undefined) return tip;
-  }
-  // Both lists can shorten under it when a read answers, so the index is clamped
+  }, [span, tick]);
+  // The list can shorten under it when a read answers, so the index is clamped
   // rather than trusted.
   const reading = readings[at] ?? readings[0];
   if (reading === undefined) {
-    throw new Error("useRestingLine needs at least one reading or tip");
+    throw new Error("useRestingLine needs at least one reading");
   }
   return reading;
 }

@@ -116,6 +116,21 @@ const SAID_BY_THE_WHEN_LINE = new Set<string>([
 ]);
 
 /**
+ * Reasons that compare a row with the rest of the queue. They decide its rank,
+ * and tell a reader nothing to act on, so no surface says them.
+ */
+const RANK_COMPARISONS = new Set<string>([
+  "material",
+  "below_material",
+  "routine",
+]);
+
+/** The reasons a row's Details may list: every fact but a rank comparison. */
+export function factReasons(item: WorklistItem): WorklistReason[] {
+  return item.because.filter((reason) => !RANK_COMPARISONS.has(reason.kind));
+}
+
+/**
  * The reasons a row says in its phrase line: all but those said elsewhere.
  * The Worklist row shows `pinned` as a pin beside its name.
  */
@@ -123,12 +138,10 @@ export function phrasedReasons(
   item: WorklistItem,
   whenDrawn: boolean,
 ): WorklistReason[] {
-  return item.because.filter(
+  return factReasons(item).filter(
     (reason) =>
       reason.kind !== BADGED &&
-      !["material", "below_material", "routine", "pinned"].includes(
-        reason.kind,
-      ) &&
+      reason.kind !== "pinned" &&
       !(
         reason.kind === "expected_revenue" &&
         item.deal?.amount_minor != null &&
@@ -240,7 +253,7 @@ export function whenText(
 ): string | null {
   if (item.source === "notice" && item.notice_origin)
     return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
-  const held = scheduledText(item, t, locale, record);
+  const held = scheduledText(item, t, locale, viewer);
   if (held) return held;
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;

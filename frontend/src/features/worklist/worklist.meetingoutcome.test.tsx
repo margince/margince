@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Held and Mark as canceled write at once from the row. Add notes opens the
+// It happened and Did not happen write at once from the row. Add notes opens the
 // composer, where No-show and what was said are typed.
 //
 // What these pin is that the composer PATCHES the meeting rather than logging a
@@ -168,15 +168,15 @@ function stubWithMeetingRead(
 }
 
 describe("a meeting that owes an answer", () => {
-  it("offers Held first, then Add notes and Mark as canceled", async () => {
+  it("offers It happened first, then Add notes and Did not happen", async () => {
     stub(aDayWithOne());
     renderUnderAToastRegion();
 
     await screen.findByText(/Discovery call with Turbinenbau/);
     const names = [
-      "Held: Discovery call with Turbinenbau",
+      "It happened: Discovery call with Turbinenbau",
       "Add notes to Discovery call with Turbinenbau",
-      "Mark as canceled: Discovery call with Turbinenbau",
+      "Did not happen: Discovery call with Turbinenbau",
     ];
     const verbs = await Promise.all(
       names.map((name) => screen.findByRole("button", { name })),
@@ -200,7 +200,7 @@ describe("a meeting that owes an answer", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Held: Discovery call with Turbinenbau",
+        name: "It happened: Discovery call with Turbinenbau",
       }),
     );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
@@ -217,7 +217,7 @@ describe("a meeting that owes an answer", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Mark as canceled: Discovery call with Turbinenbau",
+        name: "Did not happen: Discovery call with Turbinenbau",
       }),
     );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
@@ -320,7 +320,7 @@ describe("a meeting that owes an answer", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Mark as canceled: Discovery call with Turbinenbau",
+        name: "Did not happen: Discovery call with Turbinenbau",
       }),
     );
     // A refused write leaves the row exactly as it was, which renders the same
@@ -342,7 +342,7 @@ describe("a meeting that owes an answer", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion();
     const cancel = await screen.findByRole("button", {
-      name: "Mark as canceled: Discovery call with Turbinenbau",
+      name: "Did not happen: Discovery call with Turbinenbau",
     });
     const before = worklistReads();
 
@@ -376,7 +376,7 @@ describe("a meeting that owes an answer", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Mark as canceled: Discovery call with Turbinenbau",
+        name: "Did not happen: Discovery call with Turbinenbau",
       }),
     );
     expect(

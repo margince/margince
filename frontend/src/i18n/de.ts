@@ -2264,8 +2264,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.coverage.retry": "Morgenbericht aktualisieren",
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
-  "brief.changes.superseded":
-    "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
+  "brief.changes.superseded": "Seit dieser Änderung erneut geändert",
   "brief.changes.undone": "Rückgängig gemacht",
   "brief.updates.title": "Updates",
   "brief.task.undated": "Kein Fälligkeitsdatum",
@@ -2719,6 +2718,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.first_name": "Vorname",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
+  "history.field.stage_id": "Phase",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
@@ -6586,9 +6586,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.learnings.didNotWork": "Erfolgloses Ergebnis",
   "brief.weekly.learnings.pattern": "Muster",
   "brief.weekly.learnings.experiment": "Experiment",
-  "brief.weekly.learnings.notRun": "Diese Woche wurde noch nicht analysiert.",
-  "brief.weekly.learnings.insufficient":
-    "Nicht genug erfasste Belege für aussagekräftige Beobachtungen.",
   "brief.weekly.scorecard.title": "Wochenbilanz",
   "brief.weekly.scorecard.basis": "Zählweise",
   "brief.weekly.scorecard.advanced": "Phasenwechsel von Leads",
@@ -6627,7 +6624,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Von einer Löschung betroffen · Zahlen sind Mindestwerte",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
-  "plan.title": "Plan für KW {week}",
+  "plan.title": "Plan · {dates}",
   "plan.titleThisWeek": "Plan für diese Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Home-Ansicht",
@@ -6638,7 +6635,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
-  "brief.first.title": "Deine Aufgaben",
+  "brief.first.title": "Braucht dich",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
   "brief.intro.urgent": "Dringend",
@@ -6757,8 +6754,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.report.chapter.forecast": "Prognose",
   "brief.report.chapter.closed": "Abschlüsse",
   "brief.report.chapter.movement": "Pipeline-Bewegung",
-  "brief.report.chapter.commitments": "Die kommende Woche",
   "brief.report.chapter.figures": "Kennzahlen",
+  "brief.report.breakdown": "Wochenbilanz und alle Kennzahlen",
+  "brief.report.howCounted": "Zählweise",
   "brief.report.chapter.observations": "Was die Woche gezeigt hat",
   "brief.report.closedTotal": "Gewonnen {won} · Verloren {lost}",
   "brief.report.weeks": "Wochen",
@@ -6813,7 +6811,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.glance.introWeekly":
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.suggestions.review": "Deal-Vorschläge ansehen",
-  "brief.suggestions.empty": "Keine Deal-Vorschläge in diesem Morgenbericht.",
+  "brief.suggestions.reviewCount_one": "{count} Deal-Vorschlag ansehen",
+  "brief.suggestions.reviewCount_other": "{count} Deal-Vorschläge ansehen",
   "brief.suggestions.notAnnotated":
     "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals noch keine Einschätzung geschrieben.",
   "brief.suggestions.noAssessment":
@@ -6850,7 +6849,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.decisionsBlocking_other": "{count} blockieren Kundenarbeit",
   "brief.snooze.done": "Zurückgestellt bis {at}",
   "brief.snooze.undo": "Rückgängig",
-  "brief.readings.meetings": "Anstehende Termine",
+  "brief.readings.meetings": "Termine heute",
   "brief.readings.meetingsBasis": "Heute noch im Kalender",
   "brief.readings.needsPrep_one": "1 braucht Vorbereitung",
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",
@@ -9082,7 +9081,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.panel.label": "Agentenbereich",
   "agent.rail.open": "Agentenbereich öffnen",
   "agent.rail.close": "Agentenbereich schließen",
-  "agent.state.idle": "Inaktiv",
+  "agent.state.idle": "Agent im Leerlauf",
   "agent.state.ingest": "Erfassung läuft",
   "agent.state.working": "Arbeitet",
   "agent.state.warning": "Warnung",
@@ -9117,10 +9116,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.line.runStopped": "Ein Lauf wurde vorzeitig beendet",
   "agent.line.justNow": "gerade eben",
   "agent.setting.edgeLight": "Leuchtender Bildschirmrand",
-  "agent.tip.day": "Aufgaben, Freigaben und Duplikate stehen unter {name}.",
-  "agent.tip.ask": "Frage den Agenten mit {chord}.",
-  "agent.tip.recap": "Öffne den Agentenbereich für die heutige Aktivität.",
-  "agent.tip.edge": "Der Bildschirmrand leuchtet, während der Agent arbeitet.",
   "agent.ticker.read.activities": "Aktivitäten werden geladen",
   "agent.ticker.read.approvals": "Freigaben werden geladen",
   "agent.ticker.read.aiCalls": "KI-Aufrufprotokoll wird geladen",
@@ -12898,7 +12893,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal360.rewrite": "Neu erzeugen",
   "deal360.readFull": "Vollständigen Bericht lesen",
   "deal360.openTask": "Aufgabe öffnen",
-  "deal360.createTask": "Aufgabe hinzufügen",
+  "deal360.createTask": "Folgeaufgabe anlegen",
+  "deal360.followUpCreated": "Folgeaufgabe angelegt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "deal360.unreadable":
     "Dieser Bericht konnte nicht geladen werden. Bitte lade die Seite neu oder erzeuge den Bericht neu.",
@@ -18848,6 +18844,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "In diesem Abschnitt ist noch nichts. Beim Scrollen lädt mehr.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
+  "worklist.clearOfUrgent": "Keine dringende Arbeit.",
   "worklist.clearOfTasksToday":
     "Keine Aufgaben fällig heute oder überfällig. Spätere Aufgaben stehen unter Anstehend und Rückstand.",
   "worklist.clearOfWhatWasRead": "Keine Einträge in den geladenen Quellen.",
@@ -18899,7 +18896,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.deal": "Deal",
   "worklist.why.title": "Warum das Aufmerksamkeit braucht",
   "worklist.why.reasons": "Gründe",
-  "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.detail": "Detail",
   "worklist.ask.approval":
     "Ein Agent hat eine Änderung vorgeschlagen und wartet auf eine Entscheidung. Gib sie frei oder lehne sie ab.",
@@ -18959,26 +18955,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nach diesem Termin wurde nichts gesendet. Sende den Teilnehmenden ein Follow-up.",
   "worklist.ask.batch":
     "Hier sind mehrere ähnliche Routineentscheidungen gebündelt. Prüfe sie gemeinsam.",
-  "worklist.consequence.buyer_waits": "Der Kontakt wartet weiter.",
-  "worklist.consequence.buyer_waits.named": "{name} wartet weiter.",
-  "worklist.consequence.promise_breaks": "Eine Zusage wird nicht eingehalten.",
-  "worklist.consequence.deal_drifts": "Der Deal gerät weiter ins Stocken.",
-  "worklist.consequence.deal_slips_past_close":
-    "Der Deal verpasst sein Abschlussdatum.",
-  "worklist.consequence.meeting_unprepared":
-    "Der Termin beginnt, bevor du dich als bereit markiert hast.",
-  "worklist.consequence.task_slips":
-    "Die Aufgabe verpasst ihr Fälligkeitsdatum.",
-  "worklist.consequence.work_blocked":
-    "Arbeit, die darauf wartet, bleibt blockiert.",
-  "worklist.consequence.customer_never_received":
-    "Der Kunde erhält die Nachricht nie.",
-  "worklist.consequence.you_believe_it_happened":
-    "Eine freigegebene Aktion bleibt unerledigt, wirkt aber erledigt.",
-  "worklist.consequence.legal_deadline_missed":
-    "Eine gesetzliche Frist wird versäumt.",
-  "worklist.consequence.mailbox_blind": "E-Mails werden nicht mehr erfasst.",
-  "worklist.consequence.data_drifts": "Datensätze veralten.",
   "worklist.band.now": "Jetzt",
   "worklist.dueGroup.tomorrow": "Morgen fällig",
   "worklist.dueGroup.this_week": "Diese Woche fällig",
@@ -19361,8 +19337,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.below_material.value":
     "{value}, nicht über dem typischen Wert gefährdeter Deals",
   "worklist.because.quiet_days": "verstummt",
-  "worklist.because.quiet_days.value_one": "seit {value} Tag still",
-  "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
+  "worklist.because.quiet_days.value_one": "seit {value} Tag keine Aktivität",
+  "worklist.because.quiet_days.value_other":
+    "seit {value} Tagen keine Aktivität",
   "worklist.because.no_next_step": "kein nächster Schritt erfasst",
   "worklist.because.no_champion": "kein Champion",
   "worklist.because.champion_unknown": "Champion unbekannt",
@@ -19418,7 +19395,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verdict.blocked": "Blockiert",
   "worklist.verdict.cold": "Kalt",
   "worklist.verdict.believes": "Frühere Bewertung",
-  "worklist.verdict.asOf": "Stand {when}",
+  "worklist.verdict.earlierOn": "Frühere Bewertung · {date}",
   "worklist.untitled.approval": "Freigabe ausstehend",
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
@@ -19495,23 +19472,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
   "worklist.verb.meetingWhatHappened": "Terminnotizen",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
-  "worklist.verb.meetingHeld": "Stattgefunden",
+  "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
-  "worklist.verb.meetingCanceled": "Als abgesagt markieren",
+  "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
   "worklist.verb.meetingOutcomeRecorded": "Terminergebnis erfasst",
   "worklist.verb.meetingOutcomeFailed":
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
   "worklist.verb.meetingAddNotesFor": "Notizen hinzufügen: {subject}",
-  "worklist.verb.meetingHeldFor": "Stattgefunden: {subject}",
-  "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
+  "worklist.verb.meetingHeldFor": "Hat stattgefunden: {subject}",
+  "worklist.verb.meetingCanceledFor": "Hat nicht stattgefunden: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
   "worklist.verb.meetingCalendarManaged":
@@ -20059,6 +20037,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.aboutCountAtLeast_one": "mindestens {count} Datensatz",
   "magic.aboutCountAtLeast_other": "mindestens {count} Datensätze",
   "magic.aboutNamedAtLeast": "{label} und möglicherweise weitere",
+  "magic.viewChanges_one": "{count} Änderung ansehen",
+  "magic.viewChanges_other": "{count} Änderungen ansehen",
+  "magic.viewChangesAtLeast_one": "Mindestens {count} Änderung ansehen",
+  "magic.viewChangesAtLeast_other": "Mindestens {count} Änderungen ansehen",
   "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens analysiert",
@@ -20124,6 +20106,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
   "magic.records.more": "Mehr anzeigen",
   "magic.records.fromTo": "{from} → {to}",
+  "magic.records.hidden_value": "verborgen",
   "magic.records.empty_value": "leer",
   "magic.records.count_one": "{count} Datensatz",
   "magic.records.count_other": "{count} Datensätze",
@@ -20133,7 +20116,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Installation hat nicht geprüft, ob sich das zurücknehmen lässt.",
   "magic.notShown_one": "{count} Änderung wird nicht gezeigt: {reason}",
   "magic.notShown_other": "{count} Änderungen werden nicht gezeigt: {reason}",
-  "magic.notShown.unadmittedAction": "Routinearbeit ohne Neuigkeiten für dich",
   "magic.notShown.unknownEntityType":
     "ein Datensatztyp, den diese Seite nicht einordnen kann",
   "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
@@ -21465,14 +21447,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.undoDeals_other": "Änderungen an {count} Deals rückgängig machen",
   "brief.done.undoChanges_one": "{count} Änderung rückgängig machen",
   "brief.done.undoChanges_other": "{count} Änderungen rückgängig machen",
+  "brief.done.viewChanges_one": "{count} Änderung ansehen",
+  "brief.done.viewChanges_other": "{count} Änderungen ansehen",
+  "brief.done.showNew": "Neue Änderungen zeigen",
   "brief.done.history": "Änderungsverlauf ansehen",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
-  "brief.done.noReason":
-    "Margince hat keinen Grund erfasst, den du lesen kannst.",
+  "brief.done.noReason": "Grund nicht verfügbar",
+  "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
   "brief.changes.markReviewed": "Als geprüft markieren",
   "brief.changes.reviewed": "Geprüft",
-  "magic.lane.doneOther": "Weitere erledigte Arbeit",
+  "magic.lane.doneOther": "Weitere Änderungen",
   "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
   "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",
   "changes.bulk.partly_one": "{count} Deal wurde teilweise rückgängig gemacht.",
@@ -21486,5 +21471,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
   "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
   "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
+  "changes.bulk.confirmOnDeal":
+    "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",
   "changes.bulk.retry": "Erneut senden",
+  "changes.bulk.unfinished": "Nicht ganz rückgängig gemachte Deals",
 };

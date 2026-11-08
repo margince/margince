@@ -155,6 +155,20 @@ export const TooLargePairMerge: Story = {
   },
 };
 
+/**
+ * The review opens with only Ana ticked, the contact it was opened from; the
+ * reader picks every duplicate. Tick Ben, the strongest pair, after proving he
+ * did not start ticked.
+ */
+async function tickBen(body: ReturnType<typeof within>) {
+  const ana = await body.findByRole("checkbox", { name: /Mira Kovac\b/ });
+  const ben = body.getByRole("checkbox", { name: /Mira Kovač/ });
+  await expect(ana).toBeChecked();
+  await expect(ben).not.toBeChecked();
+  await userEvent.click(ben);
+  await expect(ben).toBeChecked();
+}
+
 /** Someone merged this contact before the reader got to it. */
 export const Resolved: Story = {
   render: () => review(() => jsonResponse(resolvedCase())),
@@ -172,6 +186,7 @@ export const Stale: Story = {
     }),
   play: async () => {
     const body = within(document.body);
+    await tickBen(body);
     await userEvent.click(
       await body.findByRole("button", { name: "Preview merge" }),
     );
@@ -190,6 +205,8 @@ export const Preview: Story = {
     }),
   play: async () => {
     const body = within(document.body);
+    await tickBen(body);
+    await userEvent.click(body.getByRole("checkbox", { name: /M\. Kovac/ }));
     await userEvent.click(
       await body.findByRole("button", { name: "Preview merge" }),
     );

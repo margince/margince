@@ -83,7 +83,7 @@ function mountWorkspace() {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <AgentRail route={{ screen: "deals" }} />
+        <AgentRail />
         <AgentEdge />
       </LocaleProvider>
     </QueryClientProvider>,
