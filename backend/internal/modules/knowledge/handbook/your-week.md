@@ -98,8 +98,8 @@ and each has a tag: **Positive outcome**, **Unsuccessful outcome**, **Pattern**,
 Each carries a warning: the observations show links in recorded work, and do not show what made the
 outcome happen.
 
-A week with no observation has no **Observations** part: the reading did not run, or there were
-fewer than three records to name, so no model was asked.
+A week with no observation has no **Observations** part. Either the reading did not run, or there
+were fewer than three records to name, so no model was asked.
 
 An installation with no AI model set up still gets the whole review. It only never gets the
 observations or the written summary.
