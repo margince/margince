@@ -44664,6 +44664,15 @@ components:
             meeting, or gave permission in person. A send may rest on it with no age limit until
             somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact;
             absent when there is none or it was taken back, and on lists.
+        created_from_activity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The note, mail or quick capture this contact was read out of, where
+            one was named at creation. Absent on a contact a member typed, and
+            absent to a reader who may not open that record, so the contact
+            still reads rather than being refused.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -44928,6 +44937,14 @@ components:
       required: [full_name, source]
       properties:
         full_name: { type: string }
+        created_from_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The note, mail or quick capture this contact was read out of. An
+            agent that creates a contact from a record names it here, so a
+            reader can check where the name and title came from. The caller
+            must be able to read it (404 `not_found` otherwise, never 403).
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
         title: { type: [string, 'null'] }

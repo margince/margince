@@ -132,42 +132,23 @@ Most of the time of a case goes to the start and seed of its stack, not to the m
 4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
 5. **Name the commit in the PR.** A verdict file does not say which copy it measured. So the PR body says which cases ran on which commit.
 
-**Run one model at a time.** Two stacks, each with the CLI of its model, ran out of RAM on one machine, and the system stopped both. The judge also uses your Claude subscription. To run two at once, give each its own worktree and its own `E2E_LLM_SLUG`.
+**Run lanes, not one long command.** A lane is one worktree with its own `E2E_LLM_SLUG`. The lanes share the Postgres, Redis and object store containers, so each adds only an API, a worker and one database. One stack still serves one case at a time. Every run restores the database from the snapshot, which would remove a second case's data. Two lanes work on one machine; four made it slow, because each lane's start and the judge use the CPU.
 
-### Sweeping through a subscription limit
+### Sweep with `scripts/e2e-llm-sweep.sh`
 
-A CLI route uses a subscription with a limit for each time window. When the limit runs out, the lane stops with exit 2 and scores nothing, so that run is no failure.
-Codex reports `Your workspace is out of credits`, and the claude CLI prints its own message about the limit. A sweep run as one command ends at that scenario.
-
-Run the scenarios one at a time instead. Skip the ones with a score, and wait when a stop names a limit: more cases would only stop the same way.
-Save it as a script. It stops on a reason it does not know, so that you read that scenario, and do not skip it.
+`SCENARIO` takes several names, so one boot, seed and search rebuild serve a whole batch. `scripts/e2e-llm-sweep.sh` runs one lane: each case it is given, in batches.
+After each batch it runs again on what is left. A case is finished once its verdict was written after `E2E_SWEEP_SINCE`, in any worktree that `E2E_SWEEP_WORKTREES` names, so a restart skips what any lane finished.
+A subscription limit makes it wait and go on. A batch that finishes nothing twice stops it, so that you read the log.
 
 ```bash
-mkdir -p .tmp/sweep
-for f in e2e/llm/scenarios/*.yaml; do
-  name="$(python3 e2e/llm/check.py --field name "$f")"
-  [[ -f ".tmp/sweep/$name.done" ]] && continue
-  while :; do
-    rm -f e2e/llm/records/"$name".run*.jsonl     # read only this attempt's transcripts
-    MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=gpt E2E_LLM_VIA=cli \
-      E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
-      SCENARIO="$name" make e2e-llm > ".tmp/sweep/$name.log" 2>&1
-    if grep -q '^scenarios: ' ".tmp/sweep/$name.log"; then
-      touch ".tmp/sweep/$name.done"; break         # scored, pass or fail
-    fi
-    if grep -qiE 'out of credits|usage limit|answered HTTP 429' \
-        ".tmp/sweep/$name.log" e2e/llm/records/"$name".run*.jsonl 2>/dev/null; then
-      sleep 1800; continue                         # wait for the limit to reset
-    fi
-    echo "$name stopped for another reason; read .tmp/sweep/$name.log" >&2
-    exit 1
-  done
-done
+export E2E_LLM_CANDIDATE=gemini E2E_LLM_VIA=cli MARGINCE_E2E_LLM=1 \
+  E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
+  E2E_SWEEP_SINCE="$(date +%s)" E2E_SWEEP_WORKTREES="$PWD ../lane-b"
+scripts/e2e-llm-sweep.sh sweepa 1 3 4 5 6           # in this worktree
+(cd ../lane-b && scripts/e2e-llm-sweep.sh sweepb 9 10 20 22 23)
 ```
 
-`make` returns 2 for a scored failure, and also for a harness stop. So the
-`scenarios:` summary line of the lane, and not the exit code, says whether a scenario has
-a score.
+Give each lane half the cases, some long and some short. The batch logs are under `.tmp/sweep/`.
 
 ## 5. Read the result
 

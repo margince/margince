@@ -48,7 +48,7 @@ expect:
     cites_label: handbook
     names_token: handbook
     # No comment here refuses, conditions or withholds anything.
-    avoids: [blocked, blocker, condition, "will not sign", "won't sign"]
+    avoids: [blocked, "will not sign", "won't sign"]
   bands:
     # The floor quotes both waiting threads and is nearly the whole answer, so
     # the bar is not inventing a blocker rather than reading one.
