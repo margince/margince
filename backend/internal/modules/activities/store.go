@@ -24,6 +24,7 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	identityProver     AddressProver
 	dealFilingResolver DealFilingResolver
 	taskRecommendation TaskRecommendation
 	calendar           SchedulingCalendar
@@ -251,3 +252,6 @@ func (s *Store) WithWorkingHours(resolve WorkingHoursResolver) *Store {
 	s.workingHours = resolve
 	return s
 }
+
+// WithIdentityProver supplies the ownership evidence required to combine imported mail.
+func (s *Store) WithIdentityProver(prover AddressProver) *Store { s.identityProver = prover; return s }

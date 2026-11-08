@@ -73,7 +73,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
-	return activities.NewHandlers(InstallationDB(pool)).
+	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).

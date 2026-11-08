@@ -58,17 +58,13 @@ var stageWithoutMemory = gatekit.Waive(map[string]string{
 		"ON CONFLICT (handler, idempotency_key) DO NOTHING gates Apply, and a clock trigger's key is " +
 		"derived from the anchor so re-evaluating an unchanged record folds; a rejection additionally " +
 		"marks the run blocked",
-
-	"internal/compose/captureverdictaccept.go": "the sweep's own backlog query excludes a decided offer " +
-		"(AwaitingReview requires decided_at IS NULL), and ReconcileDeclined closes the ledger row a " +
-		"rejection answered, so the row cannot come back round",
 })
 
 // stageCallFloor is how many plain-Stage call sites the tree holds today. Under-
 // recognition is the one way this gate must not break — a scanner that matches
 // nothing reports PASS over every producer at once — so this is the exact count
 // rather than a margin below it.
-const stageCallFloor = 4
+const stageCallFloor = 3
 
 func TestEveryRetriggerableProducerRemembersARefusal(t *testing.T) {
 	t.Parallel()

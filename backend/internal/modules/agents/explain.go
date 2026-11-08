@@ -40,13 +40,14 @@ import (
 // never to a false "something broke".
 func (s *Dispatcher) explain(tool string, err error) string {
 	var (
-		badArgs     *BadArgsError
-		unknownTool *UnknownToolError
-		steppedUp   *StepUpStagedError
-		overQuota   *auth.VolumeExceededError
-		staged      *workflow.StagedApprovalError
-		skew        *apperrors.VersionSkewError
-		areaOff     *auth.AreaOffError
+		badArgs        *BadArgsError
+		unknownTool    *UnknownToolError
+		steppedUp      *StepUpStagedError
+		overQuota      *auth.VolumeExceededError
+		staged         *workflow.StagedApprovalError
+		skew           *apperrors.VersionSkewError
+		areaOff        *auth.AreaOffError
+		archiveRefusal *auth.ArchiveAuthorityError
 	)
 	switch {
 	case errors.As(err, &steppedUp):
@@ -120,6 +121,8 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "Refused: " + message + "."
 	case errors.Is(err, apperrors.ErrScopeExceeded):
 		return "The passport this session runs under does not grant the scope this tool needs. (" + err.Error() + ")"
+	case errors.As(err, &archiveRefusal):
+		return "Refused on authority: " + fileKindDetail(err)
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		// Whose bound it was is in the detail, and the summary must not guess:
 		// an agent has the access of the human it acts for AND no more of it than

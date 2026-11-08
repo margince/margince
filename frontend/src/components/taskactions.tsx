@@ -1,4 +1,4 @@
-import { type ReactNode, useId, useRef } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import {
   Badge,
@@ -37,6 +37,7 @@ import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
+import { TaskOutcomeForm } from "./taskoutcome";
 import type { useTaskUpdate } from "./taskwrite";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
@@ -354,22 +355,13 @@ export function TaskDetailDialog({
                 )}
               </div>
               {why}
-              <TaskNextSteps
+              <TaskDetailActions
                 task={task}
-                className="form-actions task-detail-actions"
+                readOnly={readOnly}
+                writable={rowWritable}
+                update={update}
+                verbs={verbs}
               />
-              {!task.is_done && !readOnly && rowWritable && (
-                <div ref={verbs} className="form-actions task-detail-actions">
-                  <TaskQuickActions
-                    activityId={task.id}
-                    version={task.version}
-                    dueAt={task.due_at}
-                    dueHasTime={task.due_has_time}
-                    update={update}
-                    showDuePicker
-                  />
-                </div>
-              )}
               {callLog.call && (
                 <CallLogInline
                   key={callLog.call.entityId}
@@ -391,5 +383,53 @@ export function TaskDetailDialog({
         </CallStartProvider>
       </DrawerBody>
     </Modal>
+  );
+}
+
+function TaskDetailActions({
+  task,
+  readOnly,
+  writable,
+  update,
+  verbs,
+}: Readonly<{
+  task: Activity;
+  readOnly: boolean;
+  writable: boolean;
+  update: ReturnType<typeof useTaskUpdate>;
+  verbs: React.RefObject<HTMLDivElement | null>;
+}>) {
+  const t = useT();
+  const [logging, setLogging] = useState(false);
+  const canAct = !task.is_done && !readOnly && writable && !logging;
+  return (
+    <>
+      {!logging && (
+        <TaskNextSteps
+          task={task}
+          className="form-actions task-detail-actions"
+        />
+      )}
+      {canAct && (
+        <div ref={verbs} className="form-actions task-detail-actions">
+          <TaskQuickActions
+            activityId={task.id}
+            version={task.version}
+            dueAt={task.due_at}
+            dueHasTime={task.due_has_time}
+            update={update}
+            showDuePicker
+          />
+        </div>
+      )}
+      {canAct && (
+        <Button onClick={() => setLogging(true)}>
+          {t("tasks.log.action")}
+        </Button>
+      )}
+      {logging && (
+        <TaskOutcomeForm task={task} onLogged={() => setLogging(false)} />
+      )}
+    </>
   );
 }

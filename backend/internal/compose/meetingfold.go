@@ -37,7 +37,7 @@ func foldMeetingDuplicateTx(
 	if err != nil || !retirable {
 		return false, err
 	}
-	if err := capture.CarryMeetingImportTx(ctx, tx, duplicate, survivor, seat); err != nil {
+	if err := capture.CarryImportTx(ctx, tx, duplicate, survivor, seat); err != nil {
 		return false, err
 	}
 	if err := meetings.RetireMeetingCopyTx(ctx, tx, duplicate, survivor); err != nil {

@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
+import { ifMatch, requireVersion } from "../api/version";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import {
   DateInput,
@@ -14,6 +15,7 @@ import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
 import { Select } from "../design-system/select";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import {
   type ActivityDraft,
@@ -35,6 +37,7 @@ import { useMe } from "../lib/session";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
+import { TaskCompletionChoice } from "./logactivity.taskcompletion";
 import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
 import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
@@ -61,7 +64,6 @@ import {
 import { MeetingAttendeeFields } from "./meetingattendees";
 import { useUnsavedGuard } from "./unsaved";
 
-// Meetings arrive through the calendar rather than a preselected form address.
 export type OpeningKind = "note" | "task" | "call";
 
 function latestDayOf(
@@ -72,7 +74,6 @@ function latestDayOf(
   return kind !== "task" && isISODate(day) ? day : undefined;
 }
 
-// One form serves record cards and drawers; banded callers own its frame.
 export function LogActivityForm({
   entityType,
   entityId,
@@ -81,6 +82,8 @@ export function LogActivityForm({
   frame,
   onlyTasks = false,
   sourceActivityId,
+  taskToComplete,
+  inheritSourceLinks = false,
 }: Readonly<{
   entityType?: EntityKind;
   entityId?: string;
@@ -91,9 +94,14 @@ export function LogActivityForm({
   // Opened as Add task: no other kind is offered, so no date stops at today.
   onlyTasks?: boolean;
   sourceActivityId?: string;
+  taskToComplete?: Readonly<{ id: string; version?: number }>;
+  inheritSourceLinks?: boolean;
 }>) {
   const t = useT();
+  const toast = useToast();
   const formId = useId();
+  const [markDone, setMarkDone] = useState(true);
+  const uploadedFiles = useRef(new Set<File>());
   const queryClient = useQueryClient();
   const recordZone = useViewerZone();
   const reportUnattached = useReportUnattached();
@@ -110,8 +118,6 @@ export function LogActivityForm({
   }
   const [files, setFiles] = useState<readonly PickedFile[]>([]);
   const custom = useActivityCustomFields(draft.kind);
-  // Who was in the room, asked for the kinds that are with a contact (see
-  // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
   const asksAttendees = KINDS_WITH_A_CONTACT.has(draft.kind);
   const needsAttendee = entityType === "company" && asksAttendees;
@@ -128,7 +134,7 @@ export function LogActivityForm({
   const dealFiling = useLogDealFiling(
     entityType,
     entityId,
-    asksAttendees && !recordOf.recordingFiledMeeting,
+    asksAttendees && !recordOf.recordingFiledMeeting && !taskToComplete,
   );
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
@@ -143,6 +149,8 @@ export function LogActivityForm({
       idempotencyKey: string;
       files: readonly File[];
       record: MeetingRecord | undefined;
+      completion: Readonly<{ id: string; version?: number }> | undefined;
+      inheritSourceLinks: boolean;
     }) => {
       if (input.record) {
         const id = await recordOnMeeting(
@@ -158,18 +166,45 @@ export function LogActivityForm({
       const created = unwrap(
         await api.POST("/activities", {
           params: { header: { "Idempotency-Key": input.idempotencyKey } },
-          body: activityRequestBody(
-            input.draft,
-            entityType,
-            entityId,
-            input.zone,
-            input.attendees,
-          ),
+          body: {
+            ...activityRequestBody(
+              input.draft,
+              entityType,
+              entityId,
+              input.zone,
+              input.attendees,
+            ),
+            ...(input.inheritSourceLinks ? { links: undefined } : {}),
+          },
         }),
         t,
       );
       // After the create: a file needs the activity's id as its parent.
-      const unattached = await attachLoggedFiles(created.id, input.files);
+      const unattached = await attachLoggedFiles(
+        created.id,
+        input.files,
+        uploadedFiles.current,
+      );
+      if (input.completion && unattached.length === 0) {
+        const current = unwrap(
+          await api.GET("/activities/{id}", {
+            params: { path: { id: input.completion.id } },
+          }),
+          t,
+        );
+        if (!current.is_done) {
+          unwrap(
+            await api.PATCH("/activities/{id}", {
+              params: {
+                path: { id: input.completion.id },
+                ...ifMatch(requireVersion(current.version)),
+              },
+              body: { is_done: true, version: current.version },
+            }),
+            t,
+          );
+        }
+      }
       return {
         id: created.id,
         unattached,
@@ -178,10 +213,11 @@ export function LogActivityForm({
           .map((link) => link.entity_id),
       };
     },
-    // A save that wrote the outcome and then failed is kept, so the retry
-    // sends only the missing steps. A refused version re-reads the meeting:
-    // answered meanwhile, the question goes and Save logs a separate meeting.
     onError: (_error, input) => {
+      if (input.completion)
+        queryClient.invalidateQueries({
+          queryKey: ["activity", input.completion.id],
+        });
       recordOf.keep(input.record);
       const filing = input.draft.dealFiling?.context;
       if (filing)
@@ -196,6 +232,10 @@ export function LogActivityForm({
     },
     onSuccess: (logged, input) => {
       reportUnattached(logged.unattached);
+      if (input.completion)
+        queryClient.invalidateQueries({
+          queryKey: ["activity", input.completion.id],
+        });
       recordOf.clear();
       dealFiling.clear();
       for (const queryKey of activityLogKeys(
@@ -206,17 +246,20 @@ export function LogActivityForm({
         logged.linkedDealIds,
       ))
         queryClient.invalidateQueries({ queryKey });
+      if (input.completion && logged.unattached.length > 0) {
+        toast.show(t("tasks.log.leftOpen"), { tone: "danger", sticky: true });
+        return;
+      }
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
       setAttendees(NO_ATTENDEES);
       setFiles([]);
+      uploadedFiles.current.clear();
       custom.reset();
       renewKey();
       onLogged?.();
     },
   });
 
-  // The words are the work a reader would retype; the kind and day are a pick.
-  // A call's outcome is what the rep came to record, so it counts too.
   useUnsavedGuard(draftHoldsWork(draft));
 
   // Enter in a field submits past the Save button, so the form is latched too.
@@ -245,6 +288,14 @@ export function LogActivityForm({
       {t(onlyTasks ? "log.addTask" : "log.save")}
     </Button>
   );
+  const completionControl = (
+    <TaskCompletionChoice
+      enabled={taskToComplete !== undefined}
+      checked={markDone}
+      onChange={setMarkDone}
+      pending={log.isPending}
+    />
+  );
   const form = (actions: ReactNode) => (
     <form
       id={formId}
@@ -265,7 +316,9 @@ export function LogActivityForm({
           attendees,
           idempotencyKey,
           files: files.map((held) => held.file),
-          record: recordOf.start(),
+          record: taskToComplete ? undefined : recordOf.start(),
+          completion: markDone ? taskToComplete : undefined,
+          inheritSourceLinks,
         });
       })}
     >
@@ -277,7 +330,9 @@ export function LogActivityForm({
                 {...control}
                 options={[
                   { value: "note", label: t("log.kindNote") },
-                  { value: "task", label: t("log.kindTask") },
+                  ...(!taskToComplete
+                    ? [{ value: "task", label: t("log.kindTask") }]
+                    : []),
                   { value: "call", label: t("log.kindCall") },
                   { value: "meeting", label: t("log.kindMeeting") },
                 ]}
@@ -392,6 +447,7 @@ export function LogActivityForm({
         onChange={setFiles}
         disabled={log.isPending}
       />
+      {completionControl}
       <ErrorLine error={log.error} />
       {actions}
     </form>
@@ -414,14 +470,9 @@ export function LogActivity({
   entityType: EntityKind;
   entityId: string;
   onLogged?: () => void;
-  // The kind the card opens on, for a reader who arrived at an address that
-  // named one. The card is standing rather than opened, so bringing it into
-  // view is the rest of what "arrive ready" means.
   askedKind?: OpeningKind;
 }>) {
   const t = useT();
-  // useCanWrite, not useCan: a read seat is refused the POST before RBAC. The
-  // card says so rather than vanishing, and only once /me has answered.
   const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const logRefused = me.data?.authorization !== undefined && !canLog;

@@ -49,6 +49,10 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 	if stored {
 		return rec.ThreadKey, nil
 	}
+	// The locked read already proves an unused own key contains no other mail.
+	if !taken && rec.ThreadKey == own && len(rec.ReplyTo) == 0 {
+		return own, nil
+	}
 	admitted, err := s.admittedNewThreadKeyTx(ctx, tx, seat, rec.ThreadKey, own)
 	if err != nil || admitted != rec.ThreadKey || len(rec.ReplyTo) == 0 {
 		return admitted, err
