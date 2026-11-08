@@ -6746,7 +6746,6 @@ export const en = {
   "brief.report.chapter.forecast": "Forecast",
   "brief.report.chapter.closed": "Closed deals",
   "brief.report.chapter.movement": "Pipeline movement",
-  "brief.report.chapter.commitments": "The week ahead",
   "brief.report.chapter.figures": "Figures",
   "brief.report.chapter.observations": "What the week taught",
   "brief.report.closedTotal": "Won {won} · Lost {lost}",

@@ -6756,7 +6756,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.report.chapter.forecast": "Prognose",
   "brief.report.chapter.closed": "Abschlüsse",
   "brief.report.chapter.movement": "Pipeline-Bewegung",
-  "brief.report.chapter.commitments": "Die kommende Woche",
   "brief.report.chapter.figures": "Kennzahlen",
   "brief.report.chapter.observations": "Was die Woche gezeigt hat",
   "brief.report.closedTotal": "Gewonnen {won} · Verloren {lost}",
