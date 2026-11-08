@@ -140,7 +140,7 @@ func TestNoSQLStatementFoldsADomainWithLower(t *testing.T) {
 	// admitted file is a finding rather than riding on its waiver.
 	admitted := map[string]int{}
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil || entry.IsDir() {
 				return walkErr
 			}
