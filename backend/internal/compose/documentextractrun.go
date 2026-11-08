@@ -105,15 +105,14 @@ type documentCompleter interface {
 
 // NewDocumentExtractor builds the engine over the pool and one model lane.
 //
-// The PDF reader is built here and kept, because it owns a compiled WebAssembly
-// module: one per extractor, compiled on the first PDF this installation is
-// asked to read and never again.
+// The PDF reader is the process's one engine (processPDFReader), compiled on
+// the first PDF this installation is asked to read and never again.
 // The engine is not closed, and that is the whole lifecycle: it is compiled on
 // the first PDF and lives as long as the worker that reads them, which is as
 // long as the process. A Close here would need a shutdown seam the job runtime
 // does not have, for a resource whose release coincides with exit.
 func NewDocumentExtractor(pool *pgxpool.Pool, brain documentCompleter, log *slog.Logger) *DocumentExtractor {
-	return &DocumentExtractor{pool: pool, brain: brain, pdf: pdftext.New(), log: log}
+	return &DocumentExtractor{pool: pool, brain: brain, pdf: processPDFReader, log: log}
 }
 
 // documentReadStore is the slice of the activities store one reading drives.

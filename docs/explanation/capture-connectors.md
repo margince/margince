@@ -454,7 +454,7 @@ roster manages an existing connection.
 
 The mapping rules are **shared with Google Calendar** (`capture/meetingmap`). They decide which meetings
 are worth logging, whether a room set on the meeting counts as a guest, and which addresses reach the writer. Each
-connector owns only the decode for its vendor.
+connector owns only the decode for its vendor. A guest who says no changes their own answer. The shared meeting is called off only when the colleague who set it up calls it off. The guest's own current answer wins over another guest's copy.
 
 ## Where each part runs
 
@@ -464,7 +464,7 @@ Capture spans two process roles, api and worker (see [architecture.md](architect
   `disconnect`, `list`, and backfill `preview`/`start` (which queues)/`status`/`cancel`. It also serves
   the two mail push webhooks, the morning `digest` read, the capture settings switch, and the list of
   consumer mail domains.
-- **`worker`** runs *every background pull* as River jobs on a schedule, on the one leader worker.
+- **`worker`** runs *every background pull* as River jobs on a schedule.
   - Those are the sync dispatcher (`30s`) → `SyncOnce` per connection, and the backfill engine (one page
     per tick). They also include each vendor's scan for watch renewal (`6h`), and the capture jobs
     (sort every hour, enrich + digest daily).

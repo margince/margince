@@ -96,7 +96,7 @@ func TestEveryGmailCallIsCountedByOpAndResult(t *testing.T) {
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	ctx := context.Background()
 
 	moved := deltas(t, func() {
@@ -275,7 +275,7 @@ func TestAGmailRateLimitIsCountedByTheLimitGoogleNamed(t *testing.T) {
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	limited := func(op, reason string) string {
 		return `margince_connector_rate_limited_total{provider="gmail",op="` + op + `",reason="` + reason + `"}`
 	}

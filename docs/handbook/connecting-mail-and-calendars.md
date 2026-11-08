@@ -60,6 +60,8 @@ Also called: calendar sync, sync meetings, link my agenda.
 
 A meeting from your calendar names every guest on the invitation under **Attendees**, whether they accepted, declined or did not answer yet. A guest who is a contact links to their record. A guest who is not a contact yet shows by the name or address on the invitation. Colleagues show under **Colleagues**. A booked room is not a guest.
 
+If you say no to an invitation, the meeting stays on for colleagues who are still going. It is called off for everyone only when the colleague who set it up calls it off.
+
 Each guest's answer shows next to their name: **Declined**, **Maybe** or **No answer**. A guest who accepted shows no label. The next calendar sync updates an answer that changed.
 
 A colleague on the invitation can read the meeting. A colleague who declined is shown under **Attendees** and cannot read it.
@@ -235,6 +237,11 @@ Before it runs, it counts the messages in the window, without reading what they
 say, and shows what the AI work will likely cost. It counts up to 20,000
 messages. A larger mailbox is shown as "{count} emails or more. Counting stopped
 there." and not as a made-up guess.
+
+Internal mail is left out unless an Admin has authorized its source and history
+range. You must also choose to include that scope in a new run. Read the scope before
+starting. [Who can see an email](who-can-see-an-email.md) explains the separate
+admin and mailbox-owner choices.
 
 You can stop it with **Stop**: "Everything imported so far is kept."
 

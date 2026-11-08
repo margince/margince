@@ -52,22 +52,58 @@ func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, 
 	return redactDeliveries(ctx, tx, activities, erasedName, payloads)
 }
 
-// tombstoneCollateralScrubs stamps an erase tombstone on each record the erasure
-// scrubbed alongside the subject. Field history cuts a record's timeline at its
-// own newest erase row, so the contact's tombstone cannot bound a twin's spine.
-// Without these, old audit images (a lead's email, an activity's subject line)
-// would serve the erased PII again. The context rides evidence and the images
-// stay empty: the record-history read serves them verbatim.
-// No outbox event is paired: the contact's single retention.applied is the fact.
-// cause is the caller's, because retention reaches this path too, and
-// contact_erasure on a retention sweep's record would misstate why the data went.
+const (
+	subjectRedactionReason = "subject_data_removed"
+	subjectRedactionCause  = "subject_redaction"
+)
+
+// tombstoneCollateralScrubs certifies each erased record and physically clears
+// its retained audit and event payloads in the same transaction.
 func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID, reason, cause string) error {
 	for _, id := range records {
-		if _, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{
-			evidenceKeyReason: reason, evidenceKeyCause: cause,
-		}); err != nil {
-			return fmt.Errorf("tombstoning scrubbed %s: %w", entityType, err)
+		if _, err := certifyCollateralScrub(ctx, tx, entityType, id, reason, cause); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func certifyCollateralScrub(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, reason, cause string) (ids.UUID, error) {
+	proof, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{evidenceKeyReason: reason, evidenceKeyCause: cause})
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("tombstoning scrubbed %s: %w", entityType, err)
+	}
+	return proof, storekit.RedactAuditHistory(ctx, tx, proof)
+}
+
+func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject ids.ContactID, keys subjectKeys, floor FloorPolicy, reason string) ([]ids.UUID, []ids.UUID, error) {
+	// Lock before checking the floor so another writer cannot change the erase-or-hold decision.
+	if err := lockSubjectTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities)); err != nil {
+		return nil, nil, err
+	}
+	activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor, reason)
+	if err != nil {
+		return nil, nil, err
+	}
+	notesRedacted, err := redactUnlinkedNotes(ctx, tx, keys)
+	if err != nil {
+		return nil, nil, err
+	}
+	// The same floor assigns each timeline row to erasure or restricted retention.
+	activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor, e.payloads)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
+		return nil, nil, err
+	}
+	if err := purgeActivityTraces(ctx, tx, notesRedacted, e.payloads); err != nil {
+		return nil, nil, err
+	}
+	if err := e.purgeTextCopies(ctx, tx, notesRedacted); err != nil {
+		return nil, nil, err
+	}
+	activitiesRedacted = append(activitiesRedacted, notesRedacted...)
+
+	return activitiesRedacted, activitiesHeld, nil
 }

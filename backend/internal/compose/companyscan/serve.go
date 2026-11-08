@@ -55,6 +55,7 @@ func (s *Service) wire(
 	if err != nil {
 		return crmcontracts.CompanyScan{}, err
 	}
+	stripModelTaskActions(current)
 	findings, dropped := applyCap(current)
 	// And the CONTENT question, which retraction deliberately does not answer.
 	// A stored finding carries the cited message's subject and a verbatim
@@ -116,4 +117,13 @@ func merge(rules, read []crmcontracts.Company360Suggestion) []crmcontracts.Compa
 		merged = append(merged, suggestion)
 	}
 	return merged
+}
+
+func stripModelTaskActions(findings []crmcontracts.Company360Suggestion) {
+	for i := range findings {
+		finding := &findings[i]
+		if finding.WrittenBy != nil && *finding.WrittenBy == crmcontracts.WrittenByModel && finding.Action != nil && finding.Action.Kind == crmcontracts.Company360SuggestionActionKindAddTask {
+			finding.Action = nil
+		}
+	}
 }

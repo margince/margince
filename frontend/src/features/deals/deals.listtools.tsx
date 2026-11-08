@@ -5,10 +5,6 @@ import {
   useId,
   useMemo,
 } from "react";
-import {
-  admittedDealFilters,
-  useAppliedCompanyName,
-} from "../../components/dealdials";
 import { searchCompanies } from "../../components/filterreference";
 import {
   type FilterSpec,
@@ -49,6 +45,7 @@ import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealBulkBar } from "./dealbulk";
+import { admittedDealFilters, useAppliedCompanyName } from "./dealdials";
 import type { Deal, Pipeline, Stage } from "./deals";
 import { dealRangeChips } from "./deals.rangefilters";
 

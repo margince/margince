@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -404,6 +405,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	},
 	"request_ownership_transfer": func(p *recordPool) map[string]any {
 		return map[string]any{"record_type": "contact", "id": p.take("stranger_contact")}
+	},
+	"replace_deal_products": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"expected_tag": deals.ProductSetTag(nil), "products": []any{}}}
 	},
 	"list_connector_containers": func(*recordPool) map[string]any { return map[string]any{"provider": "gmail"} },
 	"mark_worklist_rows_done": func(p *recordPool) map[string]any {

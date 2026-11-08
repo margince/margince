@@ -30,6 +30,15 @@ import (
 // SARPackage is the assembled export. Sections hold raw row maps —
 // the package is a data handover, not an API shape.
 type SARPackage struct {
+	AuditHistory           []map[string]any `json:"audit_history"`
+	RetainedEvents         []map[string]any `json:"retained_events"`
+	RoomParticipants       []map[string]any `json:"room_participants"`
+	RoomComments           []map[string]any `json:"room_comments"`
+	Introductions          []map[string]any `json:"introductions"`
+	DuplicateEvidence      []map[string]any `json:"duplicate_evidence"`
+	PlannedCommitments     []map[string]any `json:"planned_commitments"`
+	TestMailboxMessages    []map[string]any `json:"test_mailbox_messages"`
+	ThreadVerdicts         []map[string]any `json:"thread_verdicts"`
 	ReportingContributions []map[string]any `json:"reporting_contributions"`
 	// ReportingQuestionAnswers are the kept question answer rows a record
 	// about the subject was counted in.
@@ -85,6 +94,7 @@ type SARPackage struct {
 	// meant a subject who asked to be erased, and was refused, could not see
 	// that the refusal existed — the one thing they would need to appeal it.
 	RightsRequests []map[string]any `json:"rights_requests"`
+	RequestProofs  []map[string]any `json:"request_proofs"`
 	// The unsubscribe links minted for this subject, which are capabilities
 	// over their own record and live two years.
 	//
@@ -266,7 +276,10 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
+		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored)
+		if err != nil {
+			return err
+		}
 
 		subject, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 		if err != nil {
@@ -476,25 +489,6 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 			return nil, err
 		}
 		out = append(out, id)
-	}
-	return out, rows.Err()
-}
-
-// subjectStrings runs a one-column text query into a slice. The contact is $1,
-// and any further arguments follow it.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
-	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []string{}
-	for rows.Next() {
-		var v string
-		if err := rows.Scan(&v); err != nil {
-			return nil, err
-		}
-		out = append(out, v)
 	}
 	return out, rows.Err()
 }

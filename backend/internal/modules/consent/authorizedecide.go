@@ -359,7 +359,8 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 
 	w := packRulesFor(country)
 	marketing := MarketingContext{Exception: w.marketingException, SendingEntity: entity}
-	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, time.Now().Add(-w.reply), marketing)
+	now := time.Now()
+	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, now.Add(-w.reply), now, marketing)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}

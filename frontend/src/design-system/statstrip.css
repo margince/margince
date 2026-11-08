@@ -250,6 +250,17 @@
   backdrop-filter: none;
   min-block-size: 0;
 }
+/* The cells share the strip's three rows, so a label that wraps lowers every
+   figure in its row with it and the figures stay on one line. A wrapped cell
+   takes the same three rows, so the next cell still lands beside it. */
+.stat-strip[data-density="plate"] > * {
+  grid-row: span 3;
+}
+/* Not the lead cell: its size container would cut it off from the rows. */
+.stat-strip[data-density="plate"]:not([data-lead]) > .stat-card,
+.stat-strip[data-lead] > .stat-card:not(:first-child) {
+  grid-template-rows: subgrid;
+}
 .stat-strip[data-density="plate"] > :last-child,
 .stat-strip[data-density="plate"] > :last-child > .stat-card {
   border-inline-end: 0;

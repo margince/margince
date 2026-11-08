@@ -137,27 +137,11 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
-		// Before the timeline is JUDGED, not merely before it is written: the
-		// erase-or-hold decision reads a column another transaction stamps, so
-		// the lock has to precede the read that decides.
-		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
-			return err
-		}
-		activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, reason)
-		if err != nil {
-			return err
-		}
-		// What the floor shielded from the statement above is held instead
-		// (erasure_restrict.go): the same three id sets, selected BY the
-		// floor rather than against it, so every row is one of the two.
-		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, e.payloads)
-		if err != nil {
-			return err
-		}
 		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
 			return err
 		}
-		if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
+		activitiesRedacted, activitiesHeld, err := e.redactSubjectActivities(ctx, tx, subject, keys, floor, reason)
+		if err != nil {
 			return err
 		}
 		// The messages nobody has sent yet — scheduled, or still a draft. They
@@ -182,10 +166,13 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := redactQuotationsOf(ctx, tx, append(activitiesRedacted, activitiesHeld...), reason); err != nil {
 			return err
 		}
-		// What the subject's name is left standing in inside somebody else's
-		// working record — an automation's run, and a colleague's plan for
-		// their week (erasure_commitments.go).
-		if err := redactWorkingRecords(ctx, tx, subject, emails); err != nil {
+		// Where the subject's name stands inside somebody else's working record:
+		// an automation's run, a colleague's voice sample or weekly plan
+		// (erasure_commitments.go).
+		if err := e.redactWorkingRecords(ctx, tx, subject, keys); err != nil {
+			return err
+		}
+		if err := e.flagManualSubjectMentions(ctx, tx, subject, keys); err != nil {
 			return err
 		}
 		// Purge the subject's attachment bytes and rows together, inside the
@@ -299,6 +286,21 @@ func anonymizeSubjectRows(
 	if err != nil {
 		return nil, err
 	}
+	// The hashes an earlier anonymize kept go onto the erasure list before the
+	// redaction clears them. They are the same hash (storekit.SuppressionHash),
+	// so the anonymized subject's addresses stay refused once the row forgets
+	// them. The stops kept on them are deleted with the subject's other stops.
+	var keptHashes []string
+	if err := tx.QueryRow(ctx,
+		`SELECT anonymized_address_hashes FROM contact WHERE id = $1`, contactID).Scan(&keptHashes); err != nil {
+		return nil, fmt.Errorf("privacy: reading the anonymized address hashes: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO erasure_suppression (kind, value_hash)
+		SELECT 'email', kept FROM unnest($1::text[]) AS kept
+		ON CONFLICT DO NOTHING`, keptHashes); err != nil {
+		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
+	}
 	// Only a row that still holds something is written. An already-anonymised
 	// contact is left as it is, so an erasure that finds nothing counts no
 	// update and its request can answer nothing_held. Asked first rather than
@@ -310,7 +312,7 @@ func anonymizeSubjectRows(
 		       OR address_line1 IS NOT NULL OR address_line2 IS NOT NULL OR address_city IS NOT NULL
 		       OR address_region IS NOT NULL OR address_postal_code IS NOT NULL
 		       OR address_country IS NOT NULL OR source_author_name IS NOT NULL
-		       OR archived_at IS NULL%s
+		       OR anonymized_address_hashes IS NOT NULL OR archived_at IS NULL%s
 		  FROM contact WHERE id = $1`, anyColumnHeld(contactCustom)), contactID, erasedName).Scan(&holds); err != nil {
 		return nil, err
 	}
@@ -320,7 +322,7 @@ func anonymizeSubjectRows(
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL,
+		  source_author_name = NULL, anonymized_address_hashes = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
 			return nil, err
@@ -336,7 +338,7 @@ func anonymizeSubjectRows(
 	if err := scrubSubjectFromGraph(ctx, tx, contactID, emails, identities, subjectName, linkedInHandles); err != nil {
 		return nil, err
 	}
-	if err := deleteConsentCapabilities(ctx, tx, contactID, emails, reason); err != nil {
+	if err := deleteConsentCapabilities(ctx, tx, contactID, emails, keptHashes, reason); err != nil {
 		return nil, err
 	}
 	// Why this contact existed. It names one contact, records what they did or

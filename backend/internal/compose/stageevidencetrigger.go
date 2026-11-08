@@ -312,7 +312,7 @@ func (t *StageEvidenceTrigger) onActivityUpdated(ctx context.Context, env events
 // event_held where the record itself shows a meeting took place.
 //
 // What settles it is PROOF THE MEETING HAPPENED, judged by MeetingWasHeld: a
-// transcript, or a held status with somebody from their side on it. Not
+// held status, with a transcript or somebody from their side on it. Not
 // authorship — capture stamps our own seat as the sender of a synced meeting,
 // so an authorship rule rejected every real one.
 //

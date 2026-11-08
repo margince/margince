@@ -22,6 +22,10 @@ touches or names a record you cannot open, the card shows none of the plan. It s
 see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
 that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 
+The approval email and an agent's approval read use the card's detail labels and value words.
+They also carry its conflicts, files and import rows.
+A preview whose plan is hidden carries none of these sections.
+
 ## Reading an import proposal
 
 An import proposal shows each source row, its planned result, and the values to create or change.
@@ -157,7 +161,7 @@ Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its
    That is **History** → **Changes** on a contact, lead or deal, and **More actions** → **Full history** on a company.
 Only a human can undo; an agent cannot.
 
-Margince may open, reopen, move or close a deal, or change its close date, amount or probability. Those changes also show on the deal's **Overview** under **Changes by Margince**. They are listed newest first, with the reason and **Undo**. The card stays after the change leaves Home. Only the deal's owner reads the reason; a colleague sees what changed. **Undo** answers in words:
+Margince may open, reopen, move or close a deal, or change its close date, amount or probability. Those changes also show on the deal's **Overview** under **Changes by Margince**. They are listed newest first, with the reason, **Mark reviewed** and **Undo**. The card stays after the change leaves Home, and a change you marked reviewed keeps its **Undo** there. Only the deal's owner reads the reason; a colleague sees what changed. **Undo** answers in words:
 - After a close: "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check."
 - After a reopen: "Closed as lost again, with its earlier reason. Margince reopens it only if newer buying evidence arrives."
 - After any other change: "Undone. Margince will not change the amount again until something new happens on this deal."

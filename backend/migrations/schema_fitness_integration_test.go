@@ -163,6 +163,7 @@ func TestSchema_companyOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"company_offered_value.company_id": "child row: what a feed offered for a company, written by contacts.RecordOfferedValues from an extension landing under the service member's own update right on the company and auth.EnsureWritableLive, never from a request body, and read only through contacts.ListOfferedValues, which gates the company with auth.EnsureReadable and answers 404 for an archived one. ON DELETE CASCADE, and the erasure path deletes a row by statement",
 	// Client-supplied references — visibility-gated at the store:
+	"contact.created_from_activity_id":     "gated: refuseUnreadableSource (the activity read grant, then auth.EnsureActivityContentVisibleLive) at CreateContact and CreateContactTx, so a caller cannot name a record they may not read",
 	"site_read.company_id":                 "gated: auth.EnsureVisible in StartSiteRead (the one human entry point); Begin/Finish only re-address a row Start created, and GetSiteRead re-checks EnsureVisible on every read",
 	"deal.company_id":                      "gated: auth.EnsureLinkTarget in CreateDeal/UpdateDeal (H1)",
 	"project.company_id":                   "gated: auth.EnsureLinkTarget in CreateProject/UpdateProject (H1) — the anchor company is client-supplied, so naming it is a read of it",
@@ -441,7 +442,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// store already put through auth.EnsureLinkTarget. Reads inherit the
 	// activity's own visibility (the link walk), so a participant row never
 	// discloses an activity its reader could not already open.
-	"activity_participant.activity_id": "child row: written only beside the activity itself, inside the transaction that mints it",
+	"activity_participant.activity_id":                    "child row: written only beside the activity itself, inside the transaction that mints it",
+	"activity_participant.domain_evidence_parent_version": "server-derived: the database copies the clock version from the already-gated activity_id. It names no independent target and is never accepted from a client",
 	// The external identities one message answers to, and the row a second
 	// provider's copy of it resolves to.
 	"activity_mail_reference.activity_id": "gated: the WRITE is a child row stored beside the email a capture just landed or took over, on the id the capture itself resolved, inside that capture's transaction. The READ (activities.MailNeighboursTx) answers activity ids only to capture's thread join, which acts on a neighbour solely when the capturing seat holds it (its own capture_import row) and only ever rewrites thread keys; no id, subject or content reaches a caller. ON DELETE CASCADE, plus an explicit purge on the erasure path beside activity_identity, because erasure archives rather than deletes",

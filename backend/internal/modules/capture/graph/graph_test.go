@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -48,6 +49,9 @@ func (f *fakeOAuth) Refresh(_ context.Context, _ string, granted []string) (oaut
 }
 
 type fakeAPI struct {
+	// mu guards what GetMIME records: a backfill page fetches concurrently.
+	mu         sync.Mutex
+	fetchedVia map[string]string
 	email      string
 	receivedAt map[string]time.Time
 	// DeltaInit's canned INBOX round (the initial/bounded anchor).
@@ -72,14 +76,18 @@ type fakeAPI struct {
 	deltaCalls   int
 	seenDelta    string
 
-	getErr    error
-	getErrIDs map[string]error // a fault scoped to one message, so a test can fault one folder alone
-	raws      map[string][]byte
+	getErr  error
+	fetched []string // every id GetMIME was asked for, in order
+	// fetchedFrom is the folder each fetch named, "" for mailbox-wide.
+	fetchedFrom []string
+	getErrIDs   map[string]error // a fault scoped to one message, so a test can fault one folder alone
+	raws        map[string][]byte
 
 	estimate      int
 	estimateAfter time.Time
 	listIDs       []string
 	sentIDs       map[string]bool // listed ids Graph filed under Sent Items
+	junkIDs       map[string]bool // listed ids Graph filed under Junk Email
 	skipIDs       map[string]bool // ids GetMIME refuses as a per-message drop
 	sentFolderErr error
 
@@ -217,7 +225,15 @@ func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]MessageRef, [
 	return f.messageRefs(f.deltaIDs), f.deltaRemoved, f.deltaLink, nil
 }
 
-func (f *fakeAPI) GetMIME(_ context.Context, _, id string) ([]byte, error) {
+func (f *fakeAPI) GetMIME(_ context.Context, _, folder, id string) ([]byte, error) {
+	f.mu.Lock()
+	f.fetched = append(f.fetched, id)
+	f.fetchedFrom = append(f.fetchedFrom, folder)
+	if f.fetchedVia == nil {
+		f.fetchedVia = map[string]string{}
+	}
+	f.fetchedVia[id] = folder
+	f.mu.Unlock()
 	if f.skipIDs[id] {
 		return nil, fmt.Errorf("graph: message %s exceeds the size cap: %w", id, connector.ErrSkip)
 	}
@@ -241,26 +257,33 @@ func (f *fakeAPI) ListAfter(_ context.Context, _ string, _ time.Time, pageToken 
 	msgs := make([]MessageRef, 0, len(f.listIDs))
 	for _, id := range f.listIDs {
 		folder := inboxFolderID
-		if f.sentIDs[id] {
+		switch {
+		case f.sentIDs[id]:
 			folder = sentFolderID
+		case f.junkIDs[id]:
+			folder = junkFolderID
 		}
 		msgs = append(msgs, MessageRef{ID: id, ParentFolderID: folder, ReceivedAt: f.receivedAt[id]})
 	}
 	return msgs, f.listNext, nil
 }
 
-// The stub mailbox's two folder ids: a listed message carries one of them, and
-// SentFolderID names which one means the owner sent it.
+// The stub mailbox's folder ids: a listed message carries one of them, and
+// FolderID names the two the sync reads.
 const (
 	sentFolderID  = "folder-sent"
 	inboxFolderID = "folder-inbox"
+	junkFolderID  = "folder-junk"
 )
 
 func (f *fakeAPI) ListFolders(context.Context, string) ([]connector.NamedContainer, bool, error) {
 	return f.folders, f.foldersCut, f.foldersErr
 }
 
-func (f *fakeAPI) SentFolderID(context.Context, string) (string, error) {
+func (f *fakeAPI) FolderID(_ context.Context, _, wellKnown string) (string, error) {
+	if wellKnown == folderInbox {
+		return inboxFolderID, nil
+	}
 	if f.sentFolderErr != nil {
 		return "", f.sentFolderErr
 	}

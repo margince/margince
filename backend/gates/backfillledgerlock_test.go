@@ -5,37 +5,7 @@
 
 package gates
 
-// A transaction that writes the backfill creation ledger locks the run row
-// first.
-//
-// The run's `contacts_created` / `companies_created` are a PROJECTION over
-// `capture_backfill_creation`, refreshed by counting it. At READ COMMITTED two
-// recomputes running at once each count a snapshot without the other's
-// uncommitted rows, so the later committer can write a total missing the
-// earlier one — a silent undercount that no later creation repairs once the
-// run has no creations left to make. The lock taken before the inserts is what
-// makes the whole write one queue.
-//
-// ## Why this is a SOURCE gate and not a concurrency test
-//
-// `TestConcurrentCreationsAreAllCounted` was written to hold this and does
-// not: it passes with `FOR UPDATE` removed, which is what raised the question.
-// The reason is in the projection's own arithmetic. It writes
-// `greatest(counted, existing)`, so the column only ever grows, and with N
-// racing writers whichever runs its UPDATE last sees every row committed
-// before it plus its own — so the final total is right whether or not anything
-// serialised. Losing it needs exactly two writers whose UPDATEs both execute
-// before either commits and no writer after them, which the page walk cannot
-// arrange: the connector's `afterMessage` hook fires once `sink.Upsert` has
-// returned, which is after the transaction has already committed.
-//
-// So the property is real, its absence is silent, and no behaviour a test can
-// stage distinguishes it. What CAN be held is the statement itself.
-//
-// The corpus is derived from the TABLE rather than from a function name: any
-// transaction inserting into the ledger is subject, so a second writer added
-// later is covered by construction rather than by somebody remembering to add
-// it here.
+// Credits for one run are serialized before inserting ledger evidence.
 
 import (
 	"go/ast"
@@ -84,15 +54,10 @@ func TestEveryWriterOfTheBackfillLedgerLocksTheRunFirst(t *testing.T) {
 		insert := strings.Index(body, "INSERT INTO "+ledgerTable)
 		switch {
 		case lock < 0:
-			t.Errorf("%s writes the backfill ledger and takes no %s on %s. The run's "+
-				"counters are a projection over that ledger, so two recomputes at "+
-				"READ COMMITTED each count without the other's uncommitted rows and "+
-				"the later one writes a total missing the earlier — a number that is "+
-				"wrong and looks fine.", name, rowLock, runTable)
+			t.Errorf("%s writes the backfill ledger and takes no %s on %s. Credits for one run must serialize before their ledger inserts.", name, rowLock, runTable)
 		case lock > insert:
-			t.Errorf("%s takes the %s AFTER its first insert, so the count and the "+
-				"insert are a race rather than one queue. The lock belongs before "+
-				"the writes, not between them and the projection.", name, rowLock)
+			t.Errorf("%s takes the %s AFTER its first insert, which reverses the "+
+				"order used by other credits for the same run.", name, rowLock)
 		}
 	}
 }

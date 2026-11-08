@@ -80,6 +80,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	if err != nil {
 		return fmt.Errorf("tombstoning the untold lead: %w", err)
 	}
+	if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+		return err
+	}
 	reason := untoldLeadReason
 	if err := storekit.EmitEventForEntity(ctx, tx, auditID, "lead", in.LeadID.UUID,
 		retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason)); err != nil {

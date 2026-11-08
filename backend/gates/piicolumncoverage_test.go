@@ -29,7 +29,6 @@ package gates
 
 import (
 	"bufio"
-	"fmt"
 	"go/ast"
 	"go/token"
 	"os"
@@ -58,6 +57,14 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// Audit identity and authority remain immutable when retained payloads are removed.
+	"audit_log": {"action", "actor_id", "actor_type", "authorization_rule", "entity_type"},
+	// Closed vocabularies, actor stamps and opaque thread keys survive the personal text.
+	"deal_room_participant":  {"capability", "captured_by", "source"},
+	"intro_request":          {"captured_by", "fallback_policy", "note_generated_by", "origin", "recorded_channel", "route_type"},
+	"dedupe_candidate":       {"captured_by", "disposition", "entity_type", "source"},
+	"weekly_plan_commitment": {"captured_by", "state"},
+	"capture_thread_verdict": {"kind", "status", "thread_key"},
 	// A voice sample's closed vocabularies (kind, origin, register, source), the
 	// builder's version, the owner's actor stamp, and the sent-mail:<activity id>
 	// key. None carries what the mail said; the erasure clears the text, the
@@ -121,6 +128,9 @@ var erasureColumnBaseline = map[string][]string{
 		// message with no record of the law it was judged under, which is the
 		// accountability half Art. 5(2) requires the erasure to keep.
 		"ruleset_codes",
+		// The sending legal entity's country code: the controller's
+		// jurisdiction, never the subject's, kept for the same reason.
+		"data_protection_country",
 	},
 	// A rights case's own vocabulary: what kind of request arrived, how it
 	// reached us, where it stands, and the minted code somebody quotes when
@@ -191,6 +201,8 @@ var erasureColumnBaseline = map[string][]string{
 		"source_system",
 	},
 	"activity_participant": {
+		// Precision is a closed clock vocabulary mirrored from its parent, never source prose.
+		"domain_evidence_precision",
 		"response",
 		"role",
 	},
@@ -503,6 +515,7 @@ func formatting(call *ast.CallExpr) bool {
 func cascadeStatements(t *testing.T, consts map[string]string) []string {
 	t.Helper()
 	var out []string
+	forwarders := cascadeSQLForwarders(t)
 	for _, path := range erasureCascadeFiles {
 		parsed, err := gatekit.ParseFile(path, 0)
 		if err != nil {
@@ -526,7 +539,7 @@ func cascadeStatements(t *testing.T, consts map[string]string) []string {
 				}
 			}
 			ast.Inspect(fn, func(n ast.Node) bool {
-				arg, found := executedSQL(n)
+				arg, found := executedSQL(n, forwarders)
 				if !found {
 					return true
 				}
@@ -564,20 +577,29 @@ func cascadeStatements(t *testing.T, consts map[string]string) []string {
 // the context, and looking at the rest reports a transaction handle or a
 // subject id as a statement this scan could not read. Restricting to the
 // position is what lets an unreadable one be a finding rather than noise.
-func executedSQL(n ast.Node) (ast.Expr, bool) {
+func executedSQL(n ast.Node, forwarders map[string]int) (ast.Expr, bool) {
 	call, isCall := n.(*ast.CallExpr)
-	if !isCall || len(call.Args) < 2 {
+	if !isCall || len(call.Args) == 0 {
 		return nil, false
 	}
-	method, isMethod := call.Fun.(*ast.SelectorExpr)
-	if !isMethod {
+	var name string
+	switch fn := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		name = fn.Sel.Name
+		if (name == "Exec" || name == "Query" || name == "QueryRow") && len(call.Args) >= 2 {
+			return call.Args[1], true
+		}
+	case *ast.Ident:
+		name = fn.Name
+	}
+	index, found := forwarders[name]
+	if !found || index >= len(call.Args) {
 		return nil, false
 	}
-	switch method.Sel.Name {
-	case "Exec", "Query", "QueryRow":
-		return call.Args[1], true
+	if index < 0 {
+		return ast.NewIdent("unresolvedSQLForwarder"), true
 	}
-	return nil, false
+	return call.Args[index], true
 }
 
 // assignmentsAreReadable reports whether every SET clause in a statement
@@ -630,6 +652,10 @@ func splitSetClause(clause string) []string {
 	var out []string
 	depth, start := 0, 0
 	for i := 0; i < len(clause); i++ {
+		if span, _ := gatekit.SQLSpanAt(clause, i); span > 0 {
+			i += span - 1
+			continue
+		}
 		switch clause[i] {
 		case '(', '[':
 			depth++
@@ -764,15 +790,24 @@ func erasureRedactedColumns(t *testing.T, columns map[string]map[string]string, 
 	return out
 }
 
-// assignsColumn reports whether a statement's SET clauses assign one column,
-// through the same reading dealforecastmovement_test.go uses: anchored on the
-// whole identifier, so `body` is not found inside `html_body`, and the
-// parenthesised multi-column form counts.
+// assignsColumn reads the targets on the left of SET assignments. Conditions
+// and quoted values do not assign the columns they mention.
 func assignsColumn(statement, column string) bool {
-	pattern := regexp.MustCompile(fmt.Sprintf(assignmentFmt, regexp.QuoteMeta(column)))
 	for _, clause := range setClause.FindAllStringSubmatch(statement, -1) {
-		if pattern.MatchString(clause[1]) {
-			return true
+		for _, assignment := range splitSetClause(clause[1]) {
+			left, _, assigned := strings.Cut(assignment, "=")
+			if !assigned {
+				continue
+			}
+			for target := range strings.SplitSeq(strings.Trim(strings.TrimSpace(left), "()"), ",") {
+				target = strings.TrimSpace(target)
+				if dot := strings.LastIndex(target, "."); dot >= 0 {
+					target = target[dot+1:]
+				}
+				if strings.EqualFold(strings.Trim(strings.TrimSpace(target), "\""), column) {
+					return true
+				}
+			}
 		}
 	}
 	return false

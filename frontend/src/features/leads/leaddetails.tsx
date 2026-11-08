@@ -7,6 +7,7 @@ import { ConversationSuggestionsCard } from "../../components/conversationsugges
 import { EntityRef } from "../../components/entityref";
 import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
+import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import {
@@ -41,6 +42,7 @@ import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
+import { LeadProductLine } from "./leadproduct";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -289,6 +291,15 @@ function useAboutRows(
       ),
     },
     {
+      key: "product_id",
+      term: t("lead.product"),
+      empty: !lead.product_id,
+      block: !lead.product_id,
+      value: (
+        <LeadProductLine lead={lead} writer={writer} reasonId={reasonId} />
+      ),
+    },
+    {
       key: "tags",
       term: t("tags.panelTitle"),
       block: true,
@@ -400,6 +411,7 @@ function LeadDetailsBody({
   return (
     <>
       <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <LeadStops leadId={lead.id} />
       {!lead.archived_at && (
         <ConversationSuggestionsCard
           key={lead.id}

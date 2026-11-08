@@ -1,0 +1,31 @@
+# CASE 111 — An admin's questions about the installation are reads: the job page,
+# the AI routing and the audit trail are three topics of read_workspace, and none
+# of them reaches a write. Which model the installation runs stays the user's to
+# change, so no settings call is made. The trail's content moves with the run, so
+# the case holds the choice of topic and not what the trail says.
+name: case111_how_is_the_workspace_doing
+criteria: [1, 2, 3]
+writes: true
+
+prompt: |
+  Quick check on the workspace before my call. Are any of our background jobs
+  failing right now? Which AI models are we routing to at the moment? And show
+  me the last things that were changed across the workspace, and who changed them.
+
+must_call:
+  - read_workspace
+
+must_call_with:
+  - read_workspace.topic=job_health|read_workspace.topic=system_health
+  - read_workspace.topic=ai_routing
+  - read_workspace.topic=audit_log
+
+must_not_call_with:
+  - change_settings~.
+
+may_call:
+  - whoami
+  - read_details
+
+runs: 3
+pass_at: 2

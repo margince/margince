@@ -67,6 +67,7 @@ components:
         - deal_room.thread_resolved
         - deal_room.decision_recorded
         - offer.created
+        - offer.updated
         - offer.sent
         - offer.accepted
         - offer.rejected
@@ -202,6 +203,11 @@ components:
           description: >-
             The record's name when the event was delivered, for a deal, company or
             project. Absent for a contact or lead; open the link to see who it is.
+        owner_name:
+          type: string
+          description: >-
+            The display name of the record's owner when the event was delivered,
+            for a deal, company or project. Absent when the record has no owner.
         url:
           type: string
           format: uri
@@ -1216,6 +1222,36 @@ components:
         captured_by:
           type: string
           description: The principal that created this revision.
+      additionalProperties: false
+
+    PublicEventOfferUpdated:
+      type: object
+      x-event-type: offer.updated
+      x-entity-type: offer
+      x-version: 1
+      description: >-
+        Payload for offer.updated: a draft offer was edited, its header or its
+        line items. Names what changed and carries no values, so a subscriber
+        reads the offer for them.
+      required:
+        - offer_id
+        - deal_id
+        - changed_fields
+      properties:
+        offer_id:
+          type: string
+          format: uuid
+          description: The edited draft offer.
+        deal_id:
+          type: string
+          format: uuid
+          description: The deal this offer belongs to.
+        changed_fields:
+          type: array
+          items: { type: string }
+          description: >-
+            The offer fields the edit moved, by their column names. A line
+            edit names line_items, beside any total it moved.
       additionalProperties: false
 
     PublicEventOfferSent:

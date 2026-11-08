@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { drawnChart, StockCharts } from "./analytics.overview.board";
 import { HeroAside, heroReceipt } from "./analytics.overview.hero";
 import { SalesOverviewMetrics } from "./analytics.overview.metrics";
@@ -14,12 +15,16 @@ import {
   OpenPipelineMeta,
   OpenPipelineNote,
 } from "./analytics.overview.salesreadings";
-import { QuarterTrajectory } from "./analytics.overview.trajectory";
+
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
   ReportingSelection,
 } from "./reporting.model";
+
+const QuarterTrajectory = lazy(async () => ({
+  default: (await import("./analytics.overview.trajectory")).QuarterTrajectory,
+}));
 
 // The review's figures on its sheet: the headline readings with the
 // trajectory, then the stock. An address the server refused says why instead.
@@ -63,11 +68,15 @@ export function SalesFigures({
             }
             receipt={heroReceipt(evaluation, chartsRead)}
             trajectory={
-              <QuarterTrajectory
-                evaluation={evaluation}
-                charts={chartsRead}
-                onEvidence={onEvidence}
-              />
+              chartsRead && (
+                <Suspense fallback={null}>
+                  <QuarterTrajectory
+                    evaluation={evaluation}
+                    charts={chartsRead}
+                    onEvidence={onEvidence}
+                  />
+                </Suspense>
+              )
             }
           />
           {/* Today's stock by stage, and the permitted chart of sales by

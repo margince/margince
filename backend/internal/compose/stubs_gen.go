@@ -1419,7 +1419,7 @@ func (stubs) ConnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, prov
 	httperr.NotImplemented(w, r, "ConnectConnector")
 }
 
-func (stubs) ListConnectorContainers(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+func (stubs) ListConnectorContainers(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider, params crmcontracts.ListConnectorContainersParams) {
 	httperr.NotImplemented(w, r, "ListConnectorContainers")
 }
 
@@ -1879,7 +1879,7 @@ func (stubs) CreateDeal(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "CreateDeal")
 }
 
-func (stubs) ListAtRiskRelationships(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListAtRiskRelationships(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAtRiskRelationshipsParams) {
 	httperr.NotImplemented(w, r, "ListAtRiskRelationships")
 }
 
@@ -2567,6 +2567,14 @@ func (stubs) UpdateLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 	httperr.NotImplemented(w, r, "UpdateLead")
 }
 
+func (stubs) ListLeadStops(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListLeadStops")
+}
+
+func (stubs) LiftLeadSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftLeadSuppression")
+}
+
 func (stubs) ListLeadConversationSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListLeadConversationSuggestions")
 }
@@ -2783,7 +2791,7 @@ func (stubs) DiscardMailDraft(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "DiscardMailDraft")
 }
 
-func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetCurrentPrincipalParams) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
 }
 
@@ -3107,8 +3115,16 @@ func (stubs) AssignNoticeCaseReview(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "AssignNoticeCaseReview")
 }
 
+func (stubs) GetNoticeSourceEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.GetNoticeSourceEvidenceParams) {
+	httperr.NotImplemented(w, r, "GetNoticeSourceEvidence")
+}
+
 func (stubs) AssessNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "AssessNoticeSource")
+}
+
+func (stubs) PreviewNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "PreviewNoticeSource")
 }
 
 func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {
@@ -3369,6 +3385,10 @@ func (stubs) ReplyBuyerRoomThread(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) DescribeQueryVocabulary(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DescribeQueryVocabulary")
+}
+
+func (stubs) DescribeReadViews(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DescribeReadViews")
 }
 
 func (stubs) DescribeRecordFields(w nethttp.ResponseWriter, r *nethttp.Request) {

@@ -40,7 +40,9 @@ var consentProofInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+consent_event\
 
 // unprovenConsentWrites are the ratified proof-free state writes, keyed
 // by "package-dir:FuncName" with the rationale inline.
-var unprovenConsentWrites = gatekit.Waive(map[string]string{})
+var unprovenConsentWrites = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:dropCollidingConsent": "sets only recorded_for_addresses, the addresses two withdrawals cover, and reads state in its WHERE. No state changes, so no proof row is owed",
+})
 
 func TestEveryConsentStateWriteAppendsProof(t *testing.T) {
 	t.Parallel()

@@ -85,21 +85,33 @@ func workerModelPathSpec(cfg workerConfig, bootstrap deployconfig.Bootstrap) mod
 // many replicas the deployment happens to run, and both ends look correct.
 // This role serves no public edge, but the send job's pacing is a ceiling all
 // the same.
-func openBus(ctx context.Context, cfg workerConfig) (*redis.Client, error) {
-	rdb, err := events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
+//
+// The ceilings get a separate client. Each event lane holds a bus connection
+// in a blocking read, which can leave the bus pool with none free. A ceiling
+// on that pool then times out, and every Gmail call fails as unreachable.
+func openBus(ctx context.Context, cfg workerConfig) (bus, coordination *redis.Client, err error) {
+	bus, err = events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	ratelimit.ShareProcess(rdb)
-	ai.ShareProviderHealth(ctx, providerhealthstore.New(rdb))
-	return rdb, nil
+	coordination, err = events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
+	if err != nil {
+		//craft:ignore swallowed-errors best-effort close of the bus client after the coordination client failed — the open error is the one to report
+		_ = bus.Close()
+		return nil, nil, err
+	}
+	ratelimit.ShareProcess(coordination)
+	ai.ShareProviderHealth(ctx, providerhealthstore.New(coordination))
+	return bus, coordination, nil
 }
 
-// closeBus releases the bus client at shutdown, reporting a close fault rather
-// than dropping it — by then there is nobody left to return it to.
-func closeBus(rdb *redis.Client, logger *slog.Logger) {
-	if err := rdb.Close(); err != nil {
-		logger.Warn("closing bus client", "err", err)
+// closeBus releases the Redis clients at shutdown, reporting a close fault
+// rather than dropping it. By then there is nobody left to return it to.
+func closeBus(logger *slog.Logger, clients ...*redis.Client) {
+	for _, rdb := range clients {
+		if err := rdb.Close(); err != nil {
+			logger.Warn("closing bus client", "err", err)
+		}
 	}
 }
 
@@ -327,7 +339,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// model, so it runs on every worker rather than only where a provider is
 	// configured — a deployment without AI still answers "who on our team knows
 	// this contact", which is a deterministic question about our own mail.
-	edges := search.NewGraphEdgeGen(search.NewStore(compose.InstallationDB(pool)))
+	edges := compose.NewGraphEdgeConsumer(pool)
 	_, _ = fmt.Fprintln(stdout, "worker maintaining interaction edges")
 	// Coalesced: a capture burst names the same colleagues event after event,
 	// and one refold per read does their shared pairs once (graphedgebatch.go).

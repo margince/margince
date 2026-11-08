@@ -41,6 +41,7 @@ export type Program = {
   readonly aliases: ReadonlyMap<string, string>;
   /** Files whose literals are the keys themselves. */
   readonly catalogs: ReadonlySet<string>;
+  readonly dynamicImports?: boolean;
 };
 
 export type Module = {
@@ -118,10 +119,10 @@ function isPropertyName(node: ts.Node): boolean {
 }
 
 // Comments are trivia and types are erased, so a key named only there is unseen.
-function readModule(path: string, text: string): Module {
+function readModule(path: string, text: string, dynamicImports = true): Module {
   const source = parseSource(path, text);
   const found: { [field in keyof Module]: string[] } = {
-    specifiers: moduleSpecifiers(source, "values"),
+    specifiers: moduleSpecifiers(source, dynamicImports ? "values" : "static"),
     globs: [],
     literals: [],
     stems: [],
@@ -155,7 +156,9 @@ export function moduleGraph(program: Program): ModuleGraph {
     if (text === undefined) return undefined;
     const known = parsed.get(path);
     if (known !== undefined) return known;
-    const module = program.catalogs.has(path) ? SILENT : readModule(path, text);
+    const module = program.catalogs.has(path)
+      ? SILENT
+      : readModule(path, text, program.dynamicImports);
     parsed.set(path, module);
     return module;
   };

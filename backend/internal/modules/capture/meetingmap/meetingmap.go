@@ -42,70 +42,6 @@ import (
 // test is a second answer to the same question.
 const MaxBodyLen = 8000
 
-// Event is one calendar event as any provider describes it, after that
-// provider's own decode. It carries what the rules below read and nothing more:
-// the raw original reaches the Sink verbatim as evidence, so a field absent
-// here is not a field lost.
-type Event struct {
-	Private bool
-	ID      string
-	// ICalUID is the event's identity ACROSS providers, and ID is not: ID is
-	// whatever the provider numbered this event in its own store, so the same
-	// meeting read from Google and from Graph carries two of them and dedupes
-	// as two meetings.
-	//
-	// It names the SERIES, not one occurrence — a weekly call is one UID and
-	// fifty-two meetings — so the occurrence's own start completes the identity
-	// (activities.MeetingIdentityKey). Both syncs already expand recurrences
-	// (gcal `singleEvents=true`, graphcal `calendarView`), so every Event a
-	// decoder produces is one occurrence and StartsAt is that occurrence's.
-	//
-	// Empty when the provider states none, and never synthesized: a made-up
-	// identity would collide two unrelated meetings, which is worse than the
-	// duplicate it set out to prevent.
-	ICalUID   string
-	Cancelled bool
-	// OwnerDeclined says the connected account answered NO to this invitation.
-	// It is a different fact from Cancelled — the organizer's event is alive and
-	// everyone else is still going — but it means the same thing for the seat
-	// whose calendar this is, so Settlement folds the two together.
-	OwnerDeclined bool
-	Subject       string
-	Description   string
-	// StartsAt is the event's start as an instant. The zero value is an
-	// unreadable start, which the Sink then stamps with capture time rather than
-	// sorting the row to the beginning of history — so a decoder that cannot
-	// read a start leaves this zero rather than guessing.
-	EndsAt   time.Time
-	StartsAt time.Time
-	// AllDay says the provider stated a date, not a time: StartsAt is then the
-	// AllDayStart noon anchor rather than a moment anybody scheduled.
-	AllDay    bool
-	Organizer Actor
-	Attendees []Actor
-	// PartiesHidden: the provider withheld guests from this copy of the event.
-	PartiesHidden bool
-	// GoogleMeet says the event's conference is a Google Meet call.
-	GoogleMeet bool
-	// Documents are the files the provider lists as attached to the event.
-	Documents []Document
-}
-
-// Actor is one organizer or attendee. The address resolves the counterparty
-// and the internal test. Room marks a booked room or device, in each vendor's
-// terms. Response is this attendee's own answer as a connector.Response
-// constant, or "" when the provider stated none; a no decides what their row grants.
-type Actor struct {
-	Email string
-	// Name is what the invitation called this party, or "" when the provider
-	// named nobody. It is the only full name an attendee-only contact ever
-	// gets: a contact minted from a bare invitation address is otherwise named
-	// by the local part of their own email.
-	Name     string
-	Response string
-	Room     bool
-}
-
 // Meeting is the classified result of reading one event against the connected
 // account's owner. The owner's own domain gives the internal floor; the
 // workspace's registered domains (CAP-DDL-1) are the authority and are applied
@@ -122,14 +58,17 @@ type Meeting struct {
 	agenda          string
 	masked          bool
 	occurredAt      time.Time
+	seriesSlot      time.Time
 	allDay          bool
 	durationSeconds *int
 	private         bool
 	cancelled       bool
-	ownerDeclined   bool
+	removed         bool
 	hasExternal     bool // any party outside the OWNER's own domain; the sink judges the rest
 	partiesHidden   bool
 	ownerDomain     string
+	ownerAddress    string
+	ownerResponse   string
 	addresses       []string
 	participants    connector.Parties
 	notes           []capture.MeetingDocument
@@ -139,6 +78,11 @@ type Meeting struct {
 // owner (whose domain marks "internal"). Pure — the caller has already decoded
 // the bytes — so the whole mapping is fixture-provable.
 func Classify(ev Event, owner string) Meeting {
+	ownerAddress := strings.ToLower(strings.TrimSpace(ev.OwnerAddress))
+	if ownerAddress == "" {
+		ownerAddress = strings.ToLower(strings.TrimSpace(owner))
+	}
+
 	ownerDom := domainOf(owner)
 	attendeeEmails, external := classifyAttendees(ev.Attendees, ownerDom)
 	organizerDom := domainOf(ev.Organizer.Email)
@@ -152,11 +96,12 @@ func Classify(ev Event, owner string) Meeting {
 		agenda:          agendaFingerprint(ev.Description),
 		masked:          masked,
 		occurredAt:      ev.StartsAt,
+		seriesSlot:      ev.SeriesSlot,
 		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
 		private:         ev.Private,
 		cancelled:       ev.Cancelled,
-		ownerDeclined:   ev.OwnerDeclined,
+		removed:         ev.Removed,
 		// The organizer counts as a party: an externally-organized meeting is a
 		// customer touch even when the owner is the only listed attendee.
 		//
@@ -167,8 +112,10 @@ func Classify(ev Event, owner string) Meeting {
 		hasExternal:   external > 0 || organizerIsExternal(ev.Organizer.Email, organizerDom, ownerDom),
 		partiesHidden: ev.PartiesHidden,
 		ownerDomain:   ownerDom,
+		ownerAddress:  ownerAddress,
+		ownerResponse: ev.OwnerResponse,
 		addresses:     eventAddresses(ev, owner),
-		participants:  meetingParties(ev),
+		participants:  meetingParties(ev, ownerAddress),
 		notes:         NotesDocuments(ev, owner),
 	}
 }
@@ -190,7 +137,7 @@ func (m Meeting) Participants() connector.Parties { return m.participants }
 // Organizer wins over attendee when the same address holds both, which is the
 // common case for a meeting somebody scheduled and then attended: organizing is
 // the stronger statement about their part in it.
-func meetingParties(ev Event) connector.Parties {
+func meetingParties(ev Event, owner string) connector.Parties {
 	seen := map[string]int{}
 
 	var out []connector.MessageParticipant
@@ -219,6 +166,12 @@ func meetingParties(ev Event) connector.Parties {
 		add(a, connector.ParticipantRoleAttendee)
 	}
 
+	if address := strings.ToLower(strings.TrimSpace(owner)); address != "" && ev.OwnerResponse != "" {
+		if at, listed := seen[address]; listed {
+			out[at].Response = ev.OwnerResponse
+		}
+	}
+
 	return connector.CapParticipants(out)
 }
 
@@ -239,9 +192,15 @@ func (m Meeting) ID() string { return m.id }
 // connectorName comes from the registry that ran this connector, so no record
 // can claim the attestation by describing itself.
 func (m Meeting) ToRecord(connectorName string, raw []byte) connector.NormalizedRecord {
+	var answer *connector.CalendarAnswer
+	if m.ownerResponse != "" {
+		answer = &connector.CalendarAnswer{Address: m.ownerAddress, Response: m.ownerResponse}
+	}
+
 	return connector.NormalizedRecord{
-		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
+		EntityType:     datasource.EntityActivity,
+		CalendarAnswer: answer,
+		NaturalKey:     connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
 			Kind:            "meeting",
 			ProviderPrivate: m.private,
@@ -267,7 +226,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		//
 		// Empty when the provider stated no UID, and then the meeting dedupes on
 		// the natural key alone exactly as it did before.
-		CrossDoorIdentity: connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay},
+		CrossDoorIdentity: m.crossDoorIdentity(),
 		Participants:      m.participants.Participants,
 		WithheldParties:   m.participants.Withheld,
 		Addresses:         m.addresses,
@@ -393,7 +352,7 @@ type Decode func(raw []byte, owner string) (Event, error)
 // Sink write fault returns an error, which stops the pull. A package function
 // rather than a method, so a pull holds no shared state.
 //
-// A cancelled or declined event reaches the sink as a CANCELLATION rather than
+// An organizer cancellation reaches the sink as a CANCELLATION rather than
 // as nothing. The event was capturable once — that is exactly the case where a
 // meeting is sitting on somebody's schedule — and this is the only pull that
 // will ever mention it again, because the provider stops listing an event once
@@ -416,7 +375,7 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 	case SettleDrop:
 		countEvent(ctx, connectorName, m.id, "dropped_"+reason.Label())
 		return nil
-	case SettleCancel:
+	case SettleCancel, SettleRemove:
 		return cancelCaptured(ctx, sink, m, connectorName, reason)
 	case SettleCapture:
 		_, err := sink.Upsert(ctx, m.ToRecord(connectorName, raw))
@@ -439,14 +398,22 @@ func CaptureOne(ctx context.Context, raw []byte, sink connector.Sink, owner, con
 // called off at the moment we noticed, and every question about when bookings
 // fell through would answer with the sync schedule instead of the calendar.
 func cancelCaptured(ctx context.Context, sink connector.Sink, m Meeting, connectorName string, reason Reason) error {
+	if m.removed {
+		remover, ok := sink.(connector.MeetingRemover)
+		if !ok {
+			countEvent(ctx, connectorName, m.id, OutcomeCancelUnsupported)
+			return nil
+		}
+		return settleWrite(ctx, connectorName, m.id, reason.Label(), remover.RemoveCalendarMeeting(ctx, connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}, m.crossDoorIdentity(), m.occurredAt))
+	}
+
 	key := connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id}
 	var err error
 	// The identity travels too where the sink can use it: an event matched onto
 	// an imported meeting left no row under its own key, and the identity is
 	// the only thing that still names that meeting.
 	if identified, ok := sink.(connector.IdentifiedMeetingCanceller); ok {
-		identity := connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: m.occurredAt, AllDay: m.allDay}
-		err = identified.CancelIdentifiedMeeting(ctx, key, identity, m.occurredAt)
+		err = identified.CancelIdentifiedMeeting(ctx, key, m.crossDoorIdentity(), m.occurredAt)
 	} else if canceller, ok := sink.(connector.MeetingCanceller); ok {
 		err = canceller.CancelMeeting(ctx, key, m.occurredAt)
 	} else {

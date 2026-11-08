@@ -45,6 +45,11 @@ describe("the week's activity chart", () => {
     expect(screen.queryByText(/busiest day/)).toBeNull();
   });
 
+  it("draws an empty week without naming a busiest day", () => {
+    render(<WeekActivity days={[]} />);
+    expect(screen.queryByText(/busiest day/)).toBeNull();
+  });
+
   it("counts what the rep did in the card's head", () => {
     render(<ActivityTotal days={week} />);
     expect(screen.getByText("15 things you did")).toBeTruthy();

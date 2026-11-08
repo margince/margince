@@ -434,7 +434,8 @@ jobs:
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
-    # a runner; both legs still run the build and the root script gates.
+    # a runner. Both legs run the build; only the unit leg runs the gates that
+    # read the tree the same way on either (CHECK_TREE_GATES).
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -442,8 +443,10 @@ jobs:
         include:
           - part: unit
             legs: test-cached test-extensions
+            tree-gates: "on"
           - part: gates
             legs: test-uncached
+            tree-gates: "off"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -477,18 +480,6 @@ jobs:
       - name: Gate binaries on PATH
         if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
-      # golangci-lint's analysis cache (~/.cache/golangci-lint) is separate
-      # from Go's build cache, so without it the two lint passes recompute the
-      # whole repo. Restored, never saved, for the same reason as above.
-      - name: Compute the golangci cache key
-        id: golangci-key
-        uses: ./.github/actions/golangci-cache-key
-      - name: Restore the golangci-lint analysis cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/golangci-lint
-          key: ${{ steps.golangci-key.outputs.key }}
-          restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
       # test-lanes, file-length,
@@ -534,7 +525,7 @@ jobs:
             mkdir -p "$TESTLOG_DIR"
             census=(TEST_EXEC="$PWD/scripts/testlog-exec.sh")
           fi
-          make check-backend CHECK_LEGS="${{ matrix.legs }}" "${census[@]}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+          make check-backend CHECK_LEGS="${{ matrix.legs }}" CHECK_TREE_GATES="${{ matrix.tree-gates }}" "${census[@]}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
       # A test read outside its module that skips the tree digest merges green
       # and breaks cache-warm's save hours later. Here it fails the PR that
       # adds it. Skipped into develop: it guards main's cache-warm, and the
@@ -614,7 +605,9 @@ jobs:
     container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
-    # The two golangci passes each load the whole tree, so each gets a runner.
+    # The baseline pass loads the whole tree, so it gets a runner. The strict
+    # pass loads only the packages a change touched, which leaves room for the
+    # modules outside backend/.
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -625,7 +618,7 @@ jobs:
             fetch-depth: 1
             filter: ""
           - pass: strict
-            legs: lint-strict
+            legs: lint-strict lint-modules
             fetch-depth: 0
             filter: blob:none
     # Setup mirrors deterministic-gates, which says why each step is there.
@@ -1170,16 +1163,6 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      # No version input: the pin is package.json's "packageManager", which pnpm
-      # and corepack read too. A second one here is refused as a mismatch.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          # Root, not frontend/: this branch moved the lockfile to a root pnpm
-          # workspace so a unit's frontend/ can join it.
-          cache-dependency-path: pnpm-lock.yaml
       # This lane compiles the composition generator and then `go run`s cmd/api.
       - name: Restore the Go build cache
         uses: ./.github/actions/go-build-cache
@@ -1222,7 +1205,7 @@ jobs:
           # the enabled extensions (extensions/de ships by default). The
           # generator itself pins the ROOT workspace (the tool is its own
           # module — a stray GOWORK would break its resolution).
-          GOWORK="$PWD/../go.work" go run ./tools/gen-composition
+          GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development
           GOWORK="$PWD/../build/composition/go.work" \
             go run ./cmd/api --dsn "postgres://margince_app:margince_app_dev@localhost:15432/margince" \
             --config "$RUNNER_TEMP/margince.yaml" \
@@ -1236,7 +1219,12 @@ jobs:
           exit 1
       - name: Seed the demo workspace
         run: make seed-dev
+      # The frontend filter holds every input of `pnpm build`, and merge_group
+      # turns it on, so fe-bundle builds the frontend whenever a change can
+      # break the build. Built here too, it took two minutes and found nothing.
       - name: Verify boot
+        env:
+          VERIFY_BOOT_FRONTEND_BUILT_BY: fe-bundle
         run: make verify-boot
       - name: API log (on failure)
         if: failure()

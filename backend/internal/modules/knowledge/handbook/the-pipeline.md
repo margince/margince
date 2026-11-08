@@ -285,9 +285,11 @@ close date counts as **Likely**.
 
 ## Close dates Margince sets
 
-Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%). The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
+Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%).
 
-A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Waiting for your word** on **Home**, to accept or undo; see [Your day](your-day.md#waiting-for-your-word). To stop these changes on your deals, see [Approvals](approvals.md).
+The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks and is at least 7 days away. It is never further away than the setting `deals.silent_close_days`, which is 120 days unless an admin changed it. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
+
+A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Done for you** on **Home**, to mark reviewed or undo; see [Your day](your-day.md#done-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
 
 ## Reading the numbers
 

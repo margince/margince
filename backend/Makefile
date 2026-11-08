@@ -1,3 +1,5 @@
+include ../scripts/composition-profile.mk
+
 # Golden path: `make dev` boots everything; `make check` is the merge gate.
 
 GO        ?= go
@@ -114,7 +116,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -152,7 +154,7 @@ help: ## List targets with their descriptions (the default goal)
 # CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
 # gates/checklegsplit_test.go fails if the two stop covering every leg.
 TEST_LEGS   := test-uncached test-cached test-extensions
-STATIC_LEGS := lint-base lint-strict vet arch-lint
+STATIC_LEGS := lint-base lint-strict lint-modules vet arch-lint
 CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
@@ -163,6 +165,7 @@ check: ## The merge gate: everything a PR must pass
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
 	$(MAKE) -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
+ifneq ($(CHECK_TREE_GATES),off)
 ifndef CHECK_WRITERS_RAN
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
@@ -171,6 +174,7 @@ endif
 	@bash ../scripts/phase-timer.sh start "backend: composition reproducibility"
 	$(MAKE) check-composition
 	@bash ../scripts/phase-timer.sh stop
+endif
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh report
 
 check-static: composition ## The static half of check (STATIC_LEGS), which CI runs as its own job
@@ -188,11 +192,11 @@ composition: ## Materialize build/composition/ from the extensions instance/go.m
 ifdef CHECK_WRITERS_RAN
 	@echo "composition: written by make check's writers phase, so this lane only reads it"
 else
-	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS)
 endif
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
-	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition -verify
+	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS) -verify
 	@echo "OK: composition reproducible"
 
 # EXT_COVER_OUT (optional): merge every unit's -coverprofile into ONE
@@ -667,14 +671,28 @@ lint-base: composition lint-tool
 
 # One golangci pass peaks near 10 GB on a cold cache, so when one make runs
 # both, the strict pass waits for the baseline. CI's strict leg runs it alone.
+#
+# The pass reports only lines changed since the merge base, so it loads only
+# the packages holding them (scripts/strict-lint-packages.sh). Loading every
+# package that imports compose cost minutes and found nothing more.
 lint-strict: composition lint-tool $(if $(filter lint lint-base,$(MAKECMDGOALS)),lint-base)
 	@if git rev-parse --verify -q "$(CHECK_BASE_REF)" >/dev/null; then \
-		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" GOLANGCI_CACHE_PASS=strict ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" ./...; \
+		pkgs="$$(../scripts/strict-lint-packages.sh "$(CHECK_BASE_REF)")" || exit 1; \
+		if [ -z "$$pkgs" ]; then \
+			echo "SKIP strict lint: no Go package under backend/ changed since the merge base with $(CHECK_BASE_REF)"; \
+		else \
+			echo "lint-strict: $$(echo "$$pkgs" | wc -l | tr -d ' ') changed package(s)"; \
+			$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" GOLANGCI_CACHE_PASS=strict ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" $$pkgs; \
+		fi; \
 	elif [ "$(origin CHECK_BASE_REF)" = "file" ]; then \
 		echo "SKIP strict lint: $(CHECK_BASE_REF) not found — fetch it to arm the new-code gate"; \
 	else \
 		echo "lint-strict: CHECK_BASE_REF=$(CHECK_BASE_REF) does not resolve — fetch it" >&2; exit 1; \
 	fi
+
+# The modules `./...` cannot reach, through the same wrapper and config.
+lint-modules: composition lint-tool
+	@GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/check-lint-modules.sh
 
 lint-tool:
 	@test -n "$(GOLANGCI_LINT)" || { \
@@ -738,7 +756,14 @@ arch-lint: ## Import-boundary lint (go-arch-lint over .go-arch-lint.yml)
 # today, the composed client types and docs as their slices land) — the same
 # split Task 11's tsconfig alias makes for TypeScript.
 gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the contract
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
+	@# The approval reading catalog needs the frontend toolchain. A checkout
+	@# without it skips the write; fe-drift checks the committed copy.
+	@if command -v pnpm >/dev/null 2>&1 && [ -d ../frontend/node_modules ]; then \
+		cd ../frontend && pnpm gen:approval-reading; \
+	else \
+		echo "gen: approval reading catalog not regenerated (no frontend toolchain); fe-drift checks it"; \
+	fi
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS)
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs

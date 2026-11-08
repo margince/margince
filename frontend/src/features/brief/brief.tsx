@@ -23,7 +23,7 @@ import { readerTask } from "../../lib/worklistcopy";
 import { pillFigure } from "../../lib/worklistcounts";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
-import { MagicPanel } from "../sign-in/magic";
+import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
   MeetingDetailModal,
   TaskDetailModal,
@@ -37,8 +37,8 @@ import {
   worklistKey,
 } from "../worklist/worklist.queries";
 import { changedSinceBrief } from "./brief.changed";
-import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
+import { DoneForYou } from "./brief.doneforyou";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
 import {
@@ -283,11 +283,26 @@ function PersonalMorning({
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
             />
-            {/* The agent's own changes stand with the work, where a reader
-                keeps or undoes them, not in the rail beside it. */}
-            <BriefChanges />
+            {/* What Margince finished stands with the work, where a reader
+                reviews or undoes it, not in the rail beside it. */}
+            <DoneForYou
+              completed={
+                <MagicPanel
+                  lanes={["done"]}
+                  embedded
+                  visibleReceiptIds={
+                    handled.isSuccess && !handled.isRefetchError
+                      ? handled.data.receipts
+                          ?.filter(isReviewableReceipt)
+                          .map((receipt) => receipt.id)
+                      : []
+                  }
+                />
+              }
+            />
             <BriefSuggestions />
             <MagicPanel
+              lanes={WAITING_LANES}
               visibleApprovalIds={day?.focus?.items
                 .filter(
                   (item) =>
@@ -295,13 +310,6 @@ function PersonalMorning({
                     item.actions.includes("decide"),
                 )
                 .map((item) => item.id)}
-              visibleReceiptIds={
-                handled.isSuccess && !handled.isRefetchError
-                  ? handled.data.receipts
-                      ?.filter(isReviewableReceipt)
-                      .map((receipt) => receipt.id)
-                  : []
-              }
             />
           </>
         }
@@ -386,14 +394,15 @@ function FocusDetails({
     );
   }
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer" fit>
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t("brief.focus.context")}
         </Heading>
       </DrawerHead>
-      <DrawerBody>
-        <WorklistPane item={item} />
+      <DrawerBody className="form-stack">
+        {/* The drawer covers the card, so it answers the row in place. */}
+        <WorklistPane item={item} answer />
       </DrawerBody>
     </Modal>
   );

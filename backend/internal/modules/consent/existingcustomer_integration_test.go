@@ -242,9 +242,10 @@ func (e *resolveEnv) marketingVerdict(t *testing.T, marketing MarketingContext) 
 	t.Helper()
 	purpose := PurposeRow{ID: e.purposeID(t, "newsletter").String(), Key: "newsletter", Label: "Newsletter", Class: ClassMarketing}
 	var out Verdict
+	asOf := time.Now()
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = GuardVerdictForContact(e.ctx, tx, e.contact.String(), purpose, time.Now().Add(-defaultReplyWindow), marketing)
+		out, err = GuardVerdictForContact(e.ctx, tx, e.contact.String(), purpose, asOf.Add(-defaultReplyWindow), asOf, marketing)
 		return err
 	}); err != nil {
 		t.Fatalf("reading the verdict: %v", err)

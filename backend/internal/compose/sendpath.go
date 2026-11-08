@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -210,7 +211,13 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 // this is composition naming a dependency, every caller assigns it into the
 // seam itself, and widening here would only hide which gate was built.
 func consentGateFor(pool *pgxpool.Pool) *consent.Gate {
-	return consent.NewGate(consent.NewStore(InstallationDB(pool))).
+	return consentGateOn(InstallationDB(pool))
+}
+
+// consentGateOn is consentGateFor for a caller that holds the database handle
+// rather than the pool.
+func consentGateOn(db *database.DB) *consent.Gate {
+	return consent.NewGate(consent.NewStore(db)).
 		// Where the installation is established, which selects the messaging
 		// rules a decision is taken under. Injected rather than read directly
 		// because the setting belongs to identity and consent may not import a
@@ -235,28 +242,8 @@ type lateApprovalEffect struct {
 	precheck func(*activities.Store, *consent.Gate, activities.DeliveryStager) approvals.ReleasePrecheck
 }
 
-// lateApprovalEffects are the approve-side pairs that cannot be registered with
-// the others, because they send.
-//
-// The list beside the rest (approvalsServiceWithEffects) runs when the approvals
-// surface is built, which is BEFORE server options assemble the send path — so
-// an executor registered there would send through a store with no signature, no
-// unsubscribe linker and no send authority. It would work, and put out mail
-// visibly worse than the same human's own send, with nothing failing to say so.
-//
-// A table rather than a call, so the things that must agree cannot drift:
-// applySendPath registers exactly these kinds and the version-pin census gate
-// enumerates exactly these keys. A waiver for a late-registered kind would
-// otherwise read as a waiver for a kind nothing stages.
-// registerLateApprovalEffects puts the send-dependent releases onto ONE approvals
-// engine, and is called once per engine that can DECIDE.
-//
-// There are two of those, not one: the inbox handlers and the governed tool
-// surface, which composes its own engine (registry.go). A kind registered on
-// only one of them is the silent half-effect this whole file exists to prevent,
-// wearing a different face — the decision commits, the card reads approved, and
-// the message it was holding is never sent. So the loop lives here and the
-// callers differ only in which engine they hand it.
+// registerLateApprovalEffects waits for send-path wiring before registering
+// releases. HTTP and tool decisions share these kinds and their prechecks.
 func registerLateApprovalEffects(svc *approvals.Service, pool *pgxpool.Pool, send SendPath) {
 	send = send.withPoolDefaults(pool)
 	store, gate := sendStore(pool, send), consentGateFor(pool)

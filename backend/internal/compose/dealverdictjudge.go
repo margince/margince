@@ -152,30 +152,15 @@ func (p dealVerdictPass) apply(
 	return written, nil
 }
 
+// applyAsOwner writes as the owner's agent, bound only in the write's own
+// transaction. An owner who left by then drops every change as no owner.
 func (p dealVerdictPass) applyAsOwner(
 	ctx context.Context, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
 ) ([]string, string, error) {
-	ownerCtx, err := ownersAgent(ctx, p.users, c.owner, marginceActorID)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		outcomes := make([]string, len(changes))
-		for i := range outcomes {
-			outcomes[i] = droppedNoOwner
-		}
-		return outcomes, "", nil
-	}
-	if err != nil {
-		return nil, "", err
-	}
-	return p.applyAs(ownerCtx, c, read, changes)
-}
-
-// applyAs writes as an owner's agent bound before the write. The owner may
-// leave or lose the deal grant in between, so the write binds them again.
-func (p dealVerdictPass) applyAs(
-	ownerCtx context.Context, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
-) ([]string, string, error) {
+	bind := ownersAgentTx(p.users, c.owner, marginceActorID)
+	var ownerLeft bool
 	var written string
-	result, err := p.deals.ApplyVerdict(ownerCtx, deals.VerdictInput{
+	result, err := p.deals.ApplyVerdict(ctx, deals.VerdictInput{
 		DealID: ids.From[ids.DealKind](c.deal), Owner: c.owner, Seen: read.state.Seen, Changes: changes,
 		Allowed: func(ctx context.Context, tx pgx.Tx, correction string) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, c.owner, deals.VerdictSwitch(correction))
@@ -191,8 +176,17 @@ func (p dealVerdictPass) applyAs(
 			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
 				Scan(&written)
 		},
-		AsOwner: ownersAgentTx(p.users, c.owner, marginceActorID),
+		AsOwner: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
+			actor, err := bind(ctx, tx)
+			ownerLeft = errors.Is(err, apperrors.ErrNotFound)
+			return actor, err
+		},
 	})
+	if ownerLeft {
+		for i := range result.Outcomes {
+			result.Outcomes[i] = droppedNoOwner
+		}
+	}
 	return result.Outcomes, written, err
 }
 

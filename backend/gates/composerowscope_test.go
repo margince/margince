@@ -885,7 +885,7 @@ func projectedBytes(sql string) []bool {
 // something other than the referenced record itself.
 func boundToCallerArgument(sql, column string) bool {
 	return compiledPattern(
-		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
+		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?(?:\$\d+|@[A-Za-z_][\w]*)`).MatchString(sql)
 }
 
 // selectSpan locates one SELECT: [from, to) is its projection, and [to, stop)

@@ -23,6 +23,8 @@ afterEach(() => {
 function reader(grants: ("read" | "update")[]) {
   stubWithSession(
     {
+      "GET /privacy/notice-case-reviews/case-source/source": () =>
+        jsonResponse({ items: [] }),
       "GET /privacy/notice-case-reviews/case-source": () =>
         jsonResponse({
           id: "case-source",
@@ -35,7 +37,7 @@ function reader(grants: ("read" | "update")[]) {
           allowed_routes: [],
         }),
     },
-    { privacy_request: grants },
+    { privacy_request: grants, contact: ["read"] },
   );
   render(
     <StoryProviders>

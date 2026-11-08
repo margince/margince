@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -66,7 +67,8 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 	// written, so the hold cannot ride inside it. Set only by the branch that
 	// rolls back; empty means nothing was deferred.
 	var deferred string
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		out, observed, deferred = FireOutcome{}, 0, ""
 		claimed, found, err := s.claimForFire(ctx, tx, id)
 		if err != nil {
 			return err
@@ -93,7 +95,7 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 		if err != nil {
 			return err
 		}
-		reason, contextErr := changedScheduledContext(ctx, tx, in, origin.anchor.UUID, claimed.CreatedAt)
+		reason, contextErr := changedScheduledContext(ctx, tx, in, origin.anchor.UUID, claimed.CreatedAt, claimed.RepliesSince)
 		if contextErr != nil {
 			if held, known := holdReasonFor(contextErr); known {
 				out.Held = held
@@ -211,11 +213,14 @@ const UnobservedVersion int64 = -1
 
 // claimedSend is one scheduled row locked for firing.
 type claimedSend struct {
-	CreatedAt   time.Time
-	ScheduledAt time.Time
-	OriginKind  string
-	Anchor      *ids.UUID
-	OriginLinks []byte
+	CreatedAt      time.Time
+	RepliesSince   time.Time
+	ScheduledBy    ids.UUID
+	PendingDraftID *ids.UUID
+	ScheduledAt    time.Time
+	OriginKind     string
+	Anchor         *ids.UUID
+	OriginLinks    []byte
 	// AlsoLinks are the records a reply was told to file itself under beyond
 	// its anchor's. Frozen at composition because nothing at fire could work
 	// out which ones the caller meant.
@@ -273,7 +278,8 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT scheduled_at, origin_kind, anchor_activity_id,
-		       origin_links, also_links, payload, payload_version, version, created_at
+		       origin_links, also_links, payload, payload_version, version, created_at,
+		       coalesce((payload->>'replies_reviewed_at')::timestamptz, created_at)
 		  FROM scheduled_send
 		 WHERE id = $1 AND status = 'scheduled'
 		 FOR UPDATE`, id)
@@ -291,7 +297,7 @@ func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claim
 	}
 	var c claimedSend
 	if err := rows.Scan(&c.ScheduledAt, &c.OriginKind, &c.Anchor,
-		&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.CreatedAt); err != nil {
+		&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.CreatedAt, &c.RepliesSince); err != nil {
 		return claimedSend{}, false, fmt.Errorf("scheduled send: claiming: %w", err)
 	}
 	return c, true, nil

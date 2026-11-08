@@ -833,6 +833,9 @@
     "describe_router_actions": {
       "checks": []
     },
+    "describe_views": {
+      "checks": []
+    },
     "direct_communication_send": {
       "checks": [
         "activity.create",
@@ -1524,6 +1527,13 @@
         "privacy_request.read"
       ]
     },
+    "get_notice_source_evidence": {
+      "checks": [
+        "activity.read",
+        "contact.read",
+        "privacy_request.read"
+      ]
+    },
     "get_ownership_offer": {
       "checks": []
     },
@@ -1798,7 +1808,6 @@
     "launch_sales_initiative": {
       "checks": [
         "deal.read",
-        "lead.read",
         "sales_initiative.update"
       ]
     },
@@ -1812,6 +1821,11 @@
     },
     "lift_counterparty_hold": {
       "checks": []
+    },
+    "lift_lead_suppression": {
+      "checks": [
+        "lead.update"
+      ]
     },
     "link_company_contacts": {
       "checks": [
@@ -2045,6 +2059,11 @@
       ]
     },
     "list_lead_manual_signals": {
+      "checks": [
+        "lead.read"
+      ]
+    },
+    "list_lead_stops": {
       "checks": [
         "lead.read"
       ]
@@ -2499,6 +2518,11 @@
         "user_admin.delete",
         "user_admin.read",
         "user_admin.update"
+      ]
+    },
+    "preview_notice_source": {
+      "checks": [
+        "privacy_request.read"
       ]
     },
     "preview_send_authorization": {

@@ -17,9 +17,9 @@ To invite a colleague to Margince, open **Settings → Members** and choose **In
 1. Open the account menu at the top right and choose **Settings**, then **Members**.
 2. Choose **Invite member**.
 3. Fill **Email** (required) and **Full name** (required).
-4. Pick a **Role** and tick any **Teams** they should join.
+4. Pick a **Role** and tick any **Teams** they should join. If your company has more than one legal entity, also pick the **Legal entity** they work for. It starts on your main company.
 5. Check the **User access** preview, then choose **Invite**.
-You need the permission to manage users. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
+You need the permission to manage users. To pick the legal entity you also need the permission to change a legal entity. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### What if the invitation email did not arrive?
@@ -57,7 +57,7 @@ If another administrator changed the account while you were editing, choose **Re
 
 To stop a colleague signing in while keeping their account in the list, choose **Deactivate** in their actions menu. You can bring it back, and it frees their seat.
 
-To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming.
+To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming. Private lists move to that colleague too. That member’s personal saved views are archived when the account is removed.
 
 Personal alerts are archived. Private contacts and companies move to the receiving colleague. Activity reader lists stay the same; activity already shared with the readers of a record may become visible to its new owner. The original names stay in history.
 
@@ -221,7 +221,7 @@ A responsibility role controls nothing:
 - It does not change the owner. Nothing links the owner to the **Account manager** role, so the owner may hold it, or someone else may.
 - A role you turn off stays on the records that carry it, but nobody can be given it again.
 
-You can give a responsibility to a colleague who was invited but has not signed in yet. The **Who** search marks them "Invited, not signed in yet". It finds a name with or without its marks, so "Thang" finds "Thắng". Only a colleague with a Margince account can be given a responsibility, so ask an admin to invite anyone the search does not find.
+You can give a responsibility to an active colleague. The **Who** search finds a name with or without its marks, so "Thang" finds "Thắng". An invited colleague shows in the search once they set a password through the invitation link. Ask an admin to invite anyone who needs an account, or to check the account of someone the search does not find.
 
 Margince comes with these responsibility roles: **Account manager**, **Sales engineer**, **Delivery lead**, **Project manager**, **Technical contact**, **Executive sponsor** and **Support team**. Admin and Ops can rename them and add more. **Settings → Responsibility roles** marks each one **Built-in** when it comes with Margince, or **Custom** when someone added it.
 

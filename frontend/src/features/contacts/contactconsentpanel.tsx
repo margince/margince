@@ -3,6 +3,7 @@ import { Ban, Check, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ContactStops } from "../../components/stops";
 import { Badge, Button, Modal, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -15,7 +16,6 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
 import { scopedConsentWord } from "./contactreadings";
-import { ContactStops } from "./contactstops";
 import {
   RetractAcquisitionRequest,
   RetractRecordedRequest,

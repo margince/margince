@@ -19,7 +19,16 @@ func (e *Eraser) purgePartyProjections(ctx context.Context, tx pgx.Tx, emails []
 		return e.purgeRawCaptures.PurgePartySourcesForEmailsTx(ctx, tx, emails)
 	}
 	var held bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM capture_party_source WHERE recipients && ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address) OR policy_addresses && ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address)) OR EXISTS(SELECT 1 FROM capture_thread_verdict v, unnest(v.seen_addresses) seen WHERE lower(seen) = ANY(ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address)))`, pgx.NamedArgs{"emails": emails}).Scan(&held); err != nil {
+	if err := tx.QueryRow(ctx, `WITH erased AS (
+ SELECT ARRAY(SELECT lower(btrim(address)) FROM unnest(@emails::text[]) address) AS addresses)
+ SELECT EXISTS(SELECT 1 FROM capture_party_source p
+   WHERE p.recipients && erased.addresses OR p.policy_addresses && erased.addresses)
+ OR EXISTS(SELECT 1 FROM capture_thread_verdict v, unnest(v.seen_addresses) seen
+   WHERE lower(seen)=ANY(erased.addresses))
+ OR EXISTS(SELECT 1 FROM capture_test_mailbox_sent,
+   jsonb_array_elements_text(to_addresses || cc_addresses) address
+   WHERE lower(btrim(address))=ANY(erased.addresses))
+ FROM erased`, pgx.NamedArgs{"emails": emails}).Scan(&held); err != nil {
 		return err
 	}
 	if held {
@@ -36,4 +45,18 @@ func (e *Eraser) purgeTextCopies(ctx context.Context, tx pgx.Tx, activities []id
 		return nil
 	}
 	return e.purgeRawCaptures.PurgeTextCopiesTx(ctx, tx, activities)
+}
+
+// purgeTextNaming empties what other modules copied that names the subject,
+// such as a voice sample greeting them. A replay reads the tombstone name, which
+// names nobody. Every eraser compose builds for a request wires the purger.
+func (e *Eraser) purgeTextNaming(ctx context.Context, tx pgx.Tx, keys subjectKeys) error {
+	if e.purgeRawCaptures == nil {
+		return nil
+	}
+	name := keys.displayName
+	if name == erasedName {
+		name = ""
+	}
+	return e.purgeRawCaptures.PurgeTextNamingTx(ctx, tx, name, keys.emails)
 }

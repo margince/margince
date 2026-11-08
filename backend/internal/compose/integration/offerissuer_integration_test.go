@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -255,8 +256,9 @@ func TestAnEntityArchivedBeforeTheSendIssuesNothing(t *testing.T) {
 	dealID := e.SeedDeal(t, "Archived issuer deal", pipeline, open, &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
 	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{})
-	// Archiving needs the entity empty, and the rep has moved on.
-	if err := e.Contacts.AssignLegalEntityMember(e.Admin(), ids.From[ids.LegalEntityKind](defaultEntityID(t, e)),
+	// Archiving needs the entity empty, and the rep has moved on. Leaving an
+	// entity carries its retention floor, as compose wires it.
+	if err := e.Contacts.WithFloorCarry(compose.EntityFloorCarry(e.Pool)).AssignLegalEntityMember(e.Admin(), ids.From[ids.LegalEntityKind](defaultEntityID(t, e)),
 		ids.From[ids.UserKind](e.Rep1)); err != nil {
 		t.Fatalf("move the rep off Vienna: %v", err)
 	}

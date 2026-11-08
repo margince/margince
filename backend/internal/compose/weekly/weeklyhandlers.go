@@ -105,6 +105,7 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		NarratedAt:     review.NarratedAt,
 		// Always sent, so a client can tell a withheld zero from a counted one.
 		MeetingsWithheld: &review.MeetingsWithheld,
+		LeadsWithheld:    &review.LeadsWithheld,
 		Counts:           countsToWire(review.Counts),
 		Pipeline:         pipelineToWire(review.Money),
 		Deals:            deals,
@@ -116,6 +117,7 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		out.Prior = &crmcontracts.WeeklyReviewPrior{
 			LocalWeekStart: openapi_types.Date{Time: review.Prior.LocalWeekStart},
 			Counts:         countsToWire(review.Prior.Counts),
+			LeadsWithheld:  &review.Prior.LeadsWithheld,
 			Pipeline:       pipelineToWire(review.Prior.Money),
 		}
 	}

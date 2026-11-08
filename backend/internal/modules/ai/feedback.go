@@ -129,9 +129,8 @@ type Verdict struct {
 	// answered. Nil where the verdict does not say: every row written before
 	// the column existed, and any client that sends none.
 	valueCapturedAt *time.Time
-	// valueShown is the value itself, as the client rendered it — the identity
-	// of what the human was looking at. The stamp above ranks two submissions;
-	// this one answers whether a verdict is about the value in hand.
+	// valueShown identifies the source value behind a displayed correction.
+	// Readers compare it with the stored source value.
 	valueShown     *string
 	verdict        string
 	correctedValue *string
@@ -352,39 +351,39 @@ func upsertVerdict(ctx context.Context, tx pgx.Tx, in RecordInput, key, captured
 		              corrected_value = EXCLUDED.corrected_value,
 		              note = EXCLUDED.note,
 		              captured_by = EXCLUDED.captured_by,
-		              -- The NEW decision's value, including where it is null:
-		              -- a re-decision from a client that sends none is about
-		              -- whatever that client was looking at, and keeping the
-		              -- previous stamp would attach the old answer's subject
-		              -- to a new answer nobody made about it.
 		              value_captured_at = EXCLUDED.value_captured_at,
-		              value_shown = EXCLUDED.value_shown,
+		              value_shown = CASE
+		                WHEN ai_feedback.verdict = 'corrected'
+		                 AND EXCLUDED.verdict IN ('corrected', 'suppressed')
+		                 AND ai_feedback.corrected_value = EXCLUDED.value_shown
+		                 AND (ai_feedback.value_captured_at = EXCLUDED.value_captured_at
+		                   OR (ai_feedback.value_shown IS NULL
+		                     AND ai_feedback.updated_at >= EXCLUDED.value_captured_at))
+		                THEN ai_feedback.value_shown
+		                ELSE EXCLUDED.value_shown
+		              END,
 		              version = ai_feedback.version + 1,
 		              updated_at = now()
-		-- A SUBMISSION FROM A STALE PAGE DOES NOT REPLACE ONE ABOUT THE VALUE
-		-- THAT STANDS. Both stamps are the server's own, so they rank: a page
-		-- that rendered the newer value carries the later one. Without this a
-		-- correction typed against a value that has since moved silently
-		-- overwrites the verdict a colleague just recorded about the current
-		-- one, and that verdict is gone.
-		--
-		-- Either side missing a stamp is not a ranking, so the write proceeds:
-		-- a client that names no value is deciding about whatever it had, and
-		-- rows written before this column existed cannot be compared with
-		-- anything.
-		WHERE ai_feedback.value_captured_at IS NULL
+		-- An older page must not replace a newer source or a correction
+		-- made since that page opened.
+		WHERE (ai_feedback.value_captured_at IS NULL
 		   OR EXCLUDED.value_captured_at IS NULL
-		   OR EXCLUDED.value_captured_at >= ai_feedback.value_captured_at
+		   OR EXCLUDED.value_captured_at >= ai_feedback.value_captured_at)
+		  AND (ai_feedback.verdict <> 'corrected'
+		   OR ai_feedback.value_shown IS NULL
+		   OR ai_feedback.value_captured_at IS DISTINCT FROM EXCLUDED.value_captured_at
+		   OR EXCLUDED.value_shown IS NULL
+		   OR EXCLUDED.value_shown = ai_feedback.value_shown
+		   OR (EXCLUDED.value_shown = ai_feedback.corrected_value AND EXCLUDED.verdict <> 'confirmed'))
+		  AND (EXCLUDED.verdict <> 'confirmed' OR ai_feedback.verdict <> 'corrected'
+		   OR ai_feedback.value_shown IS NOT NULL
+		   OR ai_feedback.corrected_value IS DISTINCT FROM EXCLUDED.value_shown
+		   OR EXCLUDED.value_captured_at > ai_feedback.updated_at)
 		RETURNING id`,
 		in.SubjectType, in.SubjectID, in.ClaimKind, key,
 		in.Verdict, in.CorrectedValue, in.Note, capturedBy, in.ValueCapturedAt, in.ValueShown,
 	).Scan(&id); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// The refused write above. The row that stands is about a LATER
-			// value than this submission named, so this decision is about a
-			// sentence nobody is looking at any more — and saying so is the
-			// only honest answer: applying it would correct the wrong value,
-			// and swallowing it would tell a human their correction landed.
 			return ids.Nil, fmt.Errorf("ai: this claim moved on while the verdict was being made: %w", ErrValueMovedOn)
 		}
 		return ids.Nil, fmt.Errorf("ai: recording a human's verdict on a derived claim: %w", err)

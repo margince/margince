@@ -43,6 +43,10 @@ replace example.com/acme-margince/addons/notes => ./addons/notes
 - **`go mod tidy` marks the extensions `// indirect`**, since only the generated code imports them. Do not run it
   on an instance.
 
+Demo and example units carry `// margince:development-only` at the end of their line.
+Normal builds leave them out. Test commands and `make gen` pass `-include-development`, as does `make dev`.
+[Build a custom Margince](build-a-custom-margince.md) shows the production and development commands.
+
 To turn an extension on or off in this repository, add or remove its two lines in `instance/go.mod`. A gate
 checks that the file lists every folder under `extensions/`, and no other.
 

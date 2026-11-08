@@ -11,11 +11,7 @@ fixture:
 expect:
   outcome: accepted
   answer: {}
-  rubric: >
-    The picture shows a sun over a green field and no conversation. The
-    correct reply reports every field as not stated. Score any message, name
-    or number at all as invented.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The right answer is no chat, and the check fails any chat text, name or
+    number the reading offers, so a judge has nothing left to weigh.

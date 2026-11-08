@@ -43,7 +43,7 @@ func stageSenderCard(t *testing.T, privateOwner func(*integration.Env) ids.UUID)
 	disposition := seedPendingDisposition(t, e, privateSender, "brandt.example", mail)
 	// A card is offered for a sender the verdict pass could not settle.
 	e.WsExec(t, `UPDATE capture_pending_counterparty SET status = 'unsure' WHERE id = $1`, disposition)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	staged, err := stageCounterpartyReview(e.Admin(), svc, approvalSummaryByLang["en"], capture.PendingCounterparty{
 		ID: disposition, Email: privateSender, Domain: "brandt.example", ActivityID: mail, OwnerID: e.Rep1,
 	})

@@ -245,7 +245,7 @@ func eraseCapabilities(
 	if err != nil {
 		t.Fatalf("opening the erasure: %v", err)
 	}
-	if err := deleteConsentCapabilities(ctx, tx, contact, nil, "test"); err != nil {
+	if err := deleteConsentCapabilities(ctx, tx, contact, nil, nil, "test"); err != nil {
 		//craft:ignore swallowed-errors the rollback abandons a transaction the Fatalf below is already failing the test on; its own error cannot change that outcome
 		_ = tx.Rollback(ctx)
 		t.Fatalf("erasing the subject's capabilities: %v", err)

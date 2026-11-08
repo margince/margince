@@ -319,8 +319,20 @@ export function useComposeFields({
     setHtml(saved.html);
     setContext(saved.context);
     setSendAt(saved.sendAt);
+    const state = saved.editorState;
+    setIntent(state?.intent ?? "");
+    setServedBody(state?.served_body ?? "");
     setDraftRef(null);
-    setProvenance(null);
+    setProvenance(
+      state?.ai_generated
+        ? {
+            ai_generated: true,
+            ai_disclosure: state.ai_disclosure,
+            voice_profile_version: state.voice_profile_version,
+            voice_degraded: state.voice_degraded ?? false,
+          }
+        : null,
+    );
   };
 
   const snapshot = (): FieldsSnapshot => ({
@@ -364,6 +376,7 @@ export function useComposeFields({
   };
 
   return {
+    editorState: editorStateOf({ intent, provenance, servedBody }),
     to,
     setTo,
     cc,
@@ -412,3 +425,17 @@ export function useComposeFields({
 }
 
 export type ComposeFields = ReturnType<typeof useComposeFields>;
+
+function editorStateOf(
+  fields: Pick<FieldsSnapshot, "intent" | "provenance" | "servedBody">,
+): components["schemas"]["MailDraftEditorState"] {
+  return {
+    intent: fields.intent,
+    ai_generated: fields.provenance?.ai_generated ?? false,
+    ai_disclosure: fields.provenance?.ai_disclosure ?? undefined,
+    voice_profile_version:
+      fields.provenance?.voice_profile_version ?? undefined,
+    voice_degraded: fields.provenance?.voice_degraded ?? false,
+    served_body: fields.servedBody,
+  };
+}

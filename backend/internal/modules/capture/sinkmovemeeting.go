@@ -104,8 +104,12 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, slot c
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, err := s.mailboxRunAllowedTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		var id ids.ActivityID
-		err := tx.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 			SELECT id FROM activity
 			 WHERE source_system = $1 AND source_id = $2
 			   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL`,
@@ -135,8 +139,16 @@ func (s *Sink) moveOnReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
 	fields, ok := rec.Fields.(ActivityFields)
-	if s.moveMeeting == nil || viaIdentity || !ok || fields.Kind != meetingKind || fields.OccurredAt.IsZero() {
+	if s.moveMeeting == nil || !ok || fields.Kind != meetingKind || fields.OccurredAt.IsZero() {
 		return nil
+	}
+	if viaIdentity {
+		// An occurrence of a series keeps its identity when moved, so this
+		// calendar's own row is reached through it too, and moves.
+		own, found, err := ownLiveMeetingTx(ctx, tx, rec.NaturalKey, actorUserID(ctx))
+		if err != nil || !found || own != id {
+			return err
+		}
 	}
 	_, err := s.moveMeeting(ctx, tx, id, connector.MeetingSlot{
 		Start: fields.OccurredAt, Duration: StorableDuration(fields.DurationSeconds), AllDay: fields.DateOnly,
@@ -163,9 +175,10 @@ func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields A
 }
 
 // settleMeetingReplay is what a proven replay of a meeting still owes the row.
-// That is its identity, guests, documents, current start and host. Only a replay of this calendar's own key moves it. A row reached through
-// the cross-door identity is another door's filing. A second calendar on the old
-// time would move it back. Either replay may hand the host to the organizer.
+// That is its identity, guests, documents, current start and host. Only this
+// calendar's own row moves. Another door's row reached through the cross-door
+// identity stays, or a second calendar on the old time would move it back.
+// Either replay may hand the host to the organizer.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {

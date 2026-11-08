@@ -138,6 +138,7 @@ type Handlers struct {
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).
 	installationBrand InstallationBrand
+	analyticsStartup  AnalyticsStartup
 	// refusedDealFilters and refusedLeadFilters name the deal and lead list
 	// filters the caller is refused. Nil omits them (meparts.go).
 	refusedDealFilters RefusedFilters
@@ -360,7 +361,7 @@ func (h Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 // never binds the session identity read here (serveAsAgent below), so an agent
 // arrives without one and is answered 401 rather than a partial profile — which
 // is why the contract's passport claim is deprecated as permanently null.
-func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request, params crmcontracts.GetCurrentPrincipalParams) {
 	id, ok := identityFrom(r.Context())
 	if !ok {
 		httperr.Unauthorized(w, r, "no session")
@@ -374,6 +375,9 @@ func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	if params.Prepare != nil && *params.Prepare == crmcontracts.GetCurrentPrincipalParamsPrepareAnalytics && h.analyticsStartup != nil {
+		me.AnalyticsStartup = h.readAnalyticsStartup(actorCtx(r.Context(), id))
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	httperr.WriteJSON(w, http.StatusOK, me)

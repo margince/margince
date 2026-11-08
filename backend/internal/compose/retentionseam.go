@@ -69,15 +69,23 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 // The voice samples read from sent mail are copies of the same text, owned by
 // ai. They ride this seam so every path that destroys the original empties them.
 func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
-	return capturedTextPurger{PendingStore: capture.NewPendingStore(db)}
+	return capturedTextPurger{PendingStore: capture.NewPendingStore(db), db: db}
 }
 
 // capturedTextPurger is capture's purge plus the copies ai holds.
-type capturedTextPurger struct{ *capture.PendingStore }
+type capturedTextPurger struct {
+	*capture.PendingStore
+	db *database.DB
+}
 
 // PurgeTextCopiesTx empties the voice samples read from the activities.
 func (capturedTextPurger) PurgeTextCopiesTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
 	return ai.EraseSamplesCopiedFromTx(ctx, tx, activityIDs, time.Now().UTC())
+}
+
+// PurgeTextNamingTx empties the voice samples that name an erased subject.
+func (capturedTextPurger) PurgeTextNamingTx(ctx context.Context, tx pgx.Tx, fullName string, emails []string) error {
+	return ai.EraseSamplesNamingTx(ctx, tx, fullName, emails, time.Now().UTC())
 }
 
 //nolint:ireturn // privacy owns the purge seam; compose supplies the vault adapter.

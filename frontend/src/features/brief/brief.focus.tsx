@@ -18,7 +18,7 @@ import { useMe } from "../../lib/session";
 import { briefContextTitle } from "../../lib/worklistcopy";
 import { useWriteTo } from "../../lib/writeto";
 import type { WorklistItem } from "../worklist/worklist.queries";
-import { WorklistRow } from "../worklist/worklist.row";
+import { OneRowWrite, useRowDone, WorklistRow } from "../worklist/worklist.row";
 import { useListed } from "../worklist/worklist.row.captions";
 import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
 
@@ -97,55 +97,57 @@ export function Triage({
             {/* Keyed by the row, so pressing another one mounts a new card and
                 replays its arrival. The press is answered on the card. */}
             <div ref={takeFocus} tabIndex={-1} className="brief-triage-frame">
-              <Card
-                as="article"
-                className={
-                  told
-                    ? "brief-triage-lead"
-                    : "brief-triage-lead brief-triage-lead-asks"
-                }
-              >
-                <TaskTick item={lead} />
-                <div className="brief-triage-body">
-                  <div className="brief-triage-lead-head">
-                    {lead.email_summary && (
-                      <Heading size="small" as="h3">
-                        {taskName(lead, viewer, t, locale)}
-                      </Heading>
-                    )}
-                    <TaskMeta item={lead} link={listed} />
-                    {inbox && (
-                      <p className="t-caption brief-triage-facts">
-                        {t(`visibility.${inbox}`)}
-                      </p>
-                    )}
+              <OneRowWrite item={lead}>
+                <Card
+                  as="article"
+                  className={
+                    told
+                      ? "brief-triage-lead"
+                      : "brief-triage-lead brief-triage-lead-asks"
+                  }
+                >
+                  <LeadTick item={lead} />
+                  <div className="brief-triage-body">
+                    <div className="brief-triage-lead-head">
+                      {lead.email_summary && (
+                        <Heading size="small" as="h3">
+                          {taskName(lead, viewer, t, locale)}
+                        </Heading>
+                      )}
+                      <TaskMeta item={lead} link={listed} />
+                      {inbox && (
+                        <p className="t-caption brief-triage-facts">
+                          {t(`visibility.${inbox}`)}
+                        </p>
+                      )}
+                    </div>
+                    <WorklistRow
+                      // Personal ordering is the queue's, not the focus projection's.
+                      allowPin={false}
+                      item={lead}
+                      position={at + 1}
+                      owner=""
+                      onOpenEmail={onOpenEmail}
+                      onReview={() =>
+                        navigate(
+                          { screen: "worklist" },
+                          new Map([["filter", lead.category]]),
+                        )
+                      }
+                      context={cardVerbs}
+                      quiet={drafts}
+                      // The card around this row says whose it is, why it is
+                      // here and where it stands in the day, each once.
+                      framed
+                    />
                   </div>
-                  <WorklistRow
-                    // Personal ordering is the queue's, not the focus projection's.
-                    allowPin={false}
-                    item={lead}
-                    position={at + 1}
-                    owner=""
-                    onOpenEmail={onOpenEmail}
-                    onReview={() =>
-                      navigate(
-                        { screen: "worklist" },
-                        new Map([["filter", lead.category]]),
-                      )
-                    }
-                    context={cardVerbs}
-                    quiet={drafts}
-                    // The card around this row says whose it is, why it is
-                    // here and where it stands in the day, each once.
-                    framed
-                  />
-                </div>
-              </Card>
+                </Card>
+              </OneRowWrite>
             </div>
           </li>
         ) : (
           <li key={identity(item)}>
-            <TaskCard
+            <QueuedCard
               item={item}
               onOpen={() => {
                 pressed.current = true;
@@ -157,4 +159,17 @@ export function Triage({
       )}
     </ol>
   );
+}
+
+/** A card waiting behind the one in hand, with Done on its tick where offered. */
+function QueuedCard({
+  item,
+  onOpen,
+}: Readonly<{ item: WorklistItem; onOpen: () => void }>) {
+  return <TaskCard item={item} onOpen={onOpen} rowDone={useRowDone(item)} />;
+}
+
+/** The tick on the card in hand, sharing the one write its row's verbs use. */
+function LeadTick({ item }: Readonly<{ item: WorklistItem }>) {
+  return <TaskTick item={item} rowDone={useRowDone(item)} />;
 }

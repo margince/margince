@@ -8,6 +8,7 @@ import {
   bookingSlots,
 } from "../src/testing/book.testkit";
 import { copy } from "./copy";
+import { contact360 } from "./mockapi/records";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";
 
@@ -16,7 +17,15 @@ test.beforeEach(async ({ page, context }) => {
   await page.clock.setFixedTime(new Date("2026-09-27T06:00:00Z"));
 });
 
-test("Meetings opens a booking for the contact", async ({ page }) => {
+test("Meetings opens a booking for the contact", async ({ page, context }) => {
+  await context.route("**/v1/contacts/p-anna/360", (route) =>
+    route.fulfill({
+      json: {
+        ...contact360,
+        contact: { ...contact360.contact, attachable: true },
+      },
+    }),
+  );
   await page.goto("/#/contacts/p-anna/meetings");
   await page
     .getByRole("button", { name: de["scheduling.bookContact"] })
@@ -149,7 +158,7 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await page.getByLabel(de["scheduling.agenda"]).fill("Discuss scope");
   const settingsPromise = page.waitForEvent("popup");
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
-  const settings = await settingsPromise;
+  const settings = await openedAt(settingsPromise, /settings\/meetings/);
   await expect(
     settings.getByRole("heading", {
       name: de["scheduling.calendarTitle"],

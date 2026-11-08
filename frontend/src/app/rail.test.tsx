@@ -531,7 +531,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
     await user.click(screen.getByRole("button", { name: "More" }));
 
-    const pressed = target();
+    const pressed = await waitFor(target);
     await user.click(pressed);
     expect(container.querySelector(".railmenu")).toBeNull();
     expect(container.querySelector(".railscrim")).toBeNull();

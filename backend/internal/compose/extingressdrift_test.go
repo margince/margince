@@ -46,10 +46,11 @@ import (
 // not supply, each with the reason it is absent. A waiver is a DECISION, so it
 // is spelled out rather than a name in a list.
 var waivedEnvelopeFields = gatekit.Waive(map[string]string{
-	"EntityType": "the port stamps it: one kind is landable, and a Record has one payload",
-	"Source":     "core-stamped from the invoking unit and its DECLARED source, so a unit cannot attribute its records to another unit or to a core connector",
-	"CapturedBy": "core-stamped, and equal to the acting principal's id — which is what makes capture's own 'a connector cannot claim to be another one' check pass by construction",
-	"NaturalKey": "half core-derived: the published Record carries the provider's own Key and the port pairs it with the derived source system",
+	"CalendarAnswer": "the core calendar connector attests its own mailbox owner response. An extension cannot assert a mailbox identity; nil leaves ordinary participant responses subject to the existing capture checks",
+	"EntityType":     "the port stamps it: one kind is landable, and a Record has one payload",
+	"Source":         "core-stamped from the invoking unit and its DECLARED source, so a unit cannot attribute its records to another unit or to a core connector",
+	"CapturedBy":     "core-stamped, and equal to the acting principal's id — which is what makes capture's own 'a connector cannot claim to be another one' check pass by construction",
+	"NaturalKey":     "half core-derived: the published Record carries the provider's own Key and the port pairs it with the derived source system",
 	"Links": "deliberately absent — a record naming the core rows it attaches to would make the link-visibility probe a per-row existence oracle over the scope the ingest runs under. " +
 		"What a message is about is decided by the core's counterparty resolution",
 	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +

@@ -422,7 +422,9 @@ func typeString(expr ast.Expr) string {
 var listSortHandlerScope = gatekit.Scope{
 	Roots:   []string{"internal"},
 	Subject: func(_ string, file *ast.File) bool { return declaresAnHTTPHandler(file) },
-	Exempt:  gatekit.Waive(map[string]string{}),
+	Exempt: gatekit.Waive(map[string]string{
+		"tools/fakegmail/server.go": "a stand-in for Google's API in local load tests; it serves no operation of the contract",
+	}),
 }
 
 func declaresAnHTTPHandler(file *ast.File) bool {

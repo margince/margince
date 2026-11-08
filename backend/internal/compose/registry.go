@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -94,7 +95,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	opts = append(opts, withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
-		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))),
+		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
@@ -105,6 +106,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
 	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
+	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(readViews(agentPolicies)))
 	agents.RegisterRouteVerbs(registry, declaredRouteVerbs(agentPolicies), routeThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db)})
@@ -156,7 +158,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
 	agents.RegisterDocumentTools(registry, documentSeam{srv: features.served, db: db})
-	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays)
+	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays, runner.SweepQuietDays)
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
@@ -251,21 +253,10 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 	}
 }
 
-// decidingApprovalsService builds the approvals engine the TOOL surface decides
-// through: the registration list plus the send-dependent releases.
-//
-// Both halves or neither. The list alone leaves held_draft — the one kind whose
-// release is a send — with no executor on this engine, so approving one here
-// would commit the decision, answer the caller success, and leave the message
-// held forever. The HTTP inbox gets the same two halves at a different moment
-// (applySendPath), because its surface is built before the send path is
-// assembled and this one is built after.
-// The process logger rides along for the reason the HTTP door takes one: a
-// bundle member whose effect fails AFTER its decision has committed is reported
-// to the caller by outcome alone, so the cause has nowhere to go but the log —
-// and this is the door where the wire carries the least.
+// decidingApprovalsService adds send-dependent releases to tool decisions.
+// Its logger retains failures that happen after a decision commits.
 func decidingApprovalsService(pool *pgxpool.Pool, send SendPath, log *slog.Logger) *approvals.Service {
-	svc := approvalsServiceWithEffects(pool)
+	svc := NewApprovalsServiceWithEffects(pool)
 	registerLateApprovalEffects(svc, pool, send)
 	if log != nil {
 		svc = svc.WithLogger(log)

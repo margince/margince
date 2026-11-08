@@ -93,10 +93,7 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 // what ran since the reader's brief, and the day's automatic work comes after it.
 func applyDailyApprovals(t *testing.T, e *apptest.AppEnv, made DailyApprovals) DailyApprovals {
 	t.Helper()
-	// The production service, without the close-date effect: compose keeps the
-	// auto-apply wiring that registers it to itself. The receipt is real; the
-	// deal's date does not move.
-	svc := compose.NewApprovalsService(e.DB())
+	svc := compose.NewApprovalsServiceWithEffects(e.Pool)
 	for _, card := range made.toApply {
 		if _, err := svc.ApplyUnderPolicy(card.agent, card.id, card.actAs); err != nil {
 			t.Fatalf("applying close-date card %s under policy: %v", card.id, err)

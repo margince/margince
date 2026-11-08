@@ -14,7 +14,12 @@ import {
 import type { ComposeThread } from "./composeanchor";
 import type { DraftAsk, FollowUp } from "./composedraftcall";
 
-import { fillFromDraft, keptTag, useDraftMutation } from "./composedraftcall";
+import {
+  draftingSubject,
+  fillFromDraft,
+  keptTag,
+  useDraftMutation,
+} from "./composedraftcall";
 import type { DraftNeed, PendingAction } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { RelinkKind } from "./composerelink";
@@ -106,6 +111,7 @@ export function useVoiceDraft({
   bodyId,
   voiceProfileId,
   sendPending,
+  sourceBlocked,
 }: Readonly<{
   open: boolean;
   fields: ComposeFields;
@@ -122,6 +128,7 @@ export function useVoiceDraft({
   bodyId: string;
   voiceProfileId: string | null;
   sendPending: boolean;
+  sourceBlocked?: boolean;
 }>) {
   const t = useT();
   const { account, draftEpoch, body, html, intent } = fields;
@@ -180,6 +187,8 @@ export function useVoiceDraft({
       ask.body === body &&
       ask.html === html &&
       ask.intent === intent &&
+      (answering !== undefined ||
+        ask.subject === draftingSubject(fields.subject)) &&
       ask.activityId === answering &&
       ask.entityId === entityId &&
       ask.entityType === entityType &&
@@ -230,6 +239,7 @@ export function useVoiceDraft({
   const rejectionInFlight = discard.isPending;
   const ask = (instruction?: string): DraftAsk => ({
     activityId: answering,
+    subject: draftingSubject(fields.subject),
     entityType,
     entityId,
     followUp,
@@ -244,7 +254,7 @@ export function useVoiceDraft({
     run: () => draft.mutate(ask()),
     pending: draft.isPending,
     disabled: draftBlocked({
-      busy: rejectionInFlight || sendPending,
+      busy: rejectionInFlight || sendPending || sourceBlocked === true,
       answering,
       intent,
       anchorActivity: thread.anchorActivity,
@@ -281,6 +291,7 @@ export function useDraftOnOpen({
   asked,
   mail,
   settled,
+  held,
   body,
   control,
 }: Readonly<{
@@ -290,6 +301,7 @@ export function useDraftOnOpen({
   mail: boolean;
   /** A saved draft has had its chance to come back. */
   settled: boolean;
+  held: boolean;
   body: string;
   control: PendingAction;
 }>) {
@@ -302,8 +314,12 @@ export function useDraftOnOpen({
       started.current = false;
       return;
     }
+    if (held) {
+      started.current = true;
+      return;
+    }
     if (started.current || !ready || disabled || pending) return;
     started.current = true;
     run();
-  }, [wanted, ready, disabled, pending, run]);
+  }, [wanted, ready, held, disabled, pending, run]);
 }

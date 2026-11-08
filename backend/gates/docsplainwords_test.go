@@ -229,6 +229,9 @@ var plainPools = []struct{ prefix, list string }{
 	{"docs/tutorials/", "docs/how-to/plain-words.txt"},
 	{"docs/explanation/", "docs/explanation/plain-words.txt"},
 	{"docs/reference/", "docs/reference/plain-words.txt"},
+	// Operations prose is the reference register: the one who runs an
+	// installation reads flags, roles and probes, as a reference reader does.
+	{"docs/operations/", "docs/reference/plain-words.txt"},
 	{"README.md", plainWordsFile},
 	{"CONTRIBUTING.md", plainWordsFile},
 	{"SECURITY.md", plainWordsFile},
@@ -242,7 +245,7 @@ var plainPools = []struct{ prefix, list string }{
 // must equal its list's size, so a list that shrinks pins its cap lower with it.
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
-	"docs/how-to/plain-words.txt":      1373,
+	"docs/how-to/plain-words.txt":      1366,
 	"docs/explanation/plain-words.txt": 1642,
 	"docs/handbook/plain-words.txt":    1386,
 	"docs/reference/plain-words.txt":   1715,
@@ -485,6 +488,7 @@ func TestPlainPageRulesFireOnPlantedDefects(t *testing.T) {
 		"docs/handbook/records.md":                               "docs/handbook/plain-words.txt",
 		"backend/internal/modules/knowledge/handbook/records.md": "docs/handbook/plain-words.txt",
 		"docs/how-to/add-a-job.md":                               "docs/how-to/plain-words.txt",
+		"docs/operations/observability.md":                       "docs/reference/plain-words.txt",
 		"docs/tutorials/getting-started.md":                      "docs/how-to/plain-words.txt",
 		"README.md":                                              plainWordsFile,
 		"docs/README.md":                                         plainWordsFile,

@@ -155,7 +155,7 @@ func (w *telegramPollSweepWorker) Work(ctx context.Context, _ *river.Job[Telegra
 		// telegram_poll declares opts_owner: args, so dispatchOne hands River
 		// the sweep tag and NOTHING else and the per-bot uniqueness below
 		// stands — no inserter can drop it by omission.
-		if err := dispatchOne(ctx, TelegramPollArgs{
+		if err := dispatchOne(ctx, w.pool, TelegramPollArgs{
 			Workspace: d.WorkspaceID, ConnectionID: d.ID.String(),
 		}, nil); err != nil {
 			w.log.WarnContext(ctx, "telegram poll enqueue failed", "connection", d.ID.String(), "err", err)

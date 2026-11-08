@@ -85,9 +85,10 @@ var rowScopedResponses = map[string]expectedTarget{
 	// employer it attached them to. The contact is the record a replay hands
 	// back, so it is probed exactly as PromoteLeadResponse above is — the
 	// company id beside it is a reference, not a second body.
-	"QuickCaptureContactResult": {table: "contact", idPath: "contact.id"},
-	"LinkContactEmployerResult": {table: "contact", idPath: "contact.id"},
-	"LinkCompanyContactsResult": {table: "company", pathParam: "id"},
+	"QuickCaptureContactResult":  {table: "contact", idPath: "contact.id"},
+	"LinkContactEmployerResult":  {table: "contact", idPath: "contact.id"},
+	"LinkCompanyContactsResult":  {table: "company", pathParam: "id"},
+	"ShareCompanyContactsResult": {table: "company", pathParam: "id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
 	// owner column the generic probe could read. It still carries an id and
@@ -440,7 +441,7 @@ func classifyResponse(schemas []string, got expectedTarget) (string, expectedTar
 func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 	t.Helper()
 	out := map[string]expectedTarget{}
-	forEachMapEntry(t, "replayableOperations", func(route string, value ast.Expr) {
+	forEachMapEntry(t, "replayableOperations", func(route string, value ast.Expr, constants map[string]string) {
 		lit, ok := value.(*ast.CompositeLit)
 		if !ok {
 			t.Fatalf("%s: replayableOperations[%q] is not a replayTarget literal — teach this extractor the new shape", replayScopeSource, route)
@@ -453,10 +454,10 @@ func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 			}
 			name, _ := kv.Key.(*ast.Ident)
 			if name != nil && name.Name == "companions" {
-				entry.companions = companionRefs(t, route, kv.Value)
+				entry.companions = companionRefs(t, route, kv.Value, constants)
 				continue
 			}
-			text := stringLiteral(t, kv.Value)
+			text := stringLiteral(t, kv.Value, constants)
 			switch {
 			case name == nil:
 				t.Fatalf("%s: replayableOperations[%q] has an unnamed field", replayScopeSource, route)
@@ -484,7 +485,7 @@ func mappedReplayScope(t *testing.T) map[string]expectedTarget {
 }
 
 // companionRefs reads a companions slice literal as "table:idPath" strings.
-func companionRefs(t *testing.T, route string, expr ast.Expr) []string {
+func companionRefs(t *testing.T, route string, expr ast.Expr, constants map[string]string) []string {
 	t.Helper()
 	slice, ok := expr.(*ast.CompositeLit)
 	if !ok {
@@ -506,9 +507,9 @@ func companionRefs(t *testing.T, route string, expr ast.Expr) []string {
 			switch {
 			case name == nil:
 			case name.Name == "table":
-				table = stringLiteral(t, kv.Value)
+				table = stringLiteral(t, kv.Value, constants)
 			case name.Name == "idPath":
-				idPath = stringLiteral(t, kv.Value)
+				idPath = stringLiteral(t, kv.Value, constants)
 			}
 		}
 		out = append(out, table+":"+idPath)
@@ -517,19 +518,13 @@ func companionRefs(t *testing.T, route string, expr ast.Expr) []string {
 	return out
 }
 
-// replayScopeConsts holds the file's string consts, so a reason written once
-// and referenced by name reads the same to this gate as an inline literal.
-// gatekit:fixture state this file's own walk writes as it parses, read back to
-// resolve a name — a cache, so nothing here is ratified or goes stale.
-var replayScopeConsts = map[string]string{}
-
 // stringLiteral flattens a string literal, a concatenation of them (the
 // reasons wrap across lines), or a reference to a string const in the file.
-func stringLiteral(t *testing.T, expr ast.Expr) string {
+func stringLiteral(t *testing.T, expr ast.Expr, constants map[string]string) string {
 	t.Helper()
 	switch node := expr.(type) {
 	case *ast.Ident:
-		text, ok := replayScopeConsts[node.Name]
+		text, ok := constants[node.Name]
 		if !ok {
 			t.Fatalf("%s: %s is not a string const in this file — teach this extractor where it comes from", replayScopeSource, node.Name)
 		}
@@ -544,7 +539,7 @@ func stringLiteral(t *testing.T, expr ast.Expr) string {
 		}
 		return text
 	case *ast.BinaryExpr:
-		return stringLiteral(t, node.X) + stringLiteral(t, node.Y)
+		return stringLiteral(t, node.X, constants) + stringLiteral(t, node.Y, constants)
 	default:
 		t.Fatalf("%s: expected a string literal, found %T", replayScopeSource, expr)
 		return ""
@@ -554,12 +549,13 @@ func stringLiteral(t *testing.T, expr ast.Expr) string {
 // forEachMapEntry walks one named package-level map literal, failing loudly
 // on any element that is not a plain "key": value pair rather than dropping
 // it silently.
-func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast.Expr)) {
+func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast.Expr, constants map[string]string)) {
 	t.Helper()
 	file, err := gatekit.ParseFile(replayScopeSource, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", replayScopeSource, err)
 	}
+	constants := map[string]string{}
 	// Collect the file's string consts first: an entry may reference one by
 	// name, and a name resolves to the same claim as the literal would.
 	for _, decl := range file.Decls {
@@ -577,7 +573,7 @@ func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast
 				if err != nil {
 					t.Fatalf("%s: unquoting const %s: %v", replayScopeSource, value.Names[0].Name, err)
 				}
-				replayScopeConsts[value.Names[0].Name] = text
+				constants[value.Names[0].Name] = text
 			}
 		}
 	}
@@ -603,7 +599,7 @@ func forEachMapEntry(t *testing.T, name string, visit func(key string, value ast
 				if !ok {
 					t.Fatalf("%s: %s holds a non key/value element — teach this extractor the new shape", replayScopeSource, name)
 				}
-				visit(stringLiteral(t, kv.Key), kv.Value)
+				visit(stringLiteral(t, kv.Key, constants), kv.Value, constants)
 			}
 		}
 	}

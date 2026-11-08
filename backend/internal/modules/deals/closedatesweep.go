@@ -105,6 +105,10 @@ type closeDateCandidate struct {
 	overrideBy       *string
 	stageProbability int
 	remainingOpen    int
+	stageID          ids.UUID
+	// horizonDays is the SilentCloseDays the assessment capped its estimate
+	// at. The write asks the setting again.
+	horizonDays int
 }
 
 // winProbability is the candidate's effective probability and its source.
@@ -165,7 +169,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 		return err
 	}
 
-	likelyThreshold, err := c.policy.LikelyThreshold(ctx)
+	bounds, err := c.passBounds(ctx)
 	if err != nil {
 		return err
 	}
@@ -188,7 +192,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 			live[cand.id] = cand
 		}
 		for _, m := range members {
-			outcome, settleErr := c.settleMember(ctx, live, m, velocities, likelyThreshold, now, loc, run.ID)
+			outcome, settleErr := c.settleMember(ctx, live, m, velocities, bounds, now, loc, run.ID)
 			if settleErr != nil {
 				// One deal's failure is that deal's outcome, not the end of the
 				// pass. Recording it and walking on is what keeps a single bad
@@ -218,7 +222,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 // the denominator.
 func (c *CloseDateCorrector) settleMember(
 	ctx context.Context, live map[ids.DealID]closeDateCandidate, m closeDateMember,
-	velocities map[ids.PipelineID]closeDatePace, likelyThreshold int, now time.Time, loc *time.Location, runID ids.UUID,
+	velocities map[ids.PipelineID]closeDatePace, bounds closeDateBounds, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
 	if m.gone {
 		return closeDateMemberSkipped, nil
@@ -236,6 +240,7 @@ func (c *CloseDateCorrector) settleMember(
 		velocities[cand.pipelineID] = velocity
 	}
 	probability, _ := cand.winProbability()
+	cand.horizonDays = bounds.horizonDays
 	hygiene := CloseDateAssessment(CloseDateInput{
 		Status:              string(DealOpen),
 		ExpectedClose:       cand.expectedClose,
@@ -245,8 +250,9 @@ func (c *CloseDateCorrector) settleMember(
 		MeetingAhead:        cand.meetingAhead,
 		StageWinProbability: cand.stageProbability,
 		RemainingOpenStages: cand.remainingOpen,
-		Likely:              probability >= likelyThreshold,
+		Likely:              probability >= bounds.likelyThreshold,
 		StageVelocityDays:   velocity.days,
+		EstimateHorizonDays: cand.horizonDays,
 	}, now, loc)
 	// The outcome is whatever correct actually DID — see closeDateOutcome. A
 	// tier that decided to act and then wrote nothing (the switch off, or the
@@ -257,6 +263,28 @@ func (c *CloseDateCorrector) settleMember(
 		return "", fmt.Errorf("close-date correction on %s: %w", cand.id, err)
 	}
 	return outcome, nil
+}
+
+// closeDateBounds are the settings one pass reads once and judges every deal by.
+type closeDateBounds struct {
+	likelyThreshold int
+	horizonDays     int
+}
+
+func (c *CloseDateCorrector) passBounds(ctx context.Context) (closeDateBounds, error) {
+	likely, err := c.policy.LikelyThreshold(ctx)
+	if err != nil {
+		return closeDateBounds{}, err
+	}
+	var horizon int
+	if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
+		var readErr error
+		horizon, readErr = config.StoredApplyTx(ctx, tx, config.Bound(), SilentCloseDays)
+		return readErr
+	}); err != nil {
+		return closeDateBounds{}, fmt.Errorf("deals: reading the silent close days the estimate stops at: %w", err)
+	}
+	return closeDateBounds{likelyThreshold: likely, horizonDays: horizon}, nil
 }
 
 type closeDatePace struct {
@@ -295,7 +323,7 @@ func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID i
 // Returns the row's post-write version and whether a domain write actually
 // happened — the caller records the latter in the run's ledger, because a tier
 // that decided to correct and then wrote nothing must not be counted as one.
-func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, evidence CorrectionEvidence, runID ids.UUID, build func(*storekit.Patch), extra map[string]any) (int64, bool, error) {
+func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate, correction string, evidence CorrectionEvidence, runID ids.UUID, build func(*storekit.Patch, lockedDeal), extra map[string]any) (bool, error) {
 	var version int64
 	var wrote bool
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -316,40 +344,40 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if err != nil {
 			return err
 		}
-		var status string
-		var owner *ids.UUID
-		if err := tx.QueryRow(ctx,
-			`SELECT status, owner_id FROM deal WHERE id = $1`, cand.id).Scan(&status, &owner); err != nil {
+		row, err := readLockedDeal(ctx, tx, cand.id)
+		if err != nil {
 			return err
 		}
-		if DealStatus(status) != DealOpen {
+		if DealStatus(row.status) != DealOpen {
 			return nil
 		}
-		// A deal handed over since the page was read waits for the next pass,
-		// which asks its new owner.
-		if !mayWrite || !sameOwner(cand.ownerID, owner) {
-			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
+		version = row.version
+		if !mayWrite {
+			return nil
 		}
-		// The kill switch, read here rather than once per pass: an operator who
-		// switches maintenance off mid-sweep stops the next deal's write, not
-		// the one after it. A halted write is not a failure — the pass carries
-		// on assessing, and the version is still read so a 🟡 staging binds to
-		// the row a human would see.
+		// A deal edited or handed over since the page was read waits for the
+		// next pass to judge it again. So does a changed horizon.
+		if same, err := cand.stillAssessed(ctx, tx, row); err != nil || !same {
+			return err
+		}
+		// The kill switch is read here rather than once per pass. An operator
+		// who switches maintenance off mid-sweep stops the next deal's write.
+		// A halted write is not a failure; the pass carries on assessing.
 		on, err := config.StoredApplyTx(ctx, tx, config.Bound(), MaintenanceWritesEnabled)
 		if err != nil {
 			return fmt.Errorf("read whether deal maintenance may write: %w", err)
 		}
 		if !on {
-			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
+			return nil
 		}
 		patch := storekit.NewPatch()
-		build(patch)
+		build(patch, row)
 		if patch.Empty() {
 			// The tier fired but the deal already holds everything it proposes —
 			// a quiet deal re-flagged on a night its velocity date has not moved.
 			// There is no write to make, and no audit row or event to raise about
-			// one. The version is still read, because a 🟡 staging binds to it.
-			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
+			// one.
+			return nil
 		}
 		auditEvidence := map[string]any{CloseDateCorrectionKind: correction}
 		maps.Copy(auditEvidence, extra)
@@ -367,7 +395,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		wrote = true
 		return nil
 	})
-	return version, wrote, err
+	return wrote, err
 }
 
 func dateString(t *time.Time) *string {

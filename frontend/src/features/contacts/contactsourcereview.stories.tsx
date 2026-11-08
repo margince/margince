@@ -30,6 +30,8 @@ const review = {
 function officer(grants: ("read" | "update")[]) {
   stubWithSession(
     {
+      "GET /privacy/notice-case-reviews/case-source/source": () =>
+        jsonResponse({ items: [] }),
       "GET /privacy/notice-case-reviews/case-source": () =>
         jsonResponse(review),
     },

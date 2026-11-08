@@ -9,7 +9,7 @@ import {
   useId,
   useRef,
 } from "react";
-import { opensRow } from "./datatable";
+import { opensRow } from "../lib/linkclick";
 import { Heading, type HeadingElement } from "./heading";
 import {
   type SectionDetail,

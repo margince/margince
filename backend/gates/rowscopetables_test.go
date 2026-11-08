@@ -20,6 +20,7 @@ package gates
 // found no such table, and dropped the site with no census entry and no waiver.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"path/filepath"
@@ -338,9 +339,11 @@ func TestTheModulesTierIsMeasuredForTheWideningItIsOwed(t *testing.T) {
 			len(sites), modulesTier, wantMinimumModuleSites)
 	}
 	unscoped := 0
+	var unscopedSites []string
 	for _, site := range sites {
 		if !reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, site.table, map[string]bool{}) {
 			unscoped++
+			unscopedSites = append(unscopedSites, fmt.Sprintf("%s:%d:%s -> %s", site.dir, site.line, site.fn, site.table))
 		}
 	}
 	if unscoped > modulesTierUnscopedCeiling {
@@ -348,6 +351,7 @@ func TestTheModulesTierIsMeasuredForTheWideningItIsOwed(t *testing.T) {
 			"recorded %d. A new one is a read handing back a reference it never bounded: bound it, or lower "+
 			"nothing and explain here why this tier grew one",
 			unscoped, len(sites), modulesTier, modulesTierUnscopedCeiling)
+		t.Logf("Unscoped references:\n%s", strings.Join(unscopedSites, "\n"))
 	}
 }
 
@@ -640,5 +644,22 @@ const (
 	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
 	// website lead holds, for the privacy page. It reads presence flags only,
 	// for the lead the link resolved, and returns no reference.
-	modulesTierUnscopedCeiling = 154
+	//
+	// 155: ai.eraseSamplesTx finds every voice profile holding a sample copied
+	// from erased mail or naming an erased contact. An erasure must reach every
+	// owner's profile, so no row scope applies. Each id is only locked, and the
+	// call returns nothing but an error.
+	// 156–162: derived-work maintenance adds seven contact references:
+	// signature retry/release selectors (two), the misattribution repair's
+	// ordered locks (one), and interaction retry/release/lock/queue selectors
+	// (four). Their system-only callers consume these keys inside maintenance;
+	// none enters a response. Human graph reads retain their object and row gates.
+	//
+	// 163: privacy.sarRetainedCopySections reads the audit, event and duplicate
+	// copies that still name the subject and their leads, three references in
+	// all. The tier had fallen to 160, so the ceiling rises by one. These are
+	// subject-access reads, unscoped for the reason subjectQuestionSources is.
+	// Art. 15 owes everything held, and AssembleSAR admits only an unbounded
+	// human holding contact.delete.
+	modulesTierUnscopedCeiling = 163
 )

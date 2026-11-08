@@ -313,11 +313,10 @@ export function isRecordRead(key: QueryKey): boolean {
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 
-// The canonical email read's key belongs to the component that reads under it,
-// so this is a re-export rather than a second spelling. Two copies of a cache
-// key do not fail loudly: they fail as a drawer that quietly stops refreshing
-// after somebody changes who may read the message.
-export { emailDetailKey as emailPresentationKey } from "../design-system/emailmessage";
+// Cache invalidation must not load the message renderer.
+export function emailPresentationKey(activityId: string) {
+  return ["email-presentation", activityId] as const;
+}
 
 /** The cache prefix every deal's watch card reads under. */
 export const DEAL_COMMITMENTS_KEY = ["deal-commitments"] as const;
