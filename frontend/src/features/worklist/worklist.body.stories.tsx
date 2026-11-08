@@ -132,8 +132,8 @@ export const DecisionsViewDark: Story = {
   globals: { theme: "dark" },
 };
 
-// No cursor, but the last page did not say the list is whole (a source held
-// rows back), so the end makes no "all loaded" claim over the rows shown.
+// No cursor, but the last page did not say the list is whole: a source held
+// rows back. So the end makes no "all loaded" claim over the rows shown.
 export const DecisionsViewNotWhole: Story = {
   args: { ...DecisionsView.args, complete: false },
   play: async ({ canvasElement }) => {

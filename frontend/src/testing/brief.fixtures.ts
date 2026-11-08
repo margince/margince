@@ -254,7 +254,7 @@ export const NOT_FOUND = { title: "Not Found", code: "no_digest_yet" };
 /**
  * `GET /deal-corrections/pending` on a night Margince changed no deal. Home
  * reads `bundles` off it beside the receipts, and the contract marks `bundles`
- * required, so the stub's fallback list page (`{data, page}`) is not a stand-in
+ * required. So the stub's fallback list page (`{data, page}`) is no stand-in
  * for it: the panel fails on it in a way no server could produce.
  */
 export const noMarginceChanges: components["schemas"]["MarginceChangeSummary"] =
