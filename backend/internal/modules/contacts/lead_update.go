@@ -120,7 +120,7 @@ func (s *Store) UpdateLead(ctx context.Context, id ids.LeadID, in UpdateLeadInpu
 	var out crmcontracts.Lead
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = s.updateLeadTx(ctx, tx, id, in, active)
+		out, err = s.updateLeadInTx(ctx, tx, id, in, active)
 		return err
 	})
 	return out, err
@@ -188,7 +188,7 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	if patch.FullName == nil && patch.CompanyName == nil && patch.Title == nil {
 		return nil
 	}
-	_, err = s.updateLeadTx(ctx, tx, id, patch, active.cols)
+	_, err = s.updateLeadInTx(ctx, tx, id, patch, active.cols)
 	return err
 }
 
@@ -215,11 +215,13 @@ func emptyFieldPatch(current crmcontracts.Lead, in CapturedLeadFields) UpdateLea
 
 func blank(value *string) bool { return value == nil || *value == "" }
 
-// updateLeadTx runs the visibility gate, the sparse-patch fold, the write
+// updateLeadInTx runs the visibility gate, the sparse-patch fold, the write
 // shape, and the cleared-override recompute for one lead update inside the
 // caller's transaction. active names the workspace's custom-field columns
 // (fetched before the tx opened).
-func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in UpdateLeadInput, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
+//
+//nolint:cyclop // one edit applies each optional field in turn, as updateContactInTx does.
+func (s *Store) updateLeadInTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in UpdateLeadInput, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
 	if err := ensureLeadUpdateAuthority(ctx, tx, id, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
