@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
-import { appHref } from "./recordaddress";
+import { afterEach, expect, it, vi } from "vitest";
+import { appHref, CONSENT_PATH, publishRecordAddress } from "./recordaddress";
 import { useRoute } from "./router";
 
 const DEAL = "01a00000-0000-7000-8000-000000000001";
@@ -71,4 +71,105 @@ it("restores a bare record address before routing without overwriting another ha
   history.replaceState(null, "", `/r/deals/${DEAL}#/home`);
   const home = renderHook(useRoute);
   expect(home.result.current.screen).toBe("home");
+});
+
+const SLUG = "Ab3_x-9QrStUvWxYz0123456789abcd";
+
+it("opens a booking page entered at its /book/ path, with or without a trailing slash", () => {
+  for (const path of [`/book/${SLUG}`, `/book/${SLUG}/`]) {
+    history.replaceState(null, "", path);
+    const view = renderHook(useRoute);
+    expect(view.result.current).toEqual({ screen: "book", id: SLUG });
+    expect(location.pathname).toBe(`/book/${SLUG}`);
+    view.unmount();
+  }
+});
+
+it("keeps a booking slug's case and reads a percent-encoded path as nginx does", () => {
+  history.replaceState(null, "", "/book/%41bC");
+  const view = renderHook(useRoute);
+  expect(view.result.current).toEqual({ screen: "book", id: "AbC" });
+  expect(location.pathname).toBe("/book/AbC");
+});
+
+it("gives a legacy /#/book/ link the path a preview fetcher reads", () => {
+  history.replaceState(null, "", `/#/book/${SLUG}`);
+  const view = renderHook(useRoute);
+  expect(view.result.current).toEqual({ screen: "book", id: SLUG });
+  expect(location.pathname).toBe(`/book/${SLUG}`);
+});
+
+it("never puts a guest token or a host control into the server-visible path", () => {
+  for (const id of [
+    "manage-private-token",
+    "proposal-private-token",
+    "meeting-01a00000-0000-7000-8000-000000000001",
+    "contact-01a00000-0000-7000-8000-000000000002",
+    "preview",
+    "contact",
+  ]) {
+    history.replaceState(null, "", `/#/book/${id}`);
+    const view = renderHook(useRoute);
+    expect(location.pathname, id).toBe("/");
+    view.unmount();
+    history.replaceState(null, "", `/book/${id}`);
+    const typed = renderHook(useRoute);
+    expect(location.pathname, id).toBe("/");
+    expect(location.hash, id).toBe("");
+    typed.unmount();
+  }
+});
+
+it("moves to the root path when a booking leads to the guest's private management link", () => {
+  history.replaceState(null, "", `/book/${SLUG}`);
+  const view = renderHook(useRoute);
+  act(() => {
+    location.hash = "#/book/manage-private-token";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  expect(view.result.current).toEqual({
+    screen: "book",
+    id: "manage-private-token",
+  });
+  expect(location.pathname).toBe("/");
+});
+
+// The consent path is served with the opener left in place, for a client's
+// popup. Any other screen there reloads at the root under the app's policy.
+it.each([
+  ["#/home", "/#/home"],
+  ["", "/"],
+  ["#/oauth-consentx", "/#/oauth-consentx"],
+])("reloads %s at the root when it opens on the consent path", (hash, to) => {
+  const replace = vi.fn();
+  vi.stubGlobal("location", {
+    pathname: CONSENT_PATH,
+    search: "",
+    hash,
+    replace,
+  });
+  try {
+    publishRecordAddress();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  expect(replace).toHaveBeenCalledWith(to);
+});
+
+it("keeps the consent screen on its own path", () => {
+  const replace = vi.fn();
+  for (const hash of ["#/oauth-consent", "#/oauth-consent?client_id=c1"]) {
+    vi.stubGlobal("location", {
+      pathname: CONSENT_PATH,
+      search: "",
+      hash,
+      replace,
+    });
+    try {
+      publishRecordAddress();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }
+  expect(replace).not.toHaveBeenCalled();
 });

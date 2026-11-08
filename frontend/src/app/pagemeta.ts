@@ -26,9 +26,8 @@ import {
 /**
  * Screens that head THEMSELVES, so the shell prints no heading above them.
  *
- * Brief greets the reader by name in its own h1 — "Guten Morgen, Demo." — and
- * the shell's own nav label above it named the page a second time at heading
- * level.
+ * Brief greets the reader by name in its own h1 ("Guten Morgen, Demo"). The
+ * shell's nav label above it named the page a second time at heading level.
  * Two top-level headings is no outline at all, and it is the same defect the
  * shell already avoids for a record (whose name is its heading) and a unit.
  *

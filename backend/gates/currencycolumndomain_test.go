@@ -20,7 +20,6 @@ package gates
 // here. The migration that creates it is the only statement of the regex.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -48,7 +47,7 @@ var notACurrencyCode = gatekit.Waive(map[string]string{
 // currencyColumns derives the corpus, mapping "table.column" to its type.
 func currencyColumns(t *testing.T) map[string]string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

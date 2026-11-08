@@ -59,18 +59,18 @@ const openComposer: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await userEvent.click(
     await canvas.findByRole("button", {
-      name: "Update Discovery call with Turbinenbau",
+      name: "Add notes to Discovery call with Turbinenbau",
     }),
   );
 };
 
 /**
- * THE CARD's two verbs, closed.
+ * The card's three verbs, closed.
  *
- * Neither is filled: a meeting the product knows nothing about has no expected
- * answer, and leading the line with either would claim one.
+ * None is filled: a meeting the product knows nothing about has no expected
+ * answer, and leading the line with any of them would claim one.
  */
-export const TwoVerbs: Story = {
+export const ThreeVerbs: Story = {
   render: () => {
     stubRoutes();
     return (
@@ -170,7 +170,7 @@ export const CalendarManaged: Story = {
   play: async (context) => {
     const canvas = within(context.canvasElement);
     await canvas.findByRole("button", {
-      name: "Update Discovery call with Turbinenbau",
+      name: "Add notes to Discovery call with Turbinenbau",
     });
     await expect(
       canvas.queryByRole("button", { name: /canceled/ }),

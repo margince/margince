@@ -7,24 +7,26 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const sourceDealAdvice = "deal_advice"
+const (
+	sourceDealAdvice       = "deal_advice"
+	sourceContactEmployers = "contact_employers"
+)
 
 type preparedDealMoves struct {
 	moves map[ids.UUID]crmcontracts.DealStatusCardMove
 }
 
-// readingDealMoves reads the current advice for the deal rows a page shows that
-// the brief or the at-risk lane raised. A deal the cut left out costs no read,
-// and a deal only the backlog tail reached carries no advice.
+// readingDealMoves reads the current advice for the deal rows a page shows, in
+// one batch. A deal the cut left out costs no read. A deal the backlog tail
+// reached is advised as it would be on the ranked page.
 func (s *Service) readingDealMoves(
-	ctx context.Context, rows []crmcontracts.WorklistItem, day crmcontracts.Attention,
+	ctx context.Context, rows []crmcontracts.WorklistItem,
 ) (*Service, *crmcontracts.WorklistSourceUnavailable) {
 	defer timeStage(ctx, "deal_moves")()
 	scoped := *s
@@ -32,11 +34,10 @@ func (s *Service) readingDealMoves(
 	if s.dealMoves == nil {
 		return &scoped, nil
 	}
-	advised := laneDeals(day)
 	seen := map[ids.UUID]bool{}
 	var wanted []ids.UUID
 	for _, row := range rows {
-		if id, ok := needsDealMove(row); ok && advised[id] && !seen[id] {
+		if id, ok := needsDealMove(row); ok && !seen[id] {
 			wanted = append(wanted, id)
 			seen[id] = true
 		}
@@ -63,19 +64,4 @@ func (s *Service) readingDealMoves(
 		slog.Log(ctx, laneFailureLevel(ctx), "current deal advice could not be checked", "error", err)
 	}
 	return &scoped, note
-}
-
-// laneDeals answers which deals the brief and the at-risk lane raised today.
-func laneDeals(day crmcontracts.Attention) map[ids.UUID]bool {
-	items := slices.Clone(day.ThisMorning)
-	if day.AtRisk != nil {
-		items = append(items, *day.AtRisk...)
-	}
-	deals := make(map[ids.UUID]bool, len(items))
-	for _, item := range items {
-		if item.Subject != nil && item.Subject.Type == subjectDeal {
-			deals[ids.UUID(item.Subject.Id)] = true
-		}
-	}
-	return deals
 }

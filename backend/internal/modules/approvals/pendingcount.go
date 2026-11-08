@@ -78,8 +78,6 @@ func (c *PendingCount) add(a row) {
 // pendingEligible is "the caller has this row to decide": still pending at
 // now, in the requested scope, and decidable by p.
 func pendingEligible(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, now time.Time) batchProbe {
-	probe := inboxProbe(ctx, tx, p, in)
-	return func(batch []row) ([]bool, error) {
-		return askWhere(batch, func(a row) bool { return a.PendingAt(now) }, probe)
-	}
+	in.actionableAt = &now
+	return inboxProbe(ctx, tx, p, in)
 }

@@ -84,13 +84,18 @@ func companyReach(operand string) string {
 // companyLinkReach is companyReach without the participant arm: the activities
 // filed against the account, its deals or its employees.
 func companyLinkReach(operand string) string {
-	linkBranch := func(column string) string {
+	linkBranch := func(column, arms string) string {
 		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
-			column, companyArms, operand)
+			column, arms, operand)
 	}
-	return linkBranch("l.company_id") + "\n\t\t    UNION " + linkBranch("d.company_id") +
-		"\n\t\t    UNION " + linkBranch("r.company_id")
+	return linkBranch("l.company_id", directLinkArm) + "\n\t\t    UNION " + linkBranch("d.company_id", companyArms) +
+		"\n\t\t    UNION " + linkBranch("r.company_id", companyArms)
 }
+
+// directLinkArm is the arm that needs none of companyArms' joins. Joining the
+// activity there only to read its timestamp makes Postgres hash every activity
+// of the installation, and the foreign keys already guarantee the row.
+const directLinkArm = "FROM activity_link l"
 
 // CompanyFiledActivityExists is the predicate over the three link arms only. A
 // file of a mail that merely CC'd an employee is not a document of that
@@ -121,8 +126,8 @@ func CompanyFiledActivityExists(companyPos int) string {
 var companyArms = `FROM activity_link l
 		    JOIN activity la ON la.id = l.activity_id
 		    LEFT JOIN deal d ON d.id = l.deal_id
-		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		    LEFT JOIN relationship r ON r.contact_id = l.contact_id
+		      AND ` + employment.CurrentMembershipSQL("r") + `
 		      AND ` + employment.InPlaceForSQL("r", "la") + `
 		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
 
@@ -149,8 +154,8 @@ var companyArms = `FROM activity_link l
 // relationship in scope under that name reads as the first.
 var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
-		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
-		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
+		      JOIN relationship emp ON emp.contact_id = ap.contact_id
+		        AND ` + employment.CurrentMembershipSQL("emp") + `
 		        AND ` + employment.InPlaceForSQL("emp", "a") + `
 		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
@@ -206,8 +211,7 @@ func activityReachesCompany(operand string) string {
 // exactly one of the three id columns is set per row, and the predicate omits
 // it for the same reason.
 //
-// No workspace filter: activity_link, deal and relationship all carry FORCE
-// row-level security, and every caller runs inside WithWorkspaceTx.
+// Every caller runs this fragment inside its workspace-bound transaction.
 //
 // The employment arm reaches only mail sent while the edge was in place
 // (employment.InPlaceForSQL). Mail from someone's previous job is therefore not

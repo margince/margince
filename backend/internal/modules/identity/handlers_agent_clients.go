@@ -37,6 +37,11 @@ func (h Handlers) ListAgentClients(w http.ResponseWriter, r *http.Request, param
 		httperr.Write(w, r, err)
 		return
 	}
+	clientCheck, err := h.svc.ClientCheck(r.Context(), actor)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	data := make([]crmcontracts.AgentClient, 0, len(clients))
 	for _, c := range clients {
 		data = append(data, wireAgentClient(c))
@@ -44,8 +49,9 @@ func (h Handlers) ListAgentClients(w http.ResponseWriter, r *http.Request, param
 	effective := state.effective()
 	w.Header().Set("Cache-Control", "private, no-store")
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AgentClientListResponse{
-		Data: data,
-		Page: pageInfo(page),
+		Data:        data,
+		Page:        pageInfo(page),
+		ClientCheck: clientCheck,
 		Registration: crmcontracts.AgentClientRegistration{
 			Dynamic: crmcontracts.AgentClientMethod{
 				Enabled: effective.Dynamic, Setting: state.switches.Dynamic, DeploymentAllows: state.deployment.Dynamic,

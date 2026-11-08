@@ -25,8 +25,12 @@ import (
 //
 //craft:ignore naked-any out is the caller-supplied JSON decode target — its concrete type varies per endpoint
 func (a *httpAPI) get(ctx context.Context, accessToken, path string, q url.Values, out any, maxBytes int64) (int, error) {
+	if err := a.waitQuota(ctx, getQuotaCost(path, q)); err != nil {
+		return 0, err
+	}
 	start := time.Now()
 	status, err := a.getOnce(ctx, accessToken, path, q, out, maxBytes)
+	err = a.noteQuotaLimit(ctx, err)
 	capturemetrics.ObserveRequest(connectorName, getOp(path, q), status, err, time.Since(start))
 	return status, err
 }
@@ -36,8 +40,12 @@ func (a *httpAPI) get(ctx context.Context, accessToken, path string, q url.Value
 //
 //craft:ignore naked-any payload/out are the caller-supplied JSON encode/decode values — the concrete type varies per endpoint
 func (a *httpAPI) postJSON(ctx context.Context, accessToken, path string, payload, out any) error {
+	if err := a.waitQuota(ctx, 100); err != nil {
+		return err
+	}
 	start := time.Now()
 	err := a.postJSONOnce(ctx, accessToken, path, payload, out)
+	err = a.noteQuotaLimit(ctx, err)
 	capturemetrics.ObserveRequest(connectorName, capturemetrics.OpOther, 0, err, time.Since(start))
 	return err
 }
@@ -45,8 +53,12 @@ func (a *httpAPI) postJSON(ctx context.Context, accessToken, path string, payloa
 // Watch registers the mailbox's users.watch through watchOnce and records the
 // call.
 func (a *httpAPI) Watch(ctx context.Context, accessToken, topic string) (string, time.Time, error) {
+	if err := a.waitQuota(ctx, 100); err != nil {
+		return "", time.Time{}, err
+	}
 	start := time.Now()
 	historyID, expires, err := a.watchOnce(ctx, accessToken, topic)
+	err = a.noteQuotaLimit(ctx, err)
 	capturemetrics.ObserveRequest(connectorName, capturemetrics.OpOther, 0, err, time.Since(start))
 	return historyID, expires, err
 }
@@ -127,7 +139,7 @@ func getOp(path string, q url.Values) string {
 	switch {
 	case path == "/messages":
 		return capturemetrics.OpList
-	case strings.HasPrefix(path, "/messages/") && q.Get("format") == "metadata":
+	case strings.HasPrefix(path, "/messages/") && q.Get(paramFormat) == formatMetadata:
 		return capturemetrics.OpGetMetadata
 	case strings.HasPrefix(path, "/messages/"):
 		return capturemetrics.OpGetRaw

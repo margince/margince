@@ -58,37 +58,53 @@ func (s *Service) LineRecords(
 	}
 	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, _, err := doneSince(ctx, tx, from, maxLimit)
-		if err != nil {
-			return err
-		}
-		if pos.asOf.IsZero() {
-			pos.asOf = newestOccurred(entries)
-		}
-		members, found := lineMembers(asOf(entries, pos.asOf), lineID)
-		if !found {
-			return apperrors.ErrNotFound
-		}
-		end := min(offset+limit, len(members))
-		if offset < end {
-			out.Data, err = s.recordsOf(ctx, tx, members[offset:end])
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			entries, _, err := doneSince(ctx, tx, from, maxLimit)
 			if err != nil {
 				return err
 			}
-		}
-		if end < len(members) {
-			next := recordsCursor{offset: end, asOf: pos.asOf}.encode()
-			out.Page = crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
-		}
-		total := len(members)
-		out.Page.Total = &total
-		return nil
+			if pos.asOf.IsZero() {
+				pos.asOf = newestOccurred(entries)
+			}
+			members, found := lineMembers(asOf(entries, pos.asOf), lineID)
+			if !found {
+				return apperrors.ErrNotFound
+			}
+			end := min(offset+limit, len(members))
+			if offset < end {
+				if err := loadDeferredImages(ctx, tx, members[offset:end]); err != nil {
+					return err
+				}
+				out.Data, err = s.recordsOf(ctx, tx, members[offset:end])
+				if err != nil {
+					return err
+				}
+			}
+			if end < len(members) {
+				next := recordsCursor{offset: end, asOf: pos.asOf}.encode()
+				out.Page = crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
+			}
+			total := len(members)
+			out.Page.Total = &total
+			return nil
+		})
 	})
+	if err == nil {
+		err = s.labelReferences(ctx, recordChanges(out.Data))
+	}
 	if err != nil {
 		return crmcontracts.MagicLineRecords{}, fmt.Errorf("open a done line: %w", err)
 	}
 	return out, nil
+}
+
+func recordChanges(records []crmcontracts.MagicLineRecord) [][]crmcontracts.MagicFieldChange {
+	out := make([][]crmcontracts.MagicFieldChange, len(records))
+	for i := range records {
+		out[i] = records[i].Changes
+	}
+	return out
 }
 
 // lineMembers regroups the window and returns the entries that share the named
@@ -134,8 +150,12 @@ func lineMembers(entries []entry, lineID ids.UUID) ([]entry, bool) {
 func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]crmcontracts.MagicLineRecord, error) {
 	out := make([]crmcontracts.MagicLineRecord, 0, len(members))
 	subjects := make([]UndoSubject, 0, len(members))
+	held, err := heldCurrencies(ctx, tx, members)
+	if err != nil {
+		return nil, err
+	}
 	for _, e := range members {
-		changes, err := visibleChanges(ctx, e.EntityType, changesOf(e))
+		changes, err := visibleChanges(ctx, e.EntityType, typedChangesOf(e, held))
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +172,6 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 	}
 	answers := map[ids.UUID]*crmcontracts.MagicUndo{}
 	if s.undo != nil {
-		var err error
 		if answers, err = s.undo.JudgeUndoPage(ctx, tx, subjects); err != nil {
 			return nil, err
 		}
@@ -180,24 +199,25 @@ func changesOf(e entry) []crmcontracts.MagicFieldChange {
 	if changes := technicalFieldChanges(e); len(changes) > 0 {
 		return changes
 	}
-	return fieldChanges(e.Before, e.After)
+	return fieldChanges(e.EntityType, e.Before, e.After)
 }
 
-// fieldChanges lists every field an audit image moved, old value to new, sorted
-// by field. The machinery's own keys are left out, the same set describe()
-// leaves out of the sentence.
-func fieldChanges(beforeRaw, afterRaw []byte) []crmcontracts.MagicFieldChange {
+// fieldChanges lists the shown fields an audit image moved, sorted by field.
+// They are the fields describe() names, each with how its value is read.
+func fieldChanges(entityType string, beforeRaw, afterRaw []byte) []crmcontracts.MagicFieldChange {
 	before, after := objectOf(beforeRaw), objectOf(afterRaw)
 	out := []crmcontracts.MagicFieldChange{}
 	for k, v := range after {
-		if bookkeepingFields[k] || evidenceKeys[k] {
+		if !presentedField(entityType, k) {
 			continue
 		}
 		b, had := before[k]
 		if had && equalJSON(b, v) {
 			continue
 		}
-		out = append(out, crmcontracts.MagicFieldChange{Field: k, Before: b, After: v})
+		change := crmcontracts.MagicFieldChange{Field: k, Before: b, After: v}
+		readAs(&change, readingFor(entityType, k), before, after)
+		out = append(out, change)
 	}
 	sort.Slice(out, func(a, b int) bool { return out[a].Field < out[b].Field })
 	return out

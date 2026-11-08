@@ -24,6 +24,7 @@ const sqlUnscoped = "true"
 // dealFacts is what the rule reads about one mail, all of it recorded on the
 // mail's own rows. outcome is set when the rule has nothing to decide.
 type dealFacts struct {
+	meeting   bool
 	outcome   DealOutcome
 	activity  ids.ActivityID
 	project   ids.UUID
@@ -48,8 +49,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	if err != nil {
 		return facts, fmt.Errorf("capture: reading the mail the deal rule files: %w", err)
 	}
+	facts.meeting = kind == meetingKind
 	switch {
-	case kind != kindEmail || channel != nil:
+	case !dealActivityKind(kind) || channel != nil:
 		facts.outcome = DealNotMail
 		return facts, nil
 	case filed && !refiling:
@@ -65,7 +67,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	if facts.companies, err = mailCompanies(ctx, tx, activityID, facts.contacts); err != nil {
 		return facts, err
 	}
-	if len(facts.companies) == 1 {
+	if kind == kindEmail && len(facts.companies) == 1 {
 		facts.thread, err = threadDeals(ctx, tx, activityID, facts.companies[0])
 	}
 	return facts, err
@@ -129,19 +131,17 @@ func oneDeal(deals []ids.UUID, question WhichDeal) DealVerdict {
 	}
 }
 
-// mailContacts answers the live contacts among the mail's participants. They
-// come from activity_participant: the participant link arm caps how many get
-// a link, so a copied contact can be missing from activity_link.
+// Participant evidence survives the link cap; explicit contact filings also count.
 func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
 	if !auth.ReadGranted(ctx, "contact") {
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT p.contact_id
-		  FROM activity_participant p
-		  JOIN contact c ON c.id = p.contact_id AND c.archived_at IS NULL
-		 WHERE p.activity_id = $1
-		 ORDER BY p.contact_id`, activityID)
+		SELECT named.contact_id FROM (
+		 SELECT p.contact_id FROM activity_participant p WHERE p.activity_id=$1
+		 UNION SELECT l.contact_id FROM activity_link l WHERE l.activity_id=$1 AND l.entity_type='contact'
+		) named JOIN contact c ON c.id=named.contact_id AND c.archived_at IS NULL
+		ORDER BY named.contact_id`, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
 	}
@@ -175,8 +175,8 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 		employers = fmt.Sprintf(`
 		UNION
 		SELECT r.company_id FROM relationship r
-		 WHERE r.contact_id = ANY($%d) AND r.kind = 'employment' AND r.company_id IS NOT NULL`, arg(contacts)) + `
-		   AND r.archived_at IS NULL AND ` + employment.IsCurrentSQL("r.ended_at") + `
+		 WHERE r.contact_id = ANY($%d) AND r.company_id IS NOT NULL`, arg(contacts)) + `
+		   AND ` + employment.CurrentMembershipSQL("r") + `
 		   AND (` + edgeScope + `)`
 	}
 	rows, err := tx.Query(ctx, `
@@ -241,4 +241,8 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, comp
 		return nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
 	}
 	return deals, nil
+}
+
+func dealActivityKind(kind string) bool {
+	return kind == kindEmail || kind == meetingKind
 }

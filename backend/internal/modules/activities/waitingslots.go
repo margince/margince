@@ -74,7 +74,7 @@ func (s *Store) waitingQueueSlots(
 	}
 	// The horizon this installation's own answering implies, read once so
 	// every row is judged by one cutoff (waitingHorizonFor).
-	horizon, err := s.waitingHorizonFor(ctx, tx)
+	horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
 	if err != nil {
 		return waitingSlots{}, err
 	}
@@ -102,7 +102,7 @@ func (s *Store) waitingQueueSlots(
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
 		reader,
-		seats.responsibilitySQL(identities, arg, waitingMailKeptSQL(fmt.Sprintf("$%d", instant), fmt.Sprint(horizon))),
+		seats.responsibilitySQL(identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon)),
 		neverRelaxed, neverRelaxed,
 		neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),

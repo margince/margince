@@ -47,11 +47,28 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		started := *concern.FailingSince
 		item.OccurredAt = &started
 	}
-	// A good sync after a Done means the concern cleared and came back.
-	if concern.LastSyncedAt != nil {
-		synced := *concern.LastSyncedAt
+	// Only changed evidence can reopen a concern marked Done.
+	if concern.SubjectMovedAt != nil {
+		synced := *concern.SubjectMovedAt
 		item.SubjectMovedAt = &synced
 	}
+	return item
+}
+
+// bookingItem carries no subject and no verbs: the host fixes the page on the
+// booking settings screen. The row id and the cause both name the blocker. A
+// page that moves to another blocker is a new card, and a Done on the old one
+// does not hide it. One host never gets two.
+func bookingItem(concern BookingConcern) crmcontracts.AttentionItem {
+	kind := concern.Blocker
+	item := crmcontracts.AttentionItem{
+		Id:      concern.PageID.String() + ":" + kind,
+		Source:  crmcontracts.AttentionItemSource("booking_health"),
+		Kind:    &kind,
+		Actions: []crmcontracts.AttentionItemActions{},
+	}
+	cause := "booking_health:" + kind
+	item.CauseRef = &cause
 	return item
 }
 
@@ -232,6 +249,10 @@ func automationItem(run TroubledAutomationRun) crmcontracts.AttentionItem {
 	if run.Reason != "" {
 		reason := run.Reason
 		item.Detail = &reason
+	}
+	if run.ReasonCode != "" {
+		code := run.ReasonCode
+		item.RunReasonCode = &code
 	}
 	return item
 }

@@ -81,9 +81,12 @@ type StagedApproval struct {
 	// Changes, Details and Effects are what the inbox card shows approving
 	// does. read_approval carries them while the change is pending and its
 	// preview is ready.
-	Changes []FieldChange   `json:"changes,omitempty"`
-	Details []PreviewDetail `json:"details,omitempty"`
-	Effects []PreviewEffect `json:"effects,omitempty"`
+	Changes    []FieldChange                          `json:"changes,omitempty"`
+	Details    []PreviewDetail                        `json:"details,omitempty"`
+	Effects    []PreviewEffect                        `json:"effects,omitempty"`
+	Conflicts  []crmcontracts.ApprovalPreviewConflict `json:"conflicts,omitempty"`
+	Files      []crmcontracts.ApprovalPreviewFile     `json:"files,omitempty"`
+	ImportRows []PreviewImportRow                     `json:"import_rows,omitempty"`
 	// PreviewState is the card preview's state, and PreviewNote the card's
 	// sentence for one that is not ready, such as who must decide it instead.
 	PreviewState string `json:"preview_state,omitempty"`
@@ -268,6 +271,7 @@ func (t readApprovalTool) Handle(ctx context.Context, in json.RawMessage) (json.
 	reading := ReadPreview(summaryIn(ctx, t.language).lang, staged.Preview)
 	staged.Changes, staged.Details, staged.Effects = reading.Changes, reading.Details, reading.Effects
 	staged.PreviewState, staged.PreviewNote = reading.State, reading.Note
+	staged.Conflicts, staged.Files, staged.ImportRows = reading.Conflicts, reading.Files, reading.ImportRows
 	if staged.OnBehalfOf != nil {
 		staged.OnBehalfOf = t.nameSeat(ctx, staged.OnBehalfOf.ID)
 	}

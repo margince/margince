@@ -253,8 +253,8 @@ func TestSingleContactAndChangeFoldsBoundAtNow(t *testing.T) {
 	if in.Current.Count90d != 2 {
 		t.Errorf("the change fold counted %d, want 2", in.Current.Count90d)
 	}
-	if in.Current.LastInteraction == nil || !in.Current.LastInteraction.Equal(now) {
-		t.Errorf("change-fold recency came from %v, want %v", in.Current.LastInteraction, now)
+	if in.Current.LastTouch == nil || !in.Current.LastTouch.Equal(now) {
+		t.Errorf("change-fold last touch came from %v, want %v", in.Current.LastTouch, now)
 	}
 }
 

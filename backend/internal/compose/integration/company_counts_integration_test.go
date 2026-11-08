@@ -5,12 +5,6 @@
 
 package integration
 
-// The two counts every company row carries (PO-EXT-10, AC-companies-2/3),
-// proven over a real migrated Postgres: contact_count follows the
-// current-primary employment edges the real writer makes, open_deal_count
-// follows the 0065 view, the list and the single read agree, and a role
-// without computed_field:read is shown a contact count but no deal count.
-
 import (
 	"encoding/json"
 	"testing"
@@ -46,9 +40,7 @@ func TestCompanyCounts_ListAndSingleReadAgreeWithTheEdges(t *testing.T) {
 	left := time.Date(2021, 6, 30, 0, 0, 0, 0, time.UTC)
 	employ(staff, acme, nil)
 	employ(second, acme, nil)
-	// A past employer is not a contact: the column answers who works here. Dated
-	// as over, because that is what past is — an undated non-primary job cannot
-	// say it, now that a contact's only employment is their current primary one.
+	// A departed contact is outside the current roster.
 	employ(leaver, acme, &left)
 
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)

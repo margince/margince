@@ -4,14 +4,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button } from "../../design-system/atoms";
+import { Badge, Button, Card, PendingBody } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
@@ -19,12 +18,14 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { identity, Triage } from "./brief.focus";
+import { Triage } from "./brief.focus";
+import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
 
 import "../worklist/worklist.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./brief.feed.css";
 
 export function BriefFeed({
@@ -45,6 +46,7 @@ export function BriefFeed({
   /** The way into the whole queue, under the day's order. */
   queueToggle?: ReactNode;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -79,14 +81,12 @@ export function BriefFeed({
             </Badge>
           </AppLink>
         )}
-        {lead && (
-          <span className="t-caption t-num brief-first-position">
-            {t("brief.focus.position", {
-              at: formatNumber(at + 1, locale),
-              count: formatNumber(rows.length, locale),
-            })}
+        {rows.length > 0 && (
+          <span className="t-caption t-num brief-first-count">
+            {formatNumber(rows.length, locale)}
           </span>
         )}
+        {queueToggle && <div className="brief-first-queue">{queueToggle}</div>}
       </div>
       {refreshFailed && (
         <p role="alert">
@@ -96,35 +96,44 @@ export function BriefFeed({
           </Button>
         </p>
       )}
-      <SurfaceState
-        state={
-          state !== "ready"
-            ? state
-            : rows.length > 0 || partial
-              ? "ready"
-              : "empty"
-        }
-        emptyLabel={t("brief.feed.clear")}
-        loadingLabel={t("brief.feed.loading")}
-      >
-        {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
-        {lead && (
-          <HomeListReturnScope>
-            <Triage
-              rows={rows}
-              at={at}
-              lead={lead}
-              onChoose={(item) => setChosen(identity(item))}
-              onOpenEmail={setOpenEmail}
-              onContext={onContext}
-            />
-          </HomeListReturnScope>
-        )}
-      </SurfaceState>
-      {queueToggle && <div className="brief-first-foot">{queueToggle}</div>}
+      {/* The card in hand is taller than a few lines of text, so its wait is
+          drawn in the card's own frame, and the page does not jump when the
+          day lands under it. */}
+      {state === "loading" ? (
+        <Card as="div" className="brief-triage-lead brief-triage-pending">
+          <PendingBody label={t("brief.feed.loading")} lines={6} />
+        </Card>
+      ) : (
+        <SurfaceState
+          state={
+            state !== "ready"
+              ? state
+              : rows.length > 0 || partial
+                ? "ready"
+                : "empty"
+          }
+          emptyLabel={t("brief.feed.clear")}
+          loadingLabel={t("brief.feed.loading")}
+          detail={{ onRetry }}
+        >
+          {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
+          {lead && (
+            <HomeListReturnScope>
+              <Triage
+                rows={rows}
+                at={at}
+                lead={lead}
+                onChoose={(item) => setChosen(identity(item))}
+                onOpenEmail={setOpenEmail}
+                onContext={onContext}
+              />
+            </HomeListReturnScope>
+          )}
+        </SurfaceState>
+      )}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
         onReplySent={() =>
           void client.invalidateQueries({ queryKey: worklistKey })

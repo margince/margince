@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import type { ReadingTone } from "../../design-system/readingtone";
-import { ScoreRing } from "../../design-system/standingring";
-import { formatNumber } from "../../format/format";
+import { Meter } from "../../design-system/readings";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { metricOf } from "./analytics.overview.readings";
 import {
@@ -19,123 +18,79 @@ type Comparison = NonNullable<
 >;
 
 /**
- * What stands under Sales won. It shows progress to the quarter's target,
- * what is still to win, the projected shortfall and the previous period.
- * Every figure is the server's; the page only formats.
- * A target that cannot be compared says why, with its fix, in place.
+ * The one line under Sales won: the target it is read against. A target that
+ * cannot be compared says why, with its fix, in place.
  */
 export function HeroAside({
   evaluation,
-  charts,
   onApply,
   targetSetup,
 }: Readonly<{
   evaluation: ReportingEvaluation;
-  // The chart read, once it answered: the period before is read off its trend.
-  charts: ReportingEvaluation | undefined;
   onApply: (selection: ReportingSelection) => void;
   // Who can set a target, for a quarter that has none.
   targetSetup: ReactNode;
 }>) {
-  const comparison = metricOf(
-    evaluation,
-    "forecast_landing",
-  )?.target_comparison;
-  let target: ReactNode = null;
-  if (comparison?.status === "no_target") target = targetSetup;
-  else if (
+  const t = useT();
+  const { locale } = useLocale();
+  const forecast = metricOf(evaluation, "forecast_landing");
+  if (forecast?.coverage.withheld) return null;
+  const comparison = forecast?.target_comparison;
+  if (comparison?.status === "no_target") return targetSetup;
+  if (
     comparison?.status === "compared" ||
     comparison?.status === "target_reached"
-  )
-    target = <TargetProgress evaluation={evaluation} comparison={comparison} />;
-  else if (comparison)
-    target = (
-      <ComparisonState comparison={comparison} onApply={onApply} compact />
+  ) {
+    const { currency } = evaluation.context;
+    return (
+      <span>
+        {comparison.status === "target_reached"
+          ? t("reporting.compare.reached")
+          : t("analytics.hero.ofTarget", {
+              target: reportingCompactAmount(
+                comparison.target,
+                currency,
+                currency,
+                locale,
+              ),
+            })}
+      </span>
     );
-  return (
-    <div className="analytics-hero-aside">
-      {target}
-      {charts && <PriorPeriod evaluation={charts} />}
-    </div>
-  );
+  }
+  return comparison ? (
+    <ComparisonState comparison={comparison} onApply={onApply} compact />
+  ) : null;
 }
 
 /**
- * Sales won as a share of the quarter's target, with a lighter part of the
- * ring up to the expected finish. Drawn only while the two are compared.
+ * What Sales won rests on, folded behind its receipt. It holds progress to the
+ * target, what is still to win and the same point of the period before.
+ * Every figure is the server's; the page only formats.
  */
-export function TargetRing({
-  evaluation,
-}: Readonly<{ evaluation: ReportingEvaluation }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const comparison = compared(evaluation);
-  const reading = useAttained(evaluation, comparison);
-  if (!comparison || !reading || comparison.won == null || !comparison.target)
-    return null;
-  const share = (comparison.won / comparison.target) * 100;
-  const reach =
-    comparison.landing == null
-      ? undefined
-      : (comparison.landing / comparison.target) * 100;
-  return (
-    <ScoreRing
-      size="compact"
-      score={share}
-      reach={reach}
-      display={`${formatNumber(Math.round(reading.percent ?? share), locale)}%`}
-      tone={gapTone(comparison.gap)}
-      label={`${t("analytics.hero.attainment")}: ${reading.attained}`}
-      caption={t("reporting.target")}
-    />
-  );
-}
-
-// Without its gap the ring claims neither side of the target.
-function gapTone(gap: number | null | undefined): ReadingTone {
-  if (gap == null) return "neutral";
-  return gap > 0 ? "warning" : "success";
-}
-
-function compared(evaluation: ReportingEvaluation): Comparison | undefined {
-  const comparison = metricOf(
-    evaluation,
-    "forecast_landing",
-  )?.target_comparison;
-  return comparison?.status === "compared" ||
-    comparison?.status === "target_reached"
-    ? comparison
-    : undefined;
-}
-
-// The server's attainment, only when it measures the same target, and the
-// sentence that states it.
-function useAttained(
+// Nothing when there is nothing to fold, so the reading shows no receipt.
+export function heroReceipt(
   evaluation: ReportingEvaluation,
-  comparison: Comparison | undefined,
-) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (!comparison) return undefined;
-  const { currency } = evaluation.context;
-  const money = (value: number | undefined) =>
-    reportingCompactAmount(value, currency, currency, locale);
-  const won = metricOf(evaluation, "bookings_won");
-  const percent =
-    won?.attainment != null && won.target === comparison.target
-      ? won.attainment
+  // The chart read, once it answered: the period before is read off its trend.
+  charts: ReportingEvaluation | undefined,
+): ReactNode {
+  const forecast = metricOf(evaluation, "forecast_landing");
+  // A withheld forecast hides the whole receipt, the period before included.
+  if (forecast?.coverage.withheld) return undefined;
+  const comparison = forecast?.target_comparison;
+  const compared =
+    comparison?.status === "compared" || comparison?.status === "target_reached"
+      ? comparison
       : undefined;
-  const attained =
-    percent == null
-      ? t("reporting.compare.remainingBasis", {
-          won: money(comparison.won),
-          target: money(comparison.target),
-        })
-      : t("analytics.hero.attained", {
-          percent: formatNumber(Math.round(percent), locale),
-          target: money(comparison.target),
-        });
-  return { percent, attained, money };
+  const prior = priorOf(charts);
+  if (!compared && !prior) return undefined;
+  return (
+    <div className="analytics-hero-aside">
+      {compared && (
+        <TargetProgress evaluation={evaluation} comparison={compared} />
+      )}
+      {charts && prior && <PriorPeriod evaluation={charts} prior={prior} />}
+    </div>
+  );
 }
 
 function TargetProgress({
@@ -143,29 +98,45 @@ function TargetProgress({
   comparison,
 }: Readonly<{ evaluation: ReportingEvaluation; comparison: Comparison }>) {
   const t = useT();
-  const reading = useAttained(evaluation, comparison);
-  if (!reading) return null;
-  const { money } = reading;
-  const { gap } = comparison;
+  const { locale } = useLocale();
+  const { currency } = evaluation.context;
+  const money = (value: number | undefined) =>
+    reportingCompactAmount(value, currency, currency, locale);
+  const won = metricOf(evaluation, "bookings_won");
+  // The percentage is the server's, and only when it measures the same target.
+  const percent =
+    won?.attainment != null && won.target === comparison.target
+      ? won.attainment
+      : undefined;
   return (
     <>
-      <p className="t-caption">{reading.attained}</p>
+      {comparison.won != null && comparison.target ? (
+        <Meter
+          value={comparison.won}
+          max={comparison.target}
+          label={t("analytics.hero.attainment")}
+          dense
+        />
+      ) : null}
       <p className="t-caption">
-        {comparison.status === "target_reached"
-          ? t("reporting.compare.reached")
-          : t("analytics.hero.remaining", {
-              amount: money(comparison.remaining),
+        {percent == null
+          ? t("reporting.compare.remainingBasis", {
+              won: money(comparison.won),
+              target: money(comparison.target),
+            })
+          : t("analytics.hero.attained", {
+              percent: formatAnalyticsNumber(Math.round(percent), locale),
+              target: money(comparison.target),
             })}
       </p>
-      {/* A comparison without its gap names no gap, rather than a zero one. */}
-      <p className="t-caption">
-        {gap == null
-          ? t("analytics.overview.gapMissing")
-          : t(gap < 0 ? "analytics.hero.surplus" : "analytics.hero.shortfall", {
-              amount: money(Math.abs(gap)),
-              landing: money(comparison.landing),
-            })}
-      </p>
+      {/* A reached target is said once, on the line under the figure. */}
+      {comparison.status !== "target_reached" && (
+        <p className="t-caption">
+          {t("analytics.hero.remaining", {
+            amount: money(comparison.remaining),
+          })}
+        </p>
+      )}
     </>
   );
 }
@@ -173,25 +144,34 @@ function TargetProgress({
 // The same elapsed point of the period before, read off the trend's own
 // comparison series. Both values are the server's. No partial period is set
 // against a whole one, and nothing is subtracted here.
-function PriorPeriod({
-  evaluation,
-}: Readonly<{ evaluation: ReportingEvaluation }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const trend = evaluation.charts.find(
+function priorOf(
+  evaluation: ReportingEvaluation | undefined,
+): Readonly<{ value: number; unit: string }> | undefined {
+  const trend = evaluation?.charts.find(
     (chart) => chart.kind === "bookings_trend",
   );
-  if (trend?.coverage.status !== "ok") return null;
-  const last = trend.points.at(-1);
-  if (!trend.comparison_interval || last?.comparison == null)
-    return <p className="t-caption">{t("analytics.hero.noPrior")}</p>;
+  if (trend?.coverage.status !== "ok" || !trend.comparison_interval)
+    return undefined;
+  const last = trend.points.at(-1)?.comparison;
+  return last == null ? undefined : { value: last, unit: trend.unit };
+}
+
+function PriorPeriod({
+  evaluation,
+  prior,
+}: Readonly<{
+  evaluation: ReportingEvaluation;
+  prior: Readonly<{ value: number; unit: string }>;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
   const { currency } = evaluation.context;
   return (
     <p className="t-caption">
       {t("analytics.hero.prior", {
         amount: reportingCompactAmount(
-          last.comparison,
-          trend.unit,
+          prior.value,
+          prior.unit,
           currency,
           locale,
         ),

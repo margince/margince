@@ -14,7 +14,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -30,8 +29,11 @@ type ExceptionsFunc func(ctx context.Context, tx pgx.Tx, population Population) 
 // Population narrows a list to the deals of one team, owner or the whole
 // workspace. The zero value narrows nothing beyond what the caller may see.
 type Population struct {
-	Kind string
-	ID   *ids.UUID
+	Kind      string
+	ID        *ids.UUID
+	ProductID *ids.UUID
+	Country   *string
+	Industry  *string
 }
 
 // Handlers is the assurance surface.
@@ -40,10 +42,7 @@ type Handlers struct {
 	exceptions ExceptionsFunc
 	// now is injected so the suppression ceiling is a function of the request's
 	// own clock rather than of whenever the process happened to start.
-	now      func() time.Time
-	settings *config.Config
-	locks    func(surface []config.Any) *[]crmcontracts.SettingLock
-	preview  PreviewFunc
+	now func() time.Time
 }
 
 // NewHandlers binds the routes to the store and its scoped read.
@@ -53,7 +52,7 @@ func NewHandlers(store *Store, exceptions ExceptionsFunc, now func() time.Time) 
 
 // ListInputChecks answers the open findings this caller can see.
 func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request, params crmcontracts.ListInputChecksParams) {
-	population := Population{ID: (*ids.UUID)(params.ScopeId)}
+	population := Population{ID: (*ids.UUID)(params.ScopeId), ProductID: (*ids.UUID)(params.ProductId), Country: params.Country, Industry: params.Industry}
 	if params.ScopeKind != nil {
 		population.Kind = string(*params.ScopeKind)
 	}

@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -132,5 +133,16 @@ func TestHealthyMailboxesReadAsAnEmptyLane(t *testing.T) {
 	}
 	if out.CaptureHealth == nil || len(*out.CaptureHealth) != 0 {
 		t.Fatalf("capture_health = %v, want an empty lane", out.CaptureHealth)
+	}
+}
+
+func TestSilenceCardUsesItsDeliveryEpisodeAsMovement(t *testing.T) {
+	delivered := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
+	item := captureItem(CaptureConcern{ConnectionID: ids.NewV7(), Kind: "capture_silent", Provider: "gmail", FailingSince: &delivered, SubjectMovedAt: &delivered})
+	if item.SubjectMovedAt == nil || !item.SubjectMovedAt.Equal(delivered) {
+		t.Fatalf("movement = %v", item.SubjectMovedAt)
+	}
+	if item.OccurredAt == nil || !item.OccurredAt.Equal(delivered) {
+		t.Fatalf("episode start = %v", item.OccurredAt)
 	}
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // planNode is the part of an EXPLAIN (FORMAT JSON) node this test reads.
@@ -26,13 +27,12 @@ type planNode struct {
 	Plans     []planNode `json:"Plans"`      //nolint:tagliatelle // Postgres's EXPLAIN key, not ours to rename
 }
 
-// reachedBy reports whether any node of the subtree is a scan of the index and
-// whether any is a sequential scan.
-func (n planNode) reachedBy(index string) (usesIndex, scansSeq bool) {
-	usesIndex = n.IndexName == index
+// reachedByID requires an id lookup without tying it to one physical index.
+func (n planNode) reachedByID() (usesIndex, scansSeq bool) {
+	usesIndex = n.IndexName != "" && testdb.IndexConditionReadsID(n.IndexCond)
 	scansSeq = n.NodeType == "Seq Scan"
 	for _, child := range n.Plans {
-		childIndex, childSeq := child.reachedBy(index)
+		childIndex, childSeq := child.reachedByID()
 		usesIndex = usesIndex || childIndex
 		scansSeq = scansSeq || childSeq
 	}
@@ -106,7 +106,7 @@ func TestTheScoutReachesACitedActivityByItsPrimaryKey(t *testing.T) {
 		t.Fatalf("the plan has no lookup of the cited activity — the statement changed shape:\n%s", raw)
 	}
 	for _, lookup := range lookups {
-		usesKey, scansSeq := lookup.reachedBy("activity_pkey")
+		usesKey, scansSeq := lookup.reachedByID()
 		if !usesKey || scansSeq {
 			t.Errorf("a cited activity is not reached by its primary key (uses key: %v, scans the table: %v):\n%s", usesKey, scansSeq, raw)
 		}

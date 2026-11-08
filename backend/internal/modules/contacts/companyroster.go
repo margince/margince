@@ -10,36 +10,52 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// LockCompanyRosterTx holds the starting roster's employments and live contacts until commit.
+func LockCompanyRosterTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]ids.ContactID, error) {
+	if _, err := LockCompanyTx(ctx, tx, companyID); err != nil {
+		return nil, err
+	}
+	initial, err := CompanyRosterTx(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	held := make(map[ids.ContactID]bool, len(initial))
+	for _, contact := range initial {
+		if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contact.String()); err != nil {
+			return nil, err
+		}
+		if err := auth.EnsureLinkTarget(ctx, tx, contactEntity, contact.UUID); err != nil {
+			return nil, err
+		}
+		held[contact] = true
+	}
+	current, err := CompanyRosterTx(ctx, tx, companyID)
+	if err != nil {
+		return nil, err
+	}
+	retained := current[:0]
+	for _, contact := range current {
+		if held[contact] {
+			retained = append(retained, contact)
+		}
+	}
+	return retained, nil
+}
 
 // CompanyRosterSQL selects, as contact_id, the account's current employees
 // this caller may read: the edge gate and the contact row scope both hold.
 // company is a SQL expression, a bind or a correlated column. A caller who
 // may not read contacts or edges is refused.
 func CompanyRosterSQL(ctx context.Context, company string, arg func(any) int) (string, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return "", err
-	}
-	// "Who works at this account" is the fact relationship.read governs.
-	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
+	edges, err := CompanyRosterEdgesSQL(ctx, company, arg)
 	if err != nil {
 		return "", err
 	}
-	if edgeBound == "" {
-		edgeBound = "TRUE"
-	}
-	scope, err := contactScopePredicate(ctx, arg)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf(`SELECT p.id AS contact_id FROM contact p
-		JOIN relationship r ON r.contact_id = p.id
-		WHERE r.kind = 'employment' AND r.company_id = %s
-		  AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
-		  AND p.archived_at IS NULL AND (%s) AND (%s)`, company, edgeBound, scope), nil
+	return "SELECT DISTINCT contact_id FROM (" + edges + ") roster", nil
 }
 
 // CompanyRosterTx reads CompanyRosterSQL for one account, in id order.
@@ -59,4 +75,13 @@ func CompanyRosterTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([
 		return nil, fmt.Errorf("contacts: reading the account's roster: %w", err)
 	}
 	return contacts, nil
+}
+
+// CompanyRosterEdgesSQL retains edge identities for the roster's employment details.
+func CompanyRosterEdgesSQL(ctx context.Context, company string, arg func(any) int) (string, error) {
+	from, err := countedEmploymentFrom(ctx, "rel.company_id = "+company, arg)
+	if err != nil {
+		return "", err
+	}
+	return "SELECT p.id AS contact_id, rel.id AS relationship_id" + from, nil
 }

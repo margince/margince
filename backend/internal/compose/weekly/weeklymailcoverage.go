@@ -23,7 +23,8 @@ import (
 // mailFigures reads the frozen coverage once for the rows that print it. set is
 // never nil: a review without coverage holds an empty one.
 type mailFigures struct {
-	set *crmcontracts.WeeklyFigureCoverageSet
+	leadsWithheld bool
+	set           *crmcontracts.WeeklyFigureCoverageSet
 	// bookings is the coverage Won was measured under; nil on a legacy review.
 	bookings *crmcontracts.ReportingCoverage
 	zone     *time.Location
@@ -33,7 +34,7 @@ type mailFigures struct {
 // figuresOf reads a review frozen before figures carried coverage as fully
 // measured, which is how that review rendered before coverage existed.
 func figuresOf(review Review, words mailcopy.Copy) mailFigures {
-	out := mailFigures{set: &crmcontracts.WeeklyFigureCoverageSet{}, words: words}
+	out := mailFigures{leadsWithheld: review.LeadsWithheld, set: &crmcontracts.WeeklyFigureCoverageSet{}, words: words}
 	if review.NumericSummary == nil {
 		return out
 	}
@@ -101,6 +102,9 @@ var readableBookings = []crmcontracts.ReportingStatus{
 // prints stated not_recorded. A family with no statement counts as measured,
 // so a review that could not state one is never called a week before history.
 func (f mailFigures) beforeHistory() bool {
+	if f.leadsWithheld {
+		return false
+	}
 	for _, family := range []*crmcontracts.WeeklyFigureCoverage{
 		f.set.Deals, f.set.Tasks, f.set.Meetings, f.set.Leads, f.set.Commitments,
 	} {

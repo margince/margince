@@ -2,7 +2,7 @@
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dayInZone, viewerZone } from "../../format/timezone";
+import { browserZone, dayInZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import { readStored, removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { digest, readingsDay } from "../../testing/brief.fixtures";
@@ -15,7 +15,7 @@ import { BriefIntro, GREETING_MS, LEAVE_MS, SHOW_MS } from "./brief.intro";
 
 // Eight in the morning on the viewer's own clock, which the greeting reads.
 const NOW = new Date(2026, 8, 3, 8, 0, 0);
-const TODAY = dayInZone(NOW.getTime(), viewerZone());
+const TODAY = dayInZone(NOW.getTime(), browserZone());
 const SKIP = en["brief.intro.skip"];
 // The curtain is named by everything it says, the way out included.
 const curtain = { name: (name: string) => name.includes(SKIP) };
@@ -42,7 +42,7 @@ describe("BriefIntro", () => {
   it("plays on the first visit of the day and records the day", () => {
     intro();
     expect(screen.getByRole("button", curtain).textContent).toContain(
-      "Good morning, Ada.",
+      "Good morning, Ada",
     );
     expect(readStored(STORAGE_KEYS.briefIntroShown)).toBe(TODAY);
   });
@@ -71,7 +71,7 @@ describe("BriefIntro", () => {
   it("rises before the day's read, so the page never shows first", () => {
     render(<BriefIntro firstName="Ada" day={undefined} now={NOW} />);
     const shown = screen.getByRole("button", curtain);
-    expect(shown.textContent).toContain("Good morning, Ada.");
+    expect(shown.textContent).toContain("Good morning, Ada");
     expect(
       shown.querySelector(".brief-intro-figures[data-pending]"),
     ).not.toBeNull();
@@ -156,7 +156,7 @@ describe("BriefIntro", () => {
   it("reads the greeting and its figures out, not only the way out", () => {
     intro();
     const name = screen.getByRole("button", curtain).textContent ?? "";
-    expect(name).toContain("Good morning, Ada.");
+    expect(name).toContain("Good morning, Ada");
     expect(name).toContain(en["brief.intro.waiting"]);
   });
 

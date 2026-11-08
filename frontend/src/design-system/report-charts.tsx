@@ -1,17 +1,254 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { CSSProperties } from "react";
-import { Button } from "./atoms";
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
+import { Button, Disclosure, TableScroll } from "./atoms";
 import "./report-charts.css";
 
 import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
-import { readingScale } from "./report-charts.model";
-import { ReadingTable } from "./report-charts.table";
+import {
+  areaUnder,
+  chartX,
+  lineSegments,
+  niceTop,
+  readingScale,
+} from "./report-charts.model";
 
-export { DonutChart, type DonutPart } from "./report-charts.donut";
-export { CumulativeChart } from "./report-charts.line";
 export type { ChartReading } from "./report-charts.model";
+
+export function ReadingTable({
+  readings,
+  label,
+  dataLabel,
+  valueLabel,
+  secondaryLabel,
+  secondary,
+  onSelect,
+}: ChartProps &
+  Readonly<{
+    secondaryLabel?: string;
+    secondary?: "comparisonAmount" | "targetAmount" | "upperAmount";
+  }>) {
+  return (
+    <Disclosure className="report-chart-data" summary={dataLabel}>
+      <TableScroll className="report-chart-table-scroll" label={label}>
+        <table>
+          <caption className="sr-only">{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{label}</th>
+              <th scope="col">{valueLabel}</th>
+              {secondaryLabel && <th scope="col">{secondaryLabel}</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {readings.map((reading) => (
+              <tr key={reading.key}>
+                <th scope="row">
+                  {onSelect ? (
+                    <Button
+                      variant="link"
+                      onClick={() => onSelect(reading.key)}
+                    >
+                      {reading.label}
+                    </Button>
+                  ) : (
+                    reading.label
+                  )}
+                </th>
+                <td>{reading.amount}</td>
+                {secondaryLabel && (
+                  <td>{secondary ? reading[secondary] : null}</td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroll>
+    </Disclosure>
+  );
+}
+
+// The plot's height in viewBox units, mirrored by `.report-chart-line`.
+const LINE_HEIGHT = { default: 238, compact: 130 } as const;
+
+function chartY(value: number, scale: number, height: number) {
+  return height - 40 - (value / scale) * (height - 64);
+}
+
+export function CumulativeChart({
+  readings,
+  label,
+  dataLabel,
+  valueLabel,
+  comparisonLabel,
+  reference,
+  axisLabel,
+  onSelect,
+  size = "default",
+}: ChartProps &
+  Readonly<{
+    comparisonLabel?: string;
+    reference?: Readonly<{ value: number; label: string; amount: string }>;
+    axisLabel: (value: number) => string;
+    /** `compact` is a shorter plot, for a chart beside a lead figure. */
+    size?: keyof typeof LINE_HEIGHT;
+  }>) {
+  const height = LINE_HEIGHT[size];
+  const title = useId();
+  const area = useId();
+  const plot = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(680);
+  useEffect(() => {
+    const node = plot.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const measure = () => setWidth(Math.max(200, node.clientWidth));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const [active, setActive] = useState<string | null>(null);
+  // A round top, so the two grid lines above zero read as round amounts.
+  const scale = niceTop(readingScale(readings, reference?.value));
+  const y = (value: number) => chartY(value, scale, height);
+  const selected = readings.find((reading) => reading.key === active);
+  const ticks = [0, scale / 2, scale];
+  const labels = new Set([
+    0,
+    Math.floor((readings.length - 1) / 2),
+    readings.length - 1,
+  ]);
+  return (
+    <figure className="report-chart" data-size={size} aria-labelledby={title}>
+      <figcaption id={title} className="sr-only">
+        {label}
+      </figcaption>
+      {/* One line alone needs no key: the legend names it beside another. */}
+      {(comparisonLabel || reference) && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key">{valueLabel}</span>
+          {comparisonLabel && (
+            <span className="report-chart-key report-chart-key-comparison">
+              {comparisonLabel}
+            </span>
+          )}
+          {reference && (
+            <span className="report-chart-key report-chart-key-target">
+              {reference.label} · {reference.amount}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="report-chart-line" data-size={size} ref={plot}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          aria-hidden="true"
+          preserveAspectRatio="none"
+        >
+          {ticks.map((tick) => (
+            <g key={tick}>
+              <line
+                className="report-chart-grid"
+                x1="56"
+                x2={width - 20}
+                y1={y(tick)}
+                y2={y(tick)}
+              />
+              <text
+                className="report-chart-axis"
+                x="48"
+                y={y(tick) + 4}
+                textAnchor="end"
+              >
+                {axisLabel(tick)}
+              </text>
+            </g>
+          ))}
+          {reference && (
+            <line
+              className="report-chart-reference"
+              x1="56"
+              x2={width - 20}
+              y1={y(reference.value)}
+              y2={y(reference.value)}
+            />
+          )}
+          {lineSegments(readings, "comparison", width, y).map((points) => (
+            <polyline
+              key={points}
+              className="report-chart-comparison"
+              points={points}
+            />
+          ))}
+          <defs>
+            <linearGradient id={area} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" className="report-chart-area-top" />
+              <stop offset="1" className="report-chart-area-foot" />
+            </linearGradient>
+          </defs>
+          {lineSegments(readings, "value", width, y).map((points) => (
+            <g key={points}>
+              <polygon
+                className="report-chart-area"
+                fill={`url(#${area})`}
+                points={areaUnder(points, y(0))}
+              />
+              <polyline className="report-chart-actual" points={points} />
+            </g>
+          ))}
+          {readings.map(
+            (reading, index) =>
+              labels.has(index) && (
+                <text
+                  key={reading.key}
+                  className="report-chart-axis"
+                  x={chartX(index, readings.length, width)}
+                  y={height - 13}
+                  textAnchor="middle"
+                >
+                  {reading.label}
+                </text>
+              ),
+          )}
+        </svg>
+        {readings.map(
+          (reading, index) =>
+            reading.value != null && (
+              <Button
+                key={reading.key}
+                variant="link"
+                className="report-chart-point"
+                style={{
+                  left: `${(chartX(index, readings.length, width) / width) * 100}%`,
+                  top: `${(y(reading.value) / height) * 100}%`,
+                }}
+                aria-label={`${reading.label}: ${reading.amount}`}
+                onFocus={() => setActive(reading.key)}
+                onPointerEnter={() => setActive(reading.key)}
+                onClick={() => onSelect?.(reading.key)}
+                disabled={!onSelect}
+              >
+                <span className="report-chart-dot" />
+              </Button>
+            ),
+        )}
+      </div>
+      <div className="report-chart-focus" aria-live="polite">
+        {selected ? `${selected.label} · ${selected.amount}` : ""}
+      </div>
+      <ReadingTable
+        readings={readings}
+        label={label}
+        dataLabel={dataLabel}
+        valueLabel={valueLabel}
+        secondaryLabel={comparisonLabel}
+        secondary="comparisonAmount"
+        onSelect={onSelect}
+      />
+    </figure>
+  );
+}
 
 export function BulletChart({
   readings,
@@ -26,20 +263,23 @@ export function BulletChart({
   return (
     <figure className="report-chart">
       <figcaption className="sr-only">{label}</figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {hasTargets && (
+      {/* One key alone names nothing the bars do not: the legend is drawn
+          only to tell the actual from its target. */}
+      {hasTargets && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key">{valueLabel}</span>
           <span className="report-chart-key report-chart-key-target">
             {targetLabel}
           </span>
-        )}
-      </div>
+        </div>
+      )}
       <ul className="report-chart-rows">
         {readings.map((reading) => (
           <li key={reading.key}>
             <Button
               variant="link"
               className="report-chart-row"
+              data-tone={reading.tone}
               onClick={() => onSelect?.(reading.key)}
               disabled={!onSelect}
               style={markGeometry(
@@ -172,16 +412,17 @@ export function GroupedBars({
   return (
     <figure className="report-chart" data-size={size}>
       <figcaption className="sr-only">{label}</figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key report-chart-key-bar">
-          {valueLabel}
-        </span>
-        {comparisonLabel && (
-          <span className="report-chart-key report-chart-key-bar report-chart-key-bar-secondary">
+      {/* Swatches, not lines: the keys name bars. One series needs no key. */}
+      {comparisonLabel && (
+        <div className="report-chart-legend">
+          <span className="report-chart-key report-chart-key-bar">
+            {valueLabel}
+          </span>
+          <span className="report-chart-key report-chart-key-bar report-chart-column-secondary">
             {comparisonLabel}
           </span>
-        )}
-      </div>
+        </div>
+      )}
       <div className="report-chart-columns">
         {readings.map((reading) => (
           <div key={reading.key} className="report-chart-column-group">

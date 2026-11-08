@@ -22,8 +22,11 @@ import (
 type ListActivitiesInput struct {
 	InteractionsAsOf *time.Time
 	mailIdentities   map[string][]string
-	Cursor           *string
-	Limit            *int
+	// onlyID narrows a read to one row, so a caller can ask whether this list
+	// returns it without a second spelling of the list's clauses.
+	onlyID *ids.ActivityID
+	Cursor *string
+	Limit  *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
 	// means the order the rest of this narrowing implies: newest-first for a
 	// timeline, nearest-deadline-first for the task queue.
@@ -35,6 +38,8 @@ type ListActivitiesInput struct {
 	// from Kind rather than a second spelling of it: the two compose, so "every
 	// message on telegram" and "every message" are both askable.
 	ChannelProvider *string
+	// CallOutcome narrows to calls that ended this way.
+	CallOutcome *string
 	// SourceSystem narrows to rows one connector wrote, such as website forms.
 	SourceSystem *string
 	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
@@ -114,6 +119,10 @@ type ListActivitiesInput struct {
 	// its own scope, like UnassignedQueue: somebody picks unowned work up by
 	// choice, and it does not arrive in everybody's day.
 	UnhostedMeetings bool
+	// WithOutsideParty keeps the meetings with somebody from outside on them
+	// (outsidePartySQL), in SQL before the page is cut.
+	WithOutsideParty bool
+	outsideParty     func(arg func(any) int) (string, error)
 
 	// ReadableOnly drops the rows this caller may discover but not read, in SQL,
 	// BEFORE the page is cut.

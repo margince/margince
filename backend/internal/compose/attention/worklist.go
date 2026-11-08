@@ -139,7 +139,7 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
+	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
@@ -155,7 +155,7 @@ func (s *Service) worklistIn(
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	out.TeamWeek = new(identity.TeamWeekOf(ctx))
 	defer timeStage(ctx, "row_names")()
-	if err := withPins.nameWorklistRows(ctx, &out, beside.night.findings, day); err != nil {
+	if err := withPins.nameWorklistRows(ctx, &out, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	return out, nil
@@ -190,12 +190,7 @@ func (s *Service) worklistFrom(
 	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.Worklist {
 	defer timeStage(ctx, "rank")()
-	if limit <= 0 {
-		limit = worklistPage
-	}
-	if limit > worklistMaxPage {
-		limit = worklistMaxPage
-	}
+	limit = pageLimit(limit)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	// One admission rule for every row the page, Focus and counts will read.
 	rows, refused := admitBySource(ctx, slices.Concat(
@@ -364,7 +359,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            walk.statedOver(summarize(outstanding(considered, s.view), materialBarOf(day, s.money))),
+		Summary:            walk.statedOver(summarize(summaryPopulation(considered, rows, s.view, filter), materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// Said on the page rather than per source: the cap is a bound on the
 		// ROSTER the scope resolves against, so what it cut is a colleague's
@@ -456,4 +451,13 @@ func (s *Service) rankedWaits(
 		return waits[i].occurredAt.Before(waits[j].occurredAt)
 	})
 	return s.narrowToScope(ctx, waits, scope, s.taskOwner)
+}
+
+// pageLimit is the page a requested limit gets: the default when none was
+// asked, and never past the largest page.
+func pageLimit(limit int) int {
+	if limit <= 0 {
+		return worklistPage
+	}
+	return min(limit, worklistMaxPage)
 }

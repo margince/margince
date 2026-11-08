@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
 import {
   installFetchStub,
@@ -281,10 +281,9 @@ export const ColleaguesMailbox: Story = {
   },
 };
 
-// The default-deny consent gate (A22/ADR-0011): a filled, confirmed send comes
-// back 409 consent_not_granted, so the modal stays open with the pointed
-// "Review consent" copy instead of a raw server error, and the action the
-// server says this rep may take.
+// A filled, confirmed send comes back 409 consent_not_granted. The modal stays
+// open, and the send status shows the engine's reason for the refused address
+// with the action the server offers this rep.
 export const ConsentBlocked: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
@@ -302,6 +301,13 @@ export const ConsentBlocked: Story = {
             overrulable: [
               {
                 contact_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+                category: "marketing",
+              },
+            ],
+            refusals: [
+              {
+                address: "buyer@acme.test",
+                reason_code: "no_marketing_consent",
                 category: "marketing",
               },
             ],
@@ -672,7 +678,7 @@ const SCHEDULED_EDIT = editSeedOf({
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   status: "scheduled",
   scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
-  scheduled_tz: viewerZone(),
+  scheduled_tz: browserZone(),
   subject: "The renewal quote",
   to: ["dana@brandt.example"],
   body: "Hi Dana, here is the renewal quote. The terms are on the site.",
@@ -729,4 +735,75 @@ export const EditingScheduledPhone: Story = {
   ...EditingScheduled,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+const SELECTED_REQUEST = {
+  id: "act-1",
+  kind: "email",
+  subject: "Product materials",
+  body: "Could you send the brochure and approved product images?",
+  direction: "inbound",
+  thread_key: "<materials@example.test>",
+  occurred_at: "2026-09-01T09:00:00Z",
+};
+
+export const SelectedOlderMessage: Story = {
+  render: composeStory({
+    "GET /activities/act-1": () => jsonResponse(SELECTED_REQUEST),
+    "GET /activities": () =>
+      jsonResponse({
+        data: [
+          {
+            ...SELECTED_REQUEST,
+            id: "act-new",
+            subject: "Invoice",
+            body: "Later invoice discussion",
+            occurred_at: "2026-09-12T09:00:00Z",
+          },
+          SELECTED_REQUEST,
+        ],
+        page: { has_more: false },
+      }),
+  }),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Show selected message" }),
+    );
+    await screen.findByText(SELECTED_REQUEST.body);
+    expect(screen.queryByText("Later invoice discussion")).toBeNull();
+  },
+};
+
+export const SelectedOlderMessageDark: Story = {
+  ...SelectedOlderMessage,
+  globals: { theme: "dark" },
+};
+
+export const ColleagueFollowUp: Story = {
+  render: composeStory({
+    "GET /activities/act-1": () =>
+      jsonResponse({
+        ...SELECTED_REQUEST,
+        voice: {
+          author: {
+            kind: "colleague",
+            display_name: "Mira Voss",
+            is_reader: false,
+          },
+        },
+      }),
+  }),
+  play: async () => {
+    const user = userEvent.setup();
+    await screen.findByText(/Following up on “Product materials”/);
+    await user.click(
+      screen.getByRole("button", { name: "Show selected message" }),
+    );
+    await screen.findByText(/Mira Voss wrote/);
+  },
+};
+export const ColleagueFollowUpDark: Story = {
+  ...ColleagueFollowUp,
+  globals: { theme: "dark" },
 };

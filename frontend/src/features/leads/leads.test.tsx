@@ -13,6 +13,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { showLayout } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
@@ -169,6 +171,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("a lead row navigates to the LEAD detail, not the contact screen", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) =>
@@ -186,7 +189,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await waitFor(() =>
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
-    await userEvent.click(screen.getByText("Jonas Petersen"));
+    await user.click(screen.getByText("Jonas Petersen"));
     expect(window.location.hash).toBe("#/leads/l-1");
   });
 
@@ -202,9 +205,10 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("the qualify dialog derives the reason from what was captured, and asks for no trigger", async () => {
+    const user = userEvent.setup();
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(await screen.findByTestId("lead-qualify"));
+    await user.click(await screen.findByTestId("lead-qualify"));
     // A lead with no captured engagement is qualified by the rep's own
     // judgement — said as a sentence, not picked from a technical list.
     expect(await screen.findByText("Reason: qualified by you.")).toBeTruthy();
@@ -212,6 +216,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("the qualify dialog names the captured reply as the reason and sends that trigger with its activity", async () => {
+    const user = userEvent.setup();
     let promoteBody: unknown = null;
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/leads/l-1/promote")) {
@@ -229,12 +234,12 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       });
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(await screen.findByTestId("lead-qualify"));
+    await user.click(await screen.findByTestId("lead-qualify"));
     expect(await screen.findByText(/Reason: the lead replied on/)).toBeTruthy();
-    // Engaged leads start with the deal block ticked; untick it here so the
-    // request is the bare promotion.
-    await userEvent.click(screen.getByTestId("lead-qualify-with-deal"));
-    await userEvent.click(
+    await user.click(
+      screen.getByRole("radio", { name: "Qualify without a deal" }),
+    );
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^Qualify/,
       }),
@@ -348,7 +353,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
     await user.click(await screen.findByTestId("lead-qualify"));
-    await user.click(screen.getByTestId("lead-qualify-with-deal"));
+    await user.click(
+      await screen.findByRole("radio", { name: "Open a new deal" }),
+    );
     await user.type(
       await screen.findByTestId("lead-qualify-deal-name"),
       "Nordwind — Pilot",
@@ -371,6 +378,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   });
 
   it("a 409 already_promoted is shown in the dialog rather than swallowed", async () => {
+    const user = userEvent.setup();
     const fetchMock = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input instanceof Request ? input.url : input);
@@ -407,9 +415,9 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(await screen.findByTestId("lead-qualify"));
+    await user.click(await screen.findByTestId("lead-qualify"));
     const dialog = within(screen.getByRole("dialog"));
-    await userEvent.click(dialog.getByRole("button", { name: /^Qualify/ }));
+    await user.click(dialog.getByRole("button", { name: /^Qualify/ }));
     // The refusal is shown where the reader is; the page re-reads the lead
     // and its outcome card then says what it became.
     expect((await dialog.findByRole("alert")).textContent).toContain(
@@ -443,7 +451,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Board" }));
+    await showLayout(userEvent.setup(), "Board");
     const card = await screen.findByText("Jonas Petersen");
     const workingColumn = screen.getByRole("region", { name: "Contacted" });
 
@@ -472,6 +480,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // for it took the chips and the search with it — leaving the reader looking
     // at a narrowed answer with no way to see or change what narrowed it — and
     // showed page one while looking like the whole pipeline.
+    const user = userEvent.setup();
     stubFetch(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/leads?") || url.endsWith("/leads")) {
@@ -484,19 +493,19 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Board" }));
+    await showLayout(user, "Board");
 
-    // The dials the board obeys are still on screen.
-    expect(screen.getByRole("button", { name: "Add filter" })).toBeTruthy();
-    expect(screen.getByRole("searchbox")).toBeTruthy();
+    expect(
+      screen.getByRole("searchbox", { name: "Search" }),
+    ).toBeInTheDocument();
     // And it admits there is more than it is showing.
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
+    // The dials the board obeys are still a press away.
+    expect(await openViewStep(user, "Filters")).toBeInTheDocument();
   });
 
-  it("edits a lead field in place, sending If-Match", async () => {
-    // The Edit modal is four clicks and a context switch to fix a misspelled
-    // company name. It stays for wholesale edits; the fields a rep corrects
-    // while reading are corrected while reading.
+  it("edits a lead field from its row, sending If-Match", async () => {
+    const user = userEvent.setup();
     type Patched = { body: unknown; ifMatch: string | null };
     const patched: Patched[] = [];
     stubFetch(async (_url: string, method: string, request) => {
@@ -511,14 +520,14 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    // The row reads as its value; pressing it opens the field.
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Company" }),
+    // The row reads as its value; pressing it opens the field's dialog.
+    await user.click(
+      await screen.findByRole("button", { name: /^Change Company/ }),
     );
     const field = await screen.findByDisplayValue("Nordwind Logistik");
-    await userEvent.clear(field);
-    await userEvent.type(field, "Nordwind GmbH");
-    await userEvent.keyboard("{Enter}");
+    await user.clear(field);
+    await user.type(field, "Nordwind GmbH");
+    await user.keyboard("{Enter}");
 
     await waitFor(() => expect(patched.length).toBe(1));
     expect(patched[0].body).toMatchObject({ company_name: "Nordwind GmbH" });
@@ -541,14 +550,15 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(
       (await screen.findAllByText("Nordwind Logistik")).length,
     ).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
     expect(screen.queryByDisplayValue("Nordwind Logistik")).toBeNull();
   });
 
-  // `writable` is what the server's write gate would answer on a mutation. A
-  // rep holding lead.update on the OBJECT was offered Edit, Promote and the
-  // inline rows on a colleague's lead, and learned from the 403 after filling
-  // the form in that it was never theirs to save.
+  // `writable` is what the server's write gate would answer on a mutation.
+  // Holding lead.update on the object must not offer Edit, Promote or field
+  // edits on a colleague's lead.
   it("refuses every write on a live lead this caller may not change, from the one sentence it prints", async () => {
     stubFetch(async () =>
       jsonResponse({ ...lead, owner_id: "u-other", writable: false }),
@@ -557,8 +567,8 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
 
     const sentence =
       "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.";
-    // The band says it once for the page; the inline rows each carry the same
-    // sentence beside their own value, as they do on a closed lead.
+    // The band says it once for the page. Each row carries the same sentence
+    // on its own value, as on a closed lead.
     expect((await screen.findAllByText(sentence)).length).toBeGreaterThan(0);
     // Each verb is refused in place, and the id it describes itself by
     // resolves to that one sentence — a disabled button whose reason is
@@ -572,9 +582,11 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
           ?.textContent,
       ).toBe(sentence);
     }
-    // The inline rows read as text with no control to press, the same shape a
+    // The rows read as text with no control to press, the same shape a
     // closed lead takes.
-    expect(screen.queryByRole("button", { name: "Change Company" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
   });
 
   it("a promoted lead keeps its page and says what the promotion did", async () => {
@@ -632,6 +644,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // ADR-0119: merge-into-existing vs create is the difference between
     // "my prospect is now a contact" and "my prospect was already someone we
     // knew". The preview runs the same ladder the promotion runs.
+    const user = userEvent.setup();
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
         return jsonResponse({ outcome: "merge", contact: anna });
@@ -642,7 +655,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(await screen.findByTestId("lead-qualify"));
+    await user.click(await screen.findByTestId("lead-qualify"));
     expect(
       await screen.findByText(/Qualifying merges into the existing contact/),
     ).toBeTruthy();
@@ -651,6 +664,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   it("a withheld merge target is never read as 'create'", async () => {
     // An absent contact on a merge means "outside your row scope", not "no
     // match": promising a new contact here would be the wrong half to guess.
+    const user = userEvent.setup();
     stubFetch(async (url) => {
       if (url.includes("/promote-preview")) {
         return jsonResponse({
@@ -661,7 +675,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(await screen.findByTestId("lead-qualify"));
+    await user.click(await screen.findByTestId("lead-qualify"));
     // In the dialog: the overview's preview card reads the same answer.
     const dialog = await screen.findByRole("dialog");
     expect(
@@ -822,6 +836,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // row the panel reads its outcome from, so without invalidating that cache
     // the panel walks no further and reports the outcome unavailable while the
     // row sits one page away.
+    const user = userEvent.setup();
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -857,8 +872,8 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       </QueryClientProvider>,
     );
 
-    await userEvent.click(await screen.findByTestId("lead-qualify"));
-    await userEvent.click(
+    await user.click(await screen.findByTestId("lead-qualify"));
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^Qualify/,
       }),

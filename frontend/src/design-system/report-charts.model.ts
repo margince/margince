@@ -3,6 +3,7 @@ export type ChartReading = Readonly<{
   label: string;
   value: number | null;
   amount: string;
+  tone?: "success" | "warning" | "danger" | "neutral";
   comparison?: number | null;
   comparisonAmount?: string;
   target?: number | null;
@@ -40,21 +41,44 @@ export function readingScale(readings: readonly ChartReading[], reference = 0) {
   );
 }
 
-/**
- * An axis that ends on a round figure. The top and its steps are 1, 2, 2.5 or
- * 5 times a power of ten, so a gridline reads "€500k", never "€453.6k".
- */
-export function niceAxis(largest: number, steps = 4) {
-  const rough = Math.max(largest, 1) / steps;
-  const power = 10 ** Math.floor(Math.log10(rough));
-  const step =
-    [1, 2, 2.5, 5, 10]
-      .map((factor) => factor * power)
-      .find((s) => s >= rough) ?? 10 * power;
-  const top = Math.ceil(Math.max(largest, 1) / step) * step;
-  const ticks = Array.from(
-    { length: Math.round(top / step) + 1 },
-    (_, index) => index * step,
-  );
-  return { top, ticks };
+export function lineSegments(
+  readings: readonly ChartReading[],
+  field: "value" | "comparison",
+  width: number,
+  y: (value: number) => number,
+) {
+  const lines: string[] = [];
+  let points: string[] = [];
+  readings.forEach((reading, index) => {
+    const value = reading[field];
+    if (value == null) {
+      if (points.length) lines.push(points.join(" "));
+      points = [];
+    } else points.push(`${chartX(index, readings.length, width)},${y(value)}`);
+  });
+  if (points.length) lines.push(points.join(" "));
+  return lines;
+}
+
+// A line's points closed down to the baseline, for the fill beneath it.
+export function areaUnder(points: string, baseline: number): string {
+  const xs = points.split(" ").map((point) => point.split(",")[0]);
+  return `${xs[0]},${baseline} ${points} ${xs.at(-1)},${baseline}`;
+}
+
+export function chartX(index: number, count: number, width: number) {
+  return 56 + (index / Math.max(1, count - 1)) * (width - 76);
+}
+
+// Round axis tops whose half is round too. Finer than 1-2-5, so the plot keeps
+// the line in its upper part instead of under half of it.
+const AXIS_STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+
+// The axis top: the largest value drawn, raised to a round step so the two
+// grid lines above zero read as round amounts.
+export function niceTop(value: number): number {
+  if (value <= 0) return 1;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const step = AXIS_STEPS.find((m) => m * magnitude >= value * 1.04);
+  return (step ?? 10) * magnitude;
 }

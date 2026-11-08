@@ -64,7 +64,7 @@ const (
 func TestOnlyTheMailMapperMintsTheOutboundAttestation(t *testing.T) {
 	t.Parallel()
 	var offenders []string
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

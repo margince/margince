@@ -14,7 +14,9 @@ import { Panel } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
+import { CAPTURE_REVIEW_PARAM, captureReview } from "../../lib/capturereview";
 import { problemMessageOf } from "../../lib/problem";
+import { useUrlParams } from "../../lib/urlstate";
 import {
   NetworkReach,
   reachCaveat,
@@ -27,6 +29,7 @@ import {
   useSenders,
 } from "./capture-senders";
 import { HeldThreads, useHeldThreads } from "./held-threads";
+import { heldTotal } from "./held-threads.counts";
 
 // One row per list the mailboxes and LinkedIn import produced. Each list is
 // long and read rarely, so the row says how much there is and opens a drawer.
@@ -40,7 +43,15 @@ export function ConnectionOutcomesCard() {
   const waiting = useAwaitingDecision();
   const held = useHeldThreads();
   const reach = useLinkedInReach();
-  const [open, setOpen] = useState<Outcome | null>(null);
+  const [params, setParams] = useUrlParams();
+  const [selected, setSelected] = useState<Outcome | null>(null);
+  const open = captureReview(params.get(CAPTURE_REVIEW_PARAM)) ?? selected;
+  const setOpen = (outcome: Outcome | null) => {
+    const next = new Map(params);
+    next.delete(CAPTURE_REVIEW_PARAM);
+    setParams(next);
+    setSelected(outcome);
+  };
   const close = () => setOpen(null);
   const titleId = useId();
   const viewBase = useId();
@@ -50,7 +61,7 @@ export function ConnectionOutcomesCard() {
   const counts: Record<Outcome, number | undefined> = {
     senders: senders.data?.data.length,
     waiting: waitingCount,
-    held: held.data?.data.length,
+    held: held.data?.pages[0] && heldTotal(held.data.pages[0]),
     reach: reachCount,
   };
   // A list emptied in the drawer, or about to re-read, may take its row's View
@@ -149,11 +160,7 @@ export function ConnectionOutcomesCard() {
           onClose={close}
           returnFocusTo={backTo("held")}
         >
-          {held.data.data.length === 0 ? (
-            <EmptyState>{t("heldThreads.empty")}</EmptyState>
-          ) : (
-            <HeldThreads list={held.data} />
-          )}
+          <HeldThreads />
         </OutcomeDrawer>
       )}
       {open === "reach" && reach.data && (

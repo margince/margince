@@ -130,29 +130,3 @@ export const ScoreHigh: Story = {
     );
   },
 };
-
-/** A share of a target, compact beside a lead figure, with the expected
-    finish as a lighter arc ahead of it. */
-export const ScoreTargetShare: Story = {
-  render: () => (
-    <ScoreRing
-      size="compact"
-      score={53}
-      reach={95}
-      display="53%"
-      tone="warning"
-      label="Target reached: €420k won of €800k"
-      caption="Target"
-    />
-  ),
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole("img")).toHaveTextContent(
-      "53%Target",
-    );
-  },
-};
-
-export const ScoreTargetShareDark: Story = {
-  ...ScoreTargetShare,
-  globals: { theme: "dark" },
-};

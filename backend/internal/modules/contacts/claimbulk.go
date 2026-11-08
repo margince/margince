@@ -11,14 +11,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,19 +33,11 @@ type BulkClaim struct {
 	Done    bool
 }
 
-// ErrClaimNeedsTheUser refuses an agent a promise: whether a human kept their
-// word is theirs to say (SettleConversationClaim).
-var ErrClaimNeedsTheUser = &httperr.DetailedError{
-	Status: http.StatusForbidden, Code: "commitment_needs_the_user",
-	Detail: "a commitment is marked done by the user, not by an agent; ask them to mark it done on their Worklist",
-}
-
 // LockClaimForBulkTx takes the row lock a bulk change holds for its whole
 // transaction, over a claim a Worklist promise row names (ourPromiseWithNoTask).
 // Any other claim, or one whose contact or source message the caller may not
-// see, answers apperrors.ErrNotFound. Then an agent is refused with
-// ErrClaimNeedsTheUser, and only then is write authority asked, so a visible
-// promise always gives an agent that one reason.
+// see, answers apperrors.ErrNotFound. Automatic work is refused before write
+// authority is asked, as SettleConversationClaim refuses it.
 func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (BulkClaim, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return BulkClaim{}, err
@@ -73,10 +63,7 @@ func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 	if err := ensureClaimContentVisible(ctx, tx, id); err != nil {
 		return BulkClaim{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return BulkClaim{}, ErrClaimNeedsTheUser
-		}
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return BulkClaim{}, err
 	}
 	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
@@ -90,7 +77,7 @@ func (s *Store) LockClaimForBulkTx(ctx context.Context, tx pgx.Tx, id ids.UUID) 
 // under the gates SettleConversationClaim holds, and answers the version the
 // write left it at.
 func (s *Store) SetClaimDoneTx(ctx context.Context, tx pgx.Tx, id ids.UUID, done bool) (int64, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return 0, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {

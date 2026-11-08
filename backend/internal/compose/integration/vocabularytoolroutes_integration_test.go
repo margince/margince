@@ -23,6 +23,7 @@ func TestVocabularyRoutesAnswerAsTheirTools(t *testing.T) {
 		{"/v1/record-fields", "describe_record_fields", `"fields":{`},
 		{"/v1/analytics/reports/blocks", "describe_report_blocks", `"blocks":{`},
 		{"/v1/analytics/reports/vocabulary", "describe_report_vocabulary", `"vocabulary":{`},
+		{"/v1/read-views", "describe_views", `"views":{`},
 	} {
 		rest := compacted(t, d.rest(t, "GET", tc.path, nil))
 		if rest != compacted(t, d.tool(t, tc.tool, map[string]any{})) {

@@ -45,7 +45,7 @@ func captureVoiceFixture(t *testing.T) voiceFixture {
 	f.to = e.SeedContact(t, "Tara Addressed", &e.Rep1)
 	f.mail = captureCommitmentMessage(t, e, f.p, "voice-thread@buyer.example", "Signed NDA please",
 		"Could you send us the signed NDA before Friday?", "inbound",
-		time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC),
+		clocktest.Now(t).Add(-24*time.Hour),
 		commitmentMailRecipient{contact: f.to, role: "to"},
 		commitmentMailRecipient{contact: f.q, role: "cc"})
 	// The owed-verdict pass reads the mail as a request, so it has a move to owe.

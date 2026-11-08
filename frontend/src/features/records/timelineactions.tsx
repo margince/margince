@@ -29,10 +29,10 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
-  AUDIENCE_CHOICES,
   AUDIENCE_HINT,
   AUDIENCE_LABEL,
   AudienceMembers,
+  messageAudienceChoices,
   useAudienceCandidates,
 } from "../lists/audiencemembers";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
@@ -66,7 +66,7 @@ type RowVerbProps = Readonly<{
 // answer what came in, not where it is filed.
 //
 // rowAnswer picks the verb: Reply on mail, Write email on any other row the
-// server says it can address (`offers_email`).
+// server names a target for (`email_target`).
 export function RowAnswerActions({
   activity,
   entityType,
@@ -89,7 +89,7 @@ export function RowAnswerActions({
       <ChannelReplyAction
         activityId={activity.id}
         kind={activity.kind}
-        offersEmail={activity.offers_email}
+        emailTarget={activity.email_target}
         channelProvider={activity.channel_provider ?? undefined}
         entityType={entityType}
         entityId={entityId}
@@ -154,7 +154,8 @@ export function TimelineActions(props: RowVerbProps) {
             a twenty-row page does not ship. Every other kind is offered it
             here, and AudienceAction withholds it where the audience was
             derived or an import wrote the row. */}
-        {activity.kind !== "email" && (
+        {(activity.kind !== "email" ||
+          activity.can_share_internal === true) && (
           <AudienceAction
             activity={activity}
             entityType={entityType}
@@ -263,6 +264,7 @@ export function AudienceAction({
   entityId: string;
 }>) {
   const t = useT();
+  const internal = activity.can_share_internal === true;
   const writable = useCanWriteRecord("activity", activity);
   const [open, setOpen] = useState(false);
   const current: ActivityAudience = activity.audience ?? "workspace";
@@ -279,12 +281,16 @@ export function AudienceAction({
   const [members, setMembers] = useState<AudienceMember[]>([]);
   // Fetched only while the dialog is open: the roster is two reads, and a
   // timeline of twenty rows would otherwise fire them per row on mount.
-  const candidates = useAudienceCandidates(open && choice === "selected");
+  const candidates = useAudienceCandidates(
+    open && choice === "selected",
+    internal,
+  );
   const mutation = useMessageAudience({
     invalidate: () => entityTimelineKeys(entityType, entityId),
     onSettled: () => setOpen(false),
   });
-  if (activity.content_state === "withheld" || !writable) {
+
+  if (activity.content_state === "withheld" || (!writable && !internal)) {
     return null;
   }
   // A DERIVED audience is not this dialog's to change, and offering it anyway
@@ -300,7 +306,7 @@ export function AudienceAction({
   // `manual` is a human's own answer and stays editable. Null is a row nothing
   // derived. The field is withheld with the content, which is why this sits
   // BELOW the withheld guard — above it, a held row would read as editable.
-  if (audienceIsDerived(activity)) {
+  if (audienceIsDerived(activity) && !internal) {
     return null;
   }
   // A row a mailbox or connector imported refuses this write EVEN WHEN
@@ -323,7 +329,7 @@ export function AudienceAction({
   // the list summary — see #4023's own comment) — but it is a known gap, not
   // an exact mirror. Reading the prefix here is not the guess #4023 removed:
   // that guess picked between two WRITE ENDPOINTS; this only hides a button.
-  if (activity.captured_by.startsWith("connector:")) {
+  if (activity.captured_by.startsWith("connector:") && !internal) {
     return null;
   }
   return (
@@ -343,7 +349,8 @@ export function AudienceAction({
         intent="form"
         confirmLabel={t("compose.audienceConfirm")}
         confirmDisabled={
-          choice === current || (choice === "selected" && members.length === 0)
+          (choice === current && !internal) ||
+          (choice === "selected" && members.length === 0)
         }
         onConfirm={() =>
           mutation.mutate({
@@ -361,7 +368,7 @@ export function AudienceAction({
             legend={t("compose.audienceLegend")}
             value={choice}
             onChange={setChoice}
-            choices={AUDIENCE_CHOICES.map((value) => ({
+            choices={messageAudienceChoices(internal).map((value) => ({
               value,
               label: t(AUDIENCE_LABEL[value]),
               description: t(AUDIENCE_HINT[value]),
@@ -372,12 +379,15 @@ export function AudienceAction({
                 refuses an empty set rather than writing it. */}
           {choice === "selected" && (
             <AudienceMembers
+              usersOnly={internal}
               candidates={candidates}
               chosen={members}
               onChange={setMembers}
             />
           )}
-          <p className="t-caption">{t("compose.audienceNote")}</p>
+          <p className="t-caption">
+            {t(internal ? "internalMail.shareNote" : "compose.audienceNote")}
+          </p>
         </div>
       </ConfirmModal>
     </>

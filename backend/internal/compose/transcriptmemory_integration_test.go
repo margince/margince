@@ -19,6 +19,7 @@ package compose
 // transcript's own words do not, which is what the identity carries.
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -130,23 +131,46 @@ func TestASecondReadingDoesNotDuplicateAProposalStillWaiting(t *testing.T) {
 	}
 }
 
-// A reading that raises nothing says why.
+// A reading that raises nothing says why, and says it to each reader.
 //
-// "I read it and everything in it was already put to you" and "I could not read
-// it" are different answers, and a run that finishes silent reads as the second.
-// The run record refuses to let them collapse, which is what caught this.
+// "I read it and everything in it was already put to someone" and "I could not
+// read it" are different answers, and a run that finishes silent reads as the
+// second. The run record refuses to let them collapse, which is what caught
+// this. Whom it was put to depends on who reads: the colleague who made the
+// promise and decided it is told "you", anyone else is told their name.
 func TestAReadingWhoseStepsWereAllAnsweredSaysSo(t *testing.T) {
 	e := setupTranscript(t)
-	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
-	e.rejectFirst(t, first.ProposalIDs)
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
+	reply := attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)
+	first := e.read(t, cannedBrain{reply: reply})
+	if len(first.ProposalIDs) != 1 {
+		t.Fatalf("the first reading staged %d proposals, want the one put to Priya", len(first.ProposalIDs))
+	}
+	priya := e.As(e.Rep2, []ids.UUID{e.Team1}, transcriptPerms)
+	reason := "not a commitment"
+	if _, err := e.svc.Decide(priya, ids.From[ids.ApprovalKind](first.ProposalIDs[0]), false, &reason); err != nil {
+		t.Fatalf("Priya declining her own promise: %v", err)
+	}
 
-	second := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
+	second := e.read(t, cannedBrain{reply: reply})
 	if second.StatusDetail == nil || *second.StatusDetail == "" {
 		t.Fatal("a reading that raised nothing recorded no reason, so it cannot be " +
 			"told from one that failed")
 	}
 	if len(second.ProposalIDs) != 0 {
 		t.Errorf("the run claims %d proposals it did not raise", len(second.ProposalIDs))
+	}
+	for reader, want := range map[string]struct {
+		ctx  context.Context
+		said string
+	}{
+		"the promiser, who decided it": {priya, "1 next step was already put to you"},
+		"the colleague who logged it":  {e.ctx, "1 next step was already put to Priya Raman"},
+		"an administrator":             {e.Admin(), "1 next step was already put to Priya Raman"},
+	} {
+		if got := detailOf(e.reportFor(t, want.ctx, second)); got != want.said {
+			t.Errorf("%s reads %q, want %q", reader, got, want.said)
+		}
 	}
 }
 

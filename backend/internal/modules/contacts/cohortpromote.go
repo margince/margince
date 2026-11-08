@@ -142,7 +142,7 @@ func (s *Store) PromoteContactCohortTx(
 	// before-image to judge — the subject is the contact whose cohort moved, not
 	// any one of the messages.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", entityContact, canonical.UUID,
-		map[string]any{"cohort_linked": len(linked), "cohort_promoted": len(promoted)})
+		map[string]any{cohortLinkedKey: len(linked), cohortPromotedKey: len(promoted)})
 	if err != nil {
 		return CohortPromotion{}, fmt.Errorf("contacts: auditing a cohort repair: %w", err)
 	}
@@ -463,4 +463,14 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		return 0, err
 	}
 	return planted, nil
+}
+
+const (
+	cohortLinkedKey   = "cohort_linked"
+	cohortPromotedKey = "cohort_promoted"
+)
+
+// CohortAuditSQL identifies the additive address-to-contact repair by its immutable audit payload.
+func CohortAuditSQL(alias string) string {
+	return `COALESCE((` + alias + `.entity_type='contact' AND ` + alias + `.action='update' AND ` + alias + `.after ? '` + cohortLinkedKey + `' AND ` + alias + `.after ? '` + cohortPromotedKey + `'),false)`
 }

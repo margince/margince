@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { FALLBACK_RECORD_ZONE } from "./timezone";
+import { FALLBACK_COMPANY_ZONE } from "./timezone";
+import { sourceFiles, srcRoot } from "./zone-by-purpose.testkit";
 
 // A screen that names a zone has decided something, and the decision is the
 // part that has to be reviewable: whose calendar does this date belong to, the
@@ -19,15 +20,15 @@ import { FALLBACK_RECORD_ZONE } from "./timezone";
 // (right for nobody, since two colleagues then quote different days for the
 // same fact).
 //
-// So the rule is that a zone is NAMED in one file. `useRecordZone()` and
-// `viewerZone()` carry the purposes; a call site picks one and reads as the
+// So the rule is that a zone is NAMED in one file. `useCompanyZone()` and
+// `browserZone()` carry the purposes; a call site picks one and reads as the
 // judgement it is. This gate holds the negative half: nothing outside that
 // module spells ANY zone out again — not the record zone, and not a second one
 // chosen because it looked harmless.
 //
 // Since the record zone became the INSTALLATION's answer rather than a
 // constant, there is a second way to pin it silently, and this gate holds that
-// half too: importing `FALLBACK_RECORD_ZONE`. It is a real zone name that a
+// half too: importing `FALLBACK_COMPANY_ZONE`. It is a real zone name that a
 // screen could use and that would look right on the machine of whoever wrote
 // it, while every installation that configured something else got Berlin — the
 // exact defect the hook exists to end. Only the record-zone module itself may
@@ -40,12 +41,6 @@ import { FALLBACK_RECORD_ZONE } from "./timezone";
 // `pinnedZones` below, and every entry states why that file is allowed to name a
 // zone. It cannot rot unnoticed: an entry that has stopped covering a real site
 // fails.
-
-const here = dirname(fileURLToPath(import.meta.url));
-const srcRoot = join(here, "..");
-
-// The one home for the rule. It names both zones because that is its job.
-const zoneModule = join(here, "timezone.ts");
 
 // The IANA areas every zone name starts with. Anchoring on them is what keeps
 // `"screens/settings"` and `"design-system/composed"` out of the findings while
@@ -65,7 +60,7 @@ const ZONE_LITERAL = new RegExp(
   "g",
 );
 
-// The viewer's own zone, read by hand. `viewerZone()` is the same lookup plus
+// The viewer's own zone, read by hand. `browserZone()` is the same lookup plus
 // the UTC fallback for a runtime that reports no zone.
 const INLINE_VIEWER_LOOKUP = /resolvedOptions\(\)\s*\.\s*timeZone/g;
 
@@ -74,23 +69,6 @@ const INLINE_VIEWER_LOOKUP = /resolvedOptions\(\)\s*\.\s*timeZone/g;
 // local first, and it is the shape a test's zone spy is built from — which is
 // why a suite that pretends to be elsewhere is an exemption below.
 const RESOLVED_OPTIONS = /Intl\.DateTimeFormat\(\)\s*\.\s*resolvedOptions\(\)/g;
-
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : sourceFiles(path);
-    }
-    if (path === fileURLToPath(import.meta.url) || path === zoneModule) {
-      // This gate spells out the very patterns it hunts for, and the module IS
-      // the permitted site. A sweep that read either would vouch for itself.
-      return [];
-    }
-    return /\.tsx?$/.test(entry.name) ? [path] : [];
-  });
-}
 
 // A zone named in a COMMENT is not a call site. The invariant a screen states
 // in prose — "pinned to Europe/Berlin it told a reader in another zone a
@@ -138,12 +116,40 @@ function code(path: string, source: string): string {
 
 // Files that legitimately name a zone, each with the reason it does. A test or
 // a fixture that PINS a zone is proving something about a named zone, which is
-// the one thing `viewerZone()` cannot stand in for: a suite whose expected
+// the one thing `browserZone()` cannot stand in for: a suite whose expected
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/booking/meeting-availability.refusal.test.tsx",
+    why: "Feeds the working-hours card the zone a host stores with their hours: the API sends that zone as data, so the fixture carries a real stored value.",
+  },
+  {
+    file: "components/bulktask.test.tsx",
+    why: "Proves the bulk writer mints the day's end on the RECORD's clock: only a named record zone that differs from the runner's and the fallback's tells that apart from the viewer's zone.",
+  },
+  {
+    file: "components/followuptaskfields.test.tsx",
+    why: "The hour the clocks skip exists only in a named zone with daylight saving; the runner's zone may have none, and then the field has nothing to warn about.",
+  },
+  {
+    file: "mcp-apps/attention/main.test.ts",
+    why: "The card prints a promise's day in the installation zone the answer names. Only named zones east and west of UTC show that a late-evening due date stays on its own day.",
+  },
+  {
+    file: "components/logactivity.followup.test.tsx",
+    why: "A callback time is a wall-clock time on the record's clock: the posted due_at only differs from UTC, and so only proves the conversion, under a named zone with an offset. A runner zone of UTC would pass a form that ignores the record zone.",
+  },
+  {
+    file: "components/logactivity.openmeeting.test.tsx",
+    why: "A date-only meeting is stored at noon UTC. Only a zone well east of UTC puts an instant from the evening before nearer the day's start than that noon, which is the case the closest-meeting pick must get right.",
+  },
+  {
     file: "features/privacy/noticesource.test.tsx",
     why: "Pins the acquisition calendar to prove that the submitted civil date converts to the intended UTC instant.",
+  },
+  {
+    file: "features/analytics/analytics.overview.trajectory.test.ts",
+    why: "Month ticks fall on the company's month starts. Only a zone whose local month starts on another UTC date tells that apart from UTC.",
   },
   {
     file: "features/analytics/reporting.questioncard.test.tsx",
@@ -210,6 +216,18 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },
   {
+    file: "features/brief/brief.taskcard.words.test.ts",
+    why: "A task card counts the days a task is late in the zone it is given; the fixture pins UTC so the count does not move with the test machine.",
+  },
+  {
+    file: "features/companies/companynextbar.late.test.tsx",
+    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the badge and the sentence must both say two.",
+  },
+  {
+    file: "features/contacts/contacttoday.late.test.tsx",
+    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the contact's badge and sentence must both say two.",
+  },
+  {
     file: "features/deals/deals.columns.test.tsx",
     why: "The close column draws its day in the zone it is given; the fixture pins UTC so the expected day does not move with the test machine.",
   },
@@ -242,7 +260,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
   },
   {
-    file: "features/automations/connect-ai-tool.test.tsx",
+    file: "components/connect-ai-tool.test.tsx",
     why: "The admin guide dates a calendar day; a viewer at UTC+14 is where a day handled as an instant would print the next one.",
   },
   {
@@ -296,7 +314,7 @@ const pinnedZones: { file: string; why: string }[] = [
 
   {
     file: "features/worklist/taskduedate.test.tsx",
-    why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through RecordZoneProvider, the seam the product itself reads.",
+    why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through CompanyZoneProvider, the seam the product itself reads.",
   },
   {
     file: "features/worklist/taskduedate.guard.test.ts",
@@ -307,28 +325,52 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
   },
   {
+    file: "testing/readerzone.testkit.ts",
+    why: "It is the zone spy a suite uses to pretend the browser is elsewhere; it has to read the real options to replace only the zone.",
+  },
+  {
+    file: "features/worklist/worklist.dueday.test.tsx",
+    why: "The row's due day is asserted where the company's clock and the reader's disagree by a calendar day, which only two named zones can set up.",
+  },
+  {
+    file: "features/worklist/worklist.briefverbs.test.tsx",
+    why: "Tomorrow at 08:00 is asserted on a named reader zone against a browser pretending to be elsewhere; only named zones make the two disagree.",
+  },
+  {
+    file: "lib/viewerzone.test.tsx",
+    why: "The reader's zone is the subject: the suite names a reader zone, a company zone that disagrees with it by a calendar day, and a fixed offset the formatters refuse.",
+  },
+  {
+    file: "features/worklist/taskactions.test.tsx",
+    why: "The due line is asserted to the hour, and that hour exists only in a named zone; the suite names the reader's zone so the hour does not move with the machine it runs on.",
+  },
+  {
+    file: "features/settings/account-settings.test.tsx",
+    why: "The case picks a zone in the account row and asserts the exact IANA name the write carries; the name the user picked is the subject, so it has to be spelled.",
+  },
+  {
     file: "testing/settings.testkit.tsx",
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, the way the analytics frames above do. Reading the runner's zone would make the fixture describe whichever machine ran it, and the card under it renders the name it is given.",
   },
   {
     file: "features/worklist/worklist.when.test.tsx",
-    why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking viewerZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
+    why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking browserZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
   },
   {
     file: "features/brief/brief.readings.test.tsx",
-    why: "The case is that a date-only period reads as the SAME days for every colleague, and proving it needs three named zones at once: the installation's, which the tile must follow, and a viewer's on either side of UTC. A zone taken off the runner would decide whether the bug can appear at all — east of UTC a viewer-zone read prints the right days by luck, so the assertion would pass over code that is wrong for half the world. The installation's zone is supplied through RecordZoneProvider, the seam the product itself reads.",
+    why: "The case is that a date-only period reads as the SAME days for every colleague, and proving it needs three named zones at once: the installation's, which the tile must follow, and a viewer's on either side of UTC. A zone taken off the runner would decide whether the bug can appear at all — east of UTC a viewer-zone read prints the right days by luck, so the assertion would pass over code that is wrong for half the world. The installation's zone is supplied through CompanyZoneProvider, the seam the product itself reads.",
   },
   {
     file: "features/automations/approvalevidence.test.tsx",
-    why: "The source date must use the configured record zone. The test supplies a named zone through RecordZoneProvider and checks the date against it, independent of the browser zone.",
+    why: "The source date must use the configured record zone. The test supplies a named zone through CompanyZoneProvider and checks the date against it, independent of the browser zone.",
   },
   {
     file: "features/brief/brief.weekly.test.tsx",
-    why: "The case asserts that the weekly's 'written at' renders in the INSTALLATION's zone, so it provides one through RecordZoneProvider and formats its expectation against the same name. The alternative is naming FALLBACK_RECORD_ZONE, which the arm below forbids and rightly: the component reads that same constant, so the assertion would hold however wrong the zone decision was.",
+    why: "The case asserts that the weekly's 'written at' renders in the INSTALLATION's zone, so it provides one through CompanyZoneProvider and formats its expectation against the same name. The alternative is naming FALLBACK_COMPANY_ZONE, which the arm below forbids and rightly: the component reads that same constant, so the assertion would hold however wrong the zone decision was.",
   },
   {
     file: "features/brief/brief.weekly.report.test.tsx",
-    why: "The report's title, calendar week and next-report date are days in the installation's zone, so the case provides one through RecordZoneProvider. Without it the expected dates would follow whichever runner's zone the case ran in.",
+    why: "The report's title, calendar week and next-report date are days in the installation's zone, so the case provides one through CompanyZoneProvider. Without it the expected dates would follow whichever runner's zone the case ran in.",
   },
   {
     file: "features/analytics/analytics.forecast.test.tsx",
@@ -387,7 +429,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The whole-app smoke story serves an installation-settings response, and the contract makes `timezone` required — a settled answer without one is a server this bundle does not match, which the app reports as an error and the render gate then fails on. The zone is the SERVER's answer being stubbed, not a zone this story picks.",
   },
   {
-    file: "lib/recordzone.test.tsx",
+    file: "lib/companyzone.test.tsx",
     why: "Proves what the record zone does with what the server sends it, which needs a configured zone to hand it and an unrenderable one to refuse — neither is a zone this code picks, both are the input under test.",
   },
   {
@@ -465,7 +507,7 @@ const pinnedZones: { file: string; why: string }[] = [
   },
   {
     file: "format/timezone.test.ts",
-    why: "Pins viewerZone()'s answer and its UTC fallback by pretending to be in a named zone.",
+    why: "Pins browserZone()'s answer and its UTC fallback by pretending to be in a named zone.",
   },
   {
     file: "features/voice-knowledge/adddocument.test.tsx",
@@ -536,6 +578,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture backing the leads screen's settings read.",
   },
   {
+    file: "components/logactivity.testkit.tsx",
+    why: "The composer harness names the reader's zone its suites assert against, so a stored instant cut on any other clock fails rather than agreeing with itself on the default.",
+  },
+  {
     file: "components/logactivity.test.tsx",
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
@@ -600,22 +646,24 @@ const pinnedZones: { file: string; why: string }[] = [
 type Finding = { file: string; line: number; text: string };
 
 function findings(): Finding[] {
-  return sourceFiles(srcRoot).flatMap((path) => {
-    const rel = relative(srcRoot, path).split("\\").join("/");
-    const lines = code(path, readFileSync(path, "utf8")).split("\n");
-    return lines.flatMap((line, index) => {
-      const hits = [
-        ...line.matchAll(ZONE_LITERAL),
-        ...line.matchAll(INLINE_VIEWER_LOOKUP),
-        ...line.matchAll(RESOLVED_OPTIONS),
-      ];
-      return hits.map((hit) => ({
-        file: rel,
-        line: index + 1,
-        text: hit[0],
-      }));
-    });
-  });
+  return sourceFiles(srcRoot, fileURLToPath(import.meta.url)).flatMap(
+    (path) => {
+      const rel = relative(srcRoot, path).split("\\").join("/");
+      const lines = code(path, readFileSync(path, "utf8")).split("\n");
+      return lines.flatMap((line, index) => {
+        const hits = [
+          ...line.matchAll(ZONE_LITERAL),
+          ...line.matchAll(INLINE_VIEWER_LOOKUP),
+          ...line.matchAll(RESOLVED_OPTIONS),
+        ];
+        return hits.map((hit) => ({
+          file: rel,
+          line: index + 1,
+          text: hit[0],
+        }));
+      });
+    },
+  );
 }
 
 const pinnedFiles = new Set(pinnedZones.map(({ file }) => file));
@@ -625,7 +673,8 @@ describe("a zone is named in one module", () => {
 
   it("reads the tree it is meant to sweep", () => {
     // A miswired walk passes every assertion below by inspecting nothing.
-    expect(sourceFiles(srcRoot).length).toBeGreaterThan(200);
+    const swept = sourceFiles(srcRoot, fileURLToPath(import.meta.url));
+    expect(swept.length).toBeGreaterThan(200);
     expect(all.length).toBeGreaterThan(pinnedZones.length);
   });
 
@@ -634,8 +683,8 @@ describe("a zone is named in one module", () => {
     // the fallback — and the two must not drift, because the way that drift
     // ends is silent. Retune the fallback to something the pattern cannot see
     // and every arm below still passes, over a tree the sweep no longer reads.
-    expect(`"${FALLBACK_RECORD_ZONE}"`.match(ZONE_LITERAL)).toEqual([
-      `"${FALLBACK_RECORD_ZONE}"`,
+    expect(`"${FALLBACK_COMPANY_ZONE}"`.match(ZONE_LITERAL)).toEqual([
+      `"${FALLBACK_COMPANY_ZONE}"`,
     ]);
     // And it has to be a zone Intl accepts, or the shape matched a name that
     // formats nothing. This is load-bearing for the fallback specifically: it
@@ -643,7 +692,7 @@ describe("a zone is named in one module", () => {
     // be rendered, so a fallback that itself threw would turn a recoverable
     // disagreement between two zone databases into a blank application.
     expect(
-      () => new Intl.DateTimeFormat("en", { timeZone: FALLBACK_RECORD_ZONE }),
+      () => new Intl.DateTimeFormat("en", { timeZone: FALLBACK_COMPANY_ZONE }),
     ).not.toThrow();
   });
 
@@ -657,18 +706,20 @@ describe("a zone is named in one module", () => {
     // sweep above to catch.
     //
     // Three permitted files, all of them about the fallback rather than users
-    // of it. `lib/recordzone.tsx` decides when it applies, and its own suite
+    // of it. `lib/companyzone.tsx` decides when it applies, and its own suite
     // proves that decision. `format/timezone.test.ts` asserts the one property
     // the fallback must keep: the formatters accept it, since it renders when
     // the installation's own zone cannot. A test forbidden
     // from naming the value it asserts on could only check it against itself.
     const allowed = new Set([
-      "lib/recordzone.tsx",
-      "lib/recordzone.test.tsx",
+      "lib/companyzone.tsx",
+      "lib/companyzone.test.tsx",
       "format/timezone.test.ts",
     ]);
-    const importers = sourceFiles(srcRoot)
-      .filter((path) => /FALLBACK_RECORD_ZONE/.test(readFileSync(path, "utf8")))
+    const importers = sourceFiles(srcRoot, fileURLToPath(import.meta.url))
+      .filter((path) =>
+        /FALLBACK_COMPANY_ZONE/.test(readFileSync(path, "utf8")),
+      )
       .map((path) => relative(srcRoot, path).split("\\").join("/"))
       .filter((file) => !allowed.has(file));
     expect(importers.sort()).toEqual([]);
@@ -722,7 +773,7 @@ describe("a zone is named in one module", () => {
       .filter(({ file }) => !pinnedFiles.has(file))
       .map(({ file, line, text }) => `${file}:${line}: ${text}`);
     // Zero, not a ratchet. A date on a record surface takes RECORD_ZONE; a
-    // moment the reader relates to their own clock takes viewerZone(); a
+    // moment the reader relates to their own clock takes browserZone(); a
     // date-only wire value takes RECORD_ZONE, because there is no instant in
     // `2026-08-21` to localize and a zone behind UTC prints the day before.
     // A fixture or a test that must pin a zone earns an entry in

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type QueryClient, useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  queryOptions,
+  useQuery,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
@@ -23,22 +27,21 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 // The rail's brand block does not: it reads /me's installation_brand, which
 // every seat receives. Only an admin asks: the read is admin-only (contacts'
 // requireAnchorAdministrator), so any other seat's request can only be refused.
+export const companyOptions = queryOptions({
+  queryKey: ["company"],
+  queryFn: async (): Promise<CompanyProfile | null> => {
+    const { data, error, response } = await api.GET("/company");
+    if (error) {
+      if (response.status === 404) return null;
+      throwProblem(error);
+    }
+    return data;
+  },
+});
+
 export function useCompany(enabled: boolean) {
   const isAdmin = useHoldsAdminRole();
-  return useQuery({
-    queryKey: ["company"],
-    enabled: enabled && isAdmin,
-    queryFn: async (): Promise<CompanyProfile | null> => {
-      const { data, error, response } = await api.GET("/company");
-      if (error) {
-        if (response.status === 404) {
-          return null;
-        }
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
+  return useQuery({ ...companyOptions, enabled: enabled && isAdmin });
 }
 
 // storeCompany writes a saved profile into the company entry and refreshes /me,
@@ -69,17 +72,24 @@ export function companySaveMessage(
     : problemMessageOf(error, t);
 }
 
-// Whether the installation has described itself, or undefined until that is
-// known. An admin learns it from GET /company. Any other seat implies it: the
-// identity invite and former-seat paths refuse while no anchor company exists.
-// `pending` is a read in flight: a seat that may not ask leaves it idle, and an
-// idle read never answers.
-export function useInstallationDescribed(enabled: boolean) {
+// A served brand proves the anchor company exists; an absent field can also
+// mean an older server, so it still needs the profile read.
+export function sessionHasCompany(
+  me: components["schemas"]["MeResponse"] | undefined,
+): boolean {
+  return me?.installation_brand != null;
+}
+
+export function useInstallationDescribed(
+  enabled: boolean,
+  { readProfile = true }: Readonly<{ readProfile?: boolean }> = {},
+) {
   const session = useMe();
   const isAdmin = useHoldsAdminRole();
-  const company = useCompany(enabled);
+  const knownFromSession = !readProfile && sessionHasCompany(session.data);
+  const company = useCompany(enabled && !knownFromSession);
   let described: boolean | undefined;
-  if (enabled && session.data !== undefined && !isAdmin) {
+  if (enabled && session.data !== undefined && (!isAdmin || knownFromSession)) {
     described = true;
   } else if (company.isSuccess) {
     described = company.data !== null;

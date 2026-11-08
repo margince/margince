@@ -24,7 +24,6 @@ var reportingForecastLabels = map[string]langcopy.Phrase{
 	"forecast_upside":        {En: "Additional upside", De: "Zusätzliches Potenzial", Vi: "Tiềm năng tăng thêm"},
 	"forecast_call":          {En: "Recorded forecast", De: "Erfasste Prognose", Vi: "Dự báo đã ghi nhận"},
 	forecastOpenContext:      {En: "Open in the quarter", De: "Offene Deals im Quartal", Vi: "Deal đang mở trong quý"},
-	forecastQualifiedContext: {En: "Qualified open in the quarter", De: "Qualifizierte offene Deals im Quartal", Vi: "Deal đủ điều kiện đang mở trong quý"},
 	reportingForecastLanding: {En: "Expected landing", De: "Erwartetes Ergebnis", Vi: "Kết quả dự kiến"},
 	forecastRangeLowContext:  {En: "Low end of 8 in 10 outcomes", De: "Untere Grenze von 8 aus 10 Ergebnissen", Vi: "Mức thấp của 8 trên 10 kết quả"},
 	forecastRangeHighContext: {En: "High end of 8 in 10 outcomes", De: "Obere Grenze von 8 aus 10 Ergebnissen", Vi: "Mức cao của 8 trên 10 kết quả"},
@@ -48,4 +47,15 @@ var reportingLeadStatusLabels = map[crmcontracts.LeadStatus]langcopy.Phrase{
 	crmcontracts.LeadStatusEngaged:      {En: "Engaged", De: "Im Gespräch", Vi: "Đang trao đổi"},
 	crmcontracts.LeadStatusPromoted:     {En: "Qualified", De: "Qualifiziert", Vi: "Đủ điều kiện"},
 	crmcontracts.LeadStatusDisqualified: {En: "Disqualified", De: "Disqualifiziert", Vi: "Đã loại"},
+}
+
+// reportingComponentKindLabels name the groups of the commercial mix: each
+// product.component_kind, a product nobody classified, and the part of a won
+// deal no product carries.
+var reportingComponentKindLabels = map[string]langcopy.Phrase{
+	"software":       {En: "Software", De: "Software", Vi: "Phần mềm"},
+	"implementation": {En: "Implementation", De: "Umsetzung", Vi: "Triển khai"},
+	"other":          {En: "Other", De: "Sonstiges", Vi: "Khác"},
+	"unclassified":   {En: "Unclassified product", De: "Nicht eingeordnetes Produkt", Vi: "Sản phẩm chưa phân loại"},
+	"unallocated":    {En: "Unallocated", De: "Nicht zugeordnet", Vi: "Chưa phân bổ"},
 }

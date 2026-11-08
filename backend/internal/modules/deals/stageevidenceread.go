@@ -260,7 +260,7 @@ func scanEvidence(row scannable) (crmcontracts.StageEvidence, error) {
 // met are the two a later reader judges the claim by, so both are named.
 func evidenceAfter(e crmcontracts.StageEvidence) map[string]any {
 	return map[string]any{
-		"deal_id": e.DealId.String(), "criterion_id": e.CriterionId.String(),
+		dealIDColumn: e.DealId.String(), "criterion_id": e.CriterionId.String(),
 		"source_type": string(e.SourceType), "source_id": e.SourceId.String(),
 		"author_side": string(e.AuthorSide), "commitment": string(e.Commitment),
 		"met": e.Met, "extracted_by": e.ExtractedBy,

@@ -150,6 +150,13 @@ func (s *Sink) recordThisImport(
 	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision,
 	memberBound bool,
 ) error {
+	// The import row records which original it read, so a held-back one is
+	// stored first. On a new row it is stored already, and this does nothing.
+	released, releaseErr := releaseHeldOriginalTx(ctx, tx, rec)
+	if releaseErr != nil {
+		return releaseErr
+	}
+	rec = released
 	// actor.UserID, the same seat captured_by names and stampCaptureParticipants
 	// stamps — NOT capturePrincipal's OnBehalfOf fallback. Every connector
 	// principal sets the two equal today, so this changes nothing now; it means
@@ -184,6 +191,11 @@ func (s *Sink) recordThisImport(
 	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {
 		return err
 	}
+	if !internalMailAdmitted(ctx) {
+		if err := recordPartyEvidenceTx(ctx, tx, id, owner, deliveringConnector(ctx), rec, fields); err != nil {
+			return err
+		}
+	}
 	// The confidentiality question for THIS seat's view of the thread, opened
 	// in the same transaction as the message it is about. A message that landed
 	// with nobody scheduled to judge it would stay held forever under the
@@ -194,8 +206,10 @@ func (s *Sink) recordThisImport(
 	// message has nothing for the verdict to open, and asking anyway would
 	// spend a model call per message on a `shared` mailbox to reach the answer
 	// it already has.
-	if err := openConfidentialityQuestionTx(ctx, tx, id, owner, rec, fields, birth); err != nil {
-		return err
+	if !internalMailAdmitted(ctx) {
+		if err := openConfidentialityQuestionTx(ctx, tx, id, owner, rec, fields, birth); err != nil {
+			return err
+		}
 	}
 	if s.recomputeAudience == nil {
 		return nil

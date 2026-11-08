@@ -146,7 +146,7 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 		// The queue's own horizon, read once and handed to every relaxation
 		// below. Read per count, two scans could differ by cutoff rather
 		// than by the rule being relaxed.
-		measured, err := s.waitingHorizonFor(ctx, tx)
+		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}
@@ -319,7 +319,7 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
-	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg, "")
+	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon))
 	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),

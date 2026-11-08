@@ -131,3 +131,36 @@ export const Glyph: Story = {
     }
   },
 };
+
+function LazyReport() {
+  const copy = useClipboardCopy(
+    {
+      key: "demo-report",
+      read: async () => "Run 4711: provider unavailable; attempt 3 of 3.",
+    },
+    {
+      copy: "Copy report",
+      copied: "Copied",
+      pending: "Reading report",
+      remedy: "Select the report and copy it manually.",
+    },
+  );
+  return (
+    <>
+      <Button pending={copy.pending} onClick={copy.copy}>
+        {copy.label}
+      </Button>
+      {copy.notice}
+      {copy.preparedText && (
+        <CopyableText text={copy.preparedText} label="Technical report" />
+      )}
+    </>
+  );
+}
+export const OnDemandReport: Story = {
+  render: () => (
+    <StoryProviders>
+      <LazyReport />
+    </StoryProviders>
+  ),
+};

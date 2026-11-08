@@ -17,6 +17,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -104,12 +105,12 @@ func TestProvenanceIsNotPermission(t *testing.T) {
 	}
 }
 
-// SCENARIO 5: an invoice recipient with no employment row.
+// SCENARIO 5: an invoice recipient the record does not name.
 //
 // Missing relational data is a CRM gap, not a legal refusal. The answer is a
 // review naming what to link, and the send still goes while the engine is
 // observed — never a deny that leaves finance unable to send an invoice.
-func TestAnInvoiceRecipientWithNoEmploymentRowIsReviewedNotRefused(t *testing.T) {
+func TestAnInvoiceRecipientTheRecordDoesNotNameIsReviewedNotRefused(t *testing.T) {
 	e := setupResolve(t)
 	invoice := e.invoice(t, e.company(t), false)
 
@@ -131,13 +132,14 @@ func TestAnInvoiceRecipientWithNoEmploymentRowIsReviewedNotRefused(t *testing.T)
 	}
 }
 
-// And the same invoice DOES support the send once the contact is linked to the
-// customer, or the test above would pass against a validator that never allows.
-func TestAnInvoiceReachesAContactAtTheCustomer(t *testing.T) {
+// And the same invoice does support the send once the contact is the
+// customer's billing contact. Without this the test above would pass against a
+// validator that never allows.
+func TestAnInvoiceReachesTheCustomersBillingContact(t *testing.T) {
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
-	e.employ(t, company)
+	e.billTo(t, company)
 
 	got := e.resolve(t, commsauthz.Request{
 		Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -145,7 +147,7 @@ func TestAnInvoiceReachesAContactAtTheCustomer(t *testing.T) {
 	})
 
 	if !got.Supported {
-		t.Fatalf("a contact employed by the customer could not be sent their invoice: %q", got.Reason)
+		t.Fatalf("the customer's billing contact could not be sent their invoice: %q", got.Reason)
 	}
 	if got.Basis != commsauthz.BasisContract {
 		t.Errorf("basis = %q, want contract", got.Basis)
@@ -175,7 +177,7 @@ func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
-	e.employ(t, company)
+	e.billTo(t, company)
 	e.seedPurpose(t, "transactional", "transactional")
 
 	req := commsauthz.Request{
@@ -248,15 +250,16 @@ func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 // invoice you cannot, and let the worker do the reading.
 //
 // The fixture is exactly that shape: a live deal the recipient is a stakeholder
-// on (so the deal arm answers first), a REAL invoice for a company that
-// employs them (so the invoice arm would allow if it ever ran), and a sender
-// principal holding neither finance nor contract.
+// on, so the deal arm answers first. A real invoice of a company they are the
+// billing contact of, so the invoice arm would allow if it ever ran. And a
+// sender principal holding neither finance nor contract.
 func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
-	e.employ(t, company)
+	e.billTo(t, company)
 	deal := e.openDeal(t, "open", true)
+	e.enquiredAbout(t, deal)
 
 	// A seat that may write mail and read contacts, and may NOT read finance.
 	// Everything else about the context is the ordinary sending principal.
@@ -311,55 +314,37 @@ func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 	}
 }
 
-// AN ENDED EMPLOYMENT DOES NOT REACH. Somebody who left the customer is not the
-// contact their invoices go to.
+// EMPLOYMENT ALONE CHOOSES NOBODY. A current job at the customer does not make
+// somebody the one its invoices and contracts go to.
 //
-// Mutation: drop either r.ended_at IS NULL or r.archived_at IS NULL from the
-// invoice validator and this fails.
-func TestSomebodyWhoLeftTheCustomerIsNotReachedByItsInvoices(t *testing.T) {
-	for _, tc := range []struct{ name, column string }{
-		{"employment ended", "ended_at"},
-		{"employment removed", "archived_at"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			e := setupResolve(t)
-			company := e.company(t)
-			invoice := e.invoice(t, company, false)
-			e.employ(t, company)
-			if _, err := e.owner.Exec(context.Background(),
-				`UPDATE relationship SET `+tc.column+` = now() WHERE contact_id = $1`, e.contact); err != nil {
-				t.Fatal(err)
-			}
-
-			got := e.resolve(t, commsauthz.Request{
-				Context:  commsauthz.CategoryInvoiceOrPayment,
-				Evidence: commsauthz.Evidence{InvoiceID: invoice},
-			})
-
-			if got.Supported {
-				t.Fatal("a former employee was still reached by the customer's invoices")
-			}
-		})
-	}
-}
-
-// SOMEBODY SERVING NOTICE STILL WORKS THERE. ended_at is a date, and a contact
-// whose last day is next month is still the one handling their employer's
-// invoices. Reading the column's mere presence as "gone" would take them off
-// the contact list the day their notice was filed — with no way back, because
-// ended_at cannot be cleared through the API.
-//
-// Mutation: spell the employment test as `r.ended_at IS NULL` and this fails.
-// That spelling is what the employment-currency gate exists to catch, and it is
-// what this validator shipped as until the gate caught it.
-func TestSomebodyServingNoticeStillReceivesTheirEmployersInvoices(t *testing.T) {
+// Mutation: put the employment arm back in documentRecipientSQL and this fails.
+func TestEmploymentAloneChoosesNoDocumentRecipient(t *testing.T) {
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
+	contract := e.contract(t, company, nil)
 	e.employ(t, company)
+
+	for _, req := range []commsauthz.Request{
+		{Context: commsauthz.CategoryInvoiceOrPayment, Evidence: commsauthz.Evidence{InvoiceID: invoice}},
+		{Context: commsauthz.CategoryContractNotice, Evidence: commsauthz.Evidence{ContractID: contract}},
+	} {
+		if got := e.resolve(t, req); got.Supported {
+			t.Errorf("%s reached an employee who is not the billing contact", req.Context)
+		}
+	}
+}
+
+// A REMOVED BILLING CONTACT IS NOT REACHED.
+//
+// Mutation: drop b.archived_at IS NULL from documentRecipientSQL and this fails.
+func TestARemovedBillingContactIsNotReachedByTheInvoices(t *testing.T) {
+	e := setupResolve(t)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.billTo(t, company)
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE relationship SET ended_at = current_date + 30 WHERE contact_id = $1`,
-		e.contact); err != nil {
+		`UPDATE relationship SET archived_at = now() WHERE contact_id = $1`, e.contact); err != nil {
 		t.Fatal(err)
 	}
 
@@ -368,8 +353,100 @@ func TestSomebodyServingNoticeStillReceivesTheirEmployersInvoices(t *testing.T) 
 		Evidence: commsauthz.Evidence{InvoiceID: invoice},
 	})
 
-	if !got.Supported {
-		t.Fatal("a contact serving notice was cut off from their employer's invoices")
+	if got.Supported {
+		t.Fatal("a removed billing contact was still reached by the customer's invoices")
+	}
+}
+
+// A company with no billing contact sends to the buyer on the deal. The
+// contract's own deal answers; an invoice names its deal. A colleague who only
+// advised on the deal is not the buyer, and a billing contact on the company
+// takes the mail from the buyer.
+//
+// Mutation: drop the NOT EXISTS clause from documentRecipientSQL and the last
+// case fails; drop the role filter and the adviser case fails.
+func TestACompanyWithNoBillingContactSendsToTheBuyerOnTheDeal(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		role          string
+		billingOnFile bool
+		want          bool
+	}{
+		{"the economic buyer", "economic_buyer", false, true},
+		{"an adviser on the deal", "influencer", false, false},
+		{"the buyer, with a billing contact on file", "economic_buyer", true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupResolve(t)
+			company := e.company(t)
+			deal := e.buyerOnDeal(t, company, tc.role)
+			if tc.billingOnFile {
+				other := e.anotherContact(t, "billing@buyer.test")
+				other.billTo(t, company)
+			}
+			invoice := e.invoice(t, company, false)
+			contract := e.contract(t, company, &deal)
+
+			for _, req := range []commsauthz.Request{
+				{Context: commsauthz.CategoryInvoiceOrPayment, Evidence: commsauthz.Evidence{InvoiceID: invoice, DealID: deal}},
+				{Context: commsauthz.CategoryContractNotice, Evidence: commsauthz.Evidence{ContractID: contract}},
+			} {
+				if got := e.resolve(t, req); got.Supported != tc.want {
+					t.Errorf("%s: supported = %v, want %v (%s)", req.Context, got.Supported, tc.want, got.Reason)
+				}
+			}
+		})
+	}
+}
+
+// Service, account and security mail reach a customer with no typed fact. A
+// customer is a contact working at a company with an active contract or a won
+// deal. Somebody serving notice still works there, because ended_at is a date.
+//
+// Mutation: spell the employment test as `r.ended_at IS NULL` and the notice
+// case fails; drop the won-deal arm and the won-deal case fails.
+func TestAContactAtACustomerIsSentServiceMailWithNoFact(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		customer func(t *testing.T, e *resolveEnv, company ids.UUID)
+		want     bool
+	}{
+		{"an active contract", func(t *testing.T, e *resolveEnv, company ids.UUID) {
+			e.contract(t, company, nil)
+		}, true},
+		{"a won deal", func(t *testing.T, e *resolveEnv, company ids.UUID) {
+			e.buyerOnDeal(t, company, "user")
+			if _, err := e.owner.Exec(context.Background(),
+				`UPDATE deal SET status = 'won', closed_at = now() WHERE company_id = $1`, company); err != nil {
+				t.Fatal(err)
+			}
+		}, true},
+		{"serving notice at a customer", func(t *testing.T, e *resolveEnv, company ids.UUID) {
+			e.contract(t, company, nil)
+			if _, err := e.owner.Exec(context.Background(),
+				`UPDATE relationship SET ended_at = current_date + 30 WHERE contact_id = $1 AND kind = 'employment'`,
+				e.contact); err != nil {
+				t.Fatal(err)
+			}
+		}, true},
+		{"only an open deal", func(t *testing.T, e *resolveEnv, company ids.UUID) {
+			e.buyerOnDeal(t, company, "user")
+		}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupResolve(t)
+			company := e.company(t)
+			e.employ(t, company)
+			tc.customer(t, e, company)
+
+			for _, category := range []commsauthz.Category{
+				commsauthz.CategoryCustomerService, commsauthz.CategoryAccountNotice, commsauthz.CategorySecurityNotice,
+			} {
+				if got := e.resolve(t, commsauthz.Request{Context: category}); got.Supported != tc.want {
+					t.Errorf("%s: supported = %v, want %v", category, got.Supported, tc.want)
+				}
+			}
+		})
 	}
 }
 
@@ -378,7 +455,7 @@ func TestSomebodyServingNoticeStillReceivesTheirEmployersInvoices(t *testing.T) 
 // contact has nothing to do with must not admit the message.
 func TestAnInvoiceForAnotherCustomerSupportsNothing(t *testing.T) {
 	e := setupResolve(t)
-	e.employ(t, e.company(t))
+	e.billTo(t, e.company(t))
 	elsewhere := e.invoice(t, e.company(t), false)
 
 	got := e.resolve(t, commsauthz.Request{
@@ -536,6 +613,47 @@ func (e *resolveEnv) employ(t *testing.T, company ids.UUID) {
 	}
 }
 
+// billTo makes this env's contact a billing contact of a company, the one its
+// invoices and contracts go to.
+func (e *resolveEnv) billTo(t *testing.T, company ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO relationship (kind, company_id, contact_id, role, source, captured_by)
+		VALUES ('billing_contact', $1, $2, 'recipient', 'manual', 'human:x')`, company, e.contact); err != nil {
+		t.Fatalf("planting the billing contact: %v", err)
+	}
+}
+
+// buyerOnDeal plants an open deal of the company with this env's contact on
+// it in the given role, and answers the deal.
+func (e *resolveEnv) buyerOnDeal(t *testing.T, company ids.UUID, role string) ids.UUID {
+	t.Helper()
+	ctx := context.Background()
+	deal := e.openDeal(t, "open", false)
+	if _, err := e.owner.Exec(ctx, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company); err != nil {
+		t.Fatalf("filing the deal under the company: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO relationship (kind, deal_id, contact_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, $3, 'manual', 'human:x')`, deal, e.contact, role); err != nil {
+		t.Fatalf("seating the contact on the deal: %v", err)
+	}
+	return deal
+}
+
+// contract plants an active contract of the company, filed under a deal when
+// one is named, and answers its id.
+func (e *resolveEnv) contract(t *testing.T, company ids.UUID, deal *ids.UUID) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contract (id, company_id, deal_id, title, status, source, captured_by)
+		VALUES ($1, $2, $3, 'Master agreement', 'active', 'manual', 'human:x')`, id, company, deal); err != nil {
+		t.Fatalf("planting the contract: %v", err)
+	}
+	return id
+}
+
 // invoice plants a finance invoice against a company, with the finance
 // connection it hangs off.
 func (e *resolveEnv) invoice(t *testing.T, company ids.UUID, _ bool) ids.UUID {
@@ -617,7 +735,7 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
-	e.employ(t, company)
+	e.billTo(t, company)
 	e.dropGrant(t, "finance")
 
 	var err error
@@ -638,8 +756,8 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 	}
 }
 
-// A VOIDED INVOICE AUTHORIZES NOTHING. Neither does an archived one, an
-// archived offer, a draft one, or a quote on a deal that closed.
+// A voided invoice authorizes nothing, and neither does an archived one. The
+// offer cases are in quoteondeal_integration_test.go.
 //
 // Mutation: drop any one of the added clauses and its own row here fails.
 func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
@@ -664,7 +782,7 @@ func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
 			e := setupResolve(t)
 			company := e.company(t)
 			invoice := e.invoice(t, company, false)
-			e.employ(t, company)
+			e.billTo(t, company)
 			tc.spoil(t, e, company, invoice)
 
 			got := e.resolve(t, commsauthz.Request{
@@ -805,5 +923,69 @@ func TestAStopThatBindsThisMessageWritesNoGround(t *testing.T) {
 	if rows != 0 {
 		t.Errorf("a restricted subject carries %d recorded ground(s) — writing one is itself "+
 			"processing, and it lands in their export as a claim made after they said stop", rows)
+	}
+}
+
+// A contract that is not in force carries neither a contract notice nor a
+// customer's service mail (contractCarriesMailSQL). A status of expired or
+// cancelled refuses even when no date says so.
+//
+// Mutation: put back a bare archived_at check in either validator and its
+// half of these cases fails.
+func TestAContractNotInForceCarriesNothing(t *testing.T) {
+	for _, tc := range []struct{ name, spoil string }{
+		{"draft", `UPDATE contract SET status = 'draft' WHERE id = $1`},
+		{"expired", `UPDATE contract SET ends_on = current_date - 1 WHERE id = $1`},
+		{"cancelled and effective", `UPDATE contract SET cancellation_effective_on = current_date - 1 WHERE id = $1`},
+		{"superseded", `UPDATE contract SET status = 'superseded', superseded_by_id = $2 WHERE id = $1`},
+		{"not yet started", `UPDATE contract SET starts_on = current_date + 30 WHERE id = $1`},
+		{"status expired with no dates", `UPDATE contract SET status = 'expired', ends_on = NULL WHERE id = $1`},
+		{"status cancelled with no dates", `UPDATE contract SET status = 'cancelled', cancellation_effective_on = NULL WHERE id = $1`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupResolve(t)
+			company := e.company(t)
+			e.employ(t, company)
+			e.billTo(t, company)
+			contract := e.contract(t, company, nil)
+			successor := e.contract(t, e.company(t), nil)
+			args := []any{contract}
+			if strings.Contains(tc.spoil, "$2") {
+				args = append(args, successor)
+			}
+			if _, err := e.owner.Exec(context.Background(), tc.spoil, args...); err != nil {
+				t.Fatalf("spoiling the contract: %v", err)
+			}
+
+			if got := e.resolve(t, commsauthz.Request{
+				Context: commsauthz.CategoryContractNotice, Evidence: commsauthz.Evidence{ContractID: contract},
+			}); got.Supported {
+				t.Error("a contract notice went out on a contract not in force")
+			}
+			if got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryCustomerService}); got.Supported {
+				t.Error("service mail went out on a contract not in force")
+			}
+		})
+	}
+}
+
+// A cancelled contract still carries mail until its cancellation takes effect.
+//
+// Mutation: drop the cancelled arm from contractCarriesMailSQL and this fails.
+func TestACancelledContractCarriesMailUntilTheCancellationTakesEffect(t *testing.T) {
+	e := setupResolve(t)
+	company := e.company(t)
+	e.employ(t, company)
+	e.billTo(t, company)
+	contract := e.contract(t, company, nil)
+	if _, err := e.owner.Exec(context.Background(), `
+		UPDATE contract SET status = 'cancelled', cancellation_notice_on = current_date,
+		       cancellation_effective_on = current_date + 30 WHERE id = $1`, contract); err != nil {
+		t.Fatalf("cancelling the contract: %v", err)
+	}
+	if got := e.resolve(t, commsauthz.Request{
+		Context: commsauthz.CategoryContractNotice, Evidence: commsauthz.Evidence{ContractID: contract},
+	}); !got.Supported {
+		t.Errorf("a contract notice was refused before the cancellation took effect: %q", got.Reason)
 	}
 }

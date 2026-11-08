@@ -117,6 +117,12 @@ export function stubFetch(
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a stub of every read and write the lead screens make; its branches are the route table
   const fetchMock = vi.fn(async (request: Request) => {
     urls.push(request.url);
+    if (
+      request.method === "GET" &&
+      new URL(request.url).pathname.endsWith("/conversation-suggestions")
+    ) {
+      return jsonResponse({ data: [], scan_limited: false });
+    }
     if (new URL(request.url).pathname.endsWith("/context")) {
       return jsonResponse({
         anchor: { type: "lead", id: "l-1" },
@@ -213,6 +219,12 @@ export function stubFetchWithMe(
     // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a stub of every read and write the lead screens make; its branches are the route table
     vi.fn(async (request: Request) => {
       urls.push(request.url);
+      if (
+        request.method === "GET" &&
+        new URL(request.url).pathname.endsWith("/conversation-suggestions")
+      ) {
+        return jsonResponse({ data: [], scan_limited: false });
+      }
       if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
         return jsonResponse(connectors);
       }

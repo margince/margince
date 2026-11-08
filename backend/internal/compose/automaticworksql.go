@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auditattribution"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,19 +28,12 @@ func machineCreatedSQL(entityType, rowAlias string) string {
 		auditattribution.FirstCreateSQL("'"+entityType+"'", rowAlias+".id"))
 }
 
-// byAColleagueSQL is whether an audit row was a colleague's own act: their session,
-// or an agent working under their passport. The system and a passportless
-// agent are rules.
-func byAColleagueSQL(alias string) string {
-	return fmt.Sprintf(`(%[1]s.actor_type = 'human' OR (%[1]s.actor_type = 'agent' AND %[1]s.passport_id IS NOT NULL))`, alias)
-}
-
 // taskMovedSQL reads the first move off the first holder: by a colleague it says
 // the task was not theirs, by a rule it was rerouted. It holds even when the
 // task later came back to them.
 func taskMovedSQL() string {
 	return fmt.Sprintf(`WHEN mv.actor_type IS NOT NULL AND %s THEN 'not_mine'
-         WHEN mv.actor_type IS NOT NULL THEN 'rerouted'`, byAColleagueSQL("mv"))
+         WHEN mv.actor_type IS NOT NULL THEN 'rerouted'`, storekit.AuditForAUser("mv"))
 }
 
 // automaticItemsSQL is one row per automatic item created in the window: its
@@ -86,7 +80,7 @@ SELECT '%[8]s', COALESCE(mv.holder, ap.requested_decider_id), made.at,
 		arg([]string{activities.CommitmentTaskSource, activities.EmailRequestTaskSource}),
 		crmcontracts.AutomaticWorkKindNameApprovalRequest,
 		fromPos, toPos,
-		byAColleagueSQL("last_archive"),
+		storekit.AuditForAUser("last_archive"),
 		machineCreatedSQL("approval", "ap"),
 		firstMoveSQL("approval", "ap", "requested_decider_id", unscrubbed))
 }
@@ -166,4 +160,63 @@ func readAutomaticWorkSeats(ctx context.Context, tx pgx.Tx, named []ids.UUID) ([
 		err := row.Scan(&s.id, &s.name, &s.status)
 		return s, err
 	})
+}
+
+func readAutomaticWorkSummary(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontracts.AutomaticWorkCounts, int, time.Time, error) {
+	_, from, _, err := automaticWorkWindow(ctx, tx, now, automaticWorkDefaultDays)
+	if err != nil {
+		return crmcontracts.AutomaticWorkCounts{}, 0, from, err
+	}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	query := `SELECT u.id, item.kind, item.outcome, count(*) FROM (` + automaticItemsSQL(arg, from, now) + `) item
+ LEFT JOIN app_user u ON u.id=item.colleague AND NOT u.is_agent GROUP BY 1,2,3 ORDER BY 1,2,3`
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return crmcontracts.AutomaticWorkCounts{}, 0, from, err
+	}
+	defer rows.Close()
+	type groupKey struct {
+		colleague ids.UUID
+		kind      crmcontracts.AutomaticWorkKindName
+	}
+	grouped := map[groupKey]crmcontracts.AutomaticWorkCounts{}
+	total := crmcontracts.AutomaticWorkCounts{}
+	for rows.Next() {
+		var key groupKey
+		var colleague *ids.UUID
+		var outcome string
+		var n int
+		if err := rows.Scan(&colleague, &key.kind, &outcome, &n); err != nil {
+			return total, 0, from, err
+		}
+		if colleague != nil {
+			key.colleague = *colleague
+		}
+		counts := grouped[key]
+		if err := addOutcome(&counts, outcome, n); err != nil {
+			return total, 0, from, err
+		}
+		grouped[key] = counts
+	}
+	if err := rows.Err(); err != nil {
+		return total, 0, from, err
+	}
+	review := 0
+	for key, counts := range grouped {
+		sumCounts(&total, counts)
+		if key.colleague.IsZero() {
+			continue
+		}
+		for _, kind := range automaticWorkKinds {
+			if kind.Kind == key.kind {
+				_, _, above := automaticRouting(counts, kind.RecordsNotMine)
+				if above {
+					review += counts.NotMine
+				}
+				break
+			}
+		}
+	}
+	return total, review, from, nil
 }

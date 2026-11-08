@@ -142,6 +142,9 @@ export const Opened: Story = {
         name: /Open the Message classification call/,
       }),
     );
-    await canvas.findByRole("heading", { name: "Attempts" });
+    const drawer = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+    );
+    await within(drawer).findByRole("heading", { name: "Attempts" });
   },
 };

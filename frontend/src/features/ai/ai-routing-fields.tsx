@@ -14,6 +14,7 @@ import {
   offeredModels,
   useAvailableModels,
 } from "../../lib/ai-models";
+import type { NamedProvider } from "../../lib/ai-provider-names";
 import { isOpenRouter } from "./ai-provider-links";
 import "./ai-settings.css";
 import {
@@ -39,14 +40,17 @@ export const PROVIDERS = [
   "ollama",
   "vllm",
   "fake",
-] as const;
+] as const satisfies readonly NamedProvider[];
 
 // The adapters the decision lane may name. A decision model answers a typed
 // question with calibrated probabilities rather than text, so no chat adapter
 // can serve it and none is offered. The same `[…] as const` mirror as
 // PROVIDERS, held against the server's decision registry by
 // backend/gates/frontendproviders_test.go.
-export const DECISION_PROVIDERS = ["jev", "jev_compatible"] as const;
+export const DECISION_PROVIDERS = [
+  "jev",
+  "jev_compatible",
+] as const satisfies readonly NamedProvider[];
 
 // The one-click binding the decision row offers on jev_compatible: OpenRouter's
 // decisions endpoint and the model certified there. Written once, here; the

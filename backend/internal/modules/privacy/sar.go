@@ -30,6 +30,15 @@ import (
 // SARPackage is the assembled export. Sections hold raw row maps —
 // the package is a data handover, not an API shape.
 type SARPackage struct {
+	AuditHistory           []map[string]any `json:"audit_history"`
+	RetainedEvents         []map[string]any `json:"retained_events"`
+	RoomParticipants       []map[string]any `json:"room_participants"`
+	RoomComments           []map[string]any `json:"room_comments"`
+	Introductions          []map[string]any `json:"introductions"`
+	DuplicateEvidence      []map[string]any `json:"duplicate_evidence"`
+	PlannedCommitments     []map[string]any `json:"planned_commitments"`
+	TestMailboxMessages    []map[string]any `json:"test_mailbox_messages"`
+	ThreadVerdicts         []map[string]any `json:"thread_verdicts"`
 	ReportingContributions []map[string]any `json:"reporting_contributions"`
 	// ReportingQuestionAnswers are the kept question answer rows a record
 	// about the subject was counted in.
@@ -85,6 +94,7 @@ type SARPackage struct {
 	// meant a subject who asked to be erased, and was refused, could not see
 	// that the refusal existed — the one thing they would need to appeal it.
 	RightsRequests []map[string]any `json:"rights_requests"`
+	RequestProofs  []map[string]any `json:"request_proofs"`
 	// The unsubscribe links minted for this subject, which are capabilities
 	// over their own record and live two years.
 	//
@@ -118,6 +128,7 @@ type SARPackage struct {
 	// as the tombstone it becomes.
 	CommunicationExceptions []map[string]any `json:"communication_exceptions"`
 	RawCapture              []map[string]any `json:"raw_capture"`
+	CapturePartySources     []map[string]any `json:"capture_party_sources"`
 	FieldOrigins            []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.
@@ -265,14 +276,12 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
+		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored)
+		if err != nil {
+			return err
+		}
 
-		subject, err := rowMaps(ctx, tx, `
-			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
-			       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
-			       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
-			       p.source, p.created_at
-			FROM contact p WHERE p.id = $1`, contactID)
+		subject, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 		if err != nil {
 			return err
 		}
@@ -307,6 +316,15 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 	return pkg, err
 }
 
+// sarSubjectQuery is the subject's own row as the export hands it over. The
+// privacy notice page reads the same row to name the kinds it holds.
+const sarSubjectQuery = `
+	SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
+	       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
+	       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
+	       p.source, p.created_at
+	FROM contact p WHERE p.id = $1`
+
 // appendSubjectCustomValues merges the subject's stored cf_ values into
 // the export's subject map, keyed by column name. The column set comes
 // from the catalog with ANY status (see subjectcolumns.go): Art. 15 owes
@@ -333,12 +351,7 @@ func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, contactID ids.Con
 type sarSection struct {
 	dest  *[]map[string]any
 	query string
-	// args overrides the default single contact-id argument. Only the staged
-	// approvals section needs it: it reaches rows by the subject's addresses
-	// and lead twins as well as by their contact id, through the SAME predicate
-	// erasure uses — and that predicate takes those as bound parameters rather
-	// than rebuilding them in SQL, so the export and the erasure cannot come to
-	// different conclusions about which rows are the subject's.
+	// args replaces the default single contact-id argument.
 	args []any
 }
 
@@ -419,15 +432,17 @@ func subjectReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]st
 		return nil, nil, nil, fmt.Errorf("reading the merged-away addresses for the export: %w", err)
 	}
 	emails = append(emails, priorEmails...)
-	// LEAD TWINS OF EVERY IDENTITY TOO. A lead promoted into a record that was
-	// later merged away points at the PREDECESSOR, so following only the
-	// survivor's promotions loses the lead-keyed proof A6 deliberately leaves
-	// on the lead.
+	// Lead twins of every identity too. A lead promoted into a record later
+	// merged away points at the predecessor. Following only the survivor's
+	// promotions loses the lead-keyed proof A6 leaves on the lead.
+	// A lead never promoted but holding one of the subject's addresses is
+	// theirs too. The Leads section exports it, so its history comes with it.
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM lead
 		 WHERE promoted_contact_id = $1
-		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`,
-		contactID.UUID)
+		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
+		    OR email = ANY($2::text[])`,
+		contactID.UUID, loweredAddresses(emails))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}
@@ -476,25 +491,6 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 			return nil, err
 		}
 		out = append(out, id)
-	}
-	return out, rows.Err()
-}
-
-// subjectStrings runs a one-column text query into a slice. The contact is $1,
-// and any further arguments follow it.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
-	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []string{}
-	for rows.Next() {
-		var v string
-		if err := rows.Scan(&v); err != nil {
-			return nil, err
-		}
-		out = append(out, v)
 	}
 	return out, rows.Err()
 }

@@ -33,41 +33,54 @@ const (
 // stored. Each drop leaves its breadcrumb (the operator's record) and its
 // trace (the member's answer to "why did this never appear"), and neither
 // names an address.
-func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
-	// Colleague correspondence is not evidence of a customer relationship — it
-	// is two employees talking, and the CRM was never asked to hold it.
+func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (context.Context, string, error) {
+	// Only an enrolled source can authorize storing colleague mail.
 	internal, err := internalOnlyTx(ctx, tx, rec)
 	if err != nil {
-		return "", err
+		return ctx, "", err
 	}
 	if internal {
+		admission, err := s.internalMailAdmissionTx(ctx, tx, rec)
+		if err != nil {
+			return ctx, "", err
+		}
+		if admission != nil {
+			ctx = context.WithValue(ctx, internalMailAdmissionKey{}, admission)
+		}
+	}
+	if internal && !internalMailAdmitted(ctx) {
 		if err := s.logBreadcrumbTx(ctx, tx, actionCaptureInternalDropped, rec, reasonInternalOnly); err != nil {
-			return "", err
+			return ctx, "", err
 		}
 		if err := s.traceTx(ctx, tx, rec, pipelinetrace.StageInternalDrop, TraceInternal, reasonInternalOnly); err != nil {
-			return "", err
+			return ctx, "", err
 		}
-		return "all participants are on the workspace's own domains", nil
+		return ctx, "all participants are on the workspace's own domains", nil
 	}
 	// A message the workspace or this mailbox's owner ruled out is not the
 	// CRM's to hold either.
 	excluded, err := excludedTx(ctx, tx, rec)
 	if err != nil {
-		return "", err
+		return ctx, "", err
 	}
 	if excluded == "" {
-		return "", nil
+		return ctx, "", nil
+	}
+	if excluded == reasonExcludedContainer {
+		if err := s.revokePartySourceTx(ctx, tx, rec); err != nil {
+			return ctx, "", err
+		}
 	}
 	if err := s.logBreadcrumbTx(ctx, tx, actionCaptureExcluded, rec, excluded); err != nil {
-		return "", err
+		return ctx, "", err
 	}
 	// The trace is written from a record with its counterparty and content
 	// stripped: with payload tracing enabled the trace writer would otherwise
 	// store the very address or subject the rule exists to keep out.
 	if err := s.traceTx(ctx, tx, withoutParties(rec), pipelinetrace.StageInternalDrop, TraceSuppressed, excluded); err != nil {
-		return "", err
+		return ctx, "", err
 	}
-	return "a capture exclusion rule keeps this message out (" + excluded + ")", nil
+	return ctx, "a capture exclusion rule keeps this message out (" + excluded + ")", nil
 }
 
 var _ connector.PreStoreJudge = (*Sink)(nil)
@@ -92,7 +105,7 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 		if err := s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty); err != nil {
 			return err
 		}
-		reason, err := s.dropBeforeStoreTx(ctx, tx, rec)
+		_, reason, err := s.dropBeforeStoreTx(ctx, tx, rec)
 		dropped = reason != ""
 		return err
 	})
@@ -109,6 +122,10 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 // that reaches the raw store has been kept whatever happens next. The answer
 // is the reason to trace, or "" when nothing matched.
 func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
+	return excludedForTx(ctx, tx, rec, actorUserID(ctx))
+}
+
+func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, owner ids.UUID) (string, error) {
 	// A message with no addresses may still have been FILED somewhere the
 	// owner keeps out, so the container arm is asked on its own. The address
 	// arms need the lists below and answer nothing without them.
@@ -139,7 +156,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
 		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
 		 ORDER BY e.kind LIMIT 1`,
-		addresses, domains, nilToNull(actorUserID(ctx)), rec.Containers).Scan(&kind)
+		addresses, domains, nilToNull(owner), rec.Containers).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil

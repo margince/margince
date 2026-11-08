@@ -18,6 +18,7 @@ export const TASK_ORIGINS: Readonly<Record<string, MessageKey>> = {
   assurance: "tasks.origin.assurance",
   check_in_cadence: "tasks.origin.check_in_cadence",
   accepted_recommendation: "tasks.origin.accepted_recommendation",
+  analytics_decision: "tasks.origin.analytics_decision",
   commitment: "tasks.origin.commitment",
   email_request: "tasks.origin.email_request",
   lead_for_contact: "tasks.origin.lead_for_contact",

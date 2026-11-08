@@ -22,13 +22,13 @@ package gates
 // The sibling gate over KIND_LABEL holds the same shape for the inbox's kinds.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendAutonomyCopy = "../frontend/src/features/settings/autonomy-settings.tsx"
@@ -73,7 +73,7 @@ func copiedKinds(t *testing.T, source string) []string {
 
 func TestEveryAutomatableKindHasSettingsCopy(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendAutonomyCopy)
+	source, err := gatekit.ReadFile(frontendAutonomyCopy)
 	if err != nil {
 		t.Fatalf("reading the autonomy settings card: %v", err)
 	}

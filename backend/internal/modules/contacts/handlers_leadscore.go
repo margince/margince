@@ -15,32 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// explainScoreHistoryLimit bounds one page of the series. The read filters
-// every entry's sources through the caller's scope, so an unbounded page
-// is unbounded work as well as an unbounded response.
-const explainScoreHistoryLimit = 50
-
-// ExplainLeadScore serves GET /leads/{id}/score — the factor
-// decomposition behind the lead's number.
-func (h Handlers) ExplainLeadScore(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ExplainLeadScoreParams) {
-	in := ExplainLeadScoreInput{Limit: explainScoreHistoryLimit}
-	if params.History != nil {
-		in.History = *params.History
-	}
-	if params.Cursor != nil {
-		in.Cursor = *params.Cursor
-	}
-	if params.Limit != nil && *params.Limit > 0 && *params.Limit <= explainScoreHistoryLimit {
-		in.Limit = *params.Limit
-	}
-	out, err := h.store.ExplainLeadScore(r.Context(), pathID[ids.LeadKind](id), in)
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, out)
-}
-
 // ListLeadManualSignals serves the qualification evidence read model. It
 // carries the exact band and provenance rather than asking the client to infer
 // them from a score factor whose points are not a unique band key.

@@ -13,7 +13,6 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -51,19 +50,15 @@ func readColdStartColumnImages(ctx context.Context, tx pgx.Tx, companyID ids.Com
 		&address.Line1, &address.Line2, &address.Region, &address.PostalCode, &address.City, &address.Country); err != nil {
 		return nil, fmt.Errorf("read company column images: %w", err)
 	}
-	// Field history uses registered_address for all six address columns.
-	// Their combined image keeps a city-only edit visible in that history.
+	// Every key is the column's own name, which is the name the company update
+	// path writes back: an Undo replays the image through that path.
 	out := map[string]any{fieldDisplayName: displayName}
-	var addressLine *string
-	if line := formatAddressLine(address); line != "" {
-		addressLine = &line
-	}
-	// size_band has no profile-field twin: the column IS the surface, so its
-	// own name is the field-history key.
 	for column, value := range map[string]*string{
-		fieldLegalName: legalName, fieldIndustry: industry,
-		fieldRegisteredAddress: addressLine, fieldOfferSummary: description,
+		columnLegalName: legalName, columnIndustry: industry, columnDescription: description,
 		columnSizeBand: sizeBand, columnCompanyPhone: phone, columnCompanyEmail: email,
+		columnAddressLine1: address.Line1, columnAddressLine2: address.Line2,
+		columnAddressCity: address.City, columnAddressRegion: address.Region,
+		columnAddressPostalCode: address.PostalCode, columnAddressCountry: address.Country,
 	} {
 		if value == nil {
 			// An empty column reads as an explicit null in the image, never as
@@ -81,48 +76,50 @@ func readColdStartColumnImages(ctx context.Context, tx pgx.Tx, companyID ids.Com
 // exist: every field explicitly null, so a create diffs against nothing rather
 // than against itself.
 func emptyColdStartColumnImages() map[string]any {
-	return map[string]any{
-		fieldDisplayName:       nil,
-		fieldLegalName:         nil,
-		fieldIndustry:          nil,
-		fieldRegisteredAddress: nil,
-		fieldOfferSummary:      nil,
-		columnSizeBand:         nil,
-		columnCompanyPhone:     nil,
-		columnCompanyEmail:     nil,
+	out := map[string]any{fieldDisplayName: nil}
+	for _, column := range []string{
+		columnLegalName, columnIndustry, columnDescription, columnSizeBand, columnCompanyPhone, columnCompanyEmail,
+	} {
+		out[column] = nil
 	}
+	for _, column := range companyAddressColumns {
+		out[column] = nil
+	}
+	return out
 }
 
-// anchorSaveImages is the pair of images a company save records: the columns as
-// the resolve found them, against the row as the save leaves it, narrowed to
-// what actually moved so a re-sent form does not present every field it echoed
-// back as an edit. A save that MINTED the row has no before-image, and its
-// after image stays whole — every column the create wrote is a change from
-// nothing.
-func anchorSaveImages(ctx context.Context, tx pgx.Tx, target anchorTarget) (map[string]any, map[string]any, error) {
+// changedColdStartColumns narrows two images to the columns that moved, and
+// keeps the address whole. An Undo writes the address back as one object, and
+// a part missing from the image would be cleared.
+//
+//craft:ignore naked-any same column-value contract as storekit.ChangedColumns
+func changedColdStartColumns(before, after map[string]any) (map[string]any, map[string]any) {
+	changedBefore, changedAfter := storekit.ChangedColumns(before, after)
+	if !movedAddress(changedAfter) {
+		return changedBefore, changedAfter
+	}
+	for _, column := range companyAddressColumns {
+		changedBefore[column] = before[column]
+		changedAfter[column] = after[column]
+	}
+	return changedBefore, changedAfter
+}
+
+// anchorSaveImages is the pair of images a company save records, narrowed to
+// what moved so a re-sent form does not read as an edit. A save that minted the
+// row has no before-image and no receipts, because its Undo archives the row.
+func anchorSaveImages(ctx context.Context, tx pgx.Tx, target anchorTarget) (map[string]any, map[string]any, map[string]ProfileFieldReceipt, error) {
 	after, err := readColdStartColumnImages(ctx, tx, target.id)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if storekit.AbsentImage(target.before) {
-		return nil, after, nil
+		return nil, after, nil, nil
 	}
-	before, changed := storekit.ChangedColumns(target.before, after)
-	return before, changed, nil
-}
-
-// formatAddressLine spells the address columns as one line, in the order a
-// letter prints them, skipping the empty ones.
-func formatAddressLine(a crmcontracts.Address) string {
-	var parts []string
-	for _, part := range []string{
-		pointerValue(a.Line1), pointerValue(a.Line2),
-		strings.TrimSpace(pointerValue(a.PostalCode) + " " + pointerValue(a.City)),
-		pointerValue(a.Region), pointerValue(a.Country),
-	} {
-		if part != "" {
-			parts = append(parts, part)
-		}
+	rows, err := readProfileFieldImages(ctx, tx, target.id)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-	return strings.Join(parts, ", ")
+	before, changed := changedColdStartColumns(target.before, after)
+	return before, changed, profileFieldReceipts(target.rows, rows, changed), nil
 }

@@ -41,28 +41,18 @@ func emitKinds(c contract, contractHash string) (string, error) {
 	return string(formatted), nil
 }
 
-// writeDeclaredSet renders the type-set constraint. It is a union rather than
-// a marker interface on purpose: a marker is something a new type can declare
-// for itself, and the whole point is that a kind api/jobs.yaml has never heard
-// of cannot be registered at all.
+const declaredJobMarker = "declaredJobType"
+
+// The self parameter prevents an embedding wrapper from inheriting registration.
 func writeDeclaredSet(b *strings.Builder, c contract) {
-	b.WriteString("// declaredJobArgs is every args type api/jobs.yaml declares, and nothing\n")
-	b.WriteString("// else. A job kind the file has never heard of cannot satisfy it, so it\n")
-	b.WriteString("// cannot be passed to the registration function below — and that is how\n")
-	b.WriteString("// the runner registers, so an undeclared kind does not compile.\n")
-	b.WriteString("//\n")
-	b.WriteString("// A union rather than a marker interface, because a marker is something a\n")
-	b.WriteString("// new type can declare for itself: the set has to be the file's to state.\n")
-	b.WriteString("type declaredJobArgs interface {\n")
-	b.WriteString("\triver.JobArgs\n\n")
-	for i, name := range c.sortedKinds() {
-		sep := " |"
-		if i == len(c.Kinds)-1 {
-			sep = ""
-		}
-		fmt.Fprintf(b, "\t%s%s\n", c.Kinds[name].GoType, sep)
+	b.WriteString("// declaredJobArgs requires the generated registration marker for the exact args type.\n")
+	b.WriteString("// Handwritten markers are refused by the registration census.\n")
+	fmt.Fprintf(b, "type declaredJobArgs[T river.JobArgs] interface {\n river.JobArgs\n %s(T)\n}\n\n", declaredJobMarker)
+	for _, name := range c.sortedKinds() {
+		args := c.Kinds[name].GoType
+		fmt.Fprintf(b, "func (%s) %s(%s) {}\n", args, declaredJobMarker, args)
 	}
-	b.WriteString("}\n\n")
+	b.WriteString("\n")
 }
 
 // writeAddDeclaredWorker renders the sanctioned registration entry points.
@@ -81,7 +71,7 @@ func writeAddDeclaredWorker(b *strings.Builder) {
 	b.WriteString("// It takes the registry, not river.Workers: River's Workers map is\n")
 	b.WriteString("// unexported, so the registry is the only thing that can tell MustBeTotal\n")
 	b.WriteString("// what this build registered.\n")
-	b.WriteString("func addDeclaredWorker[T declaredJobArgs](reg *jobRegistry, w jobs.WorkOnly[T]) {\n")
+	b.WriteString("func addDeclaredWorker[T declaredJobArgs[T]](reg *jobRegistry, w jobs.WorkOnly[T]) {\n")
 	b.WriteString("\taddGovernedWorker[T](reg, w)\n")
 	b.WriteString("}\n\n")
 }

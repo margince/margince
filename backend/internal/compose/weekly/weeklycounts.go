@@ -21,7 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -152,6 +154,9 @@ const (
 func countWeekLeads(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (routed, answered, breached int, err error) {
+	if err := auth.Require(ctx, leadObject, principal.ActionRead); err != nil {
+		return 0, 0, 0, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
@@ -159,7 +164,7 @@ func countWeekLeads(
 	// were narrowed after the week must not read back rows they can no longer
 	// see, and the review is assembled under their own principal
 	// (weeklyjobs.go binds it) precisely so this holds.
-	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
+	scope, err := auth.ScopeClauseFor(ctx, leadObject, "l", arg)
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -266,12 +271,11 @@ func countWeekMeetings(
 	if err != nil {
 		return 0, 0, err
 	}
-	// NULL admitted, because this window is a week that has already passed: a
-	// meeting nothing said was off, whose time has come and gone, is one that
-	// happened. A calendar connector records no status at all, so the strict
-	// form counted none of a rep's synced meetings in their own review.
-	// The transition's status when it recorded one, so a meeting marked held
-	// and later reopened is not still counted.
+	// Only a recorded held outcome counts, as meetingoutcome.HeldSQL reads one.
+	// A synced meeting nobody reported is awaiting its outcome, and the review
+	// must not call it held when the record page does not. The status is the
+	// transition's when it recorded one, so a meeting marked held and later
+	// reopened is not still counted.
 	status := "COALESCE(held.status,m.meeting_status)"
 	// A start whose day cannot be settled is read under either day, as the
 	// Analytics reader reads it.
@@ -280,7 +284,7 @@ func countWeekMeetings(
 		occurredday.WithinAtSQL(transition.Start, "'instant'", "$%[1]d", "$%[2]d") + " OR " +
 		occurredday.WithinAtSQL(transition.Start, "'day'", "$%[1]d", "$%[2]d") + ")))"
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND (` + status + ` IS NULL OR ` + status + ` = 'held')
+		      AND ` + status + ` = '` + meetingoutcome.Held + `'
 		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
 		      AND ` + within + `
 		      AND (%[4]s)`

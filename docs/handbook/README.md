@@ -99,6 +99,7 @@ Records, deals and mail in Margince, by page:
 - [Connecting your website](connect-your-website.md): putting a contact form on
   your website, or keeping your own, so each question lands as a lead. WordPress,
   Webflow, Typeform, Tally, Payload and your own server, plus spam and consent.
+- [Other recipients on a conversation](recipients-on-conversations.md): when other recipients and meeting guests become contacts, and how to add a suggested contact.
 - [Capture](capture.md): how email, calendar and chat get in, and what happens
   to a message step by step. The rules that file it against the right contact,
   deal and project. What happens when nothing matches, and what capture refuses
@@ -115,9 +116,10 @@ Records, deals and mail in Margince, by page:
 - [How the forecast learns](forecast-learning.md): how each stage's probability
   moves with the deals that closed from it. The risks marked on a deal, and the
   switch that turns it off.
-- [Deals the customer still supports](deals-the-customer-supports.md): the review
-  a deal gets when its customer stops answering. The switch that leaves such deals
-  out of the forecast.
+- [Deals the customer still supports](deals-the-customer-supports.md): how
+  Margince closes a deal as lost when its customer stops answering, and how to
+  undo it.
+- [Your email signature](email-signatures.md): plain text, personal HTML and the company template.
 - [Writing and sending mail](sending-mail.md): the composer, replying to one
   message in a thread, filing a send under a project, and drafting in your
   voice. The purpose picker and the consent check. What a send refuses and what

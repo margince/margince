@@ -14,8 +14,6 @@
   .panel-plate,
   .card,
   .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-  .record-split-details,
-  .record-split-sheet,
   .record-card,
   .recorddetails-note,
   .company-card,
@@ -39,7 +37,6 @@
   .rail,
   .topbar,
   .backfill-estimate,
-  .agents-guide-command,
   .aiconnect-path,
   .aiconnect-admin,
   .mb-open,
@@ -90,7 +87,9 @@
   .ob-voice-result-hero,
   .ob-voice-building,
   .voicekind,
-  .compose-reasons-card
+  .compose-reasons-card,
+  .page-pane,
+  .analytics-sheet
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -112,8 +111,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -137,7 +134,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -188,15 +184,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -220,7 +216,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -271,7 +266,9 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -293,8 +290,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -318,7 +313,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -369,15 +363,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -401,7 +395,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -452,15 +445,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -484,7 +477,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -535,7 +527,9 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -557,8 +551,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -582,7 +574,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -633,15 +624,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -665,7 +656,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -716,15 +706,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -748,7 +738,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -799,15 +788,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -831,7 +820,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -882,7 +870,9 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -916,9 +906,9 @@
   .accountsub,
   .arpanel,
   .mw-aistat-pop,
-  .report-chart-tip,
   .ddeck-tray:not(.panel-foot > .ddeck-tray),
-  .notifbell-loose
+  .notifbell-loose,
+  .overflow-menu-labelled
 ) {
   --ground: var(--bgElevated);
   --groundEdge: var(--ladder1Edge);
@@ -952,17 +942,15 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -986,7 +974,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1037,7 +1024,9 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1071,17 +1060,15 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1105,7 +1092,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1156,15 +1142,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1188,7 +1174,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1239,7 +1224,9 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1273,17 +1260,15 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1307,7 +1292,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1358,15 +1342,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1390,7 +1374,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1441,15 +1424,15 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1473,7 +1456,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1524,7 +1506,9 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1585,8 +1569,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1610,7 +1592,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1661,7 +1642,9 @@
     .ob-voice-result-hero,
     .ob-voice-building,
     .voicekind,
-    .compose-reasons-card
+    .compose-reasons-card,
+    .page-pane,
+    .analytics-sheet
   ) {
   background-color: var(--ground);
 }

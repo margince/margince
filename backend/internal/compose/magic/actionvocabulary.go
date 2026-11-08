@@ -149,12 +149,12 @@ func meaningOf(action string) (admittedAction, bool) {
 	return meaning, ok
 }
 
-// machineActors are the actor types this surface reports.
+// MachineActors are the actor types this surface reports.
 //
 // Human actors are absent deliberately. This reports what ran WITHOUT being
 // asked; a contact's own change is their own, and handing it back to them as
 // machinery would be a lie about who did it.
-func machineActors() []string {
+func MachineActors() []string {
 	return []string{
 		string(crmcontracts.MagicActorTypeMagicActorAgent),
 		string(crmcontracts.MagicActorTypeMagicActorSystem),

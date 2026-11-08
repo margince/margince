@@ -81,10 +81,10 @@ func applyEmailStates(page []crmcontracts.Activity, states map[ids.UUID]EmailRow
 //
 // It answers the message's controller-send mark, read with its delivery.
 func withEmailStateOn(
-	ctx context.Context, tx pgx.Tx, id openapi_types.UUID, summary *crmcontracts.EmailSummary,
+	ctx context.Context, tx pgx.Tx, id openapi_types.UUID, summary *crmcontracts.EmailSummary, asOf time.Time,
 ) (*crmcontracts.ControllerSend, error) {
 	row := []crmcontracts.Activity{{Id: id, EmailSummary: summary}}
-	states, err := EmailStatesFor(ctx, tx, emailIDsOf(row))
+	states, err := EmailStatesFor(ctx, tx, emailIDsOf(row), asOf)
 	if err != nil {
 		return nil, err
 	}

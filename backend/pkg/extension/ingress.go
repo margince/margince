@@ -14,7 +14,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 )
 
 // RecordKind is which kind of record a unit lands. It is the vocabulary a unit
@@ -154,37 +153,6 @@ type Counterparty struct {
 	//
 	// Zero for every record that identifies its counterparty by address.
 	ChannelIdentity ChannelIdentity
-}
-
-// ActivityFields is a captured interaction bound for the timeline. It mirrors
-// the core's own shape; a fitness test outside this package compares the two so
-// a field added there cannot go unnoticed here.
-type ActivityFields struct {
-	// Kind is the timeline kind — the core admits a closed set, and a value
-	// outside it is refused rather than coerced.
-	Kind string
-	// ChannelProvider is the transport that carried this record, and it is
-	// meaningful for exactly one kind: ActivityKindMessage.
-	//
-	// The pairing rule — a message names a transport, nothing else does, and a
-	// unit may name only a transport it DECLARED — is enforced by the core at
-	// the write door rather than here. This package does not know the core's
-	// kind vocabulary and cannot see which channels the calling unit declared,
-	// so a rule spelled here would be a second version of one that can disagree
-	// with the first.
-	ChannelProvider string
-	// Subject and Body are the message as a human reads it. Both are bounded
-	// (see the Max* constants): a provider is a remote party, and an unbounded
-	// field is that party choosing how much this installation stores.
-	Subject string
-	Body    string
-	// OccurredAt is when the message happened at the PROVIDER, not when the
-	// poll saw it — a timeline ordered by discovery is a timeline of this
-	// system's own scheduling.
-	OccurredAt      time.Time
-	DateOnly        bool // OccurredAt names a date with no time of day, as an all-day event does.
-	DurationSeconds *int
-	Direction       string
 }
 
 // The bounds every ingested record is held to, applied before any transaction

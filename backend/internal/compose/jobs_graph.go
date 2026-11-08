@@ -39,7 +39,7 @@ func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log
 	// meeting whose no-record hold has stopped being true.
 	links := newLinkReconcileWorker(pool,
 		newContactsStore(InstallationDB(pool)).
-			WithAudienceRecompute(activities.RecomputeAudienceTx), log)
+			WithAudienceRecompute(activities.RecomputeAudienceTx), cfg.CaptureConfig, log)
 	addDeclaredWorker[LinkReconcileArgs](reg, links)
 	rematch := newLinkedInRematchWorker(pool, newContactsStore(InstallationDB(pool)), identity.NewService(pool), log)
 	addDeclaredWorker[LinkedInRematchArgs](reg, rematch)

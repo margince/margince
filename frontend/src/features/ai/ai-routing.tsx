@@ -9,7 +9,6 @@ import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { stable } from "../../format/collate";
 import { formatDate, formatNumber } from "../../format/format";
 import { lockReasonOr } from "../../format/settinglocks";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import {
   type ModelCatalogue,
@@ -18,6 +17,7 @@ import {
   withBorrowedRows,
 } from "../../lib/ai-models";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
+import { providerName } from "../../lib/ai-provider-names";
 import {
   ROUTING_KEY,
   type RoutingRead,
@@ -27,12 +27,12 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { SETUP_PROVIDERS } from "../../lib/setup-providers";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useAiStatus } from "./ai-admin";
 import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
 import { useAiHealth } from "./ai-health";
 import { useProviderKeys } from "./ai-provider-key-hooks";
-import { providerName } from "./ai-provider-names";
 import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
@@ -297,6 +297,7 @@ function SheetFooter({
   catalogue,
   profile,
 }: Readonly<{ catalogue: ModelCatalogue; profile: string }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const asOf = sheetAsOf(catalogue);
@@ -305,7 +306,7 @@ function SheetFooter({
       <span className="t-caption">
         {asOf
           ? t("aiRouting.sheetAsOf", {
-              date: formatDate(asOf, locale, viewerZone()),
+              date: formatDate(asOf, locale, readerZone),
             })
           : t("aiRouting.sheetUnknown")}
       </span>

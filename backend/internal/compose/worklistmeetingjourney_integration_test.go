@@ -109,3 +109,48 @@ func TestAMeetingInAnHourLeadsTheRepsWorkUntilTheRepSaysReady(t *testing.T) {
 		t.Errorf("urgent work went from %d to %d, want exactly one action fewer", before.Summary.Urgent, after.Summary.Urgent)
 	}
 }
+
+// A cancelled meeting asks nothing more of anyone. The rep who said I'm ready
+// loses the reminder, and the rep who had not loses the preparation.
+func TestACancelledMeetingLeavesNeitherAReminderNorAPreparation(t *testing.T) {
+	for _, ready := range []bool{true, false} {
+		t.Run(fmt.Sprintf("ready=%t", ready), func(t *testing.T) {
+			e := integration.Setup(t)
+			rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+			contact := e.SeedContact(t, "Ana Roth", &e.Rep1)
+			subject, booked, start := "Pricing review", string(crmcontracts.ActivityMeetingStatusBooked), journeyMorning.Add(time.Hour)
+			meeting := logJourneyActivity(rep, t, e, activities.LogActivityInput{
+				Kind: "meeting", Subject: &subject, OccurredAt: &start, MeetingStatus: &booked,
+				Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+			})
+			before := readJourneyDay(rep, t, e)
+			row, at := meetingRow(before, meeting)
+			if at < 0 || row.Preparation == nil {
+				t.Fatalf("the booked meeting is not on the day with a preparation (at %d): %+v", at, row.Preparation)
+			}
+			if ready {
+				store := activities.NewStore(InstallationDB(e.Pool))
+				if _, err := store.ConfirmMeetingReady(rep, ids.From[ids.ActivityKind](meeting), row.Preparation.Revision); err != nil {
+					t.Fatalf("saying I'm ready: %v", err)
+				}
+				before = readJourneyDay(rep, t, e)
+			}
+
+			canceled := string(crmcontracts.ActivityMeetingStatusCanceled)
+			if _, err := e.Activities.UpdateActivity(rep, ids.From[ids.ActivityKind](meeting), activities.UpdateActivityInput{MeetingStatus: &canceled}); err != nil {
+				t.Fatalf("cancelling the meeting: %v", err)
+			}
+
+			after := readJourneyDay(rep, t, e)
+			if row, at := meetingRow(after, meeting); at >= 0 {
+				t.Fatalf("the cancelled meeting is still on the day at %d: %+v", at, row.Because)
+			}
+			if !ready && after.Summary.Urgent != before.Summary.Urgent-1 {
+				t.Errorf("urgent work went from %d to %d, want the preparation gone", before.Summary.Urgent, after.Summary.Urgent)
+			}
+			if ready && after.Summary.Urgent != before.Summary.Urgent {
+				t.Errorf("urgent work went from %d to %d, want a ready meeting's reminder to count for nothing", before.Summary.Urgent, after.Summary.Urgent)
+			}
+		})
+	}
+}

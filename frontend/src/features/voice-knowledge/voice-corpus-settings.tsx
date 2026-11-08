@@ -1,3 +1,4 @@
+import { FileUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Radio, Textarea } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
@@ -65,23 +66,31 @@ export function VoiceCorpusIntake({
         description={t("settings.voice.dropHint")}
         layout="stack"
         control={(control) => (
-          <div className="vdna-zone settingrow-measure">
-            <FileDropzoneControl
-              control={control}
-              emptyLabel={t("settings.voice.dropEmpty")}
-              multiple
-              accept={ACCEPTED_CORPUS_ATTR}
-              onPick={(file) => intake.addFiles([file])}
-            />
-            <PasteSample
-              onAdd={(text, onSettled) =>
-                intake.addPaste(
-                  text,
-                  t("settings.voice.pasteSource"),
-                  onSettled,
-                )
-              }
-            />
+          <div className="vdna-zone">
+            {/* Two ways in, side by side where the card is wide enough. */}
+            <div className="vdna-zone-inputs">
+              <div className="vdna-drop">
+                {/* A caption, not a label: the row already names the input. */}
+                <span className="t-label">{t("settings.voice.dropLabel")}</span>
+                <FileDropzoneControl
+                  control={control}
+                  emptyLabel={t("settings.voice.dropEmpty")}
+                  icon={FileUp}
+                  multiple
+                  accept={ACCEPTED_CORPUS_ATTR}
+                  onPick={(file) => intake.addFiles([file])}
+                />
+              </div>
+              <PasteSample
+                onAdd={(text, onSettled) =>
+                  intake.addPaste(
+                    text,
+                    t("settings.voice.pasteSource"),
+                    onSettled,
+                  )
+                }
+              />
+            </div>
             {intake.pendingAsk && (
               // Keyed by the source: when the queue advances to the next file
               // the panel is a NEW panel, so the previous file's chosen
@@ -132,7 +141,7 @@ function PasteSample({
   const [sending, setSending] = useState(false);
   const blank = text.trim() === "";
   return (
-    <div>
+    <div className="vdna-paste">
       <Field label={t("settings.voice.pasteLabel")}>
         {(control) => (
           <Textarea
@@ -169,7 +178,7 @@ function PasteSample({
 function WhatTeachesTheVoice() {
   const t = useT();
   return (
-    <div>
+    <div className="vdna-works">
       <p className="vdna-label">{t("settings.voice.worksTitle")}</p>
       <ul className="vdna-works-list">
         <li>{t("settings.voice.worksEmails")}</li>

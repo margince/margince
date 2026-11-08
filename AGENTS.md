@@ -186,6 +186,10 @@ Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
 in the session scratchpad. `.gitignore` already covers the files we know about; a new path of this
 kind is still yours to keep out, and to add there.
 
+**Paid lanes are optional in a PR.** Never run `make e2e-ai` or `make e2e-llm` to finish one, and never stop to ask if
+you may: a loop has no one to answer. In the PR body, list each record and its state that `make e2e-ai-report` shows as
+not `current`. Run a paid lane only if the request asks. After you change a tool, gate or role, run `make test-roles` (it needs `make db-up`).
+
 ## Layout
 
 The DAG is `shared → platform → modules → compose → cmd`, and three tools hold it (`depguard`,
@@ -203,8 +207,8 @@ The DAG is `shared → platform → modules → compose → cmd`, and three tool
 4. **`internal/contracts/` and `*_gen.go` are generated** from
    `backend/api/crm.yaml`. Never edit them by hand; the drift gate fails that.
 
-`extensions/<name>/` is the extension tier. Each unit is its own Go module, and it imports only the
-approved `backend/pkg/**` surface. A unit is turned on by being under `extensions/`.
+`extensions/<name>/` holds Go units that import only the approved `backend/pkg/**` surface.
+`instance/go.mod` names those to build; `// margince:development-only` lines are only for dev and tests.
 
 Working in `frontend/`? It has its own [AGENTS.md](frontend/AGENTS.md), which opens with the design
 system catalog. Read that catalog before you build something a user sees. No tool can tell that the

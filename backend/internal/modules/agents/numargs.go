@@ -52,6 +52,10 @@ func declaredNumBounds(inputSchema json.RawMessage) []numBound {
 			Type    string   `json:"type"`
 			Minimum *float64 `json:"minimum"`
 			Maximum *float64 `json:"maximum"`
+			// Registry.Invoke holds minimum and maximum only, so an exclusive
+			// bound would be advertised and never enforced.
+			ExclusiveMinimum json.RawMessage `json:"exclusiveMinimum"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
+			ExclusiveMaximum json.RawMessage `json:"exclusiveMaximum"` //nolint:tagliatelle // JSON Schema's keyword, not ours to rename
 		} `json:"properties"`
 	}
 	// assertObjectSchemas has already confirmed this is valid JSON declaring an
@@ -65,6 +69,10 @@ func declaredNumBounds(inputSchema json.RawMessage) []numBound {
 	}
 	var bounds []numBound
 	for name, prop := range schema.Properties {
+		if prop.ExclusiveMinimum != nil || prop.ExclusiveMaximum != nil {
+			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+			panic("crmagents: input schema declares an exclusive bound on `" + name + "`, which no call is held to; state it as minimum or maximum")
+		}
 		if prop.Type != "integer" && prop.Type != "number" {
 			continue
 		}
@@ -92,7 +100,8 @@ func (r *Registry) requireDeclaredArgs(name string, args json.RawMessage) error 
 	if err := r.requireDeclaredTypes(name, args); err != nil {
 		return err
 	}
-	return joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args))
+	bounded := joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args))
+	return joinArgRefusals(bounded, r.requireDeclaredUniqueness(name, args))
 }
 
 // joinArgRefusals answers with both refusals when both fired, and with whichever

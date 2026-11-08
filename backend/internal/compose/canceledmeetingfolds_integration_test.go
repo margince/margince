@@ -237,6 +237,13 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 	}
 	called.Capture(t, e.Env)
 	called.Cancel(t, e.Env)
+	// The same meeting recorded held is the evidence, so a captured meeting
+	// counts once held and not once canceled.
+	kept := e.SeedDeal(t, "Fold follow-up, held", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, kept, "call", "Discovery call", 5)
+	e.RecordHeld(t, integration.CalendarMeeting{
+		Event: "evt-fold-kept", At: called.At, Links: []datasource.EntityRef{{Type: "deal", ID: kept}},
+	}.Capture(t, e.Env))
 
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
@@ -247,6 +254,9 @@ func TestACanceledMeetingIsNoFollowUpEvidence(t *testing.T) {
 	if _, proposal := e.followUpApproval(t, deal); proposal.EvidenceKind != "call" {
 		t.Errorf("the follow-up cites a %q, want the call — a canceled meeting left no conversation behind",
 			proposal.EvidenceKind)
+	}
+	if _, proposal := e.followUpApproval(t, kept); proposal.EvidenceKind != "meeting" {
+		t.Errorf("the follow-up on the held meeting cites a %q, want the meeting", proposal.EvidenceKind)
 	}
 }
 

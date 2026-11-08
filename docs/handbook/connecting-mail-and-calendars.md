@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/components/mailcoveragenotice.tsx frontend/src/features/capture/connection-service.tsx -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -17,6 +17,8 @@ To connect your Gmail or Outlook mailbox to Margince, open **Settings → Connec
 You land back on Connections with a note such as "Google connected" and "Mail and Calendar are syncing." An agent cannot connect a mailbox for you.
 If the account says "{provider} is not configured on this installation.", an administrator has to set it up first.
 Also called: hook up Google Mail, link my inbox, email sync, Outlook sync, Office 365.
+
+Google also shares your account's picture. If that Google account is the address you sign in with, colleagues see its picture next to your name. A picture you uploaded or removed stays as it is. A shared mailbox, such as sales@, sets no one's picture.
 
 ### How do I connect an IMAP mailbox?
 To connect any other mail host to Margince, open **Settings → Connections**, choose **Add account** and pick **Another mail host**. Then fill in the **Connect IMAP mailbox** form.
@@ -49,7 +51,7 @@ To connect your calendar to Margince, tick **Calendar** when you connect your Go
 1. Open **Settings**, then **Connections**.
 2. For a new account, choose **Connect Google** or **Connect Microsoft 365** and keep **Calendar** ticked.
 3. For an account already connected with mail only, choose **Connect calendar** in its **Calendar** row. Or choose **Change what it brings in** in the account's menu.
-4. Approve access on the provider's screen. With Mail and Calendar both ticked, the provider asks twice: once for mail, then once for your calendar.
+4. Approve access on the provider's screen. Google asks once for **Mail** and **Calendar** added together, and Microsoft 365 asks once for each.
 If the calendar is refused, mail still connects and the note says so, with **Connect calendar** to try again.
 A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.
@@ -57,6 +59,8 @@ Also called: calendar sync, sync meetings, link my agenda.
 ### Who a meeting from your calendar shows
 
 A meeting from your calendar names every guest on the invitation under **Attendees**, whether they accepted, declined or did not answer yet. A guest who is a contact links to their record. A guest who is not a contact yet shows by the name or address on the invitation. Colleagues show under **Colleagues**. A booked room is not a guest.
+
+If you say no to an invitation, the meeting stays on for colleagues who are still going. It is called off for everyone only when the colleague who set it up calls it off.
 
 Each guest's answer shows next to their name: **Declined**, **Maybe** or **No answer**. A guest who accepted shows no label. The next calendar sync updates an answer that changed.
 
@@ -106,10 +110,11 @@ its own word:
 
 You also see its last good sync. A failed check does not move that time.
 
-### Why does a record say it may be missing mail?
+### Does a record show all my mail?
 
 Dates on a contact or deal describe the mail on record. They do not prove that nobody replied outside these records.
-**Check connections** opens your mailboxes. A good sync or a finished history import does not prove that every Inbox and Sent message is on record.
+A good sync or a finished history import does not prove that every Inbox and Sent message is on record.
+A connection problem shows on **Settings → Connections**.
 A task you kept stays even when some mail is missing.
 
 ### Why did my Gmail or Outlook connection stop working?
@@ -117,6 +122,7 @@ When emails stop coming into Margince, open **Settings → Connections** and rea
 - **Needs reconnect**: "The provider rejected the stored credentials. Reconnect to resume." Press **Reconnect** and approve access again.
 - **Needs attention**: the line under it says why. When the provider is slowed down or unreachable, Margince tries again on its own. If it stays, choose **Disconnect** in the account's menu, then connect again.
 - **Not connected**: connect again with **Connect** on the row, or **Add account**.
+- **Your role cannot record activities**: your role cannot capture mail. Ask them to change it. Capture starts again by itself.
 Also called: mailbox not syncing, emails stopped coming in, Gmail disconnected, sync broken.
 
 ### How do I reconnect a mailbox?
@@ -232,6 +238,11 @@ say, and shows what the AI work will likely cost. It counts up to 20,000
 messages. A larger mailbox is shown as "{count} emails or more. Counting stopped
 there." and not as a made-up guess.
 
+Internal mail is left out unless an Admin has authorized its source and history
+range. You must also choose to include that scope in a new run. Read the scope before
+starting. [Who can see an email](who-can-see-an-email.md) explains the separate
+admin and mailbox-owner choices.
+
 You can stop it with **Stop**: "Everything imported so far is kept."
 
 The window can only be **widened** later, never made smaller: "A wider window
@@ -250,3 +261,18 @@ Once an import finishes, check two places:
 **Senders**, for what was decided about each address it found, and **Held
 threads**, for the threads still held. Both are under Settings → Capture
 activity.
+
+## Why is there a warning about my mailbox?
+
+A warning at the top of every page names a connection that needs attention and says since when.
+Choose **Reconnect** when its permission has expired, or **Open connection** to check it.
+The same warning stays in your attention feed.
+
+A mailbox warns when its sync stops or it delivers no mail for three days. For a mailbox
+that has never delivered mail, the three days start when you connect it. A quiet mailbox
+may be quiet by choice: dismiss its warning to keep it out of the banner and feed.
+If mail arrives later and another three days pass without delivery, the warning returns.
+Errors still appear after you dismiss this warning. Margince sends no email about it.
+
+Admins and operations can see connections needing attention in **System health**, including
+the member, mailbox and last good sync. They see no subjects or message contents there.

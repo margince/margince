@@ -47,7 +47,7 @@ func TestTheBenchmarkPageKeepsTechnicalWordsInsideItsDetails(t *testing.T) {
 
 func TestTheBenchmarkPageWithNoRecordSaysSo(t *testing.T) {
 	page := renderPlain(map[string]record{})
-	if !strings.Contains(page, "Nobody has measured this yet") || strings.Contains(page, "## How fast does my morning start?") {
+	if !strings.Contains(page, "Nobody has measured the daily screens yet") || strings.Contains(page, "## How fast does my morning start?") {
 		t.Errorf("a checkout with no daily record must say so and show no answers:\n%s", page)
 	}
 }
@@ -161,5 +161,42 @@ func TestARefusedRowRendersAsAFailureUnlessItsIssueAllowsIt(t *testing.T) {
 	allowed.Verdict, allowed.KnownIssue, allowed.Allowed422 = storedOverKnown, 7037, true
 	if got := verdict(allowed); got != "over budget (#7037)" {
 		t.Errorf("verdict %q; a refusal the listed issue allows renders against that issue", got)
+	}
+}
+
+func TestSystemHealthMeasurementsKeepTheirSeatCorpusAndScope(t *testing.T) {
+	records := fixtureRecords(t)
+	records[healthTarget] = record{Target: healthTarget, MeasuredOn: "2026-10-01", Corpus: &corpus{Scale: 1, Contacts: 250000, Activities: 500000}, Budgets: []measurement{{ID: "PERF-11", Name: "system_health", Flow: "system_health", Seat: "admin", P95Ms: 75, BudgetMs: 750, Samples: 30, Verdict: storedWithin, Note: "10000 retained job runs; HTTP reads only"}}}
+	technical, plain := render(records), renderPlain(records)
+	for _, want := range []string{"250,000", "10000 retained job runs; HTTP reads only", "BENCH_DAILY_TEST=TestSystemHealthBudgets"} {
+		if !strings.Contains(technical, want) || !strings.Contains(plain, want) {
+			t.Errorf("health evidence %q missing from rendered pages", want)
+		}
+	}
+	if !strings.Contains(technical, "| `system_health` | admin |") {
+		t.Error("the measured health seat is absent")
+	}
+	if !strings.Contains(plain, "Opening Overview") || !strings.Contains(plain, "not the page in your browser") {
+		t.Error("the plain page must name the view and measurement boundary")
+	}
+}
+
+func TestAHealthRecordRendersWithoutADailyRecord(t *testing.T) {
+	page := renderPlain(map[string]record{healthTarget: {Target: healthTarget}})
+	if !strings.Contains(page, "How quickly can I check System health?") {
+		t.Error("a standalone health record was omitted")
+	}
+}
+
+func TestHealthMeasurementsKeepEachChecksSampleCountAndNote(t *testing.T) {
+	page := renderPlain(map[string]record{healthTarget: {Budgets: []measurement{
+		{Name: "system_health", Samples: 30, Note: "single request"},
+		{Name: "system_health_eight_readers", Samples: 12, Note: "whole-round latency"},
+		{Name: "unknown_check", Samples: 4, Note: "new diagnostic"},
+	}}})
+	for _, want := range []string{"Opening Overview: 30 samples. single request", "Eight readers checking at once: 12 samples. whole-round latency", "Another health check: 4 samples. new diagnostic"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("measurement missing: %s", want)
+		}
 	}
 }

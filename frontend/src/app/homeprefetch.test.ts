@@ -3,7 +3,7 @@
 
 import { InfiniteQueryObserver } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import { morningBriefOptions } from "../features/brief/brief.queries";
+import { handledForYouOptions } from "../lib/handled";
 import { worklistDayOptions } from "../lib/worklistday";
 import { DEFAULT_VIEW } from "../lib/worklistviews";
 import { quietRun } from "../testing/brief.fixtures";
@@ -14,33 +14,49 @@ afterEach(() => vi.restoreAllMocks());
 
 const brief = quietRun;
 
-function briefQuery(client: ReturnType<typeof createQueryClient>) {
+// The handled list stays a live read, so its mount is where the prefetch note
+// still decides between serving the answer and reading again.
+const handledPage = {
+  as_of: "2026-11-01T08:00:00Z",
+  receipts: [],
+  truncated: false,
+};
+
+function handledQuery(client: ReturnType<typeof createQueryClient>) {
   const query = client
     .getQueryCache()
-    .find({ queryKey: morningBriefOptions.queryKey, exact: true });
-  if (!query) throw new Error("the brief read is not in the cache");
+    .find({ queryKey: handledForYouOptions.queryKey, exact: true });
+  if (!query) throw new Error("the handled read is not in the cache");
   return query;
 }
 
+function answering(handled: unknown) {
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const request = input instanceof Request ? input : new Request(input);
+    return Response.json(
+      new URL(request.url).pathname.endsWith("/handled") ? handled : brief,
+    );
+  });
+}
+
 it("lets Home's mount use an answer the prefetch fetched", async () => {
-  vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
-    Response.json(brief),
-  );
+  answering(handledPage);
   const client = createQueryClient();
   prefetchHome(client, new Map());
-  await vi.waitFor(() => expect(briefQuery(client).state.data).toEqual(brief));
-  await vi.waitFor(() => expect(liveOnMount(briefQuery(client))).toBe(true));
+  await vi.waitFor(() => expect(handledQuery(client).state.data).toBeDefined());
+  await vi.waitFor(() => expect(liveOnMount(handledQuery(client))).toBe(true));
 });
 
 it("keeps the mount refetch for an answer already cached before the prefetch", async () => {
-  vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
-    Response.json(brief),
-  );
+  answering(handledPage);
   const client = createQueryClient();
-  client.setQueryData(morningBriefOptions.queryKey, brief);
+  client.setQueryData(handledForYouOptions.queryKey, {
+    pages: [handledPage],
+    pageParams: [undefined],
+  });
   prefetchHome(client, new Map());
   await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(liveOnMount(briefQuery(client))).toBe("always");
+  expect(liveOnMount(handledQuery(client))).toBe("always");
 });
 
 it("prefetches nothing for the weekly view", () => {

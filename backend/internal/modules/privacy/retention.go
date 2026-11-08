@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -73,7 +74,12 @@ func retentionAppliedPayload(
 		policy := openapi_types.UUID(*policyID)
 		payload.Policy = &policy
 	}
-	payload.Reason = reason
+	if reason != nil {
+		request := fulfillingCase(*reason)
+		if (request != (ids.UUID{}) && *reason == "dsr:"+request.String()) || slices.Contains(fixedPrivacyReasons(), *reason) {
+			payload.Reason = reason
+		}
+	}
 	return payload
 }
 
@@ -173,6 +179,9 @@ type RetentionService struct {
 // of what it reports erasing, and there is no configuration in which that is
 // the intended behaviour. compose.NewRetentionServiceFor supplies capture's.
 func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger, purge RawCapturePurger) *RetentionService {
+	if rawCapturePurgerMissing(purge) {
+		purge = nil
+	}
 	return &RetentionService{
 		db:               db,
 		eraser:           NewEraser(db).WithBlobstore(blob).WithRawCapturePurger(purge),
@@ -209,25 +218,31 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 // RawCapturePurger deletes the provider originals behind the given activities,
 // inside the caller's transaction so they die with the text they duplicate.
 //
-// A seam rather than a fourth DELETE in this package, and NOT because privacy
-// may not write the table — it already does, twice, ratified in doc.go. It is a
-// seam because the natural-key join those rows are found by belongs to capture,
-// which writes them: a copy of that join here would be a second answer to the
-// same question, the two would drift, and the half that drifted would leave
-// originals behind while reporting success.
-// capture.PendingStore.PurgeRawCaptureTx is the implementation, already written
-// for the noise-redaction sweep.
+// It is a seam rather than a fourth DELETE in this package. Privacy may write
+// the table, and does twice (see doc.go). The natural-key join that finds those
+// rows belongs to capture, which writes them. A copy of that join here would
+// drift, and the drifted half would leave originals behind while reporting
+// success. capture.PendingStore.PurgeRawCaptureTx is the implementation.
 //
-// Where this parts company with EdgeInvalidator beside it is what an unwired
-// seam means. A missing edge invalidator leaves an aggregate for the bus
-// consumer that also handles retention.applied to correct — late, but
-// corrected. There is no second path that ages raw_capture out:
-// PurgeRawCaptureTx's own comment says so, and says why the Art. 17 purge
-// cannot stand in (it is scoped to a CONTACT, where a retention window is scoped
-// to time). So an unwired purger is not a degraded mode. It is a constructor
-// argument, and EvaluateInstallation refuses the whole pass if one arrives nil
-// anyway — before a single record is touched.
-type RawCapturePurger func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error
+// An unwired seam means something else here than for EdgeInvalidator beside it.
+// A missing edge invalidator leaves an aggregate for the bus consumer of
+// retention.applied to correct later. Nothing else ages raw_capture out, as
+// PurgeRawCaptureTx's comment explains. The Art. 17 purge cannot stand in: it is
+// scoped to a contact, and a retention window is scoped to time. So the purger
+// is a constructor argument, and EvaluateInstallation refuses the whole pass,
+// before it touches a record, if it is nil.
+//
+// PurgeTextCopiesTx empties the copies other modules took of the given
+// activities' text, such as a voice sample read from sent mail. It rides the
+// same seam because every path that destroys the original destroys them too.
+// PurgeTextNamingTx empties those copies that name an erased subject by full
+// name or address, whatever text they were taken from.
+type RawCapturePurger interface {
+	PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error
+	PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error
+	PurgeTextCopiesTx(context.Context, pgx.Tx, []ids.UUID) error
+	PurgeTextNamingTx(ctx context.Context, tx pgx.Tx, fullName string, emails []string) error
+}
 
 // ErrRetentionSeamMissing is the refusal a pass makes when it was built without
 // a dependency one of its destructive actions cannot finish without. A sentinel
@@ -316,6 +331,9 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 		return err
 	}
 	if err := s.evaluateHeldCommitments(ctx); err != nil {
+		return err
+	}
+	if err := s.retryMarkedAuditCopies(ctx); err != nil {
 		return err
 	}
 	retainOnly, err := s.retainOnly(ctx)
@@ -472,11 +490,6 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 func isDestructive(action string) bool {
 	return action == actionAnonymize || action == actionErase
 }
-
-// voiceSignalRetention note: the deadline itself is stamped per row
-// (voice_learning_signal.retention_until, set at capture); this sweep only
-// honors it — the window is the ai module's fixed operational floor, not a
-// policy-configurable domain record.
 
 // WithPayloadVault lets destructive actions retire sealed booking capabilities.
 func (s *RetentionService) WithPayloadVault(payloads PayloadPurger) *RetentionService {

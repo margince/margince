@@ -17,13 +17,16 @@ import { useScrollMemory } from "../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
+import { CaptureHealthBanner } from "./capturehealthbanner";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
+import { isSidebarChord } from "./hotkeys";
 import { LicenseBanner } from "./licensebanner";
 import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
 import { useReadingColumn } from "./readingcolumn";
+import { usePublishedScrollerHeight } from "./scrollerheight";
 import { TopBar } from "./topbar";
 import "./shell.css";
 
@@ -149,6 +152,7 @@ export function Shell({
   // column grows. A list restores its rows a moment after the address arrives,
   // so a single assignment lands on a column still short and gets clamped.
   useScrollMemory(scroller, address);
+  usePublishedScrollerHeight(scroller, railless ? "railless" : "workspace");
 
   const toggle = useCallback(() => {
     setCollapsed((current) => {
@@ -165,17 +169,7 @@ export function Shell({
   // on the platform, and a composer is exactly where a reader would reach for it.
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
-      // The chord EXACTLY: one platform modifier and no others. Accepting any
-      // combination that merely included Meta or Ctrl took Cmd+Shift+B — which
-      // is bold-with-a-selection in most editors, and something of its own in
-      // the browser — and swallowed it with preventDefault.
-      const platformKey = event.metaKey !== event.ctrlKey;
-      if (
-        !platformKey ||
-        event.altKey ||
-        event.shiftKey ||
-        event.key.toLowerCase() !== "b"
-      ) {
+      if (!isSidebarChord(event)) {
         return;
       }
       // `instanceof` rather than an assertion: an event target is an
@@ -266,6 +260,7 @@ export function Shell({
                 onOpenSearch={onOpenSearch}
               />
             )}
+            <CaptureHealthBanner />
             <ConnectivityBanner />
             <EconomyBanner />
             <EmbedReindexBanner />

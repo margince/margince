@@ -2,7 +2,7 @@
 <!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
-Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
+Home has one ranking engine behind three views: the Worklist, the **Needs you** section on Home, and the
 weekly review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
 cut of that same order, taken before the queue's filter and page limit, so no client can rank work on its
 own. Promises read from a conversation reach the queue through one dispatch rule.
@@ -71,7 +71,7 @@ A stored signal or finding cannot create current work alone. Suggestions without
 
 Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
 
-Current deal actions use the deal page's rules over one batch of owning reads. They are read for the deal rows on the page that the brief or the at-risk lane raised.
+Current deal actions use the deal page's rules over one batch of owning reads. They are read for every brief and at-risk deal row on the page. A deal the tail reached carries the action it would carry in the ranked top.
 They share the Worklist's database snapshot. A failed advice read keeps the work and names the gap.
 
 Saved model words are an earlier view, with their written date. They never admit work or change its rank.
@@ -96,9 +96,21 @@ The deal store applies these owners and the caller's visibility rules before lim
 An empty set reads no owners. No set means the visible workspace view.
 Team reads keep work from former team members and work with no owner.
 
-Company and lead duplicate pairs and deal and tag suggestions have no requested decider.
+Company and lead duplicate pairs and tag suggestions have no requested decider.
 **Mine** and chosen member views skip those sources before building the decision page and counts.
 **Unassigned** and wider views keep them. Approvals keep their requested-decider query.
+
+A deal suggestion (source `deal_suggestion`, `attention/suggestionlane.go`) belongs to its company's owner.
+Its list and count take the same owner set as the deal risk read.
+So each view reads only the suggestions for companies its owners hold.
+The row names the company's current owner as its requested decider, read at request time.
+
+A change of company owner moves the suggestion with no write to it.
+A suggestion for a company with no owner shows under **Unassigned** and in team views.
+`GET /attention` answers for the acting reader, so its suggestion lane and count hold only the reader's own companies.
+An owner who may not read all of a suggestion's evidence does not get the row, and no other reader gets it in their place.
+The suggestion ranks as a possible deal, at the level of a held customer send.
+It sits below customer replies, promises, deal risk and agreed tasks, and above routine work on records.
 
 Contact pairs reach the queue as contact cases (source `contact_case`, `attention/contactcaselane.go`), never one pair at a time.
 A case is a group of contacts joined by open pairs, and its row id is the lowest member id.
@@ -137,7 +149,8 @@ every source in the tail is read to its end. A source that fails while the tail 
 The tail merges its sources by one order every store can sort by in SQL (`attention/backlogmerge.go`). Each row has
 a time: a task's due date, when a waiting customer's message came in, or a deal's expected close date. Rows go
 from the earliest time to the latest, and an undated task or deal goes last. A tie goes to the source's name, then to the store's own order. So the
-longest-standing work comes first, whichever source holds it.
+longest-standing work comes first, whichever source holds it. An approval has no time in this order, so approvals
+come after the dated rows.
 
 Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
 hold an earlier one. Each source then moves to the row after the last one it gave, and reads the rest again on the
@@ -148,7 +161,7 @@ when its own read finds nothing more, so completing tasks above never ends it. T
 time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
-Three sources are read on in the tail today:
+Four sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
   count, taken on the first page only. A team page reads and counts the roster's tasks and nobody's in SQL, as its
@@ -158,6 +171,10 @@ Three sources are read on in the tail today:
   messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
   is one card, and other mail is one card per sender and subject. The category has no count: judging every message
   costs more than the first page may spend.
+- Approvals (`WithApprovalBacklog`, `ApprovalsAfter` in `compose/attentionseam.go`). The tail goes on with the
+  approval engine's inbox read, under the lane's own query and its check of who may decide, newest staged first. It starts
+  just after the last approval the ranked rows hold (`approvalTailStart` in `attention/backlogapproval.go`), so no
+  approval is skipped or served twice.
 
 - Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
   deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
@@ -171,9 +188,14 @@ Mail a sending system wrote is left out of the waiting lane and its tail, unless
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
-Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
-still states their exact total. The list never shows the rows past the lane's cut. A team page states no approval total,
-because the count does not judge by the team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
+Mail that carried a List-Unsubscribe header (`bulk_mail_attested`) waits only once a human took it on as a request.
+An `asks_us` verdict from the classifier alone does not put a newsletter on the lane (`owedSQL` in
+`modules/activities/answered.go`). Our own newsletter waits on no reply, and a newsletter on a thread answers nothing,
+because the follow-up rule reads `relstrength.WrittenByHumanSQL`.
+
+The approval engine counts approvals under the lane's own query, so a cut lane still states their exact total. The
+tail reaches every row it counts. A team page states no approval total, because the count does not judge by the
+team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
 
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).
@@ -255,7 +277,7 @@ A stalled deal keeps its future date while its forecast category drops one step.
 date still needs enough observed history before it can be replaced. Only a replaced date is
 provisional; a future date a human set stays theirs.
 
-`setCloseDate` and `setForecastCategory` in `closedatecorrect.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
+`setCloseDate` in `closedatecorrect.go` and `setWinProbability` in `winprobability.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
 still.
 
 **Accept** (`acceptAppliedDealChange`, `changeacceptance.go`) records an audited review of a close date

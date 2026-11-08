@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { zeroWeekCounts } from "../../testing/brief.fixtures";
 import {
   fleetDeal,
@@ -23,9 +23,17 @@ afterEach(() => {
   window.location.hash = "";
 });
 
+// The report is read the day after its week closed, so the next one is ahead.
+const READ_ON = new Date("2026-07-06T09:00:00Z");
+
 beforeEach(() => {
   window.location.hash = "#/home?view=weekly";
+  vi.useFakeTimers({ toFake: ["Date"], now: READ_ON });
 });
+
+// The title reads as one heading: the report's week, then the days it covers.
+const kicker = (week: string) =>
+  en["brief.report.kicker"].replace("{week}", week);
 
 // ── The report's own shape ──
 
@@ -39,16 +47,19 @@ describe("BriefScreen — the weekly report", () => {
     deals: [],
   };
 
+  const olderReview = { ...review, local_week_start: "2026-06-22" };
+
   const openReport = (weeks: readonly string[]) => {
     stubApi({
-      "GET /weekly-reviews/latest": () => jsonResponse(review),
+      "GET /weekly-reviews/latest": (_body, query) =>
+        jsonResponse(query.get("week") === "2026-06-22" ? olderReview : review),
       "GET /weekly-reviews": () => jsonResponse({ weeks }),
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(
-      <RecordZoneProvider zone="Europe/Berlin">
+      <CompanyZoneProvider zone="Europe/Berlin">
         <BriefScreen />
-      </RecordZoneProvider>,
+      </CompanyZoneProvider>,
     );
   };
 
@@ -58,11 +69,8 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: /^29 June\s*[–-]\s*5 July$/,
+        name: new RegExp(`^${kicker("27")}\\s*,\\s*29 June\\s*[–-]\\s*5 July$`),
       }),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(en["brief.report.kicker"].replace("{week}", "27")),
     ).toBeTruthy();
   });
 
@@ -117,14 +125,71 @@ describe("BriefScreen — the weekly report", () => {
   it("leaves out a section with nothing to say", async () => {
     openReport(["2026-06-29"]);
 
-    await screen.findByText(en["brief.report.chapter.figures"], {
-      selector: "h2",
+    await screen.findByRole("heading", {
+      name: en["brief.report.chapter.figures"],
     });
     // No deal closed this week, so there is no section for closed deals.
     expect(
       screen.queryByRole("heading", {
         name: new RegExp(en["brief.report.chapter.closed"]),
       }),
+    ).toBeNull();
+  });
+
+  // The headline states the week once, in the report. The detail and its
+  // definitions wait behind openers, and the rail repeats none of it.
+  it("states the figures once and keeps the detail behind openers", async () => {
+    openReport(["2026-06-29", "2026-06-22"]);
+
+    const strip = await screen.findByTestId("weekly-strip");
+    expect(strip.closest("#brief-weekly")).not.toBeNull();
+    expect(screen.getAllByTestId("weekly-strip")).toHaveLength(1);
+    for (const opener of [
+      en["brief.report.breakdown"],
+      en["brief.report.howCounted"],
+    ]) {
+      const summary = screen.getByText(opener).closest("summary");
+      expect(summary?.getAttribute("aria-expanded")).toBe("false");
+    }
+    const table = screen.getByRole("table", {
+      name: en["brief.report.chapter.figures"],
+    });
+    expect(
+      table.closest("details")?.querySelector("summary")?.textContent,
+    ).toBe(en["brief.report.breakdown"]);
+  });
+
+  it("lists the newest weeks beside the report, and opens one", async () => {
+    openReport(["2026-06-29", "2026-06-22"]);
+    const user = userEvent.setup();
+
+    const shown = await screen.findByRole("button", { name: /^Week 27/ });
+    expect(shown.getAttribute("aria-current")).toBe("true");
+    await user.click(screen.getByRole("button", { name: /^Week 26/ }));
+    await waitFor(() =>
+      expect(window.location.hash).toContain("week=2026-06-22"),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: new RegExp(`^${kicker("26")}`),
+      }),
+    ).toBeTruthy();
+  });
+
+  // A run that stopped leaves the newest week behind and its next date past.
+  // The rail then names no date rather than a wrong one.
+  it("names no next report once its date has passed", async () => {
+    vi.setSystemTime(new Date("2026-08-03T09:00:00Z"));
+    openReport(["2026-06-29"]);
+
+    await screen.findByRole("heading", {
+      name: en["brief.report.chapter.figures"],
+    });
+    expect(
+      screen.queryByText(
+        new RegExp(en["brief.report.next"].replace("{date}", ".*")),
+      ),
     ).toBeNull();
   });
 
@@ -173,9 +238,9 @@ describe("BriefScreen — the weekly report", () => {
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(
-      <RecordZoneProvider zone="Europe/Berlin">
+      <CompanyZoneProvider zone="Europe/Berlin">
         <BriefScreen />
-      </RecordZoneProvider>,
+      </CompanyZoneProvider>,
     );
     const user = userEvent.setup();
 
@@ -185,7 +250,7 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: /^22\s*[–-]\s*28 June$/,
+        name: new RegExp(`^${kicker("26")}\\s*,\\s*22\\s*[–-]\\s*28 June$`),
       }),
     ).toBeTruthy();
     expect(

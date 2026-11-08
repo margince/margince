@@ -72,16 +72,6 @@
   height: var(--controlIcon);
   flex-shrink: 0;
 }
-.book-powered {
-  display: flex;
-  justify-self: end;
-  align-items: center;
-  gap: var(--space-2);
-}
-.book-powered-mark img {
-  width: 84px;
-  height: auto;
-}
 @media (max-width: 760px) {
   .book-page,
   .book-guest-page {

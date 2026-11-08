@@ -72,3 +72,18 @@ func TestAMeetingLoggedByNoHumanNamesNoHost(t *testing.T) {
 		t.Errorf("a system-logged meeting claims host %v", got)
 	}
 }
+
+func TestAnAnonymousImportDoesNotMakeItsImporterAParticipant(t *testing.T) {
+	for _, kind := range []string{KindMeeting, "call", "email"} {
+		t.Run(kind, func(t *testing.T) {
+			in := LogActivityInput{Kind: kind, SourceSystem: new("mirror:legacy_crm"), SourceID: new("legacy-1")}
+			ctx := humanWriting(ids.NewV7())
+			if host := meetingHost(ctx, in); host != nil {
+				t.Fatalf("importer became host: %v", host)
+			}
+			if seat := loggedOurSide(ctx, in); !seat.IsZero() {
+				t.Fatalf("importer became a participant: %v", seat)
+			}
+		})
+	}
+}

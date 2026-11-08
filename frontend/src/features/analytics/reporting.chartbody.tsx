@@ -1,18 +1,24 @@
 import { Button, Disclosure, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { SegmentBar } from "../../design-system/readings";
+import { BarList, SegmentBar } from "../../design-system/readings";
 import {
   BulletChart,
   CumulativeChart,
   RangeChart,
 } from "../../design-system/report-charts";
 import { Waterfall } from "../../design-system/waterfall";
-import { formatDateTime, formatMoneyCompact } from "../../format/format";
-import { type Translator, useLocale, useT } from "../../i18n";
-import { CohortTable } from "./reporting.cohort";
 import {
-  blockLabel,
-  type MetricNames,
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
+  formatDateTime,
+  MONEY_ABSENT,
+} from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { chartTitle } from "./reporting.chartlabel";
+import { CohortTable } from "./reporting.cohort";
+import { withDealCount } from "./reporting.dealcount";
+import { breakdownLabel } from "./reporting.grouplabel";
+import {
   type ReportingChart,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -22,24 +28,27 @@ import {
 } from "./reporting.model";
 import { movementLabel } from "./reporting.movement";
 import { useMetricNames } from "./reporting.queries";
+import { selectReading } from "./reporting.readingselect";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
 import { TargetProgress } from "./reporting.summary";
 import "./reporting.css";
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 
-import { Breakdown, StageDistribution } from "./reporting.groups";
 export function ChartBody({
   chart,
   evaluation,
   onEvidence,
   trendSize,
+  headline = true,
 }: Readonly<{
   chart: ReportingChart;
   evaluation: ReportingEvaluation;
   onEvidence: EvidenceAction;
   /** `compact` is a shorter trend, for one beside a lead figure. */
   trendSize?: "default" | "compact";
+  /** False where the chart's head already states its total. */
+  headline?: boolean;
 }>) {
   const t = useT();
   const metricName = useMetricNames();
@@ -48,7 +57,7 @@ export function ChartBody({
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
   const compact = (value: number) =>
     reportingMoneyUnit(chart.unit, evaluation.context.currency)
-      ? formatMoneyCompact(value, evaluation.context.currency, locale)
+      ? formatAnalyticsMoney(value, evaluation.context.currency, locale)
       : format(value);
   const readings = chart.points.map((point) => ({
     ...point,
@@ -65,17 +74,7 @@ export function ChartBody({
     targetAmount: point.target == null ? undefined : compact(point.target),
     upperAmount: format(point.upper),
   }));
-  const onSelect = (key: string) => {
-    if (
-      chart.kind === "pipeline_movement" &&
-      (key === "opening" || key === "closing")
-    ) {
-      onEvidence({ metric: chart.metric, context_id: `movement_${key}` });
-      return;
-    }
-    const reference = chart.points.find((point) => point.key === key)?.evidence;
-    if (reference) onEvidence(reference);
-  };
+  const onSelect = (key: string) => selectReading(chart, key, onEvidence);
   const shared = {
     readings,
     label: chartTitle(chart, evaluation, t, metricName),
@@ -96,7 +95,7 @@ export function ChartBody({
           }
           axisLabel={(value) =>
             reportingMoneyUnit(chart.unit, evaluation.context.currency)
-              ? formatMoneyCompact(value, evaluation.context.currency, locale)
+              ? formatAnalyticsMoney(value, evaluation.context.currency, locale)
               : format(value)
           }
           reference={
@@ -138,11 +137,12 @@ export function ChartBody({
       );
     case "stage_distribution":
       return (
-        <StageDistribution
+        <StageChart
           chart={chart}
           evaluation={evaluation}
           label={shared.label}
           format={format}
+          headline={headline}
           onSelect={onSelect}
         />
       );
@@ -291,27 +291,177 @@ export function ChartBody({
   }
 }
 
-export function chartTitle(
-  chart: ReportingChart,
-  evaluation: ReportingEvaluation,
-  t: Translator,
-  metricName: MetricNames,
-): string {
-  if (chart.kind === "owner_attainment")
-    return t("reporting.ownerMetric", { metric: metricName(chart.metric) });
-  // A chart named after its metric, as stage age is, reads the catalog's name.
-  if (chart.kind === "target_progress" || chart.kind === chart.metric)
-    return metricName(chart.metric);
-  if (chart.kind === "breakdown")
-    return t("reporting.breakdownTitle", {
-      metric: metricName(chart.metric),
-    });
-  if (
-    chart.kind === "sdr_outcomes" &&
-    !evaluation.charts.some(
-      (other) => other.kind === "sdr_outcomes" && other.metric !== chart.metric,
-    )
-  )
-    return metricName(chart.metric);
-  return blockLabel(chart.kind, t);
+type ChartPoint = ReportingChart["points"][number];
+
+// The groups a lead or partner figure splits into. A count's records are its
+// value, so only a sum names how many records each group holds.
+function Breakdown({
+  chart,
+  evaluation,
+  label,
+  format,
+  onSelect,
+}: Readonly<{
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
+  label: string;
+  format: (value: number | null | undefined) => string;
+  onSelect: (key: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const named = {
+    ...chart,
+    points: chart.points.map((point) => ({
+      ...point,
+      label: breakdownLabel(point.key, point.label, t),
+    })),
+  };
+  return (
+    <GroupedBars
+      chart={named}
+      label={label}
+      amount={(point) =>
+        reportingCompactAmount(
+          point.value,
+          chart.unit,
+          evaluation.context.currency,
+          locale,
+        )
+      }
+      format={format}
+      countHeader={
+        chart.unit === "count" ? undefined : t("reporting.recordCount")
+      }
+      onSelect={onSelect}
+    />
+  );
+}
+
+// A figure split into groups: a bar per group that opens its records, and the
+// same groups as a table under a disclosure.
+function GroupedBars({
+  chart,
+  label,
+  amount,
+  format,
+  countHeader,
+  onSelect,
+}: Readonly<{
+  chart: ReportingChart;
+  label: string;
+  amount: (point: ChartPoint & { value: number }) => string;
+  format: (value: number | null | undefined) => string;
+  countHeader?: string;
+  onSelect: (key: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <>
+      <BarList
+        label={label}
+        rows={chart.points.flatMap((point) =>
+          point.value == null
+            ? []
+            : [
+                {
+                  key: point.key,
+                  label: point.label,
+                  value: point.value,
+                  amount: amount({ ...point, value: point.value }),
+                },
+              ],
+        )}
+        onSelect={onSelect}
+      />
+      <Disclosure className="report-chart-data" summary={t("reporting.data")}>
+        <DataTable
+          label={label}
+          rows={chart.points}
+          rowKey={(point) => point.key}
+          columns={[
+            {
+              key: "label",
+              header: label,
+              render: (point) => (
+                <Button variant="link" onClick={() => onSelect(point.key)}>
+                  {point.label}
+                </Button>
+              ),
+            },
+            {
+              key: "value",
+              header: t("reporting.actual"),
+              render: (point) => format(point.value),
+            },
+            ...(countHeader == null
+              ? []
+              : [
+                  {
+                    key: "count",
+                    header: countHeader,
+                    render: (point: ChartPoint) =>
+                      point.observations == null
+                        ? MONEY_ABSENT
+                        : formatAnalyticsNumber(point.observations, locale),
+                  },
+                ]),
+          ]}
+        />
+      </Disclosure>
+    </>
+  );
+}
+
+// Today's stock by stage, under the total it splits unless the head says it.
+function StageChart({
+  chart,
+  evaluation,
+  label,
+  format,
+  headline,
+  onSelect,
+}: Readonly<{
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
+  label: string;
+  format: (value: number | null | undefined) => string;
+  headline: boolean;
+  onSelect: (key: string) => void;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const { currency } = evaluation.context;
+  return (
+    <>
+      {headline && (
+        <p className="reporting-headline t-num">
+          {reportingCompactAmount(
+            evaluation.metrics.find((metric) => metric.id === chart.metric)
+              ?.value,
+            chart.unit,
+            currency,
+            locale,
+          )}
+        </p>
+      )}
+      <GroupedBars
+        chart={chart}
+        label={label}
+        amount={(point) =>
+          withDealCount(
+            reportingCompactAmount(point.value, chart.unit, currency, locale),
+            point.observations,
+            plural,
+            locale,
+          )
+        }
+        format={format}
+        countHeader={t("reporting.stageDeals")}
+        onSelect={onSelect}
+      />
+    </>
+  );
 }

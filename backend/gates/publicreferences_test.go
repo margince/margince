@@ -42,6 +42,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // forbidden is what a private reference looks like in this tree's history.
@@ -126,7 +128,7 @@ func assertFileCitesNothingPrivate(t *testing.T, rel string) {
 
 	// The working copy, not the committed blob: a violation must fail before
 	// it is committed, not after.
-	body, err := os.ReadFile(filepath.Join("..", rel))
+	body, err := gatekit.ReadFile(filepath.Join("..", rel))
 	if err != nil {
 		// A tracked file can be absent from the working tree mid-rebase or
 		// after `git rm`. That is not this gate's business.
@@ -193,7 +195,7 @@ func TestPublicTreeCitesNoDocumentGitIgnores(t *testing.T) {
 		if filepath.Ext(rel) != ".md" {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join("..", rel))
+		body, err := gatekit.ReadFile(filepath.Join("..", rel))
 		if err != nil {
 			// Absent mid-rebase or after `git rm`; not this gate's business.
 			if os.IsNotExist(err) {

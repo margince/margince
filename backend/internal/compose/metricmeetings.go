@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -94,7 +95,7 @@ func heldMeetingSource(ctx context.Context, b *reportingBindings, at, from, to t
 		from: "activity a " + held.Join,
 		where: `a.kind='meeting' AND a.archived_at IS NULL
  AND ` + held.Recorded + `
- AND COALESCE(held.status,a.meeting_status)='held' AND (` + eligible + `)
+ AND COALESCE(held.status,a.meeting_status)='` + meetingoutcome.Held + `' AND (` + eligible + `)
  AND ` + within + " AND " + orUnnarrowed(visible) + " AND " + fieldScope,
 		seats:      storekit.MeetingCreditedSeatsAtChangeSQL("a", legacy, "held.host_id_at_change"),
 		seat:       storekit.MeetingCreditedSeatAtChangeSQL("a", legacy, "held.host_id_at_change"),

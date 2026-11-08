@@ -78,7 +78,7 @@ func TestNoErrorMessageStringMatching(t *testing.T) {
 	t.Parallel()
 	defer errTextMatchWaivers.AssertAllMatched(t)
 	fset := gatekit.SourceFileSet()
-	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}

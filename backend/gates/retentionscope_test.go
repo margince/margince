@@ -50,7 +50,7 @@ func TestRetentionPassCtxOnlyDrivesTheRetentionPass(t *testing.T) {
 	t.Parallel()
 	fset := gatekit.SourceFileSet()
 	references := 0
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func TestTheRetentionScopeSinkIsTheOneTheGateMeans(t *testing.T) {
 	t.Parallel()
 	fset := gatekit.SourceFileSet()
 	var found []string
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

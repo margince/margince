@@ -1,11 +1,11 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts, wideCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
 import {
@@ -31,6 +31,9 @@ it("keeps meeting and accepted-handoff evidence distinct in the paired graph", a
     <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={sdrEvaluation} onEvidence={evidence} />
     </StoryProviders>,
+  );
+  await waitFor(() =>
+    expect(container.querySelectorAll(".report-chart-column")).toHaveLength(8),
   );
   const bars = container.querySelectorAll<HTMLButtonElement>(
     ".report-chart-column",
@@ -62,7 +65,7 @@ it("renders forecast support and reconciled movement with boundary evidence", as
       <ReportingCharts evaluation={forecastEvaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
-  await user.click(screen.getByRole("button", { name: /Opening.*760/ }));
+  await user.click(await screen.findByRole("button", { name: /Opening.*760/ }));
   expect(evidence).toHaveBeenLastCalledWith({
     metric: "open_pipeline",
     context_id: "movement_opening",
@@ -134,7 +137,7 @@ it("shows missing capture history as unavailable instead of drawing a fabricated
   ).not.toBeInTheDocument();
 });
 
-it("names every movement bar in words, never by the server's bucket key", () => {
+it("names every movement bar in words, never by the server's bucket key", async () => {
   const keys = ["new", "reopened_or_archived", "stage_weight", "fx"];
   const evaluation = {
     ...forecastEvaluation,
@@ -161,7 +164,7 @@ it("names every movement bar in words, never by the server's bucket key", () => 
     "Stage weight changes",
     "Exchange rate changes",
   ]) {
-    expect(screen.getAllByText(word).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(word)).length).toBeGreaterThan(0);
   }
   for (const key of keys) {
     expect(screen.queryByText(key)).not.toBeInTheDocument();
@@ -271,8 +274,8 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
 });
 
 it.each([
-  { actual: 21600000, label: "€84k remaining" },
-  { actual: 34000000, label: "€40k above target" },
+  { actual: 21600000, label: "€84,000 remaining" },
+  { actual: 34000000, label: "€40,000 above target" },
 ])("shows target attainment with $label", ({ actual, label }) => {
   const evaluation = {
     ...reportingStoryEvaluation,
@@ -506,14 +509,10 @@ it("shows how many priced deals make each stage's value", () => {
     </StoryProviders>,
   );
   expect(
-    screen.getByRole("button", {
-      name: /Discovery: .+ · 1 priced deal, 27%$/,
-    }),
+    screen.getByRole("button", { name: /Discovery: .+ · 1 priced deal$/ }),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", {
-      name: /Proposal: .+ · 7 priced deals, 41%$/,
-    }),
+    screen.getByRole("button", { name: /Proposal: .+ · 7 priced deals$/ }),
   ).toBeInTheDocument();
 });
 
@@ -593,4 +592,30 @@ it("credits a saved edition's sales to the owner it captured", () => {
   expect(
     screen.queryByText("Credited to each deal’s current owner"),
   ).toBeNull();
+});
+
+// With individual performance off, a reader sees only their own bar on the
+// owner chart. The chart says why above its bars, or one bar reads as a team
+// of one.
+it("says why an owner chart drawn from the reader's own figures has one bar", () => {
+  installFetchStub(reportingStoryRoutes());
+  const reason =
+    "An administrator switched off individual performance, so this shows your own figures only. Team totals stay complete.";
+  const base = ownerChartEvaluation(false);
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingCharts
+        evaluation={{
+          ...base,
+          charts: base.charts.map((chart) => ({
+            ...chart,
+            points: chart.points.slice(0, 1),
+            coverage: { status: "partial", withheld: true, reason },
+          })),
+        }}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(screen.getByText(reason)).toBeInTheDocument();
 });

@@ -100,12 +100,19 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/privacy:sarRetainedCopySections":     "This pure subject-export query builder uses read predicates only in SELECT subqueries over the subject contact and lead twins. It performs no database writes, even when a notice caller builds its sections inside a write transaction. Domain mutations retain their own write gates.",
+	"internal/modules/consent:holdReviewedContact":         "a source review writes the notice case, not the contact. When the answer records a meeting on the contact it takes auth.HoldWritableLive instead; this visibility probe only hides a contact the reviewer cannot see",
+	"internal/modules/consent:sourceContactReadable":       "resolves the evidence a reviewer picks for a notice case. The row that changes is the notice case, behind the privacy-request gate; nothing on the contact changes",
+	"internal/modules/initiatives:visibleRecords":          "narrows a pick or an exclusion to the records the caller may read. The row that changes is the initiative's, behind its own update gate and row scope; no lead or deal row changes",
+	"internal/modules/initiatives:carriedDeals":            "a read: the deals promoted from member leads, under the reader's own row scope; no lead or deal row changes",
+	"internal/modules/initiatives:memberRead":              "a read: the member list after a write, under the reader's own row scope. Nothing is written on a lead or deal",
 	"internal/modules/contacts:TransferRequestableTx":      "asks whether a colleague may ASK for a record they cannot change; it writes nothing on the record, and the move on accept passes auth.EnsureWritableLive as the owner",
 	"internal/modules/deals:pendingMappingsOf":             "narrows which lost deals a mapping count or apply page reads to those the operator may see. Each write then asks auth.EnsureWritable on the deal (writeMappedLossReason) and skips one the operator may not write",
 	"internal/modules/deals:ListLegacyLossReasons":         "a read: the custom_field update gate names who may decide a mapping, and the deal scope clause narrows which lost deals' notes the list counts and shows. Nothing is written",
 	"internal/modules/contacts:attachToSettledVerdict":     "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",
 	"internal/modules/contacts:employerDomainsVisible":     "filters read-only work-domain evidence; no company mutation occurs before the shared employer resolver",
 	"internal/modules/contacts:previewDomainEmployerTx":    "read-only employer planning checks visibility; writes still pass the resolver and their mutation authority gates",
+	"internal/modules/contacts:promotionEmployerFactsTx":   "reads whether the stored company can be an employment target; contact and relationship writes keep their own gates, and a company industry carry separately requires company update and EnsureChangeable",
 	"internal/modules/contacts:EmployerNameMatchesTx":      "matches a visible company for an employment link; matching changes no existing company. New companies pass CreateCompanyTx and the edge passes contact write authority and link-target gates",
 	"internal/modules/contacts:ensureCompanyAndEmployment": "checks whether a domain-matched company may be named before attaching a contact. It changes no company row; the inferred edge uses the capture employment writer and its existing contact and seat locks",
 
@@ -120,7 +127,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:checkStagedEmployer":            "asks whether the decider may SEE the company a LinkedIn match card offers as employer, which is the product rule for that box. It changes no company: the write is an employment edge on the contact, whose create runs its own link-target probe on the company",
 	"internal/modules/deals:suggestionVisibleClause":           "reads the company and cited evidence before deciding a suggestion; the company itself is unchanged, and existing-deal linking separately requires update authority on its locked target",
 	"internal/modules/collections:recordArm":                   "the reader row scope over the record a tag suggestion names, which decides whether the caller may SEE the suggestion; it changes no record. Accepting or dismissing then asks auth.EnsureWritableLive on that record in the same transaction (openTagSuggestionForDecision) before anything is written",
-	"internal/modules/activities:offeredEmails":                "reads which contact a written-about row is filed on, under the reader's contact row scope, to say whether Write email opens with a recipient. It changes no contact: it runs in the read-back of a write the caller already passed, and answers a boolean and an address the caller may read",
+	"internal/modules/activities:linkedCandidates":             "reads which contact, lead or company a written-about row is filed on, under the reader's row scope for that object, to name where Write email goes. It changes no record: it runs in the read-back of a write the caller already passed, and answers a target and an address the caller may read",
 	"internal/modules/activities:resolveAuthorContacts":        "names the sender of rows a write returns by the one contact holding the stated address. It changes no contact; the object grant and row scope decide only whether the sender is named or stays an address",
 	"internal/modules/activities:readEmailPartiesOf":           "names the parties on rows a write returns. It changes no contact; the object grant and row scope decide only whether a party is named or stays an address, and the write's own gate is the activity's writable probe",
 	"internal/modules/activities:hiddenProjects":               "decides which of the projects a filing names the caller may SEE, so a project out of their sight is shown unnamed and the undo refuses rather than leave a link it cannot remove. It changes no project; the undo's own row gate is the activity's writable probe taken under the lock",
@@ -162,7 +169,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:nameableLead":         "the duplicate-lead 409's disclosure decision, shared by the email, LinkedIn and worked-from-contact probes: it names the incumbent lead only when the caller could READ it, and writes nothing to that row. The lead being created, reopened or demoted takes its own gate: lead:create on create, auth.Require(lead, update) plus the writable lock in ReopenLead and DemoteLead",
 	"internal/modules/contacts:claimedEmailRefusal":  "the contact twin of refusedCompanyCreate, reached from refusedContactCreate and from the email claim check shared by the create and replace paths, and the same decision: whether the 409 may NAME the contact already holding the address, or answers the held refusal that names nobody. That contact is a different row from the one being written and is never touched. Authority over the row that IS being changed is taken by its caller: contact:create on the create path, auth.EnsureWritable in UpdateContact on the replace path",
 
-	"internal/modules/contacts:LockClaimForBulkTx":       "decides only whether the caller may SEE the claim's contact, so that an agent is refused a visible promise with one stable reason (commitment_needs_the_user) and an invisible one reads as absent. It is not the mutation's gate: the same function takes auth.EnsureWritableLive on that contact right after the agent check, and the settlement write (moveClaimStatus) asks it again under the lock",
+	"internal/modules/contacts:LockClaimForBulkTx":       "decides only whether the caller may SEE the claim's contact, so that a promise the caller cannot see reads as absent. It is not the mutation's gate: the same function takes auth.EnsureWritableLive on that contact right after the agent check, and the settlement write (moveClaimStatus) asks it again under the lock",
 	"internal/modules/contacts:setNudgeAside":            "the contact a nudge is ABOUT. That row is written NOTHING — the mutation is a relationship_nudge_dismissal keyed on the CALLER, so it can only ever change the caller's own lane — and the probe decides one thing: whether this rep may be told that contact has gone quiet. Setting somebody aside is a judgement about the rep's own morning, and requiring write authority over a contact before a rep may stop being reminded of them would mean they could only quiet reminders about records they own, which is the opposite of what the lane is for. The liveness half is load-bearing: a dismissal must not name a contact erasure anonymized in place",
 	"internal/modules/contacts:RestoreRelationshipNudge": "the undo of the above, and the same decision: the contact is written nothing, the row deleted is the caller's own, and the probe asks whether this rep may be told about that contact at all",
 
@@ -219,7 +226,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// `action` branch in resolveAttachmentParent before trusting it, and if the
 	// attachment paths grow a third arm, revisit this rather than extend it.
 	"internal/modules/activities:visibleParentClause":           "the document library's per-row visibility clause, reached from a write path only by ensureInDealDocuments — the hide's membership probe, asking whether the file is in THIS caller's view of the deal's Files area at all. It only ever NARROWS (a miss is 404), and the record being changed is the deal's listing, gated on its own way in by auth.EnsureWritable(deal) in setDealDocumentHidden before the probe runs",
-	"internal/modules/activities:ensureAttachmentParentVisible": "the READ half of a pair whose only caller picks between them by action: principal.ActionRead takes this one, everything else takes ensureAttachmentParentWritable. The write path is gated as this test demands; the extractor sees the function, not the arm",
+	"internal/modules/activities:ensureAttachmentParentVisible": "the READ half of a pair whose caller picks between them by action: principal.ActionRead takes this one, everything else takes ensureAttachmentParentWritable. A write reaches it only through deniedChange, after the write is already refused, to choose 403 over 404; it never admits a write. The extractor sees the function, not the arm",
 	"internal/modules/capture:threadDeals":                      "the deal rule's row predicate on the deals our own mail in a thread is filed under, narrowing which deal a captured reply may be FILED UNDER. The deal is referenced, never changed: the link it writes is gated on activity:update and auth.EnsureLinkTarget in linkActivityToDeal, the same read-share reasoning as projectScopeClause",
 	"internal/modules/capture:projectScopeClause":               "the project-attribution ladder's row predicate, narrowing which projects a captured message may be FILED UNDER. Read authority is the whole of what it needs: the project is referenced, never changed — the rows written are the activity_link edge and the activity's own version bump, and both are gated on activity:update in linkActivityToProject. A `read` share on a project is exactly the authority to see mail land on it, so requiring write here would refuse a filing to the colleague the project was deliberately shared with",
 
@@ -808,9 +815,10 @@ func visibleWriteAuthorityFns(byReceiver map[string]map[string]*writeAuthorityFn
 			continue
 		}
 		merged := &writeAuthorityFn{
-			mutates:  pkgLevel.mutates || info.mutates,
-			requires: map[string]bool{},
-			calls:    map[string]bool{},
+			previewOnly: pkgLevel.previewOnly && info.previewOnly,
+			mutates:     pkgLevel.mutates || info.mutates,
+			requires:    map[string]bool{},
+			calls:       map[string]bool{},
 		}
 		for _, src := range []*writeAuthorityFn{pkgLevel, info} {
 			merged.probes = append(merged.probes, src.probes...)

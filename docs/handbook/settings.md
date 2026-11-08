@@ -16,7 +16,7 @@ Margince Settings puts its pages in these groups:
 - **You**: Account, Meetings, Writing voice, AI access, Notifications, Connections, Capture activity.
 - **Company**: Company profile, Sign-in and apps.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
-- **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
+- **Sales**: Pipelines, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Website forms, Knowledge, Data import.
 - **AI**: AI usage, AI models, MCP, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
@@ -25,7 +25,7 @@ You see only the pages your permissions open. The Reset data page appears only w
 
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
-- Change your password, display name, email signature, language or theme (appearance): **Account**.
+- Change your password, display name, profile picture, email signature, language or theme (appearance): **Account**.
 - Turn on two-step sign-in, with a code from your phone: **Account**.
 - Set when customers can book you, and share your booking link: **Meetings**, in **When people can book** and **Booking links**.
 - Set up how your drafts sound: **Writing voice**.
@@ -88,7 +88,6 @@ A setting is locked when whoever runs the installation set it outside the app. T
 
 Ask whoever runs the installation to change it there, or to remove it so the app can change it again. The [Configuration](configuration.md) page lists every setting and where its value comes from.
 Also called: locked setting, greyed out setting, read-only field.
-
 ## Whose settings are you changing?
 
 Every Margince settings page carries a badge beside its heading. It says who a change there touches:
@@ -111,12 +110,13 @@ The pages under **You** are on [Your own settings](your-own-settings.md).
 # The rest of settings
 
 The rest of Margince settings is six groups after **You**. Which pages you see, and whether you can change them, follows your role. The table at the end sums it up.
-
 ## Company profile
 
 The Company profile page in Settings (group **Company**) holds your own company's name, currency and business facts. It is an administrator's page: Admin and Ops reach it, and a sales seat does not. Sign-in and the Google and Microsoft apps have their own **Sign-in and apps** page in the same group.
 
-The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
+The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the company time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
+
+The company's logo heads the mail Margince sends as your installation: daily and weekly emails, notifications, invitations and password resets. Under it is a small "Powered by Margince" line. Without a logo, and on privacy notices, the company name stands in its place. Mail you send from your own mailbox carries your signature instead. The logo is set on the **Brand** card, where **Edit** under the **Wide logo** or the **Square icon** uploads or removes it.
 
 The **Show individual performance** switch there decides whether anyone sees a colleague's figures. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance). The **Forecast** card there holds one switch, **Let the forecast correct itself**. Off, each open deal counts at the probability typed on its stage. On, the forecast learns from deals that closed. See [How the forecast learns](forecast-learning.md).
 
@@ -133,8 +133,11 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 
 **Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
 
-To add another, an Admin chooses **New legal entity** and types its name, its legal name and a two-letter code such as AT. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. Offers and signatures still show the default.
+To add another, an Admin chooses **New legal entity**, types its name and legal name, and picks where it is based. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
 
+To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed. A logo is stored as soon as you choose it with **Edit** and **Upload logo** under the logo. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
+
+**Archive** in the same menu takes one off the list, and the default cannot be archived. Margince also refuses while colleagues still work for it or companies are rated against it. It then says what to change first. Once there are two, the **Members** page shows a **Legal entity** column, where an Admin chooses which one each colleague works for.
 ## Sign-in and apps
 
 The Sign-in and apps page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
@@ -187,7 +190,7 @@ The Capture rules page in Settings (group **Data**) decides what comes into the 
 
 The same card holds **Held threads reviewed per run**. A mailbox set to *Held until checked* holds its mail until Margince has checked the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets.
 
-**Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, including you. Take note: no mailbox offers again the mail skipped while a domain is on this list.
+**Own email domains** are the domains that belong to this company. Mail between colleagues is skipped by default. An Admin can add a mailbox and its folders under **Internal operational mail**. That mail stays with its participants. See [Capture](capture.md) for the source and history choices. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
 **Enrichment.** Whether Margince fills in facts on captured companies by itself.
 
@@ -199,18 +202,11 @@ The same card holds **Held threads reviewed per run**. A mailbox set to *Held un
 
 The Sales group in Settings has one page per subject. There are the fields a record carries, the stages it moves through, and the lists of choices it picks from. And there are the priced things that go on an offer.
 
-- **Pipelines**: the stages a deal moves through, for the whole company. See
-  [The pipeline](the-pipeline.md#pipelines-and-stages).
-- **Stage automation**: the record of how each stage move has gone, before
-  Margince moves deals by itself. See
-  [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
-- **Lead handling**: lead origins, reasons to drop a lead, and the first-reply
-  target, which is off by default. Origins add or take away score points.
-- **Acquisition sources**: the business channels a deal can come from. Lead
-  origins, which record where a lead came from, are separate.
+- **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
+- **Lead handling**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
+- **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
 - **Partners**: the partner stages and what each one means. See [Partners and commission](partners.md#how-do-i-change-the-partner-stages).
-- **Outcome reviews**: questions a seller answers when a deal is won or lost.
-  There is one set for won and one for lost.
+- **Outcome reviews**: questions a seller answers when a deal is won or lost. There is one set for won and one for lost.
 - **Responsibility roles**: what a colleague or team looks after on a
   company, deal or project. A role gives no access to the record; the owner
   keeps the responsibility for it. Each role is marked **Built-in** when it comes with
@@ -311,27 +307,30 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 
 System health and Reset data sit in the **Governance** group, and Data import in **Data**.
 
-- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
-  prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another.
-  Nothing is written until you check the test run.
+**System health** opens on **Overview**: what needs work, who can act and the next step.
+Only work that needs a person appears here, with its effect and an action button. The status label says what to fix or review. **Check results** compares the current counts. **All checks** holds service status; **Diagnostics** shows the technical details.
+
+**Review mailbox decisions** lists who has choices waiting. **Review my choices** opens your **Worklist → Decisions** for proposed contacts, or your held conversations in **Capture activity** for sharing choices. For another owner, copy a request with their personal review link. The request sends no message and gives you no access to their mail.
+
+**Diagnostics** shows each source and keeps the selected check in its address. Data updates shows open work first; completed updates and optional work open separately. Mail capture shows counts only; held meetings are counted across the whole installation. Filter background runs or open the next page; totals include all runs still kept in that window.
+
+A canceled run is not a failed run. Deleted runs do not prove the work is done. **Copy technical report** copies recorded errors, attempts and run IDs; it sends no message.
+
+**System health > Schedules and sending** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
+Moving to another view asks you to save a draft first. **Search settings** opens the view with the control you asked for.
+
+- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
 - **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
-- **AI provider status**: whether each AI provider is answering, as the app and its background jobs found it, in one view. See [AI providers](ai-providers.md).
-- **Mail capture checks**: whether the passes that fix mail capture in the
-  background keep up. It shows when each last worked, and how many contacts and
-  threads wait in each mailbox. It also shows how many filed meetings are held
-  back in the whole installation. It shows counts only; the contacts and messages stay
-  in view to their mailbox owner alone. The same readers as Background jobs see
-  it.
+- **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
+- **Mail capture checks**: connections that need attention, with the member, mailbox, condition and last good sync. Admin and Ops see no messages here.
+  It also shows when each background pass last worked, contacts and threads waiting in each mailbox, and meetings held back.
+  Counts are shown to the same readers as Background jobs; contacts, threads and messages stay with their mailbox owner.
 - **Links in outgoing mail**: the address Margince puts in the links it emails, such as unsubscribe links, marked **Reachable**, **Unreachable** or **Not checked**. If nobody outside can reach it, those links open nothing.
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
-- **Restore drills**: when a restore from a backup was last tested, if it
-  passed, and how long it took against the targets. Whoever runs the
-  installation records each test. Margince does not see backups, so the card
-  says "Not observed by Margince" for the last backup. The same readers as
-  Background jobs see it.
+- **Restore drills**: when a restore was tested, if it passed, and how long it took against the targets. Whoever runs the installation records each test. Margince does not see backups; the card says "Not observed by Margince". The same readers as Background jobs see it.
 - **Reset data**: takes an installation back to how it was on its first start.
   It deletes every record and setting, but keeps the company and its users, so
   everyone can still sign in. It appears only where whoever runs the

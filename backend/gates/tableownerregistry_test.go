@@ -74,16 +74,22 @@ var tableOwners = map[string]string{
 	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
-	"worklist_snapshot":      "internal/compose/worklistsnap",
-	"relationship":           "internal/modules/contacts",
-	"partner":                "internal/modules/contacts",
-	"lead":                   "internal/modules/contacts",
-	"lead_score_history":     "internal/modules/contacts",
-	"lead_manual_signal":     "internal/modules/contacts",
-	"lead_source":            "internal/modules/contacts",
-	"lead_origin":            "internal/modules/contacts",
-	"lead_disqualify_reason": "internal/modules/contacts",
-	"partner_stage":          "internal/modules/contacts",
+	"worklist_snapshot": "internal/compose/worklistsnap",
+	// One reader's cached Home answers, the fence that ends them and the
+	// reader's last write, owned by the compose package that serves them.
+	"home_read_cache":         "internal/compose/homecache",
+	"home_read_fence":         "internal/compose/homecache",
+	"home_read_forgotten":     "internal/compose/homecache",
+	"home_read_fence_pending": "internal/compose/homecache",
+	"relationship":            "internal/modules/contacts",
+	"partner":                 "internal/modules/contacts",
+	"lead":                    "internal/modules/contacts",
+	"lead_score_history":      "internal/modules/contacts",
+	"lead_manual_signal":      "internal/modules/contacts",
+	"lead_source":             "internal/modules/contacts",
+	"lead_origin":             "internal/modules/contacts",
+	"lead_disqualify_reason":  "internal/modules/contacts",
+	"partner_stage":           "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
 	// administered reason a refusal names. contacts owns them because the SUBJECT
@@ -179,13 +185,21 @@ var tableOwners = map[string]string{
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails
 	// TestEveryPackageOnlyWritesTablesItOwns.
-	"project":               "internal/modules/projects",
-	"project_phase_history": "internal/modules/projects",
-	"fx_rate":               "internal/modules/deals",
-	"product":               "internal/modules/deals",
-	"offer":                 "internal/modules/deals",
-	"offer_line_item":       "internal/modules/deals",
-	"offer_template":        "internal/modules/deals",
+	"project":                   "internal/modules/projects",
+	"project_phase_history":     "internal/modules/projects",
+	"fx_rate":                   "internal/modules/deals",
+	"product":                   "internal/modules/deals",
+	"tax_rate":                  "internal/modules/deals",
+	"product_translation":       "internal/modules/deals",
+	"offer":                     "internal/modules/deals",
+	"offer_line_item":           "internal/modules/deals",
+	"deal_product":              "internal/modules/deals",
+	"deal_line_item":            "internal/modules/deals",
+	"sales_initiative":          "internal/modules/initiatives",
+	"sales_initiative_revision": "internal/modules/initiatives",
+	"sales_initiative_member":   "internal/modules/initiatives",
+	"sales_initiative_baseline": "internal/modules/initiatives",
+	"offer_template":            "internal/modules/deals",
 	// activities
 	"activity":              "internal/modules/activities",
 	"transcript_read":       "internal/modules/activities",
@@ -205,6 +219,7 @@ var tableOwners = map[string]string{
 	// so it belongs to the module that owns that row — the same ground the
 	// reply-verdict history above stands on.
 	"activity_request_settlement":   "internal/modules/activities",
+	"activity_reminder_delivery":    "internal/modules/activities",
 	"activity_commitment_admission": "internal/modules/activities",
 	// Which owed mails had their stored original re-read for a calendar method.
 	// Its candidates are owedSQL, which this module owns, so the marker is here
@@ -256,14 +271,16 @@ var tableOwners = map[string]string{
 	// its own key on the transaction writing its owning row, so the writes reach this
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
-	"stored_object_intent":  "internal/platform/storedobjects",
-	"data_task_run_history": "internal/platform/datatask",
-	"data_task_review":      "internal/platform/datatask",
-	"data_task_run":         "internal/platform/datatask",
-	"deal_document_hide":    "internal/modules/activities",
-	"meeting_proposal":      "internal/modules/activities",
-	"meeting_invitation":    "internal/modules/activities",
-	"booking_page":          "internal/modules/activities",
+	"stored_object_intent":     "internal/platform/storedobjects",
+	"data_task_run_history":    "internal/platform/datatask",
+	"data_task_review":         "internal/platform/datatask",
+	"data_task_run":            "internal/platform/datatask",
+	"deal_document_hide":       "internal/modules/activities",
+	"meeting_proposal":         "internal/modules/activities",
+	"meeting_invitation":       "internal/modules/activities",
+	"meeting_calendar_episode": "internal/modules/activities",
+	"booking_page":             "internal/modules/activities",
+	"booking_alias":            "internal/modules/activities",
 	// approvals. The autonomy policy is what each rep decided about a KIND of
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
@@ -278,20 +295,22 @@ var tableOwners = map[string]string{
 	// What made business correspondence lawful, and the §7(3) flag: both are
 	// the gate's own evidence (ADR-0098 D2/D4), written where the gate that
 	// relies on them lives.
-	"contact_acquisition_evidence": "internal/modules/contacts",
-	"privacy_notice_case":          "internal/modules/consent",
-	"lead_privacy_notice":          "internal/modules/consent",
-	"consent_text_version":         "internal/modules/consent",
-	"communication_decision":       "internal/modules/consent",
-	"communication_basis":          "internal/modules/consent",
-	"communication_review":         "internal/modules/consent",
-	"communication_instruction":    "internal/modules/consent",
-	"communication_override":       "internal/modules/consent",
-	"communication_suppression":    "internal/modules/consent",
-	"consent_qualifying_event":     "internal/modules/consent",
-	"data_subject_request":         "internal/modules/consent",
-	"privacy_request_proof":        "internal/modules/consent",
-	"preference_token":             "internal/modules/consent",
+	"contact_acquisition_evidence":     "internal/modules/contacts",
+	"privacy_notice_case":              "internal/modules/consent",
+	"lead_privacy_notice":              "internal/modules/consent",
+	"consent_text_version":             "internal/modules/consent",
+	"communication_decision":           "internal/modules/consent",
+	"communication_basis":              "internal/modules/consent",
+	"communication_review":             "internal/modules/consent",
+	"communication_instruction":        "internal/modules/consent",
+	"communication_override":           "internal/modules/consent",
+	"communication_suppression":        "internal/modules/consent",
+	"existing_customer_notice":         "internal/modules/consent",
+	"existing_customer_notice_purpose": "internal/modules/consent",
+	"consent_qualifying_event":         "internal/modules/consent",
+	"data_subject_request":             "internal/modules/consent",
+	"privacy_request_proof":            "internal/modules/consent",
+	"preference_token":                 "internal/modules/consent",
 	// The emailed link that shows a contact their own record and carries their
 	// marketing answer back, and what comes back through it. Consent's, because
 	// what the token authorises is a consent decision and the address it was
@@ -319,6 +338,9 @@ var tableOwners = map[string]string{
 	"capture_alias_sighting":           "internal/modules/capture",
 	"capture_alias_refused":            "internal/modules/capture",
 	"capture_owner_identity_withdrawn": "internal/modules/capture",
+	"capture_party_admission_cursor":   "internal/modules/capture",
+	"capture_party_source_replay":      "internal/modules/capture",
+	"capture_party_source":             "internal/modules/capture",
 	"capture_import":                   "internal/modules/capture",
 	"capture_thread_verdict":           "internal/modules/capture",
 	"capture_counterparty_hold":        "internal/modules/capture",

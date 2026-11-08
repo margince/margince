@@ -29,11 +29,13 @@ const MENU_LEAD = en["worklist.rowMenu"].slice(
 );
 const rowMenu = (name: string) => name.startsWith(MENU_LEAD);
 
-/** The queue beside the row in hand, one control per queued row. */
-function inQueue(container: HTMLElement) {
-  const queue = container.querySelector(".brief-triage-queue");
-  if (!(queue instanceof HTMLElement)) throw new Error("no queue is drawn");
-  return within(queue);
+/** The waiting card whose press names `name`; it fails when none does. */
+function queuedCard(container: HTMLElement, name: RegExp): HTMLElement {
+  const card = within(container)
+    .queryAllByRole("button", { name })
+    .find((press) => press.classList.contains("brief-task-open"));
+  if (!card) throw new Error(`no waiting card is named ${name}`);
+  return card;
 }
 
 /** The row in hand, drawn whole on the panel's left. */
@@ -57,28 +59,23 @@ it("renders the server focus even when the queue page contains different rows", 
       state="ready"
     />,
   );
-  // The day's first row is in hand, drawn whole. The list under it names
-  // every other focus row in the server's order, with its rank in the
-  // reader's own numerals.
+  // The day's first row is in hand, drawn whole. Every other focus row is a
+  // card under it, in the server's order, and the band counts them all.
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
       (row) => row.textContent,
     ),
   ).toEqual([rows[0].title]);
   expect(
-    [...container.querySelectorAll(".brief-focus-item-title")].map(
+    [...container.querySelectorAll(".brief-task-title")].map(
       (item) => item.textContent,
     ),
   ).toEqual(rows.slice(1, 6).map((row) => row.title));
-  expect(
-    [...container.querySelectorAll(".brief-focus-list > li")].map(
-      (item) => item.querySelector(".brief-focus-rank")?.textContent,
-    ),
-  ).toEqual(["2", "3", "4", "5", "6"]);
-  expect(screen.getByText("1 of 6")).toBeTruthy();
+  expect(container.querySelectorAll(".brief-triage > li")).toHaveLength(6);
+  expect(container.querySelector(".brief-first-count")?.textContent).toBe("6");
 });
 
-it("puts a queued row in hand when it is pressed, and says where it stands", async () => {
+it("opens a waiting card where it stands when it is pressed", async () => {
   stubApi({});
   const user = userEvent.setup();
   const rows = Array.from({ length: 3 }, (_, index) =>
@@ -87,30 +84,27 @@ it("puts a queued row in hand when it is pressed, and says where it stands", asy
   const { container } = render(
     <BriefFeed day={readingsDay({}, rows)} state="ready" />,
   );
-  await user.click(
-    inQueue(container).getByRole("button", { name: /Call buyer 2/ }),
-  );
+  await user.click(queuedCard(container, /Call buyer 2/));
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
       (row) => row.textContent,
     ),
   ).toEqual([rows[2].title]);
-  expect(screen.getByText("3 of 3")).toBeTruthy();
-  // The pressed button is gone, so focus lands on the card it brought in hand.
+  // The pressed card is gone, so focus lands on the card it opened.
   expect(
     document.activeElement?.contains(
       container.querySelector(".brief-triage-lead"),
     ),
   ).toBe(true);
-  // The row in hand leaves the list; the rows still waiting keep their ranks.
+  // The other rows stay cards, and the opened one keeps its place last.
   expect(
-    inQueue(container).queryByRole("button", { name: /Call buyer 2/ }),
-  ).toBeNull();
-  expect(
-    [...container.querySelectorAll(".brief-focus-list > li")].map(
-      (item) => item.querySelector(".brief-focus-rank")?.textContent,
+    [...container.querySelectorAll(".brief-task-title")].map(
+      (item) => item.textContent,
     ),
-  ).toEqual(["1", "2"]);
+  ).toEqual([rows[0].title, rows[1].title]);
+  expect(
+    container.querySelector(".brief-triage > li:last-child .brief-triage-lead"),
+  ).toBeTruthy();
 });
 
 it("neither grows focus nor links the whole queue when more pages exist", () => {
@@ -202,6 +196,9 @@ it.each([false, true])(
     ).toBeNull();
     expect(inHand(container).getByText("Call the buyer")).toBeTruthy();
     expect(screen.queryByText(/you pinned/i)).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: en["worklist.pinnedMark"] }),
+    ).toBeNull();
   },
 );
 
@@ -254,7 +251,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
   const head = container.querySelector(".brief-triage-lead-head");
-  expect(head?.querySelector(".brief-triage-label-now")?.textContent).toBe(
+  expect(head?.querySelector(".brief-task-status")?.textContent).toBe(
     "Customer waiting",
   );
   expect(head?.textContent).toContain(en["visibility.team"]);
@@ -301,13 +298,14 @@ it("names the account a row in hand is about", () => {
   const { container } = render(
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
-  const head = container.querySelector(".brief-triage-lead-head");
-  expect(head?.querySelector("a")?.textContent).toBe("Nordwind");
+  const head = container.querySelector<HTMLElement>(".brief-triage-lead-head");
+  if (!head) throw new Error("the card in hand has no head");
+  expect(within(head).getByRole("link", { name: "Nordwind" })).toBeTruthy();
 });
 
-// The ranked column names its rows from the contact, not from a message. A
-// task carries a contact and no message, and must still show a name.
-it("names a task's contact in the ranked column", () => {
+// A waiting card names its row's contact, not a message's sender. A task
+// carries a contact and no message, and must still show a name.
+it("names a task's contact on its waiting card", () => {
   stubApi({});
   const owed = {
     ...taskRow("owed", "Send the promised rollout comparison"),
@@ -331,18 +329,14 @@ it("names a task's contact in the ranked column", () => {
     />,
   );
 
-  // The task's own row in the column. The card and the waiting message both
-  // name the contact too, so a page-wide query would prove nothing.
-  const column = container.querySelector(".brief-triage-queue");
-  if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
-  const row = within(column).getByRole("button", {
-    name: /Send the promised rollout comparison/,
-  });
+  // The task's own card. The card in hand and the waiting message both name
+  // the contact too, so a page-wide query would prove nothing.
+  const row = queuedCard(container, /Send the promised rollout comparison/);
   expect(within(row).getByText(/Sonya Beck/)).toBeTruthy();
 });
 
 // A waiting row is named by its subject, from the row's own `title`. The
-// server puts the subject there, so the column never reads `email_summary`.
+// server puts the subject there, so the card never reads `email_summary`.
 it("names a waiting row by its subject", () => {
   stubApi({});
   const { container } = render(
@@ -356,11 +350,9 @@ it("names a waiting row by its subject", () => {
     />,
   );
 
-  const column = container.querySelector(".brief-triage-queue");
-  if (!(column instanceof HTMLElement)) throw new Error("no ranked column");
   expect(
-    within(column).getByRole("button", { name: /Meet next Tues\?/ }),
-    "the column stopped naming a waiting row by the subject it is known by",
+    queuedCard(container, /Meet next Tues\?/),
+    "the card stopped naming a waiting row by the subject it is known by",
   ).toBeTruthy();
 });
 
@@ -387,7 +379,7 @@ it("names the host of a meeting in hand on Home's focus card", () => {
   expect(card?.textContent).toContain("hosted by Lena Fischer");
 });
 
-it("shows concrete reasons without ranking or consequence narration", () => {
+it("shows its first concrete reason without ranking or consequence narration", () => {
   stubApi({});
   const { container } = render(
     <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
@@ -395,7 +387,7 @@ it("shows concrete reasons without ranking or consequence narration", () => {
   const card = inHand(container);
   expect(card.queryByText("Why first?")).toBeNull();
   expect(card.queryByText(/If ignored/)).toBeNull();
-  expect(card.getByText(/waiting 13 days/)).toBeTruthy();
+  expect(card.getByText(/wrote last/)).toBeTruthy();
 });
 
 it.each([true, false])(
@@ -563,16 +555,12 @@ it("keeps three similar deal cards distinct and exposes commercial facts", async
   ).toBeTruthy();
   expect(inHand(container).getByText("€25,000.00")).toBeTruthy();
   expect(container.querySelector(".worklist-row-context")).toBeNull();
-  await user.click(
-    inQueue(container).getByRole("button", { name: /Globex Renewal/ }),
-  );
+  await user.click(queuedCard(container, /Globex Renewal/));
   expect(
     inHand(container).getByRole("heading", { name: "Globex Renewal" }),
   ).toBeTruthy();
   expect(inHand(container).getByText("€12,000.00")).toBeTruthy();
-  await user.click(
-    inQueue(container).getByRole("button", { name: /Nordwind Rollout/ }),
-  );
+  await user.click(queuedCard(container, /Nordwind Rollout/));
   expect(
     inHand(container).getByRole("heading", { name: "Nordwind Rollout" }),
   ).toBeTruthy();
@@ -666,4 +654,38 @@ it("keeps an unlinked subject in the framed title", () => {
       name: "Review the transcript · Buyer meeting",
     }),
   ).toBeTruthy();
+});
+
+// The day lands under a reader who may already be reading the greeting. What
+// is still out holds the room it will take, so nothing pushes in later.
+it("waits for the day in the card's own frame", () => {
+  stubApi({});
+  const { container } = render(<BriefFeed day={undefined} state="loading" />);
+  const pending = container.querySelector(".brief-triage-pending");
+  expect(pending?.querySelector('[role="status"]')).not.toBeNull();
+  expect(screen.getByText(en["brief.feed.loading"])).toBeTruthy();
+});
+
+it("holds the opening sentence's line while the day is read, and only then", () => {
+  stubApi({});
+  const now = new Date(2026, 6, 5, 9, 30, 0);
+  const glance = (pending: boolean) =>
+    render(
+      <BriefGlance
+        view="morning"
+        firstName="Ada"
+        now={now}
+        day={undefined}
+        week={undefined}
+        pending={pending}
+      />,
+    );
+  const reading = glance(true);
+  expect(
+    reading.container.querySelector(".glance-sentence-pending"),
+  ).not.toBeNull();
+  reading.unmount();
+  // A day that failed to load says nothing rather than holding a grey line.
+  const failed = glance(false);
+  expect(failed.container.querySelector(".glance-sentence-pending")).toBeNull();
 });

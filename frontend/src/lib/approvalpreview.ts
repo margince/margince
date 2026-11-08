@@ -82,6 +82,8 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   promote_lead_archive_source: "approval.preview.promotionArchive",
   promote_create_contact: "approval.preview.promotionCreate",
   promote_fill_contact: "approval.preview.promotionFill",
+  promote_seat_contact_on_existing_deal:
+    "approval.preview.promotionExistingDealEffect",
   promote_open_deal_seat_contact: "approval.preview.promotionDeal",
   promote_queue_duplicate_review: "approval.preview.promotionReview",
   promote_fill_company_industry: "approval.preview.promotionFillIndustry",
@@ -123,7 +125,7 @@ function previewMoney(value: Value, t: Translator, locale: Locale): string {
       });
 }
 
-function previewValue(
+export function previewValue(
   value: Value,
   field: string,
   t: Translator,
@@ -192,7 +194,11 @@ const PREVIEW_CATALOG_ALIASES: Readonly<Record<string, string>> = {
   relationship_end_precision: "relationship_start_precision",
 };
 
-function previewLabel(value: Value, field: string, t: Translator): string {
+export function previewLabel(
+  value: Value,
+  field: string,
+  t: Translator,
+): string {
   const mergeLabel = mergeValueLabel(field, value.text, t);
   if (mergeLabel !== undefined) return mergeLabel;
   const formatter = PREVIEW_TEXT_FORMATTERS.get(field);

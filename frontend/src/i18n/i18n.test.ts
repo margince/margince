@@ -30,6 +30,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "changes.check.outcome",
+  "captureConcern.title",
   "companyReach.functionCount",
   "deal.committee.seatSub",
   "lead.card.askedQuote",
@@ -51,6 +53,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
+  // The product's own name, as the agent that made a change.
+  "agentJob.margince",
   // The name of the network, offered as a profile field in the research drawer.
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
@@ -59,6 +63,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // does; only the words inside change, and they are the speaker's own.
   "commitment.quote",
   "filters.propose.unusedItem",
+  "reporting.setup.unusedItem",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",
@@ -67,7 +72,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
   // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
+  "analytics.accounts.deal",
   "explain.col.pipeline",
+  "reporting.recordType.lead",
+  "reporting.recordType.deal",
+  "analytics.decisions.deal",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —
   // the vi catalog already carries it untranslated wherever it appears in a
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
@@ -100,13 +109,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // The release channel's own name on the rail head's stage marker. "Beta" is
-  // the word all three catalogs use for it — Vietnamese borrows it as a term of
-  // art the way it borrows "deal" and "pipeline" — and a marker four letters
-  // long is also the only spelling that fits the 56px rail it must survive.
-  // Temporary, with the badge that renders it: app/betabadge.tsx names this
-  // entry among the things its deletion takes.
-  "shell.beta",
   // "Core" is the product's name for the shared codebase, which every catalog
   // already uses as a term of art (ob.core.*).
   "shell.coreVersion",
@@ -167,9 +169,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "approval.field.email",
   // And naming the kind of evidence a tag suggestion cites.
   "tagSuggestion.kind.email",
-  // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
-  // keeps "Email". German translates it, and does.
-  "deal.forecast.pipeline",
   "room.create.defaultTitle",
   // These slots receive category counts and action names already translated by their owners.
   "brief.agenda.summary",
@@ -224,13 +223,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "board.count_one",
   "lead.boardCount_one",
   "deals.pipeline",
-  "deal.fcPipeline",
   "filters.field.pipeline_id",
   "analytics.field.pipeline_id",
   "analytics.sectionPipeline",
   "reporting.pipeline",
   "lead.qualify.pipeline",
-  "stageAutomation.pipeline",
   "review.colDeal",
   "worklist.category.leads",
   "filters.sentence.ref.pipeline_one",
@@ -252,10 +249,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contracts.renew.deal",
   "contracts.deal",
 
-  // The forecast categories Commit and Best case keep their English names.
-  "deal.fcCommit",
-  "deal.fcBestCase",
-  "brief.weekly.outlook.bestCase",
+  // A bare percentage, written the same way in Vietnamese.
+  "deal.winProbability.band.zero",
 
   // Endonyms: a locale's own name for itself, identical in every catalog.
   "locale.name.en",
@@ -317,6 +312,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.lead",
   // The same loanword, naming the record an approval's evidence came from.
   "decision.evidenceSource.deal",
+  "worklist.pane.deal",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client
@@ -543,8 +539,10 @@ const OWNER_WORD: Record<string, string> = {
 describe("the owner and the responsibility roles", () => {
   it("names the owner's word for every locale, as its label says it", () => {
     for (const [locale, catalog] of Object.entries(catalogs)) {
+      const owner = catalog["list.owner"];
+      if (!owner) throw new Error("The locale catalog was not loaded");
       expect(
-        catalog["list.owner"].toLowerCase(),
+        owner.toLowerCase(),
         `${locale}: the owner's word is missing`,
       ).toContain(OWNER_WORD[locale]);
     }

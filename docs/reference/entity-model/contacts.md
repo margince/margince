@@ -6,7 +6,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-47 columns · primary key `(id)` · referenced by 50 foreign keys
+47 columns · primary key `(id)` · referenced by 51 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -117,6 +117,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_delete_clears_deal_partner`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()`
 - `company_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `company_refuse_anchor_retirement`: `BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()`
+- `home_read_fence_company_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR (old.is_anchor IS DISTINCT FROM new.is_anchor) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_company_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()`
 - `trg_company_geocode_state_stale`: `AFTER UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_state_goes_stale()`
 - `trg_company_no_cycle`: `BEFORE INSERT OR UPDATE OF parent_company_id FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()`
@@ -186,11 +187,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `home_read_fence_company_domain`: `AFTER UPDATE FOR EACH ROW WHEN (((old.domain_folded IS DISTINCT FROM new.domain_folded) OR (old.company_id IS DISTINCT FROM new.company_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_company_domain_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_company_domain_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## company_domain_disposition
 
-22 columns · primary key `(id)` · referenced by 1 foreign key
+24 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -201,8 +204,9 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `admission_reason_code` | `text` |  |  |
 | `admission_reason_coded_at` | `timestamp with time zone` |  |  |
 | `admission_sender_kind` | `text` |  |  |
-| `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`. |
+| `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`, `agent`. |
 | `attempts` | `integer`, default `0` | yes |  |
+| `candidate_company_id` | `uuid` |  | Points at `company.id`. |
 | `company_id` | `uuid` |  | Points at `company.id`. |
 | `domain` | `text` | yes |  |
 | `evidence` | `text` |  |  |
@@ -212,15 +216,17 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `pending_reason` | `text` |  | One of `unevidenced`, `stale_evidence`, `near_duplicate`, `forwarded_identity`, `vendor_verdict`, `reserved_domain`. |
 | `site_read_id` | `uuid` |  | Points at `site_read.id`. |
+| `site_unreadable` | `boolean`, default `false` | yes |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `company`, `personal`, `provider`, `no_site`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` |  | One of `site_read`, `heuristic`, `human`. |
+| `source` | `text` |  | One of `site_read`, `heuristic`, `human`, `agent`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `candidate_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent deletes this row |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `site_read_id` | `site_read` | deleting the parent keeps this row and clears the link |
@@ -229,17 +235,18 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_domain_disposition_admission_check`: `CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed', 'admitted']))))`
 - `company_domain_disposition_admission_shape`: `CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))`
-- `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human']))))`
+- `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
 - `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'vendor_verdict', 'reserved_domain']))))`
 - `company_domain_disposition_pending_reason_shape`: `CHECK (((pending_reason IS NULL) OR ((status = 'pending') AND (admission IS DISTINCT FROM 'suppressed'))))`
 - `company_domain_disposition_settled_shape`: `CHECK ((((status = 'pending') AND (source IS NULL)) OR ((status = 'company') AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal', 'provider', 'no_site'])) AND (source IS NOT NULL))))`
-- `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human']))))`
+- `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'company', 'personal', 'provider', 'no_site'])))`
 
 **Indexes**
 
 - `company_domain_disposition_pkey`: `unique, btree (id)`
+- `idx_company_domain_disposition_candidate`: `btree (candidate_company_id) WHERE (candidate_company_id IS NOT NULL)`
 - `idx_company_domain_disposition_company`: `btree (company_id)`
 - `idx_company_domain_disposition_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
 - `idx_domain_disposition_admission`: `btree (admission_at DESC) WHERE (admission IS NOT NULL)`
@@ -560,7 +567,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-35 columns · primary key `(id)` · referenced by 49 foreign keys
+37 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -571,7 +578,9 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_line2` | `text` |  |  |
 | `address_postal_code` | `text` |  |  |
 | `address_region` | `text` |  |  |
+| `anonymized_address_hashes` | `text[]` |  |  |
 | `converted_from_lead_id` | `uuid` |  | Canonical origin pointer if promoted from a lead. |
+| `created_from_activity_id` | `uuid` |  | The note, mail or quick capture this contact was read out of, where one was named at creation. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_name` | `text` |  |  |
 | `full_name` | `text` | yes | Always present (display name). |
@@ -605,6 +614,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `converted_from_lead_id` | `lead` | deleting the parent keeps this row and clears the link |
+| `created_from_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `merged_into_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `source_author_id` | `app_user` | deleting the parent keeps this row and clears the link |
@@ -624,7 +634,9 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `contact_confidentiality_hold_ix`: `btree (id) WHERE (narrowing_reason = 'confidentiality_hold')`
 - `contact_pkey`: `unique, btree (id)`
+- `idx_contact_created_from`: `btree (created_from_activity_id) WHERE (created_from_activity_id IS NOT NULL)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
@@ -635,6 +647,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_name_keyset`: `btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_keyset_desc`: `btree ("left"(full_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_trgm`: `gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)`
+- `idx_contact_name_trigram_candidates`: `btree (hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL)`
 - `idx_contact_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_contact_search`: `gin (search_tsv)`
 - `idx_contact_updated_keyset`: `btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
@@ -643,12 +656,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `contact_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `home_read_fence_contact_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_contact_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()`
 - `trg_contact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_acquisition_evidence
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -659,6 +673,9 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `note` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone` |  |  |
 | `purpose_claimed` | `text` |  |  |
+| `recorded_for_addresses` | `text[]` |  |  |
+| `request_retracted_at` | `timestamp with time zone` |  |  |
+| `request_retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
 | `source_entity_type` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -781,17 +798,18 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_email_pkey`: `unique, btree (id)`
-- `idx_contact_email_base`: `btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@', '\1@')) WHERE (archived_at IS NULL)`
 - `idx_contact_email_contact`: `btree (contact_id)`
 - `idx_contact_email_correspondence`: `btree (email) WHERE (from_correspondence AND (archived_at IS NULL))`
 - `idx_contact_email_dedupe_scan`: `btree (updated_at, id)`
 - `idx_contact_email_domain_reversed`: `btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL)`
+- `idx_contact_email_mailbox_base`: `btree (( CASE WHEN (regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@') ~ '^[^@]*@(gmail|googlemail)\.com$') THEN (replace(regexp_replace(regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@'), '@(gmail|googlemail)\.com$', ''), '.', '') || '@gmail.com') ELSE regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@') END)) WHERE (archived_at IS NULL)`
 - `idx_contact_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `uq_contact_email_dedupe`: `unique, btree (email) WHERE (archived_at IS NULL)`
 - `uq_contact_email_primary`: `unique, btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))`
 
 **Triggers**
 
+- `bind_requests_on_address_move`: `BEFORE UPDATE OF contact_id FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
 - `trg_contact_email_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -933,27 +951,41 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_signature_enrich_state
 
-5 columns · primary key `(contact_id)` · referenced by 0 foreign keys
+11 columns · primary key `(contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `activity_id` | `uuid` | yes | Points at `activity.id`. |
-| `attempted_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `activity_id` | `uuid` |  | Points at `activity.id`. |
+| `attempted_at` | `timestamp with time zone`, default `now()` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
+| `deferred_run_id` | `uuid` |  | Points at `capture_backfill.id`. |
+| `due_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `history_depth` | `smallint` |  |  |
-| `last_activity_at` | `timestamp with time zone` | yes |  |
+| `last_activity_at` | `timestamp with time zone` |  |  |
+| `live_generation` | `bigint`, default `0` | yes |  |
+| `processed_generation` | `bigint`, default `0` | yes |  |
+| `read_snapshot` | `pg_snapshot` |  |  |
+| `requested_generation` | `bigint`, default `0` | yes |  |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `activity_id` | `activity` | deleting the parent deletes this row |
+| `activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `deferred_run_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
+
+**Rules**
+
+- `signature_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))`
 
 **Indexes**
 
 - `contact_signature_enrich_state_pkey`: `unique, btree (contact_id)`
 - `idx_contact_signature_enrich_state_activity`: `btree (activity_id)`
+- `idx_signature_live_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation > processed_generation))`
+- `idx_signature_work_deferred`: `btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL)`
+- `idx_signature_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation <= processed_generation) AND (deferred_run_id IS NULL))`
 
 ## contact_social
 
@@ -1124,12 +1156,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## email_signature
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `body` | `text` | yes | The sign-off appended below every message this member sends, plain text. |
+| `body` | `text` | yes | Plain-text fallback after personal HTML and the company template. |
+| `html` | `text`, default `''::text` | yes | Saved personal HTML, trimmed at both ends. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the workspace template's `{phone}`. |
 | `title` | `text`, default `''::text` | yes | The member's title, filled into the workspace template's `{title}`. |
@@ -1195,7 +1228,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-47 columns · primary key `(id)` · referenced by 18 foreign keys
+48 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1222,10 +1255,11 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `partner_accepted_by` | `text` |  | Who accepted the lead for its partner. |
 | `partner_company_id` | `uuid` |  | The partner company that referred this lead. |
 | `phone` | `text` |  | E.164, as a contact's number is. |
+| `product_id` | `uuid` |  | The product the lead is interested in, set by hand or by the web form that captured it. |
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
-| `qualified_deal_id` | `uuid` |  | The deal opened by the qualify call that promoted this lead, when one was asked for. |
+| `qualified_deal_id` | `uuid` |  | The deal joined or opened by the qualify call that promoted this lead, when one was asked for. |
 | `routed_at` | `timestamp with time zone` |  | When routing assigned an owner. |
 | `score` | `smallint`, default `0` | yes | Lead-local scoring; never reads the contact graph. |
 | `score_computed` | `smallint` |  | Server-derived. |
@@ -1258,6 +1292,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `origin` | `lead_origin` | the parent cannot be deleted while this row points at it |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `partner_company_id` | `company` | deleting the parent keeps this row and clears the link |
+| `product_id` | `product` | the parent cannot be deleted while this row points at it |
 | `project_id` | `project` | deleting the parent keeps this row and clears the link |
 | `promoted_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `qualified_deal_id` | `deal` | deleting the parent keeps this row and clears the link |
@@ -1301,12 +1336,14 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_lead_sla_open`: `btree (created_at) WHERE ((archived_at IS NULL) AND (first_response_at IS NULL) AND (sla_breached_at IS NULL))`
 - `idx_lead_status_live`: `btree (status) WHERE (archived_at IS NULL)`
 - `lead_pkey`: `unique, btree (id)`
+- `lead_product_idx`: `btree (product_id) WHERE (product_id IS NOT NULL)`
 - `uq_lead_email_dedupe`: `unique, btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL))`
 - `uq_lead_from_contact_live`: `unique, btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL))`
 - `uq_lead_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
 **Triggers**
 
+- `home_read_fence_lead_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `lead_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_lead_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -1490,7 +1527,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-28 columns · primary key `(id)` · referenced by 2 foreign keys
+29 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1514,6 +1551,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `offer_summary` | `text` |  |  |
 | `register_court` | `text` |  | The court that keeps the entity's commercial register entry. |
 | `register_number` | `text` |  | The entity's commercial register number. |
+| `signature_template` | `text` |  | The mail signature layout of a sender assigned to this entity, with the placeholders of `EmailSignatureTemplate.template`, up to 4000 characters. |
 | `usp` | `text` |  |  |
 | `value_proposition` | `text` |  |  |
 | `vat_id` | `text` |  | The entity's VAT identification number. |
@@ -1530,11 +1568,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `legal_entity_default_has_no_offering`: `CHECK (((NOT is_default) OR ((offer_summary IS NULL) AND (icp IS NULL) AND (value_proposition IS NULL) AND (usp IS NULL))))`
 - `legal_entity_default_is_permanent`: `CHECK (((NOT is_default) OR (archived_at IS NULL)))`
 - `legal_entity_default_reads_the_anchor`: `CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))`
+- `legal_entity_default_signs_with_the_installation`: `CHECK (((NOT is_default) OR (signature_template IS NULL)))`
 - `legal_entity_iban_shape`: `CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$')))`
 - `legal_entity_imprint_bounded`: `CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))`
 - `legal_entity_language_shape`: `CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$')))`
 - `legal_entity_names_itself`: `CHECK ((is_default OR ((btrim(COALESCE(display_name, '')) <> '') AND (btrim(COALESCE(legal_name, '')) <> '') AND (country IS NOT NULL))))`
 - `legal_entity_offering_bounded`: `CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000)))`
+- `legal_entity_signature_template_bounded`: `CHECK (((signature_template IS NULL) OR (length(signature_template) <= 4000)))`
 - `legal_entity_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

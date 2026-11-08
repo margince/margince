@@ -25,10 +25,15 @@ import {
   useConnectAccount,
 } from "../../lib/connect-account";
 import { missingCalendarWriteGrant } from "../../lib/connector-status";
+import { captureRefusalOf, useConnectors } from "../../lib/connectors";
 import { navigate } from "../../lib/router";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { calendarName, useMeetingCalendar } from "./booking-calendar-state";
 import "./meeting-cards.css";
+import {
+  UnreadableCalendarLine,
+  useUnreadableCalendar,
+} from "./unreadable-calendar";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 type CaptureConnection = components["schemas"]["CaptureConnection"];
@@ -114,13 +119,15 @@ function useCalendarDraft(
   const { provider, ready, selected, calendars } = calendar;
   const dirty =
     JSON.stringify(calendarFields(form)) !==
-      JSON.stringify(calendarFields(baseline)) ||
-    (provider !== "" && provider !== baseline.provider);
+    JSON.stringify(calendarFields(baseline));
   const writable =
     ready && !!selected?.writable && !calendars.isFetching && !!provider;
   useSaveDraft({
     // A calendar that is not ready cannot be saved; its row's Reconnect says so.
     dirty: dirty && ready,
+    // The live calendar the card picked by itself: shown as the answer, not an edit.
+    offered: ready && provider !== "" && provider !== baseline.provider,
+    offer: provider,
     // The card says why beside the choice.
     invalid: !selected || !writable,
     save: async () => {
@@ -184,6 +191,7 @@ function CalendarFields({
         {provider !== "" && ready && (
           <CalendarChoices
             calendar={calendar}
+            saved={draft.baseline}
             onCalendar={(value) =>
               setForm({
                 ...form,
@@ -254,10 +262,13 @@ function CalendarConnectionRow({
   const { locale } = useLocale();
   const now = useNow(60_000);
   const reconnect = useConnectAccount();
+  const refusal = captureRefusalOf(useConnectors().data);
   const expired = connection.status === "reauth_required";
   const readOnly = !expired && missingCalendarWriteGrant(connection);
-  const syncedAt = connection.last_synced_at
-    ? Date.parse(connection.last_synced_at)
+  // The last sync that worked: `last_synced_at` is the last attempt, which a
+  // failing calendar keeps moving.
+  const syncedAt = connection.last_success_at
+    ? Date.parse(connection.last_success_at)
     : Number.NaN;
   const openConnections = () =>
     navigate({ screen: "settings", id: "connections" });
@@ -292,7 +303,7 @@ function CalendarConnectionRow({
         )
       }
       action={
-        ready ? (
+        ready || refusal ? (
           <Button onClick={openConnections}>
             {t("scheduling.openConnections")}
           </Button>
@@ -310,7 +321,7 @@ function CalendarConnectionRow({
         )
       }
       menu={
-        ready ? undefined : (
+        ready || refusal ? undefined : (
           <OverflowMenu label={calendarName(t, provider)}>
             <Button onClick={openConnections}>
               {t("scheduling.openConnections")}
@@ -319,6 +330,7 @@ function CalendarConnectionRow({
         )
       }
     >
+      {!ready && refusal && <p className="t-caption">{t(refusal)}</p>}
       <ConnectRefusal connect={reconnect} />
     </ProviderRow>
   );
@@ -328,13 +340,24 @@ function CalendarChoices({
   calendar,
   onCalendar,
   onBlocking,
+  saved,
 }: Readonly<{
   calendar: ReturnType<typeof useMeetingCalendar>;
+  saved: Profile;
   onCalendar: (id: string) => void;
   onBlocking: (ids: string[]) => void;
 }>) {
   const t = useT();
   const { calendarID, blocking } = calendar;
+  const connection = calendar.providers.find(
+    (item) => item.provider === saved.provider,
+  );
+  const unreadable = useUnreadableCalendar(
+    saved,
+    calendar.ready && connection ? connection.status : "",
+  );
+  // The line sits under the row that holds the calendar it names.
+  const unreadableBlocks = unreadable !== null && blocking.includes(unreadable);
   return (
     <QueryGate query={calendar.calendars} pendingLabel={t("common.loading")}>
       {(calendars) =>
@@ -359,6 +382,12 @@ function CalendarChoices({
                 />
               )}
             />
+            {!unreadableBlocks && (
+              <UnreadableCalendarLine
+                calendar={unreadable}
+                provider={calendar.provider}
+              />
+            )}
             <SettingRow
               label={t("scheduling.blocking")}
               description={t("scheduling.blockingRowHelp")}
@@ -378,6 +407,12 @@ function CalendarChoices({
                 />
               )}
             />
+            {unreadableBlocks && (
+              <UnreadableCalendarLine
+                calendar={unreadable}
+                provider={calendar.provider}
+              />
+            )}
           </>
         ) : (
           <p>{t("scheduling.noWritableCalendar")}</p>

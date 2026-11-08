@@ -16,6 +16,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDuration, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
@@ -24,8 +25,8 @@ import "./embedreindex.css";
 import { useNow } from "../../format/now";
 import { settingsHref } from "../../lib/settingsrouting";
 import {
-  embedReindexIdentitiesQueryKey,
-  embedReindexStatusQueryKey,
+  embedReindexIdentitiesKey,
+  embedReindexStatusKey,
   type ReindexIdentities,
   type ReindexStatus,
   useEmbedReindexAvailable,
@@ -238,16 +239,20 @@ export function EmbedReindexCard() {
     setPreviewedIdentity(null);
   };
 
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const status = useEmbedReindexStatus(canRead && bound);
 
   // Fetched only once the dialog is open (ADR-0020 preview-before-spend):
   // the estimate is what the operator is about to consent to, not a figure
   // computed ahead of the decision to look.
   const preview = useQuery({
-    queryKey: embedReindexPreviewQueryKey,
-    enabled: mode !== null,
-    queryFn: async (): Promise<ReindexPreview> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/preview"));
+    queryKey: [...embedReindexPreviewQueryKey, scope],
+    enabled: mode !== null && visible && scope !== undefined,
+    queryFn: async ({ signal }): Promise<ReindexPreview> => {
+      const data = unwrap(
+        await api.GET("/embeddings/reindex/preview", { signal }),
+      );
       if (!data) {
         throw new Error("malformed reindex preview response");
       }
@@ -256,15 +261,19 @@ export function EmbedReindexCard() {
   });
 
   const confirm = useMutation({
-    mutationFn: async (force: boolean): Promise<ReindexStatus> => {
+    mutationFn: async (input: {
+      force: boolean;
+      previewedIdentity: string | undefined;
+      scope: string | undefined;
+    }): Promise<ReindexStatus> => {
       const data = unwrap(
         await api.POST("/embeddings/reindex", {
           body: {
             // The identity this SPA previewed against, snapshotted at dialog open. The
             // server 409s (reindex_identity_drift) if the embed binding changed since,
             // so this must be the on-screen value, not a refetched live one.
-            previewed_identity: previewedIdentity ?? undefined,
-            force,
+            previewed_identity: input.previewedIdentity,
+            force: input.force,
           },
         }),
       );
@@ -273,40 +282,25 @@ export function EmbedReindexCard() {
       }
       return data;
     },
-    onSuccess: (data) => {
-      // The 202 body is the SAME status read the GET returns — seed the
-      // card's cache and the banner's identities directly, with no extra round trip.
-      qc.setQueryData(embedReindexStatusQueryKey, data);
-      qc.setQueryData<ReindexIdentities>(embedReindexIdentitiesQueryKey, {
-        configured_identity: data.configured_identity,
-        populated_identity: data.populated_identity,
-      });
+    onMutate: (input) => input.scope,
+    onSuccess: (data, _input, startedScope) => {
+      if (startedScope !== scope) return;
+      qc.invalidateQueries({ queryKey: ["system-health"] });
+      // The accepted response seeds both views for the reader who confirmed it.
+      qc.setQueryData(embedReindexStatusKey(startedScope), data);
+      qc.setQueryData<ReindexIdentities>(
+        embedReindexIdentitiesKey(startedScope),
+        {
+          configured_identity: data.configured_identity,
+          populated_identity: data.populated_identity,
+        },
+      );
       closeDialog();
     },
   });
 
-  // Withheld, not absent: a permission is what denies this, so the card keeps its
-  // place and says why it is empty rather than vanishing. The reader it is written
-  // for is narrower than it looks — the Maintenance entry opens on this very read
-  // or the admin role, so nobody below ops reaches the page at all. It serves an
-  // operator whose embedding_reindex grant an edited role no longer carries, and
-  // for them an absent card would read as "this installation has no search index"
-  // rather than "this is not yours to see".
-  //
-  // The query is gated on `canRead && bound`, and each half asks nothing for
-  // the same reason: a denial is already known, and an unbound lane can only
-  // answer 501, so asking for either refusal in order to render it would turn
-  // a settled answer into a "status unavailable" the reader cannot act on.
-  // This runs after every hook call above so the hooks-call-order stays
-  // unconditional, and it is gated on the /me probe itself so the notice waits
-  // for the grants rather than flashing while they are in flight.
-  //
-  // ONE panel shell for every state this card can be in. It used to be four
-  // copies of the same header — withheld, loading, unreadable, ready — and the
-  // two middle ones had drifted into a bare paragraph apiece: no live region on
-  // the loading line, and no retry at all on the failure. QueryGate is the
-  // shared spelling of those three rungs, and it carries the server's own
-  // explanation with the retry rather than replacing it with "unavailable".
+  // This page may open through another grant. Keep the card's own gate
+  // and QueryGate's loading, failure and retry behavior in every state.
   let body: ReactNode;
   if (!canRead) {
     body = (
@@ -436,7 +430,11 @@ export function EmbedReindexCard() {
                     if (!canWrite) {
                       return;
                     }
-                    confirm.mutate(mode === "rebuild");
+                    confirm.mutate({
+                      force: mode === "rebuild",
+                      previewedIdentity: previewedIdentity ?? undefined,
+                      scope,
+                    });
                   }}
                 >
                   {preview.isPending && (

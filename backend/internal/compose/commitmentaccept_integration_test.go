@@ -38,6 +38,7 @@ type mailedProposal struct {
 func stageMailedProposal(t *testing.T) mailedProposal {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep2, "rep")
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
@@ -86,7 +87,7 @@ func TestAWaitingMailedCommitmentIsCountedOnItsAccount(t *testing.T) {
 
 func (m mailedProposal) accept() error {
 	colleague := m.As(m.Rep2, []ids.UUID{m.Team1}, transcriptPerms)
-	_, err := approvalsServiceWithEffects(m.Pool).Decide(colleague, ids.From[ids.ApprovalKind](m.approval), true, nil)
+	_, err := NewApprovalsServiceWithEffects(m.Pool).Decide(colleague, ids.From[ids.ApprovalKind](m.approval), true, nil)
 	return err
 }
 

@@ -45,6 +45,8 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.capture_reauth_required",
   "magic.action.capture_connection_error",
   "magic.action.capture_sync_failing",
+  "magic.action.capture_sync_stalled",
+  "magic.action.capture_silent",
   "magic.action.capture_backfill_failed",
   "magic.action.mail_filed",
   "magic.action.company_profile_read",

@@ -283,3 +283,16 @@ func retractionAudits(t *testing.T, e *integration.Env) int {
 		 WHERE entity_type = 'contact' AND evidence->>'reason' IN
 		   ('signature read off text the contact did not write in that mail', 'a number a workspace member signs with')`)
 }
+
+func TestANumberOnlyInMemberMarkupIsNotLearnedFromAReply(t *testing.T) {
+	e := integration.Setup(t)
+	markup := `<div>Sam Seller</div><a href="tel:&#43;31205550101">Call me</a><div>Mobile: &#43;31 20 555 0101</div>`
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(e.Admin(), contacts.SaveSignatureInput{Body: "", HTML: &markup}); err != nil {
+		t.Fatal(err)
+	}
+	contact := seedEnrichContact(t, e, "bob@window.example", "Works for me.\n\nBob Contact\n"+bobOwnNumber+"\nYour account manager: "+memberNumber)
+	runEnrichPass(t, e, &signatureScriptBrain{fields: phoneReply(bobOwnNumber, memberNumber)})
+	if got := liveNumbers(t, e, contact); !slices.Equal(got, []string{"+442079460000"}) {
+		t.Fatalf("member HTML number learned as a contact's: %v", got)
+	}
+}

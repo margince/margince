@@ -8,6 +8,9 @@ package compose
 import (
 	"context"
 	"fmt"
+	"maps"
+	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -147,20 +150,23 @@ func (w *waitingBacklog) mailOnDeal(t *testing.T, deal ids.UUID, subject string,
 	w.cards[w.r.e.Rep1][ids.UUID(row.Id).String()] = true
 }
 
-// Each scope's at-risk deals are reached once each by walking the list to its
-// end, in the tail's shared order with tasks and waiting cards. A deal a
-// customer waits on is never served as at risk. A Done deal stays off its
-// reader's list, and one that came back since its Done returns.
-func TestTheAtRiskTailReachesEveryDealOnce(t *testing.T) {
+// Walked to its end in each scope, a backlog past every scan cap reaches each
+// waiting card and at-risk deal once. The tail merges them with tasks in one
+// order. A deal a customer waits on is never served as at risk. A Done deal stays off
+// its reader's list, and one that came back since its Done returns. The claims
+// share one seed, its cost, and the Done on a card runs last.
+func TestABacklogPastEveryScanCapIsWalkedToItsEnd(t *testing.T) {
 	b := seedRiskBacklog(t)
 	r := b.r
 	for i := range plannedCapForTest + 6 {
 		r.task(t, fmt.Sprintf("Rep1 due %d", i), r.now.Add(-time.Duration(i+1)*3*time.Hour), nil, &r.e.Rep1)
 	}
+	generated := generatedDateTask(t, r)
 	b.markDone(t)
+	t.Run("the waiting tail is the fold of the scan", b.assertTailIsTheFold)
+
 	rep1 := b.atRisk[r.e.Rep1]
-	mine := map[string]bool{}
-	team := map[string]bool{}
+	mine, team := map[string]bool{}, map[string]bool{}
 	for id := range rep1 {
 		if id != b.done {
 			team[id], mine[id] = true, true
@@ -169,19 +175,27 @@ func TestTheAtRiskTailReachesEveryDealOnce(t *testing.T) {
 	for id := range b.atRisk[r.e.Rep2] {
 		team[id] = true
 	}
+	teamCards := map[string]bool{}
+	for _, seat := range []ids.UUID{r.e.Rep1, r.e.Rep2} {
+		for id := range b.cards[seat] {
+			teamCards[id] = true
+		}
+	}
 	checks := []struct {
 		name, scope string
 		ctx         context.Context
 		owner       ids.UUID
 		deals       map[string]bool
+		cards       map[string]bool
 	}{
-		{"mine", "mine", b.seat(r.e.Rep1), ids.Nil, mine},
-		{"named owner", "mine", r.e.Admin(), r.e.Rep1, rep1},
-		{"team", "team", b.seat(r.e.Rep1), ids.Nil, team},
+		{"mine", "mine", b.seat(r.e.Rep1), ids.Nil, mine, b.cards[r.e.Rep1]},
+		{"named owner", "mine", r.e.Admin(), r.e.Rep1, rep1, b.cards[r.e.Rep1]},
+		{"team", "team", b.seat(r.e.Rep1), ids.Nil, team, teamCards},
 	}
 	for _, check := range checks {
 		t.Run(check.name, func(t *testing.T) {
 			served, first, frozen := walkWorklist(check.ctx, t, r, check.scope, check.owner)
+			b.assertCardsReached(t, check.scope, served, first, check.cards)
 			b.assertDealsReached(t, served, check.deals)
 			if total, stated := totalOf(first, "deals_at_risk"); stated && total != len(check.deals) {
 				t.Errorf("deals_at_risk states %d, the walk holds %d", total, len(check.deals))
@@ -196,8 +210,54 @@ func TestTheAtRiskTailReachesEveryDealOnce(t *testing.T) {
 			if tailed == 0 {
 				t.Error("no at-risk deal was served below the ranked top, so the tail proves nothing")
 			}
+			b.assertTailAdvised(check.ctx, t, served, frozen)
+			if check.scope == "mine" {
+				assertLastTask(t, served, generated)
+			}
 		})
 	}
+	t.Run("done on a waiting card below the ranked top takes it off", b.assertDoneTakesACardOff)
+}
+
+// assertTailAdvised holds that each at-risk deal served below the ranked top
+// carries the step its status card names, as a ranked row of it would.
+func (b *riskBacklog) assertTailAdvised(ctx context.Context, t *testing.T, served []servedRow, frozen map[string]bool) {
+	t.Helper()
+	tail := map[ids.UUID]*crmcontracts.WorklistMove{}
+	for _, row := range served {
+		if row.source == crmcontracts.WorklistItemSourceDealAtRisk && !frozen[row.id] {
+			tail[ids.MustParse(row.id)] = row.move
+		}
+	}
+	cards := newDealStatusService(b.r.e.Pool, func() time.Time { return b.r.now })
+	want, err := cards.CurrentMoves(ctx, slices.Collect(maps.Keys(tail)))
+	if err != nil {
+		t.Fatalf("reading the tail deals' current steps: %v", err)
+	}
+	for deal, move := range tail {
+		card, advised := want[deal]
+		if !advised {
+			t.Fatalf("the status card names no step for tail deal %s, so the check proves nothing", deal)
+		}
+		if !sameMove(move, card) {
+			t.Errorf("tail deal %s carries %+v, its card names %+v", deal, move, card)
+		}
+	}
+}
+
+// sameMove is whether a row carries the card's move. The wire spells a card's
+// draft_email that names a message draft_reply, and copies everything else.
+func sameMove(move *crmcontracts.WorklistMove, card crmcontracts.DealStatusCardMove) bool {
+	if move == nil {
+		return false
+	}
+	action := string(move.Action)
+	if move.Action == crmcontracts.WorklistMoveActionDraftReply && move.ActivityId != nil {
+		action = string(crmcontracts.WorklistMoveActionDraftEmail)
+	}
+	return action == card.Action && reflect.DeepEqual(move.Arguments, card.Arguments) &&
+		reflect.DeepEqual(move.Basis, card.Basis) && reflect.DeepEqual(move.MailCoverage, card.MailCoverage) &&
+		reflect.DeepEqual(move.Recommendation, card.Recommendation)
 }
 
 // markDone has Rep1 mark two deals below the ranked top done, through the

@@ -150,7 +150,9 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	if suppressed {
 		return EnsureChannelCounterpartyResult{}, ErrCounterpartySuppressed
 	}
-
+	if err := channelAddressIsNotASeat(ctx, tx, in.CorroboratingEmail); err != nil {
+		return EnsureChannelCounterpartyResult{}, err
+	}
 	var res EnsureChannelCounterpartyResult
 	if err := s.resolveChannelContact(ctx, tx, in, &res); err != nil {
 		return EnsureChannelCounterpartyResult{}, err

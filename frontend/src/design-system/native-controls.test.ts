@@ -121,12 +121,18 @@ const nativeControls = new Set(["select", "option", "optgroup"]);
 // with a backslash — so a file with neither a name nor a backslash cannot spell
 // one. Deriving it from the set would be wrong, which is why it is stated once
 // with its reason instead.
-const prefilter = new RegExp(`${[...nativeControls].join("|")}|\\\\`);
+//
+// A name counts only where no word character follows it. Each detector below
+// ends the name there: a JSX tag, a literal that equals the name, and the string
+// scan's boundary. So `options` and `selected` cannot be a hit.
+const prefilter = new RegExp(
+  `(?:${[...nativeControls].join("|")})(?![A-Za-z0-9_])|\\\\`,
+);
 
 // The tags whose `type` reaches a native input as written, derived from the
 // design system and every module the extension surface publishes from.
 const designSystemDir = join(srcDir, "design-system");
-// A date takes InlineTextControl's InlineDate branch, which renders DateInput.
+// InlineTextControl sends a date to DateInput, so no date reaches its TextInput.
 const notHosts = new Set(["InlineTextControl"]);
 // Each spreads FieldControl or SettingControlProps: an id and aria wiring, no type.
 const clearedSpreads = ["NameDialog", "NumberSetting", "ResolveSheet"];
@@ -148,9 +154,14 @@ const clockTypeOf = (values: string[]) =>
 const clockAlternation = clockTypes.join("|");
 const elementFactories = new Set(["createElement", "jsx", "jsxs", "jsxDEV"]);
 
-// Sound for the same reason as `prefilter`: a hit spells `type`, and its value
-// opens with a quote, backtick, `=` or space, or goes through a backslash escape.
-const dateValueStart = new RegExp(`[\\s"'\`=](?:${clockAlternation})`, "i");
+// Sound for the same reason as `prefilter`. A hit spells `type`, and its value
+// is a literal equal to a clock type, between quotes or backticks.
+// Only the string scan reads one unquoted, after `=` and before a non-word
+// character. Any other spelling goes through a backslash escape.
+const dateValueStart = new RegExp(
+  `["'\`](?:${clockAlternation})["'\`]|=\\s*(?:${clockAlternation})(?![\\w-])`,
+  "i",
+);
 const worthParsing = (text: string) =>
   prefilter.test(text) || (text.includes("type") && dateValueStart.test(text));
 
@@ -187,9 +198,7 @@ const probeFile = join(srcDir, "design-system", "native-controls.test.ts");
 // hand-written lexer was verified only by the tree happening to be clean.
 function findNativeControls(path: string, text: string): string[] {
   // A file that can produce none of the three names is not parsed at all. The
-  // census reads ~930 files and reparses every non-TSX one as TSX, which took
-  // 21s on a CI runner against 1.3s locally and timed the test out; roughly
-  // half the tree is skipped here.
+  // parse is the census's cost, and most of the tree is skipped here.
   //
   // The filter has to be SOUND, not merely quick, and two escape routes decide
   // its shape. The names carry no angle bracket, because `\u003cselect>` spells
@@ -981,5 +990,9 @@ describe("the native-control detector sees what it claims to", () => {
     expect(
       worthParsing('const a = <input type="text" onBlur={update} />;'),
     ).toBe(false);
+    expect(worthParsing("const options = selected; // type a date")).toBe(
+      false,
+    );
+    expect(worthParsing("const html = `<input type=\n date>`;")).toBe(true);
   });
 });

@@ -15,6 +15,8 @@ package compose
 import (
 	"maps"
 	"slices"
+
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 // The OAuth capture providers. Gmail and Google Calendar (gcal) share one
@@ -42,26 +44,12 @@ func isOAuthProvider(provider string) bool {
 	return slices.Contains(oauthProviders, provider)
 }
 
-// MailProviders are the providers that connect a MAILBOX. The other two —
-// gcal and graphcal — connect a calendar, and the difference is not a detail of
-// presentation: a calendar has no mail history to import backward from a date,
-// no posture to take towards mail it does not carry, and no signature block to
-// read a contact out of. Every mail-shaped operation is refused for one, and the
-// connections screen draws none of those rows against one.
-//
-// The whole reason this is a named set rather than a comparison at each door:
-// the screen listed a calendar as a "mailbox", drew it under an envelope beside
-// the member's own email address, and offered it a mail-history import that
-// answered "this mailbox type cannot be backfilled". A reader took that as the
-// product refusing to import their mail.
-//
-// Held equal to frontend/src/format/connectorprovider.ts's MAIL_PROVIDERS by
-// backend/gates/frontendmailproviders_test.go.
-func MailProviders() []string { return []string{providerGmail, providerGraph, providerIMAP} }
+// MailProviders shares capture's mailbox set with HTTP and tool surfaces.
+func MailProviders() []string { return capture.MailProviders() }
 
 // IsMailProvider reports whether this provider connects a mailbox.
 func IsMailProvider(provider string) bool {
-	return slices.Contains(MailProviders(), provider)
+	return capture.IsMailProvider(provider)
 }
 
 // calendarProviders are the providers that connect a CALENDAR. Derived as the

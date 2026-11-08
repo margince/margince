@@ -7,24 +7,23 @@ import { AppLink } from "../../design-system/applink";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import {
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   formatDateAbbrev,
-  formatMoneyCompact,
-  formatNumber,
-  MONEY_ABSENT,
 } from "../../format/format";
-import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { isEntityKind } from "../../lib/entity";
 import { useMemberNames } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import type { UrlParams } from "../../lib/urlstate";
 import { type AttentionState, attentionState } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
-import { useInputChecks } from "./analytics.forecast.review";
 import { checkLabel } from "./inputcheck.facts";
+import { useInputChecks } from "./inputchecks.queries";
+import type { Dimensions } from "./reporting.dimensions";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type CheckList = NonNullable<ReturnType<typeof useInputChecks>["data"]>;
@@ -51,9 +50,12 @@ export type Interventions = Readonly<{
  * The findings Sales review acts on and the sources behind them, read under
  * the keys their own sections read them by.
  */
-export function useInterventions(scope: AnalyticsScope): Interventions {
+export function useInterventions(
+  scope: AnalyticsScope,
+  dimensions?: Dimensions,
+): Interventions {
   const canReadForecast = useCan("forecast", "read");
-  const checks = useInputChecks(canReadForecast, scope);
+  const checks = useInputChecks(canReadForecast, scope, dimensions);
   const coverage = useDataCoverage();
   const canReadCoverage = useCan("data_coverage", "read");
   const unread =
@@ -90,6 +92,8 @@ export function InterventionPanel({
   const { locale } = useLocale();
   const { list, state, unreadSources } = interventions;
   const findings = list?.data ?? [];
+  if (findings.length === 0 && state !== "failed" && unreadSources === 0)
+    return null;
   const forecast = (extra?: readonly [string, string]) =>
     analyticsSectionHref(
       "forecast",
@@ -100,16 +104,16 @@ export function InterventionPanel({
       <Panel
         title={t("analytics.attention")}
         flatHead
+        titleAction={
+          findings.length > 0 ? (
+            <AppLink href={forecast()}>
+              {t("analytics.intervention.viewAll")}
+            </AppLink>
+          ) : undefined
+        }
         footer={
-          <>
-            {/* The checks read every pipeline and close date of the scope. */}
-            <p className="t-caption">{t("analytics.intervention.scope")}</p>
-            {findings.length > 0 && (
-              <AppLink href={forecast()}>
-                {t("analytics.intervention.viewAll")}
-              </AppLink>
-            )}
-          </>
+          // The checks read every pipeline and close date of the scope.
+          <p className="t-caption">{t("analytics.intervention.scope")}</p>
         }
       >
         {(findings.length === 0 || state === "failed") && (
@@ -157,7 +161,7 @@ export function InterventionPanel({
             </p>
             <p className="t-caption">
               {plural("analytics.intervention.maintenanceBody", unreadSources, {
-                count: formatNumber(unreadSources, locale),
+                count: formatAnalyticsNumber(unreadSources, locale),
               })}{" "}
               <AppLink href={analyticsSectionHref("coverage", dials)}>
                 {t("analytics.attentionCoverageAction")}
@@ -179,7 +183,7 @@ function FindingRows({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const owners = useMemberNames(
     findings.flatMap((check) => check.owner_id ?? []),
   );
@@ -196,7 +200,7 @@ function FindingRows({
           ].join(" · ")}
         </p>
       </div>
-      <AppLink className="btn btn-ghost" href={href(check.id)}>
+      <AppLink href={href(check.id)}>
         {t(
           check.destination?.mode === "read"
             ? "analytics.intervention.open"
@@ -253,12 +257,10 @@ function findingFacts(
     check.affected_minor == null
       ? undefined
       : t("analytics.attentionAtStake", {
-          amount: formatMoneyOrWord(
+          amount: formatAnalyticsMoneyOrAbsent(
             check.affected_minor,
             check.currency,
             locale,
-            MONEY_ABSENT,
-            formatMoneyCompact,
           ),
         });
   const outOfDate = check.inputs_changed
@@ -286,14 +288,14 @@ function Groups({
   }) =>
     [
       plural("analytics.intervention.findings", group.findings, {
-        count: formatNumber(group.findings, locale),
+        count: formatAnalyticsNumber(group.findings, locale),
       }),
       plural("analytics.intervention.deals", group.deals, {
-        count: formatNumber(group.deals, locale),
+        count: formatAnalyticsNumber(group.deals, locale),
       }),
       group.other_findings > 0
         ? plural("analytics.intervention.other", group.other_findings, {
-            count: formatNumber(group.other_findings, locale),
+            count: formatAnalyticsNumber(group.other_findings, locale),
           })
         : undefined,
     ]
@@ -315,18 +317,16 @@ function Groups({
                 counted(group),
                 // One amount per currency, never added across them.
                 ...group.exposure.map((money) =>
-                  formatMoneyOrWord(
+                  formatAnalyticsMoneyOrAbsent(
                     money.amount_minor,
                     money.currency,
                     locale,
-                    MONEY_ABSENT,
-                    formatMoneyCompact,
                   ),
                 ),
               ].join(" · ")}
             </p>
           </div>
-          <AppLink className="btn btn-ghost" href={href(group.type)}>
+          <AppLink href={href(group.type)}>
             {t("analytics.intervention.show")}
           </AppLink>
         </PanelRow>

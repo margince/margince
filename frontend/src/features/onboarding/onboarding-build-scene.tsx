@@ -8,10 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { Wordmark } from "../../components/auth-identity";
 import { Card } from "../../design-system/atoms";
 import { usePrefersReducedMotion } from "../../design-system/motion";
 import { useT } from "../../i18n";
-import { Wordmark } from "../sign-in/auth";
 import "./onboarding-build-scene.css";
 
 /**

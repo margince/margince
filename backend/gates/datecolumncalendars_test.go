@@ -19,10 +19,11 @@ package gates
 // the registry and the schema are held equal in both directions.
 
 import (
-	"os"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // dayCalendar names the calendar a stored day was cut in.
@@ -68,6 +69,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	},
 	"brief_item.returned_after_dismissal_on": {calendar: installationDay},
 	"brief_run.local_day":                    {calendar: installationDay},
+	"sales_initiative.deadline":              {calendar: installationDay},
 	"capture_auto_enrich_budget.budget_date": {
 		calendar: utcDay,
 		why:      "one shared daily enrichment cap, keyed explicitly on (now() AT TIME ZONE 'UTC')::date so the cap resets at one instant everywhere",
@@ -127,6 +129,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	"forecast_snapshot.local_day":                {calendar: installationDay},
 	"forecast_snapshot.period_end":               {calendar: installationDay},
 	"forecast_snapshot.period_start":             {calendar: installationDay},
+	"tax_rate.valid_from":                        {calendar: installationDay},
 	"fx_rate.rate_date":                          {calendar: installationDay, drift: "the open-pipeline rollup, company 360, the brief and the deal list's base value ask it with a UTC or session-zone today; " + readersDisagree},
 	"linkedin_connection.connected_on":           {calendar: suppliedDay, why: "parsed from the member's LinkedIn export as written; only a dedupe key and a subject-access export read it"},
 	"notification_digest_run.digest_date":        {calendar: installationDay},
@@ -154,7 +157,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 // "table.column", through the same line shape the undo gate reads.
 func schemaDateColumns(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

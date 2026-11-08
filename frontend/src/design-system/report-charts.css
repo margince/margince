@@ -26,17 +26,6 @@
 .report-chart-key-target::before {
   border-top: 2px dotted var(--textPrimary);
 }
-/* Columns are keyed by a swatch of their own fill, not a line. */
-.report-chart-key-bar::before {
-  width: 0.625rem;
-  height: 0.625rem;
-  border: 0;
-  border-radius: var(--r-xs);
-  background: var(--accent);
-}
-.report-chart-key-bar-secondary::before {
-  background: color-mix(in srgb, var(--accent) 38%, var(--ground));
-}
 .report-chart-key-dot::before {
   width: 0.5rem;
   height: 0.5rem;
@@ -44,6 +33,17 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--accent);
+}
+.report-chart-key-bar::before {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: var(--accent);
+}
+.report-chart-key-bar.report-chart-column-secondary::before {
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 38%, var(--ground));
 }
 .report-chart-key-range::before {
   border-color: color-mix(in srgb, var(--accent) 35%, var(--bgElevated));
@@ -84,6 +84,18 @@
   stroke: var(--accent);
   stroke-width: 3;
 }
+/* The actual total stands on a soft ground of its own colour. */
+.report-chart-area {
+  stroke: none;
+}
+.report-chart-area-top {
+  stop-color: var(--accent);
+  stop-opacity: 0.16;
+}
+.report-chart-area-foot {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
 .report-chart-comparison {
   stroke: var(--textSecondary);
   stroke-width: 2;
@@ -114,81 +126,11 @@
   corner-shape: round;
   background: var(--accent);
   border: 2px solid var(--bgElevated);
-  opacity: 0;
-  transition:
-    opacity var(--dur-state) var(--ease-out),
-    transform var(--dur-state) var(--ease-out);
 }
-/* Only the latest reading and the one under the pointer carry a dot, so the
-   line reads as one shape rather than a row of beads. */
-.report-chart-point[data-last] .report-chart-dot,
-.report-chart-point[data-active] .report-chart-dot,
+.report-chart-point:hover .report-chart-dot,
 .report-chart-point:focus-visible .report-chart-dot {
-  opacity: 1;
-}
-.report-chart-point[data-active] .report-chart-dot,
-.report-chart-point:focus-visible .report-chart-dot {
-  transform: scale(1.3);
-}
-/* The wash under the line is the accent at a tenth, flat: the area says
-   "this much so far" and a gradient would add a second meaning. */
-.report-chart-area {
-  fill: color-mix(in srgb, var(--accent) 12%, transparent);
-  stroke: none;
-}
-.report-chart-series {
-  animation: report-chart-rise var(--dur-enter) var(--ease-out) both;
-}
-.report-chart-crosshair {
-  stroke: var(--borderStrong);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-.report-chart-end {
-  fill: var(--textPrimary);
-  font: var(--fontBodySmall);
-  font-weight: var(--fontWeightMedium);
-  font-variant-numeric: tabular-nums;
-}
-.report-chart-tip {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-sm);
-  box-shadow: var(--shadow-pop);
-  pointer-events: none;
-  white-space: nowrap;
-  transform: translate(var(--space-3), -50%);
-}
-.report-chart-tip[data-side="start"] {
-  transform: translate(calc(-100% - var(--space-3)), -50%);
-}
-.report-chart-tip-label {
-  color: var(--textSecondary);
-  font: var(--fontBodySmall);
-}
-.report-chart-tip-value {
-  color: var(--textPrimary);
-  font-weight: var(--fontWeightMedium);
-  font-variant-numeric: tabular-nums;
-}
-@keyframes report-chart-rise {
-  from {
-    opacity: 0.35;
-    transform: translateY(8px);
-  }
-}
-@keyframes report-chart-grow {
-  from {
-    transform: scaleX(0.3);
-  }
-}
-@keyframes report-chart-grow-up {
-  from {
-    transform: scaleY(0.3);
-  }
+  width: 13px;
+  height: 13px;
 }
 .report-chart-focus {
   min-height: 1.5em;
@@ -222,9 +164,21 @@
   display: grid;
   gap: var(--space-3);
 }
+/* The rows share one set of columns, so every bar is drawn on a track of the
+   same width and two bars compare by length whatever their names run to. */
+.report-chart-rows:has(> li > .report-chart-row) {
+  grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 2fr) max-content;
+  column-gap: var(--space-3);
+}
+.report-chart-rows > li:has(> .report-chart-row) {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
 .report-chart .btn.report-chart-row {
   display: grid;
-  grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 2fr) max-content;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   width: 100%;
   gap: var(--space-3);
   align-items: center;
@@ -250,27 +204,38 @@
   position: relative;
   display: block;
   height: 1.25rem;
-  border-radius: var(--r-full);
-  corner-shape: round;
+  border-radius: var(--r-sm);
   background: var(--bgInset);
 }
 .report-chart-bullet-fill {
-  animation: report-chart-grow var(--dur-enter) var(--ease-out) both;
-  transform-origin: left center;
   position: absolute;
   inset-block: var(--space-1);
   height: calc(100% - 2 * var(--space-1));
   left: 0;
   width: var(--report-mark-width);
   background: var(--accent);
-  border-radius: var(--r-full);
-  corner-shape: round;
+  border-radius: var(--r-sm);
 }
 .report-chart-bullet-target {
   position: absolute;
   inset-block: 0;
   width: 2px;
   background: var(--textPrimary);
+}
+.report-chart-row[data-tone="success"] .report-chart-bullet-fill {
+  background: var(--success);
+}
+.report-chart-row[data-tone="warning"] .report-chart-bullet-fill {
+  background: var(--warning);
+}
+.report-chart-row[data-tone="danger"] .report-chart-bullet-fill {
+  background: var(--danger);
+}
+.report-chart-row[data-tone="neutral"] .report-chart-bullet-fill {
+  background: var(--textSecondary);
+}
+.report-chart .btn.report-chart-row:disabled {
+  opacity: 1;
 }
 .report-chart-range {
   background: transparent;
@@ -303,16 +268,22 @@
 }
 /* The "view as table" fold sits right under its chart with no rule of its
    own: the card's foot below it already draws the only line needed there. */
-.report-chart-data {
-  margin-top: var(--space-3);
+/* Two classes, so the base disclosure's rule and gap do not come back by
+   sheet order. */
+.disclosure.report-chart-data {
+  margin: var(--space-3) 0 0;
+  padding-top: 0;
+  border-top: 0;
   color: var(--textSecondary);
   font: var(--fontBodySmall);
 }
 .report-chart-data summary {
   cursor: pointer;
   width: fit-content;
+  font-weight: var(--fontWeightRegular);
 }
 .report-chart-table-scroll {
+  position: relative;
   overflow-x: auto;
   margin-top: var(--space-3);
 }
@@ -337,7 +308,7 @@
   gap: var(--space-3);
 }
 .report-chart[data-size="compact"] .report-chart-column-pair {
-  height: 7.5rem;
+  height: 5rem;
 }
 .report-chart-column-group {
   min-width: 0;
@@ -345,6 +316,7 @@
 .report-chart-column-pair {
   display: flex;
   align-items: end;
+  justify-content: center;
   gap: var(--gapActions);
   height: 12rem;
   border-bottom: 1px solid var(--borderSubtle);
@@ -353,17 +325,13 @@
   padding: 0;
   display: block;
   position: relative;
-  width: 50%;
+  /* A bar keeps a bar's width on a wide card instead of filling its week. */
+  width: min(50%, 3.5rem);
   text-align: center;
   text-decoration: none;
   color: var(--textPrimary);
 }
 .report-chart-column-fill {
-  max-inline-size: 2.5rem;
-  margin-inline: auto;
-  animation: report-chart-grow-up var(--dur-enter) var(--ease-out) both;
-  transform-origin: bottom center;
-  transition: opacity var(--dur-state) var(--ease-out);
   height: 100%;
   position: absolute;
   bottom: 0;
@@ -372,11 +340,6 @@
   border-radius: var(--r-sm) var(--r-sm) 0 0;
 }
 .report-chart-column-secondary .report-chart-column-fill {
-  max-inline-size: 2.5rem;
-  margin-inline: auto;
-  animation: report-chart-grow-up var(--dur-enter) var(--ease-out) both;
-  transform-origin: bottom center;
-  transition: opacity var(--dur-state) var(--ease-out);
   height: 100%;
   background: color-mix(in srgb, var(--accent) 38%, var(--bgElevated));
   border: 1px solid var(--accent);
@@ -407,29 +370,5 @@
   }
   .report-chart-row-amount {
     grid-column: -2;
-  }
-}
-
-/* A hovered column keeps its ink and its neighbours step back, so the one
-   being read stands out without a second colour. */
-.report-chart-columns:has(.report-chart-column:hover)
-  .report-chart-column:not(:hover)
-  .report-chart-column-fill {
-  opacity: 0.55;
-}
-.report-chart .btn.report-chart-row:hover .report-chart-bullet-fill {
-  background: var(--accentText);
-}
-
-/* Last in the file, so it outranks every rule that starts a motion. */
-@media (prefers-reduced-motion: reduce) {
-  .report-chart-series,
-  .report-chart-bullet-fill,
-  .report-chart-column-fill {
-    animation: none;
-  }
-  .report-chart-dot,
-  .report-chart-column-fill {
-    transition: none;
   }
 }

@@ -5,16 +5,16 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Button } from "../../design-system/atoms";
+import { Button, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { DonutChart } from "../../design-system/report-charts";
+import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { UPCOMING_LIST_ID } from "./analytics.overview.prospectinghero";
 import {
   type ReportingEvaluation,
@@ -54,8 +54,16 @@ export function UpcomingMeetings({
   // Every page is read in the summary's window, so a clock that moves on
   // between pages still lists the meetings the summary counted.
   const window = summary.data?.upcoming_window;
+  const scopeKind = upcomingScopeKind(summary.data?.scope.kind);
   const rows = useInfiniteQuery({
-    queryKey: ["sdr-summary", self, "meetings", window?.start_at],
+    queryKey: [
+      "sdr-summary",
+      summary.data?.scope.kind ?? "owner",
+      summary.data?.scope.id ?? self,
+      "meetings",
+      window?.start_at,
+      window?.end_at,
+    ],
     enabled: count != null && count > 0 && window !== undefined,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam, signal }) =>
@@ -63,8 +71,11 @@ export function UpcomingMeetings({
         await api.GET("/analytics/sdr-summary/meetings", {
           params: {
             query: {
-              scope_kind: "owner",
-              scope_id: self,
+              scope_kind: scopeKind,
+              scope_id:
+                scopeKind !== "owner" && scopeKind !== "team"
+                  ? undefined
+                  : (summary.data?.scope.id ?? self),
               window_start: window?.start_at,
               window_end: window?.end_at,
               ...(pageParam ? { cursor: pageParam } : {}),
@@ -76,15 +87,7 @@ export function UpcomingMeetings({
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
-  const state = summary.isError
-    ? "failed"
-    : !summary.data
-      ? "loading"
-      : count == null
-        ? "withheld"
-        : count === 0
-          ? "empty"
-          : "ready";
+  const state = upcomingState(summary);
   return (
     <div id={UPCOMING_LIST_ID} tabIndex={-1}>
       <Panel title={title} flatHead>
@@ -136,13 +139,14 @@ function MeetingRow({
   meeting: Meeting;
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   // A meeting known only by its day names the day, never a made-up noon.
   const when = formatActivityWhen(
     meeting.starts_at,
     meeting.starts_precision,
     locale,
-    viewerZone(),
+    readerZone,
   );
   return (
     <PanelRow className="analytics-attention-row">
@@ -210,30 +214,28 @@ export function HandoffCohort({
               <>
                 <p className="t-caption">
                   {plural("analytics.prospect.cohortCaption", cohort.rounds, {
-                    count: formatNumber(cohort.rounds, locale),
+                    count: formatAnalyticsNumber(cohort.rounds, locale),
                     period: when,
                   })}
                 </p>
                 {cohort.rounds > 0 && (
-                  <DonutChart
-                    label={title}
-                    total={formatNumber(cohort.rounds, locale)}
-                    totalLabel={t("reporting.selectedValue")}
-                    parts={(
+                  <StatStrip label={title} density="plate">
+                    {(
                       [
-                        ["accepted", cohort.accepted, "success"],
-                        ["recycled", cohort.recycled, "warning"],
-                        ["rejected", cohort.rejected, "danger"],
-                        ["waiting", cohort.waiting, "neutral"],
+                        ["accepted", cohort.accepted],
+                        ["recycled", cohort.recycled],
+                        ["rejected", cohort.rejected],
+                        ["waiting", cohort.waiting],
                       ] as const
-                    ).map(([outcome, count, tone]) => ({
-                      key: outcome,
-                      label: t(`analytics.prospect.cohort.${outcome}`),
-                      value: count,
-                      amount: formatNumber(count, locale),
-                      tone,
-                    }))}
-                  />
+                    ).map(([outcome, count]) => (
+                      <StatCard
+                        key={outcome}
+                        narrow="row"
+                        label={t(`analytics.prospect.cohort.${outcome}`)}
+                        value={formatAnalyticsNumber(count, locale)}
+                      />
+                    ))}
+                  </StatStrip>
                 )}
               </>
             );
@@ -259,4 +261,17 @@ function useOwnReview(self: string, period: CohortPeriod | undefined) {
         }),
       ),
   });
+}
+
+function upcomingScopeKind(kind: SdrSummary["scope"]["kind"] | undefined) {
+  return kind === "managed_teams" ? undefined : (kind ?? "owner");
+}
+
+function upcomingState(
+  summary: Readonly<{ data?: SdrSummary; isError: boolean }>,
+) {
+  if (summary.isError) return "failed";
+  if (!summary.data) return "loading";
+  if (summary.data.upcoming_meetings == null) return "withheld";
+  return summary.data.upcoming_meetings === 0 ? "empty" : "ready";
 }

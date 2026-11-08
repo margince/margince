@@ -50,7 +50,7 @@ func ActivitiesReachingEverySeat(ctx context.Context, tx pgx.Tx, activityIDs []i
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos := arg(activityIDs)
-	clause := activityDiscoverClause(aStranger(), "a", arg)
+	clause := discoverGateFor(aStranger(), "a", arg)
 
 	rows, err := tx.Query(ctx,
 		fmt.Sprintf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d) AND %s`, idsPos, clause),

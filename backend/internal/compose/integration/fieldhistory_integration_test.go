@@ -583,13 +583,9 @@ func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 	if !seen["legal_name"] {
 		t.Errorf("legal_name is missing from field history: %v — the apply wrote it, so the record's own change must be what shows", seen)
 	}
-	// offer_summary rides company.description, and the images are keyed by
-	// FIELD rather than by column on purpose: filed under the column, this
-	// change would reach the reader as `description`, a name the profile
-	// surface does not have — the same complaint registered_address/address_line1
-	// answers one line above it in the image reader. So the field the human
-	// accepted is the field the history must name.
-	if !seen["offer_summary"] {
-		t.Errorf("offer_summary is missing from field history: %v — an accepted offer_summary fills a column, so it is a change the record really made", seen)
+	// The accepted offer_summary fills company.description. The image keys the
+	// column, because an Undo replays it through the company update path.
+	if !seen["description"] {
+		t.Errorf("description is missing from field history: %v — an accepted offer_summary fills that column, so it is a change the record really made", seen)
 	}
 }

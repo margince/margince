@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -170,12 +171,13 @@ var meetingFollowUpsSQL = `
 	   -- follow-up already made. Only the recipients count, uncapped: a
 	   -- contact the reader cannot see must not make a row vanish. Their own
 	   -- mail after it is the waiting queue's business, not this reminder's.
-	   AND NOT EXISTS (SELECT 1 FROM (SELECT heard.activity_id FROM activity_link heard
+	   -- The recipient set must not be scanned once per later activity.
+	   AND NOT EXISTS (WITH touched AS MATERIALIZED (SELECT heard.activity_id FROM activity_link heard
 	                                   WHERE heard.contact_id = ANY(attendees.recipients)
 	                                  UNION ALL
 	                                  SELECT reached.activity_id FROM activity_participant reached
-	                                   WHERE reached.contact_id = ANY(attendees.recipients)) touched
-	                     JOIN activity later ON later.id = touched.activity_id
+	                                   WHERE reached.contact_id = ANY(attendees.recipients))
+	                   SELECT 1 FROM touched JOIN activity later ON later.id = touched.activity_id
 	                    WHERE later.id <> a.id
 	                      AND later.archived_at IS NULL
 	                      AND later.direction IS DISTINCT FROM 'inbound'
@@ -194,7 +196,7 @@ var meetingFollowUpsSQL = `
 // past meeting owes an outcome, which the outcome lane asks for once; it owes
 // no follow-up yet.
 func meetingHeldSQL(alias, now string) string {
-	return "(" + alias + ".meeting_status = 'held' AND " + occurredday.BegunSQL(alias, now) + ")"
+	return "(" + meetingoutcome.HeldSQL(alias) + " AND " + occurredday.BegunSQL(alias, now) + ")"
 }
 
 func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
@@ -218,7 +220,7 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
-		g.later, relstrength.InteractionCountsSQL("later"), reader,
+		g.later, relstrength.InteractionCountsSQL("later", at), reader,
 		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
 		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	)), args, nil

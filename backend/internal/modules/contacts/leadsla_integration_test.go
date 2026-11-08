@@ -216,9 +216,10 @@ func TestLeadQuickFindIncludesExactEmailAndLinkedIn(t *testing.T) {
 // up — they inherit a breach earned while the row was nobody's. That is the
 // state a website read leaves behind, which is why it matters now.
 func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
+	now := pinLeadAuditClock(t)
 	e := setupPromoteConsent(t)
 	id := ids.NewV7()
-	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
+	weekAgo := now.Add(-7 * 24 * time.Hour)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
 		 VALUES ($1, 'Found On A Website', 'found@example.test', 'new', 'siteread', 'connector:siteread', NULL, $2)`,
@@ -263,6 +264,7 @@ func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
 	if arrivedWith := e.arrivalOwner(t, id); arrivedWith == nil || *arrivedWith != e.user {
 		t.Errorf("arrival owner = %v after a reassignment, want the first owner %s", arrivedWith, e.user)
 	}
+	requireStoredLeadClockAudit(e.ctx, t, e.store, leadID)
 }
 
 func (e *promoteConsentEnv) arrivalOwner(t *testing.T, id ids.UUID) *ids.UUID {
@@ -418,7 +420,7 @@ func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
 // unanswered lead is an explicit disposition and stamps it too.
 func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	e := setupPromoteConsent(t)
-	now := time.Now().UTC()
+	now := pinLeadAuditClock(t)
 	worked := e.seedLeadCreatedAt(t, "worked@example.test", now.Add(-time.Hour))
 	status := "contacted"
 	after, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &status})
@@ -455,6 +457,7 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	if closed.FirstResponseAt == nil {
 		t.Error("disqualifying is an explicit disposition and must stamp first_response_at")
 	}
+	requireStoredLeadClockAudit(e.ctx, t, e.store, worked)
 }
 
 // The bus is unordered: a reply that happened at 09:00 may be processed
@@ -588,9 +591,10 @@ func TestTheScanReadsTheActivitiesRatherThanTheProjection(t *testing.T) {
 // "answered" for everything would pass the test above while switching the
 // whole target off.
 func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
+	now := pinLeadAuditClock(t)
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
-	lead := e.seedLeadCreatedAt(t, "unanswered@sla.test", time.Now().UTC().Add(-DefaultFirstResponseTarget-time.Hour))
+	lead := e.seedLeadCreatedAt(t, "unanswered@sla.test", now.Add(-DefaultFirstResponseTarget-time.Hour))
 
 	// An activity that is NOT a first response: an inbound the lead sent, and
 	// an agent's outbound with nothing to respond to (§18.1's anti-pollution
@@ -601,7 +605,7 @@ func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
 	}
 	e.seedLeadTouch(t, lead, "email", "outbound", "agent:scheduler", "connector", state.SlaDeadlineAt.Add(-DefaultFirstResponseTarget-time.Minute))
 
-	breaches, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC())
+	breaches, err := e.store.ScanLeadSLA(e.ctx, now)
 	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}
@@ -615,6 +619,7 @@ func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
 		t.Fatal("a lead nobody answered was not breached — an agent's cold outbound is not a first " +
 			"response, and treating it as one turns the whole target off")
 	}
+	requireStoredLeadClockAudit(e.ctx, t, e.store, lead)
 }
 
 // A reply AFTER the deadline is not an answer in time, and must not rescue the
@@ -830,6 +835,33 @@ func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
 			}
 			if after.FirstResponseAt == nil || !after.FirstResponseAt.Equal(tc.want) {
 				t.Fatalf("first_response_at = %v, want %v", after.FirstResponseAt, tc.want)
+			}
+		})
+	}
+	for name, respond := range map[string]func(*promoteConsentEnv, ids.LeadID) error{
+		"promotion": func(e *promoteConsentEnv, id ids.LeadID) error {
+			_, _, err := e.store.PromoteLead(e.ctx, id, PromoteLeadInput{Trigger: "human_qualify"})
+			return err
+		},
+		"disqualification": func(e *promoteConsentEnv, id ids.LeadID) error {
+			_, err := e.store.DisqualifyLead(e.ctx, id, DisqualifyLeadInput{})
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			lead := e.seedLeadCreatedAt(t, "disposition@example.test", created)
+			if err := respond(e, lead); err != nil {
+				t.Fatal(err)
+			}
+			var response *time.Time
+			if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
+				return tx.QueryRow(e.ctx, `SELECT first_response_at FROM lead WHERE id=$1`, lead).Scan(&response)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if response == nil || !response.Equal(created) {
+				t.Fatalf("response=%v, creation=%s", response, created)
 			}
 		})
 	}

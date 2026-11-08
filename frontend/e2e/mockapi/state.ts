@@ -26,7 +26,7 @@ export type MockApiOptions = Readonly<{
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
   // Which meeting brief the drawer gets. The default is the everyday one,
   // carrying a withheld source for the AC that reads it.
-  meetingBrief?: "rep" | "plan" | "manager" | "empty" | "failed";
+  meetingBrief?: "rep" | "plan" | "manager" | "empty" | "withheld";
   // Where the acting human stands in the setup journey. "finished" (the
   // default) is described and complete. The shell lets every screen render.
   // "unstarted" has no company and no wizard row, which the onboarding AC
@@ -49,6 +49,8 @@ export type MockApiOptions = Readonly<{
   agentRunning?: true;
   // The day's queue holds the two tasks on the called contact instead.
   callTasks?: true;
+  // Qualify holds more deals than one board column reads at a time.
+  busyStage?: true;
 }>;
 
 export type LoggedActivity = {

@@ -16,7 +16,6 @@ import {
 } from "../../design-system/panel";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge, formatInterval } from "../../format/interval";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -27,7 +26,10 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
+import { CaptureConnectionsHealth } from "./captureconnectionshealth";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/capture-health — whether mailbox capture keeps up with its own
@@ -187,6 +189,7 @@ function mailboxColumns(
   t: Translator,
   plural: PluralTranslator,
   locale: Locale,
+  zone: string,
 ): DataTableColumn<Mailbox>[] {
   const counted = (
     key: string,
@@ -244,23 +247,15 @@ function mailboxColumns(
       render: (box) =>
         box.unread_period
           ? t("captureHealth.unreadPeriod", {
-              from: formatDateTime(
-                box.unread_period.from,
-                locale,
-                viewerZone(),
-              ),
-              to: formatDateTime(box.unread_period.to, locale, viewerZone()),
+              from: formatDateTime(box.unread_period.from, locale, zone),
+              to: formatDateTime(box.unread_period.to, locale, zone),
             })
           : "",
       folded: (box) =>
         box.unread_period
           ? t("captureHealth.unreadPeriodFolded", {
-              from: formatDateTime(
-                box.unread_period.from,
-                locale,
-                viewerZone(),
-              ),
-              to: formatDateTime(box.unread_period.to, locale, viewerZone()),
+              from: formatDateTime(box.unread_period.from, locale, zone),
+              to: formatDateTime(box.unread_period.to, locale, zone),
             })
           : undefined,
     },
@@ -322,11 +317,28 @@ function CaptureHealthBody({
   health,
   zone,
 }: Readonly<{ health: Health; zone: string }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   return (
     <>
+      {health.mailboxes.length > 0 && (
+        <>
+          <PanelGroupHead title={t("captureHealth.mailboxes")} level="h3" />
+          <PanelBody>
+            <PanelIntro>{t("captureHealth.noDetail")}</PanelIntro>
+          </PanelBody>
+          <DataTable
+            bleed
+            fold
+            label={t("captureHealth.mailboxes")}
+            columns={mailboxColumns(t, plural, locale, readerZone)}
+            rows={[...health.mailboxes]}
+            rowKey={(box) => box.user_id}
+          />
+        </>
+      )}
       <PanelGroupHead title={t("captureHealth.sweeps")} level="h3" />
       <PanelBody>
         <PanelIntro>{t("captureHealth.sweepsSub")}</PanelIntro>
@@ -339,22 +351,10 @@ function CaptureHealthBody({
         rows={[...health.sweeps]}
         rowKey={(sweep) => sweep.sweep}
       />
-      {health.mailboxes.length > 0 && (
-        <>
-          <PanelGroupHead title={t("captureHealth.mailboxes")} level="h3" />
-          <PanelBody>
-            <PanelIntro>{t("captureHealth.noDetail")}</PanelIntro>
-          </PanelBody>
-          <DataTable
-            bleed
-            fold
-            label={t("captureHealth.mailboxes")}
-            columns={mailboxColumns(t, plural, locale)}
-            rows={[...health.mailboxes]}
-            rowKey={(box) => box.user_id}
-          />
-        </>
-      )}
+      <CaptureConnectionsHealth
+        rows={health.connection_concerns ?? []}
+        zone={zone}
+      />
     </>
   );
 }
@@ -368,6 +368,20 @@ function isCaptureHealth(data: Health | undefined): data is Health {
     typeof data.generated_at === "string" &&
     Array.isArray(data.mailboxes) &&
     Array.isArray(data.sweeps) &&
+    (data.owner_reviews === undefined ||
+      (Array.isArray(data.owner_reviews) &&
+        data.owner_reviews.every(
+          (owner) =>
+            owner !== null &&
+            typeof owner === "object" &&
+            typeof owner.user_id === "string" &&
+            Number.isSafeInteger(owner.sender_decisions) &&
+            owner.sender_decisions >= 0 &&
+            Number.isSafeInteger(owner.thread_decisions) &&
+            owner.thread_decisions >= 0 &&
+            (owner.display_name === undefined ||
+              typeof owner.display_name === "string"),
+        ))) &&
     typeof data.classifier === "object" &&
     data.classifier !== null &&
     typeof data.held_meetings === "object" &&
@@ -378,11 +392,13 @@ function isCaptureHealth(data: Health | undefined): data is Health {
 // `job_health:read`, what the endpoint asks for (compose/capturehealth.go).
 export function useCaptureHealth() {
   const canSee = useCan("job_health", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey: ["capture-health"],
-    enabled: canSee,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/admin/capture-health"));
+    queryKey: ["capture-health", scope],
+    enabled: canSee && visible && scope !== undefined,
+    queryFn: async ({ signal }) => {
+      const data = unwrap(await api.GET("/admin/capture-health", { signal }));
       if (!isCaptureHealth(data)) {
         throw new Error("malformed capture-health response");
       }
@@ -395,7 +411,7 @@ export function useCaptureHealth() {
 export function CaptureHealthCard() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const { canSee, query } = useCaptureHealth();
 
   return (

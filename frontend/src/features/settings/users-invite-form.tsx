@@ -12,39 +12,28 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
+import { nameFromEmail } from "../../lib/namefromemail";
 import { unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
+import {
+  entityOptions,
+  useEntityChoice,
+  useMayAssignEntity,
+} from "./users-entitycell";
 import { MemberTeamsField } from "./users-teams";
 import "./users-admin.css";
 
-// The invite form: an address, a name, a role and the teams the member lands
-// in, committed together. Two surfaces ask it — the roster's dialog in
-// Settings → Contacts and the setup journey's team step — and it is one form so
-// the two cannot come to invite differently. What happens after the write
+// The invite form: an address, a name, a role, the teams the member lands in
+// and the legal entity they work for, committed together. Two surfaces ask it:
+// the roster's dialog in Settings → Contacts and the setup journey's team step.
+// It is one form so the two cannot come to invite differently. What happens after the write
 // (closing a dialog, minting a set-password link, moving the journey on) is
 // the caller's, through `onInvited`.
 
 export type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
 
 export type InvitedMember = Readonly<{ id: string; name: string }>;
-
-/**
- * The name a member is created under when the form asks for none: the part
- * of the address before the @, with the dots and underscores contacts write
- * between their names read as spaces and each word capitalised. It is a
- * starting point the admin can change in Settings → Contacts, and it is what
- * the roster shows until they do — so it has to read as a name, not as an
- * address fragment.
- */
-export function nameFromEmail(email: string): string {
-  const local = email.trim().split("@")[0] ?? "";
-  return local
-    .split(/[._-]+/)
-    .filter((part) => part !== "")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
 
 export function InviteUserForm({
   titleId,
@@ -81,6 +70,10 @@ export function InviteUserForm({
   // Only an admin puts a member on a team (identity/teams.go), so only an
   // admin is asked which teams the new member joins.
   const placesOnTeams = useHoldsAdminRole();
+  // Placing the member is assigning them, which asks the assignment's grants.
+  const { entities, fallback } = useEntityChoice(useMayAssignEntity());
+  const [entityId, setEntityId] = useState<string | null>(null);
+  const placedIn = entityId ?? fallback?.id ?? null;
   const [error, setError] = useState<Error | null>(null);
 
   // The role and the team set ride as the mutation's variable rather than
@@ -93,7 +86,12 @@ export function InviteUserForm({
   const greetingName = askName ? greeting.trim() : "";
   const invite = useMutation({
     mutationFn: async (
-      choice: Readonly<{ role: Role; teams: string[]; greeting: string }>,
+      choice: Readonly<{
+        role: Role;
+        teams: string[];
+        greeting: string;
+        entity: string | null;
+      }>,
     ): Promise<string> => {
       const data = unwrap(
         await api.POST("/users", {
@@ -105,6 +103,9 @@ export function InviteUserForm({
               : { greeting_name: choice.greeting }),
             role: choice.role,
             team_ids: choice.teams,
+            ...(choice.entity === null
+              ? {}
+              : { legal_entity_id: choice.entity }),
           },
         }),
       );
@@ -117,6 +118,7 @@ export function InviteUserForm({
       setGreeting("");
       setRole("rep");
       setTeamIds([]);
+      setEntityId(null);
       setError(null);
       onInvited({ id: newUserId, name: invitedName });
     },
@@ -148,6 +150,8 @@ export function InviteUserForm({
               role,
               teams: placesOnTeams ? teamIds : [],
               greeting: greetingName,
+              // The default entity is what an invite naming none gets.
+              entity: placedIn === fallback?.id ? null : placedIn,
             });
           }
         }}
@@ -207,6 +211,18 @@ export function InviteUserForm({
           the invite goes out. */}
         {placesOnTeams && (
           <MemberTeamsField value={teamIds} onChange={setTeamIds} canManage />
+        )}
+        {fallback !== undefined && placedIn !== null && (
+          <Field label={t("users.entityLabel")}>
+            {(control) => (
+              <Select
+                {...control}
+                value={placedIn}
+                onChange={setEntityId}
+                options={entityOptions(t, entities)}
+              />
+            )}
+          </Field>
         )}
         {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
         {/* ABOVE the submit row, where the sibling dialogs in this family put a

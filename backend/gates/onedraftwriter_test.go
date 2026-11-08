@@ -34,11 +34,12 @@ package gates
 // demanding they converge would be asserting an answer nobody gave.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -126,7 +127,7 @@ func TestTheSharedWriterStillReachesTheModel(t *testing.T) {
 // is describing the writer rather than adding a second one.
 func goSourcesIn(t *testing.T, dir string) map[string]string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -138,7 +139,7 @@ func goSourcesIn(t *testing.T, dir string) map[string]string {
 			continue
 		}
 		path := filepath.Join(dir, name)
-		source, readErr := os.ReadFile(path)
+		source, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}

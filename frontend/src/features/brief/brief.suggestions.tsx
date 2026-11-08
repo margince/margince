@@ -10,27 +10,47 @@ import {
   useEntityName,
 } from "../../components/entityref";
 import { usableName } from "../../components/entityref.queries";
-import { EmptyState } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { Heading } from "../../design-system/heading";
 import { PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { formatDate, formatDateTime, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type MorningBrief,
   type MorningBriefItem,
   useMorningBrief,
 } from "./brief.queries";
 
+/**
+ * The stored run's deal suggestions, behind one opener that counts them. A run
+ * that loaded with no deals draws nothing; a failed read stays, so its retry
+ * is one press away.
+ */
 export function BriefSuggestions() {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const query = useMorningBrief();
   const [open, setOpen] = useState(false);
+  // An open section stays while its read retries, so the retry is not lost.
+  const empty = query.isSuccess && !query.data?.items.length;
+  if (empty || (query.isPending && !open)) {
+    return null;
+  }
+  const found =
+    query.data?.items.filter((item) => findingOf(item) !== null).length ?? 0;
   return (
     <Disclosure
-      summary={t("brief.suggestions.review")}
+      summary={
+        found > 0
+          ? plural("brief.suggestions.reviewCount", found, {
+              count: formatNumber(found, locale),
+            })
+          : t("brief.suggestions.review")
+      }
       open={open}
       onToggle={setOpen}
     >
@@ -40,22 +60,21 @@ export function BriefSuggestions() {
 }
 
 function StoredSuggestions() {
+  const readerZone = useViewerZone();
   const query = useMorningBrief();
   const t = useT();
   const { locale } = useLocale();
   return (
     <QueryGate query={query} pendingLabel={t("brief.feed.loading")}>
       {(run) =>
-        !run?.items.length ? (
-          <EmptyState>{t("brief.suggestions.empty")}</EmptyState>
-        ) : (
+        run?.items.length ? (
           <>
             <p className="t-caption">
-              {formatDateTime(run.generated_at, locale, viewerZone())}
+              {formatDateTime(run.generated_at, locale, readerZone)}
             </p>
             <RunSuggestions run={run} />
           </>
-        )
+        ) : null
       }
     </QueryGate>
   );
@@ -167,6 +186,7 @@ function StoredSuggestion({
   item,
   run,
 }: Readonly<{ item: MorningBriefItem; run: MorningBrief }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -176,14 +196,14 @@ function StoredSuggestion({
           <Heading as="h3" size="small">
             <EntityRef kind="deal" id={item.deal_id} name={name} />
           </Heading>
-          <p>
-            {t("worklist.verdict.believes")} {findingOf(item)}
+          <p className="t-caption">
+            {run.annotated_at
+              ? t("worklist.verdict.earlierOn", {
+                  date: formatDate(run.annotated_at, locale, readerZone),
+                })
+              : t("worklist.verdict.believes")}
           </p>
-          {run.annotated_at && (
-            <p className="t-caption">
-              {formatDateTime(run.annotated_at, locale, viewerZone())}
-            </p>
-          )}
+          <p>{findingOf(item)}</p>
         </PanelRow>
       )}
     </NamedDeal>

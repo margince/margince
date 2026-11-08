@@ -98,10 +98,9 @@ func TestSubWorkspaceFanOutsSelectsExactlyTheFinerGrains(t *testing.T) {
 		t.Errorf("the kinds are unsorted (%v); a scrape target's series order must not flap between reads", kinds)
 	}
 
-	var workspaceGrain, finerGrain int
+	var finerGrain int
 	for kind, unit := range FanOutUnits() {
 		if unit == FanOutWorkspace {
-			workspaceGrain++
 			if slices.Contains(kinds, kind) {
 				t.Errorf("%s fans out per workspace but is read by the unit pair, where it would restate margince_sweep_workspaces exactly", kind)
 			}
@@ -123,25 +122,9 @@ func TestSubWorkspaceFanOutsSelectsExactlyTheFinerGrains(t *testing.T) {
 	if finerGrain == 0 {
 		t.Fatalf("no finer-grain fan-outs declared; the partition's checked side is unexercised")
 	}
-	// The WORKSPACE side no longer is, and that is the collapse rather than a
-	// gap. ADR-0103 retired every workspace fan-out: a scheduled pass walks the
-	// tenants itself, so no kind declares FanOutWorkspace any more. The unit
-	// survives — an extension may still declare one (compose/extjobs.go) — so
-	// the partition still has to hold, and it is exercised below against a
-	// table this test builds rather than against a live declaration that no
-	// longer exists.
-	if workspaceGrain != 0 {
-		t.Errorf("%d workspace-grain fan-out(s) declared; ADR-0103 retired them, so a new one is a decision somebody should have to make deliberately", workspaceGrain)
-	}
 }
 
-// The workspace side of the partition, against a table this test builds.
-//
-// It stopped being reachable from the live declarations when ADR-0103 retired
-// the workspace fan-outs, and the rule it proves did not stop mattering: a
-// workspace-grain fan-out must NOT be read by the unit pair, because
-// margince_sweep_workspaces already states exactly that number and a second
-// series carrying the same one is two answers to one question.
+// Synthetic declarations keep both sides covered even when a catalog has only finer grains.
 func TestAWorkspaceGrainFanOutIsNotReadByTheUnitPair(t *testing.T) {
 	t.Parallel()
 

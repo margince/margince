@@ -81,7 +81,7 @@ func focusEligible(row ranked, asOf time.Time) bool {
 // so each naming read runs once per page rather than once per list. A failed
 // advice read keeps the rows and is named on the page.
 func (s *Service) nameWorklistRows(
-	ctx context.Context, page *crmcontracts.Worklist, findings map[ids.UUID]string, day crmcontracts.Attention,
+	ctx context.Context, page *crmcontracts.Worklist, findings map[ids.UUID]string,
 ) error {
 	lists := []*[]crmcontracts.WorklistItem{&page.Queue}
 	if page.Focus != nil {
@@ -94,12 +94,15 @@ func (s *Service) nameWorklistRows(
 	for _, list := range lists {
 		rows = append(rows, *list...)
 	}
-	advised, adviceErr := s.readingDealMoves(ctx, rows, day)
+	advised, adviceErr := s.readingDealMoves(ctx, rows)
 	if adviceErr != nil {
 		page.SourcesUnavailable = append(page.SourcesUnavailable, s.stampSources([]crmcontracts.WorklistSourceUnavailable{*adviceErr})...)
 	}
 	if err := advised.nameRows(ctx, rows, findings); err != nil {
 		return err
+	}
+	if employersErr := advised.nameTheEmployers(ctx, rows); employersErr != nil {
+		page.SourcesUnavailable = append(page.SourcesUnavailable, s.stampSources([]crmcontracts.WorklistSourceUnavailable{*employersErr})...)
 	}
 	for _, list := range lists {
 		rows = rows[copy(*list, rows):]
@@ -121,7 +124,7 @@ func (s *Service) nameRows(ctx context.Context, rows []crmcontracts.WorklistItem
 	if err := s.nameTheCompanies(ctx, rows); err != nil {
 		return err
 	}
-	if err := s.nameTheEmployers(ctx, rows); err != nil {
+	if err := s.nameTheOrganizers(ctx, rows); err != nil {
 		return err
 	}
 	return s.nameTheOwners(ctx, rows)

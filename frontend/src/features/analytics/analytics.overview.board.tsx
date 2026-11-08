@@ -3,23 +3,17 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Button } from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { useLocale, useT } from "../../i18n";
-import { metricOf, readingValue } from "./analytics.overview.readings";
-import { ChartBody } from "./reporting.chartbody";
-import { ChartDetails } from "./reporting.chartcontext";
-import { ChartPanel } from "./reporting.charts";
-import {
-  type ReportingBlockKind,
-  type ReportingChart,
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingPeriodLabel,
+import { useT } from "../../i18n";
+import { ChartPanel } from "./reporting.chartpanel";
+import type {
+  ReportingBlockKind,
+  ReportingChart,
+  ReportingEvaluation,
+  ReportingEvidenceRef,
+  ReportingSelection,
 } from "./reporting.model";
-import { useMetricNames, useReportingEvaluation } from "./reporting.queries";
+import { useReportingEvaluation } from "./reporting.queries";
 
 // The sales charts the opening page draws. Stage age stays on Performance: it
 // answers how long deals wait, which a review opens only when a stage stalls.
@@ -27,6 +21,7 @@ const SALES_BOARD_BLOCKS: ReadonlySet<ReportingBlockKind> = new Set([
   "bookings_trend",
   "stage_distribution",
   "owner_attainment",
+  "breakdown",
 ]);
 
 /** The charts of the sales preset that the opening page asks for. */
@@ -70,124 +65,19 @@ export function useSalesCharts(
   return asked ? query : undefined;
 }
 
-function chartOf(
+/** The evaluation's chart of this kind, unless it has nothing to draw. */
+export function drawnChart(
   evaluation: ReportingEvaluation,
   kind: ReportingChart["kind"],
 ): ReportingChart | undefined {
-  return evaluation.charts.find((chart) => chart.kind === kind);
-}
-
-const drawn = (chart: ReportingChart | undefined): chart is ReportingChart =>
-  chart !== undefined &&
-  chart.points.length > 0 &&
-  chart.coverage.status !== "no_data";
-
-// A running total that never leaves zero, in either period, is a blank box:
-// the figure and its explanation say it better alone.
-const moves = (chart: ReportingChart): boolean =>
-  chart.points.some((point) => !!point.value || !!point.comparison);
-
-/**
- * Sales won as the page's lead: the figure, the period it covers and the door
- * to its deals, beside the running total that reached it. `aside` stands
- * under the figure: the target it is read against, and the period before.
- */
-export function SalesHero({
-  evaluation,
-  charts,
-  onEvidence,
-  aside,
-  mark,
-}: Readonly<{
-  evaluation: ReportingEvaluation;
-  // The chart read, apart from the figures: pending, failed or answered, or
-  // none when the preset draws no chart.
-  charts?: Readonly<{ data?: ReportingEvaluation; isPending: boolean }>;
-  onEvidence: (
-    reference: ReportingEvidenceRef,
-    from?: ReportingEvaluation,
-  ) => void;
-  aside?: ReactNode;
-  // A reading drawn beside the figure, such as its share of the target.
-  mark?: ReactNode;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const metricName = useMetricNames();
-  const { context } = evaluation;
-  const won = metricOf(evaluation, "bookings_won");
-  const found = charts?.data && chartOf(charts.data, "bookings_trend");
-  const trend = drawn(found) && moves(found) ? found : undefined;
-  const trendRead = charts?.data;
-  return (
-    <Panel
-      title={metricName("bookings_won")}
-      // One line of head and no foot: the header's caption already names the
-      // period, and the first screen has no height to spare.
-      flatHead
-      titleAction={
-        trend &&
-        trendRead && <ChartDetails chart={trend} evaluation={trendRead} />
-      }
-    >
-      <PanelBody>
-        <div className="analytics-hero-body">
-          <div className="analytics-hero-figure">
-            <div className="analytics-hero-headline">
-              <div className="analytics-hero-lead">
-                <p className="analytics-hero-value t-num">
-                  {readingValue(won, evaluation, t, locale)}
-                </p>
-                {/* With the chart drawn, its foot names the period. */}
-                {!trend && (
-                  <p className="t-caption">
-                    {reportingPeriodLabel(
-                      context.interval,
-                      context.timezone,
-                      locale,
-                    )}
-                  </p>
-                )}
-                {won?.coverage.withheld && (
-                  <p className="t-caption">
-                    {t("analytics.overview.partlyHidden")}
-                  </p>
-                )}
-                {won?.coverage.status !== "ok" && won?.coverage.reason && (
-                  <p className="t-caption">{won.coverage.reason}</p>
-                )}
-                {won && (
-                  <Button
-                    variant="link"
-                    onClick={() => onEvidence(won.evidence)}
-                  >
-                    {t("reporting.viewRecords")}
-                  </Button>
-                )}
-              </div>
-              {mark}
-            </div>
-            {aside}
-          </div>
-          {trend && trendRead && (
-            <div className="analytics-hero-chart">
-              <ChartBody
-                chart={trend}
-                evaluation={trendRead}
-                onEvidence={(reference) => onEvidence(reference, trendRead)}
-                trendSize="compact"
-              />
-            </div>
-          )}
-          {/* The trend's place, kept while it is read, so the figure does not
-              move when it lands. */}
-          {charts?.isPending && (
-            <div className="analytics-hero-chart" aria-hidden="true" />
-          )}
-        </div>
-      </PanelBody>
-    </Panel>
-  );
+  const chart = evaluation.charts.find((candidate) => candidate.kind === kind);
+  if (
+    !chart ||
+    (chart.coverage.status === "no_data" &&
+      chart.points.every((point) => point.value == null || point.value === 0))
+  )
+    return undefined;
+  return chart;
 }
 
 /** One preset chart in its panel, or nothing when the evaluation lacks it. */
@@ -195,18 +85,27 @@ export function BoardChart({
   evaluation,
   kind,
   onEvidence,
+  section = false,
+  meta,
+  note,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   kind: ReportingChart["kind"];
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  // A section of a sheet, with a flat head, rather than a panel of its own.
+  section?: boolean;
+  meta?: ReactNode;
+  note?: ReactNode;
 }>) {
-  const chart = chartOf(evaluation, kind);
+  const chart = drawnChart(evaluation, kind);
   if (!chart) return null;
   return (
     <ChartPanel
       chart={chart}
       wide={false}
-      flatHead
+      section={section}
+      meta={meta}
+      note={note}
       evaluation={evaluation}
       onEvidence={onEvidence}
     />
@@ -214,40 +113,52 @@ export function BoardChart({
 }
 
 /**
- * One chart of the chart read. The gated one says in its place that the read
- * is pending or failed. The other draws only once there is an answer, so a
- * failure is said once, and the figures above stand either way.
+ * Today's stock by stage over the permitted sales by owner, from the chart
+ * read, each a section of the review's sheet. While it is read, or when it
+ * failed, it says so in its own place and the figures above it stand.
  */
-export function StockChart({
+export function StockCharts({
   charts,
-  kind,
-  gated,
+  stageMeta,
+  stageNote,
   onEvidence,
 }: Readonly<{
   charts: UseQueryResult<ReportingEvaluation>;
-  kind: ReportingChart["kind"];
-  gated?: boolean;
+  // Said in the stage chart's head, and above its bars.
+  stageMeta?: ReactNode;
+  stageNote?: ReactNode;
   onEvidence: (
     reference: ReportingEvidenceRef,
     from?: ReportingEvaluation,
   ) => void;
 }>) {
   const t = useT();
-  const draw = (read: ReportingEvaluation) => (
-    <BoardChart
-      evaluation={read}
-      kind={kind}
-      onEvidence={(reference) => onEvidence(reference, read)}
-    />
-  );
-  // Ungated, a failed or refreshing read draws nothing rather than stale data.
-  if (!gated)
-    return !charts.isPending && !charts.isError && charts.data
-      ? draw(charts.data)
-      : null;
   return (
     <QueryGate query={charts} pendingLabel={t("analytics.overview.charts")}>
-      {draw}
+      {(read) => (
+        <>
+          <BoardChart
+            evaluation={read}
+            kind="stage_distribution"
+            onEvidence={(reference) => onEvidence(reference, read)}
+            section
+            meta={stageMeta}
+            note={stageNote}
+          />
+          <BoardChart
+            evaluation={read}
+            kind="owner_attainment"
+            onEvidence={(reference) => onEvidence(reference, read)}
+            section
+          />
+          <BoardChart
+            evaluation={read}
+            kind="breakdown"
+            onEvidence={(reference) => onEvidence(reference, read)}
+            section
+          />
+        </>
+      )}
     </QueryGate>
   );
 }

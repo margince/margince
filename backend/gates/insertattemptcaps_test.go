@@ -52,10 +52,10 @@ type insertSite string
 // are helpers that hand the number's ownership somewhere else, and in both the
 // omission is load-bearing rather than forgotten.
 var capExemptSites = gatekit.Waive(map[insertSite]string{
-	"internal/compose/jobs.go:sweepInsertOpts":        "the uniqueness half of the periodic insert and nothing else. River reads the explicit opts BEFORE the args type's, so a cap here would outrank every max_attempts api/jobs.yaml publishes for an opts_owner: args kind and make the declared ladder a number nothing runs at; periodicInsertOpts adds one only where no args type owns it",
-	"internal/compose/dispatch.go:markedAsFleetPass":  "it copies the caller's opts to add the sweep tag, so the cap it carries is whichever one the caller already chose. Naming one here would silently retune every fleet pass, and do it inside a function whose subject is a tag",
-	"internal/platform/jobs/queuedas.go:QueuedAs":     "it copies the caller's opts to supply the declared queue, so the cap it carries is the caller's. Naming one here would outrank every cap in the tree, and do it inside a function whose subject is the queue",
-	"internal/platform/jobs/queuedas.go:QueuedAsKind": "QueuedAs's answer, for the same reason: the literal is a copy of the caller's opts and the queue is the only field it decides",
+	"internal/compose/jobs.go:sweepInsertOpts":                  "the uniqueness half of the periodic insert and nothing else. River reads the explicit opts BEFORE the args type's, so a cap here would outrank every max_attempts api/jobs.yaml publishes for an opts_owner: args kind and make the declared ladder a number nothing runs at; periodicInsertOpts adds one only where no args type owns it",
+	"internal/compose/dispatch.go:markedAsFleetPass":            "it copies the caller's opts to add the sweep tag, so the cap it carries is whichever one the caller already chose. Naming one here would silently retune every fleet pass, and do it inside a function whose subject is a tag",
+	"internal/platform/jobs/sessionlocked.go:SessionInsertOpts": "it copies the caller's opts to let the session lease own concurrency. The attempt cap remains the caller's choice; naming one here would override it",
+	"internal/platform/jobs/queuedas.go:QueuedAsKind":           "QueuedAs's answer, for the same reason: the literal is a copy of the caller's opts and the queue is the only field it decides",
 })
 
 // TestEveryInsertDeclaresAnAttemptCap is the census the caller-owned tier had

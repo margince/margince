@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import "./readings.css";
 import { webUrl } from "../format/weburl";
+import { AppLink } from "./applink";
 import { Button } from "./atoms";
 
 // Three ways to draw a reading that is not a number in a box: a proportion as
@@ -208,39 +209,64 @@ const SPARK_INSET = 3;
 // and it is a link when the fact has somewhere to go.
 export function Chip({
   icon: Icon,
+  lead,
   children,
   href,
+  appHref,
+  label,
   dense,
-}: Readonly<{
-  icon: LucideIcon;
-  children: ReactNode;
-  // An external destination. Present → the chip is an anchor and opens in a
-  // new tab with `noreferrer`, since these point off our origin.
-  href?: string;
-  // The chip at a `Badge`'s geometry, for a chip inside a table row: it shares
-  // a cell with badges there, and a fact drawn a rung larger than the status
-  // beside it outweighs the name the row is actually about.
-  //
-  // A size on the primitive rather than a height each caller sets, for the
-  // reason `Meter`'s dense rung is one: a geometry with two authors drifts the
-  // first time either moves.
-  dense?: boolean;
-}>) {
-  const shape = dense ? "chip chip-dense" : "chip";
+}: Readonly<
+  {
+    children: ReactNode;
+    // An external destination. Present → the chip is an anchor and opens in a
+    // new tab without an opener or referrer, since these point off our origin.
+    href?: string;
+    // A page of this app, followed in place: the record a fact names.
+    appHref?: string;
+    // The link's name where the visible text alone does not say where it goes.
+    label?: string;
+    // The chip at a `Badge`'s geometry, for a table row that shares a cell with
+    // badges. A fact a rung larger than its status outweighs the row's name.
+    // It is a size on the primitive, like `Meter`'s dense rung, so one author
+    // owns the geometry.
+    dense?: boolean;
+  } & (
+    | { icon: LucideIcon; lead?: never }
+    // A mark in the icon's place: a record's Avatar, or a company's logo.
+    | { icon?: never; lead: ReactNode }
+  )
+>) {
+  const shape = ["chip", dense ? "chip-dense" : "", Icon ? "" : "chip-lead"]
+    .filter(Boolean)
+    .join(" ");
   const body = (
     <>
-      <Icon size={dense ? 12 : 14} aria-hidden="true" />
+      {Icon ? (
+        <Icon size={dense ? 12 : 14} aria-hidden="true" />
+      ) : (
+        <span className="chip-mark" aria-hidden="true">
+          {lead}
+        </span>
+      )}
       <span>{children}</span>
     </>
   );
+  if (appHref) {
+    return (
+      <AppLink className={`${shape} chip-link`} href={appHref}>
+        {body}
+      </AppLink>
+    );
+  }
   const destination = href && webUrl(href) ? href : undefined;
   if (destination) {
     return (
       <a
         className={`${shape} chip-link`}
         href={destination}
+        aria-label={label}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
       >
         {body}
       </a>
@@ -373,7 +399,6 @@ export type BarListRow = Readonly<{
 export function SegmentBar({
   parts,
   marker,
-  band,
   label,
   onSelect,
 }: Readonly<{
@@ -382,16 +407,13 @@ export function SegmentBar({
   // A figure the parts are read against rather than one of them: a line across
   // the track, drawn in ink so it never reads as a fourth part.
   marker?: SegmentBarPart;
-  // A span of another measure on the same scale, such as a modelled range. It
-  // is a bracket under the track, so it never reads as a part.
-  band?: SegmentBarBand;
   // What the legend is, for a reader who meets it as a list.
   label: string;
 }>) {
   const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
-  // The scale is whichever is larger, the parts, the mark or the band: a call
-  // beyond what the parts reach leaves recessed track between them.
-  const scale = Math.max(total, marker?.value ?? 0, band?.high ?? 0);
+  // The scale is the larger of the parts and the mark. A mark beyond the parts
+  // leaves recessed track between them, and that track is the gap.
+  const scale = Math.max(total, marker?.value ?? 0);
   return (
     <div className="segbar">
       <div className="segbar-track" aria-hidden={onSelect ? undefined : true}>
@@ -420,17 +442,6 @@ export function SegmentBar({
           />
         )}
       </div>
-      {band && (
-        <div className="segbar-band" aria-hidden="true">
-          <span
-            className="segbar-band-span"
-            style={{
-              left: `${percentOf(band.low, scale)}%`,
-              width: `${percentOf(band.high - band.low, scale)}%`,
-            }}
-          />
-        </div>
-      )}
       <ul className="segbar-legend" aria-label={label}>
         {parts.map((part, step) => (
           <li key={part.key} className="segbar-key">
@@ -449,15 +460,6 @@ export function SegmentBar({
             <span className="segbar-amount t-num">{marker.amount}</span>
           </li>
         )}
-        {band && (
-          <li className="segbar-key">
-            <span className="segbar-swatch-band" aria-hidden="true" />
-            {band.label}
-            {band.amount && (
-              <span className="segbar-amount t-num">{band.amount}</span>
-            )}
-          </li>
-        )}
       </ul>
     </div>
   );
@@ -468,14 +470,6 @@ export type SegmentBarPart = Readonly<{
   label: string;
   value: number;
   amount: string;
-}>;
-
-export type SegmentBarBand = Readonly<{
-  label: string;
-  low: number;
-  high: number;
-  // Left out where the same range is stated in full beside the bar.
-  amount?: string;
 }>;
 
 // One to three parts, as a type: a fourth step of one hue is not told apart,

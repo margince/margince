@@ -34,9 +34,11 @@ type ContactEdge struct {
 // and none are invented: the reciprocity term simply has nothing to say.
 func (e ContactEdge) StrengthOf(now time.Time) relstrength.Score {
 	last := e.LastAt
+	// Both contacts were on the activity, so each took part in it.
 	return relstrength.Compute(relstrength.Inputs{
-		LastInteraction: &last,
-		Count90d:        e.Count90d,
+		LastTouch:   &last,
+		LastEngaged: &last,
+		Count90d:    e.Count90d,
 	}, now)
 }
 
@@ -53,23 +55,24 @@ type contactPair struct {
 // event arrives, the former pair cannot be named from the rows alone — but its
 // surviving member still is, so the stale edge is refolded and pruned instead
 // of standing until the nightly rebuild.
-func affectedContactPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]contactPair, error) {
-	rows, err := tx.Query(ctx, `
+func affectedContactPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, includePrior bool) ([]contactPair, error) {
+	args := []any{activityIDs, includePrior}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH present AS (
 		    SELECT DISTINCT contact_id
 		      FROM activity_participant
-		     WHERE activity_id = ANY($1) AND contact_id IS NOT NULL
+		     WHERE activity_id = ANY($%[1]d) AND contact_id IS NOT NULL
 		)
 		SELECT DISTINCT x.contact_id, y.contact_id
 		  FROM activity_participant x
 		  JOIN activity_participant y
 		    ON y.activity_id = x.activity_id AND y.contact_id > x.contact_id
-		 WHERE x.activity_id = ANY($1) AND x.contact_id IS NOT NULL
+		 WHERE x.activity_id = ANY($%[1]d) AND x.contact_id IS NOT NULL
 		 UNION
 		SELECT e.contact_a, e.contact_b
 		  FROM graph_contact_edge e
-		 WHERE e.contact_a IN (SELECT contact_id FROM present)
-		    OR e.contact_b IN (SELECT contact_id FROM present)`, activityIDs)
+		 WHERE $%[2]d AND (e.contact_a IN (SELECT contact_id FROM present)
+		    OR e.contact_b IN (SELECT contact_id FROM present))`, len(args)-1, len(args)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: resolving the contact pairs an activity touches: %w", err)
 	}
@@ -89,28 +92,16 @@ func scanContactPairs(rows pgx.Rows) ([]contactPair, error) {
 	return out, rows.Err()
 }
 
-// recomputeContactPairs re-folds the named pairs from the base tables in one
-// statement and deletes the ones that no longer qualify — the same
-// atomic-with-capture shape recomputePairs keeps, for the same reason, and
-// in the same key order, so concurrent batches lock rows in one order.
-//
-// The audience rule and the role set are graph_interaction_edge's own, applied unchanged:
-// a limited-audience activity contributes NOTHING here, exactly as it
-// contributes nothing to graph_interaction_edge — who talked to whom on a
-// limited thread is content, and this table is readable without reading it.
-func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) error {
+// Sorted folds share the capture transaction, so concurrent batches lock pairs in one order.
+// Limited-audience evidence is excluded because this projection can be read without its source activity.
+func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) ([]contactPair, error) {
 	if len(pairs) == 0 {
-		return nil
+		return nil, nil
 	}
-	first := make([]ids.UUID, 0, len(pairs))
-	second := make([]ids.UUID, 0, len(pairs))
-	for _, p := range pairs {
-		first = append(first, p.a)
-		second = append(second, p.b)
-	}
+	first, second := contactPairKeys(pairs)
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
 
-	if _, err := tx.Exec(ctx, `
+	rows, err := tx.Query(ctx, `
 		WITH target AS (
 		    SELECT DISTINCT contact_a, contact_b
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
@@ -129,20 +120,29 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		      JOIN activity a
 		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
+		     WHERE `+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+`
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
-		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at)
-		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, now()
+		    (contact_a, contact_b, last_at, count_90d, count_total, computed_at, read_snapshot)
+		SELECT f.contact_a, f.contact_b, f.last_at, f.count_90d, f.count_total, now(), pg_current_snapshot()
 		  FROM folded f
 		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
 		    last_at     = EXCLUDED.last_at,
 		    count_90d   = EXCLUDED.count_90d,
 		    count_total = EXCLUDED.count_total,
-		    computed_at = EXCLUDED.computed_at`,
-		first, second); err != nil {
-		return fmt.Errorf("search: recomputing contact edges: %w", err)
+		    computed_at = EXCLUDED.computed_at,
+            read_snapshot = EXCLUDED.read_snapshot
+        RETURNING e.contact_a, e.contact_b`,
+		first, second)
+	if err != nil {
+		return nil, fmt.Errorf("search: recomputing contact edges: %w", err)
+	}
+	written, err := scanContactPairs(rows)
+	rows.Close()
+	if err != nil {
+		return nil, err
 	}
 
 	// A pair whose last shared activity was archived or limited loses its row.
@@ -152,18 +152,18 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		DELETE FROM graph_contact_edge e
 		 USING unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
 		 WHERE e.contact_a = t.contact_a AND e.contact_b = t.contact_b
-		   AND NOT EXISTS (
+		   AND NOT (`+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+` AND EXISTS (
 		       SELECT 1
 		         FROM activity_participant pa
 		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
 		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
-		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`)`,
+		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`))`,
 		first, second); err != nil {
-		return fmt.Errorf("search: pruning contact edges that lost their evidence: %w", err)
+		return nil, fmt.Errorf("search: pruning contact edges that lost their evidence: %w", err)
 	}
-	return nil
+	return written, nil
 }
 
 // contactPairsForContact names every pair one contact can appear in: partners

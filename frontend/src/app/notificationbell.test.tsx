@@ -10,8 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { type Locale, LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { NotificationBell } from "./notificationbell";
@@ -23,21 +24,7 @@ import { NotificationBell } from "./notificationbell";
 // a reader only ever sees their own notices and there is no seat that could be
 // refused the panel.
 
-type Notice = {
-  id: string;
-  kind: string;
-  subject: string;
-  body?: string;
-  created_at: string;
-  read_at?: string;
-  target?: { type: string; id: string };
-  origin?: {
-    event_id: string;
-    actor_type: string;
-    actor_id: string;
-    occurred_at: string;
-  };
-};
+type Notice = components["schemas"]["NotificationItem"];
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -219,15 +206,25 @@ describe("NotificationBell", () => {
     expect(items[1]?.textContent).toContain("An automation could not run");
   });
 
-  it("heads a notice that is only field pairs with its class, not the pairs", async () => {
-    const fields = "into_tag_id=01a11ecb-0000, to_stage_id=01a0ced5-0000";
+  it("heads an approval notice with its sentence and lists the values from its parts", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor([
-        notice("n1", fields, { kind: "approval_pending" }),
-        notice("n2", "Update a deal, setting amount_minor: amount_minor=100", {
-          kind: "approval_pending",
-        }),
+        notice(
+          "n1",
+          "Update a deal: amount_minor=100, name=Smith, Jones & Co",
+          {
+            kind: "approval_pending",
+            summary_parts: {
+              sentence: "Update a deal",
+              fields: [
+                { field: "amount_minor", value: "100" },
+                { field: "name", value: "Smith, Jones & Co" },
+              ],
+              more_fields: 0,
+            },
+          },
+        ),
       ]).fetchMock,
     );
     const user = userEvent.setup();
@@ -235,15 +232,12 @@ describe("NotificationBell", () => {
 
     await user.click(await screen.findByRole("button", { name: /waiting/i }));
 
-    const [bare, sentence] = await screen.findAllByRole("listitem");
-    expect(within(bare).getByText("Approvals waiting on you")).toBeTruthy();
-    expect(within(bare).getByText(fields)).toBeTruthy();
-    // A sentence heads its row; the raw pairs after it are only detail.
-    expect(
-      within(sentence).getByText("Update a deal, setting amount_minor"),
-    ).toBeTruthy();
-    expect(within(sentence).getByText("amount_minor=100")).toBeTruthy();
-    expect(within(sentence).queryByText("Approvals waiting on you")).toBeNull();
+    const row = await screen.findByRole("listitem");
+    expect(within(row).getByText("Update a deal")).toBeTruthy();
+    // The values come from the parts, so a comma inside one stays inside it.
+    expect(within(row).getByText(/Smith, Jones & Co$/)).toBeTruthy();
+    expect(within(row).queryByText(/amount_minor=/)).toBeNull();
+    expect(within(row).queryByText("Approvals waiting on you")).toBeNull();
   });
 
   it("says when each notice was raised", async () => {
@@ -264,7 +258,7 @@ describe("NotificationBell", () => {
     const when = row.querySelector("time");
     expect(when?.getAttribute("datetime")).toBe("2026-09-15T09:00:00Z");
     expect(when?.textContent).toBe(
-      formatDateTime("2026-09-15T09:00:00Z", "en", viewerZone()),
+      formatDateTime("2026-09-15T09:00:00Z", "en", browserZone()),
     );
   });
 
@@ -410,6 +404,78 @@ describe("NotificationBell", () => {
     expect(link.getAttribute("href")).toBe(
       "/#/home?approval=22222222-2222-4222-8222-222222222222",
     );
+  });
+
+  it("offers each notice the move its target names, beside Mark read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          target: { type: "lead", id: "11111111-1111-4111-8111-111111111111" },
+        }),
+        notice("n2", "Is boris@customer.example a contact worth keeping?", {
+          kind: "approval_pending",
+          target: {
+            type: "approval",
+            id: "22222222-2222-4222-8222-222222222222",
+          },
+        }),
+        notice("n3", "Background correction stopped: Folding domains", {
+          kind: "data_task_failed",
+          target: {
+            type: "data_task",
+            id: "33333333-3333-4333-8333-333333333333",
+          },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(await screen.findByRole("button", { name: /waiting/i }));
+
+    const rows = await screen.findAllByRole("listitem");
+    const verb = (row: number, name: string) =>
+      within(rows[row] as HTMLElement).getByRole("link", { name });
+    expect(verb(0, "Open lead").getAttribute("href")).toBe(
+      "/#/leads/11111111-1111-4111-8111-111111111111",
+    );
+    expect(verb(1, "Review request").getAttribute("href")).toBe(
+      "/#/home?approval=22222222-2222-4222-8222-222222222222",
+    );
+    expect(verb(2, "Open System health").getAttribute("href")).toBe(
+      "/#/settings/system-health/diagnostics?section=dataTasks.title",
+    );
+    for (const row of rows) {
+      expect(
+        within(row).getByRole("button", { name: "Mark read" }),
+      ).not.toBeNull();
+    }
+  });
+
+  it("keeps a read notice's move and drops only its Mark read", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([
+        notice("n1", "A lead is past its deadline", {
+          read_at: "2026-09-15T10:00:00Z",
+          target: { type: "lead", id: "11111111-1111-4111-8111-111111111111" },
+        }),
+      ]).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationBell />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /notifications/i }),
+    );
+
+    expect(
+      (await screen.findByRole("link", { name: "Open lead" })).getAttribute(
+        "href",
+      ),
+    ).toBe("/#/leads/11111111-1111-4111-8111-111111111111");
+    expect(screen.queryByRole("button", { name: "Mark read" })).toBeNull();
   });
 
   // A record KIND this app has no page for is named and not linked. Offering a

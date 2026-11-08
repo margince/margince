@@ -5,9 +5,10 @@
 // open. The server decides which reminders are due (`reminder_due` on the
 // activity list); this file only decides whether this browser has shown one.
 //
-// "Once" is kept per browser, keyed by the task and its reminder instant. The
-// record is in storage every tab shares, written under a lock the tabs share. The
-// Worklist is where a reminder stays; the notification is the nudge to look.
+// "Once" is kept per browser, keyed by the task and its reminder instant, in
+// storage every tab shares and under a lock the tabs share. Across browsers the
+// server's claim decides. The Worklist is where a reminder stays; the
+// notification is the nudge to look.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -17,14 +18,29 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useNotificationPermission } from "./notificationpermission";
 import { unwrap } from "./problem";
-import { navigate } from "./router";
+import { navigate, parseHash, routeHash } from "./router";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "./storage";
+import { hashWithParams, parseParams } from "./urlstate";
 import { worklistKey } from "./workkeys";
 
 type Activity = components["schemas"]["Activity"];
 
 /** The Home address dial that opens one task. */
 export const TASK_PARAM = "task";
+
+/**
+ * The address that opens one task on Home. From Home it keeps the reader's own
+ * dials, so an open Worklist drawer, its view and its filter stay as they were
+ * under the task. From elsewhere it starts Home with the task alone.
+ */
+export function taskHref(id: string): string {
+  const here = globalThis.location?.hash ?? "";
+  const params = new Map(
+    parseHash(here).screen === "home" ? parseParams(here) : [],
+  );
+  params.set(TASK_PARAM, id);
+  return hashWithParams(routeHash({ screen: "home" }), params);
+}
 
 const POLL_MS = 60_000;
 const PAGE = 200;
@@ -77,6 +93,28 @@ function underTabLock<T>(work: () => T): Promise<T> {
   const locks = typeof navigator === "undefined" ? undefined : navigator.locks;
   if (!locks) return Promise.resolve(work());
   return locks.request(LOCK, () => work());
+}
+
+/**
+ * Whether this tab is the one to show a reminder, across every browser the
+ * member is signed in on. The server grants the first claim at the reminder's
+ * instant. A claim that fails for another reason shows it anyway, as this
+ * browser alone would, so a lost request never silences a reminder.
+ */
+export async function claimDelivery(task: Activity): Promise<boolean> {
+  if (!task.remind_at) return false;
+  try {
+    const { data, response } = await api.POST(
+      "/activities/{id}/reminder-delivery",
+      {
+        params: { path: { id: task.id } },
+        body: { remind_at: task.remind_at },
+      },
+    );
+    return data ? data.claimed : response.status !== 404;
+  } catch {
+    return true;
+  }
 }
 
 export function openTaskFromNotification(id: string): void {
@@ -136,10 +174,14 @@ export function useTaskReminderNotifications(signedIn: boolean): void {
   useEffect(() => {
     if (!granted || !due.data) return;
     const page = due.data;
-    void underTabLock(() => takeUnshown(page, Date.now())).then((unshown) => {
-      for (const task of unshown) show(task, t);
-      if (unshown.length > 0)
-        void client.invalidateQueries({ queryKey: worklistKey });
-    });
+    void underTabLock(() => takeUnshown(page, Date.now())).then(
+      async (unshown) => {
+        const claims = await Promise.all(unshown.map(claimDelivery));
+        const mine = unshown.filter((_, index) => claims[index]);
+        for (const task of mine) show(task, t);
+        if (mine.length > 0)
+          void client.invalidateQueries({ queryKey: worklistKey });
+      },
+    );
   }, [granted, due.data, client, t]);
 }

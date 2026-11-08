@@ -190,8 +190,11 @@ func RequestSettlementRevalidationTx(ctx context.Context, tx pgx.Tx, expected Se
 		 WHERE request_activity_id = $1`, expected.RequestID, asOf); err != nil {
 		return false, fmt.Errorf("activities: asking for a verdict to be judged again: %w", err)
 	}
-	_, err = storekit.Audit(ctx, tx, "update", "activity", expected.RequestID,
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", expected.RequestID,
 		map[string]any{settlementRevalidationCol: nil},
 		map[string]any{settlementRevalidationCol: asOf})
+	if err == nil {
+		err = emitSettlementChanged(ctx, tx, auditID, expected.RequestID)
+	}
 	return err == nil, err
 }

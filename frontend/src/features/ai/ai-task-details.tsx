@@ -7,6 +7,7 @@ import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { providerName } from "../../lib/ai-provider-names";
 import { decisionSkipLabel } from "./ai-decision-labels";
 import {
   type LaneKeyGap,
@@ -14,7 +15,6 @@ import {
   laneRung,
   TaskState,
 } from "./ai-lane-state";
-import { providerName } from "./ai-provider-names";
 import { TermChip } from "./ai-terms";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
 

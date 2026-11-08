@@ -113,3 +113,23 @@ func meetingDuplicatesEstimate(ctx context.Context, t *testing.T, e *integration
 	}
 	return count
 }
+
+// Another seat on the copy does not keep it when that seat imports the
+// survivor with the same posture. Retiring the copy loses that seat nothing.
+func TestTheMeetingDuplicatesTaskRetiresACopyWhoseOtherImporterHoldsTheSurvivor(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	held := importMeeting(t, e, "human:"+e.Rep1.String())
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`, held, rep2Address)
+	copyID := seedCalendarCopy(t, e, e.Rep2, rep2Address)
+	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2), ($3, $2)`, copyID, e.Rep1, held)
+
+	runCalendarDescriptionTask(ctx, t, e, meetingDuplicatesDataTask(e.Pool))
+
+	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, copyID); got != 0 {
+		t.Error("a copy whose other importer already holds the survivor is still live")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE activity_id = $1`, held); got != 2 {
+		t.Errorf("the survivor has %d importers, want both seats", got)
+	}
+}
