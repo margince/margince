@@ -30,8 +30,8 @@ const salesAssessmentFixtureJSON = `{
 }`
 
 // minted names what one preparation showed the model, so a reply is written
-// against the prepared request rather than typed by hand: a cell by its id,
-// a deal and its owner by the refs the request showed.
+// against the prepared request rather than typed by hand. A cell is named by
+// its id, a deal and its owner by the refs the request showed.
 type minted struct {
 	t   *testing.T
 	c   *salesAssessmentCase

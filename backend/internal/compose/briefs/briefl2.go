@@ -143,10 +143,10 @@ func rankRefs(candidates []BriefQueueItem) *promptref.Refs {
 var dealRef = regexp.MustCompile(`^d[1-9][0-9]*$`)
 
 // ParseRankOrder reads the ordered deal refs out of a reply as the deals they
-// name. It is this site's ONLY refusal: a reply that cannot be read, or that
-// names anything but a deal ref, a record id included, degrades the whole L2
-// pass to the deterministic composite order. A ref of no candidate reads as
-// ids.Nil, which BoundToCandidates drops like any other id it was not given.
+// name. It is this site's only refusal. A reply that cannot be read degrades
+// the whole L2 pass to the deterministic composite order. So does one that
+// names anything but a deal ref, a record id included. A ref of no candidate reads as
+// ids.Nil. BoundToCandidates drops it like any other id it was not given.
 func ParseRankOrder(text string, candidates []BriefQueueItem) ([]ids.UUID, error) {
 	var parsed struct {
 		Order []string `json:"order"`

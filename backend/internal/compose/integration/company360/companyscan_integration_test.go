@@ -69,7 +69,7 @@ func (l *quotingLane) Complete(_ context.Context, req model.Request) (model.Resp
 }
 
 // quotedMessageRef is the ref the request shows for the message whose text
-// holds quote, the one a model quoting it would cite, or fallback when the
+// holds quote, which a model quoting it would cite. It is fallback when the
 // request shows no such message.
 func quotedMessageRef(req model.Request, quote, fallback string) string {
 	for _, message := range req.Messages {

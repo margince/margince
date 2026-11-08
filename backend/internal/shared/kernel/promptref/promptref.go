@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package promptref names the records one model request shows by short refs,
-// such as m1 or d2, and reads a ref in the reply back to its record id.
+// such as m1 or d2. It reads a ref in the reply back to its record id.
 //
 // A model never sees a record's UUID. A small model copies a short ref it was
-// given, and it garbles a 36-character id, cites it in the wrong field or
-// writes it into prose. A ref names one record of one request only: the reply
-// is read back through the same Refs, and a ref it never minted is refused.
+// given. It garbles a 36-character id, cites it in the wrong field or writes
+// it into prose. A ref names one record of one request only. The reply is read
+// back through the same Refs, and a ref it never minted is refused.
 package promptref
 
 import "strconv"

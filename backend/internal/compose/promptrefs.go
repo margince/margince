@@ -9,7 +9,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
-// shownID is the record id a reply's ref names, or "" for a ref the request
+// shownID is the record id a reply's ref names. It is "" for a ref the request
 // never showed, so a guessed or copied id never reaches a write.
 func shownID(refs *promptref.Refs, ref string) string {
 	if id, ok := refs.ID(strings.TrimSpace(ref)); ok {

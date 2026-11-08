@@ -302,7 +302,7 @@ func Parse(reply string, in Input) ([]Learning, error) {
 }
 
 // dealRefs names each deal of the week d1, d2, … in the order the summary
-// lists them; Request and Parse both build it from the same input.
+// lists them. Request and Parse both build it from the same input.
 func dealRefs(in Input) *promptref.Refs {
 	refs := promptref.New("d")
 	for _, d := range in.deals {

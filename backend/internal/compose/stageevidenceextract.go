@@ -248,10 +248,10 @@ func stageEvidenceRequest(
 // stage and no author side, so the shape itself refuses the reply this site
 // must never accept.
 //
-// The two ids a claim cites are closed to THIS call's own: the criterion keys
+// The two ids a claim cites are closed to this call's own: the criterion keys
 // it listed and the span refs it supplied. stageEvidenceValid refuses anything
-// else afterwards, but a decoder that can only write an offered id cannot
-// spend a whole reply on a record this call never read. The lines are
+// else afterwards. A decoder that can only write an offered id cannot spend a
+// whole reply on a record this call never read. The lines are
 // integers because a claim cites line 3, never line 2.5, and the reader
 // decodes them into ints.
 func stageEvidenceSchema(criteria []stageEvidenceCriterion, spans []stageEvidenceSpan) json.RawMessage {

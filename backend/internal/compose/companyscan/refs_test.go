@@ -18,8 +18,8 @@ func inRefs(in Input, reply string) string {
 	return promptref.Rewrite(reply, refsOf(in).tables...)
 }
 
-func parseIDs(reply string, companyID ids.CompanyID, in Input, lang string) ([]crmcontracts.Company360Suggestion, []string, error) {
-	return ParseFindings(inRefs(in, reply), companyID, in, lang)
+func parseIDs(reply string, companyID ids.CompanyID, in Input) ([]crmcontracts.Company360Suggestion, []string, error) {
+	return ParseFindings(inRefs(in, reply), companyID, in, "en")
 }
 
 func TestTheScanShowsNoRecordIDAndReadsAMessageRefBack(t *testing.T) {

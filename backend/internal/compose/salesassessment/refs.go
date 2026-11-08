@@ -17,7 +17,7 @@ type shownRefs struct {
 
 // asShown is the input as the model reads it, each record id replaced by its
 // ref. Request and Parse both call it, so a reply is read in the refs it was
-// shown: a record id the request never showed grounds nothing.
+// shown. A record id the request never showed grounds nothing.
 func asShown(in Input) (Input, shownRefs) {
 	refs := shownRefs{deals: promptref.New("d"), decisions: promptref.New("r"), owners: promptref.New("u")}
 	in.Candidates = slices.Clone(in.Candidates)

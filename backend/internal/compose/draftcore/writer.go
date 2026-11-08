@@ -130,8 +130,8 @@ type Surface struct {
 	// no record of ours behind it.
 	KeepUncited func(kind crmcontracts.AccountDraftReasonKind, label string) bool
 	// Known is each record a citation may name, by id, with the kind the
-	// caller can see it as — so a citation can be checked against the type the
-	// model claimed. The payload shows each by a ref of that kind; an id it
+	// caller can see it as. That lets a citation be checked against the type
+	// the model claimed. The payload shows each by a ref of that kind. An id it
 	// does not hold is shown by a ref no citation can name.
 	Known map[string]string
 }

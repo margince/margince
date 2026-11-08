@@ -23,17 +23,18 @@ import (
 // site no longer shows one fails, so a converted site leaves it in the same
 // change.
 //
-// gatekit:fixture the sites not yet moved to promptref — expected data the gate checks still holds, not a waived cost
+// gatekit:fixture the sites not yet moved to promptref: expected data the gate checks still holds, not a waived cost
 var stillShowsRecordIDs = map[string]string{
 	"agent_loop/morning_brief":           "seed context record ids, passed back to tools",
 	"agent_loop/overnight_at_risk_sweep": "seed context record ids, passed back to tools",
 }
 
-// A model is never shown a record UUID: it copies one wrong, cites it in the
+// A model is never shown a record UUID. It copies one wrong, cites it in the
 // wrong field or writes it into prose, and a small model does all three. A
-// site names its records by short refs from promptref and reads a reply's refs
-// back to ids in its parser. This walks every request every registered site
-// issues for every corpus scenario; docs/how-to/add-an-ai-task.md has the steps.
+// site names its records by short refs from promptref. Its parser reads a
+// reply's refs back to ids. This walks every request every registered site
+// issues for every corpus scenario. The steps are in
+// docs/how-to/add-an-ai-task.md.
 func TestNoSiteShowsTheModelARecordUUID(t *testing.T) {
 	t.Parallel()
 	census, err := compose.NewTaskCensus()

@@ -368,9 +368,9 @@ func (r classifyResult) answeredID() string { return r.ID }
 
 func (r classifyResult) answering(id string) classifyResult { r.ID = id; return r }
 
-// classifyIDs is the refs one batch asks about, in the order it sends them:
-// what the schema lets the model name and what the validator requires it to
-// answer.
+// classifyIDs is the refs one batch asks about, in the order it sends them.
+// The schema lets the model name them and the validator requires an answer
+// for each.
 func classifyIDs(batch []unlabeledMessage) []string {
 	return capturelabel.Refs(batch).All()
 }

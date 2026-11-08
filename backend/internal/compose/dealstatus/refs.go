@@ -12,9 +12,9 @@ import (
 )
 
 // statusRefs names the records a summary shows: the deal d1, timeline
-// activities a1, a2, …, open tasks t1, … and room threads r1, …, in the order
-// the summary lists them. StatusRequest and ParseStatus both build it from the
-// same input, so a ref reads back to the record it was shown for.
+// activities a1, a2, …, open tasks t1, … and room threads r1, …. Each follows
+// the order the summary lists them. StatusRequest and ParseStatus both build it from the
+// same input. So a ref reads back to the record it was shown for.
 type statusRefs struct {
 	deal, acts, tasks, threads *promptref.Refs
 }
@@ -49,8 +49,8 @@ func (r statusRefs) tables() []*promptref.Refs {
 	return []*promptref.Refs{r.deal, r.acts, r.tasks, r.threads}
 }
 
-// recordID is the id a cited ref names, or "" for a ref this summary never
-// showed, a bare record id included, which the grounding filter then drops.
+// recordID is the id a cited ref names. It is "" for a ref this summary never
+// showed (a bare record id included), which the grounding filter then drops.
 func (r statusRefs) recordID(ref string) string {
 	for _, table := range r.tables() {
 		if id, ok := table.ID(ref); ok {
@@ -62,7 +62,7 @@ func (r statusRefs) recordID(ref string) string {
 
 var errRefInReaderText = errors.New("reply spells a record reference in reader text")
 
-// read turns every cited ref of the reply into the record id it names, and
+// read turns every cited ref of the reply into the record id it names. It
 // refuses a reply whose reader text spells a ref, as it refuses one spelling
 // an id.
 func (r statusRefs) read(parsed replyShape) (replyShape, error) {

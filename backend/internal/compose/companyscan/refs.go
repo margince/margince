@@ -6,10 +6,10 @@ package companyscan
 import "github.com/margince/margince/backend/internal/shared/kernel/promptref"
 
 // scanRefs names every record the scan payload shows. The messages a finding
-// may cite are m1, m2, … in the order they are listed; the account's own
-// records take a prefix per kind; any other record id in the payload is r1, r2,
-// … so none reaches the model. ScanRequest and ParseFindings both build it from
-// the same input.
+// may cite are m1, m2, … in the order they are listed. The account's own
+// records take a prefix per kind. Any other record id in the payload is r1,
+// r2, … so none reaches the model. ScanRequest and ParseFindings both build it
+// from the same input.
 type scanRefs struct {
 	messages *promptref.Refs
 	tables   []*promptref.Refs

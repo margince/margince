@@ -87,7 +87,7 @@ func scanSystemFor(fence promptfence.Fence, lang string) string {
 // ScanRequest is the one request the scan sends. Exported so the
 // certification case issues the request production sends rather than a copy.
 //
-// The reply schema is built per call: the citation enum is THIS input's
+// The reply schema is built per call. The citation enum is this input's
 // message refs, so a fabricated one fails the provider's own validation before
 // the reply reaches the parser. With no messages there is nothing to cite and
 // the caller does not ask at all.
@@ -242,15 +242,9 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input, refs scanRefs, sa
 	if !claims.Quoted(message.Text, raw.Quote) {
 		return crmcontracts.Company360Suggestion{}, "the quote is not in the message it cites, verbatim"
 	}
-	title, reason := strings.TrimSpace(raw.Title), strings.TrimSpace(raw.Reason)
-	if title == "" || reason == "" {
-		return crmcontracts.Company360Suggestion{}, "a finding needs both a title and a reason"
-	}
-	if claims.SpellsRecordID(title) || claims.SpellsRecordID(reason) || refs.namedIn(title) || refs.namedIn(reason) {
-		return crmcontracts.Company360Suggestion{}, "an id appears in the title or the reason; ids belong in message_id only"
-	}
-	if raw.Action != actionDraftReply && raw.Action != actionAddTask && raw.Action != actionNone {
-		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("action %q is not one the page performs", clamp(raw.Action))
+	title, reason, why := readWording(raw, refs)
+	if why != "" {
+		return crmcontracts.Company360Suggestion{}, why
 	}
 	quote := claims.CollapseSpace(raw.Quote)
 	if why := quoteOutOfBounds(quote, claims.CollapseSpace(message.Text)); why != "" {
@@ -282,6 +276,21 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input, refs scanRefs, sa
 		out.Action.ActivityId = &evidence[0].EntityId
 	}
 	return out, ""
+}
+
+// readWording returns the finding's title and reason, or why they cannot be shown.
+func readWording(raw rawFinding, refs scanRefs) (title, reason, why string) {
+	title, reason = strings.TrimSpace(raw.Title), strings.TrimSpace(raw.Reason)
+	if title == "" || reason == "" {
+		return "", "", "a finding needs both a title and a reason"
+	}
+	if claims.SpellsRecordID(title) || claims.SpellsRecordID(reason) || refs.namedIn(title) || refs.namedIn(reason) {
+		return "", "", "an id appears in the title or the reason; ids belong in message_id only"
+	}
+	if raw.Action != actionDraftReply && raw.Action != actionAddTask && raw.Action != actionNone {
+		return "", "", fmt.Sprintf("action %q is not one the page performs", clamp(raw.Action))
+	}
+	return title, reason, ""
 }
 
 func readKind(name string) (crmcontracts.Company360SuggestionKind, bool) {

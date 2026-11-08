@@ -17,7 +17,7 @@ func planRefs(in Input, floor Plan) claims.Refs {
 }
 
 // readPlanRefs reads every citation of a reply back to the record id the
-// request showed it by; a ref it never showed reads as no record, which no
+// request showed it by. A ref it never showed reads as no record, which no
 // grounding accepts. An item whose prose writes a ref is dropped, as one that
 // spells an id is.
 func readPlanRefs(reply planReply, shown claims.Refs) planReply {

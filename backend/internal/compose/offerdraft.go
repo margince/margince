@@ -411,7 +411,7 @@ func newOfferDraftRefs(dealContext []dealContextItem, catalog []crmcontracts.Pro
 }
 
 // read turns each candidate's refs into the ids they name. A source the call
-// never showed reads as none, which the evidence gate drops; a product it never
+// never showed reads as none, which the evidence gate drops. A product it never
 // showed reads as none, which prices the line at the zero sentinel.
 func (r offerDraftRefs) read(candidates []offerLineCandidate) []offerLineCandidate {
 	out := make([]offerLineCandidate, len(candidates))

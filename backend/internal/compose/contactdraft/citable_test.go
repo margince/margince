@@ -55,9 +55,9 @@ func fullView() (crmcontracts.Contact360, ids.ProjectID) {
 var summaryRef = regexp.MustCompile(`"(?:id|source_id)":"([a-z]+[0-9]+)"`)
 
 // Every record the summary shows the model is shown by a ref a reason may
-// cite, and never by its id. A ref the filter refuses is an invitation to a
-// citation that is silently dropped, so the census reads the encoded payload
-// rather than a list of its fields.
+// cite, and never by its id. A ref the filter refuses invites a citation that
+// is silently dropped. So the census reads the encoded payload rather than a
+// list of its fields.
 func TestEveryRefTheSummaryCarriesIsCitable(t *testing.T) {
 	view, project := fullView()
 	in := FromView(view, Request{Envelope: envelopeAt(textlang.English, convstate.BandFresh), ProjectID: &project})

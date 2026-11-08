@@ -13,8 +13,8 @@ var refPrefixes = map[string]string{
 	"": "r",
 }
 
-// Refs names the records one prompt shows, one table per entity type, so a
-// citation's entity_id is a short ref the model copied rather than a UUID.
+// Refs names the records one prompt shows, one table per entity type. A
+// citation's entity_id is then a short ref the model copied, not a UUID.
 type Refs map[string]*promptref.Refs
 
 // MintRefs mints a ref for every record id payload carries, of the kind known
@@ -34,8 +34,9 @@ func MintKinds(payload string, kindOf map[string]string) Refs {
 	return Refs(promptref.Mint(payload, kindOf, refPrefixes))
 }
 
-// Show writes every id the tables hold, wherever text spells it, as its ref:
-// the payload as the model reads it, or a scripted answer as a model writes it.
+// Show writes every id the tables hold, wherever text spells it, as its ref.
+// That gives the payload as the model reads it, or a scripted answer as a
+// model writes it.
 func (r Refs) Show(text string) string {
 	tables := make([]*promptref.Refs, 0, len(r))
 	for _, table := range r {
@@ -45,8 +46,9 @@ func (r Refs) Show(text string) string {
 }
 
 // Read turns each citation's ref into the record id it names under its entity
-// type. A ref of no shown record reads as no id, which grounds nothing, and a
-// sentence whose text spells a ref is dropped: reader text never carries one.
+// type. A ref of no shown record reads as no id, which grounds nothing. A
+// sentence whose text spells a ref is dropped, because reader text never
+// carries one.
 func (r Refs) Read(sentences []Sentence) []Sentence {
 	out := make([]Sentence, 0, len(sentences))
 	for _, sentence := range sentences {

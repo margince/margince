@@ -142,7 +142,8 @@ func validateTagSuggestPayload(payload tagSuggestPayload, tags []collections.Sug
 }
 
 // tagSuggestItemIDs is the item refs one batch asks about, in the order it
-// sends them: what the schema lets the model name and the validator requires.
+// sends them. The schema lets the model name them and the validator requires
+// them.
 func tagSuggestItemIDs(items []tagsuggest.Item) []string {
 	return tagsuggest.ItemRefs(items).All()
 }

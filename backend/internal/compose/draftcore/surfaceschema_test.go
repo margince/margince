@@ -89,8 +89,8 @@ func TestANullCitationReadsAsNoCitation(t *testing.T) {
 	}
 }
 
-// The model cites by the ref the payload showed. Anything else — a ref never
-// minted, the raw id, or a shown ref under another kind — names no record.
+// The model cites by the ref the payload showed. Anything else names no
+// record: a ref never minted, the raw id, or a shown ref under another kind.
 func TestACitationNamesARecordOnlyByItsShownRef(t *testing.T) {
 	for entityID, want := range map[string]int{"d1": 1, "d2": 0, deal1: 0} {
 		reasons := []modelReason{{Kind: "deal", Label: "renewal", EntityType: "deal", EntityID: entityID}}
@@ -104,8 +104,8 @@ func TestACitationNamesARecordOnlyByItsShownRef(t *testing.T) {
 	}
 }
 
-// A null type beside an id is not "no citation": it is a pair naming a record
-// by ref alone, and a ref reads back only under the kind it was shown as.
+// A null type beside an id is a pair naming a record by ref alone, never "no
+// citation". A ref reads back only under the kind it was shown as.
 // Either way the reason is dropped, never kept as a chip pointing at a record
 // nobody checked.
 func TestACitationWithANullTypeIsDropped(t *testing.T) {

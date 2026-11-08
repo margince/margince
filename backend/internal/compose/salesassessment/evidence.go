@@ -6,7 +6,7 @@ package salesassessment
 import "strings"
 
 // evidence is what a reply may cite. Only a cell grounds a sentence, since
-// the reader's evidence list shows cells; a cited candidate deal or decision
+// the reader's evidence list shows cells. A cited candidate deal or decision
 // adds only the figures its own record holds.
 type evidence struct {
 	sources map[string]CellIn
@@ -16,7 +16,7 @@ type evidence struct {
 }
 
 // evidenceOf reads each record as a source the quantity checks already
-// understand: a candidate's amount is a money value, a decision's value is
+// understand. A candidate's amount is a money value. A decision's value is
 // the text it was recorded with.
 func evidenceOf(in Input) evidence {
 	ev := evidence{sources: map[string]CellIn{}, cells: map[string]bool{}, deals: map[string]string{}}
@@ -44,9 +44,9 @@ func evidenceOf(in Input) evidence {
 }
 
 // quantitiesFit holds each {{id}} to what it renders as. A cell may stand
-// anywhere; a deal's amount stands once, in a sentence that names that deal,
-// since a model that writes {{deal id}} for the name would have the amount
-// printed where the name belongs. A decision renders as no quantity at all.
+// anywhere. A deal's amount stands once, in a sentence that names that deal.
+// Otherwise a model that writes {{deal id}} for the name would see the amount
+// printed where the name belongs. A decision renders as no quantity.
 func (ev evidence) quantitiesFit(text string) bool {
 	lowered := strings.ToLower(text)
 	used := map[string]bool{}

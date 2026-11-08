@@ -25,7 +25,7 @@ import (
 
 // scriptedBrain is a model double: it returns a fixed {"order":[...]} of
 // deal refs, or an error to exercise the deterministic fallback. It never
-// reaches the network — the L2 ranker's contract is purely the ordered ref
+// reaches the network. The L2 ranker's contract is purely the ordered ref
 // list it parses back. The prompt lists the candidates d1, d2, … in the
 // deterministic order.
 type scriptedBrain struct {

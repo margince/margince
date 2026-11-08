@@ -18,7 +18,7 @@ var monthWords = map[string]time.Month{
 }
 
 // nameLikeMonthWords are month words that are also a verb ("may") or a first
-// name ("Jan"); a pattern that scans prose for a month leaves them out.
+// name ("Jan"). A pattern that scans prose for a month leaves them out.
 var nameLikeMonthWords = map[string]time.Month{"may": 5, "jan": 1}
 
 // MonthWord is the month a lower-cased word names, "may" and "jan" included.

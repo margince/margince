@@ -268,7 +268,7 @@ func TestSignatureEnrichFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 }
 
 // The signature window names its mail by a ref, never by the activity id
-// Prepare mints: the reply cites nothing, and an id in the prompt is one a
+// Prepare mints. The reply cites nothing, and an id in the prompt is one a
 // model can copy into a field.
 func TestSignatureEnrichCaseNamesTheMailByARef(t *testing.T) {
 	req := runSignatureEnrichTrace(t)

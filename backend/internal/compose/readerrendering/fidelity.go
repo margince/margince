@@ -63,7 +63,7 @@ func checkSection(source, rendered string) error {
 }
 
 // spelledAsMonth reports whether a digit run the rendering dropped is a month
-// it wrote by name: every place the source holds the run is a month position,
+// it wrote by name. Every place the source holds the run is a month position,
 // and the rendering names that month. A count that shares the digits still
 // has to survive as digits.
 func spelledAsMonth(run, source, rendered string) bool {

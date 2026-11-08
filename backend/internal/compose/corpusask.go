@@ -198,7 +198,7 @@ func corpusAskSystemFor(fence promptfence.Fence, lang string) string {
 }
 
 // passageRefs names the passages p1, p2, … in the order the prompt lists
-// them; the request and the reply's reading both build it from the same list.
+// them. The request and the reply's reading both build it from the same list.
 func passageRefs(passages []knowledge.Passage) *promptref.Refs {
 	refs := promptref.New("p")
 	for _, p := range passages {

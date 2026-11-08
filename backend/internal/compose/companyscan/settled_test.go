@@ -18,21 +18,21 @@ func TestAFindingThatSaysAnAskIsOwedIsRefusedOnASettledMessage(t *testing.T) {
 	for _, kind := range []string{"question_unanswered", "commitment_unmet"} {
 		raw := finding(nudge, nudgeQuote)
 		raw["kind"] = kind
-		kept, refused, err := parseIDs(reply(raw), companyID, in, "en")
+		kept, refused, err := parseIDs(reply(raw), companyID, in)
 		if err != nil || len(kept) != 0 || len(refused) != 1 {
 			t.Errorf("%s on a settled message: kept %d, refused %v, err %v; want it refused", kind, len(kept), refused, err)
 		}
 	}
 	risk := finding(nudge, nudgeQuote)
 	risk["kind"] = "risk_raised"
-	if kept, _, err := parseIDs(reply(risk), companyID, in, "en"); err != nil || len(kept) != 1 {
+	if kept, _, err := parseIDs(reply(risk), companyID, in); err != nil || len(kept) != 1 {
 		t.Errorf("a risk on a settled message was refused: kept %d, err %v", len(kept), err)
 	}
 }
 
 func TestAnOpenMessageStillCarriesItsAsk(t *testing.T) {
 	in, nudge := scanInput()
-	kept, refused, err := parseIDs(reply(finding(nudge, nudgeQuote)), ids.New[ids.CompanyKind](), in, "en")
+	kept, refused, err := parseIDs(reply(finding(nudge, nudgeQuote)), ids.New[ids.CompanyKind](), in)
 	if err != nil || len(kept) != 1 || len(refused) != 0 {
 		t.Errorf("kept %d, refused %v, err %v; want the open ask kept", len(kept), refused, err)
 	}
@@ -43,18 +43,18 @@ func TestAnAccountWithDealAdviceWithheldIsNeverAdvisedToOpenADeal(t *testing.T) 
 	in.NoDealAdvice = true
 	need := finding(nudge, nudgeQuote)
 	need["kind"] = "need_raised"
-	kept, refused, err := parseIDs(reply(need), ids.New[ids.CompanyKind](), in, "en")
+	kept, refused, err := parseIDs(reply(need), ids.New[ids.CompanyKind](), in)
 	if err != nil || len(kept) != 0 || len(refused) != 1 {
 		t.Errorf("a need with deal advice withheld: kept %d, refused %v, err %v; want it refused", len(kept), refused, err)
 	}
-	if kept, _, err := parseIDs(reply(finding(nudge, nudgeQuote)), ids.New[ids.CompanyKind](), in, "en"); err != nil || len(kept) != 1 {
+	if kept, _, err := parseIDs(reply(finding(nudge, nudgeQuote)), ids.New[ids.CompanyKind](), in); err != nil || len(kept) != 1 {
 		t.Errorf("an open question was refused with deal advice withheld: kept %d, err %v", len(kept), err)
 	}
 }
 
 func TestOnlyTheModelsOwedFindingsAreHeldToTheThread(t *testing.T) {
 	in, nudge := scanInput()
-	kept, _, err := parseIDs(reply(finding(nudge, nudgeQuote)), ids.New[ids.CompanyKind](), in, "en")
+	kept, _, err := parseIDs(reply(finding(nudge, nudgeQuote)), ids.New[ids.CompanyKind](), in)
 	if err != nil || len(kept) != 1 {
 		t.Fatalf("kept %d, err %v", len(kept), err)
 	}

@@ -243,7 +243,7 @@ func TestADealQuantityStandsOnlyForTheAmountOfADealTheSentenceNames(t *testing.T
 }
 
 // parseCited parses a reply scripted with the input's record ids as the model
-// would write it: each id spelled as the ref the request showed for it.
+// would write it. Each id is spelled as the ref the request showed for it.
 func parseCited(reply string, in Input) (Written, error) {
 	_, refs := asShown(in)
 	var pairs []string

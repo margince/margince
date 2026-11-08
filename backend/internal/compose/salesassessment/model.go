@@ -297,8 +297,8 @@ func keepSentence(line replySentence, ev evidence, known map[string]bool) (Sente
 	return Sentence{Text: displayed, Kind: sentenceKind(line.Kind), Cells: kept}, true, nil
 }
 
-// refusedProse says whether a sentence's own words already rule it out, and
-// errs when they refuse the whole reply: past the bound, or spelling an id.
+// refusedProse says whether a sentence's own words already rule it out. It
+// errs when they refuse the whole reply, past the bound or spelling an id.
 func refusedProse(text string, ev evidence, known map[string]bool) (bool, error) {
 	if machineWording(text) || text == "" {
 		return true, nil

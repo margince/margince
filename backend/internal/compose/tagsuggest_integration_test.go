@@ -87,7 +87,7 @@ func (b *tagBrainStub) CompleteValidated(ctx context.Context, req model.Request,
 }
 
 // askedAbout lists the bodies of the items the stub was asked about, across
-// calls: the prompt names an item by a ref, never by its activity id.
+// calls. The prompt names an item by a ref, never by its activity id.
 func (b *tagBrainStub) askedAbout() []string {
 	var out []string
 	for _, req := range b.prompts {

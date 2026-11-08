@@ -46,7 +46,7 @@ func (s *briefStub) Complete(_ context.Context, req model.Request) (model.Respon
 const briefToken = "quote tracking"
 
 // briefCaseFor builds the case over a meeting whose own activity is the record
-// a correct brief cites, and returns the ref the request shows it by: the
+// a correct brief cites. It returns the ref the request shows it by. The
 // meeting is always citable, since knownRecords seeds it.
 func briefCaseFor() (*meetingBriefCase, string) {
 	meeting := ids.NewV7().String()

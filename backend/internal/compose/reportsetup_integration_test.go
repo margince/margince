@@ -16,9 +16,9 @@ import (
 )
 
 // The model reads the live products and the reader's metrics. A product it
-// names by the ref it was shown is resolved, and one it names by an id it was
-// never shown is named back. The
-// proposal writes nothing: the initiative list stays empty.
+// names by the ref it was shown is resolved. One it names by an id it was
+// never shown is named back. The proposal writes nothing: the initiative list
+// stays empty.
 func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)

@@ -37,17 +37,22 @@ type shownBy struct {
 
 // dispositionShown finds a first-time sender by its address, in the brackets
 // addressLine writes it in, so one address is never found inside another.
-var dispositionShown = shownBy{key: "id",
-	query: `SELECT '(' || email || ')' FROM capture_pending_counterparty WHERE id = $1`}
+var dispositionShown = shownBy{
+	key:   "id",
+	query: `SELECT '(' || email || ')' FROM capture_pending_counterparty WHERE id = $1`,
+}
 
 // requestShown finds an answered request by the first line the settlement
 // prompt renders of it, which opens its conversation's span.
-var requestShown = shownBy{key: "source_id", query: `SELECT body FROM activity WHERE id = $1`,
+var requestShown = shownBy{
+	key: "source_id", query: `SELECT body FROM activity WHERE id = $1`,
 	render: func(body string) string {
 		opening, _, _ := strings.Cut(strings.TrimSpace(settleMessageBody(threadMessage{
-			Direction: string(crmcontracts.ActivityDirectionInbound), Body: body})), "\n")
+			Direction: string(crmcontracts.ActivityDirectionInbound), Body: body,
+		})), "\n")
 		return opening
-	}}
+	},
+}
 
 // recordUUID matches a record id in a scripted reply.
 var recordUUID = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)

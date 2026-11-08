@@ -14,9 +14,9 @@ import (
 var nameFields = []string{"label", "name", "title", "display_name"}
 
 // RefWhere is the short ref a request shows for the record whose field holds
-// value, read off the request the way a model reads it: the "id" the record's
+// value. It reads the request the way a model does, from the "id" the record's
 // JSON object gives before that field. A request names records by refs and
-// never by id, so a scripted reply that cites a record a test seeded names it
+// never by id. So a scripted reply that cites a record a test seeded names it
 // by this. False when the request shows no such record.
 func RefWhere(req model.Request, field, value string) (string, bool) {
 	shown := regexp.MustCompile(`"id":"([a-z]+[0-9]+)"[^{}]*?"` + regexp.QuoteMeta(field) + `":"` + regexp.QuoteMeta(value) + `"`)

@@ -96,8 +96,8 @@ func partyKey(refs *promptref.Refs, ref string) string {
 	return ref
 }
 
-// partyKeys reads each ref of a list back to its participant key, keeping nil
-// as nil: an omitted list and an empty one mean different things.
+// partyKeys reads each ref of a list back to its participant key. It keeps nil
+// as nil, because an omitted list and an empty one mean different things.
 func partyKeys(refs *promptref.Refs, cited []string) []string {
 	if cited == nil {
 		return nil

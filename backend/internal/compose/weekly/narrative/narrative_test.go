@@ -294,7 +294,7 @@ func TestASentenceAboutDealsIsJudgedByTheDeals(t *testing.T) {
 }
 
 // The subtract-the-difference rule has nothing to work on when no task carried
-// over and no deal moved; the prompt must not leave the model to invent a
+// over and no deal moved. The prompt must not leave the model to invent a
 // meaning for the counts.
 func TestAWeekWithNothingOpenAndNothingMovedIsStatedNotInterpreted(t *testing.T) {
 	week := Input{Counts: Counts{TasksDue: 2, TasksDone: 2, ProposalsAccepted: 1}}

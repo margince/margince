@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// The model cites a context item and a product by the refs the prompt shows;
-// the orchestrator reads them back to ids and refuses a ref it never showed.
+// The model cites a context item and a product by the refs the prompt shows.
+// The orchestrator reads them back to ids and refuses a ref it never showed.
 func TestOfferDraftNamesRecordsByRefAndReadsThemBack(t *testing.T) {
 	product := crmcontracts.Product{
 		Id: openapi_types.UUID(ids.NewV7()), Name: "Support Plan", UnitPriceMinor: 5000, Currency: "EUR",

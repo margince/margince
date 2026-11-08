@@ -66,7 +66,7 @@ func TestParticipantPromptDoesNotAddUnquotedAddresses(t *testing.T) {
 	}
 }
 
-// The model cites a participant by the short ref the prompt lists, and a reply
+// The model cites a participant by the short ref the prompt lists. A reply
 // reads it back to the participant's record key, which never reaches the prompt.
 func TestAParticipantIsListedAndReadBackByItsShortRef(t *testing.T) {
 	t.Parallel()

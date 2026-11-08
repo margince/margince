@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -350,118 +349,6 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 // the sectioned brief can never disagree about what counts as checkable.
 func keepGroundedSentences(sentences []Sentence, companyID string, in Input) []Sentence {
 	return claims.Keep(sentences, knownRecords(companyID, in), knownNature, natureFact)
-}
-
-// knownRecords is what this brief was written from, keyed by TYPE AND ID.
-//
-// Keying on the id alone accepted a real deal id cited as a contact: the id
-// passes, and the card then routes the reader to the wrong screen — or to a
-// record of a kind they were never shown. The pair is the reference, so the
-// pair is what is checked.
-// The VALUE is what that record said, as the model was shown it, so a sentence
-// can be held to the rows it points at rather than only to their existence.
-func knownRecords(companyID string, in Input) map[Evidence]string {
-	known := map[Evidence]string{{EntityType: citeCompany, EntityID: companyID}: accountItself(in)}
-	for _, deal := range in.OpenDeals {
-		known[Evidence{EntityType: citeDeal, EntityID: deal.ID}] = claims.Source(deal)
-	}
-	for _, act := range in.Recent {
-		known[Evidence{EntityType: citeActivity, EntityID: act.ID}] = claims.Source(act)
-	}
-	for _, contact := range in.Contacts {
-		known[Evidence{EntityType: citeContact, EntityID: contact.ID}] = claims.Source(contact)
-	}
-	for _, task := range in.OpenTasks {
-		known[Evidence{EntityType: citeActivity, EntityID: task.ID}] = claims.Source(task)
-	}
-	for _, commitment := range in.OpenCommitments {
-		// A commitment cites the message it was read from, which Recent may
-		// carry too, and one message can hold two promises. The texts are
-		// joined under the one key so a sentence is held to all of them.
-		key := Evidence{EntityType: citeActivity, EntityID: commitment.ActivityID}
-		known[key] = strings.TrimSpace(known[key] + "\n" + claims.Source(commitment))
-	}
-	return known
-}
-
-// accountItself is the account's OWN facts: the input with its lists emptied.
-//
-// The whole input would make a citation of the company a skeleton key —
-// most sentences cite it, and every figure anywhere in the payload would answer
-// for them. What a sentence about the account may state is what the account
-// row says: its industry, its size, its lifetime won.
-func accountItself(in Input) string {
-	in.Contacts, in.OpenDeals, in.Recent, in.OpenTasks, in.OpenCommitments = nil, nil, nil, nil, nil
-	return claims.Source(in)
-}
-
-// recordKey is knownRecords' pair without the citation's descriptive Name, so
-// a name lookup and a grounding lookup can share one shape without either
-// caring what the other keys on.
-type recordKey struct {
-	EntityType string
-	EntityID   string
-}
-
-// recordNames is every citable record's own display name, read from the SAME
-// input the brief was written from — never from the model's reply, which
-// cannot be trusted to relay a record's name correctly, and never from the
-// evidence a sentence already carries, which for the model lane has none.
-func recordNames(in Input) map[recordKey]string {
-	names := make(map[recordKey]string, len(in.OpenDeals)+len(in.Recent)+len(in.Contacts)+len(in.OpenTasks)+len(in.OpenCommitments))
-	for _, deal := range in.OpenDeals {
-		names[recordKey{citeDeal, deal.ID}] = deal.Name
-	}
-	for _, act := range in.Recent {
-		names[recordKey{citeActivity, act.ID}] = act.Subject
-	}
-	for _, contact := range in.Contacts {
-		names[recordKey{citeContact, contact.ID}] = contact.Name
-	}
-	for _, task := range in.OpenTasks {
-		names[recordKey{citeActivity, task.ID}] = task.Name
-	}
-	// A commitment's message is named by the promise, not the subject line, and
-	// the first of two promises from one message keeps the name.
-	claimed := make(map[recordKey]bool, len(in.OpenCommitments))
-	for _, commitment := range in.OpenCommitments {
-		key := recordKey{citeActivity, commitment.ActivityID}
-		if !claimed[key] {
-			names[key], claimed[key] = commitment.Claim, true
-		}
-	}
-	return names
-}
-
-// withEvidenceNames attaches each citation's own display name to sentences
-// already accepted by the grounding filter — the ONE place that runs for
-// both writers, so a "deal" chip names the deal whichever lane wrote the
-// sentence about it. Run after grounding, never before: a name is cosmetic,
-// and attaching it earlier would risk a caller comparing full Evidence
-// values before they learn to strip it, exactly the trap Grounded and Dedupe
-// guard against in package claims.
-func withEvidenceNames(sentences []Sentence, in Input) []Sentence {
-	names := recordNames(in)
-	for i := range sentences {
-		evidence := sentences[i].Evidence
-		for j := range evidence {
-			key := recordKey{evidence[j].EntityType, evidence[j].EntityID}
-			if name, ok := names[key]; ok && name != "" && evidence[j].Name == "" {
-				evidence[j].Name = name
-			}
-		}
-	}
-	return sentences
-}
-
-// withSectionEvidenceNames is withEvidenceNames over a brief's sections
-// rather than a flat sentence list — the shape Write returns, and the shape
-// Get caches.
-func withSectionEvidenceNames(sections []Section, in Input) []Section {
-	for i := range sections {
-		sections[i].Sentences = withEvidenceNames(sections[i].Sentences, in)
-	}
-	return sections
 }
 
 // The section kinds, DERIVED from the contract's enum rather than re-spelled,

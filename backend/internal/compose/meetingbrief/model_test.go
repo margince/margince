@@ -21,7 +21,7 @@ import (
 )
 
 // laneReturning answers one canned reply, and records the request it was sent.
-// in, when set, is the meeting the request shows: each record id in reply is
+// in, when set, is the meeting the request shows. Each record id in reply is
 // then spelled as the ref that request showed, as a model writes it.
 type laneReturning struct {
 	reply string
