@@ -157,14 +157,13 @@ func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survi
 	return carried, nil
 }
 
-// IsMeetingCopyArchive reports whether an archive's audit evidence records a
-// meeting copy folded into another row. Its identities and guests moved to
-// that row, so unarchiving it alone would bring back a second, hollow meeting.
-func IsMeetingCopyArchive(evidence []byte) bool {
+// IsFoldedCopyArchive reports whether an archive's audit evidence records a
+// copy folded into another row. Restoring it alone would duplicate the message.
+func IsFoldedCopyArchive(evidence []byte) bool {
 	var recorded map[string]any
 	if json.Unmarshal(evidence, &recorded) != nil {
 		return false
 	}
 	reason, ok := recorded[evidenceReasonKey].(string)
-	return ok && reason == meetingCopyReason
+	return ok && (reason == meetingCopyReason || reason == mailCopyReason)
 }

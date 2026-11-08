@@ -45,16 +45,7 @@ type HeldThread struct {
 	Subject    string
 	OccurredAt *time.Time
 	Precision  *string
-	// HasActivity is whether the message this hold was raised about still
-	// exists — read WITHOUT the content clause, because existence and
-	// readability are different questions.
-	//
-	// It separates three states the screen draws differently: a message with a
-	// subject, a message whose subject this reader may not have (withheld, or
-	// sent blank), and no message at all — erased while the verdict stood,
-	// which the ledger deliberately survives. Deriving it from the gated
-	// subject collapsed the middle into the last and told a holder their
-	// evidence was destroyed while it sat in the thread.
+	// HasActivity preserves the response shape for older clients; listed messages are readable.
 	HasActivity bool
 	// ActivityID is the message that opened the thread, for a reader who wants
 	// to read it rather than only be told it is held.
@@ -111,12 +102,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 		args = append(args, v)
 		return len(args)
 	}
-	// The subject is activity CONTENT, so it is read through the same clause
-	// every other reader of that table composes. This is the caller's own
-	// mailbox, so the clause admits them — but writing the read unconditionally
-	// would leave a projection of activity text that no audience rule governs,
-	// which is the shape audiencereaders_test refuses. A held thread the caller
-	// may not read the content of still appears, with no subject.
+	// Content scope governs both previews and search matches.
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return HeldThreadPage{}, err
@@ -129,27 +115,7 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 		filters := query.filters(after, arg)
 		limit := storekit.ClampLimit(query.Limit)
 		limitAt := arg(limit + 1)
-		// The activity join is a LEFT one and the ledger is the driving table:
-		// a verdict outlives the message it was raised about (first_activity_id
-		// is ON DELETE SET NULL, so an erasure inside the window nulls it
-		// rather than dropping the row), and an inner join would silently drop
-		// exactly the threads whose evidence is gone while the hold stands.
-		//
-		// The content clause rides the JOIN rather than the WHERE for the same
-		// reason: in the WHERE it would turn the outer join into an inner one
-		// and drop every row whose activity is absent or withheld.
-		//
-		// `present` is a SECOND join carrying no content clause, and that is
-		// deliberate. Whether the message still exists and whether this reader
-		// may read it are different questions; the gated join answers only the
-		// second, and its columns go null for an erased message and a withheld
-		// one alike. Deriving existence from them told a holder their evidence
-		// had been destroyed while it sat in the thread.
-		//
-		// It discloses nothing new: the reader is looking at their own verdict
-		// row, which names first_activity_id. Only the boolean crosses over —
-		// no subject, no id, no occurred_at. A filter reads `a`, or the ledger
-		// through messageErased, so no match crosses over either.
+		// Only readable messages are corrections; an orphan hold still protects future replies.
 		rows, err := tx.Query(ctx, `
 			SELECT v.thread_key,
 			       v.status,
@@ -159,18 +125,14 @@ func HeldThreadsFor(ctx context.Context, db *database.DB, query HeldThreadQuery)
 			       a.occurred_at,
 			       a.occurred_precision,
 			       v.attempts,
-			       present.id IS NOT NULL  AS has_activity,
+			       a.id IS NOT NULL  AS has_activity,
 			       v.status = 'pending'    AS pending,
 			       coalesce(a.occurred_at, v.created_at) AS sort_at,
 			       v.id
 			  FROM capture_thread_verdict v
-			  LEFT JOIN activity a
-			    ON a.id = v.first_activity_id
-			   AND a.archived_at IS NULL
-			   AND `+content+`
-			  LEFT JOIN activity present
-			    ON present.id = v.first_activity_id
-			   AND present.archived_at IS NULL
+			  JOIN LATERAL (SELECT a.id,a.subject,a.occurred_at,a.occurred_precision FROM activity a
+ WHERE `+HeldMessageSQL("v", "a")+` AND `+content+`
+ ORDER BY (a.id=v.first_activity_id) DESC,a.occurred_at DESC,a.id DESC LIMIT 1) a ON true
 			 WHERE v.user_id = $1
 			   AND v.status NOT IN ('cleared', 'shared_by_owner')`+filters+`
 			 ORDER BY pending DESC, sort_at DESC, v.id DESC

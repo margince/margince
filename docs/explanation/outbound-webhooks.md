@@ -294,8 +294,8 @@ A body over 256 KiB is not sent: the row is dead-lettered with its reason, and a
 
 Every event and its fields: [reference/webhook-events.md](../reference/webhook-events.md). Before a
 body is rendered, `entity` gets `url`, a link from the public base URL, and `name` for a deal,
-company or project (`recordref.go`). A contact or lead gets no name: erasure does not reach a stored
-delivery.
+company or project (`recordref.go`). A contact or lead gets no name. The stored body is cleared 7
+days after its delivery ended, or at once by an erasure ([erasure-leftovers.md](erasure-leftovers.md)).
 
 `POST /webhook-subscriptions/body-preview` renders a template against a sample event with the same
 engine. The sample comes from the event's schema in `public-events.yaml` (`PublicEventSamples`,

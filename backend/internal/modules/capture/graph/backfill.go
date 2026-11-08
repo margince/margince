@@ -143,7 +143,7 @@ func (c *Connector) backfillOne(ctx context.Context, raw []byte, fetchErr error,
 		// provider is waited out, anything else ends the run.
 		return false, fetchErr
 	}
-	return captureOne(ctx, raw, sink, c.bounces, owner, msg.ParentFolderID, sentByOwner, msg.ReceivedAt)
+	return captureOne(ctx, raw, sink, c.bounces, owner, msg.ParentFolderID, msg.ID, sentByOwner, msg.ReceivedAt)
 }
 
 // backfillWalk fetches a few messages of a page at once and captures them in

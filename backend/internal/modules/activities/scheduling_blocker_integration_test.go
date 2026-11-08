@@ -35,7 +35,7 @@ func savePage(t *testing.T, f *invitationFixture, enabled bool) crmcontracts.Sch
 func guestProfile(t *testing.T, f *invitationFixture, slug string) map[string]any {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	Handlers{store: f.store}.GetPublicSchedulingProfile(rec, httptest.NewRequest(http.MethodGet, "/profile", nil).WithContext(f.ctx), slug)
+	Handlers{store: f.store}.GetPublicSchedulingProfile(rec, httptest.NewRequest(http.MethodGet, "/profile", nil).WithContext(f.ctx), slug, crmcontracts.GetPublicSchedulingProfileParams{})
 	var body map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || rec.Code != http.StatusOK {
 		t.Fatalf("public profile: %d %s", rec.Code, rec.Body.String())
@@ -104,7 +104,7 @@ func TestTheBookingsSecondReadAnswersAPausedPageAsUnknown(t *testing.T) {
 	start := monday(10)
 	req := crmcontracts.BookPublicMeetingJSONRequestBody{Start: start, End: start.Add(30 * time.Minute)}
 	_, ok := Handlers{store: f.store}.reservePublicInvitation(rec, httptest.NewRequest(http.MethodPost, "/book", nil).WithContext(f.ctx),
-		BookingPage{HostUserID: ids.From[ids.UserKind](f.env.rep)}, req, ids.UUID(f.request.ContactId), invitationIntent{}, MarketingNotAsked)
+		BookingPage{HostUserID: ids.From[ids.UserKind](f.env.rep)}, req, ids.UUID(f.request.ContactId), invitationIntent{}, MarketingNotAsked, nil)
 	if ok || rec.Code != http.StatusNotFound {
 		t.Errorf("a page paused before the reservation answered %d, want 404", rec.Code)
 	}

@@ -208,7 +208,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 		return counterpartyCreated{}, err
 	}
 	out := counterpartyCreated{ContactID: res.ContactID}
-	if res.TriagePending {
+	if res.TriagePending && in.Mark == "" {
 		out.TriageDomain = res.TriageDomain
 	}
 	return out, nil

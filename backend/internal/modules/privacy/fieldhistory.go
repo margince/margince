@@ -82,10 +82,13 @@ type FieldHistoryPage struct {
 // the dispatch both read from the same word.
 const entityTypeActivity = "activity"
 
+// entityTypeProject is the project record's entity type.
+const entityTypeProject = "project"
+
 // The record kinds whose field history is readable — the audit spine's
 // entity_type is free text, so the surface pins the vocabulary.
 var fieldHistoryEntityTypes = map[string]bool{
-	contactObject: true, "company": true, "deal": true, "lead": true, "project": true, entityTypeActivity: true,
+	contactObject: true, "company": true, "deal": true, "lead": true, entityTypeProject: true, entityTypeActivity: true,
 }
 
 // fieldHistoryEntityTypeList is fieldHistoryEntityTypes spelled for a

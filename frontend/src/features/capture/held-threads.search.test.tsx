@@ -75,9 +75,14 @@ async function openDrawer() {
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "View Held threads" }),
+    await screen.findByRole("button", {
+      name: "View Mail not shared with the team",
+    }),
   );
-  await screen.findByRole("dialog", { name: "Held threads" });
+  await screen.findByRole("dialog", { name: "Mail not shared with the team" });
+  await user.click(
+    screen.getByRole("button", { name: "Browse recent conversations" }),
+  );
   return user;
 }
 

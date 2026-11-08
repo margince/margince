@@ -195,7 +195,7 @@ func boundToAnotherRecordType(statement string) bool {
 // path probes with it and nothing else, and a reader inside such a transaction
 // is guarded by a call this gate could not otherwise see.
 var heldScopeMarkers = []string{
-	"ActivityDiscoverClause", "ActivityContentClause", "ActivityAvailableClause", "ActivityExternalEvidenceClause",
+	"HeldMessageSQL", "ActivityDiscoverClause", "ActivityContentClause", "ActivityAvailableClause", "ActivityExternalEvidenceClause",
 	"EnsureActivityVisible", "EnsureActivityVisibleLive",
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
 	"EnsureActivityWritable",
@@ -275,6 +275,7 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/purge.go:RetentionService.purgeOneActivity":               "Locks only the activity id before the caller rechecks provider evidence. No content is projected; eraseActivityContent separately enforces the statutory floor and returns errKeptByFloor for held mail.",
 	"internal/modules/privacy/linkedhistoricalaudit.go:legacyAuditEntries":              "system-only audit-key walk returns metadata and reduction flags. Each matching record is checked for current holds and correspondence floors before a per-entry proof changes its payload; no activity image leaves the database",
 	"internal/modules/privacy/historicalaudit.go:RedactHistoricalAuditPageTx":           "scans audit IDs, entity references and a certificate flag, not activity content. Each candidate is checked against current holds and the shared correspondence floor before any payload is erased",
 	"internal/modules/activities/participantevidence.go:lockParticipantEvidenceParents": "Locks only opaque parent IDs before derived-clock backfill takes child row locks. Held parents must share the cascade lock order too; no date or content leaves this function, and evidence readers separately exclude held rows.",

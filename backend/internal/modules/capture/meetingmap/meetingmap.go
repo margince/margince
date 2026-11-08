@@ -216,9 +216,12 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			Direction:        "",
 			MeetingDocuments: m.notes,
 		},
-		Source:     connectorName + ":" + m.id,
-		CapturedBy: "connector:" + connectorName,
-		Raw:        raw,
+		// This calendar's own id for its copy, so its import row can resolve a
+		// later tombstone that carries nothing else.
+		ProviderMessageID: m.id,
+		Source:            connectorName + ":" + m.id,
+		CapturedBy:        "connector:" + connectorName,
+		Raw:               raw,
 		// What this meeting is called on EVERY calendar, as distinct from the
 		// natural key above, which is only what THIS provider numbered it. Two
 		// colleagues on the same meeting sync two different event ids for it, so

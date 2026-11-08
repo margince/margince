@@ -263,7 +263,16 @@ function MembersTable({
           header: t("users.teamsLabel"),
           render: (u) => <MemberTeams ids={u.team_ids} names={teamNames} />,
         },
-        ...(entity ? [entity] : []),
+        ...(entity
+          ? [
+              {
+                ...entity,
+                render: (u: User) => (
+                  <span className="users-entity">{entity.render(u)}</span>
+                ),
+              },
+            ]
+          : []),
         activity,
         {
           key: "verbs",
@@ -287,14 +296,16 @@ function MembersTable({
   // paint. The caption above still counts every match.
   return (
     <>
-      <DataTable
-        fold
-        bleed
-        label={t("users.membersTitle")}
-        columns={columns}
-        rows={list.length > count ? list.slice(0, count) : list}
-        rowKey={(u) => u.id}
-      />
+      <div className="users-members-table">
+        <DataTable
+          fold
+          bleed
+          label={t("users.membersTitle")}
+          columns={columns}
+          rows={list.length > count ? list.slice(0, count) : list}
+          rowKey={(u) => u.id}
+        />
+      </div>
       <ScrollSentinel
         list={search}
         cursor={nextBatch}

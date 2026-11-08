@@ -52,6 +52,20 @@ func ImportRunOf(ctx context.Context) *ids.UUID {
 	return &id
 }
 
+type syncKey struct{}
+
+// WithSync marks every write under ctx as mirrored in from another CRM by an
+// extension. Unlike an import it names no run: a sync has no batch to undo.
+func WithSync(ctx context.Context) context.Context {
+	return context.WithValue(ctx, syncKey{}, true)
+}
+
+// Synced reports whether the write was mirrored in from another CRM.
+func Synced(ctx context.Context) bool {
+	synced, ok := ctx.Value(syncKey{}).(bool)
+	return ok && synced
+}
+
 // ImportMark is the pair of members an event of an import's write carries, so
 // an outside system can tell brought-in history from new work. Both are nil for
 // a write made on its own, which keeps the members absent from the payload.

@@ -106,6 +106,7 @@ func (a *httpAPI) get(ctx context.Context, accessToken, fullURL string, hdr http
 		return 0, fmt.Errorf("graph: building request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Prefer", immutableMessageIDs)
 	for k, vs := range hdr {
 		for _, v := range vs {
 			req.Header.Add(k, v)
@@ -159,6 +160,7 @@ func (a *httpAPI) writeJSON(ctx context.Context, method, fullURL, accessToken st
 		return 0, fmt.Errorf("graph: building request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Prefer", immutableMessageIDs)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := a.client.Do(req)
 	if err != nil {

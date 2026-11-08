@@ -20,8 +20,8 @@ import (
 // is, which is the only seat whose captured copy a removal may reach.
 func seatContext(seat ids.UUID) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
-		Type:   principal.PrincipalHuman,
-		ID:     "human:" + seat.String(),
+		Type:   principal.PrincipalConnector,
+		ID:     "connector:gmail",
 		UserID: seat,
 	})
 }
@@ -163,5 +163,17 @@ func TestWithMessagePurgerLeavesTheOriginalUnarmed(t *testing.T) {
 	}
 	if armed == base {
 		t.Error("WithMessagePurger returned the same Sink rather than a copy")
+	}
+}
+
+func TestARemovalCannotNameAnotherConnectorsMessage(t *testing.T) {
+	calls := 0
+	sink := capture.NewSink(nil).WithMessagePurger(func(context.Context, func(context.Context, pgx.Tx) error, ids.UUID, string, string) error {
+		calls++
+		return nil
+	})
+	err := sink.RemoveMessage(seatContext(ids.NewV7()), connector.NaturalKey{SourceSystem: "graph", SourceID: "msg-1"})
+	if err == nil || calls != 0 {
+		t.Fatalf("mismatched removal: error=%v, purges=%d", err, calls)
 	}
 }
