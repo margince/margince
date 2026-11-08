@@ -74,6 +74,7 @@ const meta: Meta<typeof WorklistBody> = {
     onRefresh: fn(),
     onMore: fn(),
     cursor: undefined,
+    complete: false,
     loadingMore: false,
     moreFailed: false,
   },
@@ -118,6 +119,7 @@ export const DecisionsView: Story = {
       ],
       summary: { ...day.summary, total: 1, lower_priority: 1 },
     },
+    complete: true,
   },
   play: async ({ canvasElement }) => {
     await expect(
@@ -130,11 +132,23 @@ export const DecisionsViewDark: Story = {
   globals: { theme: "dark" },
 };
 
+// No cursor, but the last page did not say the list is whole (a source held
+// rows back), so the end makes no "all loaded" claim over the rows shown.
+export const DecisionsViewNotWhole: Story = {
+  args: { ...DecisionsView.args, complete: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByRole("listitem").length).toBeGreaterThan(0);
+    await expect(canvas.queryByText("All decisions loaded.")).toBeNull();
+  },
+};
+
 // A failed next batch keeps the loaded rows and offers Retry at the end.
 export const NextBatchFailed: Story = {
   args: {
     ...DecisionsView.args,
     cursor: "page-2",
+    complete: false,
     moreFailed: true,
   },
   play: async ({ canvasElement }) => {
