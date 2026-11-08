@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -137,6 +138,11 @@ func (s *Store) correctTechnicalContact(
 func (s *Store) writeTechnicalOutcome(
 	ctx context.Context, tx pgx.Tx, contact technicalCandidate,
 ) (technicalOutcome, error) {
+	for _, email := range contact.emails {
+		if mailidentity.IsRecruitingRelayAddress(email) {
+			return technicalHeld, nil
+		}
+	}
 	technical := technicalAddresses(contact.emails)
 	switch {
 	case len(technical) == 0:
