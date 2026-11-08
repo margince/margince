@@ -27,10 +27,8 @@ import (
 var stillShowsRecordIDs = map[string]string{
 	"agent_loop/morning_brief":               "seed context record ids, passed back to tools",
 	"agent_loop/overnight_at_risk_sweep":     "seed context record ids, passed back to tools",
-	"brief_ranking/rank":                     "candidate ids",
 	"capture_confidentiality_verdict/thread": "the thread id on its one span; integration fakes key on it",
 	"capture_counterparty_verdict/verdict":   "the sender id on its one span; integration fakes key on it",
-	"corpus_ask/corpus_ask":                  "passage ids",
 	"deal_verdict/deal_verdict":              "activity, stage and criterion ids; integration fakes reply with them",
 	"draft_reply/account":                    "the recipient id",
 	"draft_reply/contact":                    "the recipient id",

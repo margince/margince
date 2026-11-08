@@ -24,11 +24,12 @@ import (
 )
 
 // scriptedBrain is a model double: it returns a fixed {"order":[...]} of
-// deal ids, or an error to exercise the deterministic fallback. It never
-// reaches the network — the L2 ranker's contract is purely the ordered id
-// list it parses back.
+// deal refs, or an error to exercise the deterministic fallback. It never
+// reaches the network — the L2 ranker's contract is purely the ordered ref
+// list it parses back. The prompt lists the candidates d1, d2, … in the
+// deterministic order.
 type scriptedBrain struct {
-	order []ids.UUID
+	order []string
 	err   error
 }
 
@@ -37,8 +38,8 @@ func (b scriptedBrain) Complete(_ context.Context, _ model.Request) (model.Respo
 		return model.Response{}, b.err
 	}
 	quoted := make([]string, len(b.order))
-	for i, id := range b.order {
-		quoted[i] = fmt.Sprintf("%q", id.String())
+	for i, ref := range b.order {
+		quoted[i] = fmt.Sprintf("%q", ref)
 	}
 	return model.Response{Text: `{"order":[` + strings.Join(quoted, ",") + `]}`}, nil
 }
@@ -58,7 +59,7 @@ func TestBriefL2ReordersWithinTheCandidateSet(t *testing.T) {
 		t.Fatalf("deterministic queue = %v, want [Deal A, Deal B]", queueDeals(deterministic.Queue))
 	}
 
-	l2 := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(scriptedBrain{order: []ids.UUID{b.dealB, b.dealA}}, nil)
+	l2 := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(scriptedBrain{order: []string{"d2", "d1"}}, nil)
 	ranked, err := l2.Rank(b.repCtx, briefClock)
 	if err != nil {
 		t.Fatal(err)
@@ -84,8 +85,9 @@ func TestBriefL2ReordersWithinTheCandidateSet(t *testing.T) {
 func TestBriefL2CannotBreachTheCutoffOrInventDeals(t *testing.T) {
 	b := setupBrief(t)
 
-	fabricated := ids.NewV7()
-	brain := scriptedBrain{order: []ids.UUID{b.dealC, fabricated, b.dealB, b.dealA}}
+	// d3 and d4 are refs the request never showed: Deal C is no candidate, and
+	// the fourth is invented.
+	brain := scriptedBrain{order: []string{"d3", "d4", "d2", "d1"}}
 	l2 := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(brain, nil)
 
 	ranked, err := l2.Rank(b.repCtx, briefClock)
@@ -98,7 +100,7 @@ func TestBriefL2CannotBreachTheCutoffOrInventDeals(t *testing.T) {
 		t.Fatalf("bounded L2 queue = %v, want [Deal B, Deal A] with Deal C and the invented id dropped", queueDeals(ranked.Queue))
 	}
 	for _, item := range ranked.Queue {
-		if item.DealID == b.dealC || item.DealID == fabricated {
+		if item.DealID == b.dealC {
 			t.Fatalf("item %s breached the candidate set — the L2 layer must never inject below the cutoff", item.DealID)
 		}
 	}

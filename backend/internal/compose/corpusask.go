@@ -58,6 +58,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/vectorkit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -110,7 +111,7 @@ documents conflict.
 When coverage is "answers":
   - write one claim per sentence of the answer. Every claim carries:
       - text: one sentence of the answer, in your own words.
-      - id: the id of the passage that sentence rests on.
+      - id: the reference of the passage that sentence rests on, such as p2.
       - quote: a span copied from that passage, CHARACTER FOR CHARACTER.
   - write summary as the ANSWER, in the words a colleague would use, saying only
     what your own claims say. Lead with the answer itself — never open by
@@ -166,7 +167,7 @@ func CorpusAskRequest(question string, passages []knowledge.Passage, lang string
 		System:         corpusAskSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: fence.Wrap(renderCorpusAsk(question, passages))}},
 		MaxTokens:      2 * ai.ReasoningOutputMaxTokens,
-		ResponseSchema: corpusAskSchema(passageIDs(passages)),
+		ResponseSchema: corpusAskSchema(passageRefs(passages).All()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -196,12 +197,14 @@ func corpusAskSystemFor(fence promptfence.Fence, lang string) string {
 		"\n" + fence.Rule("passage")
 }
 
-func passageIDs(passages []knowledge.Passage) []string {
-	ids := make([]string, len(passages))
-	for i, p := range passages {
-		ids[i] = p.ChunkID.String()
+// passageRefs names the passages p1, p2, … in the order the prompt lists
+// them; the request and the reply's reading both build it from the same list.
+func passageRefs(passages []knowledge.Passage) *promptref.Refs {
+	refs := promptref.New("p")
+	for _, p := range passages {
+		refs.For(p.ChunkID.String())
 	}
-	return ids
+	return refs
 }
 
 // renderCorpusAsk lays out the question and the numbered passages.
@@ -210,8 +213,9 @@ func renderCorpusAsk(question string, passages []knowledge.Passage) string {
 	b.WriteString("Question: ")
 	b.WriteString(question)
 	b.WriteString("\n\nPassages:\n")
+	refs := passageRefs(passages)
 	for _, p := range passages {
-		fmt.Fprintf(&b, "\n[%s] from %s\n%s\n", p.ChunkID, p.DocumentName, p.Text)
+		fmt.Fprintf(&b, "\n[%s] from %s\n%s\n", refs.For(p.ChunkID.String()), p.DocumentName, p.Text)
 	}
 	return b.String()
 }
