@@ -18,14 +18,29 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useNotificationPermission } from "./notificationpermission";
 import { unwrap } from "./problem";
-import { navigate } from "./router";
+import { navigate, parseHash, routeHash } from "./router";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "./storage";
+import { hashWithParams, parseParams } from "./urlstate";
 import { worklistKey } from "./workkeys";
 
 type Activity = components["schemas"]["Activity"];
 
 /** The Home address dial that opens one task. */
 export const TASK_PARAM = "task";
+
+/**
+ * The address that opens one task on Home. From Home it keeps the reader's own
+ * dials, so an open Worklist drawer, its view and its filter stay as they were
+ * under the task; from elsewhere it starts Home with the task alone.
+ */
+export function taskHref(id: string): string {
+  const here = globalThis.location?.hash ?? "";
+  const params = new Map(
+    parseHash(here).screen === "home" ? parseParams(here) : [],
+  );
+  params.set(TASK_PARAM, id);
+  return hashWithParams(routeHash({ screen: "home" }), params);
+}
 
 const POLL_MS = 60_000;
 const PAGE = 200;
