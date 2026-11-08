@@ -12877,7 +12877,8 @@ export const en = {
   "deal360.rewrite": "Regenerate",
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
-  "deal360.createTask": "Add task",
+  "deal360.createTask": "Create follow-up",
+  "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "deal360.unreadable":
     "This brief did not load. Reload the page, or regenerate it.",

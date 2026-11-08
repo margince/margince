@@ -12897,7 +12897,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal360.rewrite": "Neu erzeugen",
   "deal360.readFull": "Vollständigen Bericht lesen",
   "deal360.openTask": "Aufgabe öffnen",
-  "deal360.createTask": "Aufgabe hinzufügen",
+  "deal360.createTask": "Folgeaufgabe anlegen",
+  "deal360.followUpCreated": "Folgeaufgabe angelegt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "deal360.unreadable":
     "Dieser Bericht konnte nicht geladen werden. Bitte lade die Seite neu oder erzeuge den Bericht neu.",
