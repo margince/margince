@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 55,
-    "sites_best_current": 51,
+    "sites_best_current": 52,
     "sites_best_partial": 0,
-    "sites_best_stale": 4,
+    "sites_best_stale": 3,
     "sites_absent": 0,
     "scenarios": 291,
     "records": 368,
@@ -1547,8 +1547,8 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "band": "not_supported",
-          "state": "stale",
+          "band": "supported_degraded",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1558,13 +1558,13 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 0,
-          "cases_failing_often": 2,
-          "cases_below_quality_bar": 1
+          "runs": 9,
+          "passed": 8,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "report_setup",
@@ -1911,8 +1911,8 @@
       ],
       "bands": {
         "certified": 24,
-        "supported_degraded": 7,
-        "not_supported": 4
+        "supported_degraded": 8,
+        "not_supported": 3
       },
       "untested": 0,
       "unbound": 0,
@@ -2720,8 +2720,8 @@
             "env": "eu_hosted",
             "thinking_level": "low"
           },
-          "band": "not_supported",
-          "state": "stale",
+          "band": "supported_degraded",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2731,7 +2731,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "stale",
+            "state": "current",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -2739,10 +2739,10 @@
             }
           },
           "abandoned": 0,
-          "runs": 12,
-          "passed": 0,
-          "cases_failing_often": 2,
-          "cases_below_quality_bar": 1,
+          "runs": 9,
+          "passed": 8,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
           "measured_on": {
             "provider": "gemini",
             "model": "gemini-3.6-flash",
@@ -3221,8 +3221,8 @@
       ],
       "bands": {
         "certified": 24,
-        "supported_degraded": 7,
-        "not_supported": 4
+        "supported_degraded": 8,
+        "not_supported": 3
       },
       "untested": 0,
       "unbound": 0,
@@ -7931,9 +7931,9 @@
       "sites_shipped": 55,
       "sites_measured": 55,
       "ready": 41,
-      "usable_with_care": 9,
-      "not_reliable_yet": 5,
-      "recheck_pending": 4,
+      "usable_with_care": 10,
+      "not_reliable_yet": 4,
+      "recheck_pending": 3,
       "models": [
         {
           "binding": {
@@ -7942,12 +7942,12 @@
             "env": "cloud_frontier"
           },
           "sites": 48,
-          "sites_current": 44,
+          "sites_current": 45,
           "sites_partial": 0,
-          "sites_stale": 4,
-          "runs": 786,
-          "passed": 738,
-          "reliability": 0.9389312977099237,
+          "sites_stale": 3,
+          "runs": 789,
+          "passed": 741,
+          "reliability": 0.9391634980988594,
           "slowest_p95_ms": 24754,
           "bands": {
             "certified": 25,
@@ -7963,17 +7963,17 @@
             "thinking_level": "low"
           },
           "sites": 47,
-          "sites_current": 43,
+          "sites_current": 44,
           "sites_partial": 0,
-          "sites_stale": 4,
-          "runs": 936,
-          "passed": 895,
-          "reliability": 0.9561965811965812,
+          "sites_stale": 3,
+          "runs": 933,
+          "passed": 903,
+          "reliability": 0.9678456591639871,
           "slowest_p95_ms": 12125,
           "bands": {
             "certified": 31,
-            "supported_degraded": 10,
-            "not_supported": 6
+            "supported_degraded": 11,
+            "not_supported": 5
           }
         }
       ],
@@ -8426,13 +8426,14 @@
           "task": "report_interpret",
           "best": {
             "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
+            "model": "gemini-3.6-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
           },
-          "band": "not_supported",
-          "state": "stale",
-          "runs": 15,
-          "passed": 0,
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 8,
           "records": 2
         },
         {
@@ -11605,12 +11606,12 @@
         "env": "cloud_frontier"
       },
       "sites": 51,
-      "sites_current": 46,
+      "sites_current": 47,
       "sites_partial": 0,
-      "sites_stale": 5,
-      "runs": 945,
-      "passed": 880,
-      "reliability": 0.9312169312169312,
+      "sites_stale": 4,
+      "runs": 948,
+      "passed": 883,
+      "reliability": 0.9314345991561181,
       "slowest_p95_ms": 24754,
       "bands": {
         "certified": 26,
@@ -11687,17 +11688,17 @@
         "thinking_level": "low"
       },
       "sites": 47,
-      "sites_current": 43,
+      "sites_current": 44,
       "sites_partial": 0,
-      "sites_stale": 4,
-      "runs": 936,
-      "passed": 895,
-      "reliability": 0.9561965811965812,
+      "sites_stale": 3,
+      "runs": 933,
+      "passed": 903,
+      "reliability": 0.9678456591639871,
       "slowest_p95_ms": 12125,
       "bands": {
         "certified": 31,
-        "supported_degraded": 10,
-        "not_supported": 6
+        "supported_degraded": 11,
+        "not_supported": 5
       }
     },
     {
@@ -22729,8 +22730,18 @@
       "key": "report_interpret/sales_assessment",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.6-flash",
+          "env": "cloud_frontier",
+          "thinking_level": "low"
+        },
+        "band": "supported_degraded",
+        "reliability": 0.8888888888888888,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "sales_assessment_acknowledges_an_open_decision",
@@ -22752,35 +22763,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 15,
-          "passed": 0,
-          "reliability": 0,
-          "latency_p50_ms": 1245,
-          "latency_p95_ms": 1461,
+          "runs": 18,
+          "passed": 3,
+          "reliability": 0.16666666666666666,
+          "latency_p50_ms": 1649,
+          "latency_p95_ms": 2206,
           "reported": {
-            "accepted": 0,
-            "wrong_answer": 0,
-            "invalid": 15,
+            "accepted": 3,
+            "wrong_answer": 2,
+            "invalid": 13,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
-          "stale_cause": {
-            "case_changed": [
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ],
-            "prompt_changed": [
-              "sales_assessment_acknowledges_an_open_decision",
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ],
-            "grader_changed": [
-              "sales_assessment_acknowledges_an_open_decision",
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -22789,35 +22787,22 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 12,
-          "passed": 0,
-          "reliability": 0,
-          "latency_p50_ms": 6953,
-          "latency_p95_ms": 9367,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 7985,
+          "latency_p95_ms": 11408,
           "reported": {
-            "accepted": 0,
+            "accepted": 8,
             "wrong_answer": 0,
-            "invalid": 12,
+            "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
-          "stale_cause": {
-            "case_changed": [
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ],
-            "prompt_changed": [
-              "sales_assessment_acknowledges_an_open_decision",
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ],
-            "grader_changed": [
-              "sales_assessment_acknowledges_an_open_decision",
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
