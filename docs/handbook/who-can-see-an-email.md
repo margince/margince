@@ -63,7 +63,7 @@ then open a message to see who can read it and change sharing. Another owner's h
 ## Mail between colleagues
 
 Mail between colleagues is not kept by default. An admin can turn on
-**Internal operational mail** in **Settings → Capture rules**. Choose the
+**Internal operational mail** in **Settings → Mail capture**. Choose the
 mail connections, then **Choose folders** where a source needs a smaller set.
 Use **Save** to apply the choices. The mailbox still needs its own grant from
 its mail service. The admin must arrange the right approval and staff notice;
@@ -205,8 +205,8 @@ offers to narrow what is already captured. It never opens up captured mail; to
 open older mail, share its threads one by one.
 
 ### How do I turn email sharing off for the whole company?
-To turn email sharing off for everyone in Margince, an administrator opens **Settings → Capture rules**. In the **Mail sharing and sync** card, they switch off **Share captured mail with the team**.
-1. Open **Settings**, then **Capture rules**.
+To turn email sharing off for everyone in Margince, an administrator opens **Settings → Mail capture**. In the **Mail sharing and sync** card, they switch off **Share captured mail with the team**.
+1. Open **Settings**, then **Mail capture**.
 2. In **Mail sharing and sync**, switch **Share captured mail with the team** off and save.
 
 From then on, only those on each message can see new mail. The card warns: "With email sharing off, the CRM is hard to use".
@@ -215,7 +215,7 @@ Only an administrator or an Ops user can change this.
 
 ## The company-wide floor
 
-**Settings → Capture rules → Mail sharing and sync** decides whether captured mail is
+**Settings → Mail capture → Sharing and sync** decides whether captured mail is
 shared with colleagues at all. It is on by default.
 
 When it is off, every message captured from then on is held to those on it,
@@ -245,12 +245,12 @@ It holds mail from then on, and lifting it opens nothing again: "Lifting applies
 to new mail. Mail already held stays held."
 
 ### How do I share an email thread with my team?
-To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Capture activity → Held threads**.
+To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Connections → Activity → Held threads**.
 1. On a contact, company or deal timeline, open the email.
 2. Beside the mark under the subject, press **Share with the company**. It "Applies to the whole thread."
 3. To go back, press **Make private**.
 
-Or press **Share with the team** on the thread under **Settings → Capture activity → Held threads**.
+Or press **Share with the team** on the thread under **Settings → Connections → Activity → Held threads**.
 Only the mailbox owner can share. If a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
 
@@ -303,8 +303,8 @@ never shows mail from another seat's own mailbox.
 | What you want | Where |
 |---|---|
 | This mailbox's posture | Settings → Connections → Mail visibility |
-| The company-wide floor | Settings → Capture rules → Mail sharing and sync |
+| The company-wide floor | Settings → Mail capture → Sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
-| Share one thread | The message itself, or Settings → Capture activity → Held threads |
+| Share one thread | The message itself, or Settings → Connections → Activity → Held threads |
 | One logged message's audience | Change visibility, under More actions on its row |
 | Who can see the *record* | The contact or company header |

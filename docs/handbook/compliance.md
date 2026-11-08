@@ -18,7 +18,7 @@ To get Margince ready for mail capture within the law, do four things before any
 2. Settle private use of work mail: consent per colleague, or a written ban (Einwilligung, §26(2) BDSG).
 3. Agree it with the works council (Betriebsvereinbarung, §87(1) Nr. 6 BetrVG).
 4. Record it for the regulator (Verarbeitungsverzeichnis und DSFA, Art. 30 and Art. 35).
-With Germany chosen as the law, **Settings → Governance → Jurisdiction** lists the templates.
+With Germany chosen as the law, **Settings → Compliance → Jurisdiction** lists the templates.
 Also called: DSGVO, data protection, works council, Betriebsrat, DPIA.
 
 ### Does Margince check that we signed a works agreement?
@@ -78,7 +78,7 @@ Also called: works council, Betriebsrat, figures per rep, team figures.
 4. **Write it down for the regulator**: the *Verarbeitungsverzeichnis und DSFA*
    (Art. 30, Art. 35). One entry per processing operation.
 
-With Germany chosen as the law, the templates are on **Settings → Governance →
+With Germany chosen as the law, the templates are on **Settings → Compliance →
 Jurisdiction**, to read and download. The English set is for reading and for
 passing around inside the company; the German versions are the ones to sign.
 
@@ -88,7 +88,7 @@ passing around inside the company; the German versions are the ones to sign.
 | --- | --- |
 | Does mail leave the company's systems? | The AI egress reference, which lists every AI task and whether its text can leave your installation |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
-| What was decided about the senders who write to me? | Settings → Capture activity → Sender decisions, per seat |
+| What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
 | Can a manager see each colleague's sales figures? | Not in reports and forecasts while **Show individual performance** is off. Each member sees their own figures. The compliance answer above lists what the switch does not cover |
@@ -99,7 +99,7 @@ templates have blanks to fill in. For erasure, access requests, retention and co
 
 ## Which law applies
 
-Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Governance → Jurisdiction**. The page shows what the choice changes:
+Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Compliance → Jurisdiction**. The page shows what the choice changes:
 
 - how long business mail is kept before anyone may delete it;
 - the due date of a privacy request;

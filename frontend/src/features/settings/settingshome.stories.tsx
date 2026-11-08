@@ -164,7 +164,7 @@ export const ReadOnlyLockTip: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const row = await canvas.findByRole("link", {
-      name: new RegExp(en["settings.tab.fields"]),
+      name: new RegExp(en["settings.tab.records"]),
     });
     row.focus();
     const tip = await within(canvasElement.ownerDocument.body).findByRole(

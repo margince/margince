@@ -189,7 +189,7 @@ function served(pipeline: Pipeline, canEdit: boolean) {
 }
 
 const meta: Meta<typeof StageLadderEditor> = {
-  title: "Settings/Sales/Pipelines/Stage ladder",
+  title: "Settings/Sales/Deals/Stage ladder",
   component: StageLadderEditor,
   parameters: { layout: "padded" },
 };

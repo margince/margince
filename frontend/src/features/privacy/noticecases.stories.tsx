@@ -148,7 +148,7 @@ function duties(
 }
 
 const meta: Meta<typeof NoticeCasesCard> = {
-  title: "Settings/Governance/Privacy and retention/Notice duties",
+  title: "Settings/Compliance/Privacy and retention/Notice duties",
   component: NoticeCasesCard,
 };
 export default meta;

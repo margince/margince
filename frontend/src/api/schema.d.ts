@@ -35106,7 +35106,7 @@ export interface components {
          *     card.
          * @enum {string}
          */
-        ContactMomentRule: "privacy_notice_due" | "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
+        ContactMomentRule: "privacy_notice_due" | "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "awaiting_reply" | "open_promise" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
         /** @description One thing that actually happened, which the reader can open. */
         ContactMomentEvidence: {
             /** @enum {string} */
@@ -36088,6 +36088,11 @@ export interface components {
              * @description The approval a human gave this exact call, on its retry.
              */
             approval_id?: string;
+            /**
+             * @description What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+             * @enum {string}
+             */
+            settle?: "complete" | "keep";
             /** @description Same key, same result. A key reused with other arguments is refused. */
             idempotency_key?: string;
         };
@@ -36101,6 +36106,22 @@ export interface components {
             note_activity_id?: string;
             /** @description The probability the move set from the new stage, as one sentence. Absent when the move changed no stage. */
             probability_note?: string;
+            /** @description The deal's tasks still open after a move that closed it. Absent when the move left it open, or when the call settled them. */
+            open_tasks?: components["schemas"]["DealOpenTask"][];
+            /** @description The tasks this call completed, present only when it asked to settle them. */
+            settled_task_ids?: string[];
+        };
+        /** @description One task still open on a deal that just closed. */
+        DealOpenTask: {
+            /** Format: uuid */
+            id: string;
+            /** @description What the task says to do. */
+            subject: string;
+            /**
+             * Format: date-time
+             * @description When it is due, absent on a task nobody dated.
+             */
+            due_at?: string;
         };
         /** @description What `qualify_lead` takes besides the lead, which the path names. */
         QualifyLeadRequest: {

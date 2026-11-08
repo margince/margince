@@ -23,12 +23,12 @@ describe("manual privacy review destinations", () => {
       "company-id",
     );
   });
-  it.each(["legal_entity", "signature_template"])(
-    "opens %s reviews in Company settings",
-    (type) => {
-      expect(noticeAction({ type, id: "retained-template" })?.href).toBe(
-        routeHash(settingsHref("company")),
-      );
-    },
-  );
+  it.each([
+    ["legal_entity", "entities"],
+    ["signature_template", "email"],
+  ])("opens %s reviews on its Company settings tab", (type, tab) => {
+    expect(noticeAction({ type, id: "retained-template" })?.href).toBe(
+      routeHash(settingsHref("company", tab)),
+    );
+  });
 });
