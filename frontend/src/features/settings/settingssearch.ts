@@ -18,10 +18,10 @@ import {
   matchesConfigurationFilter,
   type SettingName,
 } from "./configurationentries";
+import { matchedTab, tabAliases } from "./settingssearchtabs";
 import {
   COMPANY_CONTEXT_SECTIONS,
   settingsSectionKeys,
-  settingsSectionTab,
 } from "./settingssections";
 
 /**
@@ -221,39 +221,6 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   reset: ["empty", "wipe", "delete everything", "danger"],
 };
 
-// Words that name one TAB rather than its page: the old names of pages that
-// became tabs, and nouns only that tab answers. A hit through one opens the tab.
-const TAB_ALIASES: Partial<
-  Record<SettingsPageId, Readonly<Record<string, readonly string[]>>>
-> = {
-  connections: {
-    activity: [
-      "capture activity",
-      "capture log",
-      "held",
-      "judgement",
-      "why",
-      "trace",
-    ],
-  },
-  deals: {
-    sources: ["acquisition"],
-    loss: ["lost reasons"],
-    reviews: ["review questions"],
-  },
-  records: { roles: ["record roles"] },
-};
-
-/** The tab aliases of `page` this reader may open, as `[tab, word]` pairs. */
-function tabAliases(
-  page: SettingsPageId,
-  reader: SettingsSearchReader,
-): readonly (readonly [string, string])[] {
-  return Object.entries(TAB_ALIASES[page] ?? {})
-    .filter(([tab]) => reader.opensTab?.(page, tab) ?? true)
-    .flatMap(([tab, words]) => words.map((word) => [tab, word] as const));
-}
-
 // The company-context card's own words. That card draws only where
 // `companyContextShown` says, so another reader would land on a page without them.
 const PROFILE_ALIASES: readonly string[] = [
@@ -316,7 +283,7 @@ export function settingsPageKeywords(
 ): readonly string[] {
   return [
     ...settingsPageAliases(page, reader),
-    ...tabAliases(page, reader).map(([, word]) => word),
+    ...tabAliases(page, reader.opensTab).map(([, word]) => word),
     ...settingsPageSections(page, t, reader),
   ];
 }
@@ -405,7 +372,7 @@ export function settingsSearch(
     const sectionKeys = pageSectionKeys(page.id, reader);
     const sections = sectionKeys.map((key) => t(key));
     const aliases = settingsPageAliases(page.id, reader);
-    const tabWords = tabAliases(page.id, reader);
+    const tabWords = tabAliases(page.id, reader.opensTab);
     // Order is the ranking: the page's own name, its group, the words it
     // answers to, the words one of its tabs answers to, the settings it draws,
     // and last its description.
@@ -453,19 +420,6 @@ export function settingsSearch(
         pages.indexOf(a.hit.page) - pages.indexOf(b.hit.page),
     )
     .map((entry) => entry.hit);
-}
-
-// The tab a hit opens: the one whose word matched, else the one drawing the
-// matched setting.
-function matchedTab(
-  page: SettingsPageId,
-  tabWord: readonly [string, string] | undefined,
-  sectionKey: MessageKey | undefined,
-): string | undefined {
-  if (tabWord !== undefined) return tabWord[0];
-  return sectionKey === undefined
-    ? undefined
-    : settingsSectionTab(page, sectionKey);
 }
 
 // The setting a hit through the sections alone names: the one holding every

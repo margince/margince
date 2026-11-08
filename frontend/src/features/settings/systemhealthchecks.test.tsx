@@ -87,9 +87,9 @@ describe("HealthChecks", () => {
 
   it("opens the page that sets a check up", async () => {
     renderChecks();
-    await userEvent.setup().click(
-      screen.getByRole("button", { name: "Open AI models" }),
-    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Open AI models" }));
     expect(window.location.hash).toBe("#/settings/models");
   });
 
