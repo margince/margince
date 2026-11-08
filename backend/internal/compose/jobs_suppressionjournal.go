@@ -115,9 +115,8 @@ func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspac
 // no job client, and a worker with no object store registers no export and
 // keeps no journal. The hourly export renames the journal for the first.
 func queueKeyedJournalExport(ctx context.Context, tx pgx.Tx) error {
-	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
-	if err != nil {
-		//craft:ignore swallowed-errors the only cause is a run with no job client, which the hourly export covers
+	client, ok := jobClientOf(ctx)
+	if !ok {
 		return nil
 	}
 	if _, err := client.InsertTx(ctx, tx, SuppressionJournalArgs{}, nil); err != nil {
@@ -127,4 +126,11 @@ func queueKeyedJournalExport(ctx context.Context, tx pgx.Tx) error {
 		return fmt.Errorf("compose: queueing the keyed suppression journal export: %w", err)
 	}
 	return nil
+}
+
+// jobClientOf answers the job client ctx carries. Its only error is a run
+// with no job client, which margince-migrate is.
+func jobClientOf(ctx context.Context) (*river.Client[pgx.Tx], bool) {
+	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
+	return client, err == nil
 }
