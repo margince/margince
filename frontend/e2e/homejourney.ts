@@ -266,6 +266,9 @@ const VITALS_KEY = "__homeVitals";
  * the mark too, before it first paints.
  */
 export async function recordVitals(page: Page): Promise<void> {
+  // Chrome times a block that fades in only when its fade ends. Home fades its
+  // content in, unless the reader asks for reduced motion.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(
     ({ key, mark }) => {
       const vitals: Vitals = { dayPaints: [], shifts: [] };
@@ -274,10 +277,15 @@ export async function recordVitals(page: Page): Promise<void> {
       new MutationObserver((records) => {
         for (const record of records) {
           for (const node of record.addedNodes) {
-            if (!(node instanceof Element) || !node.closest(marked)) continue;
-            node.setAttribute("elementtiming", mark);
-            for (const inner of node.querySelectorAll("*"))
-              inner.setAttribute("elementtiming", mark);
+            if (!(node instanceof Element)) continue;
+            // React adds a whole tree at once, so the mark may sit below it.
+            const roots = node.closest(marked)
+              ? [node]
+              : node.querySelectorAll(marked);
+            for (const root of roots) {
+              for (const inner of [root, ...root.querySelectorAll("*")])
+                inner.setAttribute("elementtiming", mark);
+            }
           }
         }
       }).observe(document, { childList: true, subtree: true });
@@ -325,6 +333,39 @@ export async function readVitals(page: Page): Promise<Vitals> {
     );
   }
   return vitals;
+}
+
+/**
+ * The vitals once the day content's paints are in. The browser reports a paint
+ * frames after it, and text waits for its font, so Home's own marks come first.
+ */
+export async function settledVitals(
+  page: Page,
+  timeout: number,
+): Promise<Vitals> {
+  // A load that never paints is the judge's to fail, not an error here.
+  await page
+    .waitForFunction(
+      (key) => {
+        const vitals: unknown = Reflect.get(window, key);
+        return (
+          typeof vitals === "object" &&
+          vitals !== null &&
+          "dayPaints" in vitals &&
+          Array.isArray(vitals.dayPaints) &&
+          vitals.dayPaints.length > 0
+        );
+      },
+      VITALS_KEY,
+      { timeout },
+    )
+    .catch(() => undefined);
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    for (let frame = 0; frame < 2; frame++)
+      await new Promise((done) => requestAnimationFrame(done));
+  });
+  return readVitals(page);
 }
 
 /**

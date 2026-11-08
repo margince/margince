@@ -30,6 +30,7 @@ import {
   probeClick,
   readVitals,
   recordVitals,
+  settledVitals,
   startJourney,
   watchScreen,
   worklistFetches,
@@ -458,7 +459,7 @@ test("vitals: the day paint and CLS stay in budget on a fixed profile", async ({
   const vitals: Vitals[] = [];
   for (let i = 1; i <= SAMPLES; i++) {
     loads.push(await loadHome(page, log, reader, i));
-    vitals.push(await readVitals(page));
+    vitals.push(await settledVitals(page, JOURNEY_TIMEOUT_MS));
   }
   report("vitals", loads);
   const p95 = vitalsP95(vitals);
@@ -471,10 +472,11 @@ test("vitals: the day paint and CLS stay in budget on a fixed profile", async ({
 });
 
 /**
- * The vitals check against pages built to break it, so a recorder or a judge
- * that sees nothing cannot pass. They need no api: each page is served here.
+ * The vitals check against pages built to break it or keep it. A recorder or
+ * a judge that sees too little or too much fails one of them. They need no
+ * api: each page is served here.
  */
-test.describe("vitals: a load that breaks the budget fails", () => {
+test.describe("vitals: pages built to break or keep the budget", () => {
   const PAGE = "http://vitals.test/";
   const TEXT = "Pipeline review for the week ahead. ".repeat(40);
   const BLOCK = `<p style="font-size:40px;margin:0">${TEXT}</p>`;
@@ -509,6 +511,36 @@ test.describe("vitals: a load that breaks the budget fails", () => {
     expect(reasons).toEqual([
       expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
     ]);
+  });
+
+  test("day content mounted inside a larger tree is timed", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main></main><script>
+        document.querySelector("main").innerHTML = ${JSON.stringify(`<div>${DAY}</div>`)};
+      </script>`,
+      (v) => v.dayPaints.length > 0,
+    );
+    expect(reasons).toEqual([]);
+  });
+
+  // Chrome times a faded block when its fade ends, not when it is drawn.
+  test("day content inside a block that fades in is timed when drawn", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<style>
+        @keyframes arrive { from { opacity: 0; } }
+        @media (prefers-reduced-motion: no-preference) {
+          main > * { animation: arrive 1500ms ease-out 100ms backwards; }
+        }
+      </style><main><div>${DAY}</div></main>`,
+      (v) => v.dayPaints.length > 0,
+    );
+    expect(reasons).toEqual([]);
   });
 
   test("a layout shift of 0.2 or more fails CLS", async ({ page }) => {
