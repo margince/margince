@@ -40,23 +40,23 @@ Also called: calendar disconnected, invitations paused, reconnect calendar.
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
 
-A move to a new start clears **Held** or **No-show**, so the meeting asks how it went again once the new time has passed.
+A move to a new start clears **It happened** or **No-show**, so the meeting asks how it went again once the new time has passed.
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
-has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
+A meeting that took place takes one press: **It happened** on its Worklist row, under **How did it
+go?**. A customer meeting that has started with no outcome also shows **It happened** and **Add notes** on the contact's **Meetings** tab
 and on the timeline. To say more, or to record a no-show, press **Add notes**:
-1. Pick **Held** or **No-show** and write what was said. Change any of your company's own fields
+1. Pick **It happened** or **No-show** and write what was said. Change any of your company's own fields
    for meetings here too.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
 The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
-moved to today at an hour still to come is filed a minute before you save. **Held** and **No-show**
+moved to today at an hour still to come is filed a minute before you save. **It happened** and **No-show**
 wait for the meeting to start. A meeting with a date but no time waits until that day is over.
 
-Press **Mark as canceled** on the row for a meeting that did not happen. A meeting with a Margince
-invitation takes only **Held** or **No-show**, because its notes and date follow the invitation.
+Press **Did not happen** on the row for a meeting that did not take place; it is recorded as canceled.
+A meeting with a Margince invitation takes only **It happened** or **No-show**, because its notes and date follow the invitation.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
 
 ### How do I cancel a meeting?

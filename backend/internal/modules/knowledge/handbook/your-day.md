@@ -46,12 +46,12 @@ To pin a Worklist item in Margince, press **More actions** on its row and choose
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Quiet contacts under **Optional reconnections** stay outside work counts, even with an open deal, until you pin them or add a task. Also called: star, flag, keep on top.
 
 ### Why is a task at the top of my worklist?
-A task leads your Worklist and **Your tasks** on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With notifications allowed, Margince shows the task once across all your browsers, in the first one open. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
+A task leads your Worklist and **Needs you** on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With notifications allowed, Margince shows the task once across all your browsers, in the first one open. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
 
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The open card under **Your tasks** on **Home** says what the row asks of you, and **View details** adds the messages, contact and deal. **Why this needs attention** gives the reasons, the next step and, when waiting costs something, **If nothing is done**. A meeting with no outcome opens the meeting itself, with **Held**, **Add notes** and **Mark as canceled** if you may change it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+The open card under **Needs you** on **Home** says what the row asks of you and its one current reason, and **View details** adds the messages, contact and deal. **Why this needs attention** lists every fact behind the row and the next step. A meeting with no outcome opens the meeting itself and asks **How did it go?**, with **It happened**, **Add notes** and **Did not happen** if you may change it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -114,7 +114,7 @@ When the start time, the guests or the invite's agenda change, the row asks agai
 ### What can I do from a task?
 A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason. The task's row on a timeline offers **Write email** to the same contact, lead or company.
 
-It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Your tasks** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
+It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Needs you** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
@@ -138,11 +138,11 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
-- **Your tasks**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that.
+- **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its
   reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
-- **Review deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now.
+- **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
   is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
@@ -160,7 +160,7 @@ and in the Worklist.
 - A privacy duty joins the day 7 days before its deadline; the legal deadline does not move.
 - A privacy duty recorded more than a day after its deadline came from imported history. It reads
   "recorded after its deadline, from imported history", ranks as normal work and never sits under
-  **Your tasks**.
+  **Needs you**.
 - A task due today or late is urgent, unless it is prospecting work.
 - A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
   when its expected close is past or within 14 days.
@@ -180,7 +180,7 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Mark reviewed** or **Undo**.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. The deals it changed come first, under a count of those that wait for your review, then **Other finished work**. Each deal lists every change: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A change with no recorded reason says "Margince recorded no reason you can read." Only the deal's owner reads why.
+**Done for you**, on **Today**, shows what Margince finished for you. The deals it changed come first, under a count of those that wait for your review, then **Other updates**. Each deal lists every change: what moved and when, and why Margince did it. A deal Margince closed reads **Marked lost**. When a change rests on the customer's own words, they show under "The customer wrote:". A closed deal with no reason you may read says "Reason unavailable"; any other change without a reason shows no reason line. Only the deal's owner reads why.
 
 **Details** shows who made the change and each value before and after. It also names the email, call or meeting it came from, unless you cannot open it. **Mark reviewed** says you have seen a change. It does not run the change again or make an estimate a customer promise, and the change keeps its **Undo**. **Undo** puts the deal back. A deal with two or more waiting changes also offers **Undo 2 changes**, which takes back the changes listed and none that arrived since.
 
@@ -280,9 +280,9 @@ Each item shows its record, the current facts that call for action, and the acti
 A request can name who is waiting and when they asked. A task shows its due date.
 A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
-Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** shows saved words and their date. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.
+Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** and its date open the saved words. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.
 
-A deal suggestion needs current facts before it enters this list. A score or a label such as “stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
+A deal suggestion needs current facts before it enters this list. A score or a label such as “stalled” cannot put it here alone. **Review N deal suggestions** opens the saved brief, including suggestions without those facts.
 
 The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work keep their order without a sentence comparing each item with the one below it.
 
