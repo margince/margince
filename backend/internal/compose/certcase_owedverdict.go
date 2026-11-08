@@ -25,9 +25,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/margince/margince/backend/internal/compose/owedverdict"
-
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/owedverdict"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"

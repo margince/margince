@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"regexp"
 	"slices"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
 const commitmentSenderRole = "from"
