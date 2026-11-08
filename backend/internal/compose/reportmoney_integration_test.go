@@ -67,7 +67,7 @@ func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
 func TestAMaskOnTheAmountWithholdsTheConvertedTotal(t *testing.T) {
 	e := setupForecast(t)
 	own := int64(100_000)
-	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own, nil)
+	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)
 
 	result := e.runReport(e.maskedDealReader(principal.MaskAlways), t, "open-deals-per-company", openDealsBasePlan)
 	if len(result.Rows) != 0 {

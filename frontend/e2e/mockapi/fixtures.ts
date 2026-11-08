@@ -202,6 +202,7 @@ export const seededLead = {
 
 export const anna = {
   id: "p-anna",
+  attachable: true,
   workspace_id: "w",
   full_name: "Anna Weber",
   title: "Head of Procurement",
@@ -279,6 +280,14 @@ export const deals = [
     last_activity_at: "2026-06-28T08:00:00Z",
   },
 ];
+
+// Thirty more deals in Qualify: past one board column's page of 25.
+export const busyStageDeals = Array.from({ length: 30 }, (_, index) => ({
+  ...deals[0],
+  id: `d-busy-${index + 1}`,
+  name: `Busy deal ${index + 1}`,
+  stage_id: "s1",
+}));
 
 // The body of work the fleet deals are about. It starts in `initiative`,
 // attached to no deal, and the project page and the deal form's project
@@ -1144,7 +1153,7 @@ export const installationLicense = {
   checked_at: "2026-08-20T09:00:00Z",
 };
 
-// Settings, Capture activity, both scopes. `funnel` is required by
+// Settings, Connections activity, both scopes. `funnel` is required by
 // CaptureActivityResponse, and the window reads it straight into its counters.
 //
 // One entry per outcome, so each of the funnel's five counters has a row and

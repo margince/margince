@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
   installFetchStub,
@@ -62,16 +63,18 @@ function story(
         }),
       ),
       "GET /capture/held-threads": answer(reads.held, () =>
-        jsonResponse({
-          data: ids(lists.held, (i) => ({
-            thread_key: `t-${i}`,
-            status: "held",
-            pending: false,
-            attempts: 1,
-            has_message: true,
-            kind: "legal",
-          })),
-        }),
+        jsonResponse(
+          heldThreadList(
+            ids(lists.held, (i) => ({
+              thread_key: `t-${i}`,
+              status: "held",
+              pending: false,
+              attempts: 1,
+              has_message: true,
+              kind: "legal",
+            })),
+          ),
+        ),
       ),
       "GET /me/linkedin-reach": () =>
         jsonResponse(
@@ -97,7 +100,7 @@ const NOTHING: Lists = { senders: 0, waiting: 0, held: 0, reach: 0 };
 const SOME: Lists = { senders: 24, waiting: 2, held: 3, reach: 1 };
 
 const meta = {
-  title: "Settings/You/Capture activity/Connection outcomes",
+  title: "Settings/You/Connections/Connection outcomes",
   component: ConnectionOutcomesCard,
 } satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;

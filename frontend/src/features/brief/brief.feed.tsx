@@ -11,7 +11,6 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
@@ -19,12 +18,14 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { identity, Triage } from "./brief.focus";
+import { Triage } from "./brief.focus";
+import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
 
 import "../worklist/worklist.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./brief.feed.css";
 
 export function BriefFeed({
@@ -45,6 +46,7 @@ export function BriefFeed({
   /** The way into the whole queue, under the day's order. */
   queueToggle?: ReactNode;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -79,14 +81,12 @@ export function BriefFeed({
             </Badge>
           </AppLink>
         )}
-        {lead && (
-          <span className="t-caption t-num brief-first-position">
-            {t("brief.focus.position", {
-              at: formatNumber(at + 1, locale),
-              count: formatNumber(rows.length, locale),
-            })}
+        {rows.length > 0 && (
+          <span className="t-caption t-num brief-first-count">
+            {formatNumber(rows.length, locale)}
           </span>
         )}
+        {queueToggle && <div className="brief-first-queue">{queueToggle}</div>}
       </div>
       {refreshFailed && (
         <p role="alert">
@@ -114,6 +114,7 @@ export function BriefFeed({
           }
           emptyLabel={t("brief.feed.clear")}
           loadingLabel={t("brief.feed.loading")}
+          detail={{ onRetry }}
         >
           {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
           {lead && (
@@ -130,10 +131,9 @@ export function BriefFeed({
           )}
         </SurfaceState>
       )}
-      {queueToggle && <div className="brief-first-foot">{queueToggle}</div>}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
         onReplySent={() =>
           void client.invalidateQueries({ queryKey: worklistKey })

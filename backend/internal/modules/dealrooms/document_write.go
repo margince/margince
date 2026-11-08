@@ -38,14 +38,13 @@ type AddDocumentInput struct {
 // AddDocument puts an attachment of the deal in front of the buyer — at once,
 // with no publish in between.
 //
-// Human-only, for the reason UpdateRoom states: handing a file to an outside
-// party is a disclosure, and a disclosure is a contact's act. Removing one is
-// already human-only, and adding is the half that matters more.
+// Handing a file to an outside party is a disclosure, as UpdateRoom says. So
+// the user or their agent makes it, and passportless work never does.
 func (s *Store) AddDocument(ctx context.Context, roomID ids.DealRoomID, in AddDocumentInput) (crmcontracts.DealRoomDocument, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionCreate); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -158,7 +157,7 @@ func (s *Store) UpdateDocument(ctx context.Context, roomID ids.DealRoomID, id id
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
 	var out crmcontracts.DealRoomDocument
@@ -214,7 +213,7 @@ func (s *Store) RemoveDocument(ctx context.Context, roomID ids.DealRoomID, id id
 	if err := auth.Require(ctx, roomObject, principal.ActionDelete); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.DealRoomDocument{}, err
 	}
 	var out crmcontracts.DealRoomDocument

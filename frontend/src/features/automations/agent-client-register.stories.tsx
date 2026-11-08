@@ -21,7 +21,7 @@ import {
 // shows once, in the result, and nowhere after the dialog closes.
 
 const meta: Meta<typeof RegisterAgentClientDialog> = {
-  title: "Settings/AI/MCP/Register a client",
+  title: "Settings/AI/AI tool access/Register a client",
   component: RegisterAgentClientDialog,
 };
 export default meta;

@@ -50,6 +50,11 @@ function stubBackend(
         page: { next_cursor: null, has_more: false },
       });
     }
+    // The deal's products, in the list-and-tag shape the card reads. Without
+    // this the deal's own route answers it with the deal record.
+    if (/\/deals\/[^/]+\/products$/.test(new URL(url, "http://x").pathname)) {
+      return jsonResponse({ data: [], tag: "empty" });
+    }
     if (url.includes("/commitments")) {
       return jsonResponse({ complete: true, has_more: false, data: [] });
     }

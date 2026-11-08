@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -55,6 +56,7 @@ type EnsureOutcome struct {
 
 // EnsureRequest names one captured message's counterparty for the resolver.
 type EnsureRequest struct {
+	HoldAuthority   func(context.Context, pgx.Tx) error
 	Admission       func(context.Context, pgx.Tx, bool) error
 	Email           string
 	DisplayName     string // untrusted header text
@@ -103,6 +105,10 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 	// The party the ladder judged — see counterpartyDecision.subject.
 	cp := decision.subject
 	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{
+		HoldAuthority: func(ctx context.Context, tx pgx.Tx) error {
+			_, owner := capturePrincipal(ctx)
+			return s.holdEnsureLocksTx(ctx, tx, owner, ids.From[ids.ActivityKind](ref.ID))
+		},
 		Admission:       s.counterpartyAdmission(rec, ref, cp),
 		Email:           cp.Email,
 		DisplayName:     cp.DisplayName,
@@ -415,6 +421,9 @@ func (s *Sink) decideCounterpartyGuarded(ctx context.Context, tx pgx.Tx, rec con
 			// Without a clean rollback the outer transaction stays poisoned,
 			// so there is no committing anything — report the original fault.
 			return counterpartyDecision{}, errors.Join(gateErr, rbErr)
+		}
+		if storekit.IsLockCycle(gateErr) {
+			return counterpartyDecision{}, gateErr
 		}
 		if err := s.logBreadcrumbTx(ctx, tx, "capture_ensure_fault", rec, gateErr.Error()); err != nil {
 			return counterpartyDecision{}, err

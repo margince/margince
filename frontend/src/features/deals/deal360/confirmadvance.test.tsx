@@ -232,7 +232,7 @@ function confirmRefusal(): string | null {
   return said === "" ? null : said;
 }
 
-it("says a lost deal needs a reason from the list, and sends it with the note on Enter", async () => {
+it("says a lost deal needs a reason from the list, and sends it with the note on Ctrl+Enter", async () => {
   const user = userEvent.setup();
   const onConfirm = vi.fn(async () => undefined);
   openOn(LOST, onConfirm);
@@ -241,7 +241,7 @@ it("says a lost deal needs a reason from the list, and sends it with the note on
     expect(confirmRefusal()).toBe("Pick why the deal was lost."),
   );
   await user.click(screen.getByRole("textbox", { name: "Note (optional)" }));
-  await user.keyboard("Budget cut{Enter}");
+  await user.keyboard("Budget cut{Control>}{Enter}{/Control}");
   expect(onConfirm).not.toHaveBeenCalled();
 
   const why = screen.getByRole("combobox", { name: "Why was it lost?" });
@@ -249,13 +249,17 @@ it("says a lost deal needs a reason from the list, and sends it with the note on
   const price = await screen.findByRole("option", { name: "Price" });
   expect(screen.queryByRole("option", { name: "Bad timing" })).toBeNull();
   await user.click(price);
-  await user.click(screen.getByRole("textbox", { name: "Note (optional)" }));
-  await user.keyboard("{Enter}");
+  const note = screen.getByRole("textbox", { name: "Note (optional)" });
+  await user.click(note);
+  // Plain Enter starts a new line of the note.
+  await user.keyboard("{Enter}more");
+  expect(onConfirm).not.toHaveBeenCalled();
+  await user.keyboard("{Control>}{Enter}{/Control}");
   expect(onConfirm).toHaveBeenCalledTimes(1);
   expect(onConfirm).toHaveBeenCalledWith(
     expect.objectContaining({
       lostReasonCode: "price",
-      lostReason: "Budget cut",
+      lostReason: "Budget cut\nmore",
     }),
   );
 });
@@ -284,7 +288,7 @@ it("leaves the win-evidence refusal to the open dialog and shows it once closed"
   expect(advanceErrorBehind(conflict, true)).toBe(conflict);
 });
 
-it("says a win marked Other needs details, and sends them on Enter", async () => {
+it("says a win marked Other needs details, and sends them on Ctrl+Enter", async () => {
   const user = userEvent.setup();
   const onConfirm = vi
     .fn<(input: unknown) => Promise<unknown>>()
@@ -300,7 +304,7 @@ it("says a win marked Other needs details, and sends them on Enter", async () =>
   expect(confirmRefusal()).toBe("Describe how the deal was won.");
 
   await user.click(screen.getByRole("textbox", { name: "Details" }));
-  await user.keyboard("Signed on a napkin{Enter}");
+  await user.keyboard("Signed on a napkin{Control>}{Enter}{/Control}");
   expect(onConfirm).toHaveBeenCalledTimes(2);
   expect(onConfirm).toHaveBeenLastCalledWith(
     expect.objectContaining({

@@ -60,10 +60,12 @@ export function useAnswerTarget({
   open,
   channelAnchorId,
   activityId,
+  openingBlocked,
 }: Readonly<{
   open: boolean;
   channelAnchorId: string | undefined;
   activityId: string | undefined;
+  openingBlocked?: boolean;
 }>) {
   const [chosen, setChosen] = useState<string | null | undefined>(undefined);
   const answering =
@@ -72,7 +74,13 @@ export function useAnswerTarget({
   useEffect(() => {
     if (!open) setChosen(undefined);
   }, [open]);
-  return { answering, choose: setChosen };
+  return {
+    answering,
+    choose: setChosen,
+    sourceBlocked: Boolean(
+      openingBlocked && activityId && answering === activityId,
+    ),
+  };
 }
 
 // The files attached per target. An upload may finish after a switch, and its

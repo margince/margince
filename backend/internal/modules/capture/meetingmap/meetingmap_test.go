@@ -75,7 +75,6 @@ func TestACancelledEventAndOneWithNoIDAreNotWrittenAsBooked(t *testing.T) {
 	external := []Actor{{Email: "client@acme.test"}}
 	for name, ev := range map[string]Event{
 		"cancelled": {ID: "evt-1", Cancelled: true, Organizer: Actor{Email: owner}, Attendees: external},
-		"declined":  {ID: "evt-2", OwnerDeclined: true, Organizer: Actor{Email: owner}, Attendees: external},
 		"no id":     {Organizer: Actor{Email: owner}, Attendees: external},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -90,7 +89,7 @@ func TestACancelledEventAndOneWithNoIDAreNotWrittenAsBooked(t *testing.T) {
 // an event never captured; a meeting already on the timeline must be CLOSED
 // instead, because the provider stops listing an event once it is off and no
 // later pull mentions it again.
-func TestACancelledOrDeclinedEventSettlesAsACancellationRatherThanADrop(t *testing.T) {
+func TestOnlyAnOrganizerCancellationSettlesAsACancellation(t *testing.T) {
 	external := []Actor{{Email: "client@acme.test"}}
 	for name, tc := range map[string]struct {
 		event Event
@@ -101,8 +100,8 @@ func TestACancelledOrDeclinedEventSettlesAsACancellationRatherThanADrop(t *testi
 			want:  SettleCancel,
 		},
 		"the owner declined it": {
-			event: Event{ID: "evt-2", OwnerDeclined: true, Organizer: Actor{Email: owner}, Attendees: external},
-			want:  SettleCancel,
+			event: Event{ID: "evt-2", OwnerResponse: connector.ResponseDeclined, Organizer: Actor{Email: owner}, Attendees: external},
+			want:  SettleCapture,
 		},
 		"no id to find it by": {
 			event: Event{Cancelled: true, Organizer: Actor{Email: owner}, Attendees: external},

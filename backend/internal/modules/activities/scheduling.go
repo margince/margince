@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
@@ -87,10 +88,9 @@ var (
 		Message: fmt.Sprintf("`duration_minutes` must be between %d and %d",
 			int(minSlotDuration.Minutes()), int(maxSlotDuration.Minutes())),
 	}
-	// The booking twin of errAvailabilityToNotAfterFrom. book_meeting's StageInfo
-	// pre-empts the same condition in its own terms so no approval is minted for
-	// an unbookable slot; this is what makes it true on every path that does not
-	// stage, REST included.
+	// The booking twin of errAvailabilityToNotAfterFrom. The booking resolver
+	// refuses the same condition before staging; this holds it on every path
+	// that does not stage, REST included.
 	errBookingEndNotAfterStart = &SchedulingArgumentError{
 		Field: "end", Code: "invalid_date_range",
 		Message: "`end` must be later than `start`",
@@ -173,16 +173,14 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
 			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.occurred_precision = 'instant'
-			  AND (a.host_user_id = $%[1]d
-			       OR EXISTS (SELECT 1 FROM capture_import held WHERE held.activity_id = a.id AND held.user_id = $%[1]d)
-			       OR EXISTS (SELECT 1 FROM activity_participant seat
-			                   WHERE seat.activity_id = a.id AND seat.user_id = $%[1]d AND seat.role IN ('organizer', 'attendee')
-			                     AND seat.response IS DISTINCT FROM 'declined' AND %[4]s))
+			  AND (%[4]s OR (NOT %[7]s AND (a.host_user_id = $%[1]d
+ OR EXISTS (SELECT 1 FROM capture_import held WHERE held.activity_id=a.id AND held.user_id=$%[1]d))))
 			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%[2]d -- meeting end: this read takes instants alone, the rows that hold a host hour
 			  AND a.occurred_at < $%[3]d -- occurred_at raw: the range's upper edge, read for instants alone
 			  AND a.meeting_status IS DISTINCT FROM 'canceled'
+ AND NOT %[6]s
 			  AND %[5]s
-			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, auth.ParticipantStandsSQL("seat", "a"), scope), args...)
+			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, storekit.MeetingResponsibilitySQL("a", fmt.Sprintf("$%d", hostPos)), scope, auth.MeetingSeatDeclinedSQL("a", fmt.Sprintf("$%d", hostPos)), storekit.MeetingHasCalendarRosterSQL("a")), args...)
 		if err != nil {
 			return err
 		}

@@ -78,13 +78,13 @@ func (s dailySeeder) backlogActivities() {
 // Nothing touched them since and the close date is ahead, so they are only quiet.
 func (s dailySeeder) backlogDeals(pipeline string) {
 	s.exec("backlog deal", `INSERT INTO deal (id, name, amount_minor, amount_minor_base, currency, pipeline_id, stage_id,
-	                                 company_id, owner_id, status, expected_close_date, forecast_category, priority,
+	                                 company_id, owner_id, status, expected_close_date, priority,
 	                                 commercial_motion, source, captured_by, created_at)
 	      SELECT b.id, 'Backlog deal ' || b.i, 500000, 500000,
 	             coalesce((SELECT value #>> '{}' FROM setting WHERE key = 'installation.base_currency'), 'EUR'),
 	             $1::uuid, (SELECT s.id FROM stage s WHERE s.pipeline_id = $1::uuid AND s.semantic = 'open'
 	                        AND s.archived_at IS NULL ORDER BY s.position LIMIT 1),
-	             b.company_id, b.rep, 'open', current_date + 30, 'pipeline', 'medium',
+	             b.company_id, b.rep, 'open', current_date + 30, 'medium',
 	             'new_business', 'manual', 'human:' || b.rep, now() - interval '60 days'
 	      FROM backlog_row b WHERE b.kind = 'deal' ORDER BY b.i`, pipeline)
 }

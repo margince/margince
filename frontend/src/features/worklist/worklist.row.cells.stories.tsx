@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { StoryProviders } from "../../testing/story-utils";
 import { row } from "./worklist.fixtures";
 import { RowText } from "./worklist.row.cells";
@@ -28,7 +28,8 @@ const meta: Meta<typeof RowText> = {
 
       sample: [],
       touch: [],
-      zone: viewerZone(),
+      pinned: false,
+      zone: browserZone(),
     },
   },
 };

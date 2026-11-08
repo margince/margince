@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 type followUpFieldError struct{ Field, Message string }
@@ -35,7 +36,7 @@ func followUpFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	}
 	task := req.FollowUpTask
 	followUp, err := TaskInputFrom(crmcontracts.CreateTaskRequest{
-		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt,
+		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt, DueHasTime: task.DueHasTime,
 		AssigneeId: task.AssigneeId, Source: req.Source,
 	})
 	if err != nil {
@@ -120,5 +121,15 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	if err := prepareFollowUpSource(ctx, tx, in); err != nil {
 		return err
 	}
-	return validateActivityDuration(in.DurationSeconds)
+	if err := admitTaskTime(in); err != nil {
+		return err
+	}
+	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		return err
+	}
+	keys := []string{in.ThreadKey}
+	if in.SourceSystem != nil && *in.SourceSystem == connector.EmailSourceSystem && in.SourceID != nil {
+		keys = append(keys, *in.SourceID)
+	}
+	return storekit.LockThreadKeysTx(ctx, tx, keys...)
 }

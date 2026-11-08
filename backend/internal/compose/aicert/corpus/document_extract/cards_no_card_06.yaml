@@ -11,11 +11,7 @@ fixture:
 expect:
   outcome: accepted
   answer: []
-  rubric: >
-    The picture shows a landscape and no business card. The correct reply is
-    an empty list of cards. Score any card at all as invented, however
-    plausible its name.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The right answer is an empty list, and the check fails any card the reading
+    offers above the floor, however plausible its name.

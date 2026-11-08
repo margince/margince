@@ -18,10 +18,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	// The stop lock first, the order a stop writer takes it in.
+	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
+		return err
+	}
 	// BEFORE the UPDATE below nulls it: a suppression is detached onto the
 	// address it applies to, and the lead row is the only place that address
 	// still lives. Read after the scrub and the objection is orphaned.
@@ -102,25 +107,14 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE lead_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's notice links: %w", err)
 	}
-	// A SUPPRESSION IS DETACHED, NOT DELETED, exactly as the contact arm detaches
-	// it. An anonymized subject may lawfully come back — re-captured from the
-	// same mailbox — and an objection deleted with them means they come back
-	// mailable, having never withdrawn it. Deleting is what an ERASURE does,
-	// and erasure writes an erasure_suppression hash to keep the refusal;
-	// retention anonymize writes none, so the address is all that is left to
-	// carry it.
+	// A suppression is detached, not deleted (retentionstops.go). Erasure
+	// deletes it because it writes an erasure_suppression hash; this writes none.
+	var addresses []string
 	if address != nil && *address != "" {
-		if _, err := tx.Exec(ctx, `
-			UPDATE communication_suppression
-			   SET lead_id = NULL, address = coalesce(address, $2)
-			 WHERE lead_id = $1`, id, *address); err != nil {
-			return fmt.Errorf("detach the lead's suppressions onto their address: %w", err)
-		}
+		addresses = []string{*address}
 	}
-	// Whatever the detach could not reach names a lead who is going.
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM communication_suppression WHERE lead_id = $1`, id); err != nil {
-		return fmt.Errorf("clear the lead's suppressions: %w", err)
+	if err := keepStopsOnAddresses(ctx, tx, stopsOfLead, id, addresses); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_decision

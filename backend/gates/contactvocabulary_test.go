@@ -30,7 +30,6 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -119,7 +118,7 @@ func humanSenseSentences() []string {
 	entry := regexp.MustCompile(`(?m)^\s*"(?:[^"\\]|\\.)+":\s*"((?:[^"\\]|\\.)*)",\s*$`)
 	seen := map[string]bool{}
 	for _, locale := range []string{"en", "de", "vi"} {
-		body, err := os.ReadFile(filepath.Join( // #nosec G304 -- a fixed catalog name
+		body, err := gatekit.ReadFile(filepath.Join( // #nosec G304 -- a fixed catalog name
 			repoRoot, "frontend", "src", "i18n", locale+".ts"))
 		if err != nil {
 			continue
@@ -161,13 +160,13 @@ var frozenCriteria = sync.OnceValue(recordedCriteria)
 
 func recordedCriteria() []string {
 	dir := filepath.Join(repoRoot, "e2e", "llm", "testdata", "judge")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		return nil
 	}
 	seen := map[string]bool{}
 	for _, entry := range entries {
-		body, err := os.ReadFile(filepath.Join(dir, entry.Name())) // #nosec G304 -- a corpus this test owns
+		body, err := gatekit.ReadFile(filepath.Join(dir, entry.Name())) // #nosec G304 -- a corpus this test owns
 		if err != nil {
 			continue
 		}
@@ -207,6 +206,8 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
+	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
+		"and a shipped migration is never renamed",
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"backend/migrations/enginebackfill_integration_test.go": "it REPLAYS a shipped migration, " +
@@ -251,10 +252,13 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/features/settings/users-access.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/components/roster.stories.tsx":                     "the member roster under the seats settings group",
 	"frontend/src/features/settings/users-edit.stories.tsx":          "a page under the seats settings group",
+	"frontend/src/features/settings/users-entitycell.stories.tsx":    "a page under the seats settings group",
 	"frontend/src/features/settings/users-retire.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/users-handover.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/features/settings/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/features/settings/users-invite-form.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-memberverbs.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/features/settings/users-membercells.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/features/settings/users-password-link.stories.tsx": "a page under the seats settings group",
 	"frontend/src/features/settings/users-rolecell.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/components/share.parts.tsx": "the share target kind: a colleague with a seat, or a team " +
@@ -369,7 +373,7 @@ func TestTheRecordIsCalledAContact(t *testing.T) {
 		if pathNamesTheRetiredWord(f.path) {
 			t.Errorf("%s is NAMED for the record's retired name. It is called a contact.", f.path)
 		}
-		body, err := os.ReadFile(filepath.Join(repoRoot, f.path))
+		body, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)
 		}
@@ -488,6 +492,11 @@ func namesTheRetiredWord(line string) bool {
 // The waiver set holds each reason to a standard and reports the entries that
 // stopped matching, so a path that moves does not leave a standing permission.
 func retirementCovers(t *testing.T, path string) bool {
+	// fe-drift proves each generated catalog copies its source; record-noun judges that source.
+	if filepath.ToSlash(filepath.Dir(path)) == "frontend/src/i18n/essential" && strings.HasSuffix(path, "_gen.json") {
+		locale := strings.TrimSuffix(filepath.Base(path), "_gen.json")
+		path = "frontend/src/i18n/" + locale + ".ts"
+	}
 	for _, prefix := range retired.Subjects() {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {
 			return retired.Waived(t, prefix)
@@ -540,6 +549,20 @@ func TestACatalogSentenceIsExemptInAnyCase(t *testing.T) {
 		if !namesTheRetiredWord(beyondTheExemptions(beside)) {
 			t.Error("the census takes a whole line out on a re-cased catalog sentence's account, " +
 				"so a retired name written beside one walks past it")
+		}
+	}
+}
+
+func TestGeneratedCatalogUsesItsSourceVocabularyOwner(t *testing.T) {
+	t.Parallel()
+	for _, locale := range []string{"en", "de", "vi"} {
+		if !retirementCovers(t, "frontend/src/i18n/essential/"+locale+"_gen.json") {
+			t.Errorf("generated %s catalog lost its source owner", locale)
+		}
+	}
+	for _, path := range []string{"frontend/src/i18n/essential/unknown_gen.json", "frontend/src/i18n/essential/notes.json", "frontend/src/i18n/essential/en_gen.ts"} {
+		if retirementCovers(t, path) {
+			t.Errorf("%s is not a generated copy of a vocabulary-owned catalog", path)
 		}
 	}
 }

@@ -153,6 +153,7 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		return "", fmt.Errorf("identity: mint session token: %w", err)
 	}
 
+	var signedIn ids.UserID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A mapped grant is a role_assignment write and serializes with every
 		// other one, so an admin's re-role cannot interleave with a sign-in
@@ -168,6 +169,7 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		if resolveErr != nil {
 			return resolveErr
 		}
+		signedIn = userID
 		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject, email)
 		if linkErr != nil {
 			return linkErr
@@ -206,5 +208,6 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		}
 		return "", err
 	}
+	s.offerProviderPicture(ctx, signedIn, claims.Picture)
 	return rawToken, nil
 }

@@ -8,6 +8,7 @@ import {
   bookingSlots,
 } from "../src/testing/book.testkit";
 import { copy } from "./copy";
+import { contact360 } from "./mockapi/records";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";
 
@@ -16,7 +17,15 @@ test.beforeEach(async ({ page, context }) => {
   await page.clock.setFixedTime(new Date("2026-09-27T06:00:00Z"));
 });
 
-test("Meetings opens a booking for the contact", async ({ page }) => {
+test("Meetings opens a booking for the contact", async ({ page, context }) => {
+  await context.route("**/v1/contacts/p-anna/360", (route) =>
+    route.fulfill({
+      json: {
+        ...contact360,
+        contact: { ...contact360.contact, attachable: true },
+      },
+    }),
+  );
   await page.goto("/#/contacts/p-anna/meetings");
   await page
     .getByRole("button", { name: de["scheduling.bookContact"] })
@@ -149,7 +158,7 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await page.getByLabel(de["scheduling.agenda"]).fill("Discuss scope");
   const settingsPromise = page.waitForEvent("popup");
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
-  const settings = await settingsPromise;
+  const settings = await openedAt(settingsPromise, /settings\/meetings/);
   await expect(
     settings.getByRole("heading", {
       name: de["scheduling.calendarTitle"],
@@ -374,6 +383,9 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   ).toBeVisible();
   await expect(page.getByLabel("Unternehmensname")).toHaveCount(0);
   await page
+    .getByRole("button", { name: de["settings.part.meetings.availability"] })
+    .click();
+  await page
     .getByRole("combobox", { name: de["scheduling.noticeRow"] })
     .click();
   await page.getByRole("option", { name: de["scheduling.ruleOther"] }).click();
@@ -390,6 +402,9 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   // The hours save does not re-key the probe, so its one read has landed.
   await settingsProbeRead;
   previewing = true;
+  await page
+    .getByRole("button", { name: de["settings.part.meetings.guests"] })
+    .click();
   await page
     .getByRole("button", { name: de["scheduling.preview"] })
     .first()
@@ -446,7 +461,7 @@ test("calendar setup enables booking with the existing Account name", async ({
     }
     await route.fulfill({ json: profile });
   });
-  await page.goto("/#/settings/meetings");
+  await page.goto("/#/settings/meetings/guests");
   await expect(
     page.getByText(
       de["scheduling.yourNameHelp"].replace(
@@ -456,6 +471,9 @@ test("calendar setup enables booking with the existing Account name", async ({
       { exact: true },
     ),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: de["settings.part.meetings.links"] })
+    .click();
   const accept = page.getByRole("switch", {
     name: de["scheduling.acceptBookings"],
     exact: true,

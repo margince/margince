@@ -59,12 +59,8 @@ func lookupCloneDB() (string, bool) {
 // ledgerColumns is what the probe reads out of a tracking table, and the
 // preflight counts these three by name.
 //
-// content_digest is in the list because a template migrated by a binary older
-// than that column exists in the wild — an inner-loop template survives across
-// a git pull (scripts/lib-testdb.sh ensure_template migrates it rather than
-// rebuilding it). Reading it blind fails the whole probe with an undefined
-// column instead of falling back, which turns a stale template from "slower"
-// into "red".
+// A template can predate content digests. Check the columns before reading them
+// so EnsureSchema can refuse that clone with a rebuild command.
 var ledgerColumns = []string{"version", "name", "content_digest"}
 
 // preflightSQL answers, in one round trip, the two questions that decide
@@ -82,49 +78,12 @@ const preflightSQL = `
 	           AND table_name IN ('schema_migrations_core', 'schema_migrations_custom')
 	           AND column_name = ANY($1))`
 
-// reusableClone reports whether owner's database may be taken as already
-// migrated to this binary's head and still empty, so EnsureSchema can skip the
-// drop and the full dbmigrate.Up.
+// reusableClone proves that the declared lane clone has this binary's migration
+// ledger and no test rows. A reason refuses that clone before any schema drop.
+// A database the lane did not declare has no reason and may be rebuilt.
 //
-// It returns a REASON alongside the verdict, and the caller prints it — but
-// only for the refusals that say something is WRONG WITH THE TEMPLATE. The
-// asymmetry matches scripts/lib-testdb.sh migrate_template, and the cut is
-// between two different kinds of "no":
-//
-//   - This database is not the lane's clone (no variable, or a name that does
-//     not match). That is a fact about the CALLER, not about any schema: the
-//     serial lane and tools/extmigrategate both arrive here legitimately and
-//     get exactly what they asked for. Silent.
-//   - The lane's own clone is behind, diverged, unverifiable or already
-//     populated. Somebody has to fix a template, and until they do the lane
-//     pays the rebuild it was meant to stop paying. Reported.
-//
-// So a line in a lane log means a template to fix, and a lane that prints none
-// is one where every package took the skip — which is what makes "no rebuild
-// lines" a usable structural check on the whole run rather than a count of
-// exceptions.
-//
-// An error is reserved for a database that could not be asked. Everything the
-// probe can actually establish about the schema resolves to reuse-or-rebuild,
-// because rebuilding is always correct.
-//
-// WHAT THIS PROVES, exactly, because the difference is the whole risk. It proves
-// that the LEDGER records this binary's own migrations, by content, and that the
-// tables a reset acts on hold no rows. It does NOT compare the live catalog
-// against what those migrations build — a column somebody added to the template
-// by hand is invisible here. That comparison cannot be made cheaply, and not for
-// want of trying: the only way to know what a migration set builds is to build
-// it, which is the rebuild being skipped. backend/migrations' own head-schema
-// digest has the same shape and the same limit.
-//
-// What bounds it is the clone, not the probe. A reusable database is a file copy
-// of margince_test taken for ONE package and dropped after it, and the lane
-// rebuilds that template from scratch on every full run (scripts/lib-testdb.sh
-// build_template); `make test-db-up` is the same thing by hand. So the window in
-// which hand-made DDL can survive is the window in which somebody edits the
-// template and then does not rebuild it — and the version, name and content
-// checks below already refuse every way the migration SET can differ, which is
-// how that template would ordinarily go stale.
+// This checks the ledger, not hand-made DDL. The lane bounds that gap by copying
+// a template built by its migrator into a private database for each package.
 func reusableClone(ctx context.Context, owner *pgx.Conn) (bool, string, error) {
 	declared, ok := lookupCloneDB()
 	if !ok {
@@ -144,27 +103,26 @@ func reusableClone(ctx context.Context, owner *pgx.Conn) (bool, string, error) {
 		return false, "", nil
 	}
 	if want := 2 * len(ledgerColumns); columns != want {
-		return false, fmt.Sprintf("the migration ledger has %d of the %d columns the probe reads — this database was migrated by a binary that did not record content digests; `make test-db-up` rebuilds the template", columns, want), nil
+		return false, ledgerRebuildReason(fmt.Sprintf("the migration ledger has %d of the %d columns the probe reads; this database did not record content digests", columns, want)), nil
 	}
-	if reason, err := ledgerAtHead(ctx, owner); err != nil || reason != "" {
-		return false, reason, err
+	if reason, err := ledgerAtHead(ctx, owner); err != nil {
+		return false, "", err
+	} else if reason != "" {
+		return false, ledgerRebuildReason(reason), nil
 	}
-	// A failed emptiness probe REFUSES rather than propagating, because this
-	// function's contract is that everything it can establish about the schema
-	// resolves to reuse-or-rebuild — rebuilding is always correct, and an error
-	// here would instead abort every package in the process. An error means the
-	// database could not be asked at all: a relation this connection's role holds
-	// no SELECT on reads that way, which is what an owner outside the compose
-	// stack (scripts/deploy/db-bootstrap.sql) can meet. "Cannot prove empty" and
-	// "is not empty" owe the caller the same answer.
+	// A role that cannot read a relation cannot prove the clone empty.
 	reason, err := schemaEmpty(ctx, owner)
 	if err != nil {
-		return false, fmt.Sprintf("the clone could not be proved empty, so it is rebuilt rather than trusted: %v", err), nil
+		return false, fmt.Sprintf("the clone could not be proved empty; check the template owner’s SELECT privileges and the schema: %v", err), nil
 	}
 	if reason != "" {
 		return false, reason, nil
 	}
 	return true, "", nil
+}
+
+func ledgerRebuildReason(reason string) string {
+	return reason + "; run `make test-db-up` in this worktree, then run the lane again to create a fresh clone"
 }
 
 // ledgerAtHead compares what each tracking table recorded against what this
@@ -247,11 +205,8 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]recordedRow) st
 			// before any package starts — so by the time this probe runs the
 			// column is there and only its rows are old. It carries the remedy for
 			// that reason.
-			return fmt.Sprintf("%s %s_%s recorded no content digest, so what it applied cannot be compared with what this binary embeds — this template predates the digest and rows are never back-filled; `make test-db-up` rebuilds it", ns.Name, m.Version, m.Name)
-		// Asked of dbmigrate rather than compared here: a migrate admits content
-		// it has recorded as building the same schema, and a probe that did not
-		// would call a template the migrator would reuse not-at-head and rebuild
-		// it for nothing.
+			return fmt.Sprintf("%s %s_%s recorded no content digest, so what it applied cannot be compared with what this binary embeds; this template predates content digests and rows are never back-filled", ns.Name, m.Version, m.Name)
+		// The migrator and reuse check must accept the same admitted content.
 		case !dbmigrate.ContentAdmitted(ns.Name, m, row.digest):
 			return fmt.Sprintf("%s %s_%s was applied from different content than this binary embeds — the migration was edited after this database was migrated", ns.Name, m.Version, m.Name)
 		}
@@ -327,7 +282,7 @@ func rowRuleRefusal(tables []probedTable) string {
 	if len(filtered) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("%d table(s) carry row-level security (%s) — an emptiness check over them answers about the role reading rather than about the table, so this clone is rebuilt rather than trusted",
+	return fmt.Sprintf("%d table(s) carry row-level security (%s) — an emptiness check over them answers about the role reading rather than about the table. Remove those row rules from the test template or correct the migrations",
 		len(filtered), summarise(filtered))
 }
 
@@ -352,9 +307,9 @@ func schemaEmpty(ctx context.Context, owner *pgx.Conn) (string, error) {
 		return "", err
 	}
 	// A migrated database always has tables, so an empty list means the schema
-	// is not there — which is a rebuild, not an empty database.
+	// is absent, which refuses reuse of that database.
 	if len(tables) == 0 {
-		return "no data tables in public or ext — this database carries a migration ledger but no schema", nil
+		return "no data tables in public or ext — this database carries a migration ledger but no schema; run `make test-db-up` in this worktree", nil
 	}
 	if reason := rowRuleRefusal(tables); reason != "" {
 		return reason, nil
@@ -387,7 +342,7 @@ func schemaEmpty(ctx context.Context, owner *pgx.Conn) (string, error) {
 	if len(populated) == 0 {
 		return "", nil
 	}
-	return fmt.Sprintf("%d table(s) already hold rows (%s) — the template this clone came from is not empty, and an empty-schema size baseline taken over them would misreport every later reset",
+	return fmt.Sprintf("%d table(s) already hold rows (%s) — the template this clone came from is not empty. Remove stray test rows, or add migration-seeded reference tables to PreservedReferenceTables",
 		len(populated), summarise(populated)), nil
 }
 

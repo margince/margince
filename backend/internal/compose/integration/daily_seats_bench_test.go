@@ -11,9 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/cookiejar"
-	"net/url"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -75,13 +73,7 @@ func signInSeat(t *testing.T, e *apptest.AppEnv, name, role, team string) Seat {
 	}, http.StatusCreated, &invited)
 	seat.UserID = invited.ID
 
-	var link struct {
-		SetPasswordURL string `json:"set_password_url"`
-	}
-	mustCall(t, e, "POST", "/v1/users/"+seat.UserID+"/password-link", nil, http.StatusCreated, &link)
-	mustCall(t, e, "POST", "/v1/auth/reset-password", AnyMap{
-		"token": passwordLinkToken(t, link.SetPasswordURL), "new_password": dailySeatPassword,
-	}, http.StatusNoContent, nil)
+	apptest.SetPasswordByLink(t, e, seat.UserID, dailySeatPassword)
 
 	seat.Client = seatClient(t, e)
 	mustCall(t, seat.env(e), "POST", "/v1/auth/login", AnyMap{
@@ -89,29 +81,6 @@ func signInSeat(t *testing.T, e *apptest.AppEnv, name, role, team string) Seat {
 	}, http.StatusOK, nil)
 	assertSeatSignedIn(t, seat.env(e), seat)
 	return seat
-}
-
-// passwordLinkToken reads the token out of the link's fragment, which is
-// shaped `/reset-password?token=…` because the SPA routes on the fragment.
-func passwordLinkToken(t *testing.T, link string) string {
-	t.Helper()
-	u, err := url.Parse(link)
-	if err != nil {
-		t.Fatalf("set-password link %q: %v", link, err)
-	}
-	_, rawQuery, found := strings.Cut(u.Fragment, "?")
-	if !found {
-		t.Fatalf("set-password link %q carries no query in its fragment", link)
-	}
-	query, err := url.ParseQuery(rawQuery)
-	if err != nil {
-		t.Fatalf("set-password link %q: %v", link, err)
-	}
-	token := query.Get("token")
-	if token == "" {
-		t.Fatalf("set-password link %q carries no token", link)
-	}
-	return token
 }
 
 // seatClient clones the harness transport rather than sharing it, so each

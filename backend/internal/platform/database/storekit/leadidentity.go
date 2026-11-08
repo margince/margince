@@ -27,6 +27,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -91,7 +92,7 @@ func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *Lead
 	if email == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, LeadEmailMatchClause("lead", "$1"), email, exclude, "email")
+	return liveLeadBy(ctx, tx, `lead.email = ANY($1::text[])`, EmailLookups(email), exclude, "email")
 }
 
 // LiveLeadByLinkedInURL reports the live lead holding this profile URL. The
@@ -107,13 +108,13 @@ func LiveLeadByLinkedInURL(ctx context.Context, tx pgx.Tx, normalizedURL string,
 	if normalizedURL == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, `linkedin_url = $1`, normalizedURL, exclude, "linkedin_url")
+	return liveLeadBy(ctx, tx, `linkedin_url = ANY($1::text[])`, []string{normalizedURL}, exclude, "linkedin_url")
 }
 
 // liveLeadBy is the one query shape behind both probes. The predicate is a
-// fixed literal chosen by the exported wrappers, never caller text; the value
-// is always a bind parameter.
-func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude *LeadSourceKey, lane string) (ids.LeadID, bool, error) {
+// fixed literal chosen by the exported wrappers, never caller text; the values
+// are always a bind parameter.
+func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate string, values []string, exclude *LeadSourceKey, lane string) (ids.LeadID, bool, error) {
 	var excludeSystem, excludeID *string
 	if exclude != nil {
 		excludeSystem, excludeID = &exclude.SourceSystem, &exclude.SourceID
@@ -126,7 +127,7 @@ func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude
 		        OR source_system IS DISTINCT FROM $2
 		        OR source_id IS DISTINCT FROM $3)
 		 ORDER BY created_at, id
-		 LIMIT 1`, value, excludeSystem, excludeID).Scan(&id)
+		 LIMIT 1`, values, excludeSystem, excludeID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.LeadID{}, false, nil
 	}
@@ -151,6 +152,23 @@ type IdentityHolders struct {
 	Leads    []ids.LeadID
 	Contacts []ids.ContactID
 	held     map[heldKey]bool
+	// typed are the holders of an address in the spelling it was asked in.
+	typed map[ids.UUID]bool
+}
+
+// PreferredLead is the lead a door files on: the oldest holding an address as
+// it was asked, else the oldest holding its other spelling. Each spelling of
+// one mailbox may already have a lead of its own. The zero id when none holds.
+func (h IdentityHolders) PreferredLead() ids.LeadID {
+	for _, lead := range h.Leads {
+		if h.typed[lead.UUID] {
+			return lead
+		}
+	}
+	if len(h.Leads) == 0 {
+		return ids.LeadID{}
+	}
+	return h.Leads[0]
 }
 
 // heldKey is one key a holder of one kind was found under.
@@ -167,12 +185,12 @@ const (
 
 // LeadHoldsEmail reports whether a live lead holds this address.
 func (h IdentityHolders) LeadHoldsEmail(email string) bool {
-	return h.held[heldKey{holderLead, laneEmail, foldEmail(email)}]
+	return h.held[heldKey{holderLead, laneEmail, mailidentity.FoldAddress(email)}]
 }
 
 // ContactHoldsEmail reports whether a live contact holds this address.
 func (h IdentityHolders) ContactHoldsEmail(email string) bool {
-	return h.held[heldKey{holderContact, laneEmail, foldEmail(email)}]
+	return h.held[heldKey{holderContact, laneEmail, mailidentity.FoldAddress(email)}]
 }
 
 // LeadHoldsLinkedIn reports whether a live lead holds this normalised profile URL.
@@ -209,43 +227,68 @@ func LockIdentityHolders(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (Ide
 
 // identityHoldersSQL matches each key against both sides. A lead holds an
 // address or a profile URL on its own row. A contact holds them on its live
-// contact_email rows and its LinkedIn contact_social row.
+// contact_email rows and its LinkedIn contact_social row. OFFSET 0 keeps the
+// lateral reads from being flattened into whole-table joins before key filtering.
 const identityHoldersSQL = `
 	WITH emails AS (SELECT DISTINCT lower(btrim(e)) AS key FROM unnest($1::text[]) e WHERE btrim(e) <> ''),
 	     urls AS (SELECT DISTINCT u AS key FROM unnest($2::text[]) u WHERE u <> '')
-	SELECT 'lead', 'email', l.id, l.email, l.created_at FROM lead l
-	 WHERE l.email IN (SELECT key FROM emails) AND l.archived_at IS NULL
+	SELECT 'lead', 'email', l.id, l.email, l.created_at FROM emails e
+	 CROSS JOIN LATERAL (
+	   SELECT id, email, created_at FROM lead
+	    WHERE email=e.key AND archived_at IS NULL OFFSET 0
+	 ) l
 	UNION ALL
-	SELECT 'lead', 'linkedin', l.id, l.linkedin_url, l.created_at FROM lead l
-	 WHERE l.linkedin_url IN (SELECT key FROM urls) AND l.archived_at IS NULL
+	SELECT 'lead', 'linkedin', l.id, l.linkedin_url, l.created_at FROM urls u
+	 CROSS JOIN LATERAL (
+	   SELECT id, linkedin_url, created_at FROM lead
+	    WHERE linkedin_url=u.key AND archived_at IS NULL OFFSET 0
+	 ) l
 	UNION ALL
-	SELECT 'contact', 'email', c.id, ce.email, c.created_at FROM contact c
-	  JOIN contact_email ce ON ce.contact_id = c.id AND ce.archived_at IS NULL
-	 WHERE ce.email IN (SELECT key FROM emails) AND c.archived_at IS NULL
+	SELECT 'contact', 'email', c.id, ce.email, c.created_at FROM emails e
+	 CROSS JOIN LATERAL (
+	   SELECT contact_id, email FROM contact_email
+	    WHERE email=e.key AND archived_at IS NULL OFFSET 0
+	 ) ce
+	 CROSS JOIN LATERAL (
+	   SELECT id, created_at, archived_at FROM contact WHERE id=ce.contact_id OFFSET 0
+	 ) c WHERE c.archived_at IS NULL
 	UNION ALL
-	SELECT 'contact', 'linkedin', c.id, cs.handle, c.created_at FROM contact c
-	  JOIN contact_social cs ON cs.contact_id = c.id AND cs.platform = 'linkedin'
-	 WHERE cs.handle IN (SELECT key FROM urls) AND c.archived_at IS NULL
+	SELECT 'contact', 'linkedin', c.id, cs.handle, c.created_at FROM urls u
+	 CROSS JOIN LATERAL (
+	   SELECT contact_id, handle FROM contact_social
+	    WHERE platform='linkedin' AND handle=u.key OFFSET 0
+	 ) cs
+	 CROSS JOIN LATERAL (
+	   SELECT id, created_at, archived_at FROM contact WHERE id=cs.contact_id OFFSET 0
+	 ) c WHERE c.archived_at IS NULL
 	ORDER BY 5, 3`
 
 // IdentityHoldersOf is the same question without the locks, for a writer that
 // already holds them and for a read that writes nothing.
 func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (IdentityHolders, error) {
-	out := IdentityHolders{Leads: []ids.LeadID{}, Contacts: []ids.ContactID{}, held: map[heldKey]bool{}}
+	out := IdentityHolders{Leads: []ids.LeadID{}, Contacts: []ids.ContactID{}, held: map[heldKey]bool{}, typed: map[ids.UUID]bool{}}
 	if len(keys.Emails) == 0 && len(keys.LinkedInURLs) == 0 {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, identityHoldersSQL, keys.Emails, keys.LinkedInURLs)
+	// A key in one spelling finds a holder stored in the other.
+	rows, err := tx.Query(ctx, identityHoldersSQL, EmailLookups(keys.Emails...), keys.LinkedInURLs)
 	if err != nil {
 		return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
 	}
 	defer rows.Close()
+	asked := map[string]bool{}
+	for _, email := range keys.Emails {
+		asked[strings.ToLower(strings.TrimSpace(email))] = true
+	}
 	for rows.Next() {
 		var found heldKey
 		var id ids.UUID
 		var createdAt time.Time
 		if err := rows.Scan(&found.holder, &found.lane, &id, &found.key, &createdAt); err != nil {
 			return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
+		}
+		if found.lane == laneEmail && asked[found.key] {
+			out.typed[id] = true
 		}
 		out.add(found, id)
 	}
@@ -256,6 +299,9 @@ func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (Ident
 }
 
 func (h *IdentityHolders) add(found heldKey, id ids.UUID) {
+	if found.lane == laneEmail {
+		found.key = mailidentity.FoldAddress(found.key)
+	}
 	h.held[found] = true
 	if found.holder == holderLead {
 		if lead := ids.From[ids.LeadKind](id); !slices.Contains(h.Leads, lead) {
@@ -267,6 +313,3 @@ func (h *IdentityHolders) add(found heldKey, id ids.UUID) {
 		h.Contacts = append(h.Contacts, contact)
 	}
 }
-
-// foldEmail is the spelling contact_email and lead_email_norm store.
-func foldEmail(email string) string { return strings.ToLower(strings.TrimSpace(email)) }

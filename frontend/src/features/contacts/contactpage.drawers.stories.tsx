@@ -11,12 +11,14 @@ import {
   providerCompletedProfile,
 } from "./contactprovider.fixtures";
 import "./contact360.css";
+import { view as contactView } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ContactMailDrawer } from "./contactpage.drawers";
 
 // The contact page's research drawer and meeting brief, from the page gallery
 // (contactpage.stories.tsx). Each story stubs the provider reads it needs.
@@ -45,6 +47,7 @@ const providerNotConnected: components["schemas"]["ContactProviderProfile"] = {
 export const ResearchDrawer: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }),
       "POST /contacts/p-1/research": () =>
         jsonResponse({
           contact_id: "p-1",
@@ -75,6 +78,7 @@ export const ResearchDrawer: Story = {
 export const ResearchDrawerProviderCompleted: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }),
       "POST /contacts/p-1/research": () =>
         jsonResponse({
           contact_id: "p-1",
@@ -134,6 +138,7 @@ const providerRunning: components["schemas"]["ContactProviderProfile"] = {
 export const ResearchDrawerProviderRunning: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }),
       "POST /contacts/p-1/research": () =>
         jsonResponse({
           contact_id: "p-1",
@@ -190,6 +195,7 @@ const providerError: components["schemas"]["ContactProviderProfile"] = {
 export const ResearchDrawerProviderError: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }),
       "POST /contacts/p-1/research": () =>
         jsonResponse({
           contact_id: "p-1",
@@ -265,6 +271,36 @@ export const ProviderNotConfigured: Story = {
     return (
       <StoryProviders>
         <ProviderCard />
+      </StoryProviders>
+    );
+  },
+};
+
+export const ReplySourceOutsideTimeline: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"], activity: ["read", "create"] }),
+      "GET /activities/source-mail": () =>
+        jsonResponse({
+          ...contactView.activities?.data[0],
+          id: "source-mail",
+          subject: "Lieferumfang",
+          links: [{ entity_type: "contact", entity_id: "p-1" }],
+        }),
+      "GET /contacts/p-1": () => jsonResponse(contactView.contact),
+      "GET /contacts/p-1/360": () => jsonResponse(contactView),
+      "GET /mail-drafts": () => jsonResponse({ code: "not_found" }, 404),
+    });
+    return (
+      <StoryProviders>
+        <ContactMailDrawer
+          contactId="p-1"
+          view={contactView}
+          open
+          intent=""
+          threadId="source-mail"
+          onClose={() => {}}
+        />
       </StoryProviders>
     );
   },

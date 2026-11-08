@@ -76,6 +76,14 @@ func (h Handlers) GetDataSubjectRequestDeadline(w http.ResponseWriter, r *http.R
 
 // writeDSR answers one request, its subject named under the queue's own rule.
 func (h Handlers) writeDSR(w http.ResponseWriter, r *http.Request, status int, d dsrRow) {
+	if closedDSRStatus(d.Status) {
+		current, err := h.store.GetDSR(r.Context(), d.ID)
+		if err != nil {
+			writeConsentErr(w, r, err)
+			return
+		}
+		d = current
+	}
 	httperr.WriteJSON(w, status, wireDSR(d, h.dsrSubjectLabels(r.Context(), d)))
 }
 

@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ShareScreen } from "./share";
+import { ShareScreenBody } from "./share.body";
+import { ShareConfirmation } from "./share.confirmation";
 
 // ShareScreen (AS-3/4/5) — record-level manual grants (A52/ADR-0039):
 // empty roster (nothing to grant to yet), a roster that failed to load, a
@@ -24,6 +26,56 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
+
+export const CompanyContacts: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /users": () => jsonResponse(usersPage),
+      "GET /teams": () => jsonResponse(teamsPage),
+      "GET /companies": () =>
+        jsonResponse({
+          data: [{ id: "co-1", display_name: "Current employer" }],
+          page: { has_more: false },
+        }),
+      "POST /companies/co-1/share-contacts": () =>
+        jsonResponse({ shared: 3, skipped: 1 }),
+    });
+    return (
+      <StoryProviders>
+        <ShareScreenBody recordType="company" recordId="co-1" contactsOnly />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Deal Desk/ }),
+    );
+    await waitFor(async () => {
+      await expect(
+        canvas.getByRole("button", { name: "Write", pressed: true }),
+      ).toBeVisible();
+    });
+    await expect(canvas.getByLabelText("Expiry")).toHaveTextContent(
+      "No expiry",
+    );
+    await userEvent.click(canvas.getByTestId("share-grant-submit"));
+    const dialog = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Share these contacts?" },
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Grant access" }),
+    );
+    await expect(canvas.findByRole("status")).resolves.toHaveTextContent(
+      "3 shared · 1 skipped",
+    );
+  },
+};
+export const CompanyContactsDark: Story = {
+  ...CompanyContacts,
+  globals: { theme: "dark" },
+};
 
 const usersPage = {
   data: [
@@ -278,4 +330,29 @@ export const SeatCeilingRefusal: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Write" }));
     await userEvent.click(canvas.getByTestId("share-grant-submit"));
   },
+};
+
+export const BulkReplacement: Story = {
+  render: () => (
+    <StoryProviders>
+      <ShareConfirmation
+        draft={{
+          subject: { id: "u-1", name: "Priya Nair", kind: "user", note: "" },
+          access: "read",
+          change: "new",
+        }}
+        bulk
+        open
+        onClose={() => {}}
+        returnFocusTo={() => null}
+        onConfirm={() => {}}
+        pending={false}
+        error={null}
+      />
+    </StoryProviders>
+  ),
+};
+export const BulkReplacementDark: Story = {
+  ...BulkReplacement,
+  globals: { theme: "dark" },
 };

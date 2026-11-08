@@ -53,7 +53,7 @@ type FormerMemberInput struct {
 const defaultFormerRole = "rep"
 
 // CreateFormerMember provisions a DEACTIVATED seat for somebody who already
-// left, with no password and no way in. Admin-only, human-only.
+// left, with no password and no way in. Admin-only.
 //
 // It is InviteUser with three things deliberately absent, and each absence is
 // the point rather than an economy:
@@ -80,11 +80,12 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 }
 
 func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in FormerMemberInput) (ids.UserID, bool, error) {
-	// HUMAN-ONLY, stated here because nothing else states it. The contract's
-	// `x-agent-access: human-only` is a declaration and the generated wrapper
-	// enforces nothing (#5852), and provisioning a human seat is not an act an
-	// agent passport may perform on its own authority.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Passportless automatic work provisions no seat. An agent never names the
+	// admin role, even on a seat that cannot sign in yet.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return ids.UserID{}, false, err
+	}
+	if err := refuseAgentAdminRole(ctx, in.Role); err != nil {
 		return ids.UserID{}, false, err
 	}
 	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionCreate)

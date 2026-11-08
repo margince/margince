@@ -79,10 +79,10 @@ STUB
         printf '%s' "$existing" >"$work/app/secrets/admin-password"
     fi
 
-    # The entrypoint writes to the absolute /app/secrets and reads /.env; run
-    # it under a rewritten copy so the test needs no container and no root.
-    sed -e "s#/app/secrets/admin-password#$work/app/secrets/admin-password#" \
-        -e "s#/\.env#$work/.env#g" "$entrypoint" >"$work/entrypoint.sh"
+    # The entrypoint reads /.env; run it under a rewritten copy so the test
+    # needs no container and no root. It writes relative to its working
+    # directory, so every run below starts in $work/app, as the image's /app.
+    sed -e "s#/\.env#$work/.env#g" "$entrypoint" >"$work/entrypoint.sh"
     chmod +x "$work/entrypoint.sh"
 
     if [[ "$in_env_file" -eq 1 ]]; then
@@ -92,7 +92,7 @@ STUB
         unset MARGINCE_SCHEMA_DSN
         export EXPECTED_SCHEMA_DSN="postgres://owner@localhost/x"
         out="$(env -u MARGINCE_OWNER_DSN -u MARGINCE_DSN -u MARGINCE_ADMIN_PASSWORD \
-            PATH="$work/bin:$PATH" "$work/entrypoint.sh" 2>&1)" || status=$?
+            PATH="$work/bin:$PATH" sh -c 'cd "$1/app" && exec "$1/entrypoint.sh"' sh "$work" 2>&1)" || status=$?
         unset EXPECTED_SCHEMA_DSN
         pwfile="$work/app/secrets/admin-password"
         return "$status"
@@ -109,14 +109,14 @@ STUB
             MARGINCE_OWNER_DSN="postgres://owner@localhost/x" \
             MARGINCE_DSN="postgres://app@localhost/x" \
             MARGINCE_ADMIN_PASSWORD="$password" \
-            "$work/entrypoint.sh" 2>&1
+            sh -c 'cd "$1/app" && exec "$1/entrypoint.sh"' sh "$work" 2>&1
         )" || status=$?
     else
         out="$(
             PATH="$work/bin:$PATH" \
             MARGINCE_OWNER_DSN="postgres://owner@localhost/x" \
             MARGINCE_DSN="postgres://app@localhost/x" \
-            "$work/entrypoint.sh" 2>&1
+            sh -c 'cd "$1/app" && exec "$1/entrypoint.sh"' sh "$work" 2>&1
         )" || status=$?
     fi
     pwfile="$work/app/secrets/admin-password"

@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { components } from "../../api/schema";
 import {
   Badge,
   Button,
@@ -14,44 +13,32 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
 import "./connected-agents.css";
 import "../settings/settings-agents.css";
+import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
-import { usePassports } from "../../lib/passports.queries";
+import {
+  offersWorkAreas,
+  type WorkArea,
+  WorkAreasCell,
+} from "../../components/workareas";
+import {
+  type ConnectionState,
+  connectionStateOf,
+  type PassportSummary,
+  usePassports,
+} from "../../lib/passports.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
 
 // GET /passports lists a connected client's credential beside the minted
 // passports; `connection` tells them apart, never the `oauth:` label prefix.
 
-type PassportSummary = components["schemas"]["PassportSummary"];
 type Connection = PassportSummary & {
   connection: NonNullable<PassportSummary["connection"]>;
 };
-
-// A connection ends when revoked, or when its credential runs out and its grant
-// cannot renew. A renewable one past its expiry is only between credentials.
-type ConnectionState = Readonly<{
-  revoked: boolean;
-  renewing: boolean;
-  lapsed: boolean;
-  ended: boolean;
-}>;
-
-function connectionStateOf(passport: Connection, now: number): ConnectionState {
-  const revoked = passport.revoked_at != null;
-  const expired =
-    !revoked &&
-    passport.expires_at != null &&
-    Date.parse(passport.expires_at) <= now;
-  // Renewing, not ended: the client repairs this itself on its next call.
-  const renewing = expired && passport.connection.renewable;
-  const lapsed = expired && !passport.connection.renewable;
-  return { revoked, renewing, lapsed, ended: revoked || lapsed };
-}
 
 type Translate = ReturnType<typeof useT>;
 
@@ -71,14 +58,18 @@ function stateBadge(state: ConnectionState, t: Translate): ReactNode {
 
 // A lapsed connection has lost its credential but not its grant, so it ends the
 // grant. Each verb names its client: the dialog's confirm names only the act.
+// A renewing connection still holds its grant, where a change of areas lands.
+// So it is offered there too. An ended one has nothing to change.
 function EndVerb({
   connection,
   state,
   onEnd,
+  onChangeAreas,
 }: Readonly<{
   connection: Connection;
   state: ConnectionState;
   onEnd: () => void;
+  onChangeAreas?: () => void;
 }>) {
   const t = useT();
   const client = connection.connection.client_name;
@@ -88,6 +79,15 @@ function EndVerb({
   return (
     <span className="cell-actions">
       <OverflowMenu label={t("table.rowActions", { name: client })}>
+        {onChangeAreas && !state.ended && (
+          <Button
+            aria-label={t("passportAreas.openNamed", { name: client })}
+            aria-haspopup="dialog"
+            onClick={onChangeAreas}
+          >
+            {t("passportAreas.open")}
+          </Button>
+        )}
         <Button
           variant={state.ended ? undefined : "danger"}
           aria-label={t(
@@ -143,18 +143,18 @@ const EXPIRES: MessageKey = "settings.passportExpiresOn";
 // connected_at is a record date; the expiry is the holder's own deadline. A
 // renewing or revoked row shows no expiry: its badge carries the state.
 function useConnectionDates() {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
   const connected = (connection: Connection) =>
-    formatDate(connection.connection.connected_at, locale, recordZone);
+    formatDate(connection.connection.connected_at, locale, readerZone);
   // A renewable connection outlives its credential, so its date is when the
   // client must next renew, never when it stops working.
   const deadline = (connection: Connection, state: ConnectionState) => {
     if (connection.expires_at == null || state.revoked || state.renewing) {
       return null;
     }
-    const date = formatDate(connection.expires_at, locale, viewerZone());
+    const date = formatDate(connection.expires_at, locale, readerZone);
     if (state.lapsed) {
       return { date, phrase: EXPIRED };
     }
@@ -185,12 +185,17 @@ function useConnectionDates() {
 function ConnectionTable({
   connections,
   now,
+  reachable,
   onEnd,
+  onChangeAreas,
 }: Readonly<{
   connections: readonly Connection[];
   now: number;
+  reachable: readonly WorkArea[];
   onEnd: (id: string) => void;
+  onChangeAreas: (connection: Connection) => void;
 }>) {
+  const areas = offersWorkAreas(reachable);
   const t = useT();
   const dates = useConnectionDates();
   const stateOf = (connection: Connection) =>
@@ -226,6 +231,19 @@ function ConnectionTable({
         </span>
       ),
     },
+    ...(areas
+      ? [
+          {
+            key: "areas",
+            header: t("settings.passportColAreas"),
+            render: (connection: Connection) => (
+              <span className="agents-scopes">
+                <WorkAreasCell areas={connection.areas} />
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: "connected",
       header: t("agents.colConnected"),
@@ -249,6 +267,7 @@ function ConnectionTable({
           connection={connection}
           state={stateOf(connection)}
           onEnd={() => onEnd(connection.id)}
+          onChangeAreas={areas ? () => onChangeAreas(connection) : undefined}
         />
       ),
     },
@@ -325,6 +344,8 @@ export function ConnectedAgentsCard() {
     (passport): passport is Connection => Boolean(passport.connection),
   );
   const now = useExpiryClock(connections);
+  const reachable = list.data?.reachable_areas ?? [];
+  const [changingAreas, setChangingAreas] = useState<Connection | null>(null);
 
   return (
     <Panel title={t("agents.connected")}>
@@ -344,7 +365,21 @@ export function ConnectedAgentsCard() {
         <ConnectionTable
           connections={connections}
           now={now}
+          reachable={reachable}
           onEnd={disconnect.ask}
+          onChangeAreas={setChangingAreas}
+        />
+      )}
+      {changingAreas && (
+        <PassportAreasDrawer
+          key={changingAreas.id}
+          subject={{
+            id: changingAreas.id,
+            name: changingAreas.connection.client_name,
+            areas: changingAreas.areas,
+          }}
+          reachable={reachable}
+          onClose={() => setChangingAreas(null)}
         />
       )}
       {disconnect.confirm}

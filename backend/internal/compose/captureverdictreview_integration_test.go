@@ -38,7 +38,7 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 	dispositionID := seedPendingDisposition(t, e, "dana@acceptco.example", "acceptco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
@@ -93,7 +93,7 @@ func TestEditingTheCapturedMessageDoesNotCancelItsWaitingReview(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "dana@editco.example", "editco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
@@ -214,7 +214,7 @@ func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "declined@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
@@ -329,7 +329,7 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "decided@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)

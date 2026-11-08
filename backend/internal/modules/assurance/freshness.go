@@ -3,16 +3,8 @@
 
 package assurance
 
-// Whether the last reading still describes the records it read.
-//
-// A change bumps its subject's generation from one sequence. A complete run
-// records the highest generation it could see before it read the deals. A
-// change is unread when its generation is higher than every run's record. The
-// marker commits only after the domain write it reports. So any generation a
-// run saw belongs to a change that committed before that run read the deals.
-// A change during a pass, or a pass that did not read every source, therefore
-// leaves the change unread. A redelivered event only bumps the generation
-// again, so it can make a subject out of date but never current.
+// The check records marker generations and committed events before reading.
+// Later unread events keep freshness unknown until a consumer or full scan reads them.
 
 import (
 	"cmp"
@@ -24,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -87,25 +80,26 @@ func distinctSubjects(subjects []ChangedSubject) ([]string, []ids.UUID) {
 	return kinds, subjectIDs
 }
 
-// inputGeneration is the highest generation visible now. Scan reads it before
-// the deals, which is what makes it safe to clear up to.
-func (s *Store) inputGeneration(ctx context.Context, tx pgx.Tx) (int64, error) {
+// readInputPosition captures committed changes before the check reads sources.
+func (s *Store) readInputPosition(ctx context.Context, tx pgx.Tx) (inputPosition, error) {
 	var generation int64
 	if err := tx.QueryRow(ctx,
 		`SELECT coalesce(max(generation), 0) FROM assurance_input_change`).Scan(&generation); err != nil {
-		return 0, fmt.Errorf("assurance: reading the input generation: %w", err)
+		return inputPosition{}, fmt.Errorf("assurance: reading the input generation: %w", err)
 	}
-	return generation, nil
+	events, err := unreadInputEvents(ctx, tx)
+	return inputPosition{generation: generation, events: events}, err
 }
 
-// recordReadThrough says the run read its inputs past generation. Only a run
-// that read everything it needs calls it; any other run clears nothing.
-func (s *Store) recordReadThrough(ctx context.Context, tx pgx.Tx, runID ids.UUID, generation int64) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE assurance_run SET read_through_generation = $2 WHERE id = $1`, runID, generation); err != nil {
+// recordReadThrough records the generations and events a complete check read.
+// An incomplete check clears neither.
+func (s *Store) recordReadThrough(ctx context.Context, tx pgx.Tx, runID ids.UUID, position inputPosition) error {
+	if _, err := tx.Exec(ctx, `UPDATE assurance_run
+		SET read_through_generation = @generation, outbox_inputs_tracked = true WHERE id = @run`,
+		pgx.NamedArgs{"run": runID, "generation": position.generation}); err != nil {
 		return fmt.Errorf("assurance: recording what the run read: %w", err)
 	}
-	return nil
+	return storekit.RecordAssuranceInputsRead(ctx, tx, position.events)
 }
 
 // readThrough is the highest generation any run read its inputs past. known is
@@ -114,7 +108,7 @@ func (s *Store) recordReadThrough(ctx context.Context, tx pgx.Tx, runID ids.UUID
 func readThrough(ctx context.Context, tx pgx.Tx) (generation int64, known bool, err error) {
 	var recorded *int64
 	if err := tx.QueryRow(ctx,
-		`SELECT max(read_through_generation) FROM assurance_run`).Scan(&recorded); err != nil {
+		`SELECT max(read_through_generation) FROM assurance_run WHERE outbox_inputs_tracked`).Scan(&recorded); err != nil {
 		return 0, false, fmt.Errorf("assurance: reading what the checks read: %w", err)
 	}
 	if recorded == nil {
@@ -125,9 +119,8 @@ func readThrough(ctx context.Context, tx pgx.Tx) (generation int64, known bool, 
 
 // Freshness is how much of the last reading the records have moved past.
 type Freshness struct {
-	// Known is false while no run has recorded what it read. Nothing can then
-	// be said about what changed since, so the reading is neither current nor
-	// out of date.
+	// Known is false until a complete run records its inputs, or while
+	// committed input events wait to be read.
 	Known bool
 	// ChangedDeals counts deals whose inputs changed after the reading.
 	ChangedDeals int
@@ -145,6 +138,10 @@ func (f Freshness) OutOfDate() bool {
 }
 
 func readFreshness(ctx context.Context, tx pgx.Tx) (Freshness, error) {
+	pending, err := inputsAwaitReading(ctx, tx)
+	if err != nil || pending {
+		return Freshness{}, err
+	}
 	generation, known, err := readThrough(ctx, tx)
 	if err != nil || !known {
 		return Freshness{}, err
@@ -172,6 +169,13 @@ func readFreshness(ctx context.Context, tx pgx.Tx) (Freshness, error) {
 func MarkOutOfDate(ctx context.Context, tx pgx.Tx, found []Exception) error {
 	if len(found) == 0 {
 		return nil
+	}
+	for i := range found {
+		found[i].InputsChanged = nil
+	}
+	pending, err := inputsAwaitReading(ctx, tx)
+	if err != nil || pending {
+		return err
 	}
 	generation, known, err := readThrough(ctx, tx)
 	if err != nil || !known {

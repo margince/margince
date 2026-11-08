@@ -49,9 +49,13 @@ export const me: Handler = ({ json }, { options }) => {
 // with them, as the server does, so a saved card stops offering its default.
 export const myWorkingHours: Handler = ({ route, json }, state) => {
   if (route.request().method() === "PUT") {
+    // The zone is not part of the write; the server keeps its own.
     state.workingHours = {
       chosen: true,
-      working_hours: route.request().postDataJSON(),
+      working_hours: {
+        ...state.workingHours.working_hours,
+        ...route.request().postDataJSON(),
+      },
     };
   }
   return json(state.workingHours);

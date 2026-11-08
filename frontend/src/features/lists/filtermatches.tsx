@@ -1,23 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// What a filter selects: the count and the first page of rows behind it, the
-// one rule for when they are on screen at all, and the line that says what
-// would bring them while they are not.
+// What a filter selects: the count, the rows a page at a time, and their export.
+// Also the one rule for when they are on screen at all, and the line that says
+// what would bring them while they are not.
 
 import { useState } from "react";
-import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  PREVIEW_PAGE,
-  useFilterPreview,
-  type VocabularyField,
-} from "../../lib/filterdata";
+import { useFilterPreview, type VocabularyField } from "../../lib/filterdata";
 import {
   MATCH_LABEL,
   type ObjectTab,
@@ -25,6 +20,7 @@ import {
   UNIT_LABEL,
 } from "../../lib/filtersaddress";
 import {
+  encode,
   fieldsNamed,
   type Group,
   isComplete,
@@ -32,16 +28,16 @@ import {
   type Node,
 } from "../../lib/segmentpredicate";
 import { type VocabularyRead, vocabularyState } from "./filtereditor";
+import {
+  canExportFilter,
+  ExportFilterItems,
+  ExportProgress,
+  useFilterExport,
+} from "./filterexport";
 import { FilterResults } from "./filterresults";
 import "./filters.css";
 
 type Preview = ReturnType<typeof useFilterPreview>;
-
-/**
- * The most rows the reader may ask the preview for. The authority is the
- * contract's ceiling on `FilterPreviewRequest.limit`, which the server holds.
- */
-const MOST_ROWS = 100;
 
 /**
  * The count, and whether it is behind.
@@ -123,42 +119,58 @@ function useResultsShown(tree: Group, preview: Preview): boolean {
 }
 
 /**
- * The results panel: the count beside its title, the rows, and the way to ask
- * for more of them. The table's own page-size dial is the request's limit, so
- * the rows it shows are the rows the server sent and no pager walks past them.
+ * The results panel: the count and the export beside its title, then the rows.
+ * The table's pager walks the pages fetched so far and asks for the next one
+ * past the last.
  */
 export function FilterMatches({
   preview,
   tab,
+  tree,
   fields,
   named,
   andJoined,
-  limit,
-  onLimit,
 }: Readonly<{
   preview: Preview;
   tab: ObjectTab;
+  /** The filter the rows answer, which the export sends. */
+  tree: Group;
   fields: readonly VocabularyField[];
   /** The fields the filter names, in the order they were written. */
   named: readonly string[];
   /** A group joins conditions with "and", so turning it to "or" loosens it. */
   andJoined: boolean;
-  limit: number;
-  onLimit: (next: number) => void;
 }>) {
   const t = useT();
+  const exportRun = useFilterExport();
   const answer = preview.data;
   const unit = t(UNIT_LABEL[tab]);
+  const resource = RESOURCE_OF[tab];
   return (
     <Panel
       title={t("filters.resultsTitle")}
       titleAction={
-        <MatchCount
-          label={MATCH_LABEL[tab]}
-          count={answer?.match_count}
-          stale={preview.isFetching}
-          failed={preview.isError}
-        />
+        <span className="filters-result-head">
+          <MatchCount
+            label={MATCH_LABEL[tab]}
+            count={answer?.match_count}
+            stale={preview.isFetching && !preview.isFetchingNextPage}
+            failed={preview.isError}
+          />
+          {canExportFilter(tree) && (
+            <>
+              <ExportFilterItems
+                run={exportRun}
+                resource={resource}
+                tree={tree}
+                // The rows on screen answer an earlier filter until this one's
+                // first page lands, and the export would not be what they show.
+                held={preview.isPlaceholderData || preview.isPending}
+              />
+              <ExportProgress run={exportRun} tree={tree} />
+            </>
+          )}
+        </span>
       }
     >
       <PanelBody>
@@ -171,6 +183,7 @@ export function FilterMatches({
             <div className="filters-matches">
               <FilterResults
                 preview={answer}
+                resource={resource}
                 fields={fields}
                 named={named}
                 unit={unit}
@@ -183,16 +196,10 @@ export function FilterMatches({
                 widthsKey={`filter-preview-${tab}`}
                 pending={preview.isFetching}
                 total={answer.match_count}
-                perPage={limit}
-                onPerPage={onLimit}
+                hasMore={preview.hasNextPage}
+                onLoadMore={() => preview.fetchNextPage()}
+                scopeKey={JSON.stringify(encode(tree))}
               />
-              {answer.match_count > answer.rows.length && limit < MOST_ROWS && (
-                <p className="filters-more">
-                  <Button variant="link" onClick={() => onLimit(MOST_ROWS)}>
-                    {t("filters.showMore")}
-                  </Button>
-                </p>
-              )}
             </div>
           )}
         </QueryStates>
@@ -203,8 +210,7 @@ export function FilterMatches({
 
 /**
  * Everything under a filter's editor: the line saying what would bring a
- * count, and the results once there is one. The page's preview lives here, its
- * page size set by the table's own dial.
+ * count, and the results once there is one. The page's preview lives here.
  */
 export function FilterOutcome({
   tab,
@@ -215,8 +221,7 @@ export function FilterOutcome({
   tree: Group;
   vocabulary: VocabularyRead;
 }>) {
-  const [limit, setLimit] = useState(PREVIEW_PAGE);
-  const preview = useFilterPreview(RESOURCE_OF[tab], tree, limit);
+  const preview = useFilterPreview(RESOURCE_OF[tab], tree);
   const shown = useResultsShown(tree, preview);
   return (
     <>
@@ -234,11 +239,10 @@ export function FilterOutcome({
         <FilterMatches
           preview={preview}
           tab={tab}
+          tree={tree}
           fields={vocabulary.data?.fields ?? []}
           named={fieldsNamed(tree)}
           andJoined={joinsWithAnd(tree)}
-          limit={limit}
-          onLimit={setLimit}
         />
       )}
     </>

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
   installFetchStub,
@@ -19,6 +20,7 @@ import { ConnectionOutcomesCard } from "./connection-outcomes";
 // row on the page.
 
 type HeldThread = components["schemas"]["HeldThread"];
+type HeldThreadList = components["schemas"]["HeldThreadListResponse"];
 
 const HELD_LEGAL: HeldThread = {
   thread_key: "t-2",
@@ -111,11 +113,33 @@ const MIXED: HeldThread[] = [
   },
 ];
 
-function story(rows: HeldThread[]) {
+const FURTHER: HeldThread = {
+  thread_key: "t-5",
+  status: "held",
+  pending: false,
+  attempts: 1,
+  has_message: true,
+  subject: "On a further page",
+  kind: "personal",
+};
+
+function story(
+  rows: HeldThread[],
+  over: Partial<HeldThreadList> = {},
+  further: HeldThread[] = [],
+) {
   return () => {
+    let asked = 0;
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /capture/held-threads": () => jsonResponse({ data: rows }),
+      "GET /capture/held-threads": () => {
+        asked += 1;
+        return jsonResponse(
+          asked > 1 && further.length > 0
+            ? heldThreadList(further)
+            : heldThreadList(rows, over),
+        );
+      },
       "GET /capture/senders": () => jsonResponse({ data: [] }),
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: [] }),
@@ -142,7 +166,7 @@ async function openHeld(canvasElement: HTMLElement) {
 }
 
 const meta = {
-  title: "Settings/You/Capture activity/Held threads",
+  title: "Settings/You/Connections/Held threads",
   component: ConnectionOutcomesCard,
 } satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;
@@ -163,6 +187,37 @@ export const Mixed: Story = {
       expect(beside?.getBoundingClientRect().height).toBe(0);
       const cell = drawer.querySelector('td[data-fold="only"]:not(:empty)');
       expect(cell?.getBoundingClientRect().height).toBeGreaterThan(0);
+    });
+  },
+};
+
+// A mailbox holding more than a page: the counts are the whole list's, and
+// the rest arrives behind "Show more".
+export const ALongList: Story = {
+  render: story(
+    MIXED,
+    {
+      page: { next_cursor: "page-2", has_more: true },
+      counts: {
+        pending: 212,
+        unsure: 18,
+        held: 940,
+        held_by_owner: 3,
+        stalled: 1,
+      },
+    },
+    [FURTHER],
+  ),
+  play: async ({ canvasElement }) => {
+    const drawer = await openHeld(canvasElement);
+    await userEvent.click(
+      await within(drawer).findByRole("button", { name: "Show more" }),
+    );
+    await within(drawer).findByText("On a further page");
+    await waitFor(async () => {
+      await expect(
+        within(drawer).queryByRole("button", { name: "Show more" }),
+      ).toBeNull();
     });
   },
 };

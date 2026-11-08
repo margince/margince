@@ -61,6 +61,28 @@ func (a attentionApprovals) CountPending(ctx context.Context, in attention.Appro
 	return count.Count, err
 }
 
+// ApprovalsAfter continues the lane's own read past its depth, through the
+// inbox keyset. A later page is decided by the same read as the first.
+func (a attentionApprovals) ApprovalsAfter(
+	ctx context.Context, in attention.ApprovalQuery, after string,
+) ([]attention.Positioned[crmcontracts.Approval], bool, error) {
+	query := approvalListInput(in)
+	query.Cursor = after
+	rows, page, err := a.svc.ListWire(ctx, query)
+	if err != nil {
+		return nil, false, err
+	}
+	staged := make([]attention.Positioned[crmcontracts.Approval], len(rows))
+	for i, row := range rows {
+		position, err := approvals.PositionAfter(row)
+		if err != nil {
+			return nil, false, err
+		}
+		staged[i] = attention.Positioned[crmcontracts.Approval]{Row: row, After: position}
+	}
+	return staged, page.HasMore, nil
+}
+
 func (a attentionApprovals) PendingInScope(ctx context.Context, in attention.ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error) {
 	return a.svc.PendingInScope(ctx, approvalListInput(in), named)
 }
@@ -248,7 +270,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	).WithWaiting(waiting).
 		// The same seam counts the waiting cards whole and reads on past the scan.
 		WithWaitingBacklog(waiting).
-		WithRiskBacklog(atRisk).
+		// The staged decisions continue past the census depth through the inbox read.
+		WithRiskBacklog(atRisk).WithApprovalBacklog(attentionApprovals{svc: svc}).
 		// The mirror: the reader's own sends nobody has answered, once the
 		// workspace's follow-up window has passed.
 		WithAwaiting(attentionAwaiting{
@@ -299,6 +322,9 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// a second store over the same pool would be a second answer to "what is
 		// still open".
 		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
+		// The reader's own booking page, once it was used and while it takes
+		// no bookings.
+		WithBookingHealth(newAttentionBookingHealth(pool, db)).
 		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
 		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
@@ -388,6 +414,7 @@ func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]at
 			AskedAt:    row.AskedAt,
 			EvidenceAt: row.EvidenceAt,
 			Note:       row.Note,
+			Context:    row.Context,
 		})
 	}
 	return out, nil

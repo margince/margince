@@ -31,7 +31,17 @@ import (
 type liveAuthority struct{}
 
 func (liveAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
-	return authz.RBAC{}, nil
+	return authz.RBAC{Permissions: capturingPermissions()}, nil
+}
+
+// capturingPermissions is the narrowest grant set capture.CaptureRefusal
+// admits: the creates capture's writers make.
+func capturingPermissions() principal.Permissions {
+	return principal.Permissions{Objects: map[string]principal.ObjectGrant{
+		"activity": {Create: true, Read: true},
+		"contact":  {Create: true, Read: true},
+		"lead":     {Create: true, Read: true},
+	}}
 }
 
 func (liveAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
@@ -76,7 +86,7 @@ func TestCallbackRefusesADeadGrantorBeforeExchangingTheCode(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: csrfCookieName(providerGmail), Value: nonce})
 	h.ConnectorOAuthCallback(rec, req, "gmail", crmcontracts.ConnectorOAuthCallbackParams{State: state, Code: &code})
 
-	if oauth.exchanged {
+	if oauth.exchanges != 0 {
 		t.Error("the code was exchanged for a credential the granting human can no longer hold")
 	}
 	// A Location on anything but a redirect status navigates no browser, so the

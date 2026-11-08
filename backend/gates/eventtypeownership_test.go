@@ -30,7 +30,6 @@ import (
 	"go/token"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -174,7 +173,7 @@ func internalContractEventTypes(t *testing.T) []string {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/internal-events.yaml")
+	raw, err := gatekit.ReadFile("api/internal-events.yaml")
 	if err != nil {
 		t.Fatalf("reading the internal payload contract: %v", err)
 	}
@@ -214,7 +213,7 @@ func collectEmitSites(t *testing.T) map[string][]emitSite {
 	// internal/contracts as legally as internal can, so an emitter added under
 	// cmd/api defeats the rule while being invisible to a modules-only walk.
 	for _, root := range []string{"internal", "cmd", "pkg", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") ||
 				isIntegrationTagged(path) {

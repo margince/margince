@@ -9,8 +9,8 @@ import type { DetailRow } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { CompanyOwnerControl } from "./companyheader";
 import type { Edit } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
@@ -65,7 +65,7 @@ function VisibleTo({ company }: Readonly<{ company: Company }>) {
 export function useRegistrationRows(company: Company, edit: Edit): DetailRow[] {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const profile = useCompanyProfileFields(company.id);
   return [
     {

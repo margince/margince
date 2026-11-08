@@ -20,10 +20,11 @@ package gates
 // list is short enough that a reviewer notices when it should have grown.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // aggregateReaders are the files whose numbers a colleague reads about mail
@@ -45,7 +46,7 @@ var aggregateReaders = map[string]string{
 func TestEveryAggregateAsksTheAudience(t *testing.T) {
 	t.Parallel()
 	for path, why := range aggregateReaders {
-		body, err := os.ReadFile(filepath.Join(strings.Split(path, "/")...))
+		body, err := gatekit.ReadFile(filepath.Join(strings.Split(path, "/")...))
 		if err != nil {
 			t.Errorf("reading %s (%s): %v — a named aggregate that moved must be re-pointed here, "+
 				"not dropped, or the rule stops being checked for it", path, why, err)

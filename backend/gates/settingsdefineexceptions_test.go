@@ -29,9 +29,10 @@ var settingsDefineExceptions = map[string]string{
 	"installation.agent_window_next_hours": pendingState,
 	"installation.agent_window_next_from":  pendingState,
 
-	"capture.google_app":    bootFieldsApart,
-	"capture.microsoft_app": bootFieldsApart,
-	"capture.unit_apps":     keyedByUnit,
+	"capture.internal_mail_policy": productState,
+	"capture.google_app":           bootFieldsApart,
+	"capture.microsoft_app":        bootFieldsApart,
+	"capture.unit_apps":            keyedByUnit,
 
 	"identity.extension_overwrites_edited_fields": keyedByUnit,
 	"identity.extension_setting_values":           keyedByUnit,
