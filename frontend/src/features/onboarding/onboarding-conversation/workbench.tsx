@@ -12,7 +12,7 @@ import {
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCan } from "../../../lib/capability";
 import { throwProblem, unwrap } from "../../../lib/problem";
-import { loadWizardState } from "../onboarding";
+import { loadWizardState } from "../onboarding-progress";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 

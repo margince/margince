@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Mail } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { api } from "../../api/client";
+import { Wordmark } from "../../components/auth-identity";
 import {
   Avatar,
   Badge,
@@ -18,11 +19,10 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDateAbbrev } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { Wordmark } from "../sign-in/auth";
 
 // The buyer's page around its documents: the ground and the product's mark,
 // the screens a dead or lapsed link lands on, the hero the seller wrote, and
@@ -179,7 +179,7 @@ export function BuyerHero({
             {access === "closed" && closedAt ? (
               <span className="t-caption">
                 {t("buyer.closedOn", {
-                  date: formatDateAbbrev(closedAt, locale, viewerZone()),
+                  date: formatDateAbbrev(closedAt, locale, browserZone()),
                 })}
               </span>
             ) : null}

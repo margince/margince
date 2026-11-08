@@ -26,9 +26,13 @@ func (e *EmptyEntryError) FieldFault() (field, code, message string) {
 // CheckEntryHasContent is the one rule for an entry that must say something.
 // The store holds it on every create and on a patch of a stored entry. The
 // create wire and an import ask it first so a row is refused for its cells
-// before any write. Only a note and a call are held to it.
-func CheckEntryHasContent(kind string, subject, body *string) error {
+// before any write. Only a note and a call are held to it. A call's outcome
+// says what happened on its own: a one-click "Not reached" is a whole entry.
+func CheckEntryHasContent(kind string, subject, body, callOutcome *string) error {
 	if kind != string(crmcontracts.ActivityKindNote) && kind != string(crmcontracts.ActivityKindCall) {
+		return nil
+	}
+	if kind == string(crmcontracts.ActivityKindCall) && callOutcome != nil {
 		return nil
 	}
 	if isBlank(subject) && isBlank(body) {

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // importAdminEmail is the address apptest.BootstrapWorkspace signs the admin in
@@ -51,8 +52,8 @@ func TestOwnersAndTagsLandAndTheTestRunNamesNewTagsAndUnknownOwners(t *testing.T
 	e := setupImportApp(t)
 	csv := "Name,Owner,Tags\nTagged GmbH," + importAdminEmail + ",Partner; DACH\nOrphan AG,mai@old-crm.example,DACH\n"
 	tagsBefore := tagCount(t, e)
-	profile, _ := uploadCSV(t, e, "company", csv)
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Owner": "owner_email", "Tags": "tags"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", csv)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Owner": "owner_email", "Tags": "tags"})
 	var report importReportDTO
 	e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report)
 	if !hasIssue(report, "new_tag", "Partner") || !hasIssue(report, "new_tag", "DACH") || !hasIssue(report, "unknown_owner", "mai@old-crm.example") {
@@ -75,12 +76,12 @@ func TestOwnersAndTagsLandAndTheTestRunNamesNewTagsAndUnknownOwners(t *testing.T
 
 func TestAReimportAddsTagsButNeverRemovesOne(t *testing.T) {
 	e := setupImportApp(t)
-	first, _ := uploadCSV(t, e, "company", "Name,Tags\nKeep GmbH,Partner\n")
-	run, _ := createRunWithMapping(t, e, "company", first.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	first, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nKeep GmbH,Partner\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", first.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
 	approveAndRead(t, e, run.ID)
 
-	again, _ := uploadCSV(t, e, "company", "Name,Tags\nKeep GmbH,DACH\n")
-	second, _ := createRunWithMapping(t, e, "company", again.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	again, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nKeep GmbH,DACH\n")
+	second, _ := importjobtest.CreateRunWithMapping(t, e, "company", again.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
 	approveAndRead(t, e, second.ID)
 	if tags := companyTags(t, e, "Keep GmbH"); !slices.Equal(tags, []string{"DACH", "Partner"}) {
 		t.Fatalf("tags = %v, want the new one added and the old one kept", tags)
@@ -89,8 +90,8 @@ func TestAReimportAddsTagsButNeverRemovesOne(t *testing.T) {
 
 func TestARefusedApprovalCreatesNoTag(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "company", "Name,Tags\nBusy GmbH,Fresh\n")
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nBusy GmbH,Fresh\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
 	// A second approve while the first one's commit is still running.
 	if _, err := e.Owner.Exec(context.Background(), `UPDATE import_run SET status = 'running' WHERE id = $1`, run.ID); err != nil {
 		t.Fatalf("marking the run running: %v", err)

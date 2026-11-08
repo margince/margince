@@ -90,7 +90,7 @@ async function openCorrections({
 }
 
 const meta = {
-  title: "Settings/Governance/Privacy and retention/Corrections",
+  title: "Settings/Compliance/Privacy and retention/Corrections",
   component: RequestsPanel,
   parameters: { layout: "padded" },
   play: openCorrections,

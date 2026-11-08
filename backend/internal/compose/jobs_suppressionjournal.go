@@ -19,8 +19,11 @@ package compose
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -100,4 +103,34 @@ func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspac
 	// job exists to prevent.
 	w.log.InfoContext(ctx, "suppression journal exported", "entries", written)
 	return nil
+}
+
+// queueKeyedJournalExport queues the suppression journal export in the batch's
+// transaction. The journal's unkeyed object names then go as soon as the list
+// is keyed, not at the next hourly export. The data task does no network I/O;
+// the export job does. The insert is one river_job row, and it lives here
+// because the data task files import no job package.
+//
+// Two runs have no export to queue. margince-migrate executes corrections with
+// no job client, and a worker with no object store registers no export and
+// keeps no journal. The hourly export renames the journal for the first.
+func queueKeyedJournalExport(ctx context.Context, tx pgx.Tx) error {
+	client, ok := jobClientOf(ctx)
+	if !ok {
+		return nil
+	}
+	if _, err := client.InsertTx(ctx, tx, SuppressionJournalArgs{}, nil); err != nil {
+		if _, unregistered := errors.AsType[*river.UnknownJobKindError](err); unregistered {
+			return nil
+		}
+		return fmt.Errorf("compose: queueing the keyed suppression journal export: %w", err)
+	}
+	return nil
+}
+
+// jobClientOf answers the job client ctx carries. Its only error is a run
+// with no job client, which margince-migrate is.
+func jobClientOf(ctx context.Context) (*river.Client[pgx.Tx], bool) {
+	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
+	return client, err == nil
 }

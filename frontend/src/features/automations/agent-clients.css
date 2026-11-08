@@ -38,3 +38,19 @@
 .agentclient-steps ol {
   margin: 0;
 }
+
+.agent-experiment-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.agent-experiment-panel p,
+.agent-experiment-panel ol {
+  margin: 0;
+}
+
+.agent-experiment-steps {
+  padding-inline-start: var(--space-4);
+  list-style: decimal;
+}

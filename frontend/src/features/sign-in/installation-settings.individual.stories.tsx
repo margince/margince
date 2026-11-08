@@ -7,8 +7,9 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { en } from "../../i18n/en";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { IndividualPerformanceRows } from "./installation-settings.individual";
@@ -26,8 +27,8 @@ const FULL: InstallationSettings = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
-  timezone: meFixture().user.timezone,
+  forecast_forward_measure: "likely",
+  timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   base_currency_locked: false,
   call_whatsapp: true,
@@ -35,6 +36,7 @@ const FULL: InstallationSettings = {
   call_zalo: true,
   individual_performance: true,
   forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
 };
 
 // A write that lands at once, or one the server refused.
@@ -58,7 +60,13 @@ function Individual({
   });
   const update = {
     mutate: (patch: Patch) => {
-      if (!refused) setSettings((was) => ({ ...was, ...patch }));
+      if (!refused) {
+        setSettings((was) => ({
+          ...was,
+          individual_performance:
+            patch.individual_performance ?? was.individual_performance,
+        }));
+      }
     },
     isPending: false,
     isError: refused,
@@ -105,7 +113,7 @@ export const SwitchOff: Story = {
     await userEvent.click(control);
     await expect(control).toHaveAttribute("aria-checked", "false");
     await expect(
-      canvas.getByText(/Nobody sees a colleague/),
+      canvas.getByText(en["installationSettings.individualOff"]),
     ).toBeInTheDocument();
   },
 };

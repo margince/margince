@@ -40,9 +40,10 @@ func captureMailLink(t *testing.T, e *Env, mail ids.UUID, system, address, text 
 	store := activities.NewStore(e.DB())
 	for range 2 {
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-			return store.RecordCapturedLinks(ctx, tx, ids.From[ids.ActivityKind](mail),
+			_, err := store.RecordCapturedLinks(ctx, tx, ids.From[ids.ActivityKind](mail),
 				activities.CapturedFileSource{System: system, MessageID: "m-" + mail.String(), CapturedBy: "connector:imap", Category: "email_attachment"},
 				[]activities.CapturedLink{{URL: address, Text: text}})
+			return err
 		}); err != nil {
 			t.Fatalf("record link: %v", err)
 		}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { webUrl } from "../format/weburl";
+import { webUrl, withWebScheme } from "../format/weburl";
 
 // What a human types when they mean a profile address, turned into one — and
 // nothing more than that.
@@ -17,20 +17,12 @@ import { webUrl } from "../format/weburl";
 // This runs BEFORE it, turning the two things contacts actually paste into
 // something `webUrl` can judge: a bare host ("linkedin.com/in/jdoe", copied
 // from a browser that hides the scheme) and a stray wrapper of whitespace.
-
-// Prepending https to a bare host is a guess, and it is only ever made for a
-// value that has no scheme at all. A value carrying `http://` keeps it: the
-// caller typed a scheme, and quietly upgrading it would claim a certificate we
-// have not seen.
-const BARE_HOST = /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$)/i;
-
 export function normalizeProfileUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) {
     return "";
   }
-  const withScheme = BARE_HOST.test(trimmed) ? `https://${trimmed}` : trimmed;
-  const parsed = webUrl(withScheme);
+  const parsed = webUrl(withWebScheme(trimmed));
   if (!parsed) {
     // Not an address this product would ever link. Hand back what the contact
     // typed rather than a mangled version of it — the field then shows their

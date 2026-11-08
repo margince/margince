@@ -19,7 +19,6 @@ package gates
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -33,7 +32,7 @@ const presetDir = "../config/presets"
 
 func presetFiles(t *testing.T) []string {
 	t.Helper()
-	entries, err := os.ReadDir(presetDir)
+	entries, err := gatekit.ReadDir(presetDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", presetDir, err)
 	}
@@ -51,7 +50,7 @@ func presetFiles(t *testing.T) []string {
 
 func routingFromPreset(t *testing.T, path string) ai.RoutingConfig {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
@@ -249,7 +248,7 @@ func shippedRoutingFiles(t *testing.T) []string {
 // seeds at all.
 func shippedRouting(t *testing.T, path string) (ai.RoutingConfig, bool) {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

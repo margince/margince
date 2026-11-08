@@ -1,11 +1,5 @@
-import { lazy } from "react";
 import { reviewActions } from "./App.reviewactions";
-
-const AnalyticsFeature = lazy(() =>
-  import("./features/analytics/analytics").then((module) => ({
-    default: module.AnalyticsScreen,
-  })),
-);
+import { AnalyticsScreen as AnalyticsFeature } from "./features/analytics/analytics";
 
 export function AnalyticsScreen() {
   return <AnalyticsFeature reviewActions={reviewActions} />;

@@ -135,8 +135,8 @@ type API interface {
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
 	// Delta returns the ids added or changed since deltaLink, the ids Graph
-	// TOMBSTONED in the same round, and the link to resume from. A tombstone is
-	// the mailbox owner deleting their own copy; it carries no message.
+	// permanently deleted in the same round, and the link to resume from.
+	// Folder moves remain available through their immutable message ids.
 	Delta(ctx context.Context, accessToken, deltaLink string) (messages []MessageRef, removed []string, newDeltaLink string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
@@ -164,18 +164,19 @@ type API interface {
 	// knows it, same as a renewal.
 	GetSubscription(ctx context.Context, accessToken, id string) (Subscription, error)
 	// GetMIME fetches one message as its RFC822 bytes (the /$value stream).
-	GetMIME(ctx context.Context, accessToken, msgID string) (rfc822 []byte, err error)
-	// EstimateAfter returns the provider-side count of messages received on
-	// or after the given instant ($count=true) — the backfill preview's number.
+	// A folder id fetches it only while it is still filed there; Graph answers
+	// 404 for a message moved out, which is a skip. "" fetches it anywhere.
+	GetMIME(ctx context.Context, accessToken, folderID, msgID string) (rfc822 []byte, err error)
+	// EstimateAfter counts the messages in the synced folders received on or
+	// after the given instant: the backfill preview's number.
 	EstimateAfter(ctx context.Context, accessToken string, after time.Time) (int, error)
 	// ListAfter returns one page of messages received on or after the given
 	// instant; pageToken is the @odata.nextLink of the prior page ("" starts
 	// the walk).
 	ListAfter(ctx context.Context, accessToken string, after time.Time, pageToken string, pageSize int) (msgs []MessageRef, next string, err error)
-	// SentFolderID returns the id of the mailbox's Sent Items well-known
-	// folder, against which a message's ParentFolderID identifies mail the
-	// authenticated owner sent.
-	SentFolderID(ctx context.Context, accessToken string) (string, error)
+	// FolderID returns the opaque id of one well-known folder, against which a
+	// listed message's ParentFolderID says where Graph filed it.
+	FolderID(ctx context.Context, accessToken, wellKnown string) (string, error)
 	// ListFolders returns the mailbox's folders — what an owner may pick from
 	// to keep one out of capture.
 	ListFolders(ctx context.Context, accessToken string) ([]connector.NamedContainer, bool, error)
@@ -308,13 +309,17 @@ func (a *httpAPI) sameAPIOrigin(link string) error {
 	return nil
 }
 
-func (a *httpAPI) GetMIME(ctx context.Context, accessToken, msgID string) ([]byte, error) {
+func (a *httpAPI) GetMIME(ctx context.Context, accessToken, folderID, msgID string) ([]byte, error) {
 	u := a.base + "/me/messages/" + url.PathEscape(msgID) + "/$value"
+	if folderID != "" {
+		u = a.base + "/me/mailFolders/" + url.PathEscape(folderID) + "/messages/" + url.PathEscape(msgID) + "/$value"
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, fmt.Errorf("graph: building message request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Prefer", immutableMessageIDs)
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("graph: message %s: %w", msgID, ErrUnreachable)
@@ -330,9 +335,8 @@ func (a *httpAPI) GetMIME(ctx context.Context, accessToken, msgID string) ([]byt
 		return nil, fmt.Errorf("graph: reading message %s: %w", msgID, ErrUnreachable)
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		// The message was deleted between delta enumeration and this fetch —
-		// skip it (the cursor still advances) rather than retrying a message
-		// that is permanently gone, which would wedge the whole sync.
+		// The message was deleted, or moved out of the folder asked for, since
+		// it was listed. Skip it: a retry would wedge the sync on it.
 		return nil, fmt.Errorf("graph: message %s no longer exists: %w", msgID, connector.ErrSkip)
 	}
 	if err := classifyStatus(resp, messageOp, body); err != nil {
@@ -348,21 +352,15 @@ func (a *httpAPI) GetMIME(ctx context.Context, accessToken, msgID string) ([]byt
 }
 
 func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken string, after time.Time) (int, error) {
-	var out struct {
-		Count int `json:"@odata.count"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
+	total := 0
+	for _, folder := range syncedFolders {
+		n, err := a.countInFolder(ctx, accessToken, folder, receivedAfterFilter(after))
+		if err != nil {
+			return 0, err
+		}
+		total += n
 	}
-	q := url.Values{
-		paramFilter: {receivedAfterFilter(after)},
-		paramCount:  {"true"},
-		paramSelect: {"id"},
-		paramTop:    {"1"},
-	}
-	// $count=true needs the eventual-consistency header on Graph.
-	hdr := http.Header{"ConsistencyLevel": {"eventual"}}
-	if _, err := a.get(ctx, accessToken, a.base+"/me/messages?"+q.Encode(), hdr, &out); err != nil {
-		return 0, err
-	}
-	return out.Count, nil
+	return total, nil
 }
 
 func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.Time, pageToken string, pageSize int) ([]MessageRef, string, error) {
@@ -404,25 +402,22 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 	return msgs, out.NextLink, nil
 }
 
-// SentFolderID resolves the mailbox's Sent Items folder by its well-known
-// name, which Graph accepts in place of the opaque id the listed messages
-// carry. Resolved once per page (the connector holds no per-connection state)
-// rather than matched by name: display names are localized and renameable, the
-// well-known id is neither.
-func (a *httpAPI) SentFolderID(ctx context.Context, accessToken string) (string, error) {
+// FolderID resolves a folder by its well-known name, which Graph accepts in
+// place of the opaque id the listed messages carry. Display names are
+// localized and renameable, and the well-known name is neither.
+func (a *httpAPI) FolderID(ctx context.Context, accessToken, wellKnown string) (string, error) {
 	var out struct {
 		ID string `json:"id"`
 	}
 	q := url.Values{paramSelect: {"id"}}
-	if _, err := a.get(ctx, accessToken, a.base+"/me/mailFolders/sentitems?"+q.Encode(), nil, &out); err != nil {
+	if _, err := a.get(ctx, accessToken, a.base+"/me/mailFolders/"+url.PathEscape(wellKnown)+"?"+q.Encode(), nil, &out); err != nil {
 		return "", err
 	}
 	if out.ID == "" {
 		// A 2xx that names no folder is not an answer. Returning "" would make
-		// the caller's `parentFolderId == sentFolder` compare two empty strings
-		// and read the ABSENCE of the signal as the signal, attesting a whole
-		// page — the one direction this evidence must never fail.
-		return "", fmt.Errorf("graph: the mailbox reported no sent-items folder id: %w", ErrUnreachable)
+		// the caller's parentFolderId comparison match two empty strings and
+		// read the ABSENCE of the signal as the signal.
+		return "", fmt.Errorf("graph: the mailbox reported no %s folder id: %w", wellKnown, ErrUnreachable)
 	}
 	return out.ID, nil
 }

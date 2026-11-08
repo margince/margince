@@ -45,7 +45,12 @@ export function CompanyHeadLines({
     <>
       {company.industry && <span>{industryWords(t, company.industry)}</span>}
       {website && (
-        <AppLink className="entity-link" href={website}>
+        <AppLink
+          className="entity-link"
+          href={website}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
           {displayHost(website)}
         </AppLink>
       )}

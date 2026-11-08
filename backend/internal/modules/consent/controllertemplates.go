@@ -250,8 +250,9 @@ func ControllerTemplateKeys() []string {
 	return keys
 }
 
-// RenderControllerPresentation frames the frozen words without changing their version.
-func RenderControllerPresentation(rendered Rendered, brand string) string {
+// RenderControllerPresentation frames the frozen words without changing their
+// version. A logoContentID heads them with the company logo the send attaches.
+func RenderControllerPresentation(rendered Rendered, brand, logoContentID string) string {
 	words := mailcopy.For(rendered.Language)
 	label := controllerAction(rendered.Key, words)
 	before, after, found := strings.Cut(rendered.Body, label+"\n  "+linkPlaceholder)
@@ -261,8 +262,8 @@ func RenderControllerPresentation(rendered Rendered, brand string) string {
 			content.Paragraph(strings.TrimSpace(paragraph))
 		}
 		message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
-		message.Text, message.Brand = rendered.Body, brand
-		return emailview.Render(message)
+		message.Text = rendered.Body
+		return emailview.Render(message, controllerLetterhead(brand, logoContentID, words))
 	}
 	var content emailview.Content
 	for paragraph := range strings.SplitSeq(before, "\n\n") {
@@ -273,8 +274,14 @@ func RenderControllerPresentation(rendered Rendered, brand string) string {
 		content.Paragraph(strings.TrimSpace(paragraph))
 	}
 	message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
-	message.Text, message.Brand, message.ActionPlaceholder = rendered.Body, brand, linkPlaceholder
-	return emailview.Render(message)
+	message.Text, message.ActionPlaceholder = rendered.Body, linkPlaceholder
+	return emailview.Render(message, controllerLetterhead(brand, logoContentID, words))
+}
+
+// controllerLetterhead is the letterhead a privacy notice is drawn under: the
+// installation's logo or name, over the attribution every system mail carries.
+func controllerLetterhead(brand, logoContentID string, words mailcopy.Copy) emailview.Letterhead {
+	return emailview.Letterhead{Name: brand, Attribution: words.PoweredBy, LogoContentID: logoContentID}
 }
 
 func historicalControllerVersion(key string, version int) bool {

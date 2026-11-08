@@ -12,12 +12,12 @@ package gates
 // fail here.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendAttachmentUpload = "../frontend/src/lib/attachmentupload.ts"
@@ -30,7 +30,7 @@ var (
 
 func TestTheAttachmentPickerOffersTheKindsTheServerKeeps(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendAttachmentUpload)
+	source, err := gatekit.ReadFile(frontendAttachmentUpload)
 	if err != nil {
 		t.Fatalf("reading the frontend attachment list: %v", err)
 	}

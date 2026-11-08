@@ -126,7 +126,7 @@ func TestWorklistApprovalKeepsAnArchivedSourceReachable(t *testing.T) {
 	}
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Scope renewal", pipeline, open, &e.Rep1)
-	queue := approvalsServiceWithEffects(e.Pool)
+	queue := NewApprovalsServiceWithEffects(e.Pool)
 	approval, err := queue.Stage(onBehalfOf(commitmentDispatchCtx(e), e.Rep1), approvals.StageInput{
 		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send revised scope","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`),
 		DiffHash: "archived-scope-review", TargetType: "deal", TargetID: deal, Summary: "Send revised scope",

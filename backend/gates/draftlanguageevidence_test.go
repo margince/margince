@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const writtenCallSiteFloor = 4
@@ -35,7 +37,7 @@ func TestEveryWrittenLiteralCarriesTheSharedLanguageEvidence(t *testing.T) {
 	wrapped := map[string]bool{}
 	wrapperOK := map[string]bool{}
 	wrapperUses := map[string]string{}
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

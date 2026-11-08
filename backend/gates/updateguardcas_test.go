@@ -29,6 +29,27 @@ var statePredicate = regexp.MustCompile(`(?i)\b([a-z_]+)\s*(?:=|<>|!=|>=|<=|>|<|
 // beside the id reads as a second key rather than a guard.
 var scopingColumn = regexp.MustCompile(`(?i)^(id|[a-z_]*_id|installation_id|workspace_id|tenant_id|key|kind|type|slug)$`)
 
+func TestTheGuardCensusReadsBothParameterStyles(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		statement string
+		version   bool
+	}{
+		{"UPDATE company SET name = $2 WHERE id = $1 AND version = $3", true},
+		{"UPDATE company SET name = @name WHERE id = @id AND version = @version", true},
+		{"UPDATE company SET version = @version WHERE id = @id", false},
+	} {
+		matched := byIDUpdate.FindStringSubmatch(tc.statement)
+		if len(matched) != 2 || matched[1] != "company" {
+			t.Fatalf("by-id update was missed: %s", tc.statement)
+		}
+		where := whereClause.FindStringSubmatch(tc.statement)
+		if len(where) != 2 || versionPredicate.MatchString(where[1]) != tc.version {
+			t.Errorf("version guard in %s: want %v", tc.statement, tc.version)
+		}
+	}
+}
+
 // livenessOnly is `archived_at IS NULL` and its deleted_at twin: a filter two
 // concurrent editors of one LIVE row both pass, so it refuses a write to a
 // retired row and says nothing about a lost update. Credited only beside a

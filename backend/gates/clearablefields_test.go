@@ -21,7 +21,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -47,8 +46,9 @@ var clearableMapsByRecordType = map[string]string{
 	// and a census that read only that map would report a store clearing fewer
 	// fields than it does — under-recognition, the one way this gate must not
 	// break. Both declarations serve the deal, and the walk unions them.
-	"dealClearPairs":          "deal",
-	"clearableProjectColumns": "project",
+	"dealClearPairs":           "deal",
+	"clearableProjectColumns":  "project",
+	"clearableActivityColumns": "activity",
 }
 
 // storeClearableFields walks the module sources for the clearable-column maps
@@ -68,7 +68,7 @@ func storeClearableFields(t *testing.T) map[string][]string {
 		filepath.Join("internal", "modules", "activities"),
 	}
 	for _, root := range roots {
-		entries, err := os.ReadDir(root)
+		entries, err := gatekit.ReadDir(root)
 		if err != nil {
 			t.Fatalf("read %s: %v", root, err)
 		}

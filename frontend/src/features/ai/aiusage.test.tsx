@@ -22,7 +22,7 @@ import { AiUsageCard } from "./aiusage";
 const viewer = vi.hoisted(() => ({ zone: "UTC" }));
 vi.mock("../../format/timezone", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../format/timezone")>();
-  return { ...actual, viewerZone: () => viewer.zone };
+  return { ...actual, browserZone: () => viewer.zone };
 });
 
 const budget = { monthly_tokens: 1000, spent_tokens: 850, band: "degraded" };
@@ -396,7 +396,7 @@ it("points to the model prices only for a reader who may read them", async () =>
   mount(body, 200, { ...OPERATOR, ai_model_rate: ["read"] });
   expect(
     await screen.findByRole("link", { name: "Prices are set on AI models" }),
-  ).toHaveProperty("hash", "#/settings/models");
+  ).toHaveProperty("hash", "#/settings/models/prices");
   cleanup();
   mount(body);
   expect(await screen.findByText("No AI calls this month.")).toBeTruthy();

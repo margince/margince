@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ContractTerms } from "../../components/contractterms";
 import { EntityRef } from "../../components/entityref";
 import {
   Badge,
@@ -20,7 +21,6 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { ContractForm } from "../projects/contractform";
 import {
   ContractCancelModal,
@@ -29,13 +29,13 @@ import {
   isTerminalContractStatus,
 } from "../projects/contractlifecycle";
 import { ContractPaper } from "../projects/contractpaperchip";
-import { ContractTerm, ContractTerms } from "./contractterms";
 import { CustomFieldsPanel } from "./customfields.card";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The account's agreements: what it signed, what each is worth, and when the
 // next one has to be decided.
@@ -405,6 +405,26 @@ function ContractRow({
   );
 }
 
+// The term as the two dates that bound it. Absent dates say so in words,
+// because a blank reads as "not loaded". An agreement entered from an invoice
+// often has no recorded term.
+function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  const on = (date: string) => formatDate(date, locale, readerZone);
+  if (!contract.starts_on && !contract.ends_on) {
+    return <span>{t("contracts.noTerm")}</span>;
+  }
+  return (
+    <span className="rec-term-dates">
+      {contract.starts_on ? on(contract.starts_on) : t("contracts.openStart")}
+      {" – "}
+      {contract.ends_on ? on(contract.ends_on) : t("contracts.openEnd")}
+    </span>
+  );
+}
+
 /**
  * ContractTermState is where the row says what is actually true about its
  * dates, which is not always what its status says.
@@ -418,7 +438,7 @@ function ContractRow({
 function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
 
   // Its dates have run out and nobody has moved the status. Saying only
   // "active" here would present an approval queue as a live agreement.
@@ -434,7 +454,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
           when: formatDate(
             contract.cancellation_effective_on,
             locale,
-            recordZone,
+            readerZone,
           ),
         })}
       </Badge>
@@ -444,7 +464,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
     return (
       <span className="t-caption">
         {t("contracts.renewsOn", {
-          when: formatDate(contract.renewal_on, locale, recordZone),
+          when: formatDate(contract.renewal_on, locale, readerZone),
         })}
       </span>
     );

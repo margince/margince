@@ -25,11 +25,12 @@ package gates
 // changes this gate follows rather than failing.
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -71,7 +72,7 @@ func TestTheAIProvenanceNoticeHasOneSpelling(t *testing.T) {
 
 	stems := noticeStems(t)
 	root := filepath.Join(repoRoot, "backend")
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -85,7 +86,7 @@ func TestTheAIProvenanceNoticeHasOneSpelling(t *testing.T) {
 		if filepath.ToSlash(rel) == noticeHome {
 			return nil
 		}
-		raw, readErr := os.ReadFile(path)
+		raw, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

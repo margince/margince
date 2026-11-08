@@ -93,6 +93,8 @@ export type SortControl = {
   /** The server sort string, e.g. `-created_at`. */
   value: string;
   onChange: (next: string) => void;
+  /** The order the list opens on; absent, the server's own. */
+  initial?: string;
 };
 
 /**

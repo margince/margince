@@ -17,8 +17,8 @@ import {
   historyValue,
   precisionOf,
 } from "../../lib/historyvalues";
-import { useRecordZone } from "../../lib/recordzone";
 import { roleLabel } from "../../lib/roles.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { humanizeToken } from "./audit";
 import {
   type AuditLogEntry,
@@ -95,7 +95,7 @@ function AuditFieldFacts({
 }: Readonly<{ entry: AuditLogEntry; keys: string[] }>) {
   const shape = changeShape(entry);
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const ctx: HistoryValueCtx = { currency: null, locale, zone };
   const value = (key: string): ReactNode => {
     if (shape === "changed") {

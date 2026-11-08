@@ -143,11 +143,12 @@ func (e *LegalReviewDecidedError) MessageFault() (code, message string) {
 func (e *LegalReviewDecidedError) Unwrap() error { return apperrors.ErrConflict }
 
 // requireReviewSeat answers the seated contact behind this call. Legal review
-// is a human's request and a human's judgement. So a connector, the system
-// principal and an agent are refused, though auth.RequireHuman admits two.
+// is a human's request and a human's judgement, made by them or by their agent
+// at their word. So a connector, the system principal and passportless work
+// are refused, though auth.RequireHuman admits two.
 func requireReviewSeat(ctx context.Context) (ids.UUID, error) {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman || p.UserID.IsZero() {
+	if !ok || !p.HumanOrItsAgent() || p.UserID.IsZero() {
 		return ids.UUID{}, fmt.Errorf("legal review is a seated contact's act: %w", apperrors.ErrPermissionDenied)
 	}
 	return p.UserID, nil

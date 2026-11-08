@@ -19,6 +19,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 failures=0
+: > "$work/copied-files.txt"
 
 # plant writes the three documents of one scenario from a compact description:
 # each argument is `purl|cyclonedx|spdx22-declared|spdx22-concluded|spdx30-declared|spdx30-concluded`,
@@ -83,7 +84,7 @@ case_is() {
 	local dir="$work/$(printf '%s' "$name" | tr -c 'a-zA-Z0-9' '-')"
 	plant "$dir" "$@"
 	local status=0
-	bash "$root/scripts/sbom-license-parity.sh" "$dir" "$map" >"$dir/out" 2>&1 || status=$?
+	bash "$root/scripts/sbom-license-parity.sh" "$dir" "$map" "$work/copied-files.txt" >"$dir/out" 2>&1 || status=$?
 	local text
 	text="$(cat "$dir/out")"
 	if [[ "$want" == pass && $status -ne 0 ]] || [[ "$want" == fail && $status -eq 0 ]]; then

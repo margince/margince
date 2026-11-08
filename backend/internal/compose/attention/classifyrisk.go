@@ -121,7 +121,6 @@ func dealFactsOf(item crmcontracts.AttentionItem) *crmcontracts.WorklistDealFact
 		// the deal's own money and this is a property of the stage it sits in.
 		WinProbability:       item.Deal.WinProbability,
 		CloseDateProvisional: item.Deal.CloseDateProvisional,
-		ForecastCategory:     item.Deal.ForecastCategory,
 		OwnerId:              item.Deal.OwnerId,
 		AmountMinor:          item.Deal.AmountMinor,
 		Currency:             item.Deal.Currency,

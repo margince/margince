@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
 import { opensReservedPage } from "./app/nav";
 import {
@@ -7,16 +8,11 @@ import {
   PendingBody,
   SectionHeader,
 } from "./design-system/atoms";
-import { AuthScreen } from "./features/sign-in/auth";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
 import { navigate } from "./lib/router";
 
-// Static imports are what a first paint needs: the shell, the auth surfaces and
-// the router. features/onboarding/onboarding is static too, since the shell calls its
-// company probe. A module imported statically anywhere lands in the entry chunk
-// whatever a dynamic import says, so splitting it costs a round-trip for nothing.
 // Every route chunk, registered as it is declared. A screen is split so the
 // login screen does not carry the app. It is warmed once a session exists, so a
 // reader past that point never pays the fetch on a click. Splitting alone moves
@@ -35,6 +31,12 @@ function routed<T>(factory: () => Promise<T>): () => Promise<T> {
   ROUTE_CHUNKS.push(factory);
   return factory;
 }
+
+export const OnboardingScreen = lazy(() =>
+  import("./features/onboarding/onboarding").then((module) => ({
+    default: module.OnboardingScreen,
+  })),
+);
 
 export const BookingScreen = lazy(
   routed(() =>

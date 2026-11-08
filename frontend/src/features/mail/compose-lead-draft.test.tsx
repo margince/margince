@@ -175,13 +175,15 @@ describe("drafting to a lead", () => {
     expect(call?.body).toEqual({ intent: "shorter" });
   });
 
-  it("rewrites the lead draft on screen, and keeps a rep's edit when asked again", async () => {
+  it("rewrites the lead draft on screen, and revises a rep's edit when asked again", async () => {
     const first = { ...LEAD_DRAFT, body: "Hi Dung, what 40 seats cost." };
     const second = { ...LEAD_DRAFT, body: "Hi Dung, short." };
+    const third = { ...LEAD_DRAFT, body: "Hi Dung, short, with your line." };
+    const answers = [first, second, third];
     let call = 0;
     const sent = stubRoutes({
       "POST /leads/l-1/draft-email": () =>
-        jsonResponse(call++ === 0 ? first : second),
+        jsonResponse(answers[Math.min(call++, answers.length - 1)]),
       "PUT /mail-drafts": () => new Response(null, { status: 204 }),
     });
     render(
@@ -208,12 +210,11 @@ describe("drafting to a lead", () => {
       screen.getByRole("button", { name: "Change the ask" }),
     );
     await userEvent.click(draftButton());
-    expect(
-      await screen.findByText("Your edits were kept. Draft again when ready."),
-    ).toBeTruthy();
-    expect(messageText("Body")).toBe("Hi Dung, short. My own line.");
+    await waitFor(() => expect(messageText("Body")).toBe(third.body));
     const again = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
-    expect(again[2]?.body).not.toHaveProperty("rewrite_of");
+    expect(again[2]?.body).toMatchObject({
+      rewrite_of: "Hi Dung, short. My own line.",
+    });
   });
 
   it("discloses a model-written draft", async () => {

@@ -48,7 +48,7 @@ func (s *Store) lastExchange(
 		return nil, err
 	}
 	row := rows[0]
-	moves, err := MailMovesFor(ctx, tx, []ids.UUID{ids.UUID(row.Id)})
+	moves, err := MailMovesFor(ctx, tx, []ids.UUID{ids.UUID(row.Id)}, now)
 	if err != nil {
 		return nil, err
 	}

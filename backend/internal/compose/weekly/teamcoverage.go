@@ -37,6 +37,10 @@ type Coverage struct {
 	CoverageBp              int64
 	BaseCurrency            string
 	ReplanRecommended       bool
+	// CallNeedsReview is frozen with the coverage: whether the call it reads
+	// had an open input-check finding when the week closed. Nil when no call
+	// was checked, so an older week never reads as current.
+	CallNeedsReview *bool
 }
 
 // TeamClose is what freezing the team's forecast hands back: the landing per
@@ -91,13 +95,17 @@ func (r TeamReview) ReplanRecommended() bool {
 // every reader, and none of them reads a withheld figure through a sentence.
 func withheldFromReader(ctx context.Context, review *TeamReview) {
 	forecast, meetings := auth.ReadGranted(ctx, "forecast"), MayReadMeetings(ctx)
-	if forecast && meetings {
+	leads := !review.LeadsWithheld && MayReadLeads(ctx)
+	if forecast && meetings && leads {
 		return
 	}
 	if !forecast {
 		for i, c := range review.Coverage {
 			review.Coverage[i] = CoverageRefused(c.PeriodKind, c.BaseCurrency)
 		}
+	}
+	if !leads {
+		withholdTeamLeads(review)
 	}
 	if !meetings {
 		withholdTeamMeetings(review)

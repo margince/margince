@@ -240,13 +240,13 @@ func reportingWriteReach(ctx context.Context, tx pgx.Tx, scope ResolvedScope) er
 	}
 	reach := auth.TeamLeadReachOf(ctx)
 	if scope.Kind == ScopeKindManagedTeams || reach == auth.ReachesNoTeam {
-		return apperrors.ErrPermissionDenied
+		return auth.RefuseRow(ctx, measuredPopulation, apperrors.ErrPermissionDenied)
 	}
 	if reach == auth.ReachesEveryTeam {
 		return nil
 	}
 	if scope.ID == nil {
-		return apperrors.ErrPermissionDenied
+		return auth.RefuseRow(ctx, measuredPopulation, apperrors.ErrPermissionDenied)
 	}
 	return reportingTeamWriteReach(ctx, tx, scope)
 }
