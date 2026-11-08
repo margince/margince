@@ -130,6 +130,7 @@ func TestAnAmbiguousMailIsCheckedBeforeAnyoneIsAsked(t *testing.T) {
 		{"one deal picked", nil, true, 0},
 		{"none of them", func(string) (string, float64) { return "not_about", 0.95 }, false, 0},
 		{"unsure", func(string) (string, float64) { return "unsure", 0.5 }, false, 1},
+		{"a pick beside doubt", nil, false, 1},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			env := newCaptureEnv(t)
@@ -139,8 +140,11 @@ func TestAnAmbiguousMailIsCheckedBeforeAnyoneIsAsked(t *testing.T) {
 			operations := w.deal(t, "Acme operations")
 			w.deal(t, "Acme reporting")
 			env.topic.answer = c.pick
-			if c.pick == nil {
-				env.topic.answer = pickDeal(operations)
+			switch c.name {
+			case "one deal picked":
+				env.topic.answer = pickDeal(operations, "not_about")
+			case "a pick beside doubt":
+				env.topic.answer = pickDeal(operations, "unsure")
 			}
 			env.syncSent(t, map[string]bool{"amb1@myco.example": true},
 				email(captureOwner, "", "alice@acme.example", "amb1@myco.example", ""))
@@ -156,12 +160,12 @@ func TestAnAmbiguousMailIsCheckedBeforeAnyoneIsAsked(t *testing.T) {
 	}
 }
 
-// pickDeal answers "about" for chosen and "not_about" for every other deal.
-func pickDeal(chosen ids.UUID) func(string) (string, float64) {
+// pickDeal answers "about" for chosen and others for every other deal.
+func pickDeal(chosen ids.UUID, others string) func(string) (string, float64) {
 	return func(deal string) (string, float64) {
 		if deal == chosen.String() {
 			return "about", 0.95
 		}
-		return "not_about", 0.95
+		return others, 0.95
 	}
 }

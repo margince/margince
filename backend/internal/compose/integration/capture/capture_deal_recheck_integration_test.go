@@ -148,3 +148,38 @@ func TestTheRecheckWindowIsNinetyDays(t *testing.T) {
 		t.Fatal("a mail older than the window is rechecked")
 	}
 }
+
+// Only a confident "not about it" takes a link back. Doubt keeps it, and is
+// remembered, so the recheck does not ask about it again.
+func TestTheRecheckTakesALinkBackOnlyOnAConfidentNo(t *testing.T) {
+	for _, c := range []struct {
+		name       string
+		verdict    string
+		confidence float64
+		kept       bool
+	}{
+		{"unsure", "unsure", 0.5, true},
+		{"not about it, below the floor", "not_about", 0.6, true},
+		{"not about it", "not_about", 0.9, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			env := newCaptureEnv(t)
+			e := env.e
+			w := newDealWorld(t, e)
+			w.employee(t, "alice@acme.example", w.customer)
+			deal := w.deal(t, "Acme rollout")
+			mail := unrecheckedLink(t, env, "rc5@acme.example", deal)
+			r := refiler(env, w)
+			env.topic.answer = func(string) (string, float64) { return c.verdict, c.confidence }
+			recheck(t, r, mail)
+			if c.kept {
+				wantDeals(t, e, "rc5@acme.example", deal)
+			} else {
+				wantDeals(t, e, "rc5@acme.example")
+			}
+			if got := rechecking(t, r, captureNow); slices.Contains(got, mail.UUID) {
+				t.Fatal("an answered recheck is offered again")
+			}
+		})
+	}
+}

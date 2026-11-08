@@ -16,6 +16,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// dealTopicProjectName is the SQL for a candidate's project name: the name
+// where the seat may read projects and that project, else empty.
+func dealTopicProjectName(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, "project") {
+		return "''", nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "project", "p", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		scope = dealTopicUnscoped
+	}
+	return `CASE WHEN p.id IS NOT NULL AND (` + scope + `) THEN p.name ELSE '' END`, nil
+}
+
 // dealTopicUnscoped stands in for a scope clause a caller's grant leaves empty.
 const dealTopicUnscoped = "TRUE"
 
@@ -51,7 +67,24 @@ func readDealTopicInput(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, dea
 		return in, false, fmt.Errorf("compose: reading the mail a deal topic check judges: %w", err)
 	}
 	in.Deals, err = readDealTopicDeals(ctx, tx, mail, deals)
-	return in, err == nil, err
+	if err != nil {
+		return in, false, err
+	}
+	return in, sameDeals(in.Deals, deals), nil
+}
+
+// sameDeals answers whether the read returned every deal asked about. A model
+// that judged a partial set would be judging a different question.
+func sameDeals(read []dealTopicDeal, asked []ids.UUID) bool {
+	if len(read) != len(asked) {
+		return false
+	}
+	for i, deal := range read {
+		if deal.ID != asked[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // readDealTopicDeals describes each deal the seat may read, in the order asked.
@@ -72,7 +105,11 @@ func readDealTopicDeals(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, dea
 			*clause = dealTopicUnscoped
 		}
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT d.id, d.name, coalesce(p.name, ''),
+	project, err := dealTopicProjectName(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT d.id, d.name, `+project+`,
 		       coalesce((SELECT array_agg(recent.subject) FROM (
 		         SELECT a.subject FROM activity a JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 		          WHERE a.id <> $%[1]d AND a.kind = 'email' AND a.subject IS NOT NULL

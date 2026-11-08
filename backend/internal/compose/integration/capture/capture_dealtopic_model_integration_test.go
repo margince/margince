@@ -29,12 +29,23 @@ type topicModel struct {
 	unconfigured bool
 	forbid       *testing.T
 	calls        int
+	// prompts holds the user turns the check sent, in order.
+	prompts []string
+	// during runs once, while the model is answering its first question.
+	during func()
 }
 
 func (m *topicModel) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.calls++
+	for _, msg := range req.Messages {
+		m.prompts = append(m.prompts, msg.Content)
+	}
+	if during := m.during; during != nil {
+		m.during = nil
+		during()
+	}
 	if m.forbid != nil {
 		m.forbid.Errorf("the deal topic check asked the model for a mail filed on explicit evidence")
 	}
@@ -65,6 +76,13 @@ func refiler(env captureEnv, w dealWorld) repairer {
 	r := newRepairer(env.e, w)
 	r.repair.Check = compose.NewDealTopicCheck(env.e.Pool, env.topic)
 	return r
+}
+
+// sent returns the user turns the check sent.
+func (m *topicModel) sent() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]string(nil), m.prompts...)
 }
 
 // asked is how many times the check called the model.

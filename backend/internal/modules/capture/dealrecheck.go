@@ -4,9 +4,9 @@
 package capture
 
 // The historical recheck: a deal link the rule wrote on a suggestion, before
-// the topic check existed, is asked about once. A confident fit stays and is
-// remembered. Any other answer takes the link back, audited. No answer keeps
-// it. A colleague's filing or decline is never touched.
+// the topic check existed, is asked about once. A confident "not about it"
+// takes the link back, audited. A fit or doubt keeps it and is remembered. No
+// answer keeps it. A colleague's filing or decline is never touched.
 
 import (
 	"context"
@@ -83,21 +83,26 @@ func (r DealRepair) recheckTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityI
 	return question, err
 }
 
-// recheckTopic settles one suggested link by the check's answer.
+// recheckTopic settles one suggested link by the check's answer. Only a
+// confident "not about it" takes the link back. Doubt keeps it, and is
+// remembered like a fit, so the recheck asks about it once.
 func (r DealRepair) recheckTopic(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID) (DealOutcome, *topicQuestion, error) {
 	suggested, err := r.suggestedLink(f, tx, mail, current)
 	if err != nil || !suggested {
 		return DealNone, nil, err
 	}
 	deals := []ids.UUID{current}
-	digest := topicDigest(f.topic.check.Ruleset(), deals)
+	digest, err := f.topic.check.Digest(f.decider, tx, mail, deals)
+	if err != nil || digest == "" {
+		return DealNone, nil, err
+	}
 	answer := f.topic.answer
 	switch {
 	case answer == nil:
 		return dealTopicPending, &topicQuestion{decider: f.decider, mail: mail, deals: deals, digest: digest}, nil
 	case answer.digest != digest || !answer.answered:
 		return DealNone, nil, nil
-	case answer.topic.Confident && answer.topic.Deal == current:
+	case !answer.topic.Confident || !answer.topic.Deal.IsZero():
 		return DealMachineConfirmed, nil, f.filer.StampDealTopic(f.writer, tx, mail, digest)
 	}
 	retracted, err := retractMachineDealLink(f, tx, mail, current)

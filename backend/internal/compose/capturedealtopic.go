@@ -10,6 +10,8 @@ package compose
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -84,12 +86,32 @@ func NewDealTopicCheck(pool *pgxpool.Pool, brain completer) capture.DealTopicChe
 	return dealTopicChecker{db: InstallationDB(pool), brain: brain}
 }
 
-// Ruleset names the prompt this build asks.
-func (dealTopicChecker) Ruleset() string { return dealtopicprompt.Ruleset }
+// Digest names the question as of tx: the prompt and the whole input the
+// model would read. A mail or a candidate the seat cannot read answers "".
+func (dealTopicChecker) Digest(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals []ids.UUID) (string, error) {
+	in, readable, err := readDealTopicInput(ctx, tx, mail, deals)
+	if err != nil || !readable {
+		return "", err
+	}
+	return dealTopicDigest(in)
+}
 
-// Check asks which of deals the mail is about. No configured model, a spent
-// budget or every model declining is capture.ErrTopicAbstained.
-func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals []ids.UUID) (capture.DealTopic, error) {
+// dealTopicDigest names the prompt and the input it renders, so a changed
+// deal name, project, filed subject or mail asks again.
+func dealTopicDigest(in dealTopicInput) (string, error) {
+	rendered, err := json.Marshal(in)
+	if err != nil {
+		return "", fmt.Errorf("deal topic: digesting the input: %w", err)
+	}
+	sum := sha256.Sum256(append([]byte(dealtopicprompt.Ruleset+"\x00"), rendered...))
+	return hex.EncodeToString(sum[:]), nil
+}
+
+// Check asks which of deals the mail is about. It abstains with
+// capture.ErrTopicAbstained when the input it reads no longer digests to
+// digest. It abstains too when no model is configured, the budget is spent or
+// every model declines.
+func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals []ids.UUID, digest string) (capture.DealTopic, error) {
 	var in dealTopicInput
 	var readable bool
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -100,8 +122,8 @@ func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals 
 	if err != nil {
 		return capture.DealTopic{}, err
 	}
-	if !readable || len(in.Deals) == 0 {
-		return capture.DealTopic{}, capture.ErrTopicAbstained
+	if current, err := dealTopicDigest(in); err != nil || !readable || current != digest {
+		return capture.DealTopic{}, errors.Join(capture.ErrTopicAbstained, err)
 	}
 	about := ai.WithSubject(ctx, mail.Ref(), in.Subject)
 	resp, err := ai.Ask(about, c.brain, dealTopicRequest(in), dealTopicShapeValid(in))
@@ -118,32 +140,32 @@ func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals 
 	return dealTopicOf(payload.Results)
 }
 
-// dealTopicOf decides an answer. One deal, and no other, judged about at or
-// above the floor files it. Every deal judged not_about at or above the floor
-// rules them all out. Anything else is doubt.
+// dealTopicOf decides an answer. A deal judged about at or above the floor is
+// filed only when every other deal is judged not_about at or above the floor.
+// Every deal judged so rules them all out. Anything else is doubt.
 func dealTopicOf(results []dealTopicResult) (capture.DealTopic, error) {
 	var picked []string
-	ruledOut := len(results) > 0
+	unsure := 0
 	for _, r := range results {
 		confident := r.Confidence >= dealTopicConfidenceFloor
-		if r.Verdict == dealTopicAbout && confident {
+		switch {
+		case r.Verdict == dealTopicAbout && confident:
 			picked = append(picked, r.DealID)
-		}
-		if r.Verdict != dealTopicNotAbout || !confident {
-			ruledOut = false
+		case r.Verdict != dealTopicNotAbout || !confident:
+			unsure++
 		}
 	}
 	switch {
+	case unsure > 0 || len(results) == 0 || len(picked) > 1:
+		return capture.DealTopic{}, nil
 	case len(picked) == 1:
 		deal, err := ids.Parse(picked[0])
 		if err != nil {
 			return capture.DealTopic{}, fmt.Errorf("deal topic: the answer names %q, which is no deal id: %w", clampToken(picked[0]), err)
 		}
 		return capture.DealTopic{Deal: deal, Confident: true}, nil
-	case ruledOut:
-		return capture.DealTopic{Confident: true}, nil
 	}
-	return capture.DealTopic{}, nil
+	return capture.DealTopic{Confident: true}, nil
 }
 
 // dealTopicRequest builds the one model call that judges one mail. It is a

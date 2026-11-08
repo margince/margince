@@ -11,11 +11,8 @@ package capture
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -58,9 +55,13 @@ var ErrTopicAbstained = errors.New("capture: the deal topic check gave no answer
 // DealTopicCheck asks a model which of deals the mail is about. Compose
 // injects it; a nil check abstains.
 type DealTopicCheck interface {
-	Check(ctx context.Context, mail ids.ActivityID, deals []ids.UUID) (DealTopic, error)
-	// Ruleset names the prompt, so a changed prompt asks again.
-	Ruleset() string
+	// Digest names the question as of tx: the prompt and every input the model
+	// would read. An empty digest means the question cannot be asked, as when
+	// the seat cannot read the mail or one of the deals.
+	Digest(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals []ids.UUID) (string, error)
+	// Check asks the model, and abstains when the input it reads no longer
+	// digests to digest.
+	Check(ctx context.Context, mail ids.ActivityID, deals []ids.UUID, digest string) (DealTopic, error)
 }
 
 // TxRunner opens one transaction for the filing's caller.
@@ -94,18 +95,6 @@ type topicQuestion struct {
 // dealTopicPending is a filing that stopped to ask the model. It never leaves
 // this package: the second transaction settles it.
 const dealTopicPending DealOutcome = "topic_pending"
-
-// topicDigest names one question: the prompt and the candidate deals, in any
-// order.
-func topicDigest(ruleset string, deals []ids.UUID) string {
-	keys := make([]string, len(deals))
-	for i, deal := range deals {
-		keys[i] = deal.String()
-	}
-	slices.Sort(keys)
-	sum := sha256.Sum256([]byte(ruleset + "\x00" + strings.Join(keys, ",")))
-	return hex.EncodeToString(sum[:])
-}
 
 // checkedFiling runs file in one transaction. When it leaves a question, it
 // asks the check outside any transaction and runs file again with the answer.
@@ -142,7 +131,7 @@ func checkedFiling(
 // askTopic asks the check one question. An abstention is an answer of its
 // own; any other fault is the caller's.
 func askTopic(check DealTopicCheck, q topicQuestion) (topicAnswer, error) {
-	topic, err := check.Check(q.decider, q.mail, q.deals)
+	topic, err := check.Check(q.decider, q.mail, q.deals, q.digest)
 	if errors.Is(err, ErrTopicAbstained) {
 		return topicAnswer{digest: q.digest}, nil
 	}
@@ -181,9 +170,14 @@ func decideFiling(f dealFiling, tx pgx.Tx, facts dealFacts, candidates DealCandi
 	if f.topic == nil {
 		return settleSuggestion(verdict, topicAnswer{}), nil, nil
 	}
-	digest := topicDigest(f.topic.check.Ruleset(), verdict.Candidates)
+	digest, err := f.topic.check.Digest(f.decider, tx, facts.activity, verdict.Candidates)
+	if err != nil {
+		return DealVerdict{}, nil, err
+	}
 	answer := f.topic.answer
 	switch {
+	case digest == "":
+		return settleSuggestion(verdict, topicAnswer{}), nil, nil
 	case facts.topicMemo == digest:
 		return DealVerdict{Outcome: DealNone, Basis: verdict.Basis}, nil, nil
 	case answer == nil:

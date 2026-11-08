@@ -100,8 +100,9 @@ func TestTheDealTopicCaseRefusesWhatNoReplyCanReach(t *testing.T) {
 	}
 }
 
-// The decision on an answer: one confident "about" files that deal, every
-// deal confidently "not_about" rules them all out, and anything else is doubt.
+// The decision on an answer: one confident "about" files that deal only when
+// every other deal is confidently "not_about". Every deal confidently
+// "not_about" rules them all out, and anything else is doubt.
 func TestADealTopicAnswerFilesOnlyOnConfidence(t *testing.T) {
 	const first, second = "01a1bbf5-b1d3-70a8-88a8-40db094f51de", "01a1bbf5-b1db-7238-ba38-cb859d5ed13c"
 	result := func(id, verdict string, confidence float64) dealTopicResult {
@@ -113,7 +114,9 @@ func TestADealTopicAnswerFilesOnlyOnConfidence(t *testing.T) {
 		deal    string
 		sure    bool
 	}{
-		{"one confident about", []dealTopicResult{result(first, "about", 0.9), result(second, "not_about", 0.6)}, first, true},
+		{"one confident about, the other ruled out", []dealTopicResult{result(first, "about", 0.9), result(second, "not_about", 0.9)}, first, true},
+		{"one confident about, the other ruled out unsurely", []dealTopicResult{result(first, "about", 0.9), result(second, "not_about", 0.6)}, "", false},
+		{"one confident about, the other unsure", []dealTopicResult{result(first, "about", 0.9), result(second, "unsure", 0.9)}, "", false},
 		{"about below the floor", []dealTopicResult{result(first, "about", 0.84)}, "", false},
 		{"two confident abouts", []dealTopicResult{result(first, "about", 0.9), result(second, "about", 0.95)}, "", false},
 		{"every deal ruled out", []dealTopicResult{result(first, "not_about", 0.9), result(second, "not_about", 0.86)}, "", true},
