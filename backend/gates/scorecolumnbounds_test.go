@@ -140,9 +140,18 @@ func statesARange(definition, column string) bool {
 		// is true of every value. Reporting it unbounded is the direction that fails.
 		return false
 	}
-	_, floor := comparisonBound(body, column, ">")
-	_, ceiling := comparisonBound(body, column, "<")
-	return floor && ceiling
+	return statesABound(body, column, ">") && statesABound(body, column, "<")
+}
+
+// statesABound reports whether the CHECK compares this column with a literal
+// in one direction. Postgres renders a numeric column's bound as a cast, as in
+// `(0)::numeric`, and the bound may carry a fraction.
+//
+// Not comparisonBound, which the safe-integer gate shares: that one answers the
+// bound's value as an integer, and a fraction has none.
+func statesABound(check, column, direction string) bool {
+	return regexp.MustCompile(`\b` + regexp.QuoteMeta(column) + `\b\s*` + direction +
+		`=?\s*\(?'?-?[0-9]+(?:\.[0-9]+)?'?\)?(?:::[a-z ]+)?(?:\s*\)|\s+AND\b|\s*$)`).MatchString(check)
 }
 
 // boundedQuantityColumns derives the corpus from the head catalog.
@@ -254,6 +263,9 @@ func TestAMentionIsNotARange(t *testing.T) {
 		{"one side only is not a range", "((points >= 0))", "points", false},
 		{"a guard on another column leaves it conditional", "((reason IS NULL) OR ((score >= 0) AND (score <= 100)))", "score", false},
 		{"a range on a sibling is not a range on this one", "(((score >= 0) AND (score <= 100)))", "score_computed", false},
+		// A numeric column's bounds come back cast, and may carry a fraction.
+		{"a numeric range states itself", "(((tax_rate >= (0)::numeric) AND (tax_rate <= (99.99)::numeric)))", "tax_rate", true},
+		{"a numeric floor alone is not a range", "((tax_rate >= (0)::numeric))", "tax_rate", false},
 	} {
 		if got := statesARange(c.definition, c.column); got != c.ranged {
 			t.Errorf("%s: %q on %s read as %v, want %v", c.name, c.definition, c.column, got, c.ranged)
