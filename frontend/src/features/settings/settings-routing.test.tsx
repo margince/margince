@@ -294,4 +294,16 @@ describe("a legacy address is answered and rewritten in place", () => {
       expect(globalThis.location.hash).toBe("#/settings/deals/loss"),
     );
   });
+
+  it("keeps the query of the old address, so a link to one pipeline still opens it", async () => {
+    vi.stubGlobal("fetch", companyReaderBackend({ pipeline: ["read"] }));
+    const legacy = "#/settings/pipelines?pipeline=p-1";
+    globalThis.location.hash = legacy;
+
+    render(<SettingsScreen route={parseHash(legacy)} />);
+
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe("#/settings/deals?pipeline=p-1"),
+    );
+  });
 });

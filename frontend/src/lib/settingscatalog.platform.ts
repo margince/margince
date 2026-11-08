@@ -164,7 +164,12 @@ export const PLATFORM_PAGES = [
     requires: anyOf(reads("ai_diagnostics"), reads("ai_budget")),
     // The allowance is the one write here; the spend is a read.
     changes: acts(writes("ai_budget", ["update"])),
-    tabs: [{ id: "allowance" }, { id: "agents" }, { id: "spend" }],
+    tabs: [
+      // The allowance card draws nothing without its read, so its tab asks it.
+      { id: "allowance", requires: reads("ai_budget") },
+      { id: "agents" },
+      { id: "spend" },
+    ],
   },
   {
     id: "model-calls",
@@ -222,7 +227,8 @@ export const PLATFORM_PAGES = [
     ),
     tabs: [
       { id: "consent" },
-      { id: "customers" },
+      // The notices card draws nothing without its read, so its tab asks it.
+      { id: "customers", requires: reads("consent_config") },
       { id: "retention" },
       { id: "requests" },
       { id: "duties" },

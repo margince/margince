@@ -99,11 +99,24 @@ export const BUSINESS_PAGES = [
       writes("fx_rate"),
     ),
     tabs: [
-      { id: "profile", requires: companyContext },
-      { id: "entities" },
-      { id: "regional" },
-      { id: "money" },
-      { id: "email" },
+      // Each tab is read-only on its own cards' grants, not on the page's.
+      { id: "profile", requires: companyContext, changes: companyContext },
+      {
+        id: "entities",
+        changes: acts(writes("legal_entity"), destroys("legal_entity")),
+      },
+      {
+        id: "regional",
+        changes: acts(writes("installation_settings", ["update"])),
+      },
+      {
+        id: "money",
+        changes: acts(writes("fx_rate"), writes("tax_rate", ["create"])),
+      },
+      {
+        id: "email",
+        changes: acts(writes("installation_settings", ["update"])),
+      },
     ],
   },
   {

@@ -11,7 +11,10 @@ import {
   SETTINGS_PAGES,
   type SettingsPageId,
   type SettingsScope,
+  settingsReach,
+  tabReadsOnly,
   visibleSettingsPages,
+  visibleSettingsTabs,
 } from "./settingscatalog";
 
 // The catalog is the single answer four surfaces resolve from, so what it says
@@ -559,6 +562,47 @@ describe("who reaches the company page", () => {
     expect(visibleSettingsPages(operator).map((p) => p.id)).toContain(
       "company",
     );
+  });
+});
+
+describe("the tabs a reader is offered", () => {
+  const tabsFor = (page: SettingsPageId, allow: GrantSpec) => {
+    const reader = meFixture({ roles: ["rep"], allow });
+    const row = SETTINGS_PAGES.find((each) => each.id === page);
+    return row === undefined
+      ? []
+      : visibleSettingsTabs(row, reader).map((tab) => tab.id);
+  };
+
+  // A tab whose only card draws nothing must not open as a blank page.
+  it("offers the allowance only to a reader of the AI budget", () => {
+    expect(tabsFor("usage", { ai_diagnostics: ["read"] })).toEqual([
+      "agents",
+      "spend",
+    ]);
+    expect(tabsFor("usage", { ai_budget: ["read"] })).toContain("allowance");
+  });
+
+  it("offers the customer notices only to a reader of the consent setup", () => {
+    expect(tabsFor("privacy", { retention_policy: ["read"] })).not.toContain(
+      "customers",
+    );
+    expect(
+      tabsFor("privacy", {
+        retention_policy: ["read"],
+        consent_config: ["read"],
+      }),
+    ).toContain("customers");
+  });
+
+  it("marks a company tab read-only on its own cards' grants", () => {
+    const rater = meFixture({
+      roles: ["rep"],
+      allow: { fx_rate: ["read", "create", "update"] },
+    });
+    const reach = settingsReach(rater);
+    expect(tabReadsOnly(reach, "company", "money", rater)).toBe(false);
+    expect(tabReadsOnly(reach, "company", "regional", rater)).toBe(true);
   });
 });
 
