@@ -14,8 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
+// narrowSurface shows one deal, deal-1, as d1.
 func narrowSurface() Surface {
+	refs := NewRecordRefs()
+	refs.For("deal", "deal-1")
 	return Surface{
+		Refs:  refs,
 		Name:  "test draft",
 		Kinds: []crmcontracts.AccountDraftReasonKind{crmcontracts.AccountDraftReasonKindIntent, crmcontracts.AccountDraftReasonKindDeal},
 		KeepUncited: func(kind crmcontracts.AccountDraftReasonKind, _ string) bool {
@@ -70,7 +74,7 @@ func TestANullCitationReadsAsNoCitation(t *testing.T) {
 	var out modelDraft
 	raw := `{"subject":"s","body":"b","reasoning":[` +
 		`{"kind":"intent","label":"asked for a call","entity_type":null,"entity_id":null},` +
-		`{"kind":"deal","label":"renewal","entity_type":"deal","entity_id":"deal-1"}]}`
+		`{"kind":"deal","label":"renewal","entity_type":"deal","entity_id":"d1"}]}`
 	if err := json.Unmarshal([]byte(raw), &out); err != nil {
 		t.Fatalf("decoding: %v", err)
 	}
@@ -80,14 +84,29 @@ func TestANullCitationReadsAsNoCitation(t *testing.T) {
 	}
 }
 
+// The model cites by the ref the payload showed. Anything else — a ref never
+// minted, the raw id, or a shown ref under another kind — names no record.
+func TestACitationNamesARecordOnlyByItsShownRef(t *testing.T) {
+	for entityID, want := range map[string]int{"d1": 1, "d2": 0, "deal-1": 0} {
+		reasons := []modelReason{{Kind: "deal", Label: "renewal", EntityType: "deal", EntityID: entityID}}
+		if kept := keepGroundedReasons(narrowSurface(), reasons); len(kept) != want {
+			t.Errorf("citing %q kept %+v, want %d reason(s)", entityID, kept, want)
+		}
+	}
+	asActivity := []modelReason{{Kind: "deal", Label: "renewal", EntityType: "activity", EntityID: "d1"}}
+	if kept := keepGroundedReasons(narrowSurface(), asActivity); len(kept) != 0 {
+		t.Errorf("a deal ref cited as an activity was kept as %+v", kept)
+	}
+}
+
 // A null type beside an id is not "no citation": it is a pair naming a record
-// by id alone, and an id this draft never read resolves to the same empty
-// string a null type decodes to. Either way the reason is dropped, never kept
-// as a chip pointing at a record nobody checked.
+// by ref alone, and a ref reads back only under the kind it was shown as.
+// Either way the reason is dropped, never kept as a chip pointing at a record
+// nobody checked.
 func TestACitationWithANullTypeIsDropped(t *testing.T) {
 	for name, entityID := range map[string]string{
-		"an id this draft never read": "01a07000-0000-7000-8000-00000000dead",
-		"an id it did read":           "deal-1",
+		"a ref this draft never showed": "d9",
+		"a ref it did show":             "d1",
 	} {
 		var out modelDraft
 		raw := `{"subject":"s","body":"b","reasoning":[{"kind":"deal","label":"signed the renewal",` +

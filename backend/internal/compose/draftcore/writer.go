@@ -132,6 +132,9 @@ type Surface struct {
 	// so a citation can be checked against the type the model claimed. Empty
 	// means "no such record here", which drops the chip.
 	Cites func(entityID string) string
+	// Refs reads a cited ref back to the record id the payload showed it for:
+	// the model sees refs, never ids.
+	Refs *RecordRefs
 }
 
 // schema is the answer's shape: closed at every level, subject then body then
@@ -374,15 +377,14 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 			// the wrong record's page rather than nothing at all — the worse of
 			// the two failures, because it looks like it worked.
 			//
-			// An id this draft never read resolves to "", and so does a null
-			// type — so the id must resolve before the pair is compared, or a
-			// made-up id with no type would match nothing to nothing.
-			cited := surface.Cites(reason.EntityID)
-			if cited == "" || cited != reason.EntityType {
+			// A ref this payload never showed, or showed as another kind, reads
+			// back to nothing, and so does a null type.
+			id, shown := surface.Refs.ID(reason.EntityType, reason.EntityID)
+			if !shown || surface.Cites(id) != reason.EntityType {
 				continue
 			}
 			keep.EntityType = reason.EntityType
-			keep.EntityID = reason.EntityID
+			keep.EntityID = id
 		} else if !surface.KeepUncited(kind, label) {
 			// A reason with no citation is only honest where nothing was there
 			// to cite. An uncited "deal" is a claim about a record with no

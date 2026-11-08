@@ -11,6 +11,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,10 +53,13 @@ func fullView() (crmcontracts.Contact360, ids.ProjectID) {
 	return view, project
 }
 
-// Every id the summary shows the model is one a reason may cite. An id the
-// filter refuses is an invitation to a citation that is silently dropped, so
-// the census reads the encoded payload rather than a list of its fields.
-func TestEveryIDTheSummaryCarriesIsCitable(t *testing.T) {
+var summaryRef = regexp.MustCompile(`"(?:id|source_id)":"([a-z]+[0-9]+)"`)
+
+// Every record the summary shows the model is shown by a ref a reason may
+// cite, and never by its id. A ref the filter refuses is an invitation to a
+// citation that is silently dropped, so the census reads the encoded payload
+// rather than a list of its fields.
+func TestEveryRefTheSummaryCarriesIsCitable(t *testing.T) {
 	view, project := fullView()
 	in := FromView(view, Request{Envelope: envelopeAt(textlang.English, convstate.BandFresh), ProjectID: &project})
 	if in.Project == nil || in.Deal == nil || len(in.Claims) == 0 || len(in.Recent) == 0 || in.Meeting == nil {
@@ -65,14 +69,28 @@ func TestEveryIDTheSummaryCarriesIsCitable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding the summary: %v", err)
 	}
-	citable := knownRecords(in)
-	found := summaryID.FindAllString(string(payload), -1)
-	if len(found) == 0 {
-		t.Fatal("the summary carries no id at all, so this census reads nothing")
+	if id := summaryID.FindString(string(payload)); id != "" {
+		t.Errorf("the summary shows the model the record id %s", id)
 	}
-	for _, id := range found {
-		if _, held := citable[id]; !held {
-			t.Errorf("the summary carries %s, which no citation the filter accepts can name", id)
+	found := summaryRef.FindAllStringSubmatch(string(payload), -1)
+	if len(found) == 0 {
+		t.Fatal("the summary carries no ref at all, so this census reads nothing")
+	}
+	citable, refs := knownRecords(in), surface(in).Refs
+	for _, match := range found {
+		if !citesSomeKind(refs, citable, match[1]) {
+			t.Errorf("the summary carries %s, which no citation the filter accepts can name", match[1])
 		}
 	}
+}
+
+// citesSomeKind says whether ref reads back, under some kind, to a record the
+// filter accepts as that kind.
+func citesSomeKind(refs *draftcore.RecordRefs, citable map[string]string, ref string) bool {
+	for _, kind := range []string{citeDeal, citeActivity, "contact", "lead"} {
+		if id, ok := refs.ID(kind, ref); ok && citable[id] == kind {
+			return true
+		}
+	}
+	return false
 }

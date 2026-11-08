@@ -123,3 +123,25 @@ func TestThePromptLetsAnObjectiveLeaveItsTargetAndDeadlineOpen(t *testing.T) {
 		}
 	}
 }
+
+// The prompt shows each product by its ref, and a reply's ref reads back to
+// the product id. The id itself was never shown, so it names no product; nor
+// does a ref the catalog never minted.
+func TestAProductIsNamedByTheRefThePromptShowed(t *testing.T) {
+	in := setupInput(SiteCustomReport)
+	shown := Request(in).Messages[0].Content
+	if strings.Contains(shown, in.Catalog.Products[0].ID) || !strings.Contains(shown, `{"id":"p1","label":"Linden press line"}`) {
+		t.Fatalf("the prompt must show the product as p1 and never its id:\n%s", shown)
+	}
+	for value, want := range map[string]string{"p1": in.Catalog.Products[0].ID, in.Catalog.Products[0].ID: "", "p9": ""} {
+		reply := `{"name":"Linden","filters":[{"field":"product","value":"` + value +
+			`","phrase":"Linden"}],"metrics":[],"charts":[],"objective":null,"clarifications":[],"unsupported":[]}`
+		out, err := Parse(reply, in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.Product != want {
+			t.Errorf("a reply naming product %q resolved %q, want %q", value, out.Product, want)
+		}
+	}
+}

@@ -56,7 +56,17 @@ func runReportSetupOn(t *testing.T, fixture, site, expected string, build func(p
 	if !ok {
 		t.Fatalf("prepared a %T, want the setup case", prepared)
 	}
-	trace, err := prepared.Run(context.Background(), &replyBrainStub{response: model.Response{Text: build(func(label string) string { return c.labels[label] })}})
+	request := reportsetup.Request(c.in)
+	productRef := func(label string) string {
+		for _, product := range c.in.Catalog.Products {
+			if product.ID == c.labels[label] {
+				return refBeside(t, request, product.Label)
+			}
+		}
+		t.Fatalf("the fixture has no product %q", label)
+		return ""
+	}
+	trace, err := prepared.Run(context.Background(), &replyBrainStub{response: model.Response{Text: build(productRef)}})
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
 	}

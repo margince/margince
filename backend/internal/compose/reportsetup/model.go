@@ -24,12 +24,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // PromptVersion changes when the prompt or the reply shape changes.
-const PromptVersion = "2026-11-08.1"
+const PromptVersion = "2026-11-08.2"
 
 // The two drawers that ask. An initiative has a goal and a rule; a custom
 // report has a selection with metrics and charts.
@@ -92,7 +93,7 @@ const system = `You turn a sales manager's description into the setup of a sales
 Return ONLY a JSON object with these keys:
 {"name":"...","filters":[{"field":"product|industry|country|period","value":"...","phrase":"..."}],"metrics":[{"id":"...","phrase":"..."}],"charts":[{"id":"...","phrase":"..."}],"objective":{"metric":"...","target_value":123 or null,"deadline":"YYYY-MM-DD" or null,"phrase":"..."} or null,"clarifications":["..."],"unsupported":[{"phrase":"...","reason":"..."}]}
 "name" is a short name for what was described. "phrase" is the words of the description a value was read from.
-A filter "value" is a catalog id for a product or an industry, an ISO 3166-1 alpha-2 code for a country, or one of the catalog's periods. Name each filter once. Name a filter only when the description asks for it.
+A filter "value" is a product's ref as the catalog shows it (p1, p2, …), an industry's catalog id, an ISO 3166-1 alpha-2 code for a country, or one of the catalog's periods. Name each filter once. Name a filter only when the description asks for it.
 "metrics" and "charts" are catalog ids; a chart must be one a chosen metric draws. For site "initiative_setup" name no metrics and no charts.
 "objective" is for site "initiative_setup" only: the metric the initiative is measured by, from "objectives", a whole-number target when the description gives one, and a deadline on or after today when it gives one. For "custom_report_setup" it is null. When the description gives no target or no deadline, set that field to null, keep the objective metric, and ask for the missing value in "clarifications".
 "clarifications" are the questions the description leaves open, at most four, each one sentence. "unsupported" names each phrase the catalog cannot express and says why in one sentence.
@@ -112,7 +113,28 @@ func Request(in Input) model.Request {
 	}
 }
 
+// productRefs names each catalog product p1, p2, … in catalog order. The
+// prompt shows the refs and Parse reads a named ref back to its product id.
+func productRefs(products []Option) *promptref.Refs {
+	refs := promptref.New("p")
+	for _, product := range products {
+		refs.For(product.ID)
+	}
+	return refs
+}
+
+// shownProducts is the product list as the model reads it: each by its ref.
+func shownProducts(products []Option) []Option {
+	refs := productRefs(products)
+	shown := make([]Option, 0, len(products))
+	for _, product := range products {
+		shown = append(shown, Option{ID: refs.For(product.ID), Label: product.Label})
+	}
+	return shown
+}
+
 func encode(in Input) string {
+	in.Catalog.Products = shownProducts(in.Catalog.Products)
 	encoded, err := json.Marshal(in)
 	if err != nil {
 		return fmt.Sprintf("{%q:%q}", "encoding_error", err.Error())
@@ -275,7 +297,7 @@ func (g *gate) filter(field, value, phrase string) {
 	value = strings.TrimSpace(value)
 	switch field {
 	case "product":
-		g.option(&g.out.Product, field, value, phrase, g.in.Catalog.Products)
+		g.product(value, phrase)
 	case "industry":
 		g.option(&g.out.Industry, field, value, phrase, g.in.Catalog.Industries)
 	case "country":
@@ -298,6 +320,19 @@ func periodOptions(periods []string) []Option {
 		out = append(out, Option{ID: period, Label: period})
 	}
 	return out
+}
+
+// product resolves a product by the ref the prompt showed, or by its name,
+// and keeps the product id the ref stands for. A product id was never shown,
+// so it names no product.
+func (g *gate) product(value, phrase string) {
+	found, err := resolve("product", value, shownProducts(g.in.Catalog.Products))
+	if err != nil {
+		g.drop(phrase, CodeUnknownValue, err.Error())
+		return
+	}
+	id, _ := productRefs(g.in.Catalog.Products).ID(found.ID)
+	g.set(&g.out.Product, "product", id, found.Label, phrase)
 }
 
 func (g *gate) option(into *string, field, value, phrase string, offered []Option) {

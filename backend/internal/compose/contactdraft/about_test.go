@@ -79,7 +79,10 @@ func TestTheMeetingADraftFollowsUpLeadsWhatTheWriterReads(t *testing.T) {
 	for _, message := range lane.asked[0].Messages {
 		fmt.Fprint(&asked, message)
 	}
-	for _, want := range []string{`"about"`, subject, deal.String()} {
+	if strings.Contains(asked.String(), deal.String()) {
+		t.Errorf("the writer was shown the deal's id, not its ref: %s", asked.String())
+	}
+	for _, want := range []string{`"about"`, subject, `"deal_id":"d1"`} {
 		if !strings.Contains(asked.String(), want) {
 			t.Errorf("the writer was not given %s: %s", want, asked.String())
 		}

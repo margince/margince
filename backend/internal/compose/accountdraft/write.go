@@ -44,7 +44,7 @@ A recent message may carry a "snippet" — the opening of a message on this acco
 Where the snippets are the only substance you have, write from what they actually say. If they say nothing you can use, say less rather than inventing a conversation: no meeting that has not happened, no concern the recipient did not raise, no description of their situation you were not given.
 ` + draftrules.Rewrite + `
 The reasoning array is where an explanation of the draft goes. It is the ONLY place; the body carries none.
-Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "follow-up due today"). Give entity_type and entity_id when the input was a record the summary identified; set both to null when it was the caller's own intent. Label the caller's own intent by its purpose ("offer a call", "introduce ourselves"), and never say in a label who introduced or referred anyone: the product holds no record of it. The body is where the sender says who they are.
+Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "follow-up due today"). Give entity_type and entity_id when the input was a record the summary identified, entity_id being the record's reference exactly as the summary shows it (such as c1, d1 or a2); set both to null when it was the caller's own intent. Label the caller's own intent by its purpose ("offer a call", "introduce ourselves"), and never say in a label who introduced or referred anyone: the product holds no record of it. The body is where the sender says who they are.
 If the summary gives you nothing but the recipient, write a short honest opener and return an empty reasoning array. Do not invent a reason.`
 
 // draftSystemFor assembles this call's system turn: what this surface is for,
@@ -208,7 +208,9 @@ func GroundedRequest(in Input, voice draftvoice.Context) (model.Request, error) 
 // existed, differing in error wording and one word of one comment.
 func surface(in Input) draftcore.Surface {
 	known := knownRecords(in)
+	_, refs := in.asShown()
 	return draftcore.Surface{
+		Refs:   refs,
 		Name:   "account draft",
 		System: draftSystemFor,
 		Kinds:  reasonKinds,

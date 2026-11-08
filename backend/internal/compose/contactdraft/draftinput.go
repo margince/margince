@@ -18,12 +18,14 @@ import (
 
 // Fenced is what the model sees. The caller's own intent is removed because it
 // rides the user turn OUTSIDE the fence — it is the one input they typed rather
-// than untrusted text read off somebody's mail.
+// than untrusted text read off somebody's mail. Each record it names carries
+// its ref, never its id.
 //
 //craft:ignore naked-any the writer marshals this to JSON and reads nothing off it; the two surfaces return different structs, so a concrete type here would be one of them and exclude the other.
 func (in Input) Fenced() any {
 	in.Intent = ""
-	return in
+	shown, _ := in.asShown()
+	return shown
 }
 
 // WrittenInto is the correspondence this draft is written into.
