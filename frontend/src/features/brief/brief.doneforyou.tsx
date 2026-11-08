@@ -3,7 +3,7 @@
 
 // What Margince finished for the reader, as one section on Home. The deals it
 // changed come first, each change with what moved, when and why, and the verbs
-// that review or take it back. Other finished work follows in `completed`.
+// that review or take it back. Other updates follow in `completed`.
 //
 // The first five deals show here and every one shows in the review drawer.
 // Both draw the same rows, so a sixth deal loses nothing a third one had.
