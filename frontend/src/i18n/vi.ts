@@ -18420,7 +18420,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.deal": "Deal",
   "worklist.why.title": "Vì sao việc này cần chú ý",
   "worklist.why.reasons": "Lý do",
-  "worklist.why.consequence": "Nếu không làm gì",
   "worklist.why.detail": "Chi tiết",
   "worklist.ask.approval":
     "Một agent đã đề xuất thay đổi và đang chờ quyết định. Duyệt hoặc từ chối đề xuất.",
@@ -18478,23 +18477,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có gì được gửi sau cuộc họp này. Gửi thư tiếp nối cho các bên đã tham dự.",
   "worklist.ask.batch":
     "Nhiều quyết định thường lệ giống nhau được gom ở đây. Xem xét chúng cùng lúc.",
-  "worklist.consequence.buyer_waits": "Họ tiếp tục phải chờ.",
-  "worklist.consequence.buyer_waits.named": "{name} tiếp tục phải chờ.",
-  "worklist.consequence.promise_breaks": "Một cam kết không được giữ.",
-  "worklist.consequence.deal_drifts": "Deal tiếp tục chững lại.",
-  "worklist.consequence.deal_slips_past_close": "Deal trễ qua ngày chốt.",
-  "worklist.consequence.meeting_unprepared":
-    "Cuộc họp bắt đầu trước khi bạn xác nhận đã sẵn sàng.",
-  "worklist.consequence.task_slips": "Việc cần làm trễ hạn.",
-  "worklist.consequence.work_blocked":
-    "Công việc đang chờ việc này vẫn bị chặn.",
-  "worklist.consequence.customer_never_received":
-    "Khách hàng không bao giờ nhận được thư.",
-  "worklist.consequence.you_believe_it_happened":
-    "Một hành động đã duyệt vẫn chưa chạy dù trông như đã xong.",
-  "worklist.consequence.legal_deadline_missed": "Một thời hạn pháp lý bị lỡ.",
-  "worklist.consequence.mailbox_blind": "Thư không còn được thu thập.",
-  "worklist.consequence.data_drifts": "Dữ liệu hồ sơ dần lỗi thời.",
   "worklist.band.now": "Ngay bây giờ",
   "worklist.dueGroup.tomorrow": "Đến hạn ngày mai",
   "worklist.dueGroup.this_week": "Đến hạn tuần này",

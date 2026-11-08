@@ -108,17 +108,24 @@ function decayRow(because: WorklistItem["because"]): WorklistItem {
 
 describe("a lapsed relationship says what it was worth", () => {
   it("says an open deal rests on the contact", async () => {
-    draw([
+    draw([decayRow([{ kind: "expected_revenue" }])]);
+
+    expect(await screen.findByText(/open deal depends on this/)).toBeTruthy();
+  });
+
+  // The row says its one current reason; the facts after it are its Details'.
+  it("says only the first reason on the row", async () => {
+    const { container } = draw([
       decayRow([
         { kind: "quiet_days", value: { kind: "days", days: 63 } },
         { kind: "expected_revenue" },
       ]),
     ]);
 
-    expect(await screen.findByText(/open deal depends on this/)).toBeTruthy();
-    // Beside the span, not instead of it: the rep reads both — how long, and
-    // why it matters that long.
-    expect(await screen.findByText(/quiet for 63 days/)).toBeTruthy();
+    await screen.findByText(/quiet for 63 days/);
+    expect(container.querySelector(".worklist-row-because")?.textContent).toBe(
+      "quiet for 63 days",
+    );
   });
 
   // The row that carries nothing says only how long. This is what makes the
@@ -347,8 +354,7 @@ describe("a follow-up row says why it is there", () => {
 
     await screen.findByText(/Pricing for the pilot/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
-    expect(line).toMatch(/you wrote last/);
-    expect(line).toMatch(/no reply recorded for 6 days/);
+    expect(line).toBe("you wrote last");
   });
 
   // The row a meeting with nobody on file leaves behind offers no "Draft
@@ -374,9 +380,7 @@ describe("a follow-up row says why it is there", () => {
 
     await screen.findByText(/Call with Acme and Dana/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
-    expect(line).toMatch(/met 1 day ago/);
-    expect(line).toMatch(/no outgoing message recorded since/);
-    expect(line).toMatch(/no attendee on file/);
+    expect(line).toBe("met 1 day ago");
   });
 });
 

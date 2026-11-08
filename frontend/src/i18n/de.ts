@@ -18895,7 +18895,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.deal": "Deal",
   "worklist.why.title": "Warum das Aufmerksamkeit braucht",
   "worklist.why.reasons": "Gründe",
-  "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.detail": "Detail",
   "worklist.ask.approval":
     "Ein Agent hat eine Änderung vorgeschlagen und wartet auf eine Entscheidung. Gib sie frei oder lehne sie ab.",
@@ -18955,26 +18954,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nach diesem Termin wurde nichts gesendet. Sende den Teilnehmenden ein Follow-up.",
   "worklist.ask.batch":
     "Hier sind mehrere ähnliche Routineentscheidungen gebündelt. Prüfe sie gemeinsam.",
-  "worklist.consequence.buyer_waits": "Der Kontakt wartet weiter.",
-  "worklist.consequence.buyer_waits.named": "{name} wartet weiter.",
-  "worklist.consequence.promise_breaks": "Eine Zusage wird nicht eingehalten.",
-  "worklist.consequence.deal_drifts": "Der Deal gerät weiter ins Stocken.",
-  "worklist.consequence.deal_slips_past_close":
-    "Der Deal verpasst sein Abschlussdatum.",
-  "worklist.consequence.meeting_unprepared":
-    "Der Termin beginnt, bevor du dich als bereit markiert hast.",
-  "worklist.consequence.task_slips":
-    "Die Aufgabe verpasst ihr Fälligkeitsdatum.",
-  "worklist.consequence.work_blocked":
-    "Arbeit, die darauf wartet, bleibt blockiert.",
-  "worklist.consequence.customer_never_received":
-    "Der Kunde erhält die Nachricht nie.",
-  "worklist.consequence.you_believe_it_happened":
-    "Eine freigegebene Aktion bleibt unerledigt, wirkt aber erledigt.",
-  "worklist.consequence.legal_deadline_missed":
-    "Eine gesetzliche Frist wird versäumt.",
-  "worklist.consequence.mailbox_blind": "E-Mails werden nicht mehr erfasst.",
-  "worklist.consequence.data_drifts": "Datensätze veralten.",
   "worklist.band.now": "Jetzt",
   "worklist.dueGroup.tomorrow": "Morgen fällig",
   "worklist.dueGroup.this_week": "Diese Woche fällig",

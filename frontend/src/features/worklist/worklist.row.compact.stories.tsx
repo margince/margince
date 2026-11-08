@@ -124,10 +124,8 @@ export const Pinned: Story = {
   },
 };
 
-// MORE THAN THE LINE HOLDS: six reasons, the comparison with the row below, and
-// a supporting sentence. Three are said outright and the count at the end names
-// everything else — a count that promised only the reasons would promise less
-// than the press delivers.
+// MORE THAN THE LINE HOLDS: six reasons and a supporting sentence. The row says
+// the first reason; the rest are in its Details.
 export const WithMoreBehindIt: Story = {
   args: {
     ...COMPACT,

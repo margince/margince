@@ -306,9 +306,6 @@ it("opens a deal row on why it needs attention", async () => {
   expect(
     within(details).getByText(en["worklist.because.approved_and_failed"]),
   ).toBeTruthy();
-  expect(
-    within(details).getByText(en["worklist.consequence.task_slips"]),
-  ).toBeTruthy();
   // The deal it is about: worth, and where it stands.
   expect(await within(details).findByText("€42,000")).toBeTruthy();
   expect(await within(details).findByText("Proposal")).toBeTruthy();

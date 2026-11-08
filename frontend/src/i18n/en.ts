@@ -18708,7 +18708,6 @@ export const en = {
   "worklist.pane.deal": "Deal",
   "worklist.why.title": "Why this needs attention",
   "worklist.why.reasons": "Reasons",
-  "worklist.why.consequence": "If nothing is done",
   "worklist.why.detail": "Detail",
   "worklist.ask.approval":
     "An agent proposed a change and is waiting for a decision. Approve it or turn it down.",
@@ -18767,23 +18766,6 @@ export const en = {
     "Nothing was sent after this meeting. Send the attendees a follow-up.",
   "worklist.ask.batch":
     "Several routine decisions that read alike are grouped here. Review them together.",
-  "worklist.consequence.buyer_waits": "They keep waiting.",
-  "worklist.consequence.buyer_waits.named": "{name} keeps waiting.",
-  "worklist.consequence.promise_breaks": "A commitment is broken.",
-  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
-  "worklist.consequence.deal_slips_past_close":
-    "The deal slips past its close date.",
-  "worklist.consequence.meeting_unprepared":
-    "The meeting starts before you said you are ready.",
-  "worklist.consequence.task_slips": "The task slips past its due date.",
-  "worklist.consequence.work_blocked": "Work that waits on this stays blocked.",
-  "worklist.consequence.customer_never_received":
-    "The customer never gets the message.",
-  "worklist.consequence.you_believe_it_happened":
-    "An approved action stays undone while it looks done.",
-  "worklist.consequence.legal_deadline_missed": "A legal deadline is missed.",
-  "worklist.consequence.mailbox_blind": "Mail stops being captured.",
-  "worklist.consequence.data_drifts": "Records go out of date.",
   "worklist.band.now": "Now",
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",
