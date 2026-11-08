@@ -191,6 +191,19 @@ func TestParseRefusesARecordIDSpelledInText(t *testing.T) {
 	}
 }
 
+func TestParseRefusesAShownRefOnlyAsAWordOfItsOwn(t *testing.T) {
+	won := `{"text":"Nothing is won yet at 0 EUR.","kind":"observation","cells":["metric:bookings_won"]}`
+	for text, refused := range map[string]bool{
+		"The pipeline rests on d1.":            true,
+		"The pipeline rests on Tier1 support.": false,
+	} {
+		reply := `{"sentences":[` + won + `,{"text":"` + text + `","cells":["metric:open_pipeline"]}],"next_decision":null}`
+		if _, err := Parse(reply, decisionInput()); (err != nil) != refused {
+			t.Errorf("%q: refused = %v, want %v (%v)", text, err != nil, refused, err)
+		}
+	}
+}
+
 func TestParseKeepsADecisionQuotingItsDealsAmount(t *testing.T) {
 	won := `{"sentences":[{"text":"Nothing is won yet at 0 EUR.","kind":"observation","cells":["metric:bookings_won"]}],`
 	written, err := parseCited(won+`"next_decision":{"deal_id":"deal-globex","text":"Decide who signs off the 25000 EUR renewal."}}`, decisionInput())

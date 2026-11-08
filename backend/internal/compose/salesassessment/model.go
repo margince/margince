@@ -17,6 +17,8 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -373,12 +375,32 @@ func refuseIDs(text string, known map[string]bool) error {
 		return errors.New("reply spells a record id in reader text")
 	}
 	for id := range known {
-		if id != "" && strings.Contains(text, id) {
+		if id != "" && spellsWord(text, id) {
 			return errors.New("reply spells an id in reader text")
 		}
 	}
 	return nil
 }
+
+// spellsWord reports whether text holds word with no letter or digit glued to
+// either side: the ref "r1" is a leak in "see r1." and a name in "Tier1".
+func spellsWord(text, word string) bool {
+	for at := strings.Index(text, word); at >= 0; {
+		before, _ := utf8.DecodeLastRuneInString(text[:at])
+		after, _ := utf8.DecodeRuneInString(text[at+len(word):])
+		if !isWordRune(before) && !isWordRune(after) {
+			return true
+		}
+		next := strings.Index(text[at+1:], word)
+		if next < 0 {
+			return false
+		}
+		at += 1 + next
+	}
+	return false
+}
+
+func isWordRune(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) }
 
 // knownIDs collects the ids the input carried; reader text must not spell one.
 func knownIDs(in Input) map[string]bool {

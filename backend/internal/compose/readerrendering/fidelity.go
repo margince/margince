@@ -21,6 +21,16 @@ var (
 	initial     = regexp.MustCompile(`(^|[\s(])\p{L}\.`)
 	// The month of "tháng 11", of "20.11." or "20/11", and of "2026-11-20".
 	monthPosition = regexp.MustCompile(`tháng\s+(\d{1,2})\b|\b\d{1,2}[./](\d{1,2})\b|\b\d{4}-(\d{2})-\d{2}\b`)
+	// "may" and "jan" name a month only beside a day: "3 May", "May 3".
+	datedNameLike = regexp.MustCompile(`\d\.?\s+(may|jan)\b|\b(may|jan)\.?\s+\d`)
+	// proseMonths are the month words that name nothing else.
+	proseMonths = func() map[string]bool {
+		words := map[string]bool{}
+		for _, word := range textlang.MonthWords() {
+			words[word] = true
+		}
+		return words
+	}()
 )
 
 func checkSection(source, rendered string) error {
@@ -70,7 +80,12 @@ func spelledAsMonth(run, source, rendered string) bool {
 	if asMonth < countRuns(source, run) {
 		return false
 	}
-	words := strings.FieldsFunc(strings.ToLower(rendered), func(r rune) bool { return !unicode.IsLetter(r) })
+	lowered := strings.ToLower(rendered)
+	words := slices.DeleteFunc(strings.FieldsFunc(lowered, func(r rune) bool { return !unicode.IsLetter(r) }),
+		func(word string) bool { return !proseMonths[word] })
+	for _, match := range datedNameLike.FindAllStringSubmatch(lowered, -1) {
+		words = append(words, match[1]+match[2])
+	}
 	return slices.ContainsFunc(words, func(word string) bool {
 		month, ok := textlang.MonthWord(word)
 		return ok && int(month) == number

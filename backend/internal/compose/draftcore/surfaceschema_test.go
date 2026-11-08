@@ -18,6 +18,9 @@ import (
 // deal1 is the one deal narrowSurface knows; its payload shows it as d1.
 const deal1 = "01a07000-0000-7000-8000-000000000001"
 
+// unlisted is an id the payload carries under no kind the surface knows.
+const unlisted = "01a07000-0000-7000-8000-000000000002"
+
 func narrowSurface() Surface {
 	return Surface{
 		Name:  "test draft",
@@ -33,7 +36,7 @@ func narrowSurface() Surface {
 // shows its deal.
 func keepNarrow(reasons []modelReason) []Reason {
 	surface := narrowSurface()
-	return keepGroundedReasons(surface, claims.MintKinds(`{"deal":"`+deal1+`"}`, surface.Known), reasons)
+	return keepGroundedReasons(surface, claims.MintKinds(`{"deal":"`+deal1+`","about":"`+unlisted+`"}`, surface.Known), reasons)
 }
 
 func TestTheSchemaAdmitsExactlyTheKindsTheParseKeeps(t *testing.T) {
@@ -109,6 +112,7 @@ func TestACitationWithANullTypeIsDropped(t *testing.T) {
 	for name, entityID := range map[string]string{
 		"a ref this draft never showed": "d9",
 		"a ref it did show":             "d1",
+		"an unlisted record's ref":      "r1",
 	} {
 		var out modelDraft
 		raw := `{"subject":"s","body":"b","reasoning":[{"kind":"deal","label":"signed the renewal",` +

@@ -395,7 +395,7 @@ func keepGroundedReasons(surface Surface, refs claims.Refs, reasons []modelReaso
 			// A ref this payload never showed, or showed as another kind, reads
 			// back to nothing, and so does a null type.
 			id, ok := refs.ID(reason.EntityType, reason.EntityID)
-			if !ok || surface.Known[id] != reason.EntityType {
+			if !ok || reason.EntityType == "" || surface.Known[id] != reason.EntityType {
 				continue
 			}
 			keep.EntityType = reason.EntityType
