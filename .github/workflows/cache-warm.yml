@@ -245,8 +245,8 @@ jobs:
           INTEGRATION_BIN_DIR: ${{ runner.temp }}/integration-bin
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
           # The value of the shard it mirrors, in _lane-integration.yml, for its
-          # reason: sixteen ran the 16GB runner out of memory and got it signalled.
-          INTEGRATION_JOBS: 8
+          # reason: one package per core, because the slice waits on the CPU.
+          INTEGRATION_JOBS: 4
         run: make test-integration
       - name: Refresh the shared build cache
         if: ${{ !cancelled() }}
