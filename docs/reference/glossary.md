@@ -56,7 +56,6 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
-| LCP | Largest Contentful Paint: when a page has drawn its largest block of content. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |

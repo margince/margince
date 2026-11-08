@@ -545,15 +545,20 @@ test.describe("vitals: a load that breaks the budget fails", () => {
     ]);
   });
 
-  test("a larger paint outside the day content neither fails nor hides its later paint", async ({
+  // The shell's block lands late, larger than all of the day. The day's last
+  // small paint comes after it, so the load settles only once both are drawn.
+  test("a larger, later paint outside the day content does not count", async ({
     page,
   }) => {
     const reasons = await vitalsOf(
       page,
-      `${BLOCK}<main>${DAY}</main><script>
-        setTimeout(() => document.querySelector("section").insertAdjacentHTML("beforeend", "<p>The rest of the day, and more of it</p>"), 300);
+      `<header id="shell"></header><main>${DAY}</main><script>
+        const day = (html) => document.querySelector("section").insertAdjacentHTML("beforeend", html);
+        setTimeout(() => day("<p>The rest of the day, and more of it</p>"), 300);
+        setTimeout(() => { document.getElementById("shell").innerHTML = ${JSON.stringify(BLOCK)}; }, 1100);
+        setTimeout(() => day("<p>.</p>"), 1300);
       </script>`,
-      (v) => v.dayPaints.some((paint) => paint.at >= 250),
+      (v) => v.dayPaints.some((paint) => paint.at >= 1_250),
     );
     expect(reasons).toEqual([]);
   });
