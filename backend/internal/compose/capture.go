@@ -338,6 +338,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			activities.CancelCapturedMeetingFor(capture.SeatHoldsActivityTx),
 			activities.CancelMeetingByIDTx,
 		).
+		WithStoredEventIdentity(storedEventIdentity).
 		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
 		WithMeetingFolder(foldCapturedMeeting(activities.NewStore(InstallationDB(pool)))).
 		WithMeetingHostKeeper(keepOrganizerHost(activities.NewStore(InstallationDB(pool)))).

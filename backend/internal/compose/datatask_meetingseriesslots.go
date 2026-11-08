@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // meetingSeriesSlotsDataTask keys each stored occurrence of a recurring
@@ -99,6 +100,16 @@ type seriesSlot struct {
 	series, key string
 }
 
+// storedEventIdentity reads the identity one stored calendar original states,
+// with the decoder of the calendar that delivered it. The capture sink resolves
+// a tombstone naming only its own event id through it.
+func storedEventIdentity(source string, raw []byte) (connector.CrossDoorIdentity, bool, error) {
+	if source == sourceGraphCal {
+		return graphcal.SeriesIdentityOf(raw)
+	}
+	return gcal.SeriesIdentityOf(raw)
+}
+
 // slotOf reads the series slot a stored original names. An original no parser
 // reads, or one that names no slot in a series, has none.
 func slotOf(source string, payload []byte) (seriesSlot, bool) {
@@ -106,11 +117,7 @@ func slotOf(source string, payload []byte) (seriesSlot, bool) {
 	if err != nil {
 		return seriesSlot{}, false
 	}
-	read := gcal.SeriesIdentityOf
-	if source == sourceGraphCal {
-		read = graphcal.SeriesIdentityOf
-	}
-	identity, inSeries, err := read(raw)
+	identity, inSeries, err := storedEventIdentity(source, raw)
 	if err != nil || !inSeries {
 		return seriesSlot{}, false
 	}

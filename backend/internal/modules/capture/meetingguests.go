@@ -195,7 +195,8 @@ func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 
 // retireOffTheRoster removes this calendar's rows the roster no longer grants:
 // a colleague's seat once they declined, and anybody a complete roster dropped.
-// The syncing seat's own row and the host's are never retired.
+// It also retires rows of a disconnected calendar, and colleagues the organizer
+// removed. The syncing seat's own row and the host's are never retired.
 func retireOffTheRoster(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, listed []connector.MessageParticipant,
 ) (int, error) {
@@ -215,13 +216,57 @@ func retireOffTheRoster(
  DELETE FROM activity_participant ap USING activity a
  WHERE a.id=ap.activity_id AND ap.activity_id=@activity
  AND ((@left AND ap.roster_seat=@seat AND ap.user_id=@seat)
- OR (NOT @left AND ap.roster_seat=@seat AND ap.address IS NOT NULL
+ OR (NOT @left AND (ap.roster_seat=@seat OR `+rosterOwnerGoneSQL("ap")+`) AND ap.address IS NOT NULL
  AND ap.user_id IS DISTINCT FROM @seat AND ap.user_id IS DISTINCT FROM a.host_user_id
  AND ((ap.user_id IS NOT NULL AND ap.address=ANY(@declined)) OR (@complete AND NOT ap.address=ANY(@addresses)))))`, pgx.StrictNamedArgs{
 		capturedActivityObject: activityID, rosterSeatArg: roster.Seat, "left": roster.Left, "declined": declined, "complete": roster.Complete, rosterAddressesArg: addresses,
+		calendarProvidersArg: calendarProviderNames(),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: retiring the guests a calendar no longer lists: %w", err)
+	}
+	if roster.Left || !roster.Complete {
+		return int(tag.RowsAffected()), nil
+	}
+	removed, err := retireSeatsTheOrganizerRemoved(ctx, tx, activityID, roster.Seat, addresses)
+	return int(tag.RowsAffected()) + removed, err
+}
+
+// calendarProvidersArg binds calendarProviderNames for rosterOwnerGoneSQL.
+const calendarProvidersArg = "calendar_providers"
+
+// rosterOwnerGoneSQL is a row a calendar roster wrote whose seat holds no live
+// calendar connection now. No calendar of that seat will settle the row again,
+// so any current roster may. A reconnected seat's own sync takes it back.
+func rosterOwnerGoneSQL(participant string) string {
+	return fmt.Sprintf(`(%[1]s.roster_seat IS NOT NULL AND NOT EXISTS (SELECT 1 FROM capture_connection owner_calendar
+ WHERE owner_calendar.user_id=%[1]s.roster_seat AND owner_calendar.provider=ANY(@%[2]s)
+ AND owner_calendar.status IN ('connected','error') AND owner_calendar.archived_at IS NULL))`, participant, calendarProvidersArg)
+}
+
+// retireSeatsTheOrganizerRemoved deletes a colleague's own calendar rows once
+// the organizer's complete roster no longer lists any address of theirs. Their
+// own calendar may report the removal much later, or never.
+func retireSeatsTheOrganizerRemoved(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID, addresses []string,
+) (int, error) {
+	organizer, err := SeatOrganizesMeetingTx(ctx, tx, activityID, seat)
+	if err != nil || !organizer {
+		return 0, err
+	}
+	args := []any{activityID, seat, addresses, storedDomainsOf(addresses)}
+	listedSeat, err := calendarSeatMatch(ctx, tx, meetingKind, true, &args)
+	if err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `
+ DELETE FROM activity_participant ap USING activity a
+ WHERE a.id=ap.activity_id AND ap.activity_id=$1
+ AND ap.user_id=ap.roster_seat AND ap.user_id<>$2 AND ap.user_id IS DISTINCT FROM a.host_user_id
+ AND NOT EXISTS (SELECT 1 FROM app_user u, unnest($3::text[], $4::text[]) AS inp(address, domain_folded)
+  WHERE u.id=ap.user_id AND (inp.address=ap.address OR `+listedSeat+`))`, args...)
+	if err != nil {
+		return 0, fmt.Errorf("capture: retiring the colleagues an organizer removed from a meeting: %w", err)
 	}
 	return int(tag.RowsAffected()), nil
 }
