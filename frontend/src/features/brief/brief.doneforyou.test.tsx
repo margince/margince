@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -299,13 +299,13 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
   await user.click(
     within(drawer).getByRole("button", { name: "Undo changes on 2 deals" }),
   );
-  const unfinished = await screen
-    .findByRole("list", { hidden: false, name: "" })
-    .catch(() => null);
-  const list =
-    unfinished ??
-    container.ownerDocument.querySelector(".changes-bulk-unfinished");
-  expect(list).toBeTruthy();
-  const links = within(list as HTMLElement).getAllByRole("link");
+  const list = await waitFor(() => {
+    const found = container.ownerDocument.querySelector<HTMLElement>(
+      ".changes-bulk-unfinished",
+    );
+    expect(found).toBeTruthy();
+    return found as HTMLElement;
+  });
+  const links = within(list).getAllByRole("link");
   expect(links.map((link) => link.textContent)).toEqual(["Deal 1"]);
 });
