@@ -89,37 +89,58 @@ func reopenFalseCancellationsBatch(ctx context.Context, tx pgx.Tx, in datatask.B
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	found, err := activities.CalendarCancellationsAfterTx(ctx, tx, since, cursor.After, in.Limit)
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	reopened := 0
-	for _, c := range found {
-		cursor.After = c.ID
-		guest, err := cancelledForAGuestTx(ctx, tx, c)
+	var out datatask.BatchOut
+	for {
+		found, err := activities.CalendarCancellationsAfterTx(ctx, tx, since, cursor.After, in.Limit)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
-		if !guest {
-			continue
-		}
-		done, err := activities.ReopenCalendarCancellationTx(ctx, tx, c, in.RunID)
+		reopened, err := reopenGuestCancellationsTx(ctx, tx, found, &cursor, in.RunID)
 		if err != nil {
 			return datatask.BatchOut{}, err
 		}
-		if done {
-			reopened++
+		out.Scanned, out.Changed = len(found), reopened
+		if len(found) == in.Limit {
+			break
 		}
-	}
-	out := datatask.BatchOut{Scanned: len(found), Changed: reopened}
-	if len(found) < in.Limit {
-		out.Done = cursor.Recheck
+		if cursor.Recheck {
+			out.Done = true
+			break
+		}
 		cursor = falseCancelCursor{Recheck: true}
+		// An empty page reports no progress, so the second walk starts here.
+		if len(found) > 0 {
+			break
+		}
 	}
 	if out.Cursor, err = json.Marshal(cursor); err != nil {
 		return datatask.BatchOut{}, err
 	}
 	return out, nil
+}
+
+// reopenGuestCancellationsTx reopens each found meeting a guest's calendar
+// cancelled for everybody, moving cursor past every meeting it read.
+func reopenGuestCancellationsTx(ctx context.Context, tx pgx.Tx, found []activities.CalendarCancellation, cursor *falseCancelCursor, runID ids.UUID) (int, error) {
+	reopened := 0
+	for _, c := range found {
+		cursor.After = c.ID
+		guest, err := cancelledForAGuestTx(ctx, tx, c)
+		if err != nil {
+			return 0, err
+		}
+		if !guest {
+			continue
+		}
+		done, err := activities.ReopenCalendarCancellationTx(ctx, tx, c, runID)
+		if err != nil {
+			return 0, err
+		}
+		if done {
+			reopened++
+		}
+	}
+	return reopened, nil
 }
 
 // cancelledForAGuestTx answers whether the evidence shows a guest's calendar
