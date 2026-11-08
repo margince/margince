@@ -287,18 +287,21 @@ func anonymizeSubjectRows(
 		return nil, err
 	}
 	// The hashes an earlier anonymize kept go onto the erasure list before the
-	// redaction clears them. They are the same hash (storekit.SuppressionHash),
-	// so the anonymized subject's addresses stay refused once the row forgets
-	// them. The stops kept on them are deleted with the subject's other stops.
+	// redaction clears them, with the key that made them. They are the same hash
+	// (storekit.SuppressionHash), so the anonymized subject's addresses stay
+	// refused once the row forgets them. The stops kept on them are deleted with
+	// the subject's other stops.
 	var keptHashes []string
+	var keptKey *string
 	if err := tx.QueryRow(ctx,
-		`SELECT anonymized_address_hashes FROM contact WHERE id = $1`, contactID).Scan(&keptHashes); err != nil {
+		`SELECT anonymized_address_hashes, anonymized_address_key_id FROM contact WHERE id = $1`,
+		contactID).Scan(&keptHashes, &keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: reading the anonymized address hashes: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO erasure_suppression (kind, value_hash)
-		SELECT 'email', kept FROM unnest($1::text[]) AS kept
-		ON CONFLICT DO NOTHING`, keptHashes); err != nil {
+		INSERT INTO erasure_suppression (kind, value_hash, key_id)
+		SELECT 'email', kept, $2 FROM unnest($1::text[]) AS kept
+		ON CONFLICT DO NOTHING`, keptHashes, keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
 	}
 	// Only a row that still holds something is written. An already-anonymised
@@ -322,7 +325,7 @@ func anonymizeSubjectRows(
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL, anonymized_address_hashes = NULL,
+		  source_author_name = NULL, anonymized_address_hashes = NULL, anonymized_address_key_id = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
 			return nil, err

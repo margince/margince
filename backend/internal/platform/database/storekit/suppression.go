@@ -11,8 +11,6 @@ package storekit
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
@@ -23,12 +21,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SuppressionHash is the one identifier hashing rule: sha256 hex over
-// the trimmed, lowercased value — writer and reader must normalize
-// identically or a stray space resurrects an erased subject.
+// SuppressionHash is the one identifier hashing rule, in the form a writer
+// stores now: an HMAC under the installation's suppression key over the sha256
+// of the trimmed, lowercased value, or that sha256 alone when no key is bound.
+// Writer and reader must normalize identically or a stray space resurrects an
+// erased subject. A writer stamps SuppressionKeyID beside it.
 func SuppressionHash(value string) string {
-	digest := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(value))))
-	return hex.EncodeToString(digest[:])
+	digest := identifierDigest(value)
+	if key, ok := currentIdentifierKey(); ok {
+		return key.keyed(digest)
+	}
+	return digest
 }
 
 // EscapeLike neutralizes LIKE/ILIKE wildcards in a value that is about
@@ -69,11 +72,7 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	if len(emails) == 0 {
 		return result, nil
 	}
-	hashes := make([]string, 0, len(emails))
-	for _, spelled := range EmailLookups(emails...) {
-		hashes = append(hashes, SuppressionHash(spelled))
-	}
-	args := []any{hashes}
+	args := []any{SuppressionForms(EmailLookups(emails...)...)}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[])`, len(args)), args...)
 	if err != nil {
 		return nil, err
@@ -88,8 +87,8 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	}
 	// An address erased in one spelling of its domain is erased in the other.
 	for _, email := range emails {
-		for _, spelled := range EmailLookups(email) {
-			if held[SuppressionHash(spelled)] {
+		for _, form := range SuppressionForms(EmailLookups(email)...) {
+			if held[form] {
 				result[strings.ToLower(strings.TrimSpace(email))] = true
 			}
 		}
@@ -176,7 +175,16 @@ func RefuseErasedEmails(ctx context.Context, tx pgx.Tx, field string, emails []s
 // erroring and nothing logged. contact_channel_identity's unique key omits
 // the bot id for the same reason (0152).
 func ChannelIdentityHash(provider, channelUserID string) string {
-	return SuppressionHash(strings.TrimSpace(provider) + ":" + strings.TrimSpace(channelUserID))
+	return SuppressionHash(channelIdentityValue(provider, channelUserID))
+}
+
+// ChannelIdentityForms is SuppressionForms for a channel account.
+func ChannelIdentityForms(provider, channelUserID string) []string {
+	return SuppressionForms(channelIdentityValue(provider, channelUserID))
+}
+
+func channelIdentityValue(provider, channelUserID string) string {
+	return strings.TrimSpace(provider) + ":" + strings.TrimSpace(channelUserID)
 }
 
 // ChannelIdentitySuppressed reports whether a channel identity belongs to
@@ -187,8 +195,8 @@ func ChannelIdentityHash(provider, channelUserID string) string {
 func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channelUserID string) (bool, error) {
 	var suppressed bool
 	err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = $1)`,
-		ChannelIdentityHash(provider, channelUserID)).Scan(&suppressed)
+		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = ANY($1))`,
+		ChannelIdentityForms(provider, channelUserID)).Scan(&suppressed)
 	return suppressed, err
 }
 
@@ -265,12 +273,13 @@ func LockChannelIdentities(ctx context.Context, tx pgx.Tx, keys []ChannelIdentit
 // makes that impossible to express.
 func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, emails []string) error {
 	hashes := make([]string, 0, len(keys)+len(emails))
+	// The unkeyed digest, so the lock never depends on which key is bound.
 	for _, key := range keys {
-		hashes = append(hashes, ChannelIdentityHash(key.Provider, key.ChannelUserID))
+		hashes = append(hashes, identifierDigest(channelIdentityValue(key.Provider, key.ChannelUserID)))
 	}
 	// Writers of either spelling of one mailbox share its identity lock.
 	for _, email := range emails {
-		hashes = append(hashes, SuppressionHash(email), SuppressionHash(mailidentity.FoldAddress(email)))
+		hashes = append(hashes, identifierDigest(email), identifierDigest(mailidentity.FoldAddress(email)))
 	}
 	slices.Sort(hashes)
 	for _, hash := range slices.Compact(hashes) {

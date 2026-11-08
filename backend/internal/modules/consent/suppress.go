@@ -281,7 +281,7 @@ func (s *Store) suppressAdmittedTx(
 	// id from. One stop is one row is one message, so a second stop recorded
 	// for the same subject cannot stage a second acknowledgement under an id
 	// the ledger already holds.
-	kept, err := anonymizedAddressHashes(ctx, tx, sub)
+	kept, keptKey, err := anonymizedAddressHashes(ctx, tx, sub)
 	if err != nil {
 		return err
 	}
@@ -290,12 +290,12 @@ func (s *Store) suppressAdmittedTx(
 	// subject's new record is matched through them. The first row answers the id.
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
-		    (`+sub.column+`, address_hash, kind, source, captured_by, decided_by_level, recorded_through)
-		SELECT $1, u.hash, $2, $3, $4, $5, $6
+		    (`+sub.column+`, address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_through)
+		SELECT $1, u.hash, CASE WHEN u.hash IS NOT NULL THEN $8::text END, $2, $3, $4, $5, $6
 		  FROM unnest(coalesce($7::text[], ARRAY[NULL::text])) WITH ORDINALITY AS u(hash, n)
 		 ORDER BY u.n
 		RETURNING id`,
-		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept)
+		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept, keptKey)
 	if err != nil {
 		return fmt.Errorf("consent: recording the suppression: %w", err)
 	}
@@ -378,19 +378,19 @@ func suppressionRecordedPayload(kind string, level commsauthz.AuthorityLevel) cr
 var errNoStopWritten = errors.New("no stop row was written")
 
 // anonymizedAddressHashes reads the hashes an anonymize kept on a contact in
-// place of its addresses. Nil for a lead and for a contact never anonymized.
-// The caller has run EnsureWritable on the subject.
-func anonymizedAddressHashes(ctx context.Context, tx pgx.Tx, sub subject) ([]string, error) {
+// place of its addresses, and the key that made them. Nil for a lead and for
+// a contact never anonymized. The caller has run EnsureWritable on the subject.
+func anonymizedAddressHashes(ctx context.Context, tx pgx.Tx, sub subject) (hashes []string, keyID *string, err error) {
 	if sub.entityType != entityContact {
-		return nil, nil
+		return nil, nil, nil
 	}
-	var kept []string
 	if err := tx.QueryRow(ctx,
-		`SELECT anonymized_address_hashes FROM contact WHERE id = $1`, sub.id).Scan(&kept); err != nil {
-		return nil, fmt.Errorf("consent: reading whether the subject was anonymized: %w", err)
+		`SELECT anonymized_address_hashes, anonymized_address_key_id FROM contact WHERE id = $1`,
+		sub.id).Scan(&hashes, &keyID); err != nil {
+		return nil, nil, fmt.Errorf("consent: reading whether the subject was anonymized: %w", err)
 	}
-	if len(kept) == 0 {
-		return nil, nil
+	if len(hashes) == 0 {
+		return nil, nil, nil
 	}
-	return kept, nil
+	return hashes, keyID, nil
 }

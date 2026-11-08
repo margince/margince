@@ -376,19 +376,9 @@ func loweredRecipients(in SendEmailInput) []string {
 // forget it is a fact this module may look at before storing a message that
 // names it.
 func anyAddressErased(ctx context.Context, tx pgx.Tx, addresses []string) (bool, error) {
-	if len(addresses) == 0 {
-		return false, nil
-	}
-	hashes := make([]string, 0, len(addresses))
-	for _, address := range addresses {
-		hashes = append(hashes, storekit.SuppressionHash(address))
-	}
-	var erased bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM erasure_suppression
-			 WHERE kind = 'email' AND value_hash = ANY($1))`, hashes).Scan(&erased); err != nil {
+	erased, err := storekit.SuppressedEmails(ctx, tx, addresses)
+	if err != nil {
 		return false, fmt.Errorf("held send: checking whether a recipient has been erased: %w", err)
 	}
-	return erased, nil
+	return len(erased) > 0, nil
 }
