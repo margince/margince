@@ -17,7 +17,6 @@ import { type Locale, useT } from "../../i18n";
 import {
   AGENT_ALLOWANCE_BOUNDS,
   type Allowances,
-  adminPresetDraft,
   COUNTS,
   type Counts,
   changesOf,
@@ -169,6 +168,9 @@ export function AllowanceForm({
         allowances={allowances}
         drafts={roleDrafts}
         busy={busy}
+        lockOf={(property) =>
+          lockFor(locks, `installation.${roleMapProperty(property)}`, t)
+        }
         onDrafts={onRoleDrafts}
       />
       <PanelBody className="form-stack">
@@ -212,14 +214,16 @@ export function AllowanceForm({
   );
 }
 
-// Every role back to the installation value, and Admin to its preset.
+// Every role's values given up: each role inherits, and Admin takes its preset.
 function defaultRoleDrafts(allowances: Allowances): RoleDrafts {
   return Object.fromEntries(
-    allowances.roles.map((role) => [
-      role.role_key,
-      role.holds_preset ? adminPresetDraft(allowances) : EMPTY_ROLE_DRAFT,
-    ]),
+    allowances.roles.map((role) => [role.role_key, EMPTY_ROLE_DRAFT]),
   );
+}
+
+// roleMapProperty is the setting a count's role values are stored under.
+export function roleMapProperty(property: Counts): string {
+  return property.replace("agent_", "agent_role_");
 }
 
 function windowOptions(allowances: Allowances, locale: Locale) {

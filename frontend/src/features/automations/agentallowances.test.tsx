@@ -314,6 +314,9 @@ describe("AgentAllowancesCard", () => {
       "agent_writes_per_window",
       "agent_egress_per_window",
       "agent_calls_per_window",
+      "agent_role_writes_per_window",
+      "agent_role_egress_per_window",
+      "agent_role_calls_per_window",
       "agent_window_hours",
     ].map((property) => ({
       key: `installation.${property}`,
@@ -334,6 +337,33 @@ describe("AgentAllowancesCard", () => {
     });
     expect(edit).toBeDisabled();
     expect(screen.getAllByText(reason)).toHaveLength(1);
+  });
+
+  it("locks a role count a boot source sets, and leaves the others open", async () => {
+    const locks = [
+      {
+        key: "installation.agent_role_calls_per_window",
+        origin: {
+          source: "env",
+          name: "MARGINCE_INSTALLATION_AGENT_ROLE_CALLS_PER_WINDOW",
+        },
+      },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, defaultAgentAllowances, locks).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+
+    expect(
+      await screen.findByTestId("role-rep-agent_calls_per_window"),
+    ).toBeDisabled();
+    expect(
+      screen.getByTestId("role-rep-agent_writes_per_window"),
+    ).toBeEnabled();
   });
 
   it("keeps Edit open while any allowance is the administrator's", async () => {
@@ -441,7 +471,7 @@ describe("AgentAllowancesCard by role", () => {
     ).toBeTruthy();
   });
 
-  it("saves every role with a value, leaving Admin on its preset", async () => {
+  it("saves only the role and count that moved, leaving Admin on its preset", async () => {
     const { fetchMock, patches } = backendFor(EDITOR, roleTunedAgentAllowances);
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
@@ -463,19 +493,10 @@ describe("AgentAllowancesCard by role", () => {
     );
 
     await waitFor(() => expect(patches).toHaveLength(1));
-    const sent = (
-      patches[0] as { agent_role_allowances: { role_key: string }[] }
-    ).agent_role_allowances;
-    expect(sent.map((set) => set.role_key)).toEqual([
-      "manager",
-      "ops",
-      "custom_field_research",
-    ]);
-    expect(sent[2]).toEqual({
-      role_key: "custom_field_research",
-      agent_calls_per_window: 8000,
-      agent_writes_per_window: 0,
-      agent_egress_per_window: 0,
+    expect(patches[0]).toEqual({
+      agent_role_allowances: [
+        { role_key: "custom_field_research", agent_calls_per_window: 8000 },
+      ],
     });
   });
 

@@ -31,18 +31,20 @@ const adminRoleKey = "admin"
 // to send more mail.
 var AdminAllowancePreset = agentvolume.Limits{Calls: 20000, Writes: 2000}
 
-// allowanceCounts pairs each governed count with its installation setting, its
-// role setting and the value it ships with.
+// allowanceCounts pairs each governed count with its role setting, in the
+// order allowanceValues holds the installation counts.
 var allowanceCounts = []struct {
-	counter      agentvolume.Counter
-	installation *config.Setting[int]
-	byRole       *config.Setting[map[string]int]
-	shipped      int
+	counter agentvolume.Counter
+	byRole  *config.Setting[map[string]int]
 }{
-	{agentvolume.Writes, AgentWritesPerWindow, AgentRoleWritesPerWindow, agentvolume.DefaultWrites},
-	{agentvolume.Egress, AgentEgressPerWindow, AgentRoleEgressPerWindow, agentvolume.DefaultEgress},
-	{agentvolume.Calls, AgentCallsPerWindow, AgentRoleCallsPerWindow, agentvolume.DefaultCalls},
+	{agentvolume.Writes, AgentRoleWritesPerWindow},
+	{agentvolume.Egress, AgentRoleEgressPerWindow},
+	{agentvolume.Calls, AgentRoleCallsPerWindow},
 }
+
+// installationChosen says, in allowanceCounts order, whether somebody chose
+// each installation count: a stored row or a boot source.
+type installationChosen [3]bool
 
 // RoleValues is what each role holds apart from the installation value.
 type RoleValues struct {
@@ -69,17 +71,17 @@ func (r RoleValues) Roles() map[string]agentvolume.Limits {
 type savedRoleMaps map[agentvolume.Counter]map[string]int
 
 // roleValuesOf folds the saved role maps into each role's values and applies
-// the preset against installation.
-func roleValuesOf(c *config.Config, installation agentvolume.Limits, maps savedRoleMaps) RoleValues {
+// the preset where it binds.
+func roleValuesOf(chosen installationChosen, maps savedRoleMaps) RoleValues {
 	out := RoleValues{Own: map[string]agentvolume.Limits{}}
-	for _, count := range allowanceCounts {
+	for i, count := range allowanceCounts {
 		saved := maps[count.counter]
 		for role, value := range saved {
 			if value > 0 {
 				out.Own[role] = out.Own[role].With(count.counter, value)
 			}
 		}
-		if presetBinds(c, count.installation, installation.Of(count.counter), count.shipped, saved) {
+		if presetBinds(chosen[i], saved) {
 			out.Preset = out.Preset.With(count.counter, AdminAllowancePreset.Of(count.counter))
 		}
 	}
@@ -87,31 +89,29 @@ func roleValuesOf(c *config.Config, installation agentvolume.Limits, maps savedR
 }
 
 // presetBinds reports whether the Admin preset applies to one count. Nobody
-// saved an Admin value for it, and the installation value is still the shipped
-// one, set by no boot source. An upgrade over chosen values leaves Admin on them.
-func presetBinds(c *config.Config, installation *config.Setting[int], value, shipped int, saved map[string]int) bool {
-	if _, chosen := saved[adminRoleKey]; chosen {
-		return false
-	}
-	if _, locked := c.Locked(installation.Key()); locked {
-		return false
-	}
-	return value == shipped
+// saved an Admin value for it, and nobody chose the installation value: no row
+// is stored and no boot source sets it. An upgrade leaves chosen values alone,
+// a saved default included.
+func presetBinds(installationChosen bool, saved map[string]int) bool {
+	_, adminChosen := saved[adminRoleKey]
+	return !adminChosen && !installationChosen
 }
 
-// RoleAllowanceSet is one role's values in a save. A zero field uses the
-// installation value.
+// RoleAllowanceSet is one role's changes in a save. Set holds the counts saved
+// for the role, where 0 saves the installation value. Unset holds the counts
+// whose saved value the role gives up. A count in neither is left as it is.
 type RoleAllowanceSet struct {
 	RoleKey string
-	Values  agentvolume.Limits
+	Set     map[agentvolume.Counter]int
+	Unset   []agentvolume.Counter
 }
 
 // roleAllowancesField is the patch field a refused role names.
 const roleAllowancesField = "agent_role_allowances"
 
-// saveRoleAllowancesTx replaces every role's values with sets. A role left out
-// holds none of its own. Admin left out returns to the preset; Admin sent with a
-// zero keeps the installation value instead.
+// saveRoleAllowancesTx applies sets to the saved role maps. Only a map a set
+// touches is written, so a boot source locking another map refuses nothing. A
+// role no set names keeps its values, an archived role's included.
 func (s *InstallationSettingsStore) saveRoleAllowancesTx(ctx context.Context, tx pgx.Tx, sets *[]RoleAllowanceSet) error {
 	if sets == nil {
 		return nil
@@ -120,31 +120,52 @@ func (s *InstallationSettingsStore) saveRoleAllowancesTx(ctx context.Context, tx
 	if err != nil {
 		return err
 	}
-	maps := make([]map[string]int, len(allowanceCounts))
-	for i := range maps {
-		maps[i] = map[string]int{}
+	saved, err := readRoleMapsTx(ctx, tx, s.config)
+	if err != nil {
+		return err
 	}
+	// A boot source's map is the configuration's own; edits go to a copy.
+	for counter, roleMap := range saved {
+		saved[counter] = maps.Clone(roleMap)
+	}
+	touched := map[agentvolume.Counter]bool{}
 	seen := map[string]bool{}
 	for _, set := range *sets {
-		if err := refuseRoleSet(roles, seen, set.RoleKey); err != nil {
+		if err := refuseRoleSet(roles, seen, set); err != nil {
 			return err
 		}
-		for i, count := range allowanceCounts {
-			if value := set.Values.Of(count.counter); value > 0 || set.RoleKey == adminRoleKey {
-				maps[i][set.RoleKey] = value
-			}
+		for counter, value := range set.Set {
+			saved.put(counter, set.RoleKey, value)
+			touched[counter] = true
+		}
+		for _, counter := range set.Unset {
+			delete(saved[counter], set.RoleKey)
+			touched[counter] = true
 		}
 	}
-	for i, count := range allowanceCounts {
-		if err := config.SaveTx(ctx, s.config, tx, count.byRole, maps[i]); err != nil {
+	for _, count := range allowanceCounts {
+		if !touched[count.counter] {
+			continue
+		}
+		if err := config.SaveTx(ctx, s.config, tx, count.byRole, saved[count.counter]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func refuseRoleSet(roles []liveRole, seen map[string]bool, key string) error {
-	if !slices.ContainsFunc(roles, func(r liveRole) bool { return r.key == key }) {
+// put saves value for role on counter, starting the map if none was stored.
+func (m savedRoleMaps) put(counter agentvolume.Counter, role string, value int) {
+	if m[counter] == nil {
+		m[counter] = map[string]int{}
+	}
+	m[counter][role] = value
+}
+
+func refuseRoleSet(roles []liveRole, seen map[string]bool, set RoleAllowanceSet) error {
+	key := set.RoleKey
+	// Giving a value up needs no live role: it is how an archived role's value goes.
+	if len(set.Set) > 0 && !slices.ContainsFunc(roles, func(r liveRole) bool { return r.key == key }) {
 		return &values.ParseError{
 			Field: roleAllowancesField, Code: "unknown_role",
 			Message: fmt.Sprintf("%q is not a live role, so a value for it would bind nobody", key),
@@ -157,6 +178,14 @@ func refuseRoleSet(roles []liveRole, seen map[string]bool, key string) error {
 		}
 	}
 	seen[key] = true
+	for _, counter := range set.Unset {
+		if _, both := set.Set[counter]; both {
+			return &values.ParseError{
+				Field: roleAllowancesField, Code: "set_and_unset",
+				Message: fmt.Sprintf("%q both sets and unsets its %s; send one", key, counter),
+			}
+		}
+	}
 	return nil
 }
 

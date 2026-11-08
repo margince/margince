@@ -25943,11 +25943,10 @@ export interface components {
             /** @description Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window. */
             agent_calls_per_window?: number;
             /**
-             * @description Set every role's own allowances at once, replacing what each role held. Each item names
-             *     a live role by its `role_key`. A role left out holds no values of its own and uses the
-             *     installation value. The built-in Admin role left out returns to the Admin preset; Admin
-             *     sent with `0` for a count uses the installation value for it instead. Applies within a
-             *     minute, in the running window, and resets no count.
+             * @description Change some roles' own allowances. Each item names a live role by its `role_key` and
+             *     says which counts it sets and which it gives up; everything else is left as it is,
+             *     the values of a role that is archived now included. Applies within a minute, in the
+             *     running window, and resets no count.
              */
             agent_role_allowances?: components["schemas"]["AgentRoleAllowanceSet"][];
             /**
@@ -27080,16 +27079,23 @@ export interface components {
              */
             source: "role" | "admin_preset" | "installation";
         };
-        /** @description One role's own allowances in a save. `0` for a count uses the installation value. */
+        /**
+         * @description One role's changes in a save. A count sent is saved for the role; `0` saves the
+         *     installation value, which for the built-in Admin role turns the preset off for that count.
+         *     A count named in `unset` loses the role's value: the role uses the installation value
+         *     again, and Admin returns to the preset. A count neither sent nor unset is left as it is.
+         */
         AgentRoleAllowanceSet: {
             /** @description The key of a live role. */
             role_key: string;
             /** @description 0, or 10 to 5000, the installation bounds. */
-            agent_writes_per_window: number;
+            agent_writes_per_window?: number;
             /** @description 0, or 1 to 200, the installation bounds. */
-            agent_egress_per_window: number;
+            agent_egress_per_window?: number;
             /** @description 0, or 50 to 20000, the installation bounds. */
-            agent_calls_per_window: number;
+            agent_calls_per_window?: number;
+            /** @description The counts whose saved value this role gives up. A count may not be both sent and unset. */
+            unset?: ("agent_writes_per_window" | "agent_egress_per_window" | "agent_calls_per_window")[];
         };
         /**
          * @description How much one agent may do in one window. A passport a user minted has its own allowance;

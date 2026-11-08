@@ -29,7 +29,11 @@ import {
   type RoleDrafts,
   roleDraftsOf,
 } from "./agentallowances.draft";
-import { AllowanceForm, InstallationHead } from "./agentallowances.form";
+import {
+  AllowanceForm,
+  InstallationHead,
+  roleMapProperty,
+} from "./agentallowances.form";
 import { RolesReadout } from "./agentallowances.roles";
 import { useResetLine } from "./agentusage";
 
@@ -77,6 +81,7 @@ export function AgentAllowancesCard() {
 function lockedEditReason(locks: Locks, t: Translator): string | undefined {
   const properties = [
     ...COUNTS.map((row) => row.property),
+    ...COUNTS.map((row) => roleMapProperty(row.property)),
     "agent_window_hours",
   ];
   const reasons = properties.map((property) => {

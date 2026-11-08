@@ -15973,16 +15973,18 @@ export const en = {
   "agentAllowances.roles.source.admin_preset": "Admin preset",
   "agentAllowances.roles.source.installation": "Installation",
   "agentAllowances.roles.editHelp":
-    "Leave a box empty to use the installation value. Calls 50 to 20,000, changes 10 to 5,000, sends 1 to 200.",
+    "Leave a box empty to inherit the installation value; Admin’s empty box takes the Admin preset. Type 0 to keep Admin on the installation value. Calls 50 to 20,000, changes 10 to 5,000, sends 1 to 200.",
   "agentAllowances.roles.preset":
     "Admin starts at {calls} calls and {changes} changes where the installation value is still the default. Sends stay at the installation value.",
   "agentAllowances.roles.inherits": "Inherits {value}",
+  "agentAllowances.roles.presetValue": "Admin preset {value}",
   "agentAllowances.roles.inputLabel": "{kind} for {role}",
   "agentAllowances.roles.useInstallation": "Use the installation value",
   "agentAllowances.roles.refusal":
     "Enter a whole number in the range, or leave the box empty.",
   "agentAllowances.diff.role": "{role}, {label} {from} → {to}",
   "agentAllowances.diff.inherited": "installation value",
+  "agentAllowances.diff.preset": "Admin preset",
   "agentAllowances.diff.roles":
     "What agents already used in this window still counts. Nothing resets.",
   "agentUsage.title": "Agent usage by user",

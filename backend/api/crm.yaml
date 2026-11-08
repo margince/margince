@@ -38279,11 +38279,10 @@ components:
           maxItems: 256
           items: { $ref: '#/components/schemas/AgentRoleAllowanceSet' }
           description: |
-            Set every role's own allowances at once, replacing what each role held. Each item names
-            a live role by its `role_key`. A role left out holds no values of its own and uses the
-            installation value. The built-in Admin role left out returns to the Admin preset; Admin
-            sent with `0` for a count uses the installation value for it instead. Applies within a
-            minute, in the running window, and resets no count.
+            Change some roles' own allowances. Each item names a live role by its `role_key` and
+            says which counts it sets and which it gives up; everything else is left as it is,
+            the values of a role that is archived now included. Applies within a minute, in the
+            running window, and resets no count.
         agent_window_hours:
           type: integer
           minimum: 1
@@ -39924,13 +39923,24 @@ components:
     AgentRoleAllowanceSet:
       type: object
       additionalProperties: false
-      description: One role's own allowances in a save. `0` for a count uses the installation value.
-      required: [role_key, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
+      description: |
+        One role's changes in a save. A count sent is saved for the role; `0` saves the
+        installation value, which for the built-in Admin role turns the preset off for that count.
+        A count named in `unset` loses the role's value: the role uses the installation value
+        again, and Admin returns to the preset. A count neither sent nor unset is left as it is.
+      required: [role_key]
       properties:
         role_key: { type: string, minLength: 1, description: The key of a live role. }
         agent_writes_per_window: { type: integer, minimum: 0, description: '0, or 10 to 5000, the installation bounds.' }
         agent_egress_per_window: { type: integer, minimum: 0, description: '0, or 1 to 200, the installation bounds.' }
         agent_calls_per_window: { type: integer, minimum: 0, description: '0, or 50 to 20000, the installation bounds.' }
+        unset:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+            enum: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
+          description: The counts whose saved value this role gives up. A count may not be both sent and unset.
 
     AgentAllowanceSettings:
       type: object

@@ -99,17 +99,17 @@ export function hasRefusal(parsed: Parsed): boolean {
 export type RoleAllowance = components["schemas"]["AgentRoleAllowance"];
 export type RoleAllowanceSet = components["schemas"]["AgentRoleAllowanceSet"];
 
-// One role's counts as typed. An empty box uses the installation value.
+// One role's counts as typed. An empty box holds no value of the role's own: the
+// role inherits, and the preset's role takes the preset. "0" saves the
+// installation value, which turns the preset off for that count.
 export type RoleDraft = Readonly<Record<Counts, string>>;
 export type RoleDrafts = Readonly<Record<string, RoleDraft>>;
 
-// A count the role inherits starts empty; its own value or the Admin preset
-// starts typed, so the box shows what binds.
+// Only a value the role holds starts typed. A preset or inherited value is not
+// one the admin saved, so it shows as the box's placeholder and is never sent.
 export function roleDraftOf(role: RoleAllowance): RoleDraft {
   const box = (property: Counts) =>
-    role[property].source === "installation"
-      ? ""
-      : String(role[property].value);
+    role[property].source === "role" ? String(role[property].value) : "";
   return {
     agent_writes_per_window: box("agent_writes_per_window"),
     agent_egress_per_window: box("agent_egress_per_window"),
@@ -129,87 +129,70 @@ export const EMPTY_ROLE_DRAFT: RoleDraft = {
   agent_calls_per_window: "",
 };
 
-// The Admin row as the preset fills it, for "Use defaults".
-export function adminPresetDraft(allowances: Allowances): RoleDraft {
-  return {
-    agent_writes_per_window: String(
-      allowances.defaults.admin_writes_per_window,
-    ),
-    agent_egress_per_window: "",
-    agent_calls_per_window: String(allowances.defaults.admin_calls_per_window),
-  };
+// The installation value saved for every count: for the preset's role, the
+// way to turn the preset off.
+export const INSTALLATION_ROLE_DRAFT: RoleDraft = {
+  agent_writes_per_window: "0",
+  agent_egress_per_window: "0",
+  agent_calls_per_window: "0",
+};
+
+// A box as a value to save: undefined when empty, 0 for the installation
+// value, else digits inside the installation's own bounds; null when refused.
+export function parseRoleCell(
+  property: Counts,
+  text: string,
+): number | undefined | null {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    return undefined;
+  }
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const value = Number(trimmed);
+  const { min, max } = AGENT_ALLOWANCE_BOUNDS[property];
+  return value === 0 || (value >= min && value <= max) ? value : null;
 }
 
-export type ParsedRole = Readonly<Record<Counts, number | null>>;
-
-// An empty box is 0, the installation value; anything else is digits inside
-// the installation's own bounds.
-export function parseRoleDraft(draft: RoleDraft): ParsedRole {
-  const read = (property: Counts): number | null => {
-    const text = draft[property].trim();
-    if (text === "") {
-      return 0;
-    }
-    if (!/^\d+$/.test(text)) {
-      return null;
-    }
-    const { min, max } = AGENT_ALLOWANCE_BOUNDS[property];
-    const value = Number(text);
-    return value >= min && value <= max ? value : null;
-  };
-  return {
-    agent_writes_per_window: read("agent_writes_per_window"),
-    agent_egress_per_window: read("agent_egress_per_window"),
-    agent_calls_per_window: read("agent_calls_per_window"),
-  };
-}
-
-const sameRoleDraft = (a: RoleDraft, b: RoleDraft) =>
-  COUNTS.every(({ property }) => a[property].trim() === b[property].trim());
-
-// What a save sends for the roles: nothing while no row moved, so the preset
-// and every role's values stay as they are. Once one did, the save replaces
-// them all, so it carries every role with a value. Admin at the
-// preset is left out and stays on it; Admin emptied is sent as zeros, which
-// keeps the installation value.
+// What a save sends for the roles: for each role, only the counts whose box
+// moved. A box emptied gives the role's value up; a box typed saves it.
 export function roleChangesOf(
   allowances: Allowances,
   drafts: RoleDrafts,
 ): RoleAllowanceSet[] | undefined {
-  const moved = allowances.roles.some(
-    (role) =>
-      !sameRoleDraft(
-        drafts[role.role_key] ?? roleDraftOf(role),
-        roleDraftOf(role),
-      ),
-  );
-  if (!moved) {
-    return undefined;
-  }
   const out: RoleAllowanceSet[] = [];
   for (const role of allowances.roles) {
-    const draft = drafts[role.role_key] ?? roleDraftOf(role);
-    const holdsPreset = role.holds_preset;
-    if (holdsPreset && sameRoleDraft(draft, adminPresetDraft(allowances))) {
-      continue;
+    const before = roleDraftOf(role);
+    const after = drafts[role.role_key] ?? before;
+    const set: RoleAllowanceSet = { role_key: role.role_key };
+    const unset: Counts[] = [];
+    for (const { property } of COUNTS) {
+      if (before[property].trim() === after[property].trim()) {
+        continue;
+      }
+      const value = parseRoleCell(property, after[property]);
+      if (value === undefined) {
+        unset.push(property);
+      } else if (value !== null) {
+        set[property] = value;
+      }
     }
-    if (!holdsPreset && sameRoleDraft(draft, EMPTY_ROLE_DRAFT)) {
-      continue;
+    if (unset.length > 0) {
+      set.unset = unset;
     }
-    const parsed = parseRoleDraft(draft);
-    out.push({
-      role_key: role.role_key,
-      agent_writes_per_window: parsed.agent_writes_per_window ?? 0,
-      agent_egress_per_window: parsed.agent_egress_per_window ?? 0,
-      agent_calls_per_window: parsed.agent_calls_per_window ?? 0,
-    });
+    if (Object.keys(set).length > 1) {
+      out.push(set);
+    }
   }
-  return out;
+  return out.length > 0 ? out : undefined;
 }
 
 export function hasRoleRefusal(drafts: RoleDrafts): boolean {
   return Object.values(drafts).some((draft) =>
-    Object.values(parseRoleDraft(draft)).some((value) => value === null),
+    COUNTS.some(
+      ({ property }) => parseRoleCell(property, draft[property]) === null,
+    ),
   );
 }
 

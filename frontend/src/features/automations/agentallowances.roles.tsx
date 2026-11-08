@@ -8,13 +8,16 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
+import type { FieldLock } from "../../format/settinglocks";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import {
   type Allowances,
   COUNTS,
   type Counts,
   EMPTY_ROLE_DRAFT,
-  parseRoleDraft,
+  hasRoleRefusal,
+  INSTALLATION_ROLE_DRAFT,
+  parseRoleCell,
   type RoleAllowance,
   type RoleDraft,
   type RoleDrafts,
@@ -111,23 +114,43 @@ export function RolesReadout({
   );
 }
 
-function inheritedValue(
+// What an empty box gives, said in its placeholder: the preset where it binds,
+// else the installation value.
+function emptyBoxSays(
+  role: RoleAllowance,
   allowances: Allowances,
   property: Counts,
+  t: Translator,
   locale: Locale,
 ): string {
-  return formatNumber(allowances[property], locale);
+  const { value, source } = role[property];
+  return source === "admin_preset"
+    ? t("agentAllowances.roles.presetValue", {
+        value: formatNumber(value, locale),
+      })
+    : t("agentAllowances.roles.inherits", {
+        value: formatNumber(allowances[property], locale),
+      });
+}
+
+// The draft "Use the installation value" leaves: for the preset's role, the
+// installation value saved, since an empty box would take the preset.
+function installationDraft(role: RoleAllowance): RoleDraft {
+  return role.holds_preset ? INSTALLATION_ROLE_DRAFT : EMPTY_ROLE_DRAFT;
 }
 
 export function RolesForm({
   allowances,
   drafts,
   busy,
+  lockOf,
   onDrafts,
 }: Readonly<{
   allowances: Allowances;
   drafts: RoleDrafts;
   busy: boolean;
+  // The lock on one count's role values, keyed by the count's property.
+  lockOf: (property: Counts) => FieldLock;
   onDrafts: (next: RoleDrafts) => void;
 }>) {
   const t = useT();
@@ -146,7 +169,7 @@ export function RolesForm({
     },
     ...countColumns(t, (role, { property, copy }) => {
       const draft = draftOf(role);
-      const refused = parseRoleDraft(draft)[property] === null;
+      const refused = parseRoleCell(property, draft[property]) === null;
       const label = t(`agentAllowances.${copy}.label`);
       return (
         <TextInput
@@ -158,11 +181,9 @@ export function RolesForm({
           })}
           aria-invalid={refused ? true : undefined}
           data-testid={`role-${role.role_key}-${property}`}
-          placeholder={t("agentAllowances.roles.inherits", {
-            value: inheritedValue(allowances, property, locale),
-          })}
+          placeholder={emptyBoxSays(role, allowances, property, t, locale)}
           value={draft[property]}
-          disabled={busy}
+          disabled={busy || lockOf(property).disabled}
           onChange={(e) => set(role, { ...draft, [property]: e.target.value })}
         />
       );
@@ -175,17 +196,22 @@ export function RolesForm({
       render: (role) => (
         <Button
           variant="link"
-          disabled={busy || sameAsEmpty(draftOf(role))}
-          onClick={() => set(role, EMPTY_ROLE_DRAFT)}
+          disabled={busy || sameDraft(draftOf(role), installationDraft(role))}
+          onClick={() => set(role, installationDraft(role))}
         >
           {t("agentAllowances.roles.useInstallation")}
         </Button>
       ),
     },
   ];
-  const refused = Object.values(drafts).some((draft) =>
-    Object.values(parseRoleDraft(draft)).includes(null),
-  );
+  const refused = hasRoleRefusal(drafts);
+  const locked = [
+    ...new Set(
+      COUNTS.map(({ property }) => lockOf(property))
+        .filter((lock) => lock.disabled)
+        .map((lock) => lock.reason),
+    ),
+  ];
   return (
     <>
       <RolesHead editing />
@@ -214,6 +240,11 @@ export function RolesForm({
         rowKey={(role) => role.role_key}
         rowTestId={(role) => `role-allowance-${role.role_key}`}
       />
+      {locked.length > 0 && (
+        <PanelBody>
+          <p className="t-caption">{locked.join(" ")}</p>
+        </PanelBody>
+      )}
       {refused && (
         <PanelBody>
           <ErrorLine>{t("agentAllowances.roles.refusal")}</ErrorLine>
@@ -223,22 +254,29 @@ export function RolesForm({
   );
 }
 
-function sameAsEmpty(draft: RoleDraft): boolean {
-  return COUNTS.every(({ property }) => draft[property].trim() === "");
+function sameDraft(a: RoleDraft, b: RoleDraft): boolean {
+  return COUNTS.every(
+    ({ property }) => a[property].trim() === b[property].trim(),
+  );
 }
 
 // One line per role count a save moves, for the callout that says what a save
-// will do. An empty box reads as the installation value.
+// will do. An empty box reads as what it gives: the preset or the installation.
 export function roleDiffLines(
   allowances: Allowances,
   drafts: RoleDrafts,
   t: Translator,
   locale: Locale,
 ): string[] {
-  const shown = (text: string) =>
-    text.trim() === ""
+  const shown = (role: RoleAllowance, text: string) => {
+    const trimmed = text.trim();
+    if (trimmed === "" && role.holds_preset) {
+      return t("agentAllowances.diff.preset");
+    }
+    return trimmed === "" || trimmed === "0"
       ? t("agentAllowances.diff.inherited")
-      : formatNumber(Number(text), locale);
+      : formatNumber(Number(trimmed), locale);
+  };
   return allowances.roles.flatMap((role) => {
     const before = roleDraftOf(role);
     const after = drafts[role.role_key] ?? before;
@@ -249,8 +287,8 @@ export function roleDiffLines(
             t("agentAllowances.diff.role", {
               role: role.role_name,
               label: t(`agentAllowances.${row.copy}.label`),
-              from: shown(before[row.property]),
-              to: shown(after[row.property]),
+              from: shown(role, before[row.property]),
+              to: shown(role, after[row.property]),
             }),
           ],
     );

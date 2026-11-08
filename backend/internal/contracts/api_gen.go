@@ -985,6 +985,27 @@ func (e AgentContextItemOccurredPrecision) Valid() bool {
 	}
 }
 
+// Defines values for AgentRoleAllowanceSetUnset.
+const (
+	AgentRoleAllowanceSetUnsetAgentCallsPerWindow  AgentRoleAllowanceSetUnset = "agent_calls_per_window"
+	AgentRoleAllowanceSetUnsetAgentEgressPerWindow AgentRoleAllowanceSetUnset = "agent_egress_per_window"
+	AgentRoleAllowanceSetUnsetAgentWritesPerWindow AgentRoleAllowanceSetUnset = "agent_writes_per_window"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceSetUnset enum.
+func (e AgentRoleAllowanceSetUnset) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceSetUnsetAgentCallsPerWindow:
+		return true
+	case AgentRoleAllowanceSetUnsetAgentEgressPerWindow:
+		return true
+	case AgentRoleAllowanceSetUnsetAgentWritesPerWindow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentRoleAllowanceValueSource.
 const (
 	AgentRoleAllowanceValueSourceAdminPreset  AgentRoleAllowanceValueSource = "admin_preset"
@@ -31612,20 +31633,29 @@ type AgentRoleAllowance struct {
 	System bool `json:"system"`
 }
 
-// AgentRoleAllowanceSet One role's own allowances in a save. `0` for a count uses the installation value.
+// AgentRoleAllowanceSet One role's changes in a save. A count sent is saved for the role; `0` saves the
+// installation value, which for the built-in Admin role turns the preset off for that count.
+// A count named in `unset` loses the role's value: the role uses the installation value
+// again, and Admin returns to the preset. A count neither sent nor unset is left as it is.
 type AgentRoleAllowanceSet struct {
 	// AgentCallsPerWindow 0, or 50 to 20000, the installation bounds.
-	AgentCallsPerWindow int `json:"agent_calls_per_window" minimum:"0"`
+	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty" minimum:"0"`
 
 	// AgentEgressPerWindow 0, or 1 to 200, the installation bounds.
-	AgentEgressPerWindow int `json:"agent_egress_per_window" minimum:"0"`
+	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" minimum:"0"`
 
 	// AgentWritesPerWindow 0, or 10 to 5000, the installation bounds.
-	AgentWritesPerWindow int `json:"agent_writes_per_window" minimum:"0"`
+	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty" minimum:"0"`
 
 	// RoleKey The key of a live role.
 	RoleKey string `json:"role_key"`
+
+	// Unset The counts whose saved value this role gives up. A count may not be both sent and unset.
+	Unset *[]AgentRoleAllowanceSetUnset `json:"unset,omitempty"`
 }
+
+// AgentRoleAllowanceSetUnset defines model for AgentRoleAllowanceSet.Unset.
+type AgentRoleAllowanceSetUnset string
 
 // AgentRoleAllowanceValue defines model for AgentRoleAllowanceValue.
 type AgentRoleAllowanceValue struct {
@@ -64185,11 +64215,10 @@ type UpdateInstallationSettingsRequest struct {
 	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
 	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" maximum:"200" minimum:"1"`
 
-	// AgentRoleAllowances Set every role's own allowances at once, replacing what each role held. Each item names
-	// a live role by its `role_key`. A role left out holds no values of its own and uses the
-	// installation value. The built-in Admin role left out returns to the Admin preset; Admin
-	// sent with `0` for a count uses the installation value for it instead. Applies within a
-	// minute, in the running window, and resets no count.
+	// AgentRoleAllowances Change some roles' own allowances. Each item names a live role by its `role_key` and
+	// says which counts it sets and which it gives up; everything else is left as it is,
+	// the values of a role that is archived now included. Applies within a minute, in the
+	// running window, and resets no count.
 	AgentRoleAllowances *[]AgentRoleAllowanceSet `json:"agent_role_allowances,omitempty"`
 
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.

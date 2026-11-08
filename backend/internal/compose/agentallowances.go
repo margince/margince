@@ -65,17 +65,36 @@ func toRoleAllowances(installation agentvolume.Limits, roles []identity.RoleAllo
 	return out
 }
 
-// roleAllowanceSets carries a save of every role's values onto the store's
-// shape; nil leaves them as they are.
+// unsetCounters names the counter each unset property gives up.
+var unsetCounters = map[crmcontracts.AgentRoleAllowanceSetUnset]agentvolume.Counter{
+	crmcontracts.AgentRoleAllowanceSetUnsetAgentWritesPerWindow: agentvolume.Writes,
+	crmcontracts.AgentRoleAllowanceSetUnsetAgentEgressPerWindow: agentvolume.Egress,
+	crmcontracts.AgentRoleAllowanceSetUnsetAgentCallsPerWindow:  agentvolume.Calls,
+}
+
+// roleAllowanceSets carries a save of some roles' values onto the store's
+// shape; nil leaves every role as it is.
 func roleAllowanceSets(sets *[]crmcontracts.AgentRoleAllowanceSet) *[]identity.RoleAllowanceSet {
 	if sets == nil {
 		return nil
 	}
 	out := make([]identity.RoleAllowanceSet, 0, len(*sets))
 	for _, set := range *sets {
-		out = append(out, identity.RoleAllowanceSet{RoleKey: set.RoleKey, Values: agentvolume.Limits{
-			Writes: set.AgentWritesPerWindow, Egress: set.AgentEgressPerWindow, Calls: set.AgentCallsPerWindow,
-		}})
+		next := identity.RoleAllowanceSet{RoleKey: set.RoleKey, Set: map[agentvolume.Counter]int{}}
+		for counter, value := range map[agentvolume.Counter]*int{
+			agentvolume.Writes: set.AgentWritesPerWindow, agentvolume.Egress: set.AgentEgressPerWindow,
+			agentvolume.Calls: set.AgentCallsPerWindow,
+		} {
+			if value != nil {
+				next.Set[counter] = *value
+			}
+		}
+		if set.Unset != nil {
+			for _, property := range *set.Unset {
+				next.Unset = append(next.Unset, unsetCounters[property])
+			}
+		}
+		out = append(out, next)
 	}
 	return &out
 }

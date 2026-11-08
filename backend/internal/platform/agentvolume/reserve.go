@@ -40,7 +40,7 @@ func (m *Meter) Reserve(ctx context.Context, c Counter, n int) (Reading, bool, e
 	ws, agent, named := callerKey(ctx)
 	if !named || m.rdb == nil {
 		refused := w.reading(c)
-		refused.Exceeded = true
+		refused.Exceeded, refused.Unanswered = true, true
 		return refused, false, nil
 	}
 	answer, err := reserveScript.Run(ctx, m.rdb,

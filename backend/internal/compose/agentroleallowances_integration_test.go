@@ -84,8 +84,8 @@ func TestARoleValueAnAdminSavedBindsThatRolesAgents(t *testing.T) {
 	h.afterSave = meter.ForgetPolicy
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{"agent_role_allowances":[`+
-		`{"role_key":"manager","agent_calls_per_window":3000,"agent_writes_per_window":0,"agent_egress_per_window":0},`+
-		`{"role_key":"ops","agent_calls_per_window":2000,"agent_writes_per_window":1000,"agent_egress_per_window":0}]}`)
+		`{"role_key":"manager","agent_calls_per_window":3000},`+
+		`{"role_key":"ops","agent_calls_per_window":2000,"agent_writes_per_window":1000}]}`)
 	if code != http.StatusOK {
 		t.Fatalf("saving the role values → %d", code)
 	}
@@ -116,34 +116,72 @@ func TestARoleValueAnAdminSavedBindsThatRolesAgents(t *testing.T) {
 	}
 }
 
-// Admin sent with zeros keeps the installation value; left out, it returns to
-// the preset.
+// Admin sent with zeros keeps the installation value; unset, it returns to the
+// preset.
 func TestAdminSentWithZeroUsesTheInstallationValue(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{"agent_role_allowances":[`+
-		`{"role_key":"admin","agent_calls_per_window":0,"agent_writes_per_window":0,"agent_egress_per_window":0}]}`)
+		`{"role_key":"admin","agent_calls_per_window":0,"agent_writes_per_window":0}]}`)
 	if code != http.StatusOK {
 		t.Fatalf("saving Admin at zero → %d", code)
 	}
 	wantValue(t, "Admin calls", roleRow(t, saved, "admin").AgentCallsPerWindow, agentvolume.DefaultCalls, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
 
-	if code, saved = patchAllowances(installationAdminCtx(e), t, h, `{"agent_role_allowances":[]}`); code != http.StatusOK {
-		t.Fatalf("leaving Admin out → %d", code)
+	if code, saved = patchAllowances(installationAdminCtx(e), t, h,
+		`{"agent_role_allowances":[{"role_key":"admin","unset":["agent_calls_per_window"]}]}`); code != http.StatusOK {
+		t.Fatalf("unsetting Admin's calls → %d", code)
 	}
-	wantValue(t, "Admin calls once left out", roleRow(t, saved, "admin").AgentCallsPerWindow, 20000, crmcontracts.AgentRoleAllowanceValueSourceAdminPreset)
+	wantValue(t, "Admin calls once unset", roleRow(t, saved, "admin").AgentCallsPerWindow, 20000, crmcontracts.AgentRoleAllowanceValueSourceAdminPreset)
+	wantValue(t, "Admin changes, still saved at zero", roleRow(t, saved, "admin").AgentWritesPerWindow, agentvolume.DefaultWrites, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
+}
+
+// The preset binds changes while an operator chose calls. Saving another role
+// leaves Admin as it was: nothing is saved for a role the save does not name.
+func TestSavingAnotherRoleLeavesAPartlyAppliedPresetBinding(t *testing.T) {
+	e := integration.Setup(t)
+	h := allowanceHandlers(t, e, wallClock(t))
+	if code, _ := patchAllowances(installationAdminCtx(e), t, h, `{"agent_calls_per_window":5000}`); code != http.StatusOK {
+		t.Fatalf("choosing 5000 calls → %d", code)
+	}
+
+	code, saved := patchAllowances(installationAdminCtx(e), t, h,
+		`{"agent_role_allowances":[{"role_key":"manager","agent_calls_per_window":6000}]}`)
+	if code != http.StatusOK {
+		t.Fatalf("saving Team Lead → %d", code)
+	}
+
+	admin := roleRow(t, saved, "admin")
+	wantValue(t, "Admin changes", admin.AgentWritesPerWindow, 2000, crmcontracts.AgentRoleAllowanceValueSourceAdminPreset)
+	wantValue(t, "Admin calls", admin.AgentCallsPerWindow, 5000, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
+}
+
+// A default somebody saved is a choice: Admin keeps it rather than the preset.
+func TestAnInstallationValueSavedAtTheDefaultKeepsThePresetOff(t *testing.T) {
+	e := integration.Setup(t)
+	h := allowanceHandlers(t, e, wallClock(t))
+	for _, body := range []string{`{"agent_calls_per_window":5000}`, `{"agent_calls_per_window":1000}`} {
+		if code, _ := patchAllowances(installationAdminCtx(e), t, h, body); code != http.StatusOK {
+			t.Fatalf("PATCH %s → %d", body, code)
+		}
+	}
+
+	_, saved := patchAllowances(installationAdminCtx(e), t, h, `{}`)
+
+	wantValue(t, "Admin calls", roleRow(t, saved, "admin").AgentCallsPerWindow, agentvolume.DefaultCalls, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
 }
 
 func TestARoleSaveRefusesWhatWouldBindNobody(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))
 	for name, body := range map[string]string{
-		"a role that is not live": `{"agent_role_allowances":[{"role_key":"custom_gone","agent_calls_per_window":100,"agent_writes_per_window":0,"agent_egress_per_window":0}]}`,
+		"a role that is not live": `{"agent_role_allowances":[{"role_key":"custom_gone","agent_calls_per_window":100}]}`,
 		"a role given twice": `{"agent_role_allowances":[` +
-			`{"role_key":"rep","agent_calls_per_window":100,"agent_writes_per_window":0,"agent_egress_per_window":0},` +
-			`{"role_key":"rep","agent_calls_per_window":200,"agent_writes_per_window":0,"agent_egress_per_window":0}]}`,
-		"a value below the range": `{"agent_role_allowances":[{"role_key":"rep","agent_calls_per_window":49,"agent_writes_per_window":0,"agent_egress_per_window":0}]}`,
+			`{"role_key":"rep","agent_calls_per_window":100},` +
+			`{"role_key":"rep","agent_calls_per_window":200}]}`,
+		"a value below the range":    `{"agent_role_allowances":[{"role_key":"rep","agent_calls_per_window":49}]}`,
+		"a count both set and unset": `{"agent_role_allowances":[{"role_key":"rep","agent_calls_per_window":100,"unset":["agent_calls_per_window"]}]}`,
 	} {
 		if code, _ := patchAllowances(installationAdminCtx(e), t, h, body); code != http.StatusUnprocessableEntity {
 			t.Errorf("%s → %d, want 422", name, code)
@@ -156,7 +194,7 @@ func TestARoleSaveRefusesWhatWouldBindNobody(t *testing.T) {
 func TestOnlyAnAdministratorsOwnSessionSetsRoleValues(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))
-	body := `{"agent_role_allowances":[{"role_key":"rep","agent_calls_per_window":20000,"agent_writes_per_window":0,"agent_egress_per_window":0}]}`
+	body := `{"agent_role_allowances":[{"role_key":"rep","agent_calls_per_window":20000}]}`
 
 	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(), SeatType: principal.SeatFull,

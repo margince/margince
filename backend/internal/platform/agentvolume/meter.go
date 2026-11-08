@@ -152,6 +152,9 @@ type Reading struct {
 	// meter's clock. A refusal then says when to retry with no clock of its own.
 	ResetsAt time.Time
 	ResetsIn time.Duration
+	// Unanswered marks a refusal the meter made because it could not read the
+	// count. No limit was reached, so it must not read as one.
+	Unanswered bool
 }
 
 // countKey is one agent's counter for one window bucket. The bucket comes from
@@ -294,7 +297,7 @@ func (m *Meter) Read(ctx context.Context, c Counter) Reading {
 		return m.readCost(ctx, w)
 	}
 	refused := w.reading(c)
-	refused.Exceeded = true
+	refused.Exceeded, refused.Unanswered = true, true
 	ws, agent, named := callerKey(ctx)
 	if !named || m.rdb == nil {
 		// Governed, and unidentifiable or uncountable. Both are the fail-closed

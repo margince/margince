@@ -263,38 +263,6 @@ type Fault struct {
 	RetryAfterSeconds int
 }
 
-// transientCodes are the refusals that clear ON THEIR OWN: a rate limit whose
-// window elapses, a metered budget that refills. Membership is by CODE and not
-// by status range, because the range lies — a 503 is equally the shape of
-// "not bootstrapped yet" or "misconfigured", which no amount of retrying
-// resolves and which an operator must act on. Telling an agent to wait for one
-// of those spends its whole step budget on a call that was already settled.
-var transientCodes = map[string]struct{}{
-	"rate_limited":               {},
-	IdempotencyInProgressCode:    {},
-	"incumbent_budget_exhausted": {},
-	schemaChangedCode:            {},
-	writeContentionCode:          {},
-	SourceBusyCode:               {},
-	AgentBusyCode:                {},
-}
-
-// SourceBusyCode refuses an import test while another run of the same source
-// name is writing. It clears when that write ends.
-const SourceBusyCode = "import_source_busy"
-
-// AgentBusyCode refuses an agent's second import test while its first is still
-// running. It clears when that test ends.
-const AgentBusyCode = "import_agent_busy"
-
-// Transient reports whether repeating the same call unchanged could succeed
-// later. Every other classified fault is settled: something must change (the
-// arguments, a human's decision, an operator's) before a retry means anything.
-func (f Fault) Transient() bool {
-	_, ok := transientCodes[f.Code]
-	return ok
-}
-
 // Classify is the ONE decision tree behind the error taxonomy: what err means
 // to a caller, independent of the surface that caller reached us through. It
 // reports false only for an error outside the taxonomy — a genuine server
@@ -338,6 +306,10 @@ func Classify(err error) (Fault, bool) {
 			}
 			return fault, true
 		}
+	}
+
+	if fault, ok := unansweredFaultOf(err); ok {
+		return fault, true
 	}
 
 	if withDetails, ok := errors.AsType[*DetailedError](err); ok {

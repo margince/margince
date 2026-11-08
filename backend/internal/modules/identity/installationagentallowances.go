@@ -79,14 +79,15 @@ func (v allowanceValues) policy(c *config.Config) agentvolume.Policy {
 // readAgentPolicy instead.
 func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolume.Policy, error) {
 	var values allowanceValues
+	var chosen installationChosen
 	var err error
-	if values[0], err = config.StoredApplyTx(ctx, tx, c, AgentWritesPerWindow); err != nil {
+	if values[0], chosen[0], err = config.StoredApplyChosenTx(ctx, tx, c, AgentWritesPerWindow); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	if values[1], err = config.StoredApplyTx(ctx, tx, c, AgentEgressPerWindow); err != nil {
+	if values[1], chosen[1], err = config.StoredApplyChosenTx(ctx, tx, c, AgentEgressPerWindow); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	if values[2], err = config.StoredApplyTx(ctx, tx, c, AgentCallsPerWindow); err != nil {
+	if values[2], chosen[2], err = config.StoredApplyChosenTx(ctx, tx, c, AgentCallsPerWindow); err != nil {
 		return agentvolume.Policy{}, err
 	}
 	if values[3], err = config.StoredApplyTx(ctx, tx, c, AgentWindowHours); err != nil {
@@ -103,7 +104,7 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolum
 		return agentvolume.Policy{}, err
 	}
 	policy := values.policy(c)
-	policy.Roles = roleValuesOf(c, policy.Limits, maps).Roles()
+	policy.Roles = roleValuesOf(chosen, maps).Roles()
 	return policy, nil
 }
 
@@ -145,15 +146,19 @@ func readRoleMapsTx(ctx context.Context, tx pgx.Tx, c *config.Config) (savedRole
 // settings page, each setting through its read gate.
 func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentvolume.Policy, []RoleAllowance, error) {
 	var values allowanceValues
+	var chosen installationChosen
 	var policy agentvolume.Policy
 	var roles []RoleAllowance
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		for i, setting := range agentAllowanceEntries {
-			value, err := config.StoredValTx(ctx, tx, s.config, setting)
+			value, picked, err := config.StoredChosenTx(ctx, tx, s.config, setting)
 			if err != nil {
 				return err
 			}
 			values[i] = value
+			if i < len(chosen) {
+				chosen[i] = picked
+			}
 		}
 		var err error
 		if values[4], err = settings.GetTx(ctx, tx, AgentWindowNextHours); err != nil {
@@ -167,7 +172,7 @@ func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentv
 			return err
 		}
 		policy = values.policy(s.config)
-		held := roleValuesOf(s.config, policy.Limits, maps)
+		held := roleValuesOf(chosen, maps)
 		live, err := liveRolesTx(ctx, tx)
 		if err != nil {
 			return err

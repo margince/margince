@@ -31,17 +31,18 @@ top of the card, which a role with no value of its own uses. For each kind, an
 agent gets the highest value among the roles of the user who connected it.
 Roles you made yourself work the same way.
 
-To set a value, press **Edit
-allowances**, type it in the role's box, and press **Save**. Leave a box empty,
-or press **Use the installation value**, to give the role the installation value
-again.
+To set a value, press **Edit allowances**, type it in the role's box, and press
+**Save**. Empty a box to give the role's value up, so the role uses the
+installation value again. A save changes only the boxes you changed. A role you
+archived keeps its value, and has it again if you restore the role.
 
 The built-in Admin role starts with more: 20,000 calls in total and 2,000
 changes, shown as **Admin preset**. Calls that go out stay at the installation
 value, because a large task is no reason to send more mail. These higher values
-apply to a kind only while that kind's installation value is still the default. If
-your installation already had its own value before, Admin keeps that value until
-you set one for Admin.
+apply to a kind only while nobody has saved its installation value. If your
+installation already had its own value, Admin keeps that value until you set one
+for Admin. An empty Admin box takes the **Admin preset**. To keep Admin on the
+installation value, press **Use the installation value** on its row.
 
 A role chooses how much, never what: an Admin's agent still needs the same
 permissions and the same approvals. A change of role or value resets nothing.
@@ -60,7 +61,9 @@ them. An agent that only reads can still reach the total and stop.
 When an agent is stopped, it is told which limit stopped it, the limit and when
 the window resets. Over the API the answer is a `429` with a `Retry-After`
 header. The per-minute limits of an MCP connection are separate, short pauses,
-the same for every role.
+the same for every role. If Margince cannot read the count for a moment, the
+agent is refused with a `503` and asked to try again in a few seconds. That is
+no limit, and the agent has used nothing more.
 
 Only whoever approved the connection can answer a request to widen it. An
 administrator cannot, and neither can the owner of the company. An agent's

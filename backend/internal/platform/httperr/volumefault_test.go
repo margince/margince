@@ -15,6 +15,32 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
+// A count the meter could not read refuses the call but names no limit. It
+// asks for a short wait, never the rest of the window.
+func TestAnUnreadableCountIsAShortWaitAndNoLimit(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	Write(rec, httptest.NewRequest(http.MethodGet, "/v1/contacts", nil),
+		&auth.VolumeUnansweredError{Counter: agentvolume.Calls})
+
+	if rec.Code != http.StatusServiceUnavailable || rec.Header().Get("Retry-After") != "5" {
+		t.Fatalf("answered %d with Retry-After %q, want 503 and 5", rec.Code, rec.Header().Get("Retry-After"))
+	}
+	var body struct {
+		Code    string         `json:"code"`
+		Details map[string]any `json:"details"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Code != "agent_volume_unavailable" || body.Details["limit"] != nil {
+		t.Errorf("the body is %+v, want agent_volume_unavailable and no limit", body)
+	}
+	if fault, _ := Classify(&auth.VolumeUnansweredError{}); !fault.Transient() {
+		t.Error("an unreadable count is not told it clears on its own")
+	}
+}
+
 // An agent refused on its allowance is told which limit stopped it and the
 // ceiling. It is also told its use and when to come back, in fields and a header.
 func TestAnAllowanceRefusalNamesItsLimitAndWhenToRetry(t *testing.T) {

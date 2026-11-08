@@ -319,6 +319,26 @@ func TestAHumansRestReadIsNeverRefusedByTheBound(t *testing.T) {
 
 // A gate with no meter composed admits, rather than failing closed on a
 // dependency the deployment never declared.
+// A meter that cannot read the count refuses the agent on both doors. It says
+// the count could not be read, never that the agent reached a limit.
+func TestAnUnreadableCountRefusesWithoutClaimingALimit(t *testing.T) {
+	gate := NewGate(&stubAuthority{seat: principal.SeatFull},
+		WithVolumeMeter(agentvolume.New(nil, agentvolume.Limits{}, agentvolume.DefaultWindow)))
+
+	for door, err := range map[string]error{
+		"REST": gate.AdmitRead(agentCtx(principal.ScopeRead)),
+		"MCP":  gate.AdmitReplay(agentCtx(principal.ScopeRead), readSpec),
+	} {
+		unanswered, ok := errors.AsType[*VolumeUnansweredError](err)
+		if !ok || unanswered.Counter != agentvolume.Calls {
+			t.Errorf("%s: an unreadable count answered %v, want an unanswered calls count", door, err)
+		}
+		if _, exceeded := errors.AsType[*VolumeExceededError](err); exceeded {
+			t.Errorf("%s: an unreadable count claims a limit reached: %v", door, err)
+		}
+	}
+}
+
 func TestARestReadOnAGateWithNoBoundIsAdmitted(t *testing.T) {
 	if err := fullSeatGate().AdmitRead(agentCtx(principal.ScopeRead)); err != nil {
 		t.Fatalf("a REST read on a gate with no meter → %v", err)

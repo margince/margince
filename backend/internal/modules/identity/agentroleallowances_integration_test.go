@@ -41,19 +41,47 @@ func (e *revocationEnv) allowanceSettings() *InstallationSettingsStore {
 	return NewInstallationSettings(e.svc.db, settings.New(e.pool, reg), e.svc.config)
 }
 
-// saveRoleValues replaces every role's values as the admin, and puts them back
+// allCounters are the counts a role can hold a value for.
+var allCounters = []agentvolume.Counter{agentvolume.Writes, agentvolume.Egress, agentvolume.Calls}
+
+// saveRoleCalls saves a calls value for role as the admin, and gives it up
 // when the test ends: the settings are the installation's.
-func (e *revocationEnv) saveRoleValues(t *testing.T, sets ...RoleAllowanceSet) {
+func (e *revocationEnv) saveRoleCalls(t *testing.T, role string, calls int) {
 	t.Helper()
-	store := e.allowanceSettings()
-	if _, err := store.UpdateInstallation(e.wsCtx(e.admin), InstallationPatch{AgentAllowances: AgentAllowancePatch{Roles: &sets}}); err != nil {
-		t.Fatalf("saving the role values: %v", err)
-	}
+	e.patchRoles(t, RoleAllowanceSet{RoleKey: role, Set: map[agentvolume.Counter]int{agentvolume.Calls: calls}})
 	t.Cleanup(func() {
-		if _, err := store.UpdateInstallation(e.wsCtx(e.admin), InstallationPatch{AgentAllowances: AgentAllowancePatch{Roles: &[]RoleAllowanceSet{}}}); err != nil {
-			t.Errorf("clearing the role values: %v", err)
+		sets := []RoleAllowanceSet{{RoleKey: role, Unset: allCounters}}
+		if _, err := e.allowanceSettings().UpdateInstallation(e.wsCtx(e.admin),
+			InstallationPatch{AgentAllowances: AgentAllowancePatch{Roles: &sets}}); err != nil {
+			t.Errorf("giving up %s's values: %v", role, err)
 		}
 	})
+}
+
+func (e *revocationEnv) patchRoles(t *testing.T, sets ...RoleAllowanceSet) {
+	t.Helper()
+	if _, err := e.allowanceSettings().UpdateInstallation(e.wsCtx(e.admin),
+		InstallationPatch{AgentAllowances: AgentAllowancePatch{Roles: &sets}}); err != nil {
+		t.Fatalf("saving role values: %v", err)
+	}
+}
+
+// roleMeter is a meter over this env's saved allowances, on a stopped clock.
+func (e *revocationEnv) roleMeter(t *testing.T) *agentvolume.Meter {
+	t.Helper()
+	at := clocktest.Now(t)
+	return agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
+		func() time.Time { return at }).WithPolicySource(storedPolicy{e})
+}
+
+// agentOn is the call context of the agent a token authenticates to now.
+func (e *revocationEnv) agentOn(t *testing.T, token string) context.Context {
+	t.Helper()
+	agent, err := e.svc.AuthenticateAgent(e.wsCtx(e.member), token)
+	if err != nil {
+		t.Fatalf("authenticating the passport: %v", err)
+	}
+	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws.UUID), agent.Principal())
 }
 
 // callsAllowed is the calls ceiling the meter holds passport to, as
@@ -82,10 +110,8 @@ func TestACustomRolesHigherValueBindsItsHolderUntilTheRoleGoes(t *testing.T) {
 		`INSERT INTO role_assignment (role_id, user_id) SELECT id, $2 FROM role WHERE key = $1`, custom, e.member.UserID); err != nil {
 		t.Fatal(err)
 	}
-	e.saveRoleValues(t, RoleAllowanceSet{RoleKey: custom, Values: agentvolume.Limits{Calls: 5000}})
-	at := clocktest.Now(t)
-	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
-		func() time.Time { return at }).WithPolicySource(storedPolicy{e})
+	e.saveRoleCalls(t, custom, 5000)
+	meter := e.roleMeter(t)
 	passport := e.mintOwnPassport(t, e.resolve(t, e.member.UserID), []string{"read"})
 
 	if got := e.callsAllowed(t, meter, passport); got != 5000 {
@@ -108,6 +134,84 @@ func TestACustomRolesHigherValueBindsItsHolderUntilTheRoleGoes(t *testing.T) {
 	for _, role := range listed.AgentRoleAllowances {
 		if role.Key == custom {
 			t.Errorf("the archived role is still listed with %+v", role)
+		}
+	}
+}
+
+// Admin taken away through the member screens lowers the limit on the next
+// call of a passport the member already holds. The count it spent stays.
+func TestLosingAdminLowersARealPassportsLimitAndKeepsItsCount(t *testing.T) {
+	e := setupRevocationEnv(t, "role-allowance-admin")
+	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, adminRoleKey); err != nil {
+		t.Fatalf("making the member an Admin: %v", err)
+	}
+	meter := e.roleMeter(t)
+	issued, err := e.svc.IssuePassport(e.wsCtx(e.member), e.resolve(t, e.member.UserID), IssuePassportInput{Scopes: []string{"read"}})
+	if err != nil {
+		t.Fatalf("minting a passport: %v", err)
+	}
+	if err := meter.Consume(e.agentOn(t, issued.Token), agentvolume.Calls, 1500); err != nil {
+		t.Fatal(err)
+	}
+	if r := meter.Read(e.agentOn(t, issued.Token), agentvolume.Calls); r.Exceeded || r.Limit != 20000 {
+		t.Fatalf("as an Admin the passport reads %+v, want 1500 inside the preset's 20000", r)
+	}
+
+	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
+		t.Fatalf("taking Admin away: %v", err)
+	}
+
+	r := meter.Read(e.agentOn(t, issued.Token), agentvolume.Calls)
+	if !r.Exceeded || r.Observed != 1500 || r.Limit != agentvolume.DefaultCalls {
+		t.Errorf("once a User the passport reads %+v, want its 1500 kept against %d and refused", r, agentvolume.DefaultCalls)
+	}
+}
+
+// A connected app's renewed passport counts on where the last one stopped, and
+// against the limit its human's role gives.
+func TestARenewedPassportKeepsItsCountUnderARoleLimit(t *testing.T) {
+	e := setupRevocationEnv(t, "role-allowance-renewal")
+	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
+		t.Fatalf("making the member a User: %v", err)
+	}
+	e.saveRoleCalls(t, "rep", 300)
+	meter := e.roleMeter(t)
+	fixture := e.connectOAuthFor(t, e.member)
+	before := e.rotateIssuing(t, &fixture)
+	if err := meter.Consume(e.agentOn(t, before.Token), agentvolume.Calls, 250); err != nil {
+		t.Fatal(err)
+	}
+
+	after := e.rotateIssuing(t, &fixture)
+
+	r := meter.Read(e.agentOn(t, after.Token), agentvolume.Calls)
+	if r.Observed != 250 || r.Limit != 300 || r.Exceeded {
+		t.Errorf("the renewed passport reads %+v, want the 250 already spent against the role's 300", r)
+	}
+}
+
+// A save of other roles leaves an archived role's value alone, so restoring
+// the role brings its value back with it.
+func TestAnArchivedRolesValueOutlivesASaveAndComesBackOnRestore(t *testing.T) {
+	e := setupRevocationEnv(t, "role-allowance-restore")
+	custom := e.customRole(t, "Seasonal research", "rep", nil)
+	e.saveRoleCalls(t, custom, 4000)
+	if _, err := e.svc.ArchiveRole(e.wsCtx(e.admin), e.admin, custom); err != nil {
+		t.Fatalf("archiving the role: %v", err)
+	}
+
+	e.saveRoleCalls(t, "rep", 2000)
+	if _, err := e.svc.RestoreRole(e.wsCtx(e.admin), e.admin, custom); err != nil {
+		t.Fatalf("restoring the role: %v", err)
+	}
+
+	listed, err := e.allowanceSettings().GetInstallation(e.wsCtx(e.admin))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, role := range listed.AgentRoleAllowances {
+		if role.Key == custom && role.Own.Calls != 4000 {
+			t.Errorf("the restored role holds %+v, want the 4000 it was saved with", role.Own)
 		}
 	}
 }

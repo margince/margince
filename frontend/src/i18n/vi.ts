@@ -15665,16 +15665,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.source.admin_preset": "Mức sẵn của Quản trị",
   "agentAllowances.roles.source.installation": "Hệ thống",
   "agentAllowances.roles.editHelp":
-    "Để trống một ô để dùng giá trị của hệ thống. Lệnh gọi từ 50 đến 20.000, thay đổi từ 10 đến 5.000, lượt gửi từ 1 đến 200.",
+    "Để trống một ô để dùng giá trị của hệ thống; ô trống của Quản trị dùng mức sẵn của Quản trị. Nhập 0 để Quản trị giữ giá trị của hệ thống. Lệnh gọi từ 50 đến 20.000, thay đổi từ 10 đến 5.000, lượt gửi từ 1 đến 200.",
   "agentAllowances.roles.preset":
     "Quản trị bắt đầu ở {calls} lệnh gọi và {changes} thay đổi khi giá trị của hệ thống còn là mặc định. Lượt gửi giữ giá trị của hệ thống.",
   "agentAllowances.roles.inherits": "Theo {value}",
+  "agentAllowances.roles.presetValue": "Mức sẵn của Quản trị {value}",
   "agentAllowances.roles.inputLabel": "{kind} cho {role}",
   "agentAllowances.roles.useInstallation": "Dùng giá trị của hệ thống",
   "agentAllowances.roles.refusal":
     "Nhập một số nguyên trong khoảng cho phép, hoặc để trống ô.",
   "agentAllowances.diff.role": "Vai trò {role}, {label} {from} → {to}",
   "agentAllowances.diff.inherited": "giá trị của hệ thống",
+  "agentAllowances.diff.preset": "mức sẵn của Quản trị",
   "agentAllowances.diff.roles":
     "Những gì agent đã dùng trong khung này vẫn được tính. Không có gì bị đặt lại.",
   "agentUsage.title": "Mức dùng agent theo thành viên",

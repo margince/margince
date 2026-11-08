@@ -115,6 +115,41 @@ func (e *VolumeExceededError) RetryAfterSeconds() int {
 	return int(math.Ceil(e.Reading.ResetsIn.Seconds()))
 }
 
+// VolumeUnansweredError refuses an agent call because its count could not be
+// read. The meter fails closed, but no limit was reached, so the answer is a
+// short wait and never the end of the window.
+type VolumeUnansweredError struct {
+	Tool    string
+	Counter agentvolume.Counter
+}
+
+// unansweredRetry is how long a caller waits before asking again, in seconds.
+const unansweredRetry = 5
+
+func (e *VolumeUnansweredError) Error() string {
+	lead := "this agent"
+	if e.Tool != "" {
+		lead = e.Tool + ": this agent"
+	}
+	return fmt.Sprintf("%s's %s count could not be read just now, so the call was not run; try again in %d seconds",
+		lead, e.Counter, unansweredRetry)
+}
+
+// Unwrap keeps the call refused on every path that checks the budget sentinel.
+func (e *VolumeUnansweredError) Unwrap() error { return apperrors.ErrBudgetExceeded }
+
+// UnansweredRetrySeconds is how long to wait before the count is asked again.
+func (e *VolumeUnansweredError) UnansweredRetrySeconds() int { return unansweredRetry }
+
+// refusalOf is the refusal a reading past its limit answers: a limit reached, or
+// a count the meter could not read.
+func refusalOf(tool string, reading agentvolume.Reading) error {
+	if reading.Unanswered {
+		return &VolumeUnansweredError{Tool: tool, Counter: reading.Counter}
+	}
+	return &VolumeExceededError{Tool: tool, Reading: reading}
+}
+
 // AdmitReplay is the admission a RECORDED answer takes before it is served
 // again. It is the volume half of Admit and nothing else, and each omission is
 // deliberate rather than an economy:
@@ -166,7 +201,7 @@ func (g *Gate) refuseOnVolume(ctx context.Context, spec mcp.ToolSpec) error {
 	for _, c := range counters {
 		reading := g.volume.Read(ctx, c)
 		if reading.Exceeded {
-			return &VolumeExceededError{Tool: spec.Name, Reading: reading}
+			return refusalOf(spec.Name, reading)
 		}
 	}
 	return nil
@@ -250,6 +285,9 @@ func (g *Gate) ReserveRecordWrites(ctx context.Context, tool string, n int) (*Wr
 		slog.ErrorContext(ctx, "reserving a bulk change against the write budget failed", "tool", tool, "err", err)
 		return nil, fmt.Errorf("gate: %s could not be counted against this agent's write budget, so it was not run: %w",
 			tool, apperrors.ErrBudgetExceeded)
+	}
+	if reading.Unanswered {
+		return nil, refusalOf(tool, reading)
 	}
 	if !admitted {
 		return nil, &RecordWritesOverBudgetError{Tool: tool, Records: n, Reading: reading}

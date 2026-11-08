@@ -149,12 +149,14 @@ roles, and a role with no value of its own gives the installation value. Nothing
 limits never reach the next.
 
 The built-in `admin` role starts at 20,000 `calls` and 2,000 `writes` (`identity.AdminAllowancePreset`). That holds
-for a counter whose installation value is still the default and set by no boot source. Roles choose the limit and
-never the counter.
+for a counter whose installation value nobody set: no stored row and no boot source. Roles choose the limit and
+never the counter. A save of role values changes only the role counts it names. An archived role keeps its
+value and a boot source that locks one map refuses only a save that touches it.
 
 A refused REST request answers `429 rate_limited` with `details.limit` (`kind`, `ceiling`, `used`, `resets_at`) and
 a `Retry-After` header. A refused tool call names the same limit, ceiling and reset in its error text. A per-minute
-refusal at the transport carries `details.limit.kind = "pacing"`.
+refusal at the transport carries `details.limit.kind = "pacing"`. A counter that cannot be read refuses an agent
+with `503 agent_volume_unavailable` and a `Retry-After` of a few seconds, never as a limit reached.
 
 A changed length waits for a reset. It takes the first reset that is a minute or more later, so a save in the last
 minute waits for the reset after that. The bucket number comes from the moment and the length, so a length that

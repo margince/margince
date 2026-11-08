@@ -21,6 +21,7 @@ function Editing() {
       allowances={roleTunedAgentAllowances}
       drafts={drafts}
       busy={false}
+      lockOf={() => ({ disabled: false })}
       onDrafts={setDrafts}
     />
   );
