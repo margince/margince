@@ -40,9 +40,9 @@ import (
 // The verdict pass is the one exception: it reads through verdictBrain, a model
 // lane. Unset, the close-date sweep still runs and its verdict step does nothing.
 func addDatabaseOnlySweepJobs(
-	reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, verdictBrain completer,
+	reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, verdictBrain, topicBrain completer,
 ) {
-	addDeclaredWorker[CapturedDealRefileArgs](reg, newCapturedDealRefileWorker(pool))
+	addDeclaredWorker[CapturedDealRefileArgs](reg, newCapturedDealRefileWorker(pool, topicBrain))
 	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{

@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 55,
+    "sites": 56,
     "sites_best_current": 35,
     "sites_best_partial": 1,
     "sites_best_stale": 14,
-    "sites_absent": 5,
-    "scenarios": 291,
+    "sites_absent": 6,
+    "scenarios": 294,
     "records": 356,
     "bindings": 18,
     "self_judged_records": 0
@@ -7867,7 +7867,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 55,
+      "sites_shipped": 56,
       "sites_measured": 48,
       "ready": 31,
       "usable_with_care": 16,
@@ -8609,7 +8609,7 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 55,
+      "sites_shipped": 56,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 15,
@@ -9313,7 +9313,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 55,
+      "sites_shipped": 56,
       "sites_measured": 44,
       "ready": 31,
       "usable_with_care": 10,
@@ -10003,7 +10003,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 55,
+      "sites_shipped": 56,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -10713,7 +10713,7 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 55,
+      "sites_shipped": 56,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
@@ -13702,6 +13702,36 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "capture_classify",
+      "site": "deal_topic",
+      "key": "capture_classify/deal_topic",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "a_bare_call_request_gives_no_ground_to_pick_between_two_deals",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/deal_topic_unsure_01.yaml"
+        },
+        {
+          "name": "a_rollout_question_is_about_the_rollout_deal_and_not_the_support_renewal",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/deal_topic_about_01.yaml"
+        },
+        {
+          "name": "an_invoice_for_other_work_is_not_about_the_customers_only_open_deal",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/capture_classify/deal_topic_not_about_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "capture_confidentiality_verdict",

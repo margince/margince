@@ -192,6 +192,13 @@ func (ActivityDealFiler) FileOnDealIfUnfiled(
 	return outcome == activities.DealFilingLanded, outcome == activities.DealFilingAlreadyFiled, err
 }
 
+// StampDealTopic is activities.StampDealTopicCheckedTx. A held or archived
+// mail keeps no memo, and needs none: no pass files it.
+func (ActivityDealFiler) StampDealTopic(ctx context.Context, tx pgx.Tx, id ids.ActivityID, digest string) error {
+	_, err := activities.StampDealTopicCheckedTx(ctx, tx, id, digest)
+	return err
+}
+
 // RetractMachineDeal is activities.RetractMachineDealTx.
 func (ActivityDealFiler) RetractMachineDeal(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,

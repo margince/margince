@@ -397,7 +397,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain, cfg.ClassifyBrain)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addSuppressionJournalJobs(reg, pool, cfg, log)
