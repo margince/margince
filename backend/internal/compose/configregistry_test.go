@@ -38,8 +38,8 @@ func TestAWorkerOnlyYAMLKeyIsKnownToTheAPI(t *testing.T) {
 }
 
 // migrate reads the credentials, and the root key its data-tasks verb hashes
-// under as the worker does: a worker or api setting in its registry would let
-// a stray variable change how the schema is applied.
+// under as the worker does. Any other worker or api setting in its registry
+// would let a stray variable change how the schema is applied.
 func TestMigrateReadsOnlyTheDatabaseCredentialsAndTheRootKey(t *testing.T) {
 	t.Parallel()
 	reg, err := compose.ProgramRegistry(config.RoleMigrate)

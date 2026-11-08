@@ -24,6 +24,8 @@ type heldRecord struct {
 }
 
 // args puts the floor's classes first when the predicate reads them.
+//
+//craft:ignore naked-any the statement's arguments are one record id or a slice of them, bound by pgx
 func (r heldRecord) args(floor FloorPolicy, records any) []any {
 	if !r.floor {
 		return []any{records}
@@ -53,8 +55,8 @@ func heldRecordRule(kind string) (heldRecord, bool) {
 	return heldRecord{}, false
 }
 
-// RecordCopy is a stored copy of a record's content, such as a published event
-// or a rendered webhook body, and the record it was made from.
+// RecordCopy is a stored copy of a record's content and the record it was made
+// from. A published event and a rendered webhook body are copies.
 type RecordCopy struct {
 	ID         ids.UUID
 	EntityType string

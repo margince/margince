@@ -46,8 +46,13 @@ type copyStore struct {
 	clear func(ctx context.Context, tx pgx.Tx, copies []ids.UUID) error
 }
 
-// pruneRecordCopies clears the copies past their window in each store.
-func (s *RetentionService) pruneRecordCopies(ctx context.Context) error {
+// pruneRecordCopies clears the copies past their window in each store. The
+// retain-only posture keeps them all.
+func (s *RetentionService) pruneRecordCopies(ctx context.Context, retainOnly bool) error {
+	if retainOnly {
+		s.log.Info("retention: retain-only posture keeps published events and webhook bodies")
+		return nil
+	}
 	stores := []copyStore{{
 		name: "webhook bodies", days: webhookBodyRetainDays,
 		past: s.purgeRawCaptures.DeliveryCopiesPastTx, clear: s.purgeRawCaptures.ClearDeliveryCopiesTx,

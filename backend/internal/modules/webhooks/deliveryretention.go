@@ -60,7 +60,7 @@ func ClearDeliveryBodiesTx(ctx context.Context, tx pgx.Tx, deliveries []ids.UUID
 }
 
 // ScrubSubjectDeliveriesTx empties every body about the erased records, and
-// cancels the deliveries still to be sent: a retry would otherwise send the
+// cancels the deliveries still to be sent. A retry would otherwise send the
 // erased subject's data after the erasure certified it destroyed.
 func ScrubSubjectDeliveriesTx(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID) error {
 	if _, err := tx.Exec(ctx, `UPDATE webhook_delivery

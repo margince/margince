@@ -24,10 +24,10 @@ const (
 	keyedIdentifiersIndexMigration = "core/1794125374"
 )
 
-// keyedIdentifierAudit is why these writes add no audit row: each re-encodes
-// a stored hash or link under the installation's key, the form the runtime
-// writers (storekit.SuppressionHash, the preference link minter) already
-// write without one.
+// keyedIdentifierAudit is why these writes add no audit row. Each re-encodes a
+// stored hash or link under the installation's key. The runtime writers
+// (storekit.SuppressionHash, the preference link minter) write that form
+// without an audit row too.
 const keyedIdentifierAudit = "re-encodes a stored hash or link into the keyed form its runtime writer writes, without an audit row, as that writer does"
 
 // keyedIdentifiersDataTask re-keys every identifier hashed before the

@@ -60,8 +60,8 @@ func currentIdentifierKey() (identifierKey, bool) {
 }
 
 // identifierDigest is the unkeyed sha256 of the normalized value. Rows written
-// without a key hold it, and the keyed form is a MAC over it, so a stored
-// digest can be re-keyed without the value it came from.
+// without a key hold it. The keyed form is a MAC over it, so a stored digest
+// can be re-keyed without the value it came from.
 func identifierDigest(value string) string {
 	digest := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(value))))
 	return hex.EncodeToString(digest[:])
@@ -83,10 +83,10 @@ func SuppressionKeyID() *string {
 	return &key.id
 }
 
-// SuppressionForms answers the stored forms each value can have, in order: the
-// keyed hash when a key is bound, then the unkeyed one rows written before the
-// key, or without one, still hold. Every reader matches against all of them, so
-// a row the re-hash has not reached yet still suppresses.
+// SuppressionForms answers the stored forms each value can have, in order. The
+// keyed hash comes first when a key is bound. The unkeyed one follows, as rows
+// written before the key, or without one, hold it. Every reader matches against
+// all of them, so a row the re-hash has not reached yet still suppresses.
 func SuppressionForms(values ...string) []string {
 	key, keyed := currentIdentifierKey()
 	forms := make([]string, 0, 2*len(values))

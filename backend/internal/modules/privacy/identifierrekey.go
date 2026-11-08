@@ -23,8 +23,8 @@ type SuppressionCursor struct {
 }
 
 // RekeySuppressionListPageTx replaces up to limit unkeyed erasure_suppression
-// rows after the cursor with their keyed form, keeping when each was erased,
-// and answers the rows it inspected. The keyed row is written before the
+// rows after the cursor with their keyed form, keeping when each was erased.
+// It answers the rows it inspected. The keyed row is written before the
 // unkeyed one goes, so the address stays refused at every point. It inspects
 // nothing when no key is bound.
 func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after SuppressionCursor, limit int) ([]SuppressionCursor, error) {

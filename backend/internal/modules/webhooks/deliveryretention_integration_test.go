@@ -32,8 +32,7 @@ func TestAReplayOfAClearedBodyIsRefusedBeforeTheRowIsReset(t *testing.T) {
 	}
 
 	err := e.store.requireReplay(ctx, sub, cleared)
-	var refused *BadInputError
-	if !errors.As(err, &refused) {
+	if _, refused := errors.AsType[*BadInputError](err); !refused {
 		t.Fatalf("replaying a cleared body = %v, want a 422 refusal", err)
 	}
 	var status, lastError string

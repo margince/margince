@@ -144,7 +144,7 @@ func resolvePreferenceTokenTx(ctx context.Context, tx pgx.Tx, token string) (Pre
 		SELECT pt.contact_id, pt.contact_email_id, pt.revoked_at IS NOT NULL, pe.email
 		  FROM preference_token pt
 		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
-		 WHERE `+preferenceTokenRowSQL+` AND pt.expires_at > now()
+		 WHERE `+preferenceLinkRowSQL+` AND pt.expires_at > now()
 		   AND (pt.revoked_at IS NULL OR pt.revoked_reason = @merged)`,
 		pgx.NamedArgs{"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
 			"merged": PreferenceRevokedMergedIntoSurvivor}).Scan(&ref.ContactID, &ref.EmailID, &merged, &address)
@@ -305,8 +305,8 @@ func liveAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addresse
 func ensurePreferenceTokenTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emailID ids.UUID,
 ) (string, error) {
-	// Without a root key a link can only be handed out again as stored, so a
-	// row whose link was hashed is not honourable here and is rotated.
+	// Without a root key a link can only be handed out again as stored. A row
+	// whose link was hashed is then not honourable, and is rotated.
 	signed := preferenceLinkKey() != nil
 	var (
 		row    ids.UUID
@@ -360,7 +360,7 @@ func ensurePreferenceTokenTx(
 		ON CONFLICT (contact_id, contact_email_id) WHERE revoked_at IS NULL DO NOTHING
 		RETURNING id, token`, contactID, fresh, preferenceTokenTTLDays, emailID).Scan(&row, &stored)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// A concurrent send won the INSERT — read the winner.
+		// A concurrent send won the INSERT, so read the winner.
 		if err := tx.QueryRow(ctx, `
 			SELECT id, token FROM preference_token
 			 WHERE contact_id = $1 AND contact_email_id = $2 AND revoked_at IS NULL`,

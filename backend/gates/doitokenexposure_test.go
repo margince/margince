@@ -95,7 +95,7 @@ const tokenParameterName = "token"
 // like any other holder.
 //
 // The preference-centre token is a DIFFERENT credential with its own resolver
-// and its own storage, so ResolvePreferenceToken is ratified here as a consumer
+// and its own storage. So ResolvePreferenceToken is ratified here as a consumer
 // and is not otherwise this gate's subject.
 //
 // gatekit:fixture why each destination may receive the plaintext

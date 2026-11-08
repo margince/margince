@@ -219,8 +219,8 @@ func (e *Eraser) matchJournaled(
 }
 
 // suppressionCandidate is a live contact's identifier that the database's own
-// list does not name, in every form it can be stored in, still to be asked of
-// the journal.
+// list does not name, still to be asked of the journal. forms are the ways
+// it can be stored.
 type suppressionCandidate struct {
 	contact ids.UUID
 	kind    string

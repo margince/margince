@@ -51,7 +51,7 @@ const suppressionJournalPrefix = "erasure-suppression/"
 
 // suppressionJournalKey addresses one suppressed identifier by its unkeyed
 // hash. The hash is the key, so asking "is this address suppressed" is a Get
-// rather than a scan, and the journal needs no enumeration to be useful.
+// rather than a scan. The journal needs no enumeration to be useful.
 func suppressionJournalKey(kind, valueHash string) string {
 	return suppressionJournalPrefix + kind + "/" + valueHash
 }
@@ -128,7 +128,7 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 			return 0, fmt.Errorf("privacy: exporting suppression %s: %w", row.hash, err)
 		}
 	}
-	// Every entry now has its keyed name, so the unkeyed names go: each one
+	// Every entry now has its keyed name, so the unkeyed names go. Each one
 	// lets a reader of the store test an address against the list.
 	if keyed {
 		for _, kind := range suppressionKinds {
@@ -148,8 +148,8 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	return len(entries), nil
 }
 
-// journalEntryKey names one row's entry: by its keyed hash when the row holds
-// one or a key is bound to make one, and by its unkeyed hash otherwise.
+// journalEntryKey names one row's entry by its keyed hash, when the row holds
+// one or a bound key can make one. Otherwise it uses the unkeyed hash.
 func journalEntryKey(kind, hash string, rowKeyed bool) string {
 	if rowKeyed {
 		return keyedJournalKey(kind, hash)
@@ -161,8 +161,8 @@ func journalEntryKey(kind, hash string, rowKeyed bool) string {
 }
 
 // journalSuppressedInAnyForm asks the journal about each stored form of one
-// identifier (storekit.SuppressionForms): the keyed one under its prefix, and
-// the unkeyed one a journal exported before the key may still hold.
+// identifier (storekit.SuppressionForms). The keyed form is under its prefix.
+// A journal exported before the key may still hold the unkeyed one.
 func (e *Eraser) journalSuppressedInAnyForm(ctx context.Context, kind string, forms []string) (bool, error) {
 	if len(forms) == 0 {
 		return false, nil

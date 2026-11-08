@@ -23,9 +23,8 @@ package consent
 // safe to keep for years.
 //
 // HASHED, like a preference link on an installation with a root key. This one
-// outlives every rotation and sits in mail archives and proxy logs, so a
-// database read must not hand somebody a working withdrawal link for every
-// recipient we have ever mailed.
+// outlives every rotation and sits in mail archives and proxy logs. A database
+// read must not hand somebody a working withdrawal link for every recipient.
 
 import (
 	"context"
@@ -348,7 +347,7 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 		SELECT pt.contact_id, pe.email
 		  FROM preference_token pt
 		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
-		 WHERE `+preferenceTokenRowSQL+`
+		 WHERE `+preferenceLinkRowSQL+`
 		   AND (pt.revoked_reason IS NULL OR pt.revoked_reason IN ('rotated', 'expired', @merged))`,
 		pgx.NamedArgs{"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
 			"merged": PreferenceRevokedMergedIntoSurvivor}).Scan(&contactID, &address)

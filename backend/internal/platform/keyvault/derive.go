@@ -15,16 +15,12 @@ import (
 // derivedKeyBytes is the length of every key DerivedKey answers.
 const derivedKeyBytes = 32
 
-// DerivedKey is the 32-byte key HKDF-SHA256 derives from the root key c holds,
-// under label, or nil when c is nil, or its program reads no root key or
-// configures none. Each label names one use,
-// so no two uses share a key and a new use needs no new secret.
+// DerivedKey is the 32-byte key HKDF-SHA256 derives from c's root key under
+// label. It is nil when c is nil, or reads or configures no root key. Each
+// label names one use, so no two uses share a key.
 //
-// It changes whenever the root key does. Data hashed under it then stops
-// matching, so a root key rotation has to re-hash that data.
-//
-// The setting's Validate refuses a key that does not decode when the
-// configuration loads, so a Config holding one cannot reach here.
+// It changes with the root key, so a root key rotation has to re-hash the data
+// hashed under it. The setting's Validate refuses a key that does not decode.
 func DerivedKey(c *config.Config, label string) []byte {
 	if c == nil {
 		return nil

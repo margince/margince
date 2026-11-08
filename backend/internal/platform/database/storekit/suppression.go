@@ -22,8 +22,8 @@ import (
 )
 
 // SuppressionHash is the one identifier hashing rule, in the form a writer
-// stores now: an HMAC under the installation's suppression key over the sha256
-// of the trimmed, lowercased value, or that sha256 alone when no key is bound.
+// stores now. It is an HMAC under the installation's suppression key over the
+// sha256 of the trimmed, lowercased value. Without a bound key it is the sha256.
 // Writer and reader must normalize identically or a stray space resurrects an
 // erased subject. A writer stamps SuppressionKeyID beside it.
 func SuppressionHash(value string) string {

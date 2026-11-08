@@ -23,10 +23,10 @@ type OutboxCopy struct {
 }
 
 // PublishedOutboxCopies is up to limit events after the cursor that were
-// published before cutoff and that no reader of the outbox still needs. Two
-// readers do: the assurance check, until it has read an event of a type in
-// unreadTypes, and the intake rule that tells an imported follow-up by the
-// event its import caused. An unpublished event is never answered.
+// published before cutoff and that no reader of the outbox still needs. The
+// assurance check needs an event of a type in unreadTypes until it has read
+// it. The intake rule needs the event an imported follow-up was caused by. An
+// unpublished event is never answered.
 func PublishedOutboxCopies(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int, unreadTypes []string) ([]OutboxCopy, error) {
 	rows, err := tx.Query(ctx, `SELECT o.id, coalesce(o.envelope->'entity'->>'type', ''), coalesce(o.envelope->'entity'->>'id', '')
 		FROM event_outbox o

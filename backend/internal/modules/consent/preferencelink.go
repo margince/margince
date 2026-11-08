@@ -56,11 +56,11 @@ func issuePreferenceLink(row ids.UUID, stored *string) (string, error) {
 	return *stored, nil
 }
 
-// preferenceTokenRowSQL finds, over preference_token aliased pt, the row a
-// link names. Both readers of a link ask through it: a signed link by the row
-// signedPreferenceRow verified, and an older one by its hash, or as stored
-// until the re-hash has reached its row.
-const preferenceTokenRowSQL = `(pt.id = @link_row OR (@link_row::uuid IS NULL
+// preferenceLinkRowSQL finds, over preference_token aliased pt, the row a
+// link names. Both readers of a link ask through it. A signed link matches the
+// row signedPreferenceRow verified. An older one matches by its hash, or as
+// stored until the re-hash has reached its row.
+const preferenceLinkRowSQL = `(pt.id = @link_row OR (@link_row::uuid IS NULL
 	AND (pt.token_hash = @link_hash OR pt.token = @link_token)))`
 
 // signedPreferenceRow is the row a signed link names, nil for an older link.
