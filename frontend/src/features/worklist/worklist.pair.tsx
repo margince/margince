@@ -23,6 +23,8 @@
 // pair is, and clearing it changes neither record. Guarding both on `merge` is
 // what left such a pair on the page as a question nobody could answer here.
 
+import { useState } from "react";
+import { ContactCaseReview } from "../../components/contactcase";
 import { Button, Card } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
@@ -90,11 +92,15 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const { locale } = useLocale();
   const toast = useToast();
   const decide = useDedupeDisposition();
+  const [reviewing, setReviewing] = useState<string | null>(null);
   const pair = item.pair;
   if (!pair) {
     return null;
   }
   const mayMerge = item.actions?.includes("merge") ?? false;
+  // Two contacts merge only through the review, where the reader ticks both
+  // and sees the preview; Keep opens it on the contact they chose to keep.
+  const reviewed = item.subject?.type === "contact";
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const answer = (disposition: PairDisposition, winnerId?: string) =>
     decide.mutate(
@@ -122,6 +128,13 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
     );
   return (
     <div className="worklist-pair-review">
+      {reviewing && (
+        <ContactCaseReview
+          contactId={reviewing}
+          open
+          onClose={() => setReviewing(null)}
+        />
+      )}
       {/* THE QUESTION, as the block's lead line. What follows it is the two
           records it is about and the one answer that is about neither.
 
@@ -180,7 +193,9 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
                   variant="primary"
                   pending={decide.isPending}
                   aria-label={keepLabel(pair, side, t)}
-                  onClick={() => answer("merge", side.id)}
+                  onClick={() =>
+                    reviewed ? setReviewing(side.id) : answer("merge", side.id)
+                  }
                 >
                   {t("worklist.pair.keep", { name: side.label })}
                 </Button>

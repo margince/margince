@@ -35,7 +35,8 @@ import {
 
 type Props = Readonly<{
   contactCase: ContactCase;
-  startId: string;
+  /** The contact the reader opened the review from; none from a queue. */
+  startId: string | undefined;
   /** The case changed under an earlier preview or merge and was read again. */
   stale: boolean;
   onClose: () => void;
@@ -50,6 +51,14 @@ function selectionProblem(
   selected: readonly string[],
   owner: string,
 ): MessageKey | null {
+  // In pair mode with no pair this reader may merge, nothing can be ticked,
+  // so "tick two" would ask for the impossible; the pair rule is the reason.
+  const noPairToTick =
+    contactCase.merge_mode === "pair" &&
+    contactCase.members.every((member) =>
+      pairLocked(contactCase, [], member.id),
+    );
+  if (noPairToTick) return "contactCase.pairOnly";
   if (selected.length < 2) return "contactCase.tooFew";
   const pair = pairProblem(contactCase, selected);
   if (pair) return pair;

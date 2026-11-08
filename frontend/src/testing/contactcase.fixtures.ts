@@ -8,7 +8,7 @@ import type {
 } from "../components/contactcase.queries";
 
 // Four contacts that may be duplicates. Ana's and Dana's records were marked
-// as different people, so a review opened on Ana's ticks the first three only.
+// as different people, so only Ben and Cleo may be ticked beside Ana.
 export const ANA = "01a05500-0000-7000-8000-00000000c0a1";
 export const BEN = "01a05500-0000-7000-8000-00000000c0a2";
 export const CLEO = "01a05500-0000-7000-8000-00000000c0a3";
