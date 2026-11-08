@@ -41,6 +41,7 @@
         "cancel_send": "cancel_scheduled_send",
         "check_new_send": "preview_account_send_authorization",
         "check_send": "preview_send_authorization",
+        "decline_deal": "decline_activity_deal",
         "discard_draft": "discard_mail_draft",
         "hide_document": "hide_deal_document",
         "log": "log_activity",

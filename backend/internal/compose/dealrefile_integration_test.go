@@ -255,6 +255,24 @@ func TestDealReconsiderationKeepsAHumanFiling(t *testing.T) {
 	}
 }
 
+// A colleague's "not about this deal" holds for the pass. The declined mail
+// stays off the deal, and the meeting the same pass reconsiders lands on it.
+func TestDealReconsiderationLeavesADeclinedDealOff(t *testing.T) {
+	f := newDealRefileFixture(t, 0)
+	integration.ApplyRiverSchema(t)
+	e := f.o.e
+	if _, err := e.Activities.DeclineDeal(e.Admin(), ids.From[ids.ActivityKind](f.mail), &f.deal); err != nil {
+		t.Fatalf("declining the deal as a colleague: %v", err)
+	}
+	f.run(t, f.enqueue(t, "contact.created", f.contact))
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND entity_type='deal'`, f.mail); got != 0 {
+		t.Fatal("the pass filed the mail on the deal it was declined on")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND deal_id=$2`, f.meeting, f.deal); got != 1 {
+		t.Fatal("the pass did not file the meeting, so it proves nothing about the mail")
+	}
+}
+
 func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)

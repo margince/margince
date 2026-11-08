@@ -275,6 +275,7 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/dealdeclineproject.go:projectCameFromDeal":             "reads the link and audit rows of the one message the decline already locked and write-checked; only a boolean leaves, never content",
 	"internal/modules/privacy/purge.go:RetentionService.purgeOneActivity":               "Locks only the activity id before the caller rechecks provider evidence. No content is projected; eraseActivityContent separately enforces the statutory floor and returns errKeptByFloor for held mail.",
 	"internal/modules/privacy/linkedhistoricalaudit.go:legacyAuditEntries":              "system-only audit-key walk returns metadata and reduction flags. Each matching record is checked for current holds and correspondence floors before a per-entry proof changes its payload; no activity image leaves the database",
 	"internal/modules/privacy/historicalaudit.go:RedactHistoricalAuditPageTx":           "scans audit IDs, entity references and a certificate flag, not activity content. Each candidate is checked against current holds and the shared correspondence floor before any payload is erased",

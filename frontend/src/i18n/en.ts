@@ -7928,7 +7928,9 @@ export const en = {
     "Created from a commitment read out of a conversation.",
   "tasks.origin.email_request": "Created from a request in an email.",
   "tasks.origin.which_deal":
-    "Created because a captured email fits more than one open deal. Choose the deal it belongs to.",
+    "Created because a captured email fits more than one open deal. Choose the deal it belongs to, or choose “None of these deals”.",
+  "tasks.whichDeal.none": "None of these deals",
+  "tasks.whichDeal.noneDone": "Email kept off these deals",
   "tasks.origin.system": "Created by an automation, not typed by a colleague.",
 
   "analytics.sub":
@@ -20493,6 +20495,14 @@ export const en = {
   "aiServing.notObject": "must be an object: the text between { and }.",
   "aiServing.previewFailed":
     "The server could not check this value: {reason} Save stays off until it can.",
+  "dealDecline.action": "Not about this deal",
+  "dealDecline.title": "Take this email off the deal?",
+  "dealDecline.body":
+    "The email comes off this deal, and Margince does not file it here again. A project link it got from this deal comes off too.",
+  "dealDecline.confirm": "Take off deal",
+  "dealDecline.done": "Email taken off the deal",
+  "dealDecline.doneProjectKept":
+    "Email taken off the deal. Its project link stays.",
   "projectFiling.action": "Undo filing",
   "projectFiling.title": "Undo project filing?",
   "projectFiling.loading": "Checking what keeps this activity…",

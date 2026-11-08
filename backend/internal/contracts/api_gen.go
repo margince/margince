@@ -30888,6 +30888,24 @@ type ActivityAuthor struct {
 // ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
+// ActivityDealDecline defines model for ActivityDealDecline.
+type ActivityDealDecline struct {
+	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
+	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
+
+	// ProjectKept A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it.
+	ProjectKept bool `json:"project_kept"`
+
+	// ProjectUnfiled The project link that came from a declined deal came off the message.
+	ProjectUnfiled bool `json:"project_unfiled"`
+
+	// QuestionsClosed The open deal questions of the conversation this call marked done.
+	QuestionsClosed int `json:"questions_closed" minimum:"0"`
+
+	// Unlinked A deal link came off the message.
+	Unlinked bool `json:"unlinked"`
+}
+
 // ActivityDealFiling defines model for ActivityDealFiling.
 type ActivityDealFiling struct {
 	// DealId Explicitly selected deal; omitted for automatic filing.
@@ -46048,6 +46066,12 @@ type DeclaredExtensionSetting struct {
 
 // DeclaredExtensionSettingKind The control the core draws.
 type DeclaredExtensionSettingKind string
+
+// DeclineActivityDealRequest defines model for DeclineActivityDealRequest.
+type DeclineActivityDealRequest struct {
+	// DealId The deal the message is not about. Leave it out to answer "none of them".
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+}
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
@@ -76408,6 +76432,9 @@ type UpdateActivityJSONRequestBody = UpdateActivityRequest
 // SetActivityAudienceJSONRequestBody defines body for SetActivityAudience for application/json ContentType.
 type SetActivityAudienceJSONRequestBody = SetActivityAudienceRequest
 
+// DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
+type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
+
 // SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
@@ -90417,6 +90444,9 @@ type ServerInterface interface {
 	// Limit (or re-open) who may see this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
+	// Say a captured message is not about a deal, or about none of the deals its question offered.
+	// (POST /activities/{id}/deal-decline)
+	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
 	// Pick the message back up — the undo behind every set-aside verb.
 	// (DELETE /activities/{id}/disposition)
 	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
@@ -93594,6 +93624,12 @@ func (_ Unimplemented) UpdateActivity(w http.ResponseWriter, r *http.Request, id
 // Limit (or re-open) who may see this activity's content.
 // (PATCH /activities/{id}/audience)
 func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say a captured message is not about a deal, or about none of the deals its question offered.
+// (POST /activities/{id}/deal-decline)
+func (_ Unimplemented) DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100723,6 +100759,40 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetActivityAudience(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeclineActivityDeal operation middleware
+func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclineActivityDeal(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -145696,6 +145766,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activities/{id}/audience", wrapper.SetActivityAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
@@ -158,11 +158,13 @@ An email stays on no deal when:
 
 - the company has several open deals and nothing picks one;
 - its contacts work at two companies;
-- it is already on a deal. A deal you chose by hand is never changed.
+- it is already on a deal, or a colleague said it is not about the deal that fits. A deal you chose by hand is never changed.
 
 When several deals fit, one colleague gets one task per thread: "Which deal is this about?". That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
 
-To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done.
+To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done. If it is about none of them, choose **None of these deals** on the task. Margince then never files that conversation on those deals.
+
+To take an email off a deal it is not about, choose **Not about this deal** in its **More actions** menu on the deal's timeline. Margince never files it on that deal again by itself; other deals can still fit it, and **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. Only a member, not an agent, takes back a project link.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 
@@ -254,7 +256,7 @@ Also called: open an email, read a conversation, forward an email.
 ### How do I move an email to the right contact or deal?
 To move a captured email that was filed on the wrong record, choose **Relink** on it in the timeline. Search for the right contact, company, deal, lead or project.
 Tick **Replace existing link** to replace it instead of adding a second link, and choose **Relink**. Tick **Move rest of thread** to move the whole conversation.
-Also called: email on the wrong deal, refile an email, change which deal an email belongs to.
+Also called: email on the wrong deal, refile an email, change which deal an email belongs to, remove an email from a deal.
 
 ## What capture refuses to do
 

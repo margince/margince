@@ -174,15 +174,18 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"request_body": map[string]any{"anchor_type": "company", "anchor_id": p.take("company")}}
 	},
 	"set_activity_disposition": byID("inbound_email"),
-	"set_thread_audience":      func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
-	"hide_deal_document":       dealDocument,
-	"unhide_deal_document":     dealDocument,
-	"accept_deal_suggestion":   byID("deal_suggestion"),
-	"dismiss_deal_suggestion":  byID("deal_suggestion"),
-	"get_deal_suggestion":      byID("deal_suggestion"),
-	"accept_tag_suggestion":    byID("tag_suggestion"),
-	"dismiss_tag_suggestion":   byID("tag_suggestion"),
-	"get_tag_suggestion":       byID("tag_suggestion"),
+	"decline_activity_deal": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
+	},
+	"set_thread_audience":     func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
+	"hide_deal_document":      dealDocument,
+	"unhide_deal_document":    dealDocument,
+	"accept_deal_suggestion":  byID("deal_suggestion"),
+	"dismiss_deal_suggestion": byID("deal_suggestion"),
+	"get_deal_suggestion":     byID("deal_suggestion"),
+	"accept_tag_suggestion":   byID("tag_suggestion"),
+	"dismiss_tag_suggestion":  byID("tag_suggestion"),
+	"get_tag_suggestion":      byID("tag_suggestion"),
 	"acknowledge_approval_failure": func(p *recordPool) map[string]any {
 		approval := p.take("failed_approval")
 		return map[string]any{"id": approval, "request_body": map[string]any{"failed_at": p.fact(approval, "failed_at")}}

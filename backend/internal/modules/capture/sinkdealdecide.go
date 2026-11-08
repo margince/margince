@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // sqlUnscoped stands in for a scope clause a caller's grant leaves empty.
@@ -73,8 +74,36 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	return facts, err
 }
 
-// decideDeal is the rule over the facts. It writes nothing.
+// decideDeal is the rule over the facts, less the deals a colleague declined
+// for this mail. Every writer of a machine deal link decides through it, so a
+// decline holds for capture, the refile pass and the repair alike. It writes
+// nothing.
 func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
+	verdict, err := decideByRule(ctx, tx, facts, candidates)
+	if err != nil || verdict.Outcome != DealLinked {
+		return verdict, err
+	}
+	declined, err := dealDeclined(ctx, tx, facts.activity, verdict.Deal)
+	if err != nil || declined {
+		return DealVerdict{Outcome: DealNone}, err
+	}
+	return verdict, nil
+}
+
+// dealDeclined answers whether a colleague said the mail is not about deal.
+func dealDeclined(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (bool, error) {
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	query := `SELECT ` + provenance.DealDeclinedSQL(arg(mail), arg(deal)+"::uuid")
+	var declined bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&declined); err != nil {
+		return false, fmt.Errorf("capture: reading whether a colleague declined the deal: %w", err)
+	}
+	return declined, nil
+}
+
+// decideByRule is the rule's rungs over the facts.
+func decideByRule(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
 	// A role that may not read deals files mail under none. That is a
 	// configuration, not a fault.
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
