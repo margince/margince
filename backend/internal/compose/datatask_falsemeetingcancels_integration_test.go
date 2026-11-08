@@ -60,18 +60,18 @@ func TestTheRepairReopensOnlyAMeetingAGuestsCalendarCancelled(t *testing.T) {
 			o := setupOwnership(t, provider)
 			e := o.e
 			organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
-			guests := map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}
-			copyOf := func(id, uid string, day int) mailboxCopy {
+			copyOf := func(id, uid string, day int, answer string) mailboxCopy {
+				guests := map[string]string{guest: answer, "buyer@customer.test": "accepted"}
 				return mailboxCopy{id: id, uid: uid, organizer: organizer, guests: guests, day: day}
 			}
-			reopened := o.sync(t, e.Rep1, copyOf("evt-1", "guest-cancelled@calendar.test", 0))
-			o.sync(t, e.Rep2, copyOf("evt-2", "guest-cancelled@calendar.test", 0))
-			o.cancelAs(t, e.Rep2, copyOf("evt-2", "guest-cancelled@calendar.test", 0))
-			kept := o.sync(t, e.Rep1, copyOf("evt-3", "organizer-cancelled@calendar.test", 1))
-			o.cancelAs(t, e.Rep1, copyOf("evt-3", "organizer-cancelled@calendar.test", 1))
-			old := o.sync(t, e.Rep1, copyOf("evt-4", "long-past@calendar.test", -40))
-			o.sync(t, e.Rep2, copyOf("evt-5", "long-past@calendar.test", -40))
-			o.cancelAs(t, e.Rep2, copyOf("evt-5", "long-past@calendar.test", -40))
+			reopened := o.sync(t, e.Rep1, copyOf("evt-1", "guest-cancelled@calendar.test", 0, "accepted"))
+			o.sync(t, e.Rep2, copyOf("evt-2", "guest-cancelled@calendar.test", 0, "declined"))
+			o.cancelAs(t, e.Rep2, copyOf("evt-2", "guest-cancelled@calendar.test", 0, "declined"))
+			kept := o.sync(t, e.Rep1, copyOf("evt-3", "organizer-cancelled@calendar.test", 1, "accepted"))
+			o.cancelAs(t, e.Rep1, copyOf("evt-3", "organizer-cancelled@calendar.test", 1, "accepted"))
+			old := o.sync(t, e.Rep1, copyOf("evt-4", "long-past@calendar.test", -40, "accepted"))
+			o.sync(t, e.Rep2, copyOf("evt-5", "long-past@calendar.test", -40, "declined"))
+			o.cancelAs(t, e.Rep2, copyOf("evt-5", "long-past@calendar.test", -40, "declined"))
 			for _, id := range []ids.UUID{reopened, kept, old} {
 				if got := meetingStatusOf(t, e, id); got != "canceled" {
 					t.Fatalf("fixture meeting reads %q before the repair, want canceled", got)
@@ -100,13 +100,50 @@ func TestTheRepairReopensOnlyAMeetingAGuestsCalendarCancelled(t *testing.T) {
 	}
 }
 
+// A guest's calendar also reports a cancellation the organizer made. Without
+// the guest's own decline the repair cannot tell the two apart, so it keeps it.
+func TestTheRepairKeepsACancellationAGuestsCalendarSawWithoutDeclining(t *testing.T) {
+	o := setupOwnership(t, sourceGraphCal)
+	e := o.e
+	organizer, guest := o.address[e.Rep1], o.address[e.Rep2]
+	guests := map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}
+	accepted := o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", uid: "accepted@calendar.test", organizer: organizer, guests: guests})
+	o.sync(t, e.Rep2, mailboxCopy{id: "evt-2", uid: "accepted@calendar.test", organizer: organizer, guests: guests})
+	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", uid: "accepted@calendar.test", organizer: organizer, guests: guests})
+
+	// The guest's first delivery already carried the organizer's cancellation.
+	shown := mailboxCopy{provider: sourceGraphCal, id: "evt-4", uid: "shown@calendar.test", owner: guest, organizer: organizer, guests: guests, day: 1}
+	event := shown.event()
+	event["isCancelled"] = true
+	original, err := json.Marshal(event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`INSERT INTO raw_capture (source_system, source_id, payload) VALUES ('graphcal', 'evt-4', $1)`, original); err != nil {
+		t.Fatal(err)
+	}
+	cancelledFirst := o.sync(t, e.Rep1, mailboxCopy{id: "evt-3", uid: "shown@calendar.test", organizer: organizer, guests: guests, day: 1})
+	o.sync(t, e.Rep2, mailboxCopy{id: "evt-4", uid: "shown@calendar.test", organizer: organizer, guests: guests, day: 1})
+	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-4", uid: "shown@calendar.test", organizer: organizer, guests: guests, day: 1})
+
+	runFalseCancelTask(t, e, falseCancelTask())
+
+	for _, id := range []ids.UUID{accepted, cancelledFirst} {
+		if got := meetingStatusOf(t, e, id); got != "canceled" {
+			t.Errorf("a cancellation a guest's calendar saw without declining reads %q, want canceled", got)
+		}
+	}
+}
+
 func TestTheRepairKeepsAStatusAHumanSetAfterTheCalendar(t *testing.T) {
 	o := setupOwnership(t, sourceGCal)
 	e := o.e
 	guests := map[string]string{o.address[e.Rep2]: "accepted", "buyer@customer.test": "accepted"}
+	declined := map[string]string{o.address[e.Rep2]: "declined", "buyer@customer.test": "accepted"}
 	meeting := o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: o.address[e.Rep1], guests: guests})
-	o.sync(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: o.address[e.Rep1], guests: guests})
-	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: o.address[e.Rep1], guests: guests})
+	o.sync(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: o.address[e.Rep1], guests: declined})
+	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: o.address[e.Rep1], guests: declined})
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	for _, status := range []string{"booked", "canceled"} {
 		if _, err := activities.NewStore(e.DB()).UpdateActivity(human, ids.From[ids.ActivityKind](meeting),
@@ -175,12 +212,13 @@ func TestTheRepairPagesReplaysAndRollsBackWithoutChangingAnythingTwice(t *testin
 	o := setupOwnership(t, sourceGraphCal)
 	e := o.e
 	guests := map[string]string{o.address[e.Rep2]: "accepted", "buyer@customer.test": "accepted"}
+	declined := map[string]string{o.address[e.Rep2]: "declined", "buyer@customer.test": "accepted"}
 	var meetings []ids.UUID
 	for i, uid := range []string{"first@calendar.test", "second@calendar.test"} {
 		own, guest := "evt-own-"+uid, "evt-guest-"+uid
 		meetings = append(meetings, o.sync(t, e.Rep1, mailboxCopy{id: own, uid: uid, organizer: o.address[e.Rep1], guests: guests, day: i}))
-		o.sync(t, e.Rep2, mailboxCopy{id: guest, uid: uid, organizer: o.address[e.Rep1], guests: guests, day: i})
-		o.cancelAs(t, e.Rep2, mailboxCopy{id: guest, uid: uid, organizer: o.address[e.Rep1], guests: guests, day: i})
+		o.sync(t, e.Rep2, mailboxCopy{id: guest, uid: uid, organizer: o.address[e.Rep1], guests: declined, day: i})
+		o.cancelAs(t, e.Rep2, mailboxCopy{id: guest, uid: uid, organizer: o.address[e.Rep1], guests: declined, day: i})
 	}
 
 	interrupted := falseCancelTask()
