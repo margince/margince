@@ -6344,6 +6344,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/deal-decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say a captured message is not about a deal, or about none of the deals its question offered.
+         * @description With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
+         *     automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
+         *     deals stay open to it, and a colleague's own relink still files it anywhere.
+         *
+         *     A project link that came from the deal comes off with it, through the same rules as the
+         *     project-filing undo. It stays when the project was filed some other way, when a retention
+         *     rule keeps it, or when an agent declines: only a member takes a project filing back.
+         *     `project_kept` says so.
+         *
+         *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
+         *     question of the message's conversation. Each deal the question offered is declined on the
+         *     message and on each unfiled message of the conversation, and the question is done. A
+         *     message with no open question answers 422.
+         *
+         *     Declining a deal already declined is the same success and writes nothing.
+         */
+        post: operations["declineActivityDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/project-filing": {
         parameters: {
             query?: never;
@@ -40348,6 +40385,25 @@ export interface components {
              */
             permanent?: boolean;
         };
+        DeclineActivityDealRequest: {
+            /**
+             * Format: uuid
+             * @description The deal the message is not about. Leave it out to answer "none of them".
+             */
+            deal_id?: string;
+        };
+        ActivityDealDecline: {
+            /** @description The deals this call declined on the message. A deal declined before is not listed again. */
+            declined_deal_ids: string[];
+            /** @description A deal link came off the message. */
+            unlinked: boolean;
+            /** @description The project link that came from a declined deal came off the message. */
+            project_unfiled: boolean;
+            /** @description A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it. */
+            project_kept: boolean;
+            /** @description The open deal questions of the conversation this call marked done. */
+            questions_closed: number;
+        };
         SetActivityDispositionRequest: {
             /**
              * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
@@ -68673,6 +68729,38 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    declineActivityDeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclineActivityDealRequest"];
+            };
+        };
+        responses: {
+            /** @description What the decline did. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealDecline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
         };
     };
     getActivityProjectFiling: {

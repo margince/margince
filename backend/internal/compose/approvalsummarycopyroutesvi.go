@@ -64,6 +64,7 @@ var routeVerbsVietnamese = map[string]string{
 	"delete_lead_origin":                 "Xóa xuất xứ lead",
 	"delete_lead_source":                 "Xóa nguồn lead",
 	"delete_legal_entity_logo":           "Gỡ logo pháp nhân",
+	"decline_activity_deal":              "Cho biết thư không thuộc về một thương vụ",
 	"discard_mail_draft":                 "Hủy bản nháp tin nhắn",
 	"dismiss_company_suggestion":         "Bỏ qua đề xuất về công ty",
 	"dismiss_contact_moment":             "Ẩn gợi ý về liên hệ",

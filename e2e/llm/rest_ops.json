@@ -505,6 +505,7 @@
     "POST /v1/activities/relink-bulk": "relink_activities",
     "POST /v1/activities/relink-thread": "relink_thread",
     "POST /v1/activities/threads/{thread_key}/audience": "set_thread_audience",
+    "POST /v1/activities/{id}/deal-decline": "decline_activity_deal",
     "POST /v1/activities/{id}/draft-email": "draft_email",
     "POST /v1/activities/{id}/relink": "relink_activity",
     "POST /v1/activities/{id}/send-email": "send_email",

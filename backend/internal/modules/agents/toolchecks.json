@@ -754,6 +754,12 @@
         "legal_review.update"
       ]
     },
+    "decline_activity_deal": {
+      "checks": [
+        "activity.update",
+        "deal.read"
+      ]
+    },
     "delete_anchor_company_logo": {
       "checks": [
         "admin",

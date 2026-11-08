@@ -197,6 +197,7 @@
     "decideIntroRequest": "business",
     "decideLegacyLossReason": "admin_settings",
     "decideLegalReview": "business",
+    "declineActivityDeal": "business",
     "deepReadCompany": "business",
     "deleteAnchorCompanyLogo": "admin_settings",
     "deleteAnchorCompanyLogoIcon": "admin_settings",
@@ -1272,6 +1273,9 @@
       "admin_settings"
     ],
     "decide_legal_review": [
+      "business"
+    ],
+    "decline_activity_deal": [
       "business"
     ],
     "delete_anchor_company_logo": [
