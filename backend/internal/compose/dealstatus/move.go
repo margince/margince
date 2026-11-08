@@ -379,12 +379,17 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 		if a.MeetingStatus != nil {
 			status = string(*a.MeetingStatus)
 		}
+		var outcome string
+		if a.CallOutcome != nil {
+			outcome = string(*a.CallOutcome)
+		}
 		var automatic relstrength.AutomaticKind
 		if a.AutomaticKind != nil {
 			automatic = relstrength.AutomaticKind(*a.AutomaticKind)
 		}
-		if occurredday.Happened(string(a.Kind), activitywhen.MomentOf(a), f.now, f.loc) &&
-			relstrength.InteractionCounts(string(a.Kind), status, automatic) {
+		at := activitywhen.MomentOf(a)
+		if occurredday.Happened(string(a.Kind), at, f.now, f.loc) &&
+			relstrength.InteractionCounts(string(a.Kind), status, outcome, automatic, at, f.now, f.loc) {
 			return a, true
 		}
 	}

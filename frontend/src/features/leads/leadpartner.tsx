@@ -12,12 +12,12 @@ import { ErrorLine } from "../../design-system/errorline";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import type { DetailRow } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { usePartnerCompanyOptions } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Lead, LeadWriter } from "./leads";
 
 type Translate = ReturnType<typeof useT>;
@@ -104,6 +104,7 @@ export function useLeadPartnerRow(
   writer: Pick<LeadWriter, "readOnly" | "readOnlyReason">,
   onSave: (next: string) => Promise<void>,
 ): DetailRow | null {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const managesPartners = useCan("partner", "update");
@@ -138,7 +139,7 @@ export function useLeadPartnerRow(
         {accepted ? (
           <span className="t-caption">
             {t("lead.partnerAccepted", {
-              date: formatDateAbbrev(accepted, locale, viewerZone()),
+              date: formatDateAbbrev(accepted, locale, readerZone),
             })}
           </span>
         ) : (

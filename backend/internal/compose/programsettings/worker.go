@@ -22,6 +22,28 @@ const DefaultAITaskDir = ".tmp/aitask"
 
 // The settings only the worker reads.
 var (
+	WorkerDatabaseConnections = config.Define(config.Spec[int]{
+		Key: "database.worker_max_connections", Env: "MARGINCE_WORKER_MAX_CONNECTIONS", Flag: "worker-max-connections", Type: config.Int,
+		Default: config.Some(12), Roles: workerOnly,
+		Validate: func(value int) error {
+			if value < 5 || value > 1024 {
+				return errors.New("must be between 5 and 1024")
+			}
+			return nil
+		},
+		Doc: "Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation.",
+	})
+	WorkerDatabaseCache = config.Define(config.Spec[int]{
+		Key: "database.worker_statement_cache_capacity", Env: "MARGINCE_WORKER_STATEMENT_CACHE_CAPACITY", Flag: "worker-statement-cache-capacity", Type: config.Int,
+		Default: config.Some(256), Roles: workerOnly,
+		Validate: func(value int) error {
+			if value < 0 || value > 4096 {
+				return errors.New("must be between 0 and 4096")
+			}
+			return nil
+		},
+		Doc: "Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN default_query_exec_mode.",
+	})
 	DataTasksPace = config.Define(config.Spec[time.Duration]{
 		Key: "data_tasks.pace", Env: "MARGINCE_DATA_TASKS_PACE", Flag: "data-tasks-pace", Type: config.Duration, Default: config.Some(time.Second), Validate: positiveWindow, Roles: workerOnly,
 		Doc: "Delay between saved batches of data tasks.",

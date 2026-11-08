@@ -4,14 +4,19 @@
 package compose
 
 import (
+	"context"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // A tool that archives, merges, sends, decides or disqualifies, and offers no
@@ -128,4 +133,150 @@ func namesAToolThatWaits(sentence string, spec mcp.ToolSpec, waits map[string]bo
 		}
 	}
 	return false
+}
+
+// The loop agent runs with no one at the screen. The ask-first clause an MCP
+// client reads must never reach the model it reasons with. The run's bounds
+// are its passport, its allowlist and the tier. The run here is the production
+// runner over the production registry, offered every tool that asks.
+func TestTheLoopAgentIsNeverToldToAskItsUser(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	ctx := principal.WithActor(context.Background(), loopAgentGrantedEveryScope(registry))
+
+	asks := map[string]string{}
+	var tools []string
+	for _, spec := range registry.Runnable(ctx) {
+		if clause := askFirstClause(spec); clause != "" {
+			asks[spec.Name] = clause
+			tools = append(tools, spec.Name)
+		}
+	}
+	if len(tools) < 5 {
+		t.Fatalf("only %d offered tools carry an ask-first clause; the census is short and this gate proves nothing", len(tools))
+	}
+
+	brain := &requestRecorder{}
+	if _, err := runner.New(registry, brain).Run(ctx, runner.Job{Goal: "sweep", Tools: tools}); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if len(brain.requests) == 0 {
+		t.Fatal("the run made no model call, so nothing it was shown was checked")
+	}
+	var request strings.Builder
+	request.WriteString(brain.requests[0].System + string(brain.requests[0].ResponseSchema))
+	for _, m := range brain.requests[0].Messages {
+		request.WriteString(m.Content)
+	}
+	shown := request.String()
+	for _, tool := range tools {
+		if !strings.Contains(shown, "- "+tool+" — ") {
+			t.Errorf("%s is not in the run's listing, so its absent clause proves nothing", tool)
+		}
+		if strings.Contains(shown, asks[tool]) {
+			t.Errorf("the loop agent is told to ask its user before %s: %q", tool, asks[tool])
+		}
+	}
+}
+
+// askFirstClause is what DescribeForClient adds to spec because it asks first:
+// the text between the parts it shares with the same spec unmarked.
+func askFirstClause(spec mcp.ToolSpec) string {
+	unmarked := spec
+	unmarked.AskUserFirst = false
+	unmarked.Actions = slices.Clone(spec.Actions)
+	for i := range unmarked.Actions {
+		unmarked.Actions[i].AskUserFirst = false
+	}
+	with, without := agents.DescribeForClient(spec), agents.DescribeForClient(unmarked)
+	prefix := 0
+	for prefix < len(without) && with[prefix] == without[prefix] {
+		prefix++
+	}
+	suffix := 0
+	for suffix < len(without)-prefix && with[len(with)-1-suffix] == without[len(without)-1-suffix] {
+		suffix++
+	}
+	return with[prefix : len(with)-suffix]
+}
+
+// loopAgentGrantedEveryScope is a scheduled run's principal: an agent on a
+// colleague's passport, holding every scope some registered tool requires.
+func loopAgentGrantedEveryScope(registry *agents.Registry) principal.Principal {
+	var scopes []principal.Scope
+	for _, spec := range registry.Specs() {
+		scopes = append(scopes, spec.RequiredScope)
+	}
+	user := ids.NewV7()
+	return principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:loop", UserID: user, OnBehalfOf: user,
+		PassportID: ids.NewV7(), SeatType: principal.SeatFull, Scopes: principal.NewScopeSet(scopes...),
+	}
+}
+
+// requestRecorder is the model boundary: it keeps each request and ends the run.
+type requestRecorder struct{ requests []model.Request }
+
+func (r *requestRecorder) Complete(_ context.Context, req model.Request) (model.Response, runner.Meta, error) {
+	r.requests = append(r.requests, req)
+	return model.Response{Text: `{"final":{"summary":"nothing to do"}}`}, runner.Meta{}, nil
+}
+
+func (*requestRecorder) PromptWindow() int { return 0 }
+
+// saysItCannotBeTakenBack is the contract's wording for a final act: data that
+// is destroyed, or a change left with no Undo. A sentence that says "not" or
+// "never" before the words is about the opposite.
+var saysItCannotBeTakenBack = regexp.MustCompile(`(?i)\b(?:is|are|gets?|be) destroyed\b|\bhas no undo\b|cannot be undone`)
+
+var negatedBefore = regexp.MustCompile(`(?i)\b(?:not|never)\b`)
+
+func callsItFinal(text string) bool {
+	for _, sentence := range regexp.MustCompile(`[.;]\s`).Split(text, -1) {
+		if at := saysItCannotBeTakenBack.FindStringIndex(sentence); at != nil && !negatedBefore.MatchString(sentence[:at[0]]) {
+			return true
+		}
+	}
+	return false
+}
+
+// The prefix census above knows an irreversible act by its verb. A tool named
+// otherwise is held by its own description. A write whose contract says it
+// destroys data or leaves no Undo must tell the client to ask first.
+func TestAWriteItsContractCallsFinalAsksTheUserFirst(t *testing.T) {
+	doc := loadContract(t)
+	words := map[string]string{}
+	for _, item := range doc.Paths.Map() {
+		for _, op := range item.Operations() {
+			words[op.OperationID] = op.Summary + ". " + op.Description
+		}
+	}
+	checked := 0
+	for _, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.Scope == scopeRead || !callsItFinal(words[pol.Op]) {
+			continue
+		}
+		checked++
+		if !pol.AskUserFirst {
+			t.Errorf("%s (%s) says in the contract that it cannot be taken back, but asks no user first; "+
+				"add ask_user_first: true to its x-mcp-tool line", pol.Op, pol.Tool)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no write tool's contract says it is final; the census reads nothing")
+	}
+}
+
+func TestOnlyAnUnnegatedFinalSentenceCounts(t *testing.T) {
+	for text, want := range map[string]bool{
+		"Mail already brought in is destroyed.":             true,
+		"After it, the change has no Undo.":                 true,
+		"It does not destroy mail. Nothing is destroyed.":   true,
+		"It does not destroy mail already captured.":        false,
+		"Not itself an irreversible act: it can be undone.": false,
+		"A deleted note can never be destroyed twice.":      false,
+	} {
+		if got := callsItFinal(text); got != want {
+			t.Errorf("callsItFinal(%q) = %v, want %v", text, got, want)
+		}
+	}
 }

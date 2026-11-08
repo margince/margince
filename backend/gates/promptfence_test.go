@@ -85,7 +85,7 @@ func sourceWithoutComments(t *testing.T, path string) string {
 // goFilesUnderTree yields every non-test Go file in the tree, with its code.
 func goFilesUnderTree(t *testing.T, visit func(path, code string)) {
 	t.Helper()
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

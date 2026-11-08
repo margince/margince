@@ -13,6 +13,7 @@ package compose
 
 import (
 	"slices"
+	"time"
 
 	"github.com/riverqueue/river"
 
@@ -77,10 +78,12 @@ func schedulesOf(cfg JobRunnerConfig) *ScheduleBook {
 // opts_owner: caller, and this periodic insert is that caller.
 func periodicInsertOpts(args river.JobArgs) *river.InsertOpts {
 	opts := sweepInsertOpts()
-	// River counts a running row as unique, and a killed worker leaves one behind.
-	if _, locked := args.(sessionLocked); locked {
-		opts.UniqueOpts = river.UniqueOpts{}
+	opts = jobs.SessionInsertOpts(args, opts)
+	// A stale running tick must not suppress later recovery windows.
+	if _, admission := args.(CaptureBackfillReconcileArgs); admission {
+		opts.UniqueOpts.ByPeriod = time.Second
 	}
+
 	if _, owned := args.(river.JobArgsWithInsertOpts); !owned {
 		opts.MaxAttempts = periodicPassMaxAttempts
 	}

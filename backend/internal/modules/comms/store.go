@@ -192,6 +192,16 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("comms: encoding the attachment snapshot: %w", err)
 	}
+	currentThread, err := storekit.LockActivityThreadTx(ctx, tx, in.ActivityID.UUID)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	if currentThread != "" {
+		in.ThreadKey = currentThread
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, append([]string{in.ThreadKey, in.MessageID, in.InReplyTo}, in.References...)...); err != nil {
+		return ids.UUID{}, err
+	}
 	id := ids.NewV7()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO comms_outbound

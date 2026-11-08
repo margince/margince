@@ -53,8 +53,8 @@ func decodeRequest(w http.ResponseWriter, r *http.Request) (Request, bool) {
 	if !httperr.Decode(w, r, &body) {
 		return Request{}, false
 	}
-	steering := draftfloor.NewSteering(body.Intent, body.RewriteOf)
-	req := Request{Intent: steering.Intent, RewriteOf: steering.RewriteOf}
+	steering := draftfloor.NewSteering(body.Intent, body.RewriteOf, body.Subject)
+	req := Request{Intent: steering.Intent, RewriteOf: steering.RewriteOf, Subject: steering.Subject}
 	if body.AboutActivityId != nil {
 		about := ids.From[ids.ActivityKind](ids.UUID(*body.AboutActivityId))
 		req.AboutActivityID = &about

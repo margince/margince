@@ -58,6 +58,7 @@ func lineInputRow(in crmcontracts.OfferLineItemInput) OfferLineInputRow {
 		Unit:           in.Unit,
 		Quantity:       wireDecimal(in.Quantity),
 		UnitPriceMinor: in.UnitPriceMinor,
+		TaxCategory:    componentKindOf(in.TaxCategory),
 	}
 	if in.DiscountPct != nil {
 		v := wireDecimal(*in.DiscountPct)
@@ -139,7 +140,7 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	// render's reclamation of a superseded PDF is, rather than failing the edit.
 	if retired != nil && h.blob != nil {
 		if delErr := h.blob.Delete(r.Context(), *retired); delErr != nil {
-			slog.WarnContext(r.Context(), "reclaiming the rendering a buyer change retired",
+			slog.WarnContext(r.Context(), "reclaiming the rendering a buyer or issuer change retired",
 				"offer", offerID.String(), "ref", *retired, "err", delErr)
 		}
 	}

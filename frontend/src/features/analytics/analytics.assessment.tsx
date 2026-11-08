@@ -1,202 +1,376 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { WrittenBy } from "../../components/citations.list";
 import { EntityRef } from "../../components/entityref";
 import { AiPending } from "../../design-system/aipending";
-import { Badge, Button } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
+import { isVersionSkewOf, problemFieldErrors, unwrap } from "../../lib/problem";
+import { reloadReportingFigures } from "../../lib/reportingfigures";
+import {
+  assessmentResidue,
+  assessmentText,
+  readableQuantities,
+} from "./analytics.assessment.text";
 import { RecordDecisionDialog } from "./analytics.decisions";
 import { metricOf } from "./analytics.overview.readings";
+import { OverviewActions } from "./analytics.overviewactions";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
   ReportingSelection,
 } from "./reporting.model";
-import { WrittenSummary } from "./reporting.written";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 
 export type SalesAssessment = components["schemas"]["SalesAssessment"];
-type Sentence = components["schemas"]["SalesAssessmentSentence"];
+type View = components["schemas"]["SalesAssessmentView"];
+type WorkReading = Readonly<{
+  upcoming_meetings?: number;
+  upcoming_window?: { start_at: string; end_at: string };
+}>;
 
-const ASSESSMENT_KEY = "sales-assessment";
-
-/**
- * The assessment of one selection. The key is the selection, so a changed
- * filter never shows the assessment of another one; a refresh asks again.
- */
 export function useSalesAssessment(
   selection: ReportingSelection,
   enabled: boolean,
+  evaluation?: ReportingEvaluation,
+  view: View = "sales",
+  work?: WorkReading,
 ) {
   const [refresh, setRefresh] = useState(0);
+  const client = useQueryClient();
+  const { locale } = useLocale();
+  const catalog = useReportingCatalog();
+  const supported = catalog.data?.assessment_views?.includes(view) === true;
   const query = useQuery({
-    enabled,
-    queryKey: [ASSESSMENT_KEY, selection, refresh],
-    queryFn: async () =>
-      unwrap(
-        await api.POST("/analytics/assessment", {
+    enabled: enabled && !catalog.isPending && (supported || view === "sales"),
+    queryKey: [
+      "sales-assessment",
+      view,
+      selection,
+      evaluation?.evaluation_key,
+      locale,
+      supported,
+      work?.upcoming_meetings,
+      work?.upcoming_window?.start_at,
+      work?.upcoming_window?.end_at,
+      refresh,
+    ],
+    queryFn: async ({ signal }) => {
+      const body = {
+        selection,
+        refresh: refresh > 0,
+        ...(supported
+          ? {
+              view,
+              receipt: evaluation
+                ? {
+                    key: evaluation.evaluation_key,
+                    at: evaluation.context.evaluated_at,
+                    framework_revision: evaluation.context.framework_revision,
+                  }
+                : undefined,
+            }
+          : {}),
+      };
+      const result = await api.POST("/analytics/assessment", { body, signal });
+      if (
+        view === "sales" &&
+        supported &&
+        result.response.status === 422 &&
+        legacyAssessmentRefusal(result.error)
+      ) {
+        const legacy = await api.POST("/analytics/assessment", {
           body: { selection, refresh: refresh > 0 },
-        }),
-      ),
+          signal,
+        });
+        return { assessment: unwrap(legacy), bound: false };
+      }
+      return { assessment: unwrap(result), bound: supported };
+    },
+    retry: false,
     staleTime: 60_000,
   });
-  return { query, refresh: () => setRefresh((n) => n + 1) };
+  const response = query.data;
+  const assessment =
+    response &&
+    (!response.bound ||
+      !evaluation ||
+      response.assessment.evaluation_key === evaluation.evaluation_key)
+      ? response.assessment
+      : undefined;
+  return {
+    query,
+    assessment,
+    supported,
+    refresh: () => {
+      if (isVersionSkewOf(query.error)) {
+        void reloadReportingFigures(client);
+        return;
+      }
+      setRefresh((n) => n + 1);
+    },
+  };
 }
 
-/**
- * The assessment under the summary and actions. It says what the figures
- * show, each sentence resting on the cells it cites, and the next decision.
- * Without a model, or when its reply could not be grounded, the panel shows
- * the page's own summary and says so.
- */
+function legacyAssessmentRefusal(problem: unknown): boolean {
+  const fields = problemFieldErrors(problem);
+  const field = fields[0];
+  return (
+    fields.length === 1 &&
+    field?.field === "body" &&
+    field.code === "unknown_field" &&
+    /^unknown fields? "(?:receipt|view)"(?:, "(?:receipt|view)")?$/.test(
+      field.message,
+    )
+  );
+}
+
+type AssessmentProps = Readonly<{
+  selection: ReportingSelection;
+  evaluation: ReportingEvaluation;
+  onEvidence: (reference: ReportingEvidenceRef) => void;
+  view?: View;
+  work?: WorkReading;
+  workPending?: boolean;
+}>;
+
+function assessmentParagraphs(assessment: SalesAssessment) {
+  return assessment.paragraphs?.length
+    ? assessment.paragraphs
+    : [assessment.sentences];
+}
+
 export function AssessmentPanel({
   selection,
   evaluation,
   onEvidence,
-}: Readonly<{
-  selection: ReportingSelection;
-  evaluation: ReportingEvaluation;
-  onEvidence: (reference: ReportingEvidenceRef) => void;
-}>) {
+  view = "sales",
+  work,
+  workPending = false,
+}: AssessmentProps) {
   const t = useT();
-  const empty = evaluation.context.scope_holds_deals === false;
-  const { query, refresh } = useSalesAssessment(selection, !empty);
-  const [reading, setReading] = useState(false);
-  const [deciding, setDeciding] = useState(false);
-  const canDecide = useCanWrite("activity", "create");
-  const written = query.data?.generated_by === "model";
+  const client = useQueryClient();
+  const { locale } = useLocale();
+  const empty =
+    view === "sales" && evaluation.context.scope_holds_deals === false;
+  const { query, assessment, supported, refresh } = useSalesAssessment(
+    selection,
+    !empty && !workPending,
+    evaluation,
+    view,
+    work,
+  );
+  const written =
+    assessment?.generated_by === "model" &&
+    assessment.sentences.length > 0 &&
+    readableAssessment(assessment, locale);
+  const actions = (
+    <OverviewActions
+      evaluation={evaluation}
+      order={written ? assessment.action_ids : undefined}
+      onEvidence={onEvidence}
+    />
+  );
+  // Without the written outlook its record doors still stand on a card.
+  const framedActions = (
+    <OverviewActions evaluation={evaluation} onEvidence={onEvidence} framed />
+  );
+  if (empty || workPending || (view !== "sales" && !supported))
+    return framedActions;
+  const upcoming = assessment?.cells?.find(
+    (cell) => cell.id === "work:upcoming",
+  );
+  if (
+    upcoming &&
+    work?.upcoming_meetings != null &&
+    Number(upcoming.value.replace(/\s+count$/, "").replace(/[,.]/g, "")) !==
+      work.upcoming_meetings
+  )
+    return (
+      <>
+        {framedActions}
+        <ErrorLine>{t("reporting.evidenceStale")}</ErrorLine>
+        <Button onClick={() => void reloadReportingFigures(client)}>
+          {t("common.retry")}
+        </Button>
+      </>
+    );
+
+  if (written)
+    return (
+      <WrittenAssessment
+        assessment={assessment}
+        evaluation={evaluation}
+        onEvidence={onEvidence}
+        view={view}
+        refresh={refresh}
+        actions={actions}
+      />
+    );
+  if (!query.isFetching && !query.isError) return framedActions;
   return (
-    <Panel
-      title={t("analytics.assessment.title")}
-      tone={written ? "ai" : undefined}
-      titleAction={
-        query.data ? (
-          <Button variant="ghost" onClick={refresh}>
-            {t("analytics.assessment.refresh")}
-          </Button>
-        ) : undefined
-      }
-      footer={query.data ? <WrittenBy by={query.data.generated_by} /> : null}
-    >
+    <Panel title={t(outlookTitle(view, evaluation))} flatHead>
       <PanelBody>
-        {empty && (
-          <p className="t-caption">{t("analytics.assessment.noSales")}</p>
-        )}
-        {!empty && query.isPending && (
-          <AiPending label={t("analytics.assessment.pending")} lines={3} />
-        )}
-        {!empty && query.isError && (
+        {query.isFetching ? (
+          <AiPending label={t(outlookTitle(view, evaluation))} lines={3} />
+        ) : (
           <>
             <ErrorLine error={query.error} />
-            <Button variant="ghost" onClick={() => query.refetch()}>
+            <Button variant="ghost" onClick={refresh}>
               {t("analytics.assessment.retry")}
             </Button>
           </>
         )}
-        {query.data && !written && (
-          <>
-            <WrittenSummary evaluation={evaluation} />
-            <p className="t-caption">
-              {t("analytics.assessment.deterministic")}
-            </p>
-          </>
-        )}
-        {query.data && written && (
-          <AssessmentBody
-            assessment={query.data}
-            canDecide={canDecide}
-            onRead={() => setReading(true)}
-            onDecide={() => setDeciding(true)}
-          />
-        )}
+        {actions}
       </PanelBody>
-      {reading && query.data && (
+    </Panel>
+  );
+}
+
+function outlookTitle(view: View, evaluation: ReportingEvaluation) {
+  if (view === "sales")
+    return evaluation.selection.period === "this_quarter"
+      ? "analytics.outlook.sales"
+      : "analytics.outlook.selectedSales";
+  if (view === "team") return "analytics.outlook.team";
+  return "analytics.outlook.prospecting";
+}
+
+// The decision is kept only when every figure in it comes from a cell. The
+// check reads the model's own text, before amounts gain their currency sign.
+function proposedDecision(assessment: SalesAssessment, locale: Locale) {
+  const decision = assessment.next_decision;
+  if (!decision) return undefined;
+  const line = {
+    text: decision.text,
+    cells: assessment.cells.map((cell) => cell.id),
+  };
+  if (!readableQuantities(assessmentResidue(line, assessment, locale)))
+    return undefined;
+  return { ...decision, text: assessmentText(line, assessment, locale) };
+}
+
+function WrittenAssessment({
+  assessment,
+  evaluation,
+  onEvidence,
+  view,
+  refresh,
+  actions,
+}: Readonly<{
+  assessment: SalesAssessment;
+  evaluation: ReportingEvaluation;
+  onEvidence: (reference: ReportingEvidenceRef) => void;
+  view: View;
+  refresh: () => void;
+  actions: ReactNode;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const [reading, setReading] = useState(false);
+  const [deciding, setDeciding] = useState(false);
+  const canDecide = useCanWrite("activity", "create");
+  const next = proposedDecision(assessment, locale);
+  return (
+    <>
+      <Panel
+        title={t(outlookTitle(view, evaluation))}
+        tone="ai"
+        flatHead
+        className="analytics-outlook"
+        titleAction={
+          <Button variant="ghost" onClick={refresh}>
+            {t("analytics.assessment.refresh")}
+          </Button>
+        }
+        footer={
+          <>
+            <WrittenBy by={assessment.generated_by} />
+            <Button variant="link" onClick={() => setReading(true)}>
+              {t("analytics.outlook.records")}
+            </Button>
+          </>
+        }
+      >
+        <PanelBody>
+          <OutlookProse assessment={assessment} />
+          {actions}
+          {next && (
+            <div className="actions">
+              <p>
+                {next.text} <EntityRef kind="deal" id={next.deal_id} />{" "}
+                <EntityRef kind="user" id={next.owner_id} />
+              </p>
+              {canDecide && (
+                <Button variant="ghost" onClick={() => setDeciding(true)}>
+                  {t("analytics.decisions.record")}
+                </Button>
+              )}
+            </div>
+          )}
+        </PanelBody>
+      </Panel>
+      {reading && (
         <InterpretationDrawer
-          assessment={query.data}
+          assessment={assessment}
           evaluation={evaluation}
           onEvidence={onEvidence}
           onClose={() => setReading(false)}
         />
       )}
-      {deciding && query.data?.next_decision && (
+      {deciding && next && (
         <RecordDecisionDialog
           initial={{
-            decision: query.data.next_decision.text,
-            dealId: query.data.next_decision.deal_id,
-            ownerId: query.data.next_decision.owner_id,
+            decision: next.text,
+            dealId: next.deal_id,
+            ownerId: next.owner_id,
           }}
           onClose={() => setDeciding(false)}
         />
       )}
-    </Panel>
-  );
-}
-
-function AssessmentBody({
-  assessment,
-  canDecide,
-  onRead,
-  onDecide,
-}: Readonly<{
-  assessment: SalesAssessment;
-  canDecide: boolean;
-  onRead: () => void;
-  onDecide: () => void;
-}>) {
-  const t = useT();
-  const next = assessment.next_decision;
-  return (
-    <>
-      <ul className="assessment-lines">
-        {assessment.sentences.map((sentence) => (
-          <li key={sentence.text}>
-            <KindBadge kind={sentence.kind} />
-            <span>{sentence.text}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="t-label">{t("analytics.assessment.nextDecision")}</p>
-      {next ? (
-        <p>
-          {next.text} <EntityRef kind="deal" id={next.deal_id} /> ·{" "}
-          <EntityRef kind="user" id={next.owner_id} />
-        </p>
-      ) : (
-        <p className="t-caption">{t("analytics.assessment.noDecision")}</p>
-      )}
-      <div className="actions">
-        <Button variant="ghost" onClick={onRead}>
-          {t("analytics.assessment.viewEvidence")}
-        </Button>
-        {next && canDecide && (
-          <Button variant="primary" onClick={onDecide}>
-            {t("analytics.decisions.record")}
-          </Button>
-        )}
-      </div>
     </>
   );
 }
 
-function KindBadge({ kind }: Readonly<{ kind: Sentence["kind"] }>) {
+// The first sentence leads, the rest of its paragraph follows, and the
+// remaining paragraphs fold behind one door, so the rail reads at a glance.
+function OutlookProse({
+  assessment,
+}: Readonly<{ assessment: SalesAssessment }>) {
   const t = useT();
-  return <Badge>{t(`analytics.assessment.kind.${kind}`)}</Badge>;
+  const { locale } = useLocale();
+  const [first = [], ...later] = assessmentParagraphs(assessment).map(
+    (paragraph) =>
+      paragraph.map((line) => assessmentText(line, assessment, locale)),
+  );
+  const [lead, ...rest] = first;
+  // A paragraph the model repeats is said once, so each keys itself.
+  const more = [...new Set(later.map((paragraph) => paragraph.join(" ")))];
+  return (
+    <div className="analytics-outlook-prose">
+      {lead && <p className="analytics-outlook-lead">{lead}</p>}
+      {rest.length > 0 && <p>{rest.join(" ")}</p>}
+      {more.length > 0 && (
+        <Disclosure summary={t("analytics.outlook.more")}>
+          {more.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </Disclosure>
+      )}
+    </div>
+  );
 }
 
-/**
- * The interpretation drawer: each sentence with the cells it rests on, and
- * the door to the records behind a cell the evaluation measured.
- */
 function InterpretationDrawer({
   assessment,
   evaluation,
@@ -209,26 +383,34 @@ function InterpretationDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const name = useMetricNames();
   const titleId = useId();
-  const labelOf = (id: string) =>
-    assessment.cells.find((cell) => cell.id === id)?.label ?? id;
+  const paragraphs = assessment.paragraphs?.length
+    ? assessment.paragraphs
+    : [assessment.sentences];
+  const labelOf = (id: string) => {
+    if (id.startsWith("metric:")) {
+      const metric = evaluation.metrics.find((m) => `metric:${m.id}` === id);
+      if (metric) return name(metric.id);
+    }
+    return assessment.cells?.find((cell) => cell.id === id)?.label ?? "";
+  };
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <Heading size="large" id={titleId} className="modal-title">
         {t("analytics.assessment.evidenceTitle")}
       </Heading>
-      <p className="t-caption">{t("analytics.assessment.evidencePurpose")}</p>
-      <ul className="assessment-lines">
-        {assessment.sentences.map((sentence) => (
-          <li key={sentence.text}>
-            <KindBadge kind={sentence.kind} />
-            <span>{sentence.text}</span>
+      <div className="analytics-outlook-prose">
+        {paragraphs.flat().map((sentence) => (
+          <div key={sentence.text}>
+            <p>{assessmentText(sentence, assessment, locale)}</p>
             <ul>
               {sentence.cells.map((id) => {
                 const reference = evidenceOf(evaluation, id);
                 return (
                   <li key={id}>
-                    {labelOf(id)}
+                    {labelOf(id)}{" "}
                     {reference && (
                       <Button
                         variant="link"
@@ -244,27 +426,35 @@ function InterpretationDrawer({
                 );
               })}
             </ul>
-          </li>
+          </div>
         ))}
-      </ul>
-      {assessment.confidence && (
-        <p className="t-caption">
-          {t("analytics.assessment.confidence", {
-            level: t(`analytics.assessment.level.${assessment.confidence}`),
-          })}
-        </p>
-      )}
+      </div>
     </Modal>
   );
 }
 
-/** The records behind a cell: a metric's own evidence, where it has one. */
 function evidenceOf(
   evaluation: ReportingEvaluation,
   cell: string,
 ): ReportingEvidenceRef | undefined {
-  if (!cell.startsWith("metric:")) return undefined;
-  const id = cell.slice("metric:".length);
-  const metric = evaluation.metrics.find((candidate) => candidate.id === id);
+  const metric = evaluation.metrics.find(
+    (candidate) => `metric:${candidate.id}` === cell,
+  );
   return metric ? metricOf(evaluation, metric.id)?.evidence : undefined;
+}
+
+function readableAssessment(
+  assessment: SalesAssessment,
+  locale: Locale,
+): boolean {
+  const unsupported =
+    /\b(?:qualified_likely|no_target|nothing checked|i checked|i verified|i couldn[’']t confirm)\b/i;
+  return assessmentParagraphs(assessment)
+    .flat()
+    .every((line) => {
+      return (
+        !unsupported.test(assessmentText(line, assessment, locale)) &&
+        readableQuantities(assessmentResidue(line, assessment, locale))
+      );
+    });
 }

@@ -1,3 +1,5 @@
+import { openingCase } from "../format/collate";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ConnectivityError, writeFailureKey } from "./connectivity";
 import {
@@ -6,7 +8,11 @@ import {
   problemCode,
   problemFieldErrors,
 } from "./problembody";
-import { heldByColleagueCopy, PROBLEM_CODE_COPY } from "./problemcodecopy";
+import {
+  heldByColleagueCopy,
+  PROBLEM_CODE_COPY,
+  roleCannotCaptureCopy,
+} from "./problemcodecopy";
 
 export type { FieldProblem } from "./problembody";
 export {
@@ -57,6 +63,7 @@ function problemDetail(
 ): string | null {
   const copyKey =
     heldByColleagueCopy(problem) ??
+    roleCannotCaptureCopy(problem) ??
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);
@@ -178,6 +185,20 @@ export function logUnexpectedError(error: unknown): void {
 // network exception never claims field errors it doesn't have.
 export function problemFieldErrorsOf(error: unknown): FieldProblem[] {
   return error instanceof ProblemError ? problemFieldErrors(error.problem) : [];
+}
+
+// Each field a refusal names, with its sentence opening a line and ending in a
+// full stop, to sit under that field. The server writes a fragment.
+export function problemFieldSentencesOf(
+  error: unknown,
+  locale: Locale,
+): ReadonlyMap<string, string> {
+  return new Map(
+    problemFieldErrorsOf(error).map((fault) => {
+      const sentence = openingCase(fault.message.trim(), locale);
+      return [fault.field, /[.!?]$/.test(sentence) ? sentence : `${sentence}.`];
+    }),
+  );
 }
 
 // A 409 naming the If-Match precondition failure: the record changed under the

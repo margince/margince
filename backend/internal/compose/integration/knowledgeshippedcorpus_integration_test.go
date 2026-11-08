@@ -17,6 +17,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/knowledge/handbook"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -101,7 +102,7 @@ func TestAnUploadCannotReplaceAFailedShippedPage(t *testing.T) {
 	if !errors.Is(err, knowledge.ErrCorpusShipped) {
 		t.Fatalf("upload into the shipped set = %v, want ErrCorpusShipped", err)
 	}
-	body, ctype := multipartDocument(t, "README.md", "text/markdown", readme)
+	body, ctype := apptest.MultipartDocument(t, "README.md", "text/markdown", readme)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(human)
 	req.Header.Set("Content-Type", ctype)

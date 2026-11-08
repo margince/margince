@@ -23,10 +23,12 @@ package gates
 // longer exists and reporting a pass over nothing.
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // noiseStandsOwner is the file that owns the spelling.
@@ -59,7 +61,7 @@ func noiseStandsClause(t *testing.T, owner string) string {
 func TestTheNoiseJudgedPredicateHasOneSpelling(t *testing.T) {
 	t.Parallel()
 
-	owner, err := os.ReadFile(noiseStandsOwner)
+	owner, err := gatekit.ReadFile(noiseStandsOwner)
 	if err != nil {
 		t.Fatalf("reading the predicate's owner: %v", err)
 	}
@@ -79,11 +81,11 @@ func TestTheNoiseJudgedPredicateHasOneSpelling(t *testing.T) {
 
 	var elsewhere []string
 	root := filepath.Join(repoRoot, "backend")
-	err = filepath.Walk(root, func(path string, _ os.FileInfo, err error) error {
+	err = gatekit.WalkDir(root, func(path string, _ fs.DirEntry, err error) error {
 		if err != nil || path == noiseStandsOwner || !strings.HasSuffix(path, ".go") {
 			return err
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

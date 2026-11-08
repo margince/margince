@@ -23,25 +23,33 @@ package gates
 // later.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// recencyFunctions are the SQL functions that answer "when did the other side
-// last engage". The list is asserted, not just iterated: a new one that skips
-// the exclusion is exactly the defect this gate exists to catch.
-var recencyFunctions = []string{
+// recencyFloor names SQL functions that answer "when did the other side last
+// engage", which the census must find. The census itself is every function a
+// migration names last_activity_of_*, so a new one is checked without joining
+// a list. A new one that skips the exclusion is the defect this gate catches.
+var recencyFloor = []string{
 	"last_activity_of_deal",
 	"last_activity_of_contact",
 	"last_activity_of_company",
 	"last_activity_of_project",
+	"last_activity_of_activity",
+	"last_activity_of_company_activity",
 }
+
+// recencyFunctionRe finds a recency function's definition or its drop, by the
+// prefix every one carries. A dropped function is not live, so it leaves the
+// census. Case and line breaks are free in SQL, so neither may hide one.
+var recencyFunctionRe = regexp.MustCompile(`(?i)(CREATE\s+(?:OR\s+REPLACE\s+)?|DROP\s+)FUNCTION\s+(?:IF\s+EXISTS\s+)?(last_activity_of_\w+)`)
 
 const remediationOrigin = "system_remediation"
 
@@ -57,18 +65,15 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 
 	bodies := currentRecencyBodies(t)
 
-	if len(bodies) != len(recencyFunctions) {
-		t.Fatalf("found %d recency functions, expected %d (%v) — a census that "+
-			"reads a smaller tree reports PASS and there is no failing assertion "+
-			"to notice", len(bodies), len(recencyFunctions), recencyFunctions)
+	for _, name := range recencyFloor {
+		if _, ok := bodies[name]; !ok {
+			t.Errorf("%s: no definition found in migrations — a census that reads a "+
+				"smaller tree reports PASS and there is no failing assertion to notice", name)
+		}
 	}
 
-	for _, name := range recencyFunctions {
-		body, ok := bodies[name]
-		if !ok {
-			t.Errorf("%s: no definition found in migrations", name)
-			continue
-		}
+	for _, name := range sortedKeys(bodies) {
+		body := bodies[name]
 		// Every arm, not the function: last_activity_of_company unions
 		// three populations, and an exclusion on two of them still lets a
 		// review task filed against a deal refresh its account.
@@ -103,7 +108,7 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 func currentRecencyBodies(t *testing.T) map[string]string {
 	t.Helper()
 	dir := filepath.Join("migrations", "core")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -119,25 +124,32 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 
 	bodies := map[string]string{}
 	for _, fn := range names {
-		raw, err := os.ReadFile(filepath.Join(dir, fn))
+		raw, err := gatekit.ReadFile(filepath.Join(dir, fn))
 		if err != nil {
 			t.Fatalf("reading %s: %v", fn, err)
 		}
-		for _, want := range recencyFunctions {
-			if body, ok := extractFunctionBody(string(raw), want); ok {
-				bodies[want] = body
+		// In statement order, so a file that drops one function and creates
+		// another leaves the census as the database does.
+		for _, m := range recencyFunctionRe.FindAllStringSubmatchIndex(string(raw), -1) {
+			name := strings.ToLower(string(raw[m[4]:m[5]]))
+			if strings.EqualFold(string(raw[m[2]:m[2]+4]), "DROP") {
+				delete(bodies, name)
+				continue
+			}
+			if body, ok := extractFunctionBody(string(raw[m[0]:]), name); ok {
+				bodies[name] = body
 			}
 		}
 	}
 	return bodies
 }
 
-var funcHeadRe = regexp.MustCompile(`CREATE (?:OR REPLACE )?FUNCTION\s+(\w+)`)
+var funcHeadRe = regexp.MustCompile(`(?i)CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(\w+)`)
 
 // extractFunctionBody returns the text between the function's $$ delimiters.
 func extractFunctionBody(sql, name string) (string, bool) {
 	for _, m := range funcHeadRe.FindAllStringSubmatchIndex(sql, -1) {
-		if sql[m[2]:m[3]] != name {
+		if !strings.EqualFold(sql[m[2]:m[3]], name) {
 			continue
 		}
 		rest := sql[m[1]:]
@@ -152,6 +164,28 @@ func extractFunctionBody(sql, name string) (string, bool) {
 		return rest[open+2 : open+2+end], true
 	}
 	return "", false
+}
+
+// The census and the body reader take any spelling SQL does. A replacement in
+// lower case or across lines still counts as the live body.
+func TestTheRecencyCensusReadsEverySpelling(t *testing.T) {
+	t.Parallel()
+	for _, sql := range []string{
+		"CREATE OR REPLACE FUNCTION last_activity_of_x() AS $$body$$",
+		"create or replace function LAST_ACTIVITY_OF_X() as $$body$$",
+		"CREATE OR\nREPLACE\n  FUNCTION last_activity_of_x() AS $$body$$",
+		"create function last_activity_of_x() as $$body$$",
+	} {
+		if !recencyFunctionRe.MatchString(sql) {
+			t.Errorf("the census does not see %q", sql)
+		}
+		if body, ok := extractFunctionBody(sql, "last_activity_of_x"); !ok || body != "body" {
+			t.Errorf("reading %q gave %q, %v, want its body", sql, body, ok)
+		}
+	}
+	if m := recencyFunctionRe.FindStringSubmatch("drop\nfunction if  exists last_activity_of_x(uuid)"); m == nil {
+		t.Error("the census does not see a lower-case drop across lines")
+	}
 }
 
 func sortStrings(s []string) {
@@ -189,7 +223,7 @@ func TestRecencyReadersOutsideTheHelpersExcludeRemediation(t *testing.T) {
 	t.Parallel()
 
 	for file, what := range recencyReadersOutsideTheHelpers {
-		raw, err := os.ReadFile(file)
+		raw, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Errorf("%s (%s): %v — a reader named here must exist, or this "+
 				"census is guarding a file that moved", file, what, err)

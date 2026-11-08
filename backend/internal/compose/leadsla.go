@@ -169,6 +169,7 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 			Subject:   subject,
 			Body:      words.NoticeSLABody,
 			DedupeKey: leadSLATaskSource + ":" + sourceID,
+			Target:    notices.Target{Type: entityLead, ID: ev.Entity.ID},
 		}); err != nil {
 			return fmt.Errorf(noticeLegWrap+": %w", err)
 		}

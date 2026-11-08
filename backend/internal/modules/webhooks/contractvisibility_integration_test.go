@@ -61,8 +61,7 @@ func setupContractVis(t *testing.T) *contractVisEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// Before any seed: EnsureSchema rebuilds whenever it cannot prove the
-	// database is a fresh lane clone, and a row written first would be dropped.
+	// EnsureSchema must verify the empty clone before the fixture seeds any rows.
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}

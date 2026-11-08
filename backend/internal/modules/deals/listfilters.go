@@ -33,7 +33,6 @@ const (
 	filterStageID            = "stage_id"
 	filterStalled            = "stalled"
 	filterStatus             = "status"
-	filterForecastCategory   = "forecast_category"
 	filterKey                = "key"
 	filterPhase              = "phase"
 	filterCommercialMotion   = "commercial_motion"
@@ -89,21 +88,21 @@ var dealListFilters = storekit.FilterSet[ListDealsInput]{
 	filterStageID:        storekit.FilterID(func(in *ListDealsInput, id *ids.StageID) { in.StageID = id }),
 	filterStalled:        storekit.FilterFlag(func(in *ListDealsInput, v *bool) { in.Stalled = v }),
 	filterStatus:         storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Status = v }),
-	filterForecastCategory: storekit.FilterWord(
-		func(in *ListDealsInput, v *string) { in.ForecastCategory = v }),
 	filterCommercialMotion: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.CommercialMotion = v }),
 	filterPriority: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Priority = v }),
 	filterAcquisitionSource: storekit.FilterWord(
 		func(in *ListDealsInput, v *string) { in.AcquisitionSource = v }),
-	filterCloseFrom:    storekit.FilterDate(func(in *ListDealsInput, v *time.Time) { in.CloseFrom = v }),
-	filterCloseTo:      storekit.FilterDate(func(in *ListDealsInput, v *time.Time) { in.CloseTo = v }),
-	filterValueMin:     storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMin = widenMinor(v) }),
-	filterValueMax:     storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMax = widenMinor(v) }),
-	filterCurrency:     storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Currency = v }),
-	filterCountry:      storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Country = v }),
-	filterSourceSystem: storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceSystem = v }),
-	filterSourceID:     storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceID = v }),
+	filterCloseFrom:         storekit.FilterDate(func(in *ListDealsInput, v *time.Time) { in.CloseFrom = v }),
+	filterCloseTo:           storekit.FilterDate(func(in *ListDealsInput, v *time.Time) { in.CloseTo = v }),
+	filterValueMin:          storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMin = widenMinor(v) }),
+	filterWinProbabilityMin: storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.WinProbabilityMin = v }),
+	filterWinProbabilityMax: storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.WinProbabilityMax = v }),
+	filterValueMax:          storekit.FilterNumber(func(in *ListDealsInput, v *int) { in.ValueMax = widenMinor(v) }),
+	filterCurrency:          storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Currency = v }),
+	filterCountry:           storekit.FilterWord(func(in *ListDealsInput, v *string) { in.Country = v }),
+	filterSourceSystem:      storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceSystem = v }),
+	filterSourceID:          storekit.FilterWord(func(in *ListDealsInput, v *string) { in.SourceID = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by.

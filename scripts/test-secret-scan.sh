@@ -49,9 +49,9 @@ cd "$root"
 gitleaks="$(gitleaks_bin)"
 
 work="$(mktemp -d)"
-backups="$(mktemp -d)"
+single="$(mktemp -d)"
 probe="$(mktemp -d)"
-trap 'rm -rf "$work" "$backups" "$probe"' EXIT
+trap 'rm -rf "$work" "$single" "$probe"' EXIT
 git archive HEAD | tar -x -C "$work"
 
 failures=0
@@ -249,8 +249,9 @@ plant_line() {
 FOREIGN_RULE="github-pat"
 
 # expect <caught|missed> <path> <rule-id> <why> — plant a token of <rule-id> in
-# the export copy of <path>, scan, then restore the file so each case is judged
-# alone.
+# a copy of <path> and scan that copy alone, at the same relative path, so each
+# allowlist path sees what it sees in the tree. Section 3 proves the rest of the
+# export clean, so the file's verdict is the tree's.
 expect() {
 	local want="$1" target="$2" rule="$3" why="$4" file="$work/$2" got line status=0
 	if [[ ! -f "$file" ]]; then
@@ -265,22 +266,19 @@ expect() {
 		fail "could not generate a token that trips '$rule' in 8 attempts — $target is ungated, and the recipe in candidate_line() no longer matches the pinned rule set."
 		return
 	fi
-	# The backup lives OUTSIDE the scanned tree. Left beside the original it
-	# would be scanned too, under a name no allowlist path matches — its own
-	# findings would then turn every case green and the suite would pass
-	# without testing anything.
-	cp "$file" "$backups/orig"
+	find "$single" -mindepth 1 -delete
+	mkdir -p "$single/$(dirname "$target")"
+	cp "$file" "$single/$target"
 	# The trailing newline is load-bearing. An unterminated final line is read
 	# differently under `regexTarget = "line"`, and a plant landing as one is
 	# reported missed in any file that carries an exempted line elsewhere — an
 	# accusation against the policy caused entirely by the plant's shape.
-	printf '\n%s\n' "$line" >>"$file"
-	if "$gitleaks" dir "$work" --config "$root/.gitleaks.toml" --redact --no-banner >/dev/null 2>&1; then
+	printf '\n%s\n' "$line" >>"$single/$target"
+	if "$gitleaks" dir "$single" --config "$root/.gitleaks.toml" --redact --no-banner >/dev/null 2>&1; then
 		got="missed"
 	else
 		got="caught"
 	fi
-	cp "$backups/orig" "$file"
 
 	if [[ "$got" == "$want" ]]; then
 		printf '  ok    %-6s  %-18s  %s\n' "$got" "$rule" "$target"
@@ -292,10 +290,10 @@ expect() {
 echo "test-secret-scan: planting a token the allowlists must not hide"
 
 # --- 3. the baseline the whole suite rests on ---------------------------------
-# `expect` judges a scan of the WHOLE tree, so ANY finding anywhere makes it
-# report "caught". If the committed tree does not scan clean, every "caught"
-# case below passes without the plant having done anything, and the suite reads
-# green while gating nothing.
+# `expect` judges one file and stands for the whole tree only if the rest of it
+# is clean. If the committed tree does not scan clean, a "caught" case would
+# not prove the tree a plant lands in fails, and the suite would read green
+# while gating nothing.
 if ! "$gitleaks" dir "$work" --config "$root/.gitleaks.toml" --redact --no-banner >/dev/null 2>&1; then
 	echo "test-secret-scan: the committed tree does not scan clean, so a planted" >&2
 	echo "  token cannot be told from what is already there — every 'caught' case" >&2

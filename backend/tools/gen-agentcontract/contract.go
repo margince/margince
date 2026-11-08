@@ -11,6 +11,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/platform/apideprecation"
+	publicnotices "github.com/margince/margince/backend/tools/internal/apideprecation"
 	"github.com/margince/margince/backend/tools/internal/oasnode"
 )
 
@@ -30,6 +32,9 @@ func agentContract(src []byte, tables []string) ([]byte, []byte, int, error) {
 	}
 	root := oasnode.Root(&doc)
 	flatten(root)
+	if err := addPublicNotices(root); err != nil {
+		return nil, nil, 0, err
+	}
 
 	paths, _ := oasnode.Lookup(root, "paths")
 	ops, tags := keepAgentOperations(root, paths)
@@ -91,12 +96,13 @@ func deepCopy(n *yaml.Node) *yaml.Node {
 	return &clone
 }
 
-// stripExtensions removes every x-* key at every depth.
+// Public release notices travel with the contract a client receives.
 func stripExtensions(n *yaml.Node) {
 	if n.Kind == yaml.MappingNode {
 		kept := n.Content[:0]
 		for i := 0; i+1 < len(n.Content); i += 2 {
-			if strings.HasPrefix(n.Content[i].Value, "x-") {
+			key := n.Content[i].Value
+			if strings.HasPrefix(key, "x-") && key != apideprecation.NoticeExtension && key != apideprecation.PolicyExtension && key != apideprecation.NoticesExtension {
 				continue
 			}
 			kept = append(kept, n.Content[i], n.Content[i+1])
@@ -194,4 +200,25 @@ func deleteKey(node *yaml.Node, key string) {
 			return
 		}
 	}
+}
+
+func addPublicNotices(root *yaml.Node) error {
+	notices, err := publicnotices.FromYAML(root)
+	if err != nil {
+		return err
+	}
+	if len(notices) == 0 {
+		return nil
+	}
+	info, ok := oasnode.Lookup(root, "info")
+	if !ok {
+		return errors.New("contract needs info for public notices")
+	}
+	var value yaml.Node
+	if err := value.Encode(notices); err != nil {
+		return err
+	}
+	deleteKey(info, apideprecation.NoticesExtension)
+	info.Content = append(info.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: apideprecation.NoticesExtension}, &value)
+	return nil
 }

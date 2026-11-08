@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { OAuthOutcomeNote } from "./connectors.notices";
 
 // The note reads a landing the address bar carried, so both segments are
@@ -160,6 +161,25 @@ describe("the OAuth return note", () => {
     expect(
       screen.queryByRole("button", { name: "Connect calendar" }),
     ).toBeNull();
+  });
+
+  it.each([
+    ["contact" as const, en["connectors.roleCannotCapture.contact"]],
+    ["seat" as const, en["connectors.roleCannotCapture.seat"]],
+    [undefined, en["connectors.oauthRoleCannotCapture"]],
+  ])("names the grant a refused role lacks (%s)", (missing, says) => {
+    render(
+      <LocaleProvider initial="en">
+        <OAuthOutcomeNote
+          outcome="role_cannot_capture"
+          provider="gmail"
+          connections={[]}
+          captureMissing={missing}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Nothing was connected")).toBeTruthy();
+    expect(screen.getByText(says)).toBeTruthy();
   });
 
   it("puts the note away until the landing changes", async () => {

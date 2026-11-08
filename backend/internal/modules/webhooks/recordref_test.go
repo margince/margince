@@ -36,7 +36,7 @@ func TestTheBaseAddressIsTrimmedOnce(t *testing.T) {
 	}
 }
 
-func TestAPreviewSampleNamesARecordAndLinksIt(t *testing.T) {
+func TestAPreviewSampleNamesARecordAndItsOwnerAndLinksIt(t *testing.T) {
 	for _, tc := range []struct {
 		eventType string
 		wantName  bool
@@ -50,8 +50,9 @@ func TestAPreviewSampleNamesARecordAndLinksIt(t *testing.T) {
 		}
 		var env struct {
 			Entity struct {
-				Name *string `json:"name"`
-				URL  *string `json:"url"`
+				Name      *string `json:"name"`
+				OwnerName *string `json:"owner_name"`
+				URL       *string `json:"url"`
 			} `json:"entity"`
 		}
 		if err := json.Unmarshal(raw, &env); err != nil {
@@ -62,6 +63,9 @@ func TestAPreviewSampleNamesARecordAndLinksIt(t *testing.T) {
 		}
 		if (env.Entity.Name != nil) != tc.wantName {
 			t.Errorf("%s: name = %v, want present=%v", tc.eventType, env.Entity.Name, tc.wantName)
+		}
+		if (env.Entity.OwnerName != nil) != tc.wantName {
+			t.Errorf("%s: owner name = %v, want present=%v", tc.eventType, env.Entity.OwnerName, tc.wantName)
 		}
 	}
 }

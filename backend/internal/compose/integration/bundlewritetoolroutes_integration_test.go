@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // stagedPerBundle is how many proposals each staged act holds.
@@ -61,8 +63,8 @@ func bundleOutcomes(t *testing.T, raw json.RawMessage) []bundleMember {
 func TestDecideApprovalBundleLeavesTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "bundle-write-doors", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Bundle Doors", "source": "manual"})
-	approveREST, approveTool := stageBundleRows(t, d.e, company, stagedPerBundle), stageBundleRows(t, d.e, company, stagedPerBundle)
-	rejectREST, rejectTool := stageBundleRows(t, d.e, company, stagedPerBundle), stageBundleRows(t, d.e, company, stagedPerBundle)
+	approveREST, approveTool := apptest.StageBundleRows(t, d.e, company, stagedPerBundle), apptest.StageBundleRows(t, d.e, company, stagedPerBundle)
+	rejectREST, rejectTool := apptest.StageBundleRows(t, d.e, company, stagedPerBundle), apptest.StageBundleRows(t, d.e, company, stagedPerBundle)
 
 	restApproved := d.restStatus(t, "POST", "/v1/approval-bundles/"+approveREST.String()+"/approve", AnyMap{"reason": "Read looks right"}, http.StatusOK)
 	toolApproved := d.tool(t, "decide_approval_bundle", map[string]any{"bundle_id": approveTool.String(), "decision": "approve", "reason": "Read looks right"})

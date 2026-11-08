@@ -56,9 +56,9 @@ test.describe("Network tab — page shape", () => {
     // a card failed to render rather than that this record lacks the fact.
     await expect(strip.locator(".stat-card")).toHaveCount(3);
 
-    // The accent panel is the page's ONE lead. A second would ask the reader
-    // which recommendation to believe.
-    await expect(page.locator(".panel-accent")).toHaveCount(1);
+    // The page has one lead. A second would ask the reader which
+    // recommendation to believe.
+    await expect(page.locator(".panel:has(.pn-verdict)")).toHaveCount(1);
   });
 
   test("draws the map and no ego ring", async ({ page }) => {
@@ -119,7 +119,7 @@ test.describe("Network tab — page shape", () => {
   });
 
   test("offers the ask on the lead route", async ({ page }) => {
-    const lead = page.locator(".panel-accent").first();
+    const lead = page.locator(".panel:has(.pn-verdict)").first();
     const ask = lead.locator(".pn-verdict-actions button");
     const ownRoute = lead.getByText(
       "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
@@ -169,7 +169,10 @@ test.describe("Network tab — visual weight", () => {
    */
   test("the answer is above the picture", async ({ page }) => {
     const strip = await page.locator(".stat-strip").first().boundingBox();
-    const lead = await page.locator(".panel-accent").first().boundingBox();
+    const lead = await page
+      .locator(".panel:has(.pn-verdict)")
+      .first()
+      .boundingBox();
     const map = await page.locator(".rmap").first().boundingBox();
     expect(strip).not.toBeNull();
     expect(lead).not.toBeNull();

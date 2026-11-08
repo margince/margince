@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -114,8 +115,10 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	subject := "Rollout call"
 	sourceSystem := "transcript"
 	body := transcriptBody
+	// The meeting must precede the reader even if the database clock is ahead.
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, Body: &body,
+		OccurredAt:      new(clocktest.Now(t).Add(-time.Hour)),
 		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
 		SourceSystem:    &sourceSystem, Source: "manual",
 	})
@@ -129,7 +132,7 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 // read drives one whole reading the way the worker does.
 func (e *transcriptEnv) read(t *testing.T, brain completer) activities.TranscriptRead {
 	t.Helper()
-	return e.readAt(t, brain, time.Now)
+	return e.readAt(t, brain, func() time.Time { return clocktest.Now(t) })
 }
 
 func (e *transcriptEnv) readAt(t *testing.T, brain completer, now func() time.Time) activities.TranscriptRead {
@@ -532,7 +535,8 @@ func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
 	sourceSystem := "transcript"
 	body := strings.TrimSuffix(long, "\n")
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
-		Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &sourceSystem, Source: "manual",
+		Kind: "meeting", Subject: &subject, Body: &body,
+		OccurredAt: new(clocktest.Now(t).Add(-time.Hour)), SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("logging the long transcript: %v", err)
@@ -715,6 +719,9 @@ func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
 				WHERE key = 'installation.timezone'`)
 
 			read := e.read(t, cannedBrain{reply: datedReply(t, 3, c.day, e.Rep1)})
+			if len(read.ProposalIDs) != 1 {
+				t.Fatalf("expected one deadline proposal, got %+v", read)
+			}
 			approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
 			if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
 				t.Fatalf("approving the proposal: %v", err)

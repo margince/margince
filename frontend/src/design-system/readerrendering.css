@@ -1,0 +1,53 @@
+/* A message shown in the reader's language. The rendering sits on the agent's
+ * ground because a model wrote it; the original carries no tint because its
+ * author did. */
+.readerrendering {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.readerrendering__ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.readerrendering__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+
+.readerrendering__text .readerrendering__note {
+  color: inherit;
+}
+
+.readerrendering__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.readerrendering__note {
+  color: var(--textSecondary);
+}
+
+.readerrendering__subject {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+  overflow-wrap: anywhere;
+}
+
+/* The rendering keeps the author's paragraphs, the way EmailText does. */
+.readerrendering__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

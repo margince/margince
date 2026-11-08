@@ -176,7 +176,9 @@ describe("ComposeModal — channel reply", () => {
     await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(await screen.findByText(/has not granted consent/i)).toBeTruthy();
+    expect(
+      await screen.findByText("This message cannot be sent as it stands."),
+    ).toBeTruthy();
     // The rep's words survive the refusal, and this test proves that, not only
     // that an error rendered. Losing a written reply to a 409 once makes a rep
     // stop trusting the surface.

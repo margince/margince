@@ -33,13 +33,19 @@ push and backfill. Connecting is `x-agent-access: human-only` on every path: Mar
 
 Create a Google OAuth app (Google Cloud project → `APIs & Services → Credentials → OAuth client ID → Web application`):
 
-- Turn on the **Gmail API**. Put **both** `.../auth/gmail.readonly` and `.../auth/gmail.send` on the consent screen.
+- Turn on the **Gmail API**. Put `.../auth/gmail.readonly`, `.../auth/gmail.send` and `.../auth/userinfo.profile` on
+  the consent screen.
 - Allow the redirect URI `<api-base>/v1/connectors/gmail/callback` (in dev:
   `http://localhost:8080/v1/connectors/gmail/callback`).
 
 The two scopes share **one** consent, because Google will not add a scope to a refresh token that already exists.
 `gmail.send` only sends: it cannot read, change or delete. A connection granted read but not send captures as usual,
 and refuses each send by name until the user connects it again.
+
+`userinfo.profile` reads the Google account's name and profile image. When the connected account is the user's own
+sign-in address, each connect stores that image as the user's, unless they uploaded or removed one. A shared mailbox
+gives no image. A connection granted before this scope keeps working, and gives an image once the user connects it
+again.
 
 ```sh
 export MARGINCE_GMAIL_CLIENT_ID="<google-oauth-client-id>"
@@ -99,9 +105,10 @@ Google Calendar (`gcal`) uses the same Google OAuth app and the same environment
 project, also turn on the **Calendar API**, and allow `<api-base>/v1/connectors/gcal/callback` (in dev:
 `http://localhost:8080/v1/connectors/gcal/callback`).
 
-It asks for `calendar.readonly` and `calendar.events.owned` as its own grant, and never sets
-`include_granted_scopes`. So the calendar grant and the Gmail grant stay separate, and connecting both means two
-Google consent screens. The first sync reaches back 90 days, and the window reaches a year ahead.
+It asks for `calendar.readonly`, `calendar.events.owned` and `userinfo.profile` as its own grant, and never sets
+`include_granted_scopes`. So a calendar connected on its own keeps its grant apart from the Gmail grant, and asks on a Google consent screen
+of its own. Connecting Gmail and the calendar in one step asks once, on one screen, and stores that one grant
+in both connections. The first sync reaches back 90 days, and the window reaches a year ahead.
 
 ## The same steps from a script
 
