@@ -129,6 +129,19 @@ export function dealChanges(
 }
 
 /**
+ * The receipts the changed-deals list draws, by id, so the done lane below it
+ * leaves out exactly those and no others.
+ */
+export function shownReceiptIds(
+  receipts: readonly Receipt[] | undefined,
+  bundles: readonly MarginceChangeBundle[] | undefined,
+): string[] {
+  return dealChanges(receipts, new Set(), bundles).flatMap((group) =>
+    group.receipts.map((receipt) => receipt.id),
+  );
+}
+
+/**
  * The changes an Undo of this deal may send: those the server still allows,
  * and only those this list shows the reader. An older server names no
  * undoable subset, so the shown changes that still read as reviewable stand in.

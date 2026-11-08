@@ -14,7 +14,7 @@ import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
-import { isReviewableReceipt } from "../../lib/receiptreview";
+import { usePendingMarginceChanges } from "../../lib/marginchanges";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
@@ -38,7 +38,7 @@ import {
 } from "../worklist/worklist.queries";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefDials } from "./brief.dials";
-import { DoneForYou } from "./brief.doneforyou";
+import { DoneForYou, shownReceiptIds } from "./brief.doneforyou";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
 import {
@@ -250,6 +250,7 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
+  const pendingChanges = usePendingMarginceChanges();
   const magic = useMagic();
   const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
   useEffect(() => {
@@ -292,9 +293,10 @@ function PersonalMorning({
                   embedded
                   visibleReceiptIds={
                     handled.isSuccess && !handled.isRefetchError
-                      ? handled.data.receipts
-                          ?.filter(isReviewableReceipt)
-                          .map((receipt) => receipt.id)
+                      ? shownReceiptIds(
+                          handled.data.receipts,
+                          pendingChanges.data?.bundles,
+                        )
                       : []
                   }
                 />
