@@ -5962,7 +5962,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `summarize` / `company_ask`
 
-`system 2,524 B (~631 tok)`: rules 2,244 B · boundary 280 B · after boundary 0 B · **cacheable 88%**
+`system 2,615 B (~653 tok)`: rules 2,335 B · boundary 280 B · after boundary 0 B · **cacheable 89%**
 
 <details><summary>system prompt 1 of 2</summary>
 
@@ -5977,7 +5977,7 @@ Write one claim per sentence, and cite the ONE record that sentence is about. Th
 If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. A withheld section does not make the question unanswerable: answer from what remains.
 If what remains does not answer the question, return an empty sentences array rather than a sentence that talks around it.
 In the summary, open_tasks are tasks somebody filed. open_commitments are promises read out of conversations and are not tasks: side says whose promise it is ("ours" or "theirs"), and holder names the contact who made a promise to us. A commitment on our side has no holder: say it is ours and name nobody. When open_work_capped or open_work_withheld is true, the lists are not the whole of what is open. Name each open item with its name, its holder and its due date wherever the summary gives them.
-Answer what the reader needs before a meeting with this account: who the known contacts are, where the pipeline stands, and whether anything is waiting for a reply. Do not invent an agenda.
+Answer what the reader needs before a meeting with this account: who the known contacts are, where the pipeline stands, what happened on it recently, and whether anything is waiting for a reply. Any one of these the summary holds is enough to answer from. Do not invent an agenda.
 LANGUAGE
 Write every human-readable sentence of your output in English.
 Write naturally in that language rather than translating English phrasing.

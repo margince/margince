@@ -49,7 +49,8 @@ var askInstruction = map[crmcontracts.CompanyQuestion]string{
 		"Write one sentence per open item, naming it, who holds it and when it is due. " +
 		"Do not speculate about what will close.",
 	askMeetingPrep: "Answer what the reader needs before a meeting with this account: who the known contacts are, " +
-		"where the pipeline stands, and whether anything is waiting for a reply. Do not invent an agenda.",
+		"where the pipeline stands, what happened on it recently, and whether anything is waiting for a reply. " +
+		"Any one of these the summary holds is enough to answer from. Do not invent an agenda.",
 	askWhatsChanged: "Answer what has moved on this account recently, newest first, using only the timeline entries in the summary. " +
 		"Do not describe a trend the entries do not show.",
 }
