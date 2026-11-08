@@ -151,11 +151,12 @@ A missing value stays unknown. `source_occurred_at` keeps the message date apart
 A reply can join mail sent from Margince before the mailbox captures its sent copy.
 The stored sender identity proves ownership. A message from another seat cannot join this way.
 
-When a user deletes mail in Gmail for good, the Gmail history names it by the mailbox's opaque message id. Margince then erases its copy through the existing retention service.
-Normal Gmail and Outlook syncs fill `capture_import.provider_message_ids`; each id carries its provider and connection generation.
+When Gmail deletes a message for good, the mailbox's own message id reaches the existing erase path (`SelectRemovedPurgeTx`).
+Normal Gmail, Outlook and calendar syncs fill `capture_import.provider_message_ids`; each id carries its provider and connection generation.
+A calendar tombstone that names only its own event id finds the meeting through these ids, and only through the syncing seat's own.
 
-Older mail with no such id is kept until a normal sync sees it again. A colleague's copy, mail written in Margince and statutory duties keep a message.
-A message that leaves an Outlook folder is never erased, because moving mail to an archive can look the same as deleting it. Outlook has no automatic erase.
+Older mail with no id stays until a normal sync sees it again. A colleague's copy, mail written in Margince and statutory duties keep a message.
+Moving Outlook mail to another folder never erases it, because a move to an archive can look like a delete. Outlook never erases mail on its own.
 
 ## Credentials & the vault
 
