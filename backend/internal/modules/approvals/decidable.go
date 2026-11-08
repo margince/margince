@@ -38,9 +38,9 @@ func decidableRows(ctx context.Context, tx pgx.Tx, p principal.Principal, rows [
 	}
 	var visible []row
 	var positions []int
-	for i, allowed := range readable {
-		if allowed {
-			visible, positions = append(visible, rows[i]), append(positions, i)
+	for i, proposal := range rows {
+		if readable[i] {
+			visible, positions = append(visible, proposal), append(positions, i)
 		}
 	}
 	permitted, err := authorityRows(ctx, tx, p, visible)

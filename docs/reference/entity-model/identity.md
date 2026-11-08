@@ -88,6 +88,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `app_user_pkey`: `unique, btree (id)`
 - `idx_app_user_live`: `btree (created_at, id) WHERE (archived_at IS NULL)`
+- `idx_app_user_login_folded`: `btree (email_domain_folded, lower(regexp_replace(email, '@[^@]*$', '')))`
 - `idx_app_user_merge_target`: `btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)`
 - `uq_app_user_email`: `unique, btree (lower(email))`
 

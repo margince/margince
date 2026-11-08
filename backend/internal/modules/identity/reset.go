@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -195,9 +196,10 @@ func (s *Service) CreatePasswordReset(ctx context.Context, email string) (string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var userID ids.UserID
 		lookupErr := tx.QueryRow(ctx,
-			`SELECT id FROM app_user
-			 WHERE email = lower($1) AND `+LiveMemberSQL("")+` AND password_hash IS NOT NULL`,
-			email).Scan(&userID)
+			`SELECT u.id FROM app_user u
+			 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+LiveMemberSQL("u")+` AND u.password_hash IS NOT NULL
+			 `+storekit.SeatLoginPrefersTypedSQL("u", "$1"),
+			typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID)
 		if errors.Is(lookupErr, pgx.ErrNoRows) {
 			return nil
 		}
@@ -392,8 +394,10 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	var userID ids.UserID
 	var isAgent bool
 	lookupErr := tx.QueryRow(ctx,
-		`SELECT id, is_agent FROM app_user WHERE email = lower($1) AND archived_at IS NULL`,
-		email).Scan(&userID, &isAgent)
+		`SELECT u.id, u.is_agent FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND u.archived_at IS NULL
+		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1"),
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &isAgent)
 	if errors.Is(lookupErr, pgx.ErrNoRows) {
 		return fmt.Errorf("identity: no user with email %q", email)
 	}
