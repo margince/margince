@@ -79,7 +79,9 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 	"activity_calendar_method_backfill": "one row per calendar-method re-read settled. The check " +
 		"stamp is the only column, so a window is the whole question",
 	"webhook_delivery": "one row per delivery attempt, holding the dead-letter stamp and the retry " +
-		"schedule. The retry path reads it, so a window must clear the longest backoff",
+		"schedule. The retry path reads it, so a window must clear the longest backoff. The rendered " +
+		"body is cleared once the delivery ended (privacy/retentioncopies.go); the row stays for the " +
+		"log and the (subscription, event) dedupe",
 })
 
 // ledgerName is the shape of a table that records executions rather than

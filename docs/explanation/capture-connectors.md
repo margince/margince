@@ -151,6 +151,11 @@ A missing value stays unknown. `source_occurred_at` keeps the message date apart
 A reply can join mail sent from Margince before the mailbox captures its sent copy.
 The stored sender identity proves ownership. A message from another seat cannot join this way.
 
+Gmail permanent-deletion history reaches the existing purge service through the mailbox's opaque message id.
+Normal Gmail and Outlook syncs fill `capture_import.provider_message_ids`; each id carries its provider and connection generation.
+Older unmapped mail stays until a normal sync sees it again. A colleague's copy, CRM-authored mail and statutory duties prevent destruction.
+Outlook folder removals never authorize a purge: moving mail to an archive can look like deletion. Outlook automatic purging remains disabled.
+
 ## Credentials & the vault
 
 A connector credential (an OAuth refresh token, or a standing IMAP password) is never stored in plain

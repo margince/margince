@@ -16,8 +16,8 @@ func StopOnAddressesSQL(alias, lowered, hashes string) string {
 }
 
 // StopAddressArgs answers the parameters of StopOnAddressesSQL. They are each
-// address lowercased, and SuppressionHash of each spelling EmailLookups knows,
-// the hash an anonymize writes. An empty address matches nothing.
+// address lowercased, and every SuppressionForms of each spelling EmailLookups
+// knows, the hash an anonymize writes. An empty address matches nothing.
 func StopAddressArgs(addresses ...string) (lowered, hashes []string) {
 	lowered = make([]string, 0, len(addresses))
 	for _, address := range addresses {
@@ -25,10 +25,5 @@ func StopAddressArgs(addresses ...string) (lowered, hashes []string) {
 			lowered = append(lowered, trimmed)
 		}
 	}
-	spellings := EmailLookups(addresses...)
-	hashes = make([]string, 0, len(spellings))
-	for _, spelled := range spellings {
-		hashes = append(hashes, SuppressionHash(spelled))
-	}
-	return lowered, hashes
+	return lowered, SuppressionForms(EmailLookups(addresses...)...)
 }

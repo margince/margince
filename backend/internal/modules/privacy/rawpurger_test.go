@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -21,6 +22,16 @@ func (*nilRawPurger) PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) erro
 func (*nilRawPurger) PurgeTextCopiesTx(context.Context, pgx.Tx, []ids.UUID) error { return nil }
 
 func (*nilRawPurger) PurgeTextNamingTx(context.Context, pgx.Tx, string, []string) error { return nil }
+
+func (*nilRawPurger) DeliveryCopiesPastTx(context.Context, pgx.Tx, time.Time, ids.UUID, int) ([]RecordCopy, error) {
+	return nil, nil
+}
+
+func (*nilRawPurger) ClearDeliveryCopiesTx(context.Context, pgx.Tx, []ids.UUID) error { return nil }
+
+func (*nilRawPurger) ScrubDeliveryCopiesTx(context.Context, pgx.Tx, string, []ids.UUID) error {
+	return nil
+}
 
 func (*nilRawPurger) PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error {
 	return nil

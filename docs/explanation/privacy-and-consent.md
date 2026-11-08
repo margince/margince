@@ -331,9 +331,9 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) clears personal values from domain rows and audit
-  images, removes raw capture, embeddings and attachment bytes, and cancels kept outbox copies.
-  Audit IDs, actors, actions and times stay fixed. One transaction per subject records the proof
-  and audit marker. A subject under `legal_hold` cannot be erased.
+  images. It removes raw capture, embeddings, attachment bytes and webhook bodies, and cancels kept
+  outbox copies ([what stays](erasure-leftovers.md)). Audit IDs, actors, actions and times stay fixed.
+  One transaction per subject records the proof and audit marker. A subject under `legal_hold` cannot be erased.
 
   Background tasks use earlier proofs and stored links to clear old copies while keeping later
   edits and held content. Request references go after their linked copies.

@@ -114,7 +114,7 @@ func (s *Service) pastPlanHidden(ctx context.Context, approval crmcontracts.Appr
 		return false, nil
 	}
 	footprint, err := s.pastFootprint(ctx, subject)
-	if err != nil {
+	if err != nil && !errors.Is(err, errNoPastFootprint) {
 		return false, err
 	}
 	if footprint == nil && s.runsAsAgent(stagedByRow(subject)) {
@@ -124,17 +124,21 @@ func (s *Service) pastPlanHidden(ctx context.Context, approval crmcontracts.Appr
 	return !clears, err
 }
 
+// errNoPastFootprint is a decided approval with no footprint to read. A caller
+// treats it as a missing footprint, never as a failure.
+var errNoPastFootprint = errors.New("approvals: no stored plan footprint")
+
 func (s *Service) pastFootprint(ctx context.Context, subject row) (*approvalplan.Footprint, error) {
 	if subject.Status == statusPending && s.planSight.Footprint != nil {
 		return s.planFootprint(ctx, subject, nil)
 	}
 	if len(subject.PlanFootprint) == 0 {
-		return nil, nil
+		return nil, errNoPastFootprint
 	}
 	var footprint approvalplan.Footprint
-	if json.Unmarshal(subject.PlanFootprint, &footprint) != nil {
+	if err := json.Unmarshal(subject.PlanFootprint, &footprint); err != nil {
 		// A footprint that does not decode proves nothing, as a missing one.
-		return nil, nil
+		return nil, errors.Join(errNoPastFootprint, err)
 	}
 	return &footprint, nil
 }
