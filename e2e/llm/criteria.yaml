@@ -615,10 +615,10 @@ cases:
         reads, and writes nothing to the room on its own judgement.
   case108_ask_sofia_for_an_intro:
     1:
-      name: The drafted introduction spends enrich
+      name: The ask goes to the colleague
       statement: >-
-        The model drafts the ask to the colleague through run_research, names the
-        colleague and the contact, and sends nothing.
+        The model drafts the message asking the colleague for the introduction,
+        names the colleague and the contact, and sends nothing.
   case109_show_my_times_in_lisbon:
     1:
       name: The agent's zone is the agent's

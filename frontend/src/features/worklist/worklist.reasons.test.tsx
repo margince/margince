@@ -12,13 +12,8 @@ import { en } from "../../i18n/en";
 import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
-// Why a row is worth the reader's morning, drawn.
-//
-// Two lanes could state only how LONG something had been true. A lapsed
-// relationship said "quiet for 63 days" whether it was the rep's strongest
-// contact with an open deal behind them or a cc who had drifted, and a task
-// nobody had taken read exactly like the reader's own. Both facts were already
-// in the server's hand and dropped on the way out.
+// A row says why it matters, not only how long it has been true. An open deal
+// rests on a lapsed contact, or nobody owns a task.
 //
 // These assert the drawn phrase rather than the wire field: a reason that
 // reaches the client and has no sentence for it is silently omitted, so a test
@@ -108,17 +103,24 @@ function decayRow(because: WorklistItem["because"]): WorklistItem {
 
 describe("a lapsed relationship says what it was worth", () => {
   it("says an open deal rests on the contact", async () => {
-    draw([
+    draw([decayRow([{ kind: "expected_revenue" }])]);
+
+    expect(await screen.findByText(/open deal depends on this/)).toBeTruthy();
+  });
+
+  // The row says its one current reason; the facts after it are its Details'.
+  it("says only the first reason on the row", async () => {
+    const { container } = draw([
       decayRow([
         { kind: "quiet_days", value: { kind: "days", days: 63 } },
         { kind: "expected_revenue" },
       ]),
     ]);
 
-    expect(await screen.findByText(/open deal depends on this/)).toBeTruthy();
-    // Beside the span, not instead of it: the rep reads both — how long, and
-    // why it matters that long.
-    expect(await screen.findByText(/quiet for 63 days/)).toBeTruthy();
+    await screen.findByText(/no activity for 63 days/);
+    expect(container.querySelector(".worklist-row-because")?.textContent).toBe(
+      "no activity for 63 days",
+    );
   });
 
   // The row that carries nothing says only how long. This is what makes the
@@ -129,7 +131,7 @@ describe("a lapsed relationship says what it was worth", () => {
       decayRow([{ kind: "quiet_days", value: { kind: "days", days: 63 } }]),
     ]);
 
-    expect(await screen.findByText(/quiet for 63 days/)).toBeTruthy();
+    expect(await screen.findByText(/no activity for 63 days/)).toBeTruthy();
     expect(screen.queryByText(/open deal depends on this/)).toBeNull();
   });
 });
@@ -347,8 +349,7 @@ describe("a follow-up row says why it is there", () => {
 
     await screen.findByText(/Pricing for the pilot/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
-    expect(line).toMatch(/you wrote last/);
-    expect(line).toMatch(/no reply recorded for 6 days/);
+    expect(line).toBe("you wrote last");
   });
 
   // The row a meeting with nobody on file leaves behind offers no "Draft
@@ -374,9 +375,7 @@ describe("a follow-up row says why it is there", () => {
 
     await screen.findByText(/Call with Acme and Dana/);
     const line = container.querySelector(".worklist-row-because")?.textContent;
-    expect(line).toMatch(/met 1 day ago/);
-    expect(line).toMatch(/no outgoing message recorded since/);
-    expect(line).toMatch(/no attendee on file/);
+    expect(line).toBe("met 1 day ago");
   });
 });
 

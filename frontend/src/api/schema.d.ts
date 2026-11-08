@@ -30748,11 +30748,15 @@ export interface components {
              */
             target?: {
                 /**
-                 * @description A record's class, as its own endpoint spells it, or one of two non-record targets:
+                 * @description A record's class, as its own endpoint spells it, or a non-record review target:
                  *     `approval` (a pending decision, `id` is the approval) and `data_task` (a
                  *     background correction run, `id` is the `run_id` that failed). A client opens the
                  *     corrections list rather than that run: a manual re-run replaces the `run_id`, so the
-                 *     one a notice names may no longer be listed.
+                 *     one a notice names may no longer be listed. Manual privacy reviews use
+                 *     `knowledge_document` (download the retained file), `email_signature` (the
+                 *     recipient's own account settings), `activity` (open the retained note in its
+                 *     drawer), `legal_entity` (Company settings), or `signature_template` (Company
+                 *     settings; `id` identifies the erasure whose review flagged the workspace template).
                  */
                 type: string;
                 /** Format: uuid */
@@ -31413,6 +31417,11 @@ export interface components {
             /** @description The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists. */
             readonly acquisition_request?: components["schemas"]["ContactAcquisitionRequest"];
             /**
+             * Format: uuid
+             * @description The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
+             */
+            readonly created_from_activity_id?: string | null;
+            /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
              */
@@ -31555,6 +31564,11 @@ export interface components {
         /** @description Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
         CreateContactRequest: {
             full_name: string;
+            /**
+             * Format: uuid
+             * @description The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
+             */
+            created_from_activity_id?: string | null;
             first_name?: string | null;
             last_name?: string | null;
             title?: string | null;
@@ -36063,6 +36077,11 @@ export interface components {
              * @description The approval a human gave this exact call, on its retry.
              */
             approval_id?: string;
+            /**
+             * @description What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+             * @enum {string}
+             */
+            settle?: "complete" | "keep";
             /** @description Same key, same result. A key reused with other arguments is refused. */
             idempotency_key?: string;
         };
@@ -36076,6 +36095,22 @@ export interface components {
             note_activity_id?: string;
             /** @description The probability the move set from the new stage, as one sentence. Absent when the move changed no stage. */
             probability_note?: string;
+            /** @description The deal's tasks still open after a move that closed it. Absent when the move left it open, or when the call settled them. */
+            open_tasks?: components["schemas"]["DealOpenTask"][];
+            /** @description The tasks this call completed, present only when it asked to settle them. */
+            settled_task_ids?: string[];
+        };
+        /** @description One task still open on a deal that just closed. */
+        DealOpenTask: {
+            /** Format: uuid */
+            id: string;
+            /** @description What the task says to do. */
+            subject: string;
+            /**
+             * Format: date-time
+             * @description When it is due, absent on a task nobody dated.
+             */
+            due_at?: string;
         };
         /** @description What `qualify_lead` takes besides the lead, which the path names. */
         QualifyLeadRequest: {
@@ -55734,12 +55769,13 @@ export interface components {
          *     there too, but the totals the first page stated stay as they were: they still count
          *     the rows that source holds, and the list stops short of them.
          *
-         *     **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
-         *     and deals at risk that the ranked rows left out continue as a tail, merged in one
-         *     order (oldest due date, arrival or expected close first) and reached through
-         *     `next_cursor` to their end. Items past the read limit of any other source are not
-         *     reachable through `next_cursor`. They join a later read as the items in front of
-         *     them are handled.
+         *     **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers,
+         *     deals at risk and staged approvals that the ranked rows left out continue as a tail,
+         *     merged in one order and reached through `next_cursor` to their end. The order is the
+         *     oldest due date, arrival or expected close first. Approvals carry no date in it, so
+         *     they come after the dated rows, newest staged first. Items past the read limit of any
+         *     other source are not reachable through `next_cursor`. They join a later read as the
+         *     items in front of them are handled.
          */
         Worklist: {
             /**
@@ -55914,9 +55950,10 @@ export interface components {
          *     `considered` is how many candidates were read and ranked. It is NOT a total: when
          *     `more_available` is true there are candidates past the bound that this read never
          *     saw, and no field here claims to know how many; `counts[].total` is the exact figure
-         *     per category where one exists. For tasks, waiting customers and deals at risk the
-         *     rest is reached through `next_cursor`. For any other source a reader who needs the
-         *     rest narrows the queue or opens that source's own screen, which pages its own data.
+         *     per category where one exists. For tasks, waiting customers, deals at risk and
+         *     approvals the rest is reached through `next_cursor`. For any other source a reader
+         *     who needs the rest narrows the queue or opens that source's own screen, which pages
+         *     its own data.
          *
          *     `shown` is how many of those candidates survived filtering and the page cut, so
          *     `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -56100,6 +56137,16 @@ export interface components {
              * @description The completed act, as its own surface spells it.
              */
             id: string;
+            /**
+             * @description What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+             * @enum {string}
+             */
+            source?: "correction" | "approval";
+            /**
+             * Format: uuid
+             * @description The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
+             */
+            audit_log_id?: string;
             /** @description The producer's own sub-type — for the label, never for authority. */
             kind: string;
             /** @description What was done, in the words the act itself recorded. */
@@ -57344,6 +57391,15 @@ export interface components {
             changes: components["schemas"]["MagicFieldChange"][];
             undo: components["schemas"]["MagicUndo"];
         };
+        /**
+         * @description One field a change moved. Only fields a reader can understand are listed: a
+         *     field of the record's update request, a custom field, or a stored column the
+         *     server declares as readable. Internal columns are never listed.
+         *
+         *     `before` and `after` keep the stored value (minor units, ids, enum codes).
+         *     The optional fields beside them say how to read it. A client that does not
+         *     know `type` must not print a raw value.
+         */
         MagicFieldChange: {
             /** @description The field's key as the record stores it (`industry`, `legal_name`). */
             field: string;
@@ -57351,6 +57407,22 @@ export interface components {
             before?: unknown;
             /** @description The value after the change; absent when the change cleared it. */
             after?: unknown;
+            /**
+             * @description How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+             * @enum {string}
+             */
+            type?: "money" | "date" | "stage" | "member" | "enum" | "text" | "number" | "boolean" | "reference";
+            /** @description The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount. */
+            currency?: string;
+            /**
+             * @description For a `date`, whether the value is a calendar day or an instant.
+             * @enum {string}
+             */
+            precision?: "day" | "instant";
+            /** @description The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed. */
+            before_label?: string;
+            /** @description The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed. */
+            after_label?: string;
         };
         /** @description The record this line is about, where it names one. */
         MagicEntityRef: {
@@ -57405,8 +57477,10 @@ export interface components {
         MarginceChangeSummary: {
             /** Format: date-time */
             as_of: string;
-            /** @description Deals with at least one open change. */
+            /** @description Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history. */
             deals: number;
+            /** @description Deals among `deals` with at least one change Undo can still take back. Absent on older responses. */
+            undoable_deals?: number;
             /** @description Deals Margince closed as lost. */
             closed: number;
             /** @description Deals given a new close date. */
@@ -57438,8 +57512,10 @@ export interface components {
              * @description The deal's version as read, for the first undo of the bundle.
              */
             version: number;
-            /** @description The changes, newest first. */
+            /** @description The changes the list shows for this deal, newest first. */
             audit_log_ids: string[];
+            /** @description The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses. */
+            undoable_audit_log_ids?: string[];
             kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move" | "deal_open" | "deal_revive")[];
             /**
              * Format: int64
@@ -86199,9 +86275,11 @@ export interface operations {
                 /** @description Admin management view — include deactivated/suspended members. Honored only for an admin caller. */
                 include_inactive?: boolean;
                 /**
-                 * @description Also list invited seats — members who have not signed in yet. Each row's `status` says so.
-                 *     A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
-                 *     Naming the colleagues a record already points at is `GET /users/names`.
+                 * @deprecated
+                 * @description Deprecated compatibility option. Also lists invited seats that have not signed in yet.
+                 *     Assignment pickers use the default active roster and leave out rows whose `is_agent` is
+                 *     true. Resolve known colleague ids with `GET /users/names`. This option remains accepted
+                 *     throughout the API compatibility window.
                  */
                 include_invited?: boolean;
             };

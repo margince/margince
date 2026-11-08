@@ -19,8 +19,8 @@ import {
   parseSource,
   resolveRelative,
   sourceFileAt,
-} from "./source-tree";
-import { isDocsPage } from "./story-files";
+} from "./source-tree.ts";
+import { isDocsPage } from "./story-files.ts";
 
 // Tests, stories and the kits only they import ask for both halves.
 // They ship in no chunk, so a walk from one proves nothing about the bundle.

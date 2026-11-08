@@ -410,17 +410,6 @@ export const Learnings: Story = {
   ),
 };
 
-// NOBODY LOOKED, which is not the same as FOUND NOTHING. A rep whose lane was
-// unbound or whose provider was down has not been told their week held no
-// lesson — and the sentence says so instead of leaving the panel blank.
-export const LearningsNotRun: Story = {
-  render: frozen(
-    <InTheWeeksPanel>
-      <LearningsPanel learnings={{ state: "not_run", items: [] }} />
-    </InTheWeeksPanel>,
-  ),
-};
-
 // ── The week's workings ─────────────────────────────────────────────────────
 
 // The five figures that are NOT the outcomes: how the queue was worked, how

@@ -32,8 +32,12 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { usePendingMarginceChanges } from "../../lib/marginchanges";
+import {
+  shownUndoable,
+  usePendingMarginceChanges,
+} from "../../lib/marginchanges";
 import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
+import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
@@ -57,6 +61,17 @@ export function HandledForYouPanel() {
   // A day with nothing done draws no panel: the empty sentence sat beside the
   // queue's own on every quiet day. A failed read still shows, with its retry.
   if (state === "empty") return null;
+  // Undo sends only the changes this list shows that the server still allows.
+  const shown = new Set(
+    (receipts ?? [])
+      .filter(isReviewableReceipt)
+      .map(receiptAuditId)
+      .filter((id): id is string => id !== undefined),
+  );
+  const undoable = (pendingChanges?.bundles ?? []).flatMap((bundle) => {
+    const audits = shownUndoable(bundle, shown);
+    return audits.length > 0 ? [{ ...bundle, audit_log_ids: audits }] : [];
+  });
   return (
     <Panel
       className={AFTER_THE_DAY}
@@ -100,16 +115,12 @@ export function HandledForYouPanel() {
               would take the page down with a type error, and calling it a quiet
               day would report a clear receipt over an answer nobody could
               read. */}
-          {pendingChanges?.bundles && pendingChanges.bundles.length > 0 && (
+          {undoable.length > 0 && (
             <BundleUndo
-              bundles={pendingChanges.bundles}
-              label={plural(
-                "changes.undoDeals",
-                pendingChanges.bundles.length,
-                {
-                  count: formatNumber(pendingChanges.bundles.length, locale),
-                },
-              )}
+              bundles={undoable}
+              label={plural("changes.undoDeals", undoable.length, {
+                count: formatNumber(undoable.length, locale),
+              })}
             />
           )}
           {receipts && (

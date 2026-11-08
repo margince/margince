@@ -85,6 +85,9 @@ write to each other and share customers. `-big` adds files of a real size, up to
    go run ./tools/fakegmail -owners admin@demo.test,rep@demo.test,rep2@demo.test -messages 20000 -big
    ```
 
+   The consent page sends the browser back only to a loopback address. If the stack's public URL is
+   on another host, name its origin with `-callback-origin`, for example `https://app.test`.
+
 2. In `.env.local` of the worktree, set `MARGINCE_GMAIL_CLIENT_ID` and `MARGINCE_GMAIL_CLIENT_SECRET`
    to any value, and `MARGINCE_CAPTURE_HISTORY_CONCURRENCY` to the number of mailboxes.
 3. Start the stack with the `loadrig` build tag, and point it at the server in the shell. The

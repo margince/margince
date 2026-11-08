@@ -47,19 +47,3 @@
   overflow-wrap: anywhere;
   font-weight: var(--fontWeightMedium);
 }
-
-.worklist-why-if {
-  margin: 0;
-  padding-block-start: var(--space-3);
-  border-block-start: 1px solid var(--borderSubtle);
-  color: var(--warningText);
-}
-
-.worklist-why-if {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.worklist-why-if > .t-caption {
-  color: var(--textSecondary);
-}

@@ -216,6 +216,14 @@ func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 	if !receipt.SourceActivityID.IsZero() {
 		out.SourceRecord = subjectOf("activity", receipt.SourceActivityID)
 	}
+	if receipt.Source != "" {
+		source := crmcontracts.ReceiptSource(receipt.Source)
+		out.Source = &source
+	}
+	if !receipt.AuditLogID.IsZero() {
+		auditID := openapi_types.UUID(receipt.AuditLogID)
+		out.AuditLogId = &auditID
+	}
 	// The way back, only where the act carries one. An approval the system
 	// decided is revisitable through the record it named; a correction nobody
 	// was asked about has this row as its only telling, so the undo travels on

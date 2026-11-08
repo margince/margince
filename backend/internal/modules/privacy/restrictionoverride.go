@@ -81,6 +81,9 @@ func (e *Eraser) ReleaseRestriction(ctx context.Context, activityID ids.UUID, re
 		if err != nil {
 			return err
 		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+			return err
+		}
 		return storekit.EmitEvent(ctx, tx, auditID, activityID, crmcontracts.PublicEventRetentionRestricted{
 			Action:     crmcontracts.Release,
 			ActivityId: openapi_types.UUID(activityID),

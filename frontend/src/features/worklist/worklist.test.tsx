@@ -400,7 +400,7 @@ describe("what the ranked queue tells a reader", () => {
     expect(container.textContent).not.toContain("worklist.because");
   });
 
-  it("shows concrete reasons directly without ranking narration", async () => {
+  it("shows the first concrete reason directly without ranking narration", async () => {
     stub(
       day({
         queue: [
@@ -427,15 +427,9 @@ describe("what the ranked queue tells a reader", () => {
       container.querySelector("details.worklist-row-because-fold"),
     ).toBeNull();
     const annotation = container.querySelector(".worklist-row-because");
-    for (const kind of [
-      "buyer_wrote_last",
-      "stale",
-      "no_reply_history",
-      "asks_nothing",
-      "expected_revenue",
-    ] as const) {
-      expect(annotation?.textContent).toContain(en[`worklist.because.${kind}`]);
-    }
+    expect(annotation?.textContent).toBe(
+      en["worklist.because.buyer_wrote_last"],
+    );
   });
 
   // Three reasons still fit on one line at 390px, so folding them would cost a

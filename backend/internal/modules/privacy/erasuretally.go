@@ -67,10 +67,8 @@ var (
 	verbOf         = map[string]string{"UPDATE": "updated", "DELETE": "deleted", "INSERT": "inserted"}
 )
 
-// bookkeeping are the tables a write lands in to record the erasure rather
-// than to erase anything. The report projection fence is one generation
-// counter that marks report caches stale. Bumping it erases nothing, and
-// counting it would make every erasure look as if it found something.
+// bookkeeping excludes infrastructure from the domain-record account. Audit
+// payload removal keeps the ledger records, and the projection fence only expires caches.
 var bookkeeping = map[string]bool{
 	storekit.TableAudit: true, "event_outbox": true, "report_projection_fence": true,
 }

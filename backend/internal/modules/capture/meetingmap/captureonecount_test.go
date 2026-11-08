@@ -73,7 +73,6 @@ func TestEveryAttemptedEventEndsOnOneOutcome(t *testing.T) {
 		"dropped_no_event_id":                {run: capture(answeringSink{}, Event{Attendees: outside})},
 		"dropped_no_party_besides_the_owner": {run: capture(answeringSink{}, Event{ID: "e3", Attendees: outside[:1]})},
 		"cancelled":                          {run: capture(answeringSink{}, cancelled)},
-		"declined_by_the_calendar_owner":     {run: capture(answeringSink{}, Event{ID: "e4", OwnerDeclined: true, Attendees: outside})},
 		"cancel_unsupported":                 {run: capture(upsertOnly{answeringSink{}}, cancelled)},
 		"beyond_horizon":                     {run: move(answeringSink{}, live)},
 		"move_unsupported":                   {run: move(upsertOnly{answeringSink{}}, live)},

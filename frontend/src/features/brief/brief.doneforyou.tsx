@@ -3,7 +3,7 @@
 
 // What Margince finished for the reader, as one section on Home. The deals it
 // changed come first, each change with what moved, when and why, and the verbs
-// that review or take it back. Other finished work follows in `completed`.
+// that review or take it back. Other updates follow in `completed`.
 //
 // The first five deals show here and every one shows in the review drawer.
 // Both draw the same rows, so a sixth deal loses nothing a third one had.
@@ -12,8 +12,6 @@ import { type ReactNode, useId, useState } from "react";
 import { rowsOf } from "../../api/rows";
 import { EntityRef } from "../../components/entityref";
 import { BundleUndo } from "../../components/marginchanges";
-import { ReceiptDetail } from "../../components/receiptdetail";
-import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
 import { AppLink } from "../../design-system/applink";
 import { Button, Modal } from "../../design-system/atoms";
@@ -26,25 +24,21 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { sameCalendarDay } from "../../format/calendarday";
-import {
-  formatDateTime,
-  formatDayMonth,
-  formatNumber,
-  formatTimeOfDay,
-} from "../../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { ENTITY } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
 import { useMagic } from "../../lib/magic.queries";
 import {
   type MarginceChangeBundle,
   type MarginceChangeSummary,
+  shownUndoable,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
-import { receiptHeadline, receiptReason } from "../../lib/receiptcopy";
-import { isReviewableReceipt } from "../../lib/receiptreview";
-import { useViewerZone } from "../../lib/viewerzone";
+import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
+import { routeHash } from "../../lib/router";
 import { listReadState } from "../../lib/worklist.listread";
+import { ChangeRow } from "./brief.doneforyou.change";
 
 /** How many changed deals Home shows before "Review all". */
 export const DONE_PREVIEW_DEALS = 5;
@@ -54,31 +48,109 @@ export type DealChanges = Readonly<{
   dealId: string;
   name: string | undefined;
   receipts: readonly Receipt[];
+  /** Changes the server lists on this deal that no loaded page holds yet. */
+  unloaded: number;
 }>;
 
 /**
- * The receipts grouped by deal, in the order their newest change arrived. A
- * receipt the reader settled on this visit stays with its answer, so a row
+ * The changed deals, in the server's order when its summary is read. That
+ * summary decides which deals and changes wait; the loaded receipts only
+ * dress them. Without it, the receipts read so far are grouped as they come.
+ * A receipt the reader settled on this visit stays with its answer, so a row
  * never leaves under the pointer that pressed it.
  */
 export function dealChanges(
   receipts: readonly Receipt[] | undefined,
   settled: ReadonlySet<string>,
+  bundles?: readonly MarginceChangeBundle[],
 ): DealChanges[] {
-  const groups = new Map<string, Receipt[]>();
+  const byDeal = new Map<string, Receipt[]>();
   for (const receipt of receipts ?? []) {
     const subject = receipt.subject;
     if (subject?.type !== "deal") continue;
-    if (!isReviewableReceipt(receipt) && !settled.has(receipt.id)) continue;
-    const group = groups.get(subject.id) ?? [];
+    const group = byDeal.get(subject.id) ?? [];
     group.push(receipt);
-    groups.set(subject.id, group);
+    byDeal.set(subject.id, group);
   }
-  return [...groups].map(([dealId, group]) => ({
-    dealId,
-    name: group[0]?.subject?.label ?? undefined,
-    receipts: group,
-  }));
+  if (!bundles) {
+    return [...byDeal]
+      .map(([dealId, group]) => ({
+        dealId,
+        name: group[0]?.subject?.label ?? undefined,
+        receipts: group.filter(
+          (receipt) => isReviewableReceipt(receipt) || settled.has(receipt.id),
+        ),
+        unloaded: 0,
+      }))
+      .filter((group) => group.receipts.length > 0);
+  }
+  const listedDeals = new Set(bundles.map((bundle) => bundle.deal_id));
+  const groups: DealChanges[] = bundles.map((bundle) => {
+    const listed = new Set(bundle.audit_log_ids);
+    const rows = (byDeal.get(bundle.deal_id) ?? []).filter((receipt) => {
+      const audit = receiptAuditId(receipt);
+      return (
+        (audit !== undefined && listed.has(audit)) || settled.has(receipt.id)
+      );
+    });
+    const loaded = rows.filter((receipt) => {
+      const audit = receiptAuditId(receipt);
+      return audit !== undefined && listed.has(audit);
+    }).length;
+    return {
+      dealId: bundle.deal_id,
+      name: bundle.deal_name,
+      receipts: rows,
+      unloaded: Math.max(0, listed.size - loaded),
+    };
+  });
+  for (const [dealId, group] of byDeal) {
+    if (listedDeals.has(dealId)) continue;
+    const kept = group.filter((receipt) => settled.has(receipt.id));
+    if (kept.length > 0) {
+      groups.push({
+        dealId,
+        name: kept[0]?.subject?.label ?? undefined,
+        receipts: kept,
+        unloaded: 0,
+      });
+    }
+  }
+  return groups;
+}
+
+/**
+ * The receipts the changed-deals list draws, by id, so the done lane below it
+ * leaves out those and no others.
+ */
+export function shownReceiptIds(
+  receipts: readonly Receipt[] | undefined,
+  bundles: readonly MarginceChangeBundle[] | undefined,
+): string[] {
+  return dealChanges(receipts, new Set(), bundles).flatMap((group) =>
+    group.receipts.map((receipt) => receipt.id),
+  );
+}
+
+/**
+ * The changes an Undo of this deal may send: those the server still allows,
+ * and only those this list shows the reader. An older server names no
+ * undoable subset, so the shown changes that still read as reviewable stand in.
+ */
+export function undoableShown(
+  group: DealChanges,
+  bundle: MarginceChangeBundle | undefined,
+): string[] {
+  if (!bundle) return [];
+  return shownUndoable(
+    bundle,
+    new Set(
+      group.receipts
+        .filter(isReviewableReceipt)
+        .map(receiptAuditId)
+        .filter((id): id is string => id !== undefined),
+    ),
+  );
 }
 
 export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
@@ -87,16 +159,16 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   const { locale } = useLocale();
   const titleId = useId();
   const handled = useHandledForYou();
-  const pending = usePendingMarginceChanges().data;
+  const summary = usePendingMarginceChanges();
+  const pending = summary.data;
   const magic = useMagic();
   const [settled, setSettled] = useState<ReadonlySet<string>>(new Set());
   const settle = (id: string) => setSettled((last) => new Set([...last, id]));
   const receipts = handled.data?.receipts;
-  const groups = dealChanges(receipts, settled);
-  // A response with no list is unreadable, not empty.
-  const state = listReadState(handled, receipts ? groups : undefined);
-  // The server counts every waiting deal; the list holds those read so far.
-  const waiting = Math.max(pending?.deals ?? 0, groups.length);
+  const groups = dealChanges(receipts, settled, pending?.bundles);
+  // The server's summary decides what waits, so its own read is the panel's
+  // state: a failed summary is a failed panel, never a quieter list.
+  const state = listReadState(summary, pending ? groups : undefined);
   const doneLines = rowsOf(magic.data?.done).length > 0;
   if (
     state === "loading" ||
@@ -104,6 +176,7 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   ) {
     return null;
   }
+  const waiting = pending?.deals;
   return (
     <section className="brief-section" aria-labelledby={titleId}>
       <Eyebrow as="h2" id={titleId} className="brief-section-label">
@@ -112,9 +185,13 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
       {state !== "empty" && (
         <>
           <PanelGroupHead
-            title={plural("brief.done.waiting", waiting, {
-              count: formatNumber(waiting, locale),
-            })}
+            title={
+              waiting === undefined
+                ? t("brief.done.dealsLabel")
+                : plural("brief.done.waiting", waiting, {
+                    count: formatNumber(waiting, locale),
+                  })
+            }
             level="h3"
           />
           <PanelBody>
@@ -122,7 +199,12 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
               state={state}
               emptyLabel=""
               loadingLabel={t("worklist.handled.loading")}
-              detail={{ onRetry: () => void handled.refetch() }}
+              detail={{
+                onRetry: () => {
+                  void summary.refetch();
+                  void handled.refetch();
+                },
+              }}
             >
               <DealChangeList
                 groups={groups.slice(0, DONE_PREVIEW_DEALS)}
@@ -132,7 +214,7 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
               />
               <div className="brief-done-foot">
                 <ReviewAll
-                  count={waiting}
+                  count={waiting ?? groups.length}
                   groups={groups}
                   pending={pending}
                   asOf={handled.data?.as_of}
@@ -166,18 +248,26 @@ function ReviewAll({
   handled: ReturnType<typeof useHandledForYou>;
   onSettled: (id: string) => void;
 }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const titleId = useId();
   const triggerId = useId();
   const [open, setOpen] = useState(false);
-  // The deals on screen when the drawer opened. A deal that arrives later is
-  // drawn but never taken back by the Undo below unless it is opened again.
+  // The deals and the Undo frozen together when the drawer opened, so the
+  // list drawn is the list the Undo sends. New changes wait for the reader's
+  // own refresh.
   const [chosen, setChosen] = useState<readonly MarginceChangeBundle[]>([]);
-  const shown = new Set(groups.map((group) => group.dealId));
-  const bundles = (pending?.bundles ?? []).filter((bundle) =>
-    shown.has(bundle.deal_id),
-  );
+  const [shown, setShown] = useState<readonly DealChanges[]>([]);
+  // Each deal's Undo names only the changes this list shows and the server
+  // still allows, frozen when the drawer opens.
+  const bundles = groups.flatMap((group) => {
+    const bundle = pending?.bundles.find((b) => b.deal_id === group.dealId);
+    const audits = undoableShown(group, bundle);
+    return bundle && audits.length > 0
+      ? [{ ...bundle, audit_log_ids: audits }]
+      : [];
+  });
   if (count === 0) return null;
   const n = formatNumber(count, locale);
   return (
@@ -187,6 +277,7 @@ function ReviewAll({
         variant="link"
         onClick={() => {
           setChosen(bundles);
+          setShown(groups);
           setOpen(true);
         }}
       >
@@ -206,8 +297,19 @@ function ReviewAll({
             </Heading>
           </DrawerHead>
           <DrawerBody>
+            {changedSince(shown, groups) && (
+              <Button
+                variant="link"
+                onClick={() => {
+                  setChosen(bundles);
+                  setShown(groups);
+                }}
+              >
+                {t("brief.done.showNew")}
+              </Button>
+            )}
             <DealChangeList
-              groups={groups}
+              groups={shown}
               pending={pending}
               asOf={asOf}
               onSettled={onSettled}
@@ -242,6 +344,8 @@ function DealChangeList({
   onSettled: (id: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   return (
     <ul className="brief-done-deals" aria-label={t("brief.done.dealsLabel")}>
       {groups.map((group) => (
@@ -249,6 +353,15 @@ function DealChangeList({
           <p className="brief-done-name">
             <EntityRef kind="deal" id={group.dealId} name={group.name} />
           </p>
+          {group.unloaded > 0 && (
+            <p className="t-caption">
+              <AppLink href={routeHash(ENTITY.deal.route(group.dealId))}>
+                {plural("brief.done.viewChanges", group.unloaded, {
+                  count: formatNumber(group.unloaded, locale),
+                })}
+              </AppLink>
+            </p>
+          )}
           <ul className="brief-done-changes">
             {group.receipts.map((receipt) => (
               <ChangeRow
@@ -285,12 +398,7 @@ function DealUndo({
 }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  const listed = new Set(
-    group.receipts
-      .filter(isReviewableReceipt)
-      .map((receipt) => receipt.undo?.audit_log_id ?? receipt.id),
-  );
-  const audits = bundle?.audit_log_ids.filter((id) => listed.has(id)) ?? [];
+  const audits = undoableShown(group, bundle);
   if (!bundle || audits.length < 2) return null;
   return (
     <div className="brief-done-controls">
@@ -307,65 +415,15 @@ function DealUndo({
   );
 }
 
-/** One change: what moved and when, why, the evidence, and its verbs. */
-function ChangeRow({
-  receipt,
-  asOf,
-  onSettled,
-}: Readonly<{
-  receipt: Receipt;
-  asOf: string | undefined;
-  onSettled: () => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  const reason = receiptReason(receipt, t, locale);
-  return (
-    <li className="brief-done-change">
-      <p className="brief-done-what">
-        {receiptHeadline(receipt, t, locale, zone)}
-      </p>
-      <time
-        className="t-caption brief-done-when"
-        dateTime={receipt.occurred_at}
-        title={formatDateTime(receipt.occurred_at, locale, zone)}
-      >
-        {changeWhen(receipt.occurred_at, asOf, locale, zone)}
-      </time>
-      {/* An older server sends no headline and keeps the reason in its
-          summary, so only a newer one can say that none was recorded. */}
-      {(reason || receipt.headline) && (
-        <p className="brief-done-reason">
-          {reason ?? t("brief.done.noReason")}
-        </p>
-      )}
-      {receipt.customer_quote && (
-        <figure className="brief-done-quote">
-          <figcaption className="t-caption">
-            {t("brief.done.customerWrote")}
-          </figcaption>
-          <blockquote>{receipt.customer_quote}</blockquote>
-        </figure>
-      )}
-      <ReceiptDetail receipt={receipt} />
-      <div className="brief-done-controls">
-        <ReceiptReview receipt={receipt} onDone={onSettled} />
-      </div>
-    </li>
-  );
-}
-
-// The hour for a change from today, the day for an older one: the list spans
-// as many days as changes have waited.
-function changeWhen(
-  iso: string,
-  asOf: string | undefined,
-  locale: Locale,
-  zone: string,
-): string {
-  return asOf !== undefined &&
-    sameCalendarDay(new Date(iso), new Date(asOf), zone)
-    ? formatTimeOfDay(iso, locale, zone)
-    : formatDayMonth(iso, locale, zone);
+// Whether the live list holds changes the frozen one does not, or lost some.
+function changedSince(
+  shown: readonly DealChanges[],
+  live: readonly DealChanges[],
+): boolean {
+  const ids = (groups: readonly DealChanges[]) =>
+    groups
+      .flatMap((group) => group.receipts.map((receipt) => receipt.id))
+      .sort()
+      .join(",");
+  return ids(shown) !== ids(live);
 }

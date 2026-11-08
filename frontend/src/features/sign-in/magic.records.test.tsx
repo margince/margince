@@ -115,7 +115,7 @@ describe("a done line standing for many records", () => {
     renderMagic();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "GEM and 1 more" }),
+      await screen.findByRole("button", { name: "View 2 changes" }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -208,7 +208,7 @@ function reviewedRecords() {
 async function openTheLine() {
   renderMagic();
   await userEvent.click(
-    await screen.findByRole("button", { name: "GEM and 1 more" }),
+    await screen.findByRole("button", { name: "View 2 changes" }),
   );
   return screen.findByRole("dialog");
 }
@@ -219,7 +219,7 @@ describe("a done line's opener", () => {
     renderMagic();
 
     const opener = await screen.findByRole("button", {
-      name: "GEM and 1 more",
+      name: "View 2 changes",
     });
 
     expect(opener.classList).toContain("btn-valuelabel");

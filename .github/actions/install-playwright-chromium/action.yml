@@ -30,8 +30,10 @@ description: >-
 # The browser download is keyed on the resolved Playwright version. The apt half
 # caches the .deb files apt downloads (about 21 MB, mostly fonts): the installed
 # libraries live outside any cacheable path, but apt reuses a matching .deb it
-# finds in its archive directory and then needs no package download. The retry
-# and the clearing of a killed install remain for the run that misses.
+# finds in its archive directory and then needs no package download. On an
+# exact hit dpkg installs those files directly: `install-deps` would still run
+# `apt-get update` against the mirror first, and that call is what hangs. The
+# retry and the clearing of a killed install remain for the run that misses.
 # Every path ends in a step that fails the action or succeeds.
 
 inputs:
@@ -63,6 +65,7 @@ runs:
     # The runner image version is in the key because the mirror's package versions
     # move with it; a stale entry would never be refreshed after an exact hit.
     - name: Restore the downloaded system packages
+      id: apt-cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/playwright-apt-archives
@@ -81,8 +84,26 @@ runs:
         path: ~/.cache/ms-playwright
         key: playwright-chromium-${{ runner.os }}-${{ steps.version.outputs.v }}
 
+    # The entry holds exactly what install-deps downloaded on this runner image
+    # for this Playwright version, so it installs with no mirror at all. An empty
+    # entry means the image already had every library. Any dpkg failure falls
+    # through to install-deps below.
+    - name: Install the cached system libraries without the mirror
+      id: offline
+      if: steps.apt-cache.outputs.cache-hit == 'true'
+      continue-on-error: true
+      shell: bash
+      run: |
+        shopt -s nullglob
+        debs=("$HOME"/playwright-apt-archives/*.deb)
+        echo "installing ${#debs[@]} cached package(s)"
+        if [ "${#debs[@]}" -gt 0 ]; then
+          sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg -i "${debs[@]}"
+        fi
+
     - name: Install the system libraries Chromium needs
       id: deps
+      if: steps.offline.outcome != 'success'
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash

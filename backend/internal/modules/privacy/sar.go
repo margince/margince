@@ -30,6 +30,15 @@ import (
 // SARPackage is the assembled export. Sections hold raw row maps —
 // the package is a data handover, not an API shape.
 type SARPackage struct {
+	AuditHistory           []map[string]any `json:"audit_history"`
+	RetainedEvents         []map[string]any `json:"retained_events"`
+	RoomParticipants       []map[string]any `json:"room_participants"`
+	RoomComments           []map[string]any `json:"room_comments"`
+	Introductions          []map[string]any `json:"introductions"`
+	DuplicateEvidence      []map[string]any `json:"duplicate_evidence"`
+	PlannedCommitments     []map[string]any `json:"planned_commitments"`
+	TestMailboxMessages    []map[string]any `json:"test_mailbox_messages"`
+	ThreadVerdicts         []map[string]any `json:"thread_verdicts"`
 	ReportingContributions []map[string]any `json:"reporting_contributions"`
 	// ReportingQuestionAnswers are the kept question answer rows a record
 	// about the subject was counted in.
@@ -267,7 +276,10 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
+		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored)
+		if err != nil {
+			return err
+		}
 
 		subject, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 		if err != nil {
@@ -420,15 +432,17 @@ func subjectReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]st
 		return nil, nil, nil, fmt.Errorf("reading the merged-away addresses for the export: %w", err)
 	}
 	emails = append(emails, priorEmails...)
-	// LEAD TWINS OF EVERY IDENTITY TOO. A lead promoted into a record that was
-	// later merged away points at the PREDECESSOR, so following only the
-	// survivor's promotions loses the lead-keyed proof A6 deliberately leaves
-	// on the lead.
+	// Lead twins of every identity too. A lead promoted into a record later
+	// merged away points at the predecessor. Following only the survivor's
+	// promotions loses the lead-keyed proof A6 leaves on the lead.
+	// A lead never promoted but holding one of the subject's addresses is
+	// theirs too. The Leads section exports it, so its history comes with it.
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM lead
 		 WHERE promoted_contact_id = $1
-		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`,
-		contactID.UUID)
+		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
+		    OR email = ANY($2::text[])`,
+		contactID.UUID, loweredAddresses(emails))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}

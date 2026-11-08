@@ -241,10 +241,11 @@
 }
 /* A reading in the rail is one line: the name, its basis quiet at the end,
    the figure, and an arrow into its lane. Context, so it stays smaller than
-   the cards it is read beside. */
+   the cards it is read beside. The arrow's track is held on every row, with or
+   without an arrow, so all the figures end on one edge. */
 .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
   grid-template-areas: "label basis figure foot";
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto var(--controlIcon);
   align-items: center;
   column-gap: var(--space-3);
   padding-block: var(--space-2);
@@ -273,6 +274,24 @@
   .stat-card-narrow-row
   > .stat-card-foot {
   justify-self: end;
+  /* One text line high, so a row with an arrow is no taller than one without;
+     the arrow's target overhangs into the row's padding. */
+  padding-top: 0;
+  block-size: 1lh;
+  align-items: center;
+}
+/* Under a thumb the door is 44px tall, so every row grows to hold it and taps
+   never land on the row next to it. */
+@media (pointer: coarse) {
+  .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
+    min-block-size: calc(max(var(--controlHeight), 44px) + 2 * var(--space-2));
+  }
+  .brief-rail
+    .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-foot {
+    block-size: auto;
+  }
 }
 /* The arrow alone opens the lane here; its word stays for a screen reader. */
 .brief-rail .stat-card-narrow-row .stat-card-open-word {

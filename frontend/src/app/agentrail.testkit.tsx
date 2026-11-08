@@ -9,7 +9,6 @@ import type { ReactNode, RefObject } from "react";
 import { expect, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import type { Route } from "../lib/router";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
 
@@ -193,7 +192,6 @@ export function stubAgentRailApi(routes: FetchRoutes = {}) {
 }
 
 export function render(
-  route: Route,
   options: Readonly<{
     client?: QueryClient;
     children?: ReactNode;
@@ -209,13 +207,11 @@ export function render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {options.children}
-        <AgentRail route={route} bar={options.bar} />
+        <AgentRail bar={options.bar} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
-
-export const ROUTE: Route = { screen: "deals" };
 
 export const block = (container: HTMLElement) => {
   const el = container.querySelector(".arblock");

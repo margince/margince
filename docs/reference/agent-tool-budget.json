@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39550,
+    "tokens": 39638,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 823
+    "mean_tool_tokens": 825
   },
   "agents": [
     {
@@ -89,23 +89,23 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2674
+      "tokens": 2687
     },
     {
       "name": "read_details",
       "tokens": 2167
     },
     {
+      "name": "change_activities",
+      "tokens": 1957
+    },
+    {
       "name": "find_records",
       "tokens": 1949
     },
     {
-      "name": "change_activities",
-      "tokens": 1935
-    },
-    {
       "name": "change_state",
-      "tokens": 1888
+      "tokens": 1930
     },
     {
       "name": "change_settings",
@@ -208,16 +208,16 @@
       "tokens": 429
     },
     {
+      "name": "schedule_meeting",
+      "tokens": 420
+    },
+    {
       "name": "annotate_brief",
       "tokens": 417
     },
     {
       "name": "read_context",
       "tokens": 413
-    },
-    {
-      "name": "schedule_meeting",
-      "tokens": 409
     },
     {
       "name": "list_approvals",

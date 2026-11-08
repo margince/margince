@@ -131,16 +131,35 @@ function pending(receipts: readonly Receipt[]) {
   };
 }
 
-function stub(receipts: readonly Receipt[]) {
+// Accepting a change answers as the server does: the receipt reads as
+// reviewed, and the deal's pending list no longer names it.
+function stub(initial: readonly Receipt[]) {
+  const accepted = new Set<string>();
+  const current = () =>
+    initial.map((r) =>
+      accepted.has(r.id) && r.review
+        ? { ...r, review: { ...r.review, accepted: true } }
+        : r,
+    );
+  const accepts = Object.fromEntries(
+    initial.map((r) => [
+      `POST /deals/${r.subject?.id}/applied-changes/${r.id}/accept`,
+      () => {
+        accepted.add(r.id);
+        return new Response(null, { status: 204 });
+      },
+    ]),
+  );
   stubWithSession(
     {
+      ...accepts,
       "GET /worklist/handled": () =>
         jsonResponse({
           as_of: "2026-09-13T08:00:00Z",
-          receipts,
+          receipts: current(),
           truncated: false,
         }),
-      "GET /deal-corrections/pending": () => jsonResponse(pending(receipts)),
+      "GET /deal-corrections/pending": () => jsonResponse(pending(current())),
       "GET /magic": () =>
         jsonResponse({
           since: "2026-09-12T18:00:00Z",
@@ -156,7 +175,11 @@ function stub(receipts: readonly Receipt[]) {
   );
 }
 
-/** Three deals: a quote, a long name, and a deal with two changes, one reviewed. */
+/**
+ * Three deals: a quote, a long name, and a deal with two changes, one already
+ * reviewed. The server no longer lists the reviewed one, so it does not wait
+ * here. Marking the other reviewed keeps its row, now saying so.
+ */
 export const ChangedDeals: Story = {
   render: () => {
     stub(RECEIPTS);
@@ -175,7 +198,14 @@ export const ChangedDeals: Story = {
         "The buyer confirmed the project was cancelled after the budget was withdrawn.",
       ),
     ).toBeTruthy();
-    await expect(await canvas.findByText("Reviewed")).toBeTruthy();
+    const row = (
+      await canvas.findByText("The latest quote names a higher total.")
+    ).closest("li");
+    if (!(row instanceof HTMLElement)) throw new Error("no row for the amount");
+    await userEvent.click(
+      await within(row).findByRole("button", { name: "Mark reviewed" }),
+    );
+    await expect(await within(row).findByText("Reviewed")).toBeVisible();
   },
 };
 

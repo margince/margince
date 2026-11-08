@@ -134,12 +134,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	rdb, err := openBus(ctx, cfg)
+	rdb, coordination, err := openBus(ctx, cfg)
 	if err != nil {
 		return err
 	}
-	// Same ordering obligation as pool.Close above: the lanes read this client.
-	defer closeBus(rdb, logger)
+	// Same ordering obligation as pool.Close above: the lanes read these clients.
+	defer closeBus(logger, rdb, coordination)
 
 	// Before the lanes and the runner: a listener started after them reports
 	// nothing during exactly the window a slow boot needs explaining. /readyz
