@@ -130,7 +130,13 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if check != nil {
 			var locked ids.UUID
-			if err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE id = @id FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&locked); err != nil {
+			err := tx.QueryRow(ctx, `SELECT id FROM activity
+ WHERE id = @id AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&locked)
+			if errors.Is(err, pgx.ErrNoRows) {
+				kept = true
+				return nil
+			}
+			if err != nil {
 				return err
 			}
 			allowed, err := check(ctx, tx, id)
