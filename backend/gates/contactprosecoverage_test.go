@@ -53,7 +53,7 @@ var contactProseWithoutSubjectData = gatekit.Waive(map[string]string{
 	"provider_employment_resolution": "the provider resolver's own bookkeeping: episode_key is a derived key and state its machine's position",
 	"signal":                         "the warm-room signal substrate. Its evidence carries SNIPPETS of activity bodies, which is subject prose — and it is retained for the reason the timeline's own bodies are: what was said is the seller's record of a conversation, erased only where the body it was copied from is. A snippet outliving its source would be the defect; the timeline redaction is what must reach it, so this is a declaration about WHERE the obligation sits, not that none exists",
 	"user_record_view":               "a reader's last-seen mark on a record: entity_type is the discriminator naming a table, and the rest are ids and a moment. It holds no text about the subject, and the contact key cascades, so a deleted contact takes the mark with it",
-	"contact_brief":                  "erased already: purgeSubjectBriefCache deletes every reader's cached brief on both acts (erasurebriefcache.go). Unregistered for the same reason as intro_request — whether a regenerable cache belongs in an Art. 15 package is a product question, and the cache is destroyed either way",
+	"contact_brief":                  "erased already: purgeSubjectBriefCache deletes every reader's cached brief on both acts (erasurebriefcache.go). Unregistered because whether a regenerable cache belongs in an Art. 15 package is a product question, and the cache is destroyed either way",
 })
 
 var (
