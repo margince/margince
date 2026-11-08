@@ -31,7 +31,7 @@ const (
 
 func inputFixture() Input {
 	return Input{
-		Name: "Anna Weber", Title: "Head of Operations", Employer: "Acme Logistik GmbH",
+		ID: briefContactID, Name: "Anna Weber", Title: "Head of Operations", Employer: "Acme Logistik GmbH",
 		BuyingRole: "economic_buyer", Strength: 64,
 		LastInbound:  "2026-08-29T08:10:00Z",
 		LastOutbound: "2026-08-20T16:00:00Z",
@@ -59,10 +59,12 @@ func inputFixture() Input {
 	}
 }
 
+// scriptedLane answers as a model shown inputFixture's request: each record id
+// in reply spelled as the ref that request showed.
 type scriptedLane struct{ reply string }
 
 func (l *scriptedLane) Complete(context.Context, model.Request) (model.Response, error) {
-	return model.Response{Text: l.reply}, nil
+	return model.Response{Text: cited(inputFixture(), l.reply)}, nil
 }
 
 type nonsenseLane struct{}
@@ -75,7 +77,7 @@ func (nonsenseLane) Complete(context.Context, model.Request) (model.Response, er
 // about a contact with nothing to check it against.
 func TestParseBriefDropsSentencesCitingRecordsTheInputNeverHeld(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief(`{"sentences":[
+	kept, err := parseBrief(`{"sentences":[
 		{"text":"They are waiting on the sub-processor list.","evidence":[
 			{"entity_type":"activity","entity_id":"`+objectionID+`"}]},
 		{"text":"They spoke to your CFO last week.","evidence":[
@@ -96,7 +98,7 @@ func TestParseBriefDropsSentencesCitingRecordsTheInputNeverHeld(t *testing.T) {
 // passes an id-only check and then routes the reader to the wrong screen.
 func TestParseBriefDropsARealIDCitedAsTheWrongKind(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief(`{"sentences":[
+	kept, err := parseBrief(`{"sentences":[
 		{"text":"They own the renewal.","evidence":[
 			{"entity_type":"contact","entity_id":"`+briefDealID+`"}]}
 	]}`, briefContactID, inputFixture())
@@ -113,7 +115,7 @@ func TestParseBriefDropsARealIDCitedAsTheWrongKind(t *testing.T) {
 // click into a record their scope may hide.
 func TestParseBriefRefusesAContactCitationThatIsNotThisContact(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief(`{"sentences":[
+	kept, err := parseBrief(`{"sentences":[
 		{"text":"They are the economic buyer.","evidence":[
 			{"entity_type":"contact","entity_id":"`+strangerID+`"}]}
 	]}`, briefContactID, inputFixture())
@@ -130,7 +132,7 @@ func TestParseBriefRefusesAContactCitationThatIsNotThisContact(t *testing.T) {
 // same way rather than passed through to a card that would render it.
 func TestAnUnknownNatureIsReadAsAFact(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief(`{"sentences":[
+	kept, err := parseBrief(`{"sentences":[
 		{"text":"They are waiting on us.","nature":"prophecy","evidence":[
 			{"entity_type":"contact","entity_id":"`+briefContactID+`"}]}
 	]}`, briefContactID, inputFixture())
@@ -146,7 +148,7 @@ func TestAnUnknownNatureIsReadAsAFact(t *testing.T) {
 // brief offering three moves has handed back the triage it existed to do.
 func TestOnlyTheFirstRecommendationSurvives(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief(`{"sentences":[
+	kept, err := parseBrief(`{"sentences":[
 		{"text":"Send the sub-processor list today.","nature":"recommendation","evidence":[
 			{"entity_type":"activity","entity_id":"`+objectionID+`"}]},
 		{"text":"Also call their legal team.","nature":"recommendation","evidence":[
@@ -168,7 +170,7 @@ func TestOnlyTheFirstRecommendationSurvives(t *testing.T) {
 // reader would lose the advice and be told nothing about why.
 func TestTheAdviceBudgetIsSpentOnlyByAdviceTheReaderSees(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief(`{"sentences":[
+	kept, err := parseBrief(`{"sentences":[
 		{"text":"Call the CFO.","nature":"recommendation","evidence":[
 			{"entity_type":"activity","entity_id":"`+strangerID+`"}]},
 		{"text":"Send the sub-processor list today.","nature":"recommendation","evidence":[
@@ -187,7 +189,7 @@ func TestTheAdviceBudgetIsSpentOnlyByAdviceTheReaderSees(t *testing.T) {
 // providers, invisibly — the reader would only see a plainer brief.
 func TestParseBriefReadsAFencedReply(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief("```json\n"+`{"sentences":[
+	kept, err := parseBrief("```json\n"+`{"sentences":[
 		{"text":"They are waiting on the list.","evidence":[
 			{"entity_type":"activity","entity_id":"`+objectionID+`"}]}
 	]}`+"\n```", briefContactID, inputFixture())
@@ -268,7 +270,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move("I'll send the sub-processor list once legal completes its review."))
 	}
 	moves = append(moves, move("Send them the sub-processor list once legal finishes its review."))
-	kept, err := ParseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, briefContactID, inputFixture())
+	kept, err := parseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, briefContactID, inputFixture())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}

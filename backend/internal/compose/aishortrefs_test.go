@@ -40,8 +40,6 @@ var stillShowsRecordIDs = map[string]string{
 	"request_settlement/request_settle":      "request ids; integration replies are scripted by id",
 	"stage_evidence_extract/criteria":        "span and criterion ids",
 	"summarize/company_dossier":              "profile field ids",
-	"summarize/contact_brief":                "record ids in the contact JSON",
-	"summarize/deal_room_brief":              "record ids in the deal room JSON",
 	"summarize/meeting_brief":                "activity ids in the meeting JSON",
 	"summarize/meeting_plan":                 "deal and contact ids in the plan JSON",
 	"tag_suggest/interest":                   "the source record id on each span",

@@ -115,7 +115,7 @@ func TestTheModelReplyKeepsOnlyGroundedSentences(t *testing.T) {
 		{"text":"Answer the cap first.","nature":"recommendation","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]},
 		{"text":"Then issue a link.","nature":"recommendation","evidence":[{"entity_type":"participant","entity_id":"` + tomasID + `"}]}
 	]}` + "\n```"
-	got, err := ParseBrief(reply, room())
+	got, err := parseBrief(reply, room())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestWriteFallsBackToTheFloorAndSaysSo(t *testing.T) {
 		}
 	}
 	reply := `{"sentences":[{"text":"Tomas is blocked on the liability cap.","nature":"fact","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]}]}`
-	if _, by := Write(context.Background(), stubLane{reply: reply}, room(), "en"); by != crmcontracts.WrittenByModel {
+	if _, by := Write(context.Background(), stubLane{reply: cited(room(), reply)}, room(), "en"); by != crmcontracts.WrittenByModel {
 		t.Errorf("a grounded reply is written by %s, want model", by)
 	}
 }
@@ -250,7 +250,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move("I'll send Tomas the revised liability cap once legal completes its review."))
 	}
 	moves = append(moves, move("Send Tomas the revised liability cap once legal finishes its review."))
-	got, err := ParseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
+	got, err := parseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}

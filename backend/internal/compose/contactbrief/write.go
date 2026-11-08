@@ -25,6 +25,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -69,7 +70,7 @@ const maxSentences = 5
 // of every contact in the system, and a card that says it has spent the
 // reader's attention to tell them nothing.
 const briefSystem = `You write the standing relationship brief on a contact's page, from a JSON summary of one contact in a salesperson's CRM.
-Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"contact|deal|activity","entity_id":"..."}]}]}.
+Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"contact|deal|activity","entity_id":"<the record's ref, such as d1>"}]}]}.
 Answer, in order: what matters about this contact NOW, what they have said they care about or object to, where the commercial stake stands, and — at most once — the single next move.
 If the summary names sections_omitted, leave those subjects out of that answer and say nothing about them at all — the reader is not allowed to see them.
 Lead with what CHANGED or what is outstanding. A brief that opens with the job title has buried its own finding.
@@ -84,7 +85,7 @@ Keep every qualification. A message that accepts one thing and reserves another 
 Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one.
 If the summary is thin, say what is MISSING and stop. Four honest sentences beat six padded ones, and a brief that pads is one a reader learns to skip.
 Cite the ids the summary gave you. A sentence about the contact themselves cites the contact; one drawn from a claim cites the claim's source_id as an activity.
-Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
+Put refs ONLY in evidence. A ref must never appear in a sentence's text — the reader sees the text, and a ref there is unreadable.
 If the summary says "relationship": "vendor_marketing", this contact is a vendor selling to the reader and nobody here has answered them. State that once, as a fact, and say what they offer. Give NO recommendation: nothing they ask for (a demo, a call, a reply) is a move the reader owes them.
 Write one claim per sentence, plainly, addressing the reader as "you" where natural. Name the contact once; after that they are "they".`
 
@@ -113,7 +114,7 @@ func BriefRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Text())}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -127,6 +128,12 @@ func BriefRequest(in Input, lang string) model.Request {
 func encodeInput(in Input) string {
 	encoded, _ := json.Marshal(in) //nolint:errchkjson // Input is a plain struct of scalars; marshal cannot fail
 	return string(encoded)
+}
+
+// shownRefs is the relationship as the prompt shows it, each record id
+// written as a ref, and the table a reply's citations are read back through.
+func shownRefs(in Input) *promptref.Payload {
+	return claims.ShowRefs(encodeInput(in), knownRecords(in.ID, in))
 }
 
 // Write produces the brief. lane may be nil, which is not an error state: it is
@@ -192,7 +199,7 @@ func ParseBrief(reply, contactID string, in Input) ([]Sentence, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return nil, fmt.Errorf("parse the brief reply: %w", err)
 	}
-	return keepGroundedSentences(parsed.Sentences, contactID, in), nil
+	return keepGroundedSentences(claims.ReadRefs(parsed.Sentences, shownRefs(in)), contactID, in), nil
 }
 
 // keepGroundedSentences drops any sentence whose citations do not point at
