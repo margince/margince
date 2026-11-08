@@ -152,10 +152,13 @@ A reply can join mail sent from Margince before the mailbox captures its sent co
 The stored sender identity proves ownership. A message from another seat cannot join this way.
 
 Gmail sends the mailbox message id when mail is gone for good. Margince uses that id to delete its own copy.
+
 Normal Gmail, Outlook and calendar syncs fill `capture_import.provider_message_ids`.
 Each id holds the provider and connection `generation`.
 When a calendar reports an event is gone, its event id finds the meeting through these ids.
-Only the syncing seat's own ids count. Older mail with no id stays until a normal sync sees it again.
+Only the syncing seat's own ids count.
+
+Older mail with no id stays until a normal sync sees it again.
 
 A colleague's copy, mail sent from Margince and the law can keep a message.
 A hold or an open request to erase data can keep it too.
