@@ -21449,8 +21449,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.viewChanges_other": "{count} Änderungen ansehen",
   "brief.done.history": "Änderungsverlauf ansehen",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
-  "brief.done.noReason":
-    "Margince hat keinen Grund erfasst, den du lesen kannst.",
+  "brief.done.noReason": "Grund nicht verfügbar",
+  "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
   "brief.changes.markReviewed": "Als geprüft markieren",
   "brief.changes.reviewed": "Geprüft",

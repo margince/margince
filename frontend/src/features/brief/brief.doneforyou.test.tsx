@@ -128,9 +128,10 @@ it("reads what changed, why and the customer's words apart", async () => {
   routes(
     [
       change(1, 0, { customer_quote: "We cancelled the project." }),
-      change(2, 0, { reason: undefined }),
+      change(2, 0, { kind: "deal_close_lost", reason: undefined }),
+      change(3, 0, { reason: undefined }),
     ],
-    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)]), bundle(3, [auditId(3)])],
   );
   render(<DoneForYou completed={null} />);
   const first = (await screen.findByText('Closed "Deal 1" as lost')).closest(
@@ -141,9 +142,17 @@ it("reads what changed, why and the customer's words apart", async () => {
   expect(within(first).getAllByText("reason 1.0")).toHaveLength(1);
   expect(within(first).getByText(en["brief.done.customerWrote"])).toBeTruthy();
   expect(within(first).getByText("We cancelled the project.")).toBeTruthy();
-  const second = screen.getByText('Closed "Deal 2" as lost').closest("li");
+  // A closure says what happened under the deal's linked name, and that its
+  // reason is unavailable.
+  const second = screen.getByRole("link", { name: "Deal 2" }).closest("li");
   if (!second) throw new Error("no row for deal 2");
+  expect(within(second).getByText(en["brief.done.markedLost"])).toBeTruthy();
+  expect(within(second).queryByText(/Closed "Deal 2"/)).toBeNull();
   expect(within(second).getByText(en["brief.done.noReason"])).toBeTruthy();
+  // Any other change with no reason leaves the line out.
+  const third = screen.getByText('Closed "Deal 3" as lost').closest("li");
+  if (!third) throw new Error("no row for deal 3");
+  expect(within(third).queryByText(en["brief.done.noReason"])).toBeNull();
 });
 
 it("keeps an older server's summary whole and claims no missing reason", async () => {

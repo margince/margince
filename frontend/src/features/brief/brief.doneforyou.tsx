@@ -407,6 +407,9 @@ function DealUndo({
   );
 }
 
+// The automatic change that closes a deal; the one whose reason is expected.
+const CLOSE_LOST = "deal_close_lost";
+
 /** One change: what moved and when, why, the evidence, and its verbs. */
 function ChangeRow({
   receipt,
@@ -420,11 +423,18 @@ function ChangeRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const reason = receiptReason(receipt, t, locale);
+  // A closure is the deal under its linked name, so it says only what
+  // happened to it, and a closure with no reason the reader may read says so.
+  const closed = receipt.kind === CLOSE_LOST;
+  const reason =
+    receiptReason(receipt, t, locale) ??
+    (closed && receipt.headline ? t("brief.done.noReason") : null);
   return (
     <li className="brief-done-change">
       <p className="brief-done-what">
-        {receiptHeadline(receipt, t, locale, zone)}
+        {closed && receipt.headline
+          ? t("brief.done.markedLost")
+          : receiptHeadline(receipt, t, locale, zone)}
       </p>
       <time
         className="t-caption brief-done-when"
@@ -433,13 +443,7 @@ function ChangeRow({
       >
         {changeWhen(receipt.occurred_at, asOf, locale, zone)}
       </time>
-      {/* An older server sends no headline and keeps the reason in its
-          summary, so only a newer one can say that none was recorded. */}
-      {(reason || receipt.headline) && (
-        <p className="brief-done-reason">
-          {reason ?? t("brief.done.noReason")}
-        </p>
-      )}
+      {reason && <p className="brief-done-reason">{reason}</p>}
       {receipt.customer_quote && (
         <figure className="brief-done-quote">
           <figcaption className="t-caption">
