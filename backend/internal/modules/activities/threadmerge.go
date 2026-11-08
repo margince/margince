@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -33,6 +34,12 @@ import (
 func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, referenced []string) error {
 	if len(referenced) == 0 {
 		return nil
+	}
+	if _, err := storekit.LockActivityThreadTx(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, referenced...); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_mail_reference (activity_id, referenced_id)
@@ -55,21 +62,33 @@ func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 func MailNeighboursTx(
 	ctx context.Context, tx pgx.Tx, self ids.ActivityID, messageID string, referenced []string,
 ) ([]ids.ActivityID, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT a.id
-		  FROM activity a
-		 WHERE a.id <> $1
-		   AND a.archived_at IS NULL
-		   AND a.thread_key IS NOT NULL
-		   AND (a.id IN (SELECT activity_id FROM activity_identity
-		                  WHERE identity_kind = $4 AND identity_key = ANY($3::text[]))
-		        -- A message sent from here is filed under its minted Message-ID
-		        -- as its natural key and claims no identity row, so a reply to
-		        -- it is found by that key.
-		        OR (a.source_system = $5 AND a.source_id = ANY($3::text[]))
-		        OR ($2 <> '' AND a.id IN (SELECT activity_id FROM activity_mail_reference
-		                                   WHERE referenced_id = $2)))`,
-		self, messageID, referenced, IdentityKindMail, connector.EmailSourceSystem)
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	selfPos, messagePos, referencesPos := arg(self), arg(messageID), arg(referenced)
+	identityPos, sourcePos := arg(IdentityKindMail), arg(connector.EmailSourceSystem)
+	// Fence point probes from flattening; apply row filters outside so stale statistics cannot favor a partial index.
+	query := fmt.Sprintf(`
+  WITH candidates AS (
+   SELECT activity_id AS id FROM activity_identity
+   WHERE identity_kind = $%[1]d AND identity_key = ANY($%[2]d::text[])
+   UNION
+   -- Sent mail may claim only its natural Message-ID key, without an identity row.
+   SELECT matched.id FROM unnest($%[4]d::text[]) AS reference(key)
+   JOIN LATERAL (
+    SELECT id FROM activity WHERE source_system = $%[3]d AND source_id = reference.key
+    OFFSET 0
+   ) matched ON true
+   UNION
+   SELECT activity_id FROM activity_mail_reference WHERE $%[5]d <> '' AND referenced_id = $%[6]d
+  )
+  SELECT a.id FROM candidates c
+  JOIN LATERAL (
+   SELECT id, archived_at, thread_key FROM activity WHERE id = c.id
+   OFFSET 0
+  ) a ON true
+  WHERE a.id <> $%[7]d AND a.archived_at IS NULL AND a.thread_key IS NOT NULL`,
+		identityPos, referencesPos, sourcePos, referencesPos, messagePos, messagePos, selfPos)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the messages a reply links: %w", err)
 	}
@@ -122,6 +141,9 @@ func EarliestThreadKeyTx(ctx context.Context, tx pgx.Tx, keys []string) (string,
 func ThreadMergeTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if from == "" || to == "" || from == to {
 		return nil
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity SET thread_key = $2

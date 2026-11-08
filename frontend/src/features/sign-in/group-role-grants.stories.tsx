@@ -68,7 +68,9 @@ export const DuplicateRefused: Story = {
     const add = await canvas.findByRole("button", { name: /add group/i });
     await waitFor(() => expect(add).toBeEnabled());
     await userEvent.click(add);
-    const groups = canvas.getAllByRole("textbox", { name: "IdP group" });
+    const groups = await canvas.findAllByRole("textbox", {
+      name: en["groupRoles.group"],
+    });
     const drafted = groups[groups.length - 1];
     if (!drafted) throw new Error("the drafted row has no group field");
     await userEvent.type(drafted, "crm-admins");
@@ -93,12 +95,14 @@ export const SaveRefused: Story = {
     const add = await canvas.findByRole("button", { name: /add group/i });
     await waitFor(() => expect(add).toBeEnabled());
     await userEvent.click(add);
-    const groups = canvas.getAllByRole("textbox", { name: "IdP group" });
+    const groups = await canvas.findAllByRole("textbox", {
+      name: en["groupRoles.group"],
+    });
     const drafted = groups[groups.length - 1];
     if (!drafted) throw new Error("the drafted row has no group field");
     await userEvent.type(drafted, "partners");
     await userEvent.click(
-      canvas.getByRole("button", { name: /save group grants/i }),
+      canvas.getByRole("button", { name: en["groupRoles.save"] }),
     );
     await canvas.findByText(en["signInMethods.saveFailed"]);
   },

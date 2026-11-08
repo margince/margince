@@ -8,6 +8,7 @@ const minted: PassportSummary = {
   id: "5d1c7a40-2b8e-4f3a-9c61-0e7f2a9b3d18",
   label: "Marcus's Claude",
   scopes: [],
+  areas: { mode: "all", areas: [] },
   created_at: "2026-07-01T10:00:00Z",
 };
 

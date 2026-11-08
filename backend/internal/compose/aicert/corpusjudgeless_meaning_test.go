@@ -74,8 +74,8 @@ func semanticProofs(t *testing.T, scenarios map[string]aicert.Scenario) map[stri
 		wrong := append([]string(nil), verdicts...)
 		wrong[0] = "asks_us"
 		out[name] = judgelessProof{correct: owedVerdicts(verdicts...), wrong: owedVerdicts(wrong...), wantWrong: aitasks.OutcomeWrongAnswer}
-		addPartialDeliveryProof(t, out, scenarios, language)
 	}
+	addPartialDeliveryProof(t, out, scenarios, "vi")
 	sc := proofScenario(t, scenarios, "tentative_promise_with_a_day")
 	out[sc.Name] = judgelessProof{correct: emptyMeaningReply(sc.Task), wrong: meaningReply(t, sc, meaningExpectation{Meaning: openMeaning(), Line: 1}), wantWrong: aitasks.OutcomeWrongAnswer}
 	return out
@@ -156,5 +156,50 @@ func settlementReply(remaining string, eraseDebt bool) func([]string) string {
 			{"id": ids[0], "verdict": verdict, "remaining": words, "due_at": "", "confidence": 0.95},
 			{"id": ids[1], "verdict": "settled", "remaining": "", "due_at": "", "confidence": 0.95},
 		}})
+	}
+}
+
+// settleVerdicts answers one verdict per conversation, in fixture order. A
+// still_owed entry carries the words of the request it quotes as remaining.
+func settleVerdicts(verdicts ...[2]string) func([]string) string {
+	return func(ids []string) string {
+		results := make([]map[string]any, len(verdicts))
+		for i, v := range verdicts {
+			results[i] = map[string]any{"id": ids[i], "verdict": v[0], "remaining": v[1], "due_at": "", "confidence": 0.95}
+		}
+		return mustJSON(map[string]any{"results": results})
+	}
+}
+
+// settlementProofs pairs each settlement with the misreading its rubric
+// named: a request kept owed after it was answered, or closed when it was not.
+func settlementProofs() map[string]judgelessProof {
+	settled, unsure := [2]string{"settled", ""}, [2]string{"unsure", ""}
+	return map[string]judgelessProof{
+		"an_answer_off_the_thread_settles_a_request": {
+			correct:   settleVerdicts(settled, settled),
+			wrong:     settleVerdicts([2]string{"still_owed", "talk through the rollout plan"}, settled),
+			alsoWrong: []func([]string) string{settleVerdicts(settled, unsure)},
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague": {
+			correct:   settleVerdicts(settled, settled),
+			wrong:     settleVerdicts([2]string{"still_owed", "on the panel"}, settled),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_reply_that_says_nothing_either_way_is_answered_unsure": {
+			correct:   settleVerdicts(unsure),
+			wrong:     settleVerdicts(settled),
+			alsoWrong: []func([]string) string{settleVerdicts([2]string{"still_owed", "die Unterlagen zum Wartungsvertrag"})},
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		// Another signer's progress read as our signing, and an owed signature
+		// that names neither the envelope nor the agreement.
+		"signature_completion_requires_the_matching_document": {
+			correct:   settleVerdicts(settled, unsure, [2]string{"still_owed", "sign envelope ALPHA-104"}),
+			wrong:     settleVerdicts(settled, unsure, settled),
+			alsoWrong: []func([]string) string{settleVerdicts(settled, unsure, [2]string{"still_owed", "Please sign envelope"})},
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 	}
 }

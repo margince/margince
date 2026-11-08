@@ -29,7 +29,7 @@ func TestEveryGovernedKindHasReviewContextOrIsNotCurrentlyStageable(t *testing.T
 	for _, kind := range automation.StageableKinds() {
 		active[kind] = true
 	}
-	for _, kind := range approvalsServiceWithEffects(nil).EffectKinds() {
+	for _, kind := range NewApprovalsServiceWithEffects(nil).EffectKinds() {
 		active[kind] = true
 	}
 	for _, policy := range agentPolicies {
@@ -59,9 +59,9 @@ func TestEveryGovernedKindHasReviewContextOrIsNotCurrentlyStageable(t *testing.T
 }
 
 func inactiveApprovalKind(kind string) bool {
-	// The first two execute without staging; the two retired kinds remain readable in history.
+	// The first two execute without staging; the retired kinds remain readable in history.
 	switch kind {
-	case "archive_tag", "change_record_parts", "transcript_proposal", "communication_review":
+	case "archive_tag", "change_record_parts", "transcript_proposal", "communication_review", "stage_progression":
 		return true
 	}
 	return false

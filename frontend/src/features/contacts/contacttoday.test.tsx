@@ -28,7 +28,7 @@ import { ContactToday } from "./contacttoday";
 
 beforeEach(() =>
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /activities/a-9": () => jsonResponse(OPEN_TASK),
   }),
 );
@@ -54,7 +54,12 @@ const CAPTURED = {
 // passing after the wire shape moved under it.
 const VIEW: Contact360 = {
   as_of: "2026-08-13T09:00:00Z",
-  contact: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
+  contact: {
+    id: "p-1",
+    full_name: "Dana Buyer",
+    attachable: true,
+    ...CAPTURED,
+  },
   sections_omitted: [],
 };
 
@@ -253,7 +258,10 @@ describe("the day's work on a contact", () => {
   it("answers a quiet record inside the bar", () => {
     show(VIEW, QUIET);
 
-    expect(screen.getByText(en["standing.next.none"])).toBeTruthy();
+    // It says what the read can back: no task is recorded. It never claims
+    // that nothing is left to do.
+    expect(screen.getByText(en["standing.next.noTask"])).toBeTruthy();
+    expect(screen.queryByText(en["standing.next.none"])).toBeNull();
     // Nobody suggested that nothing needs doing, and there is nothing to press
     // about it.
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
@@ -390,11 +398,11 @@ describe("Call on the next task", () => {
     ).toBeTruthy();
   });
 
-  it("offers no Call on a task typed by hand", () => {
+  it("offers Call on a task typed by hand", () => {
     show(onTask(null), QUIET);
 
     expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
-    expect(dial()).toBeNull();
+    expect(dial()?.getAttribute("href")).toBe("tel:+49301234567");
   });
 
   // On this page the task is about this contact whatever else it links. The
@@ -487,16 +495,22 @@ describe("Call on the move a call left owed", () => {
     expect(screen.getByRole("button", { name: "Write to them" })).toBeTruthy();
   });
 
+  it("offers Call on a move about a hand-typed task", async () => {
+    show(viewWith({}), {
+      ...OWED,
+      evidence: [{ type: "task", id: "a-6", label: "Typed" }],
+    });
+    const call = await screen.findByRole("link", {
+      name: en["record.verb.call"],
+    });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+  });
+
   const quiet: [
     string,
     Partial<ContactMoment>,
     Partial<Contact360["contact"]>,
   ][] = [
-    [
-      "a hand-typed task",
-      { evidence: [{ type: "task", id: "a-6", label: "Typed" }] },
-      {},
-    ],
     [
       "a record that is not a task",
       { evidence: [{ type: "activity", id: "a-7", label: "Re: renewal" }] },
@@ -546,7 +560,7 @@ describe("Call on the move a call left owed", () => {
     },
   });
   const lateBy = (days: number) =>
-    en["contact.standing.late_other"].replace("{count}", String(days));
+    en["co.next.daysLate_other"].replace("{days}", String(days));
 
   it("dates the promise and offers its Call when the evidence names another task", async () => {
     show(datedView(), promised([{ type: "task", id: "a-6", label: "Typed" }]));
@@ -633,13 +647,49 @@ it("shows a privacy duty in place of the quiet answer and opens its review actio
   expect(
     screen.queryByRole("button", { name: en["standing.next.snooze"] }),
   ).toBeNull();
-  expect(screen.queryByText(en["standing.next.none"])).toBeNull();
+  expect(screen.queryByText(en["standing.next.noTask"])).toBeNull();
   await user.click(screen.getByRole("button", { name: "Review privacy duty" }));
   expect(action).toHaveBeenCalledWith(privacy.recommended_action);
 });
 
+it("offers a follow-up task on a quiet record to a reader who may log one", async () => {
+  const user = userEvent.setup();
+  const onAddTask = vi.fn();
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ContactToday
+          view={VIEW}
+          moment={QUIET}
+          onAction={() => {}}
+          onAddTask={onAddTask}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["standing.next.addTask"] }),
+  );
+  expect(onAddTask).toHaveBeenCalledTimes(1);
+});
+
 it("keeps a quiet relationship readable when compliance work is outside the reader's role", () => {
   show({ ...VIEW, sections_omitted: ["privacy_notice_duties"] }, QUIET);
-  expect(screen.getByText(en["standing.next.none"])).not.toBeNull();
+  expect(screen.getByText(en["standing.next.noTask"])).not.toBeNull();
   expect(screen.queryByText(/Not included: privacy duties/)).toBeNull();
 });
+
+it.each([false, undefined])(
+  "blocks the Next bar action without an attach right even when an older server offers it: %s",
+  async (attachable) => {
+    show({ ...VIEW, contact: { ...VIEW.contact, attachable } }, THIN);
+    expect(await screen.findByText(en["contact.attachRefused"])).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Log an interaction" }),
+    ).toHaveProperty("disabled", true);
+  },
+);

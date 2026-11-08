@@ -80,8 +80,10 @@ func (s *Store) applyInvitationChange(ctx context.Context, host ids.UserID, id i
 		if err := auditInvitation(ctx, tx, &before, row); err != nil {
 			return err
 		}
-		result = row
-		return nil
+		// Read back as stored: the status trigger clears the reason a row
+		// that stops waiting no longer has.
+		result, err = readInvitation(ctx, tx, id, false)
+		return err
 	})
 	return invitationView(result), err
 }
@@ -92,7 +94,7 @@ func (s *Store) DeliverInvitations(ctx context.Context) error {
 	if s.calendar == nil {
 		return apperrors.ErrPermissionDenied
 	}
-	var faults []error
+	faults := []error{s.resumeParkedInvitations(ctx)}
 	for range 10 {
 		row, found, err := s.claimInvitation(ctx)
 		if err != nil {
@@ -143,6 +145,7 @@ func (s *Store) claimInvitation(ctx context.Context) (invitationRow, bool, error
 		before := row
 		row.Attempts++
 		row.Version++
+		row.ClaimedAt = s.now()
 		args = schedulingArgs{}
 		query := `UPDATE meeting_invitation SET attempts=` + args.add(row.Attempts) + `,version=` + args.add(row.Version) + `,lease_until=` + args.add(s.now().Add(3*time.Minute)) + ` WHERE activity_id=` + args.add(id)
 		if _, err := tx.Exec(ctx, query, args...); err != nil {
@@ -169,11 +172,20 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 			return s.finishSupersededInvitation(ctx, tx, row, claimed, receipt)
 		}
 		before := row
-		if deliveryErr != nil {
-			if row.Attempts >= 5 {
-				row.Status = invitationNeedsAttention
+		parked := false
+		if deliveryErr != nil && calendarAuthFailure(deliveryErr) {
+			if parked, err = s.parkInvitationAndQueue(ctx, tx, &row, claimed.ClaimedAt); err != nil {
+				return err
 			}
-		} else {
+		}
+		switch {
+		case parked:
+			// The whole queue waits for the host; no back-off applies.
+		case deliveryErr != nil && row.Attempts >= 5:
+			markAttention(&row, attentionDeliveryFailed, row.ID)
+		case deliveryErr != nil:
+			// An ordinary failure is retried after its back-off.
+		default:
 			row.Receipt = receipt
 			row.Status = invitationConfirmed
 			if row.Command == invitationCancel {
@@ -185,11 +197,17 @@ func (s *Store) finishInvitation(ctx context.Context, claimed invitationRow, rec
 		}
 		row.Version++
 		args := schedulingArgs{}
-		query := `UPDATE meeting_invitation SET status=` + args.add(row.Status) + `,receipt=` + args.add(row.Receipt) + `,version=` + args.add(row.Version) + `,next_attempt_at=` + args.add(s.now().Add(time.Duration(row.Attempts)*time.Minute)) + `,lease_until=NULL,updated_at=now() WHERE activity_id=` + args.add(row.ID)
+		query := `UPDATE meeting_invitation SET status=` + args.add(row.Status) + `,receipt=` + args.add(row.Receipt) + `,attention_reason=` + args.add(row.AttentionReason) + `,attention_episode=` + args.add(row.AttentionEpisode) + `,version=` + args.add(row.Version) + `,next_attempt_at=` + args.add(s.now().Add(time.Duration(row.Attempts)*time.Minute)) + `,lease_until=NULL,updated_at=now() WHERE activity_id=` + args.add(row.ID)
 		if _, err := tx.Exec(ctx, query, args...); err != nil {
 			return err
 		}
-		return auditInvitation(ctx, tx, &before, row)
+		if err := auditInvitation(ctx, tx, &before, row); err != nil {
+			return err
+		}
+		if before.Status == invitationNeedsAttention || row.Status != invitationNeedsAttention {
+			return nil
+		}
+		return s.tellHost(ctx, tx, row)
 	})
 }
 
@@ -286,13 +304,7 @@ func transitionInvitation(ctx context.Context, tx pgx.Tx, row *invitationRow, in
 		if row.Status != invitationNeedsAttention {
 			return apperrors.ErrConflict
 		}
-		row.Status = invitationPending
-		if row.Command == invitationUpdate {
-			row.Status = "rescheduling"
-		}
-		if row.Command == invitationCancel {
-			row.Status = invitationCanceling
-		}
+		row.Status = pendingFor(row.Command)
 	default:
 		return apperrors.ErrConflict
 	}

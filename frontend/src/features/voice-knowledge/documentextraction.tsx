@@ -140,9 +140,16 @@ export function DocumentExtractionPanel({
   const query = useQuery({
     queryKey: ["attachment-extraction", attachmentId],
     queryFn: async () => {
+      // This panel reviews deal facts only: a chat reading is not a deal fact
+      // and is never offered for Accept.
       const { data, error, response } = await api.GET(
         "/attachments/{id}/extraction",
-        { params: { path: { id: attachmentId } } },
+        {
+          params: {
+            path: { id: attachmentId },
+            query: { question: "deal_facts" },
+          },
+        },
       );
       // 404 is the honest "nobody has read this file", not a failure — it is
       // what the offer to read one is rendered from.
@@ -152,7 +159,7 @@ export function DocumentExtractionPanel({
       if (error) {
         throwProblem(error);
       }
-      return data ?? null;
+      return data?.question === "deal_facts" ? data : null;
     },
     refetchInterval: (q) =>
       isLive(q.state.data ?? undefined) ? POLL_MS : false,
@@ -163,6 +170,7 @@ export function DocumentExtractionPanel({
       unwrap(
         await api.POST("/attachments/{id}/extraction", {
           params: { path: { id: attachmentId } },
+          body: { question: "deal_facts" },
         }),
       );
     },

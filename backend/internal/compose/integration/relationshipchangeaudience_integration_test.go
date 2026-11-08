@@ -5,27 +5,10 @@
 
 package integration
 
-// The fifth reader of the audience column: the derived relationship CHANGE.
-//
-// auth.AudienceWorkspaceOnly's own doc names four aggregate readers and states
-// the rule they exist for — a last-activity timestamp that moves when a private
-// message arrives tells a colleague when it arrived, without showing a word of
-// it. relationship strength is one of the four and applies the clause in five
-// places (contacts/strength.go). The change DERIVED from that strength applied it
-// in none, so a message the score itself refused to count still produced
-// "replied after 41 quiet days" with the reply's own timestamp.
-//
-// That is the disclosure the rule forbids, arriving through arithmetic rather
-// than through a row. It is asserted here rather than in the module because the
-// leak is only visible end to end: the fold is pure, the SQL is what withholds,
-// and only a real limited message proves which of the two is answering.
-//
-// The control is the SAME message at workspace audience, not the same message
-// read by its author. AudienceWorkspaceOnly is deliberately not the reader's own
-// audience — "the question an aggregate asks is may EVERYONE see this, and the
-// answer is the same for everybody" — so a fixture asserting the author still
-// sees the change would be asserting the opposite of the rule, and would have to
-// fail for the change to be right.
+// The derived relationship CHANGE ("replied after N quiet days") is one
+// reader's follow-up advice, so it counts the messages that reader can open.
+// A held message moves it for a reader in its audience and for nobody else.
+// The shared strength score stays workspace-only (contacts/strength.go).
 
 import (
 	"context"
@@ -37,29 +20,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// TestALimitedReplyIsNotDerivedIntoARelationshipChange seeds the exact shape
-// ChangeRepliedAfterGap fires on — one old outbound, then a recent inbound reply
-// after a long silence — and runs it twice over the same fixture: once with the
-// reply open to the workspace, once held to its participants. Open, the change
-// fires. Held, it does not, for anybody.
-//
-// Two arms over one fixture rather than two readers over one message, because
-// the aggregate rule is about the MESSAGE and not about who is asking. The open
-// arm is the positive control: without it, "no change" is also what a fixture
-// that fires for nobody produces, and the held arm would pass against a broken
-// seed.
+// TestALimitedReplyIsNotDerivedIntoARelationshipChange seeds the shape
+// ChangeRepliedAfterGap fires on: an old outbound, then a recent reply. Open,
+// the change fires for a colleague. Held, it fires for the author, who can open
+// the reply, and not for the colleague, who cannot.
 func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		audience string
+		reader   string
 		want     bool
 	}{
-		{"open to the workspace, the change fires", "workspace", true},
-		{"held to its participants, it does not", "participants", false},
+		{"open to the workspace, the change fires for a colleague", "workspace", "colleague", true},
+		{"held, the author who can open it sees the change", "participants", "author", true},
+		{"held, a colleague outside its audience does not", "participants", "colleague", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := Setup(t)
 			author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+			readers := map[string]context.Context{"author": author, "colleague": e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms)}
 			contact := e.SeedContact(t, "Ines Wieder", &e.Rep1)
 
 			now := time.Now().UTC()
@@ -85,19 +64,17 @@ func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
 				t.Fatalf("logging the reply: %v", err)
 			}
 			backdate(t, ids.UUID(reply.Id), now.AddDate(0, 0, -1))
-			// Through the real writer: SetAudience is what a human uses, and a
-			// hand-written UPDATE would prove nothing about the path that runs.
+			// Through the real writer: SetAudience is what a human uses.
 			if _, err := e.Activities.SetAudience(author,
 				ids.From[ids.ActivityKind](ids.UUID(reply.Id)),
 				activities.SetAudienceInput{Audience: tc.audience}); err != nil {
 				t.Fatalf("setting the reply audience to %s: %v", tc.audience, err)
 			}
 
-			got := hasKind(changesFor(author, t, e, contact, now), relstrength.ChangeRepliedAfterGap)
+			got := hasKind(changesFor(readers[tc.reader], t, e, contact, now), relstrength.ChangeRepliedAfterGap)
 			if got != tc.want {
-				t.Errorf("a %s reply produced %s = %v, want %v — a change derived from a "+
-					"message discloses that message's timing and the silence it broke",
-					tc.audience, relstrength.ChangeRepliedAfterGap, got, tc.want)
+				t.Errorf("a %s reply read by the %s produced %s = %v, want %v",
+					tc.audience, tc.reader, relstrength.ChangeRepliedAfterGap, got, tc.want)
 			}
 		})
 	}
@@ -135,28 +112,24 @@ func hasKind(changes []relstrength.Change, kind string) bool {
 // LatestInbound is nil and changeInputs returns before the preceding-interaction
 // query ever runs.
 //
-// The gap is measured back to the interaction BEFORE the reply. A held message
-// sitting inside that span is still an interaction, so counting it would shorten
-// the silence — and a silence that shortens is itself the disclosure: the number
-// changes on a day the reader is not allowed to see, and the change says
-// something happened then.
-//
-// Both arms use the SAME open reply and differ only in the audience of one
-// message in the middle. Twelve days is below ReplyGapDays, so counting it does
-// not merely change the number — it takes the change away entirely, which is a
-// sharper control than a number nobody would notice was wrong.
+// The gap is measured back to the interaction before the reply. A held message
+// in that span shortens the silence only for a reader who can open it. Twelve
+// days is below ReplyGapDays, so counting it takes the change away entirely.
 func TestAHeldMessageDoesNotShortenTheGapAReplyBroke(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		intervening string
+		reader      string
 		wantFires   bool
 	}{
-		{"an open message in the span shortens the gap below the threshold", "workspace", false},
-		{"a held one leaves the silence as the workspace sees it", "participants", true},
+		{"an open message in the span shortens the gap below the threshold", "workspace", "colleague", false},
+		{"a held one shortens it for the author, who can open it", "participants", "author", false},
+		{"a held one leaves the silence for a colleague outside its audience", "participants", "colleague", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := Setup(t)
 			author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+			readers := map[string]context.Context{"author": author, "colleague": e.As(e.Rep3, []ids.UUID{e.Team2}, AdminPerms)}
 			contact := e.SeedContact(t, "Wenke Dazwischen", &e.Rep1)
 
 			now := time.Now().UTC()
@@ -186,7 +159,7 @@ func TestAHeldMessageDoesNotShortenTheGapAReplyBroke(t *testing.T) {
 			log("Zwischenstand", "outbound", 13, tc.intervening)
 			log("Re: Angebot", "inbound", 1, "workspace")
 
-			changes := changesFor(author, t, e, contact, now)
+			changes := changesFor(readers[tc.reader], t, e, contact, now)
 			var got *relstrength.Change
 			for i := range changes {
 				if changes[i].Kind == relstrength.ChangeRepliedAfterGap {
@@ -207,9 +180,8 @@ func TestAHeldMessageDoesNotShortenTheGapAReplyBroke(t *testing.T) {
 				return
 			}
 			if got != nil {
-				t.Errorf("%s fired after %d days with an OPEN message 12 days ago — the "+
-					"control arm is supposed to fall below ReplyGapDays, so this fixture "+
-					"is not proving the held arm means anything", got.Kind, got.Days)
+				t.Errorf("%s fired after %d days although the %s can open a message 12 days ago",
+					got.Kind, got.Days, tc.reader)
 			}
 		})
 	}

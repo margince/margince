@@ -12,9 +12,9 @@ import {
 } from "./leadorigins";
 
 const t = ((key: string, params?: Record<string, string>) =>
-  params?.uploadName ? `${key}:${params.uploadName}` : key) as Parameters<
-  typeof addedViaFor
->[1];
+  params?.uploadName || params?.name
+    ? `${key}:${params.uploadName ?? params.name}`
+    : key) as Parameters<typeof addedViaFor>[1];
 
 function origin(key: string, label: string, active = true): LeadOrigin {
   return {
@@ -83,6 +83,15 @@ describe("the added-via reader", () => {
     ).toBe("trust.importedFrom:crm");
     expect(addedViaFor({ source: "import", imported_from: "" }, t)).toBe(
       "trust.imported",
+    );
+  });
+
+  it("names the website form a lead came through", () => {
+    expect(
+      addedViaFor({ source: "web_form", web_form_name: "Contact us" }, t),
+    ).toBe("lead.source.webformNamed:Contact us");
+    expect(addedViaFor({ source: "web_form", web_form_name: null }, t)).toBe(
+      "lead.source.webform",
     );
   });
 

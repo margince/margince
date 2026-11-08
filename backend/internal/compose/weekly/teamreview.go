@@ -36,6 +36,7 @@ type TeamMember struct {
 
 // TeamReview is one team's frozen week.
 type TeamReview struct {
+	LeadsWithheld  bool
 	NumericSummary *crmcontracts.WeeklyNumericSummary
 	ID             ids.UUID
 	TeamID         ids.UUID
@@ -169,6 +170,9 @@ func (e *Engine) AssembleTeamFor(
 		if err := e.measureTeamWeek(ctx, tx, &review, members, now); err != nil {
 			return err
 		}
+		if review.LeadsWithheld || !MayReadLeads(ctx) {
+			withholdTeamLeads(&review)
+		}
 		review.Summary = summarise(review)
 		id, wrote, err := insertTeamReview(ctx, tx, review)
 		if err != nil {
@@ -277,6 +281,7 @@ func gatherTeamWeek(
 			UserID: member.UserID, DisplayName: member.DisplayName, Measured: true,
 		})
 		counts, memberMoney := frozen.counts, frozen.money
+		review.LeadsWithheld = review.LeadsWithheld || frozen.leadsWithheld
 		plans.add(frozen.plans)
 		review.Counts.RepsCounted++
 		addTeamCounts(&review.Counts, counts)

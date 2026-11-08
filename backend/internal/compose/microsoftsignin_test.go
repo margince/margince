@@ -169,13 +169,13 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	adapter := microsoftOIDCVerifierAdapter{
 		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
-			withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base }),
+			withHTTPClient(rig.srv.Client()).setClock(func() time.Time { return rig.base }),
 		matchIdentity: microsoftIssuer([]string{testTenant}),
 	}
 
 	tok := rig.mint(t, testKID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-1", "email": "carol@example.com",
-		"given_name": "Carol",
+		"given_name": "Carol", "picture": "https://graph.example/photo",
 	})
 	claims, err := adapter.Verify(context.Background(), tok)
 	if err != nil {
@@ -186,6 +186,9 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 	}
 	if claims.GivenName != "Carol" {
 		t.Fatalf("given name = %q, want the token's given_name claim", claims.GivenName)
+	}
+	if claims.Picture != "" {
+		t.Fatalf("picture = %q, want none: only a Google picture is ever fetched", claims.Picture)
 	}
 	// No groups claim surfaces as none — a groupless token grants nothing and
 	// is never an error.
@@ -334,7 +337,7 @@ func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 	tenants := []string{testTenant, microsoftConsumerTenant}
 	adapter := microsoftOIDCVerifierAdapter{
 		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
-			withHTTPClient(rig.srv.Client()).withClock(func() time.Time { return rig.base }),
+			withHTTPClient(rig.srv.Client()).setClock(func() time.Time { return rig.base }),
 		matchIdentity: microsoftIssuer(tenants),
 	}
 

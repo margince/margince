@@ -5,6 +5,7 @@ package compose
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -21,17 +22,26 @@ type salesDecisionHandlers struct {
 
 // ListSalesDecisions implements GET /analytics/decisions.
 func (h salesDecisionHandlers) ListSalesDecisions(w http.ResponseWriter, r *http.Request, params crmcontracts.ListSalesDecisionsParams) {
-	var deal *ids.UUID
+	if params.ScopeId != nil && params.ScopeKind == nil {
+		httperr.Write(w, r, httperr.Validation("scope_kind", "required", "Name the kind of scope scope_id belongs to."))
+		return
+	}
+	filter := decisionFilter{selection: crmcontracts.ReportingSelection{
+		PipelineId: params.PipelineId, ProductId: params.ProductId, InitiativeId: params.InitiativeId,
+		Country: params.Country, Industry: params.Industry,
+	}}
 	if params.DealId != nil {
 		id := ids.UUID(*params.DealId)
-		deal = &id
+		filter.deal = &id
 	}
-	var status *string
 	if params.Status != nil {
 		value := string(*params.Status)
-		status = &value
+		filter.status = &value
 	}
-	out, err := h.decisions.List(r.Context(), deal, status)
+	if params.ScopeKind != nil {
+		filter.selection.Scope = crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(*params.ScopeKind), Id: params.ScopeId}
+	}
+	out, err := h.decisions.List(r.Context(), filter)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -77,5 +87,9 @@ func (h salesDecisionHandlers) RecordSalesDecisionOutcome(w http.ResponseWriter,
 // initiatives it narrows to and the decisions it writes as tasks.
 func (s *Server) wireSalesReview(pool *pgxpool.Pool) {
 	s.initiativeHandlers = initiatives.NewHandlers(newInitiativeStore(pool))
-	s.salesDecisionHandlers = salesDecisionHandlers{decisions: newSalesDecisions(InstallationDB(pool))}
+	decisions := newSalesDecisions(InstallationDB(pool))
+	s.salesDecisionHandlers = salesDecisionHandlers{decisions: decisions}
+	s.salesAssessmentHandlers = salesAssessmentHandlers{svc: newSalesAssessments(s.reportMetrics, decisions, InstallationDB(pool))}
+	s.reportSetupHandlers = reportSetupHandlers{svc: newReportSetups(s.reportMetrics, s.dealsStore, pool)}
+	s.accountCoverageHandlers = accountCoverageHandlers{svc: accountCoverage{db: InstallationDB(pool), now: time.Now}}
 }

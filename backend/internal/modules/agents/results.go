@@ -54,6 +54,9 @@ type ListRecordsResult struct {
 	// NextCursor is absent rather than empty when there is no next page — an
 	// empty string reads as a cursor a caller might try to use.
 	NextCursor string `json:"next_cursor,omitempty"`
+	// Calendar is GET /activities' own field: present on an activity list read
+	// as the reader's diary, and only `connected` makes an empty day a free one.
+	Calendar *crmcontracts.ReaderCalendar `json:"calendar,omitempty"`
 }
 
 // QueryWorkspaceResult is what query_workspace answers: the records a plan
@@ -373,16 +376,6 @@ type QualifyLeadResult struct {
 	RecordID ids.UUID                  `json:"record_id"`
 	Filled   map[string]QualifiedField `json:"filled"`
 	Gaps     []string                  `json:"gaps"`
-}
-
-// ProgressDealResult is what progress_deal answers: the deal as it now stands,
-// and the note it left if it left one.
-type ProgressDealResult struct {
-	Deal wireRecord `json:"deal"`
-	// NoteActivityID is absent when the call carried no note. It is a pointer
-	// rather than a zero uuid because "no note was asked for" and "a note whose
-	// id is all zeroes" are different claims, and only one of them is true.
-	NoteActivityID *ids.UUID `json:"note_activity_id,omitempty"`
 }
 
 // SlippingEvidence is one reason a deal is reported as slipping, named by the

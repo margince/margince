@@ -17,10 +17,10 @@ import (
 // A pending card of a retired kind is refused on approval, because nothing
 // would carry out the yes. Declining it still closes it.
 func TestAPendingRetiredCardIsRefusedOnApprovalAndMayBeDeclined(t *testing.T) {
-	for _, kind := range []string{kindTranscriptProposal, kindCommunicationReview} {
+	for _, kind := range []string{kindTranscriptProposal, kindCommunicationReview, retiredStageCardKind} {
 		t.Run(kind, func(t *testing.T) {
 			e := setupStaging(t)
-			seat := seatFor(e.ws, e.rep, objectActivity, objectCommunicationException)
+			seat := seatFor(e.ws, e.rep, objectActivity, objectCommunicationException, tableDeal)
 			stage := func(hash string) ids.ApprovalID {
 				t.Helper()
 				var id ids.UUID

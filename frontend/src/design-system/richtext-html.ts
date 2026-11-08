@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { mailbox } from "../format/contacturi";
 import { escapeHtml } from "../format/html";
+import { webUrl, withWebScheme } from "../format/weburl";
 
 /**
  * The plain-text rendering of what the editor holds.
@@ -257,6 +259,35 @@ export function safeHref(href: string | null): string {
 }
 
 /**
+ * The href a typed link address stands for, or "" when no link may carry it.
+ * A bare mailbox writes to it and a bare host is a web address.
+ */
+export function linkHref(typed: string): string {
+  const address = mailbox(typed);
+  return address ? `mailto:${address}` : keptHref(withWebScheme(typed));
+}
+
+/** Strips each href the link dialog would refuse, so a pasted link reports none. */
+export function dropRefusedHrefs(root: HTMLElement): void {
+  for (const anchor of root.querySelectorAll("a[href]")) {
+    if (keptHref(anchor.getAttribute("href") ?? "") === "") {
+      anchor.removeAttribute("href");
+    }
+  }
+}
+
+// A mailto carries one mailbox and nothing after it: `?cc=` or an encoded
+// newline would hand the recipient's mail client a header the writer never saw.
+function keptHref(href: string): string {
+  const trimmed = href.trim();
+  if (/^mailto:/i.test(trimmed)) {
+    const address = mailbox(trimmed.slice("mailto:".length));
+    return address ? `mailto:${address}` : "";
+  }
+  return webUrl(trimmed) ? trimmed : "";
+}
+
+/**
  * Plain text as editor markup: the inverse of {@link plainTextOf}.
  *
  * The drafting endpoints answer in plain text. Without this, a three-paragraph
@@ -273,4 +304,99 @@ export function paragraphsFrom(text: string): string {
     .filter((block) => block !== "")
     .map((block) => `<p>${escapeHtml(block).replaceAll("\n", "<br>")}</p>`)
     .join("");
+}
+
+/**
+ * Put sanitised markup at the caret, replacing the selection.
+ *
+ * `insertHTML` first, because it keeps the paste on the browser's undo stack.
+ * An engine without it gets the same markup through the selection's range.
+ */
+export function insertMarkup(editor: HTMLElement, markup: string): void {
+  editor.focus();
+  // The type says execCommand always exists; a test engine (happy-dom) has
+  // none, and the range path is the one that works there.
+  if (
+    typeof document.execCommand === "function" &&
+    document.execCommand("insertHTML", false, markup)
+  ) {
+    return;
+  }
+  const selection = window.getSelection();
+  const current = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  const range =
+    current && editor.contains(current.commonAncestorContainer)
+      ? current
+      : endOf(editor);
+  range.deleteContents();
+  const fragment = range.createContextualFragment(markup);
+  const last = fragment.lastChild;
+  range.insertNode(fragment);
+  if (last) {
+    range.setStartAfter(last);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+}
+
+export function endOf(node: HTMLElement): Range {
+  const range = document.createRange();
+  range.selectNodeContents(node);
+  range.collapse(false);
+  return range;
+}
+
+/** The reader's selection, when it is inside `editor`. */
+export function selectionIn(editor: HTMLElement): Range | null {
+  const selection = window.getSelection();
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  return range && editor.contains(range.commonAncestorContainer)
+    ? range.cloneRange()
+    : null;
+}
+
+/** The link `range` sits in, inside `editor`. */
+export function linkAround(
+  editor: HTMLElement,
+  range: Range,
+): HTMLAnchorElement | null {
+  const at = range.commonAncestorContainer;
+  const anchor = (at instanceof Element ? at : at.parentElement)?.closest("a");
+  return anchor && editor.contains(anchor) ? anchor : null;
+}
+
+/** Replaces all `editor` holds through the browser's command, so undo reaches it.
+ * False where that would take the caret from a field in use, or is off screen. */
+export function replaceUndoably(
+  editor: HTMLElement,
+  markup: string,
+  replacing: { current: boolean },
+): boolean {
+  const active = document.activeElement;
+  const typingElsewhere =
+    active !== editor &&
+    active instanceof HTMLElement &&
+    (active.isContentEditable || active.matches("input, textarea, select"));
+  if (
+    typingElsewhere ||
+    typeof document.execCommand !== "function" ||
+    !editor.isContentEditable ||
+    editor.getClientRects().length === 0 ||
+    editor.closest("[inert]")
+  ) {
+    return false;
+  }
+  editor.focus({ preventScroll: true });
+  const selection = window.getSelection();
+  if (document.activeElement !== editor || !selection) {
+    return false;
+  }
+  selection.selectAllChildren(editor);
+  replacing.current = true;
+  try {
+    return document.execCommand("insertHTML", false, markup);
+  } finally {
+    replacing.current = false;
+  }
 }

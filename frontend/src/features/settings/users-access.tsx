@@ -348,6 +348,7 @@ function TeamTable({
                 contacts={faces.map((user) => ({
                   name: user.display_name,
                   identity: user.id,
+                  photo: user.avatar_url,
                 }))}
               />
             ) : null}

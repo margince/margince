@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -11,21 +12,35 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
-import { Badge, OverflowMenu } from "../../design-system/atoms";
-import { CellStack } from "../../design-system/cellstack";
+import { Button, OverflowMenu } from "../../design-system/atoms";
 import { KeyedName } from "../../design-system/keyedname";
 import type { ListColumn } from "../../design-system/listtable";
 import { sortState } from "../../design-system/listtable.query";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { formatMoney } from "../../format/format";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { billingModelLabel } from "../../format/productbilling";
-import { type Translator, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { billingOf, billingPatchOf } from "./billingclassification";
+import {
+  BILLING_MONTHS,
+  billingLabel,
+  CADENCE,
+  COMPONENT_KINDS,
+  COMPONENT_LABEL,
+  componentKindOf,
+  ProductPrice,
+  ProductStatus,
+  productStatus,
+} from "./products.display";
+import { ProductTranslationsDialog } from "./products.translations";
+import {
+  TAX_CATEGORIES,
+  TAX_CATEGORY_LABEL,
+  taxCategoryOf,
+} from "./taxcategory";
 import "../lists/listsection.css";
 import {
   currencyOptions,
@@ -69,17 +84,9 @@ async function fetchProductsPage(
   };
 }
 
-// Phase-3 line-item product picker reuses this list read, mapped to {id,name}.
-export async function searchProductCandidates(
-  q: string,
-): Promise<{ id: string; name: string }[]> {
-  const data = unwrap(
-    await api.GET("/products", {
-      params: { query: { q, limit: 10 } },
-    }),
-  );
-  return data.data.map((p) => ({ id: p.id, name: p.name }));
-}
+// The offer lines and the deal's products pick from the catalog through the
+// one search every surface shares.
+export { searchProductCandidates } from "../../components/productsearch";
 
 // Built per render: option labels are shown as given, so they arrive translated.
 function productFields(
@@ -117,6 +124,21 @@ function productFields(
       options: currencyOptions(leadingCurrencies),
     },
     { key: "default_tax_rate", label: "product.taxRate", type: "number" },
+    {
+      // Which rate of the country an offer is issued from applies. Unset is
+      // a real answer: nobody has classified it, and a line takes the rate
+      // above.
+      key: "tax_category",
+      label: "product.taxCategory",
+      type: "select",
+      options: [
+        { value: "", label: t("product.taxCategoryUnset") },
+        ...TAX_CATEGORIES.map((category) => ({
+          value: category,
+          label: t(TAX_CATEGORY_LABEL[category]),
+        })),
+      ],
+    },
     {
       // The empty option is a real answer, and every product written before
       // this field existed carries it: nobody has said whether the price
@@ -161,85 +183,6 @@ function productFields(
   ];
 }
 
-type ComponentKind = NonNullable<Product["component_kind"]>;
-
-const COMPONENT_KINDS: readonly ComponentKind[] = [
-  "software",
-  "implementation",
-  "other",
-];
-
-const COMPONENT_LABEL: Readonly<Record<ComponentKind, MessageKey>> = {
-  software: "product.componentSoftware",
-  implementation: "product.componentImplementation",
-  other: "product.componentOther",
-};
-
-function componentKindOf(value: unknown): ComponentKind | undefined {
-  return COMPONENT_KINDS.find((kind) => kind === value);
-}
-
-type BillingMonths = NonNullable<Product["billing_interval_months"]>;
-
-const BILLING_MONTHS: readonly BillingMonths[] = [1, 3, 6, 12];
-
-const CADENCE: Readonly<Record<BillingMonths, MessageKey>> = {
-  1: "product.billingMonthly",
-  3: "product.billingQuarterly",
-  6: "product.billingHalfYearly",
-  12: "product.billingYearly",
-};
-
-const PRICE_PER: Readonly<Record<BillingMonths, MessageKey>> = {
-  1: "product.pricePerMonth",
-  3: "product.pricePerQuarter",
-  6: "product.pricePerHalfYear",
-  12: "product.pricePerYear",
-};
-
-function billingLabel(p: Product, t: Translator): string {
-  if (p.billing_model !== "recurring")
-    return billingModelLabel(p.billing_model, t);
-  return p.billing_interval_months
-    ? t(CADENCE[p.billing_interval_months])
-    : t("product.billingRecurring");
-}
-
-// The period under the amount, not after it: a 110px price column clips both.
-function ProductPrice({ product }: Readonly<{ product: Product }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const amount = formatMoney(
-    product.unit_price_minor,
-    product.currency,
-    locale,
-  );
-  const months = product.billing_interval_months;
-  if (product.billing_model !== "recurring" || !months) {
-    return amount;
-  }
-  return (
-    <CellStack>
-      <span>{amount}</span>
-      <span className="t-caption">{t(PRICE_PER[months])}</span>
-    </CellStack>
-  );
-}
-
-// Only a status that differs from the usual one has a name.
-function productStatus(product: Product): MessageKey | null {
-  if (product.archived_at) {
-    return "product.archived";
-  }
-  return product.active ? null : "product.inactive";
-}
-
-function ProductStatus({ product }: Readonly<{ product: Product }>) {
-  const t = useT();
-  const status = productStatus(product);
-  return status === null ? null : <Badge>{t(status)}</Badge>;
-}
-
 function editableProduct(p: Product) {
   const unit = unitChoiceOf(p.unit);
   return {
@@ -249,6 +192,7 @@ function editableProduct(p: Product) {
     unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
     billing_model: p.billing_model ?? "",
     component_kind: p.component_kind ?? "",
+    tax_category: p.tax_category ?? "",
     billing_interval_months:
       p.billing_interval_months == null
         ? ""
@@ -307,6 +251,7 @@ export function ProductsAdmin() {
   });
   const leading = useLeadingCurrencies();
   const fields = productFields(t, leading);
+  const [translating, setTranslating] = useState<Product | null>(null);
 
   const createProduct = async (values: Record<string, string>) => {
     return unwrap(
@@ -327,6 +272,7 @@ export function ProductsAdmin() {
             : null,
           ...billingOf(values),
           component_kind: componentKindOf(values.component_kind) ?? null,
+          tax_category: taxCategoryOf(values.tax_category) ?? null,
           source: "manual",
         },
       }),
@@ -367,6 +313,7 @@ export function ProductsAdmin() {
               : undefined,
             ...billingPatchOf(values),
             component_kind: componentKindOf(values.component_kind) ?? null,
+            tax_category: taxCategoryOf(values.tax_category) ?? null,
           },
         }),
       );
@@ -405,6 +352,11 @@ export function ProductsAdmin() {
               update={updateProduct(p)}
               fields={fields}
             />
+          )}
+          {canUpdate && (
+            <Button onClick={() => setTranslating(p)}>
+              {t("product.translations")}
+            </Button>
           )}
           {canArchive && (
             <ArchiveAction
@@ -512,8 +464,26 @@ export function ProductsAdmin() {
             allLabel: "product.activeFilterAll",
             options: [{ value: "true", label: "product.active" }],
           },
+          {
+            key: "tax_category",
+            label: "product.taxCategoryFilter",
+            allLabel: "product.taxCategoryFilterAll",
+            options: [
+              { value: "unclassified", label: "product.taxCategoryUnset" },
+              ...TAX_CATEGORIES.map((category) => ({
+                value: category,
+                label: TAX_CATEGORY_LABEL[category],
+              })),
+            ],
+          },
         ]}
       />
+      {translating && (
+        <ProductTranslationsDialog
+          product={translating}
+          onClose={() => setTranslating(null)}
+        />
+      )}
     </Panel>
   );
 }

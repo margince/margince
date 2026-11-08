@@ -10,9 +10,9 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { Stack } from "../../design-system/stack";
 import { rowsState, SurfaceState } from "../../design-system/surfacestate";
 import {
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   formatDateTime,
-  formatMoneyOrAbsent,
-  formatNumber,
 } from "../../format/format";
 import { INTL_LOCALE } from "../../format/intllocale";
 import { zoneNameAndOffset } from "../../format/timezone";
@@ -205,7 +205,7 @@ function renderDerivationCell(
     }
   }
   if (col.endsWith("_minor") && typeof value === "number") {
-    return formatMoneyOrAbsent(
+    return formatAnalyticsMoneyOrAbsent(
       value,
       derivationCellCurrency(col, row, baseCurrency),
       locale,
@@ -286,7 +286,7 @@ function DerivationRows({
 
 // A field mask took these records out of the figure AND the rows, so the two
 // reconcile; said, so a smaller number reads as governed rather than missing.
-function ExcludedNote({
+export function ExcludedNote({
   count,
 }: Readonly<{ count: number | null | undefined }>) {
   const t = useT();
@@ -302,7 +302,7 @@ function ExcludedNote({
       loadingLabel={t("explain.sources")}
       detail={{
         withheldReason: plural("explain.excluded", count, {
-          count: formatNumber(count, locale),
+          count: formatAnalyticsNumber(count, locale),
         }),
       }}
     >

@@ -15,11 +15,11 @@ func TestDatedDealRecoveryDoesNotDependOnPortfolioValue(t *testing.T) {
 		t.Run(map[bool]string{false: "unpriced", true: "only priced deal"}[priced], func(t *testing.T) {
 			value := int64(8900000)
 			provisional := true
-			omitted := "omitted"
+			probability := 0
 			closes := rankInstant.AddDate(0, 0, 14)
 			risk := RiskyDeal{
 				DealID: ids.NewV7(), QuietDays: 71, ExpectedCloseDate: &closes,
-				CloseDateProvisional: &provisional, ForecastCategory: &omitted,
+				CloseDateProvisional: &provisional, WinProbability: &probability,
 			}
 			if priced {
 				risk.AmountMinor = &value
@@ -32,7 +32,7 @@ func TestDatedDealRecoveryDoesNotDependOnPortfolioValue(t *testing.T) {
 			if !less(row, lead) {
 				t.Fatal("generic prospecting outranked a recovery due within two weeks")
 			}
-			if row.item.Deal == nil || row.item.Deal.CloseDateProvisional == nil || !*row.item.Deal.CloseDateProvisional || *row.item.Deal.ForecastCategory != omitted {
+			if row.item.Deal == nil || row.item.Deal.CloseDateProvisional == nil || !*row.item.Deal.CloseDateProvisional || row.item.Deal.WinProbability == nil || *row.item.Deal.WinProbability != probability {
 				t.Fatal("the recovery row lost its provisional date or forecast category")
 			}
 			breached := classifyWaiting(WaitingCustomer{ActivityID: ids.NewV7(), Engaged: true, Since: rankInstant.Add(-time.Hour)}, rankInstant)

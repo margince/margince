@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -201,6 +202,7 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 	} {
 		t.Run(tc.language, func(t *testing.T) {
 			e := integration.Setup(t)
+			e.Contacts.SetClock(func() time.Time { return time.Date(2026, 9, 1, 12, 0, 0, 123456789, time.UTC) })
 			integration.SetBaseLanguage(e.Admin(), t, e.Pool, tc.language)
 			name, email := "Lena Lead", "lena@prospect.test"
 			lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})

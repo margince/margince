@@ -94,6 +94,15 @@ queues:
     max_workers: 1
     reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
+  graph_projection:
+    max_workers: 1
+    reason: Exact graph drains run apart from admission and short maintenance jobs.
+  mail_admission:
+    max_workers: 1
+    reason: Admission recovery must run while every history reader is waiting on a provider.
+  mail_history:
+    max_workers: 2
+    reason: History pages wait on providers and must leave short maintenance jobs able to run.
   comms_send:
     max_workers: 3
     reason: >-
@@ -363,46 +372,26 @@ kinds:
     role: worker
     fleet: true
     go_type: CaptureBackfillReconcileArgs
-    queue: default
+    queue: mail_admission
     timeout: 2m
     opts_owner: caller
-    cadence: 24h
-    registration: {when: [GmailRegistry], absent: registers_nothing}
+    cadence: 15s
+    registration: always
     reason: >-
-      The nightly pass ADR-0063 called for and nobody built: it puts a paging
-      job back behind every backfill run that is still live.
-
-      IT EXISTS BECAUSE TWO CORRECT DECISIONS MEET BADLY. capture_backfill is
-      inserted with one attempt, because the run ROW owns the outcome and a
-      River retry would re-page a run the engine already ended; and a run is
-      protected by a unique index over the connection while it is queued or
-      running, so one import cannot start on top of another. If that single
-      attempt is ever lost to something the engine never sees — a worker killed
-      mid-page, a rescue, a queue that dropped it — the row stays live with no
-      job behind it, and the index then refuses every future StartBackfill for
-      that connection. The import stops and the only symptom is a contact who
-      cannot start one.
-
-      It re-enqueues rather than deciding anything: the insert carries the same
-      ByArgs uniqueness the start does, so a run whose job is alive dedupes onto
-      it and a run whose job is gone gets a new one. Nightly rather than
-      minutely because the failure it repairs is rare and its cost is a delay,
-      not a loss — and a pass that ran often enough to notice quickly would
-      spend its every tick confirming that nothing was wrong.
-
-      Two minutes bounds an enumeration and an insert per live run. It does no
-      paging itself: the job it queues does that, under its own eight.
+      Restore durable paging jobs and admit queued imports without exceeding
+      the installation budget. Recover durable signature requests and release terminal imports. Ownership comes from advisory locks and execution
+      generations, so a delayed job or an old timestamp never proves an owner died.
 
   capture_backfill:
     role: worker
     go_type: CaptureBackfillArgs
-    queue: default
+    queue: mail_history
     timeout: 8m
     opts_owner: caller
     registration: {when: [GmailRegistry], absent: registers_nothing}
     fault:
       nil_after_logging: >-
-        the backfill ROW owns the outcome: RunBackfillStep ends the run and
+        the backfill ROW owns the outcome: RunBackfillExecution ends the run and
         records the fault class on the row against its own give-up cap, on a
         context detached from the job because the job context dying mid-page
         is the commonest fault. A River retry would re-page a run the engine
@@ -410,6 +399,7 @@ kinds:
     args:
       Workspace: id
       BackfillID: id
+      ExecutionGeneration: {scalar: true, reason: "A monotonic execution number fences replaced paging jobs and carries no mail content."}
     reason: >-
       One page of up to 100 large real messages fetched serially over the
       network, then a snooze. Without the headroom the job context dies mid-page
@@ -587,6 +577,8 @@ kinds:
     queue: default
     timeout: 20m
     opts_owner: caller
+    args:
+      Pending: {scalar: true, reason: "Selects the durable pending cohort; absent means the existing full repair pass."}
     cadence: 24h
     registration: {when: [EnrichBrain], absent: registers_nothing}
     reason: >-
@@ -1071,9 +1063,11 @@ kinds:
     role: worker
     fleet: true
     go_type: GraphEdgeReconcileArgs
-    queue: default
+    queue: graph_projection
     timeout: 15m
     opts_owner: caller
+    args:
+      Pending: {scalar: true, reason: "Selects the durable pending cohort; absent means the existing full repair pass."}
     cadence: 24h
     reason: >-
       Daily, because the 90-day window counts go stale through the passage of
@@ -1218,14 +1212,13 @@ kinds:
         unconfigured worker from a quiet week.
 
         It waives THAT branch and no other. The failures above the claim are
-        returned and River retries them, and the ones below it are recorded
-        rather than logged away — a refusal writes its cause into
-        notice.email_error beside a claim that is never released. That is where
-        the durability lives, and it is deliberate: SMTP returns no receipt, so
-        a retried attempt could not tell a refused message from a delivered one
-        and would risk telling a colleague twice that the same decision is
-        waiting. The green River row means 'this notice's one attempt is
-        concluded'; the row says how it went.
+        returned and River retries them. A relay that never took the message
+        (mailer.NotTaken) releases the claims and is returned too, so the next
+        rung sends it; no relay holds a copy, so the retry cannot send a second
+        one. Any other relay failure, and the last rung, writes its cause into
+        notice.email_error beside a claim that is never released, and cancels
+        the job so job health counts it as dead. SMTP returns no receipt, so a
+        message the relay may have taken is never sent again.
     args:
       Workspace: id
       NoticeID: id
@@ -1371,12 +1364,13 @@ kinds:
     timeout: 5m
     max_attempts: 3
     opts_owner: args
-    cadence: 1h
+    cadence: 6h
     reason: >-
-      Hourly, because readers treat a stored horizon older than a day as
-      missing (waitingHorizonStaleAfter): a few missed passes still leave a
+      Every six hours, because readers treat a stored horizon older than a day
+      as missing (waitingHorizonStaleAfter): two missed passes still leave a
       fresh value, and a measurement that fails keeps the previous one. The
-      measurement is a year of inbound mail, which is why no read does it.
+      measurement is a year of inbound mail, which is why no read does it, and
+      why it runs no more often than the day's staleness needs.
 
   evidence_authorship:
     role: worker
@@ -1741,6 +1735,23 @@ kinds:
       and a pass cut short resumes where the checkpoints say.
 
 
+  project_health_scan:
+    role: worker
+    fleet: true
+    go_type: ProjectHealthScanArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Daily, because its inputs move by the day: the quiet rule counts thirty
+      days without a filed activity, and a task is overdue once its due date
+      has passed. An hourly pass would find the same answer twenty-three times
+      out of twenty-four. One pass is two indexed reads per in-flight project
+      and calls no model, so ten minutes covers every workspace of an
+      installation with room to spare.
+
+
   deal_scout:
     role: worker
     fleet: true
@@ -2098,11 +2109,6 @@ kinds:
     timeout: {derived: voiceBuildTimeout, value: 10m}
     opts_owner: caller
     registration: {when: [VoiceBrain], absent: registers_anyway}
-    fault:
-      nil_after_logging: >-
-        the build ROW owns its state: every model failure lands on the row
-        as deferred or failed, never as a River retry loop, and the
-        deferred-retry sweep re-enqueues what is due.
     args:
       Workspace: id
       ProfileID: id
@@ -2146,12 +2152,12 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: 15m
+    cadence: 1m
     fans_out_to: voice_build
     fan_out_unit: build
     reason: >-
-      Deferrals are hours long, so a fifteen-minute scan is prompt without being
-      busywork.
+      A lost worker releases its session lock. The next minute scan re-offers
+      abandoned builds while preserving budget deferral deadlines.
 
   # One job, not a dispatcher and a child (ADR-0103 §1). It keeps the
   # dispatcher's KIND and CADENCE — the name an operator alerts on, the interval

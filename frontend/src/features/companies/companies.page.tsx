@@ -15,8 +15,8 @@ import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import type { CompanyTab } from "../../lib/companytab";
 import { invalidateCompany } from "../../lib/recordwritekeys";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { RecordHistoryTab } from "../records/history";
 import { WorklistReturnLink } from "../worklist/worklist.return";
@@ -98,7 +98,7 @@ export function CompanyPage({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const archivedParagraphId = useId();
   // Why this account takes no changes from this reader (archived, or not
   // theirs to write), said once for the page. The header's verbs, the document
@@ -194,7 +194,7 @@ export function CompanyPage({
           <LatestInboundLine latest={latest} onOpen={() => onTab("overview")} />
         )
       }
-      zone={recordZone}
+      zone={readerZone}
       // The composer opens from a button rather than standing open above the
       // page. A whole form in the header's action strip would push the
       // account's own story below the fold.
@@ -286,7 +286,7 @@ export function CompanyPage({
         could then put it over an already-open dialog. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={recordZone}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
       />
       {/* The audit spine, opened from the header's overflow menu. It belongs

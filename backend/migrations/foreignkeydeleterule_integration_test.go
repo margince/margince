@@ -140,6 +140,7 @@ var unwrittenDeleteRules = []string{
 	"intro_request (through_contact_id) -> contact",
 	"deal_product (product_id) -> product",
 	"lead (product_id) -> product",
+	"lead (product_id) -> product",
 	"lead_manual_signal (set_by) -> app_user",
 	"meeting_invitation (host_user_id) -> app_user",
 	"meeting_proposal (host_user_id) -> app_user",

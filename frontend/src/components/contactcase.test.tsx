@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { en } from "../i18n/en";
 import {
   ANA,
   BEN,
@@ -44,10 +45,15 @@ afterEach(() => {
 
 const CASE_PATH = `/dedupe/contact-cases/${ANA}`;
 
-function mount() {
+function mount({ chosen }: { chosen?: boolean } = {}) {
   return render(
     <StoryProviders>
-      <ContactCaseReview contactId={ANA} open onClose={() => undefined} />
+      <ContactCaseReview
+        contactId={ANA}
+        chosen={chosen}
+        open
+        onClose={() => undefined}
+      />
     </StoryProviders>,
   );
 }
@@ -91,37 +97,82 @@ describe("which members the review ticks", () => {
       { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },
       {},
     );
+    const user = userEvent.setup();
     mount();
     expect(
       await screen.findByRole("checkbox", { name: /Mira Kovac\b/ }),
     ).toBeChecked();
-    expect(member(/Mira Kovač/)).toBeChecked();
-    expect(member(/M\. Kovac/)).not.toBeChecked();
     // Dana is linked to Cleo, and was marked as a different person from Ana.
     expect(member(/Mira Kovacs/)).not.toBeChecked();
     expect(member(/Mira Kovacs/)).toBeDisabled();
     expect(
       screen.getByText("Marked as a different person from Mira Kovac."),
     ).toBeInTheDocument();
+
+    await user.click(member(/Mira Kovač/));
+    await user.click(member(/M\. Kovac/));
+    expect(member(/Mira Kovacs/)).not.toBeChecked();
+    expect(member(/Mira Kovacs/)).toBeDisabled();
   });
 
-  it("ticks one pair and never a chain of pairs", () => {
+  it("ticks only the contact the review opened on, never a second one", () => {
+    const one = contactCase();
+    expect(defaultSelection(one, ANA)).toEqual([ANA]);
+    expect(defaultSelection(one, BEN)).toEqual([BEN]);
+    // Dana's Ana pair was marked different, but her Cleo pair is open.
+    expect(defaultSelection(one, DANA)).toEqual([DANA]);
+  });
+
+  it("ticks nobody when the review was opened on no contact", () => {
+    expect(defaultSelection(contactCase(), undefined)).toEqual([]);
+  });
+
+  it("ticks nobody when the start's only pair is marked as different people", () => {
+    const one = contactCase({
+      edges: contactCase().edges.filter((edge) => edge.pair_id === "p4"),
+    });
+    expect(defaultSelection(one, ANA)).toEqual([]);
+  });
+
+  it("joins ticked members only through open pairs among them", () => {
     const one = contactCase();
     // Ana–Ben and Ben–Cleo are open, but nothing pairs Ana with Cleo.
-    expect(defaultSelection(one, ANA)).toEqual([ANA, BEN]);
-    // Ben's strongest open pair is Ana (0.92), not Cleo (0.81).
-    expect(defaultSelection(one, BEN)).toEqual([BEN, ANA]);
-    // Dana's only open pair is Cleo; the Ana–Dana pair was marked different.
-    expect(defaultSelection(one, DANA)).toEqual([DANA, CLEO]);
     expect(isConnected(one, [ANA, CLEO])).toBe(false);
     expect(isConnected(one, [ANA, BEN, CLEO])).toBe(true);
   });
 
-  it("ticks only the start when it has no open pair", () => {
-    const one = contactCase({
-      edges: contactCase().edges.filter((edge) => edge.pair_id === "p4"),
+  it("starts with nobody ticked and no preview when the server picked the contact", async () => {
+    stubWithSession(
+      { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },
+      {},
+    );
+    mount({ chosen: false });
+    const preview = await screen.findByRole("button", {
+      name: "Preview merge",
     });
-    expect(defaultSelection(one, ANA)).toEqual([ANA]);
+    expect(preview).toBeDisabled();
+    for (const box of screen.getAllByRole("checkbox")) {
+      expect(box).not.toBeChecked();
+    }
+  });
+
+  it("starts on the opened contact alone and previews once the reader ticks a duplicate", async () => {
+    stubWithSession(
+      { [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()) },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    const preview = await screen.findByRole("button", {
+      name: "Preview merge",
+    });
+    expect(screen.getAllByRole("checkbox", { checked: true })).toEqual([
+      member(/Mira Kovac\b/),
+    ]);
+    expect(preview).toBeDisabled();
+
+    await user.click(member(/Mira Kovač/));
+    expect(preview).toBeEnabled();
   });
 });
 
@@ -139,7 +190,7 @@ describe("a reader who may change one end of a pair", () => {
     };
   };
 
-  it("ticks the pair, keeps the colleague's record and its owner", async () => {
+  it("keeps the colleague's record and its owner once the reader ticks the pair", async () => {
     const one = pairCase();
     const previews: unknown[] = [];
     stubWithSession(
@@ -157,7 +208,12 @@ describe("a reader who may change one end of a pair", () => {
     expect(
       await screen.findByRole("checkbox", { name: /Mira Kovac\b/ }),
     ).toBeChecked();
-    expect(member(/Mira Kovač/)).toBeChecked();
+    expect(member(/Mira Kovač/)).not.toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Preview merge" }),
+    ).toBeDisabled();
+
+    await user.click(member(/Mira Kovač/));
     expect(member(/M\. Kovac/)).not.toBeChecked();
     expect(screen.getByRole("radio", { name: /Mira Kovač/ })).toBeChecked();
     expect(screen.getByRole("radio", { name: /Mira Kovac$/ })).toBeDisabled();
@@ -183,8 +239,12 @@ describe("a reader who may change one end of a pair", () => {
     );
   });
 
-  it("starts on an offered pair when the review opens on another member", () => {
-    expect(defaultSelection(pairCase(), DANA)).toEqual([ANA, BEN]);
+  it("starts ticked only on a member of a pair the reader may merge", () => {
+    expect(defaultSelection(pairCase(), ANA)).toEqual([ANA]);
+    expect(defaultSelection(pairCase(), BEN)).toEqual([BEN]);
+    // Cleo's only open pair is one the reader may not merge.
+    expect(defaultSelection(pairCase(), CLEO)).toEqual([]);
+    expect(defaultSelection(pairCase(), DANA)).toEqual([]);
   });
 
   it("keeps the selection to the two ends of one offered pair", async () => {
@@ -205,8 +265,10 @@ describe("a reader who may change one end of a pair", () => {
     const user = userEvent.setup();
     mount();
     const cleo = await screen.findByRole("checkbox", { name: /M\. Kovac/ });
-    expect(cleo).toBeDisabled();
+    expect(cleo).toBeEnabled();
 
+    await user.click(member(/Mira Kovač/));
+    expect(cleo).toBeDisabled();
     await user.click(member(/Mira Kovač/));
     expect(cleo).toBeEnabled();
     // Dana is joined to Ana by a dismissed pair only.
@@ -246,13 +308,15 @@ describe("a reader who may change one end of a pair", () => {
     );
     mount();
     expect(
-      await screen.findByText(
-        "You can merge only one pair of these contacts, one of them yours. Tick such a pair.",
-      ),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Preview merge" }),
+      await screen.findByRole("button", { name: "Preview merge" }),
     ).toBeDisabled();
+    for (const box of screen.getAllByRole("checkbox")) {
+      expect(box).not.toBeChecked();
+      expect(box).toBeDisabled();
+    }
+    // The pair rule is the reason, not a request to tick what cannot be ticked.
+    expect(screen.getByText(en["contactCase.pairOnly"])).toBeInTheDocument();
+    expect(screen.queryByText(en["contactCase.tooFew"])).toBeNull();
   });
 });
 
@@ -265,6 +329,7 @@ describe("who may own the remaining contact", () => {
     const user = userEvent.setup();
     mount();
     const owner = await screen.findByRole("combobox", { name: /Owner/ });
+    await user.click(member(/Mira Kovač/));
     // The kept record's own owner is the start.
     expect(owner).toHaveTextContent("Ana Owner");
     await user.click(owner);
@@ -290,6 +355,7 @@ describe("who may own the remaining contact", () => {
     const user = userEvent.setup();
     mount();
     const owner = await screen.findByRole("combobox", { name: /Owner/ });
+    await user.click(member(/Mira Kovač/));
     await user.click(member(/M\. Kovac/));
     await user.click(screen.getByRole("radio", { name: /Mira Kovač/ }));
     expect(owner).toHaveTextContent("Ben Seller");
@@ -343,8 +409,9 @@ describe("the preview", () => {
     const user = userEvent.setup();
     mount();
     await user.click(
-      await screen.findByRole("checkbox", { name: /M\. Kovac/ }),
+      await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
+    await user.click(member(/M\. Kovac/));
     await user.click(screen.getByRole("button", { name: "Preview merge" }));
     const preview = await screen.findByTestId("contact-case-preview");
     expect(within(preview).getByText("Cleo Reader, can view")).toBeVisible();
@@ -386,8 +453,9 @@ describe("the preview", () => {
     const user = userEvent.setup();
     mount();
     await user.click(
-      await screen.findByRole("button", { name: "Preview merge" }),
+      await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
+    await user.click(screen.getByRole("button", { name: "Preview merge" }));
     expect(
       await screen.findByText(
         "The duplicates changed while you reviewed them. Check the selection again.",
@@ -419,8 +487,9 @@ describe("a case already settled", () => {
     const user = userEvent.setup();
     mount();
     await user.click(
-      await screen.findByRole("button", { name: "Preview merge" }),
+      await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
+    await user.click(screen.getByRole("button", { name: "Preview merge" }));
     expect(
       await screen.findByText(
         "A colleague already settled these duplicates. This contact remains.",

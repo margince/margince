@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -217,6 +218,30 @@ func (e *resolveEnv) openDeal(t *testing.T, status string, stakeholder bool) ids
 	return dealID
 }
 
+// enquiredAbout plants the subject's own inbound enquiry ten days ago. A
+// connector captured it from an authenticated sender and it is filed on the
+// deal, which makes that deal a negotiation they asked for.
+func (e *resolveEnv) enquiredAbout(t *testing.T, deal ids.UUID) {
+	t.Helper()
+	enquiry := e.inboundFrom(t, "their-enquiry-"+deal.String(), e.address, clocktest.Now(t).Add(-10*24*time.Hour))
+	if _, err := e.owner.Exec(context.Background(), `
+		UPDATE activity SET captured_by = 'connector:gmail', inbound_sender_authenticated = true
+		 WHERE id = $1`, enquiry); err != nil {
+		t.Fatalf("marking the enquiry captured: %v", err)
+	}
+	e.fileOnDeal(t, enquiry, deal)
+}
+
+// fileOnDeal files an activity on a deal.
+func (e *resolveEnv) fileOnDeal(t *testing.T, activity, deal ids.UUID) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity_link (activity_id, entity_type, deal_id)
+		VALUES ($1, 'deal', $2)`, activity, deal); err != nil {
+		t.Fatalf("filing the activity on the deal: %v", err)
+	}
+}
+
 // seedPurpose plants a legacy consent purpose of a named class.
 func (e *resolveEnv) seedPurpose(t *testing.T, key, class string) {
 	t.Helper()
@@ -228,14 +253,18 @@ func (e *resolveEnv) seedPurpose(t *testing.T, key, class string) {
 	}
 }
 
-// decide runs the WHOLE per-recipient decision, not just the resolution — which
-// is what the Resolved/Requested split has to be asserted through, because the
-// split happens in decideResolved rather than in the resolver.
+// decide runs the whole per-recipient decision, not only the resolution. The
+// Resolved/Requested split happens in decideResolved rather than in the
+// resolver, so a test of the split goes through here. It names the sending
+// entity as staging does.
 func (e *resolveEnv) decide(t *testing.T, req commsauthz.Request) commsauthz.Decision {
 	t.Helper()
 	var out commsauthz.Decision
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		var err error
+		req, err := withSendingEntity(e.ctx, tx, req)
+		if err != nil {
+			return err
+		}
 		out, err = e.gate.decideOne(e.ctx, tx,
 			connector.Recipient{Email: e.address}, req, commsauthz.PhaseStaging)
 		return err
@@ -436,11 +465,12 @@ func TestAMissingAnchorSupportsNothing(t *testing.T) {
 	}
 }
 
-// A live deal the recipient is a stakeholder on supports an unprompted
-// follow-up.
+// A live deal the recipient is a stakeholder on, and asked about, supports an
+// unprompted follow-up.
 func TestALiveDealTheRecipientIsAStakeholderOnSupportsAFollowUp(t *testing.T) {
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
+	e.enquiredAbout(t, deal)
 
 	got := e.resolve(t, commsauthz.Request{Links: []ids.UUID{deal}})
 
@@ -545,11 +575,11 @@ func TestTheLegacyTransactionalPurposeNoLongerCarriesItself(t *testing.T) {
 // AND THE VERDICT AGREES WITH THE RESOLUTION.
 //
 // The resolution above has said "not supported, and here is why" since the
-// escape hatch was closed, but the DECISION went on allowing: decideResolved
-// handed an unsupported transactional claim to legacyVerdictFor, which asked
-// VerdictForContact, whose ClassTransactional arm allows unconditionally. So the
-// engine recorded its objection and sent the mail anyway, on nothing but the
-// purpose key — which is the hole the resolution change was supposed to close.
+// escape hatch was closed. But the decision went on allowing: decideResolved
+// handed an unsupported transactional claim to legacyVerdictFor. That asked
+// VerdictForRecipient, whose ClassTransactional arm allows unconditionally. So
+// the engine recorded its objection and sent the mail anyway, on the purpose
+// key alone. That is the hole the resolution change was meant to close.
 //
 // The contact here has an address, a seeded transactional purpose, and NO
 // invoice, contract, thread or deal. The only thing saying this message is
@@ -853,4 +883,44 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 		t.Fatal(err)
 	}
 	return id
+}
+
+// A FAILED ACTIVE-DEAL CLAIM STAYS ON THE PREVIEW, AND NEVER RESOLVES. The rep
+// has mail from the recipient a month ago and an open deal they are not a
+// stakeholder on, and claims an active-deal follow-up. The claim fails for want
+// of evidence. Requested keeps the claim, which is what the composer names the
+// missing deal from. Resolved never takes it.
+//
+// Mutation: drop BOTH `d.Requested = req.Context` in decidePreviewTx and
+// `d.Requested = res.Category` in decideResolved, and the requested assertion
+// fails. Either alone stays green, because the other sets the same claim.
+func TestAFailedDealClaimStaysOnThePreviewWithoutResolving(t *testing.T) {
+	e := setupResolve(t)
+	e.inboundFrom(t, "thread-earlier", e.address, clocktest.Now(t).AddDate(0, 0, -30))
+	deal := e.openDeal(t, "open", false)
+
+	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: e.address}},
+		Context:    commsauthz.CategoryActiveDealFollowup,
+		Links:      []ids.UUID{deal},
+	})
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	if len(set.Decisions) != 1 {
+		t.Fatalf("decisions = %d, want one", len(set.Decisions))
+	}
+	d := set.Decisions[0]
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatal("a deal the recipient is no stakeholder on supported the follow-up")
+	}
+	if d.ReasonCode != commsauthz.ReasonNoEvidence {
+		t.Errorf("reason = %q, want %q: the gap is the deal, not a stop", d.ReasonCode, commsauthz.ReasonNoEvidence)
+	}
+	if d.Requested != commsauthz.CategoryActiveDealFollowup {
+		t.Errorf("requested = %q, want the rep's active_deal_followup claim", d.Requested)
+	}
+	if d.Resolved == commsauthz.CategoryActiveDealFollowup {
+		t.Error("the unproven claim became the resolved category")
+	}
 }

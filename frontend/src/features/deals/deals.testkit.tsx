@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 
@@ -24,10 +26,14 @@ export const render = (ui: ReactNode): RenderResult => {
       <LocaleProvider initial="en">
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write says mounts it the same way. */}
-        <ToastProvider>
-          <RecordShell>{ui}</RecordShell>
-          <ToastRegion />
-        </ToastProvider>
+        {/* The reader's zone is named, so a date does not move with the
+          machine the suite runs on. */}
+        <ViewerZoneProvider zone={UTC_ZONE}>
+          <ToastProvider>
+            <RecordShell>{ui}</RecordShell>
+            <ToastRegion />
+          </ToastProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -138,6 +144,9 @@ export function stubBackend(
   deals: Deal[],
   opts: {
     onAdvance?: (body: unknown, ifMatch: string | null) => void;
+    // What an advance answers it set the probability to. Left out, the move
+    // set none, as an older server answers.
+    probabilitySet?: components["schemas"]["DealProbabilitySet"];
     onCloseDay?: (body: unknown, ifMatch: string | null) => void;
     // Makes the stub enforce the server's win-evidence rule. A win naming
     // neither a contract nor a reason is refused 422, as the real server does.
@@ -181,6 +190,11 @@ export function stubBackend(
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    // The deal's products, in the list-and-tag shape the card reads. Without
+    // this the deal's own route answers it with the deal record.
+    if (/\/deals\/[^/]+\/products$/.test(new URL(url, "http://x").pathname)) {
+      return jsonResponse({ data: [], tag: "empty" });
+    }
     if (method === "GET" && url.includes("/commitments")) {
       return jsonResponse({ complete: true, has_more: false, data: [] });
     }
@@ -330,7 +344,10 @@ export function stubBackend(
           422,
         );
       }
-      return jsonResponse(deal({ stage_id: body.to_stage_id }));
+      return jsonResponse({
+        ...deal({ stage_id: body.to_stage_id }),
+        probability_set: opts.probabilitySet,
+      });
     }
     if (method === "GET" && /\/deals\/[^/?]+(\?.*)?$/.test(url)) {
       return jsonResponse(opts.single ?? deals[0]);
@@ -373,18 +390,30 @@ export function stubBackend(
     }
     if (url.includes("/deals") && !url.includes("/outcome-reviews")) {
       opts.onDealsUrl?.(url);
+      // A board column asks for one stage, and the server answers only it.
+      const stageId = new URL(url, "https://test.local").searchParams.get(
+        "stage_id",
+      );
+      const inStage = (rows: Deal[]) =>
+        stageId ? rows.filter((row) => row.stage_id === stageId) : rows;
       if (opts.nextPage) {
         return url.includes("cursor=")
           ? jsonResponse({
-              data: opts.nextPage,
+              data: inStage(opts.nextPage),
               page: { next_cursor: null, has_more: false },
             })
           : jsonResponse({
-              data: deals,
-              page: { next_cursor: "cur-2", has_more: true },
+              data: inStage(deals),
+              page: {
+                next_cursor: "cur-2",
+                has_more: inStage(opts.nextPage).length > 0,
+              },
             });
       }
-      return jsonResponse({ data: deals, page: { next_cursor: null } });
+      return jsonResponse({
+        data: inStage(deals),
+        page: { next_cursor: null },
+      });
     }
     return jsonResponse({ data: [], page: { next_cursor: null } });
   });

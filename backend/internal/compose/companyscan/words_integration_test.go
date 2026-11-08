@@ -35,10 +35,11 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 		t.Fatalf("employing the contact: %v", err)
 	}
 	onAccount := []datasource.EntityRef{{Type: "contact", ID: contact}}
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	held := integration.CalendarMeeting{Event: "evt-scan-held", At: now.AddDate(0, 0, -10), Links: onAccount}
-	called := integration.CalendarMeeting{Event: "evt-scan-called", At: now.AddDate(0, 0, -2), Links: onAccount}
+	called := integration.CalendarMeeting{Event: "evt-scan-called", At: now.AddDate(0, 0, 2), Links: onAccount}
 	heldID, calledID := held.Capture(t, e), called.Capture(t, e)
+	e.RecordHeld(t, heldID)
 
 	read := func() []ids.UUID {
 		var words []MessageIn
@@ -55,8 +56,8 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 		}
 		return out
 	}
-	if got := read(); !slices.Contains(got, calledID) {
-		t.Fatalf("the booked meeting is not read before the cancel (%v) — the case below proves nothing", got)
+	if got := read(); slices.Contains(got, calledID) || !slices.Contains(got, heldID) {
+		t.Fatalf("the scan reads %v before cancellation, want only the reported held meeting %v", got, heldID)
 	}
 	called.Cancel(t, e)
 	got := read()
@@ -75,16 +76,19 @@ func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Quote Scan Co", nil)
 	mail := ids.NewV7()
-	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by)
-		VALUES ($1, 'email', 'next steps', $2, 'inbound', 'gmail', $3, 'gmail:seed', 'connector:gmail')`, mail,
+	now := clocktest.Now(t)
+	// Dated from the scan's clock, not the column default. The drift lane parts
+	// the two, and the mail would fall out of the window.
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, direction, occurred_at, source_system, source_id, source, captured_by)
+		VALUES ($1, 'email', 'next steps', $2, 'inbound', $3, 'gmail', $4, 'gmail:seed', 'connector:gmail')`, mail,
 		"Works for me.\n\nFrom: Sam Seller <sam@seller.example>\nSent: Monday\n\nWe will send the contract by Friday.",
-		mail.String())
+		now.Add(-time.Hour), mail.String())
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`, mail, company)
 
 	var words []MessageIn
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		words, err = readWords(ctx, tx, ids.From[ids.CompanyKind](company), clocktest.Now(t))
+		words, err = readWords(ctx, tx, ids.From[ids.CompanyKind](company), now)
 		return err
 	}); err != nil {
 		t.Fatal(err)

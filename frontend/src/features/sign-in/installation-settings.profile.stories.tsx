@@ -25,7 +25,7 @@ const SETTINGS: InstallationSettings = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
+  forecast_forward_measure: "likely",
   timezone: REPORTING_FIXTURE_ZONE,
   base_currency: "EUR",
   date_format: "dmy",
@@ -36,6 +36,7 @@ const SETTINGS: InstallationSettings = {
   call_zalo: true,
   individual_performance: true,
   forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
   base_currency_locked_reason:
     "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; clear the rate sheet first",
   base_currency_lock: { reason: "rate_sheet", count: 3, base_currency: "EUR" },

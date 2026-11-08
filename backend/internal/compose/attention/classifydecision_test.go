@@ -6,7 +6,7 @@ package attention
 import "testing"
 
 func TestCommercialStageDecisionsAreNotRoutineCleanup(t *testing.T) {
-	for _, kind := range []string{"advance_deal", "progress_deal", "stage_progression"} {
+	for _, kind := range []string{"advance_deal", "progress_deal"} {
 		t.Run(kind, func(t *testing.T) {
 			row := classifyDecision(item("proposal", "approval", withKind(kind)), rankInstant).item
 			if row.Level != levelAgreed || row.Consequence != "none" || len(row.Because) != 0 {
@@ -21,5 +21,16 @@ func TestCommercialStageDecisionsAreNotRoutineCleanup(t *testing.T) {
 	cleanup := classifyDecision(item("merge", "approval", withKind("merge_contacts")), rankInstant).item
 	if cleanup.Level != levelRoutine || cleanup.Consequence != "data_drifts" || len(cleanup.Because) != 1 || cleanup.Because[0].Kind != "routine" {
 		t.Fatalf("contact cleanup lost its routine classification: %+v", cleanup)
+	}
+}
+
+func TestADealSuggestionIsAPossibleOpportunityNotCleanup(t *testing.T) {
+	ranked := classifyDecision(item("scout", sourceDealSuggestion, withKind("open_deal")), rankInstant)
+	row := ranked.item
+	if row.Level != levelBlocking || row.Consequence != "none" || len(row.Because) != 0 {
+		t.Fatalf("a deal suggestion was classified as cleanup: %+v", row)
+	}
+	if key, folds := batchKeyOf(ranked); folds {
+		t.Fatalf("a deal suggestion folds into the %q group", key)
 	}
 }

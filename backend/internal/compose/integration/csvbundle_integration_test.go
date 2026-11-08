@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 func TestAZipUploadProfilesEveryFileAndListsWhatItIgnores(t *testing.T) {
@@ -72,7 +74,7 @@ func TestAZipHoldingOneTypeTwiceIsRefusedAsABundle(t *testing.T) {
 func TestAZipSentWithAnObjectIsProfiledByItsFileNames(t *testing.T) {
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "ref,name\nCO-1,Acme\n"})
-	raw, status := postCSVFile(t, e, "lead", string(body))
+	raw, status := importjobtest.PostCSVFile(t, e, "lead", string(body))
 	if status != http.StatusOK {
 		t.Fatalf("status %d body %s, want 200", status, raw)
 	}

@@ -34,13 +34,13 @@ package gates
 // correct code.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -139,7 +139,7 @@ func TestEveryCategoryCarriesADistinctWireValue(t *testing.T) {
 func readDecisionMigration(t *testing.T) string {
 	t.Helper()
 	path := filepath.Join("migrations", "core", decisionMigration)
-	sql, err := os.ReadFile(path)
+	sql, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

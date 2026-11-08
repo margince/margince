@@ -8,6 +8,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -80,15 +81,15 @@ func TestASiteReadSplitsTheAddressItCreatesACompanyWith(t *testing.T) {
 	if got := storedProfileValue(ctx, t, e.store, id, fieldRegisteredAddress); got != siteAddress {
 		t.Fatalf("registered_address profile value = %q, want the whole text %q", got, siteAddress)
 	}
-	var line string
+	var line1, city, country string
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT after->>'registered_address' FROM audit_log
-			WHERE entity_type = 'company' AND entity_id = $1 AND action = 'create'`, id).Scan(&line)
+		return tx.QueryRow(ctx, `SELECT after->>'address_line1', after->>'address_city', after->>'address_country' FROM audit_log
+			WHERE entity_type = 'company' AND entity_id = $1 AND action = 'create'`, id).Scan(&line1, &city, &country)
 	}); err != nil {
 		t.Fatalf("reading the create audit row: %v", err)
 	}
-	if want := "Example Street 1, Tower B, 12345 Example City, DE"; line != want {
-		t.Fatalf("audit after registered_address = %q, want the six columns as one line %q", line, want)
+	if got := [3]string{line1, city, country}; got != [3]string{"Example Street 1", "Example City", "DE"} {
+		t.Fatalf("audit after address columns = %q, want each column under its own name", got)
 	}
 }
 
@@ -110,20 +111,20 @@ func TestASiteReadLeavesAnAddressSomebodyStartedAlone(t *testing.T) {
 				protected[part.column] = true
 			}
 		}
-		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Held " + formatAddressLine(held), Source: "manual", Address: &held})
+		company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: fmt.Sprint("Held ", addressPartsOf(held)), Source: "manual", Address: &held})
 		if err != nil {
 			t.Fatal(err)
 		}
 		id := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 		queued := countGeocodes(e.store)
 		if err := e.store.ApplyEnrichment(ctx, id, ApplyColdStartProfileInput{SourceURL: siteAddressURL, Fields: []ColdStartFieldInput{addressField(siteAddress)}}); err != nil {
-			t.Fatalf("enriching a company holding %s: %v", formatAddressLine(held), err)
+			t.Fatalf("enriching a company holding %s: %v", addressPartsOf(held), err)
 		}
 		if got, want := storedAddressParts(ctx, t, e.store, id), addressPartsOf(held); got != want {
-			t.Errorf("a company holding only %s now holds %q", formatAddressLine(held), got)
+			t.Errorf("a company holding only %s now holds %q", addressPartsOf(held), got)
 		}
 		if *queued != 0 {
-			t.Errorf("a read that wrote no address queued %d lookups for %s", *queued, formatAddressLine(held))
+			t.Errorf("a read that wrote no address queued %d lookups for %s", *queued, addressPartsOf(held))
 		}
 	}
 	if len(protected) != len(companyAddressColumns) {

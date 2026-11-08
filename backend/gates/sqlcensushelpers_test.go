@@ -81,24 +81,56 @@ func stripSQLComments(sql string) string {
 // second spelling of these patterns would read a clean tree over whatever it
 // did not know.
 var (
-	// setClause isolates what a statement assigns from what it merely names. A
-	// column read in a `WHERE` predicate or listed in a `SELECT` is not a
-	// write. `SET` is the one token every assigning form shares: a plain
-	// `UPDATE`, an upsert's `DO UPDATE`, and the update inside a `MERGE`.
-	// `\b` keeps it out of `offset`.
-	setClause = regexp.MustCompile(`(?is)\bset\b(.*?)(?:\bwhere\b|\breturning\b|;|$)`)
 	// writeTarget matches the table a write names, through every identifier
 	// spelling Postgres accepts: quoted, schema-qualified, `ONLY`-prefixed. The
 	// writes are `UPDATE`, `INSERT` (whose `ON CONFLICT` can carry an update)
 	// and `MERGE`.
 	writeTarget = regexp.MustCompile(
 		`(?is)\b(?:update|insert\s+into|merge\s+into)\s+(?:only\s+)?(?:"?[a-z_][a-z0-9_]*"?\.)?"?([a-z_][a-z0-9_]*)"?`)
-	// assignmentFmt matches `col = …` and the multi-column form
-	// `(a, col) = (…)`, with or without the identifier quoted.
-	//
-	// Anchored on the whole identifier, so `currency` is not found inside
-	// `base_currency`: the substring reading is the half that survives a
-	// careless escape. The parenthesised branch may not cross a `(` of its own,
-	// so a column list cannot reach forward to an unrelated `=`.
-	assignmentFmt = `(?i)(?:(?:^|[,\s"])%[1]s"?\s*=)|(?:\([^()=]*[,\s"]?%[1]s"?[^()=]*\)\s*=)`
 )
+
+// setClauses isolates what a statement assigns from what it merely names. A
+// column read in a `WHERE` predicate or listed in a `SELECT` is not a write.
+// `SET` is the one token every assigning form shares: a plain `UPDATE`, an
+// upsert's `DO UPDATE`, and the update inside a `MERGE`.
+//
+// A clause ends at `WHERE`, `RETURNING` or `;`, found outside quoted strings
+// and comments. A literal holding one of those words is still a value, and
+// ending there would hide every assignment after it. A span that never closes
+// runs to the end of the text, so splitSetClause can report it.
+func setClauses(statement string) []string {
+	var clauses []string
+	start := -1
+	for i := 0; i < len(statement); i++ {
+		if span, _ := gatekit.SQLSpanAt(statement, i); span > 0 {
+			i += span - 1
+			continue
+		}
+		switch {
+		case start < 0 && sqlWordAt(statement, i, "set"):
+			start = i + len("set")
+			i = start - 1
+		case start >= 0 && (statement[i] == ';' || sqlWordAt(statement, i, "where") || sqlWordAt(statement, i, "returning")):
+			clauses = append(clauses, statement[start:i])
+			start = -1
+		}
+	}
+	if start >= 0 {
+		clauses = append(clauses, statement[start:])
+	}
+	return clauses
+}
+
+// sqlWordAt reports whether word, in any case, stands at pos as a whole word.
+// The boundary keeps `set` out of `offset`.
+func sqlWordAt(text string, pos int, word string) bool {
+	end := pos + len(word)
+	if end > len(text) || !strings.EqualFold(text[pos:end], word) {
+		return false
+	}
+	return (pos == 0 || !sqlIdentByte(text[pos-1])) && (end == len(text) || !sqlIdentByte(text[end]))
+}
+
+func sqlIdentByte(b byte) bool {
+	return b == '_' || b >= '0' && b <= '9' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z'
+}

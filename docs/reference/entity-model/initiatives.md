@@ -78,6 +78,7 @@ The 4 tables owned by `initiatives`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `sales_initiative_baseline_deal_idx`: `btree (deal_id)`
 - `sales_initiative_baseline_pkey`: `unique, btree (initiative_id, deal_id)`
 
 ## sales_initiative_member

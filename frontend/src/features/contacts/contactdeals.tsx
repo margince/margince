@@ -1,19 +1,29 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { DealCard } from "../../design-system/dealcard";
+import { Panel, PanelBody } from "../../design-system/panel";
+import { StatCard } from "../../design-system/statcard";
+import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
-import { formatDayMonth, formatMoneyCompact } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import {
+  formatDayMonth,
+  formatNumber,
+  MONEY_ABSENT,
+} from "../../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
-import { navigate } from "../../lib/router";
+import { navigate, routeHash } from "../../lib/router";
 import "./contact360.css";
+import { toBoardDeal } from "../../components/boarddeal";
+import { openValueWords } from "../../components/openvaluewords";
+import { AddRelationshipAction } from "../../components/relationships";
 import { closeDayOf } from "../../lib/closeday";
+import { openValue } from "../../lib/openvalue";
 import { dealRoleLabel } from "../../lib/recordlabels";
-import { AddRelationshipAction } from "../records/relationships";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ContactDealRooms } from "./contactdealrooms";
 import "./contacttabs.css";
 
@@ -35,7 +45,13 @@ type CommitteeMember = NonNullable<
 // not open. Not shared with that hook: it is private to its own file, and
 // this task's touch scope stops at this one.
 function useDealSummary(dealId: string) {
-  return useQuery({
+  return useQuery(dealSummaryQuery(dealId));
+}
+
+// One read per deal on the tab. The figures and each card share that one
+// cache entry.
+function dealSummaryQuery(dealId: string) {
+  return {
     queryKey: ["deal", dealId],
     queryFn: async (): Promise<Deal | null> => {
       const { data, error, response } = await api.GET("/deals/{id}", {
@@ -50,7 +66,7 @@ function useDealSummary(dealId: string) {
       return data;
     },
     staleTime: 5 * 60_000,
-  });
+  };
 }
 
 // `Deal.company_id` names the deal's company but carries no display name of
@@ -100,28 +116,81 @@ function closeLine(
   });
 }
 
-// One deal this contact sits on: the seat `deal_roles` carries, and the
-// money, the close date and the company `useDealSummary`/`useDealCompany`
-// fetch for it.
-function DealRow({ role }: Readonly<{ role: DealRole }>) {
+// One deal this contact sits on, as the board draws a deal, with its stage
+// and this contact's seat. Until the deal itself is read, or where it may not
+// be, the row that `deal_roles` alone can carry stands in.
+function DealTile({ role }: Readonly<{ role: DealRole }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const deal = useDealSummary(role.deal_id).data;
-  const company = useDealCompany(deal?.company_id).data;
+  const companyRead = useDealCompany(deal?.company_id);
+  const company = companyRead.data;
   const roleWord = dealRoleLabel(role.role, t);
+  if (!deal) {
+    return <DealRow role={role} roleWord={roleWord} />;
+  }
+  const marks = new Map(
+    company
+      ? [
+          [
+            company.id,
+            { name: company.display_name, logoUrl: company.logo_url },
+          ],
+        ]
+      : [],
+  );
+  return (
+    <li>
+      <DealCard
+        deal={toBoardDeal(deal, {
+          marks,
+          // A company the read failed on, or refused, keeps its row as one
+          // not read rather than vanishing from the card.
+          unreadable: new Set(
+            deal.company_id && (companyRead.isError || company === null)
+              ? [deal.company_id]
+              : [],
+          ),
+        })}
+        href={routeHash({ screen: "deals", id: deal.id })}
+        zone={readerZone}
+        closed={
+          deal.status === "open"
+            ? undefined
+            : closeLine(deal, t, locale, readerZone)
+        }
+        standing={
+          <>
+            <Badge tone="info">
+              {role.deal_stage ?? t("contact.deals.noStage")}
+            </Badge>
+            {roleWord && <Badge>{roleWord}</Badge>}
+          </>
+        }
+      />
+    </li>
+  );
+}
+
+// The deal by its seat alone: title, stage and close, for a deal not yet read
+// or one this reader may not open.
+function DealRow({
+  role,
+  roleWord,
+}: Readonly<{ role: DealRole; roleWord: string | null }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  const deal = useDealSummary(role.deal_id).data;
   const meta = [
-    deal?.amount_minor != null && deal.currency
-      ? formatMoneyCompact(deal.amount_minor, deal.currency, locale)
-      : null,
     role.deal_stage ?? t("contact.deals.noStage"),
-    closeLine(deal, t, locale, recordZone),
-    company?.display_name ?? null,
+    closeLine(deal, t, locale, readerZone),
   ]
     .filter(Boolean)
     .join(" · ");
   return (
-    <PanelRow record className="ct-item">
+    <li className="ct-deal-row">
       <div className="ct-item-main">
         <button
           type="button"
@@ -133,7 +202,77 @@ function DealRow({ role }: Readonly<{ role: DealRole }>) {
         <span className="t-caption">{meta}</span>
       </div>
       {roleWord && <Badge>{roleWord}</Badge>}
-    </PanelRow>
+    </li>
+  );
+}
+
+// The deals in figures: how many are open, what they are worth together, and
+// which closes next. Until every deal is read in full, a figure says it is a
+// floor or says nothing. It never prints part of the answer.
+function DealFigures({
+  roles,
+  cut,
+}: Readonly<{ roles: DealRole[]; cut: boolean }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  const reads = useQueries({
+    queries: roles.map((role) => dealSummaryQuery(role.deal_id)),
+  });
+  // A failed read settles too, so a lost deal never leaves "…" up for good.
+  const settled = reads.every((read) => !read.isPending);
+  const deals = reads
+    .map((read) => read.data)
+    .filter((deal): deal is Deal => deal != null);
+  // A page cut leaves deals unread, so every figure is a floor.
+  const complete =
+    !cut &&
+    reads.every((read) => read.isSuccess) &&
+    deals.length === roles.length;
+  const open = deals.filter((deal) => deal.status === "open");
+  const next = open
+    .filter((deal) => deal.expected_close_date)
+    // ISO days sort as plain strings, in no locale.
+    .sort((a, b) =>
+      (a.expected_close_date ?? "") < (b.expected_close_date ?? "") ? -1 : 1,
+    )[0];
+  const pending = "…";
+  return (
+    <StatStrip density="plate" label={t("contact.deals.figures")}>
+      <StatCard
+        label={t("contact.deals.openCount")}
+        value={
+          settled
+            ? `${formatNumber(open.length, locale)}${complete ? "" : "+"}`
+            : pending
+        }
+        detail={plural("contact.deals.ofAll", roles.length, {
+          count: `${formatNumber(roles.length, locale)}${cut ? "+" : ""}`,
+        })}
+      />
+      <StatCard
+        label={t("contact.deals.openValue")}
+        value={
+          settled
+            ? openValueWords(openValue(open, complete), t, locale)
+            : pending
+        }
+      />
+      <StatCard
+        label={t("contact.deals.nextClose")}
+        value={
+          !settled
+            ? pending
+            : !complete
+              ? MONEY_ABSENT
+              : next?.expected_close_date
+                ? formatDayMonth(next.expected_close_date, locale, readerZone)
+                : t("contact.deals.noClose")
+        }
+        detail={complete ? next?.name : undefined}
+      />
+    </StatStrip>
   );
 }
 
@@ -239,9 +378,17 @@ export function ContactDealsTab({
         }
       >
         {state === "ready" ? (
-          cards.map((role) => (
-            <DealRow key={role.relationship_id} role={role} />
-          ))
+          <PanelBody>
+            <DealFigures
+              roles={cards}
+              cut={view?.deal_roles?.page.has_more ?? false}
+            />
+            <ul className="ct-deal-grid">
+              {cards.map((role) => (
+                <DealTile key={role.relationship_id} role={role} />
+              ))}
+            </ul>
+          </PanelBody>
         ) : (
           <PanelBody>
             <SurfaceState

@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "a2860ad810d07c54c739c3f5c4a76b4dc1a88d6e910554c4be69df2907c43aa6"
+const jobContractHash = "8b793eb432d69c8f07e22515ea99b0fa1e0ba100d4dabf7f007656ef384fa8b3"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -97,6 +97,7 @@ func (ParticipantBackfillArgs) declaredJobType(ParticipantBackfillArgs)         
 func (PastActivityClockRefoldArgs) declaredJobType(PastActivityClockRefoldArgs)   {}
 func (RequestProofExpiryArgs) declaredJobType(RequestProofExpiryArgs)             {}
 func (PrivacyRetentionArgs) declaredJobType(PrivacyRetentionArgs)                 {}
+func (ProjectHealthScanArgs) declaredJobType(ProjectHealthScanArgs)               {}
 func (ProviderLookupSweepArgs) declaredJobType(ProviderLookupSweepArgs)           {}
 func (ProviderRunPollSweepArgs) declaredJobType(ProviderRunPollSweepArgs)         {}
 func (ProviderRunSubmitArgs) declaredJobType(ProviderRunSubmitArgs)               {}
@@ -174,6 +175,7 @@ var (
 	_ jobs.FleetWide = NotificationDigestArgs{}
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
+	_ jobs.FleetWide = ProjectHealthScanArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = ReportScheduleSweepArgs{}

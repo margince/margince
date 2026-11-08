@@ -139,7 +139,7 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
+	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
@@ -359,7 +359,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            walk.statedOver(summarize(outstanding(considered, s.view), materialBarOf(day, s.money))),
+		Summary:            walk.statedOver(summarize(summaryPopulation(considered, rows, s.view, filter), materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// Said on the page rather than per source: the cap is a bound on the
 		// ROSTER the scope resolves against, so what it cut is a colleague's

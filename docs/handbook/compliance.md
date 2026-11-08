@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -30,6 +30,9 @@ Yes. Admin and Ops switch off **Show individual performance** on the **Installat
 - Reports, analytics questions, forecasts, forecast shares, targets and editions show no colleague's figures. That holds for their exports and for agent answers about them too.
 - Splitting or filtering figures by owner or meeting host is refused, and so is a view of one colleague.
 - A figure that holds a colleague's work shows only if it holds the work of at least two colleagues besides you who still work here.
+- The same holds for the difference between two totals. A team total is hidden when taking away the members of another team you can see would leave fewer than two colleagues.
+- Say one team is A, B and C, and a second team is A and B. The first team is hidden, because it minus the second is C alone. The second team still shows. The difference counts members, so a total that would show that C won nothing is hidden too.
+- A company total is checked by who added to it, not by who is on a team. A colleague on no team who added nothing hides nothing. A colleague on no team who did add to it hides it when all other figures behind it come from one team you can see.
 - Team weeks are not made, sent or opened. Each member's own week stays.
 - Everyone still sees their own figures.
 
@@ -41,7 +44,9 @@ What the switch does not cover yet:
 
 What the switch cannot promise:
 - Records stay open to read. A list of deals still shows each deal's owner and amount.
-- Totals of teams that share members can be compared. Say you share one team with A and B, one with A and C, and one with B and C. The three totals together give each colleague's figure.
+- One team's total can be compared over time. When a member joins or leaves, this month's total minus last month's can show that member's figure.
+- Totals are compared two at a time. Several teams that together cover all but one colleague of a total are not taken away together, apart from your own **My teams**. Their totals can still add up to that colleague's figure.
+- A company total that holds no figure of a colleague on no team still shows, so it can show that this colleague added nothing.
 
 Also called: works council, Betriebsrat, figures per rep, team figures.
 
@@ -98,8 +103,15 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 
 - how long business mail is kept before anyone may delete it;
 - the due date of a privacy request;
-- the rules for sales mail.
+- who your company says it is, and whom to ask about data, at the foot of its mail;
+- the sales-mail rules for recipients under that law.
+
+The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
+
+How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.
+
+When a colleague moves to another legal entity, or a legal entity changes its law, mail already kept keeps its time.
 
 A change to a law that keeps mail for a shorter time does not cut that time for mail you already hold. That mail keeps the old time, and the page says until when.

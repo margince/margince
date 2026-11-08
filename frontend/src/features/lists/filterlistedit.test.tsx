@@ -363,15 +363,12 @@ describe("saving to the list", () => {
     ]);
   });
 
-  it("offers saving as a new view and the exports from More", async () => {
+  it("offers saving as a new view in the band, and the exports beside the count", async () => {
     open();
     const user = userEvent.setup();
     await screen.findByDisplayValue("Manufacturing");
-    await user.click(
-      screen.getByRole("button", { name: en["filters.footMore"] }),
-    );
     expect(
-      screen.getByRole("button", { name: en["filters.exportCsv"] }),
+      await screen.findByRole("button", { name: en["filters.exportCsv"] }),
     ).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: en["filters.saveAsNew"] }),
@@ -424,7 +421,7 @@ describe("saving to the list", () => {
     expect(screen.getByDisplayValue("Manufacturing")).toBeInTheDocument();
   });
 
-  it("exports JSON from More as the file the server rendered, under its name", async () => {
+  it("exports JSON as the file the server rendered, under its name", async () => {
     const files: Blob[] = [];
     Object.defineProperties(URL, {
       createObjectURL: {
@@ -446,10 +443,7 @@ describe("saving to the list", () => {
     const user = userEvent.setup();
     await screen.findByDisplayValue("Manufacturing");
     await user.click(
-      screen.getByRole("button", { name: en["filters.footMore"] }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: en["filters.exportJson"] }),
+      await screen.findByRole("button", { name: en["filters.exportJson"] }),
     );
 
     await vi.waitFor(() => expect(anchors).toHaveLength(1));

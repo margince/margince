@@ -11,21 +11,22 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { BulkVerbs } from "../../components/bulkverbs";
-import { Button } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
-import { type ListColumn, ListTable } from "../../design-system/listtable";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { useRowSelection } from "../../design-system/listselection";
+import {
+  type ListColumn,
+  type ListSelection,
+  ListTable,
+} from "../../design-system/listtable";
+import { Panel } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { downloadBytes, filenameFromDisposition } from "../../lib/download";
 import {
@@ -39,16 +40,13 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import "./lists.css";
 import "./listsection.css";
 
-/** Where each record type's rows are read, and the screen a row opens. */
+/** Where each record type's rows are read. `ENTITY` names the page a row opens. */
 export const MEMBER_SOURCES = {
-  contact: { path: "/contacts", screen: "contacts", unit: "unit.contacts" },
-  company: { path: "/companies", screen: "companies", unit: "unit.companies" },
-  deal: { path: "/deals", screen: "deals", unit: "unit.deals" },
-  lead: { path: "/leads", screen: "leads", unit: "unit.leads" },
-} as const satisfies Record<
-  string,
-  { path: string; screen: string; unit: MessageKey }
->;
+  contact: { path: "/contacts", unit: "unit.contacts" },
+  company: { path: "/companies", unit: "unit.companies" },
+  deal: { path: "/deals", unit: "unit.deals" },
+  lead: { path: "/leads", unit: "unit.leads" },
+} as const satisfies Record<string, { path: string; unit: MessageKey }>;
 
 type MemberSource = keyof typeof MEMBER_SOURCES;
 
@@ -63,9 +61,6 @@ export type MemberRow = Readonly<
 >;
 
 const MEMBER_PAGE = 50;
-
-// The largest page the record lists serve, for walking the members to select.
-const SELECT_ALL_PAGE = 200;
 
 type MemberPage = Readonly<{
   data: readonly MemberRow[];
@@ -107,29 +102,6 @@ async function listedPage(
   };
 }
 
-/**
- * Every member the reader can see, up to the bulk cap, and whether more remain
- * past it. These are the explicit records a verb will act on.
- */
-async function selectableMembers(
-  source: MemberSource,
-  listId: string,
-): Promise<Readonly<{ rows: MemberRow[]; more: boolean }>> {
-  const rows: MemberRow[] = [];
-  let cursor: string | undefined;
-  for (;;) {
-    const page = await memberPage(source, listId, SELECT_ALL_PAGE, cursor);
-    rows.push(...page.data.filter((row) => row.archived_at == null));
-    cursor = page.page.next_cursor ?? undefined;
-    if (!page.page.has_more || !cursor || rows.length > BULK_MAX_ITEMS) {
-      return {
-        rows: rows.slice(0, BULK_MAX_ITEMS),
-        more: rows.length > BULK_MAX_ITEMS || page.page.has_more,
-      };
-    }
-  }
-}
-
 export function isMemberSource(type: ListRecordType): type is MemberSource {
   return type in MEMBER_SOURCES;
 }
@@ -155,7 +127,8 @@ function useListMembers(list: List, source: MemberSource | undefined) {
     members.data?.pages.flatMap((page) => [...page.data]) ?? [];
   const state: SectionState = members.isPending
     ? "loading"
-    : members.isError
+    : // A failed later page keeps the rows already read; the table says why.
+      members.isError && shown.length === 0
       ? "unavailable"
       : shown.length > 0
         ? "ready"
@@ -224,16 +197,7 @@ export function MembersPanel({
   const { members, shown, state } = useListMembers(list, source);
   const chosen = useMemberSelection(list, source, shown);
   return (
-    <Panel
-      className="listsection"
-      title={t("lists.members.title")}
-      titleAction={
-        state === "ready" ? (
-          <SelectAllMembers list={list} chosen={chosen} />
-        ) : undefined
-      }
-    >
-      <MemberNotices chosen={chosen} />
+    <Panel className="listsection" title={t("lists.members.title")}>
       <SurfaceState
         state={state}
         emptyLabel={
@@ -250,143 +214,55 @@ export function MembersPanel({
           rowKey={(row) => row.id}
           onRowClick={onOpen}
           unit={t(MEMBER_SOURCES[source].unit)}
-          selection={chosen.selection}
+          selection={chosen}
           hasMore={members.hasNextPage}
           onLoadMore={() => members.fetchNextPage()}
           pending={members.isFetchingNextPage}
+          problem={
+            members.isError ? <ErrorLine error={members.error} /> : undefined
+          }
         />
       </SurfaceState>
     </Panel>
   );
 }
 
-type MemberSelection = ReturnType<typeof useMemberSelection>;
-
-// The selection over the members shown and those "Select all" fetched. A row
-// is known by the version it was read at, which is what the bulk change holds
-// each record to.
+// A row is known by the version it was read at, which is what the bulk change
+// holds each record to.
 function useMemberSelection(
   list: List,
   source: MemberSource,
   shown: readonly MemberRow[],
-) {
+): ListSelection<MemberRow> {
   const t = useT();
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [fetched, setFetched] = useState<readonly MemberRow[]>([]);
-  const [capped, setCapped] = useState(false);
-  const known = new Map<string, MemberRow>();
-  for (const row of [...fetched, ...shown]) {
-    known.set(row.id, row);
-  }
-  const rows = [...selected].flatMap((id) => {
-    const row = known.get(id);
-    return row ? [row] : [];
-  });
-  const clear = () => {
-    setSelected(new Set());
-    setFetched([]);
-    setCapped(false);
-  };
-  const selectAll = useMutation({
-    mutationFn: (input: Readonly<{ listId: string }>) =>
-      selectableMembers(source, input.listId),
-    onSuccess: (all) => {
-      setFetched(all.rows);
-      setSelected(new Set(all.rows.map((row) => row.id)));
-      setCapped(all.more);
-    },
+  const chosen = useRowSelection({
+    rows: shown,
+    keyOf: (row) => row.id,
+    limit: BULK_MAX_ITEMS,
   });
   const shortlist =
     list.list_type === "static" && list.can_edit && !list.archived_at
       ? { id: list.id, name: list.name }
       : undefined;
   return {
-    selectAll,
-    capped,
-    full: selected.size >= BULK_MAX_ITEMS,
-    selection: {
-      selected,
-      selectable: (row: MemberRow) => row.archived_at == null,
-      onToggle: (row: MemberRow) =>
-        setSelected((prev) => {
-          const next = new Set(prev);
-          if (next.has(row.id)) {
-            next.delete(row.id);
-          } else if (next.size < BULK_MAX_ITEMS) {
-            // At the cap a tick adds nothing: one change takes no more
-            // records, and the notice says so. Unticking stays open.
-            next.add(row.id);
-          }
-          return next;
-        }),
-      label: (row: MemberRow) =>
-        t("bulk.selectRow", { name: memberName(row, t) }),
-      bar: (
-        <BulkVerbs
-          recordType={source}
-          rows={rows.map((row) => ({
-            id: row.id,
-            version: row.version,
-            label: memberName(row, t),
-          }))}
-          shortlist={shortlist}
-          onDone={clear}
-        />
-      ),
-    },
+    selected: chosen.selected,
+    limit: chosen.limit,
+    selectable: (row) => row.archived_at == null,
+    onChange: chosen.onChange,
+    label: (row) => t("bulk.selectRow", { name: memberName(row, t) }),
+    bar: (
+      <BulkVerbs
+        recordType={source}
+        rows={chosen.selectedRows.map((row) => ({
+          id: row.id,
+          version: row.version,
+          label: memberName(row, t),
+        }))}
+        shortlist={shortlist}
+        onDone={chosen.clear}
+      />
+    ),
   };
-}
-
-/** "Select all N members", for a list the server could count. */
-function SelectAllMembers({
-  list,
-  chosen,
-}: Readonly<{ list: List; chosen: MemberSelection }>) {
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const total = list.visible_count ?? 0;
-  if (total === 0) {
-    return null;
-  }
-  return (
-    <Button
-      variant="ghost"
-      pending={chosen.selectAll.isPending}
-      onClick={() => chosen.selectAll.mutate({ listId: list.id })}
-    >
-      {plural("lists.members.selectAll", total, {
-        count: formatNumber(total, locale),
-      })}
-    </Button>
-  );
-}
-
-/** Why "Select all" fell short, or why a tick adds nothing more. */
-function MemberNotices({ chosen }: Readonly<{ chosen: MemberSelection }>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  if (!chosen.capped && !chosen.full && !chosen.selectAll.error) {
-    return null;
-  }
-  const cap = { count: formatNumber(BULK_MAX_ITEMS, locale) };
-  return (
-    <PanelBody>
-      <div className="lists-member-notices">
-        <ErrorLine error={chosen.selectAll.error} />
-        {chosen.capped && (
-          <Callout tone="info" title={t("lists.members.selectAllCappedTitle")}>
-            {plural("lists.members.selectAllCapped", BULK_MAX_ITEMS, cap)}
-          </Callout>
-        )}
-        {chosen.full && (
-          <Callout tone="info" title={t("lists.members.selectionFullTitle")}>
-            {plural("lists.members.selectionFull", BULK_MAX_ITEMS, cap)}
-          </Callout>
-        )}
-      </div>
-    </PanelBody>
-  );
 }
 
 /** A record's name, whichever field its type names itself by. */

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId } from "react";
+import { Fragment, useId } from "react";
 import { EntityRef } from "../../components/entityref";
+import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelRow } from "../../design-system/panel";
 import {
@@ -12,11 +13,11 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { activityTimeOfDay } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { itemTitle, moveHref, rowHref } from "../../lib/worklistcopy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import {
@@ -72,10 +73,16 @@ function answered(state: SectionState): boolean {
 export function SchedulePanel({
   day,
   state,
-}: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
+  onOpenMeeting,
+}: Readonly<{
+  day: Worklist | undefined;
+  state: SectionState;
+  /** Opens one meeting by its activity id; without it the title is text. */
+  onOpenMeeting?: (id: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const titleId = useId();
   if (scheduleIsEmpty(day, state)) {
     return null;
@@ -98,7 +105,10 @@ export function SchedulePanel({
         emptyLabel={t("brief.rail.quietSchedule")}
       >
         {meetings.length === 0 && answered(state) && day && (
-          <NoMeetingRows calendar={calendarDay(day)} />
+          <NoMeetingRows
+            calendar={calendarDay(day)}
+            onOpenMeeting={onOpenMeeting}
+          />
         )}
         {meetings.map((item) => (
           <PanelRow key={item.id} className="rail-schedule-row">
@@ -110,7 +120,7 @@ export function SchedulePanel({
                   reading as a schedule rather than as a list of sentences. */}
             <span className="rail-schedule-dot" aria-hidden="true" />
             <span className="rail-schedule-what">
-              <Title item={item} />
+              <Title item={item} onOpenMeeting={onOpenMeeting} />
               {isUnprepared(item) && (
                 <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
               )}
@@ -123,11 +133,19 @@ export function SchedulePanel({
 }
 
 /** What the panel says on a day it has no meeting rows to draw. */
-function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
+function NoMeetingRows({
+  calendar,
+  onOpenMeeting,
+}: Readonly<{
+  calendar: CalendarDay;
+  onOpenMeeting?: (id: string) => void;
+}>) {
   const t = useT();
   switch (calendar.state) {
     case "quiet":
-      return <NextMeetingRow next={calendar.next} />;
+      return (
+        <NextMeetingRow next={calendar.next} onOpenMeeting={onOpenMeeting} />
+      );
     case "not_connected":
       return (
         <>
@@ -135,7 +153,12 @@ function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
             sentence={t("brief.schedule.notConnected")}
             verb={t("brief.schedule.connect")}
           />
-          {calendar.next && <NextMeetingRow next={calendar.next} />}
+          {calendar.next && (
+            <NextMeetingRow
+              next={calendar.next}
+              onOpenMeeting={onOpenMeeting}
+            />
+          )}
         </>
       );
     case "unreadable":
@@ -145,7 +168,12 @@ function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
             sentence={t("brief.schedule.unreadable")}
             verb={t("brief.schedule.reconnect")}
           />
-          {calendar.next && <NextMeetingRow next={calendar.next} />}
+          {calendar.next && (
+            <NextMeetingRow
+              next={calendar.next}
+              onOpenMeeting={onOpenMeeting}
+            />
+          )}
         </>
       );
     case "unread":
@@ -177,10 +205,13 @@ function CalendarRow({
  * The next booked conversation, on the schedule's own line. Its gutter carries
  * a date rather than a time, which is what tells it apart from today's rows.
  */
-function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
+function NextMeetingRow({
+  next,
+  onOpenMeeting,
+}: Readonly<{ next: NextMeeting; onOpenMeeting?: (id: string) => void }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const time = activityTimeOfDay(
     next.starts_at,
     next.occurred_precision,
@@ -195,8 +226,14 @@ function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
       </span>
       <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
-        {next.linked_deal_id ? (
-          <EntityRef kind="deal" id={next.linked_deal_id} name={subject} />
+        {/* The title opens the meeting itself; its deal is one click on. */}
+        {onOpenMeeting ? (
+          <Button
+            variant="link"
+            onClick={() => onOpenMeeting(next.activity_id)}
+          >
+            {subject}
+          </Button>
         ) : (
           <span className="t-body">{subject}</span>
         )}
@@ -205,24 +242,42 @@ function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
             {t("brief.schedule.nextAt", { time })}
           </span>
         )}
-        {next.participants?.map((participant) => (
-          <EntityRef
-            key={participant.contact_id}
-            kind="contact"
-            id={participant.contact_id}
-            name={participant.full_name}
-          />
+        {next.participants?.map((participant, index) => (
+          <Fragment key={participant.contact_id}>
+            {index > 0 && ", "}
+            <EntityRef
+              kind="contact"
+              id={participant.contact_id}
+              name={participant.full_name}
+            />
+          </Fragment>
         ))}
+        <MeetingOthers
+          others={next.other_participants}
+          more={next.participants_more}
+          afterContacts={(next.participants?.length ?? 0) > 0}
+        />
       </span>
     </PanelRow>
   );
 }
 
 /** The row's own words, linked where the row names a record. */
-function Title({ item }: Readonly<{ item: WorklistItem }>) {
+function Title({
+  item,
+  onOpenMeeting,
+}: Readonly<{ item: WorklistItem; onOpenMeeting?: (id: string) => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const title = itemTitle(item, t, locale);
+  // A meeting row's title opens the meeting itself; its record is a click on.
+  if (item.source === MEETING && onOpenMeeting) {
+    return (
+      <Button variant="link" onClick={() => onOpenMeeting(item.id)}>
+        {title}
+      </Button>
+    );
+  }
   const href = rowHref(item) ?? (item.move ? moveHref(item) : undefined);
   return href ? (
     <AppLink className="entity-link t-body" href={href}>

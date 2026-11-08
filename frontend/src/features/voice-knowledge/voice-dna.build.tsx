@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
@@ -23,11 +22,8 @@ export function reportFailure(
   };
 }
 
-// The two ADR-0066 maturity thresholds, mirrored so the build control can say
-// how far a corpus still has to go. The server decides what state a profile is
-// in (VoiceProfile.maturity); these only phrase the distance to the next one.
-export const VOICE_FIRST_BUILD_WORDS = 800;
-
+// The ADR-0066 full-build threshold, mirrored to phrase how far a provisional
+// corpus still has to go. The first-build distance comes from the server.
 const VOICE_FULL_BUILD_WORDS = 4000;
 
 /** How a build ended, and the server's own words about it when it has any. */
@@ -71,6 +67,26 @@ function buildOutcomeText(
     return detail;
   }
   return t(`settings.voice.buildStatus.${outcome.status}`);
+}
+
+// The newest build as the profile read recorded it, for a page opened after
+// the build started or ended elsewhere. A success says nothing here: what it
+// produced is drawn as the voice or the candidate review.
+function recordedOutcome(
+  t: ReturnType<typeof useT>,
+  profile: VoiceProfile,
+): BuildOutcome | null {
+  const build = profile.latest_build;
+  switch (build?.status) {
+    case "queued":
+    case "running":
+      return { status: "pending", detail: t("settings.voice.buildRunning") };
+    case "failed":
+    case "deferred":
+      return { status: build.status, detail: deferralDetail(t, build) };
+    default:
+      return null;
+  }
 }
 
 // Build creates a durable background build; poll to a terminal state. A slow or
@@ -137,14 +153,14 @@ export function useVoiceBuild(profile: VoiceProfile, onBuilt: () => void) {
   // threshold. The word counts below only phrase the distance to the next state.
   const tooThin = profile.maturity === "collecting";
   // The distance is quoted only from a corpus total that loaded. A failed
-  // fetch would read as zero words and announce "about 800 more words" when
-  // the cause was the failure. The button's state follows maturity, which
-  // comes from a different request.
+  // fetch would read as zero words and announce a distance caused by the
+  // failure. The first-build distance is the profile's own server fact.
   const words = corpus.isSuccess ? corpus.data.summary.total_words : null;
+  const remaining = profile.first_build_words_remaining ?? null;
   const blocked =
-    tooThin && words !== null
+    tooThin && remaining !== null
       ? t("settings.voice.buildNeedsWords", {
-          n: formatNumber(Math.max(0, VOICE_FIRST_BUILD_WORDS - words), locale),
+          n: formatNumber(remaining, locale),
         })
       : null;
   const reach =
@@ -159,9 +175,14 @@ export function useVoiceBuild(profile: VoiceProfile, onBuilt: () => void) {
     error,
     tooThin,
     words,
+    remaining,
     blocked,
     reach,
-    progress: buildStatusLine(t, build.isPending, outcome),
+    progress: buildStatusLine(
+      t,
+      build.isPending,
+      outcome ?? recordedOutcome(t, profile),
+    ),
   };
 }
 
@@ -179,7 +200,7 @@ export function BuildButton({
   run: VoiceBuild;
   profile: VoiceProfile;
   intakeBusy: boolean;
-  variant?: "ai" | "ghost";
+  variant?: "ai" | "aiQuiet";
   describedBy?: string;
 }>) {
   const t = useT();
@@ -195,7 +216,6 @@ export function BuildButton({
       busyLabel={t("settings.voice.building")}
       onClick={() => run.build.mutate()}
     >
-      <Sparkles aria-hidden />{" "}
       {t(
         (profile.profile_version ?? 0) > 0
           ? "settings.voice.rebuild"

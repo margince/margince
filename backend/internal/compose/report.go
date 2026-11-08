@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -55,7 +56,6 @@ const (
 	// at write time (modules/deals writes inside the RLS tx), so a deal's stage row
 	// is never invisible to the deal's own scope.
 	joinStageForWinProbability = "JOIN stage s ON s.id = t.stage_id"
-	colWinProbability          = "s.win_probability"
 
 	// weightedAmountMinorExpr is the report engine's weighted value (AC-F1):
 	// rounded per deal, half away from zero, so a roll-up equals the sum of its
@@ -245,26 +245,17 @@ type reportSpec struct {
 	grants map[string]string
 }
 
-// forecastCategoryExpr is the forecast's effective-category dimension
-// (formulas §11, AC-F9): a claimed commit/best_case deal whose close
-// date is past, missing, or still a provisional machine guess is NOT
-// counted in those totals — it groups under 'slipped' until a human
-// confirms a real date. The exclusion lives in the dimension itself, so
-// the aggregate, its filter, and the drill-through all read the same
-// row set and keep reconciling exactly (no post-hoc subtraction).
-// "Today" buckets in the installation's reporting zone (data-semantics §2 r4).
-//
-// The zone arrives as a BIND parameter, written here as reportZoneToken and
-// substituted for a real $n once the statement is assembled (reportsql.go
-// bindReportTokens) — the catalog is a static map of expressions, so it has
-// no bind position to name at the point it is written. Postgres still does the date arithmetic, which is what keeps
-// the DST rules and the day boundary where they were when the zone was a
-// column on a joined row.
-const forecastCategoryExpr = `(CASE WHEN t.forecast_category IN ('commit','best_case')
-		AND (t.expected_close_date IS NULL
-			OR t.expected_close_date < (timezone(` + reportZoneToken + `, now()))::date
-			OR t.close_date_provisional)
-	THEN 'slipped' ELSE t.forecast_category END)`
+// colWinProbability is the deal's effective win probability, the figure the
+// forecast weights by and the deal list filters on.
+var colWinProbability = deals.WinProbabilitySQL("t")
+
+// winProbabilityBandExpr groups deals into the bands the analytics tiles draw.
+// 90_plus is Likely at the shipped threshold.
+var winProbabilityBandExpr = `(CASE WHEN ` + colWinProbability + ` = 0 THEN 'zero'
+	WHEN ` + colWinProbability + ` < 30 THEN '1_29'
+	WHEN ` + colWinProbability + ` < 60 THEN '30_59'
+	WHEN ` + colWinProbability + ` < 90 THEN '60_89'
+	ELSE '90_plus' END)`
 
 // fromClause renders the base table (aliased t) plus the spec's fixed
 // lookup joins — the one spelling shared by the aggregate plan and the
