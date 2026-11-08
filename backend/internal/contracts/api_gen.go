@@ -66416,12 +66416,13 @@ type WorkingHours struct {
 // there too, but the totals the first page stated stay as they were: they still count
 // the rows that source holds, and the list stops short of them.
 //
-// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
-// and deals at risk that the ranked rows left out continue as a tail, merged in one
-// order (oldest due date, arrival or expected close first) and reached through
-// `next_cursor` to their end. Items past the read limit of any other source are not
-// reachable through `next_cursor`. They join a later read as the items in front of
-// them are handled.
+// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers,
+// deals at risk and staged approvals that the ranked rows left out continue as a tail,
+// merged in one order and reached through `next_cursor` to their end. The order is the
+// oldest due date, arrival or expected close first. Approvals carry no date in it, so
+// they come after the dated rows, newest staged first. Items past the read limit of any
+// other source are not reachable through `next_cursor`. They join a later read as the
+// items in front of them are handled.
 type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -67761,9 +67762,10 @@ type WorklistPromiseRecipientStatus string
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
 // `more_available` is true there are candidates past the bound that this read never
 // saw, and no field here claims to know how many; `counts[].total` is the exact figure
-// per category where one exists. For tasks, waiting customers and deals at risk the
-// rest is reached through `next_cursor`. For any other source a reader who needs the
-// rest narrows the queue or opens that source's own screen, which pages its own data.
+// per category where one exists. For tasks, waiting customers, deals at risk and
+// approvals the rest is reached through `next_cursor`. For any other source a reader
+// who needs the rest narrows the queue or opens that source's own screen, which pages
+// its own data.
 //
 // `shown` is how many of those candidates survived filtering and the page cut, so
 // `shown` under `considered` means the rest were folded, filtered or below the cut —
