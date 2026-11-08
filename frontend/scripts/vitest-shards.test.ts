@@ -96,6 +96,15 @@ describe("the cost a test file is expected to have", () => {
     expect(kindOf("program.test.ts", source)).toBe("program");
   });
 
+  it("reads a test's sweep module as the test's own code", () => {
+    plant(
+      "census.sweep.ts",
+      'import { k } from "./compiler";\nprogramOver([k], "");\n',
+    );
+    const source = 'import type * as S from "./census.sweep";\n';
+    expect(kindOf("swept.test.ts", source)).toBe("program");
+  });
+
   it("finds all three kinds in the real suite", () => {
     const kinds = new Set([...suite.values()].map(({ kind }) => kind));
     expect(kinds).toEqual(new Set(["render", "parse", "program"]));

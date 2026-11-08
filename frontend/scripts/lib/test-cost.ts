@@ -12,20 +12,23 @@ import { edgesOf } from "./import-reach.ts";
 export type TestKind = "render" | "parse" | "program";
 
 // Milliseconds on the CI runner: a fixed part for loading what the kind loads,
-// and a part per kilobyte of test source. Fitted to six runs of the full suite;
-// a stale fit makes the split less even and never drops or repeats a file.
+// and a part per kilobyte of test source. Fitted to six runs of the full suite.
+// The parse kind was fitted again once those files ran unisolated, from two
+// runs scaled to the render fit. A stale fit makes the split less even and
+// never drops or repeats a file.
 const COST_MS: Readonly<
   Record<TestKind, { fixed: number; perKilobyte: number }>
 > = {
   render: { fixed: 700, perKilobyte: 110 },
-  parse: { fixed: 3700, perKilobyte: 660 },
-  program: { fixed: 0, perKilobyte: 7700 },
+  parse: { fixed: 1950, perKilobyte: 570 },
+  program: { fixed: 0, perKilobyte: 2300 },
 };
 
 // A value import: `import type` is erased and loads nothing.
 const LOADS_COMPILER =
   /^\s*import\s+(?!type\b)[^;]*?\bfrom\s*["']typescript["']/m;
 const BUILDS_PROGRAM = /\b(?:programOver|checkedProgram|createProgram)\s*\(/;
+const isSweep = (path: string) => path.endsWith(".sweep.ts");
 
 // The modules each module is imported by, over everything `entries` reach,
 // and which of them import the compiler themselves.
@@ -72,7 +75,10 @@ export function testCosts(
   const reach = compilerReach(files);
   return new Map(
     files.map((file) => {
-      const source = readFileSync(file, "utf8");
+      // A test's `.sweep.ts` is its own code, moved out to run in a worker.
+      const source = [file, ...edgesOf(file, "scanned").filter(isSweep)]
+        .map((path) => readFileSync(path, "utf8"))
+        .join("\n");
       const kind: TestKind = !reach.has(file)
         ? "render"
         : BUILDS_PROGRAM.test(source)
