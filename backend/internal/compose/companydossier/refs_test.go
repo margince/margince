@@ -13,7 +13,7 @@ import (
 // cited is a dossier reply scripted with record ids as the model writes it:
 // each id the request showed spelled as its ref. An id the request never
 // showed stays as written, which is how a model that invents one answers.
-func cited(in Input, reply string) string { return dossierRefs(in).Show(reply) }
+func cited(in Input, reply string) string { return summaryRefs(in).Show(reply) }
 
 func parseCitedDossier(reply string, in Input) ([]Section, error) {
 	return ParseDossier(cited(in, reply), in)

@@ -3,28 +3,7 @@
 
 package companydossier
 
-import (
-	"github.com/margince/margince/backend/internal/compose/claims"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
-)
-
-// growthFitRefs names the records the growth-fit prompt shows: profile fields
-// p1, p2, … and facts f1, f2, …, in the order the summary lists them.
-// GrowthFitRequest and ParseGrowthFit both build it from the same input.
-func growthFitRefs(in Input) claims.Refs {
-	fields, facts := promptref.New("p"), promptref.New("f")
-	for _, field := range in.ProfileFields {
-		if field.Id != nil {
-			fields.For(field.Id.String())
-		}
-	}
-	for _, fact := range in.Facts {
-		if fact.Id != nil {
-			facts.For(fact.Id.String())
-		}
-	}
-	return claims.Refs{citeProfileField: fields, citeFact: facts}
-}
+import "github.com/margince/margince/backend/internal/compose/claims"
 
 // readRefs turns every citation of the reply into the record id its ref names,
 // before the grounding filter judges it.

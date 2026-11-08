@@ -57,7 +57,7 @@ func DossierRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:   dossierSystemFor(fence, lang),
-		Messages: []model.Message{{Role: "user", Content: fence.Wrap(dossierRefs(in).Show(encodeInput(in, lang)))}},
+		Messages: []model.Message{{Role: "user", Content: fence.Wrap(summaryRefs(in).Show(encodeInput(in, lang)))}},
 		// Deliberately NOT set: the dossier describes the company, and our own
 		// context is only ever an input to a judgment about fit. A writer given
 		// it would start comparing, which is the other surface's job.
@@ -67,10 +67,10 @@ func DossierRequest(in Input, lang string) model.Request {
 	}
 }
 
-// dossierRefs names each profile field and fact the dossier prompt shows by a
-// ref, and reads a reply's citations back. The language words the industry
-// only, so the refs are the same in every language.
-func dossierRefs(in Input) claims.Refs {
+// summaryRefs names each profile field and fact the dossier and growth-fit
+// prompts show by a ref, and reads a reply's citations back. The language
+// words the industry only, so the refs are the same in every language.
+func summaryRefs(in Input) claims.Refs {
 	return claims.MintRefs(encodeInput(in, ""), KnownRecords(in))
 }
 
@@ -133,7 +133,7 @@ func ParseDossier(reply string, in Input) ([]Section, error) {
 		return nil, fmt.Errorf("parse the dossier reply: %w", err)
 	}
 	known := KnownRecords(in)
-	shown := dossierRefs(in)
+	shown := summaryRefs(in)
 	bySection := map[string][]claims.Sentence{}
 	for _, section := range parsed.Sections {
 		kept := keepNatures(shown.Read(section.Sentences), known, map[string]bool{natureFact: true})

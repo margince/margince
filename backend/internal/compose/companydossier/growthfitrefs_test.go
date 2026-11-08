@@ -12,7 +12,7 @@ import (
 
 // firstFieldRef is the ref the growth-fit prompt shows for an input's first
 // profile field.
-const firstFieldRef = "p1"
+const firstFieldRef = "pf1"
 
 func TestTheGrowthFitPromptNamesRecordsByRefAndTheReplyReadsBack(t *testing.T) {
 	in := sevenOfSeven()
@@ -37,7 +37,7 @@ func TestTheGrowthFitPromptNamesRecordsByRefAndTheReplyReadsBack(t *testing.T) {
 
 func TestAGrowthFitCitationOfARefNeverShownOrARawIDGroundsNothing(t *testing.T) {
 	in := sevenOfSeven()
-	for _, cited := range []string{"p99", "f1x", in.ProfileFields[0].Id.String()} {
+	for _, cited := range []string{"pf99", "fa1x", in.ProfileFields[0].Id.String()} {
 		reply := `{"band":"strong","positive_factors":[{"text":"They sell software.","nature":"fact",
 			"evidence":[{"entity_type":"profile_field","entity_id":"` + cited + `"}]}]}`
 		if _, _, err := ParseGrowthFit(reply, in); err == nil {
@@ -48,8 +48,8 @@ func TestAGrowthFitCitationOfARefNeverShownOrARawIDGroundsNothing(t *testing.T) 
 
 func TestAGrowthFitClaimSpellingARefInItsTextIsDropped(t *testing.T) {
 	in := sevenOfSeven()
-	reply := `{"band":"strong","positive_factors":[{"text":"Per p1 they sell software.","nature":"fact",
-		"evidence":[{"entity_type":"profile_field","entity_id":"p1"}]}]}`
+	reply := `{"band":"strong","positive_factors":[{"text":"Per pf1 they sell software.","nature":"fact",
+		"evidence":[{"entity_type":"profile_field","entity_id":"pf1"}]}]}`
 	if _, _, err := ParseGrowthFit(reply, in); err == nil {
 		t.Error("a claim spelling its ref in reader text was kept")
 	}
