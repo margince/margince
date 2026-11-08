@@ -25,21 +25,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// mailScriptedBrain answers each signature call by the mail it names in the
-// fenced source_id, and records which scripted mails it was asked about. A mail
-// with no script gets an empty answer: every captured body opens with its From
-// line, so the newest mail is always read.
+// mailScriptedBrain answers each signature call by the mail whose signature
+// block the prompt shows, and records which scripted mails it was asked about.
+// The prompt names the mail by a ref, never by its id, so the block is what
+// tells one mail from another. A mail with no script gets an empty answer:
+// every captured body opens with its From line, so the newest mail is always
+// read.
 type mailScriptedBrain struct {
 	mu      sync.Mutex
 	answers map[ids.UUID][]map[string]any
 	fail    map[ids.UUID]error
+	bodies  map[ids.UUID]string
 	asked   []ids.UUID
 	// onAsk runs before the answer, as a human acting while the model thinks.
 	onAsk func(ids.UUID)
 }
 
 func newMailScriptedBrain() *mailScriptedBrain {
-	return &mailScriptedBrain{answers: map[ids.UUID][]map[string]any{}, fail: map[ids.UUID]error{}}
+	return &mailScriptedBrain{
+		answers: map[ids.UUID][]map[string]any{}, fail: map[ids.UUID]error{}, bodies: map[ids.UUID]string{},
+	}
 }
 
 func (b *mailScriptedBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
@@ -49,17 +54,7 @@ func (b *mailScriptedBrain) Complete(_ context.Context, req model.Request) (mode
 		// A seeded contact's own mail, read in the same pass.
 		return model.Response{Text: `{"fields": []}`}, nil
 	}
-	var mail ids.UUID
-	for id := range b.answers {
-		if strings.Contains(req.Messages[0].Content, id.String()) {
-			mail = id
-		}
-	}
-	for id := range b.fail {
-		if strings.Contains(req.Messages[0].Content, id.String()) {
-			mail = id
-		}
-	}
+	mail := b.shown(req.Messages[0].Content)
 	if mail != ids.Nil {
 		b.asked = append(b.asked, mail)
 	}
@@ -74,6 +69,23 @@ func (b *mailScriptedBrain) Complete(_ context.Context, req model.Request) (mode
 		return model.Response{}, err
 	}
 	return model.Response{Text: string(payload)}, nil
+}
+
+// shown is the scripted mail whose signature block the prompt carries, the
+// longest block winning when one contains another.
+func (b *mailScriptedBrain) shown(content string) ids.UUID {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	var mail ids.UUID
+	longest := 0
+	for id, body := range b.bodies {
+		_, scripted := b.answers[id]
+		_, failing := b.fail[id]
+		block := signatureBlock(body)
+		if (scripted || failing) && block != "" && len(block) > longest && strings.Contains(content, block) {
+			mail, longest = id, len(block)
+		}
+	}
+	return mail
 }
 
 func (b *mailScriptedBrain) askedAbout() []ids.UUID {
@@ -107,10 +119,14 @@ func setupHistory(t *testing.T) *historyEnv {
 // writes captures an inbound mail from the contact, days after the first one.
 func (h *historyEnv) writes(t *testing.T, days int, body string) ids.UUID {
 	t.Helper()
-	return h.capture(t, owedMail{
+	mail := h.capture(t, owedMail{
 		from: historyFrom, to: h.seat, subject: "Order", body: body,
 		at: h.day.AddDate(0, 0, days), messageID: "pat-" + ids.NewV7().String() + "@customer.example",
 	})
+	h.brain.mu.Lock()
+	defer h.brain.mu.Unlock()
+	h.brain.bodies[mail] = body
+	return mail
 }
 
 func signed(title string) string {

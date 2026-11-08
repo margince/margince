@@ -32,7 +32,6 @@ var stillShowsRecordIDs = map[string]string{
 	"deal_verdict/deal_verdict":              "activity, stage and criterion ids; integration fakes reply with them",
 	"draft_reply/account":                    "the recipient id",
 	"draft_reply/contact":                    "the recipient id",
-	"enrich/signature":                       "the source activity id on its span",
 	"report_interpret/sales_assessment":      "candidate deal ids",
 	"report_setup/custom_report_setup":       "catalog ids",
 	"report_setup/initiative_setup":          "catalog product ids",

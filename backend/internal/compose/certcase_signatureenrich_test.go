@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -266,19 +267,17 @@ func TestSignatureEnrichFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	}
 }
 
-// The fixture supplies no activity id, and Prepare mints a fresh one per
-// preparation. Production reads it from the linked mail's ledger row, which no
-// sender has written, so a fixture carrying one would put a product-side
-// identifier in the hands of whoever authored the mail.
-func TestSignatureEnrichCaseMintsTheActivityIDRatherThanReadingIt(t *testing.T) {
-	first := signatureSourceIDIn(t, runSignatureEnrichTrace(t))
-	second := signatureSourceIDIn(t, runSignatureEnrichTrace(t))
-
-	if first == "" {
-		t.Fatal("the signature window carries no source id")
+// The signature window names its mail by a ref, never by the activity id
+// Prepare mints: the reply cites nothing, and an id in the prompt is one a
+// model can copy into a field.
+func TestSignatureEnrichCaseNamesTheMailByARef(t *testing.T) {
+	req := runSignatureEnrichTrace(t)
+	if got := signatureSourceIDIn(t, req); got != "m1" {
+		t.Errorf("the signature window is named %q, want the ref m1", got)
 	}
-	if first == second {
-		t.Errorf("two preparations share the activity id %q", first)
+	if id := regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`).
+		FindString(req.Messages[0].Content); id != "" {
+		t.Errorf("the request shows the record id %s", id)
 	}
 }
 

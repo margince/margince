@@ -163,7 +163,11 @@ one certification run can cover:
    ```
 
    A batch that answers one result per label can use `resolveBatchRefs` in
-   `internal/compose/batchfidelity.go`. `TestNoSiteShowsTheModelARecordUUID` builds every request of
+   `internal/compose/batchfidelity.go`. A JSON payload built with record IDs can go out through
+   `promptref.Rewrite`, which puts each ID's label in its place. `Refs.NamedIn` finds a label that a
+   reply wrote in reader text, and the parser refuses that text as it refuses an ID there. Cited
+   evidence of the shape `{entity_type, entity_id}` reads back through `claims.Refs`, which keeps one
+   table for each entity type. `TestNoSiteShowsTheModelARecordUUID` builds every request of
    every corpus scenario and fails a site whose prompt, answer schema or tool list carries a UUID.
    Why a UUID is a bad name for a model:
    [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids).
