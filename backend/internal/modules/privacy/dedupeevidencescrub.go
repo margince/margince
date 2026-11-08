@@ -27,7 +27,7 @@ func scrubDedupeEvidence(ctx context.Context, tx pgx.Tx, contacts, leads []ids.U
 	if len(contacts) == 0 && len(leads) == 0 {
 		return nil
 	}
-	args := pgx.StrictNamedArgs{"contacts": contacts, "leads": leads}
+	args := pgx.StrictNamedArgs{"contacts": contacts, leadsParameter: leads}
 	rows, err := tx.Query(ctx, `SELECT id FROM dedupe_candidate
   WHERE (left_contact_id = ANY(@contacts) OR right_contact_id = ANY(@contacts)
    OR left_lead_id = ANY(@leads) OR right_lead_id = ANY(@leads))

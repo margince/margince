@@ -349,8 +349,10 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
 		 WHERE `+preferenceLinkRowSQL+`
 		   AND (pt.revoked_reason IS NULL OR pt.revoked_reason IN ('rotated', 'expired', @merged))`,
-		pgx.NamedArgs{"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
-			"merged": PreferenceRevokedMergedIntoSurvivor}).Scan(&contactID, &address)
+		pgx.NamedArgs{
+			"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
+			"merged": PreferenceRevokedMergedIntoSurvivor,
+		}).Scan(&contactID, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WithdrawalRef{}, apperrors.ErrNotFound
 	}

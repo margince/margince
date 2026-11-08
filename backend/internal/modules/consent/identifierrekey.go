@@ -64,7 +64,7 @@ func RekeyKeptStopsPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 	if _, err := tx.Exec(ctx, `UPDATE communication_suppression s
 		SET address_hash = u.hash, address_key_id = @key
 		FROM unnest(@ids::uuid[], @hashes::text[]) AS u(id, hash) WHERE s.id = u.id`,
-		pgx.StrictNamedArgs{"ids": storedIDs(page), "hashes": rekeyed, "key": *keyID}); err != nil {
+		pgx.StrictNamedArgs{"ids": storedIDs(page), "hashes": rekeyed, fieldKey: *keyID}); err != nil {
 		return nil, fmt.Errorf("consent: re-keying stops: %w", err)
 	}
 	return storedIDs(page), nil

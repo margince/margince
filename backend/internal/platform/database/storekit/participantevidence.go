@@ -30,7 +30,10 @@ func ParticipantEvidenceReady(ctx context.Context, tx pgx.Tx) (bool, error) {
 	return ready, err
 }
 
+// pageLimitParameter binds the size of a page a sweep reads.
+const pageLimitParameter = "limit"
+
 // ParticipantEvidenceArgs keeps readiness and repair limits checked by pgx.
 func ParticipantEvidenceArgs(limit int64) pgx.StrictNamedArgs {
-	return pgx.StrictNamedArgs{"limit": limit}
+	return pgx.StrictNamedArgs{pageLimitParameter: limit}
 }

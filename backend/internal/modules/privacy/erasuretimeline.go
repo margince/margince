@@ -204,7 +204,7 @@ func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Conte
 	if leads == nil {
 		leads = []ids.UUID{}
 	}
-	args := pgx.StrictNamedArgs{"contact_id": contactID, "leads": leads}
+	args := pgx.StrictNamedArgs{"contact_id": contactID, leadsParameter: leads}
 	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, args); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list history: %w", err)
 	}

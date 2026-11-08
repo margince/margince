@@ -146,8 +146,10 @@ func resolvePreferenceTokenTx(ctx context.Context, tx pgx.Tx, token string) (Pre
 		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
 		 WHERE `+preferenceLinkRowSQL+` AND pt.expires_at > now()
 		   AND (pt.revoked_at IS NULL OR pt.revoked_reason = @merged)`,
-		pgx.NamedArgs{"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
-			"merged": PreferenceRevokedMergedIntoSurvivor}).Scan(&ref.ContactID, &ref.EmailID, &merged, &address)
+		pgx.NamedArgs{
+			"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
+			"merged": PreferenceRevokedMergedIntoSurvivor,
+		}).Scan(&ref.ContactID, &ref.EmailID, &merged, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return PreferenceRef{}, apperrors.ErrNotFound
 	}

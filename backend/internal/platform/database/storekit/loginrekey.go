@@ -30,7 +30,7 @@ func RekeyLoginAttemptsPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `SELECT id, detail->>'email_hash' `+unkeyedLoginRows+`
-		AND id > @after ORDER BY id LIMIT @limit FOR UPDATE`, pgx.StrictNamedArgs{"after": after, "limit": limit})
+		AND id > @after ORDER BY id LIMIT @limit FOR UPDATE`, pgx.StrictNamedArgs{"after": after, pageLimitParameter: limit})
 	if err != nil {
 		return nil, fmt.Errorf("store: reading unkeyed failed-login rows: %w", err)
 	}
