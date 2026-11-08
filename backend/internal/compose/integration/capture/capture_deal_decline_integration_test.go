@@ -48,6 +48,7 @@ func asColleague(w dealWorld, kind principal.PrincipalType, objects map[string]p
 	actor.Type = kind
 	if kind == principal.PrincipalAgent {
 		actor.ID = "agent:decline-test"
+		actor.PassportID, actor.OnBehalfOf = ids.NewV7(), actor.UserID
 	}
 	if objects != nil {
 		actor.Permissions.Objects = objects
@@ -163,10 +164,11 @@ func TestNoneOfThemDeclinesEveryOfferedDealAndClosesTheQuestion(t *testing.T) {
 	wantDeals(t, e, "none2@acme.example")
 }
 
-// The decline answers by the caller's access: 403 without the grants it
-// needs, 404 for a message or a deal the caller cannot reach. An agent's
-// decline takes the deal off and keeps the project: only a member takes a
-// project filing back.
+// The decline answers by the caller's access, for a member and an agent
+// alike. It is 403 without the grants it needs, and 404 for a message or a
+// deal the caller cannot reach. An agent's decline takes the deal's own project link
+// off too, as a member's does, and the audit row names the agent. An agent
+// that cannot read projects keeps the link and says so.
 func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -190,6 +192,8 @@ func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 	}{
 		{"without activity update", asColleague(w, principal.PrincipalHuman, readOnly), mail, dealBody(deal), http.StatusForbidden},
 		{"without the deal read", asColleague(w, principal.PrincipalHuman, noDeals), mail, dealBody(deal), http.StatusForbidden},
+		{"an agent without activity update", asColleague(w, principal.PrincipalAgent, readOnly), mail, dealBody(deal), http.StatusForbidden},
+		{"an agent without the deal read", asColleague(w, principal.PrincipalAgent, noDeals), mail, dealBody(deal), http.StatusForbidden},
 		{"a message nobody has", w.ctx, ids.NewV7(), dealBody(deal), http.StatusNotFound},
 		{"a deal nobody has", w.ctx, mail, dealBody(ids.NewV7()), http.StatusNotFound},
 	} {
@@ -199,12 +203,36 @@ func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
 	}
 	wantDeals(t, e, "dec3@acme.example", deal)
 
-	status, out := decline(asColleague(w, principal.PrincipalAgent, nil), t, e, mail, dealBody(deal))
+	noProjects := map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}, "deal": {Read: true}}
+	status, out := decline(asColleague(w, principal.PrincipalAgent, noProjects), t, e, mail, dealBody(deal))
 	if status != http.StatusOK || !out.Unlinked || out.ProjectUnfiled || !out.ProjectKept {
-		t.Fatalf("the agent's decline answered %d %+v, want the deal off and the project kept", status, out)
+		t.Fatalf("the decline of an agent that cannot read projects answered %d %+v, want the deal off and the project kept", status, out)
 	}
 	wantDeals(t, e, "dec3@acme.example")
 	if got := linkedProject(t, e, "dec3@acme.example"); got != rollout.ID {
-		t.Fatalf("the agent's decline left project %s, want %s", got, rollout.ID)
+		t.Fatalf("the decline of an agent that cannot read projects left project %s, want %s", got, rollout.ID)
+	}
+
+	// A second mail on the same deal, captured the same way, for the agent
+	// that holds the project grant.
+	other := mailFrom("alice@acme.example", "dec4@acme.example", "", "status")
+	env.sync(t, other)
+	env.sync(t, other)
+	if got := linkedProject(t, e, "dec4@acme.example"); got != rollout.ID {
+		t.Fatalf("the second mail is on project %s, want the deal's project %s", got, rollout.ID)
+	}
+	mail = activityOf(t, e, "dec4@acme.example")
+	status, out = decline(asColleague(w, principal.PrincipalAgent, nil), t, e, mail, dealBody(deal))
+	if status != http.StatusOK || !out.Unlinked || !out.ProjectUnfiled || out.ProjectKept {
+		t.Fatalf("the agent's decline answered %d %+v, want the deal and its project taken off", status, out)
+	}
+	wantDeals(t, e, "dec4@acme.example")
+	if got := linkedProject(t, e, "dec4@acme.example"); !got.IsZero() {
+		t.Fatalf("the agent's decline left project %s, want it taken off with the deal", got)
+	}
+	undone := `SELECT count(*) FROM audit_log WHERE entity_id = '` + mail.String() + `'
+		AND evidence->>'cause' = 'project_filing_undone' AND actor_type = 'agent' AND actor_id = 'agent:decline-test'`
+	if n := countRows(t, e, undone); n != 1 {
+		t.Fatalf("%d audit rows record the agent taking the project back, want 1", n)
 	}
 }

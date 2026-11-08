@@ -30893,7 +30893,7 @@ type ActivityDealDecline struct {
 	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
 	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
 
-	// ProjectKept A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it.
+	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
 	ProjectKept bool `json:"project_kept"`
 
 	// ProjectUnfiled The project link that came from a declined deal came off the message.
