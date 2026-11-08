@@ -109,7 +109,7 @@ func (s *promotionSight) requirePlanShown(reader context.Context, id ids.Approva
 // The admin who decided keeps the plan; the rep who cannot open the company
 // it is filed under reads the decision without it.
 func TestADecidedPlanStaysHiddenFromAReaderWhoCannotOpenWhatItTouched(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	company := s.privateCompany(hiddenMailSecret, s.e.Rep1)
 	id := s.stageHiddenMail(company, approvals.StageInput{}, "Renewal terms attached.")
 	if _, err := s.svc.Decide(s.rep1(), id, true, nil); err != nil {
@@ -165,7 +165,7 @@ func TestEveryEndOfAPlanKeepsItFromAReaderWhoCannotOpenWhatItTouched(t *testing.
 		}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s := newKindSight(t)
+			s := newMailSight(t)
 			company := s.privateCompany(hiddenMailSecret, s.e.Rep1)
 			id := s.stageHiddenMail(company, approvals.StageInput{}, "Renewal terms attached.")
 			if tc.name == "superseded" {
@@ -186,7 +186,7 @@ func TestEveryEndOfAPlanKeepsItFromAReaderWhoCannotOpenWhatItTouched(t *testing.
 // Rep2 opens every record the plan touched, and their role masks the address
 // it is sent to. The mask, not the sight, keeps the decided plan from them.
 func TestADecidedPlanStaysHiddenFromAReaderWhoseRoleMasksAFieldItNamed(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	company := s.company("Open Account", s.e.Rep2, "")
 	id := s.stageHiddenMail(company, approvals.StageInput{}, "Renewal terms attached.")
 	if _, err := s.svc.Decide(s.rep1(), id, false, nil); err != nil {
@@ -202,7 +202,7 @@ func TestADecidedPlanStaysHiddenFromAReaderWhoseRoleMasksAFieldItNamed(t *testin
 // A rep may decline a plan they cannot open. What the decision hands back to
 // them, one at a time or as a bundle, carries none of it.
 func TestADeclineByAReaderWhoCannotOpenThePlanAnswersWithoutIt(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	company := s.privateCompany(hiddenMailSecret, s.e.Rep1)
 	single := s.stageHiddenMail(company, approvals.StageInput{}, "Renewal terms attached.")
 	declined, err := (approvalInbox{svc: s.svc}).DecideApproval(s.rep2(), single.UUID, false, "")
@@ -230,7 +230,7 @@ func TestADeclineByAReaderWhoCannotOpenThePlanAnswersWithoutIt(t *testing.T) {
 // reader. An agent's plan then shows nobody its payload; a kind with no
 // preview shows every decider what its pending card showed.
 func TestAPlanDecidedWithoutAFootprintShowsOnlyWhatNoPreviewGuarded(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	agentPlan := s.stageHiddenMail(s.company("Plain Account", s.e.Rep1, ""), approvals.StageInput{}, "Renewal terms attached.")
 	typed, err := s.svc.Stage(s.e.Admin(), approvals.StageInput{
 		Kind: "fx_rate_proposal", ProposedChange: json.RawMessage(`{"note":"a rate to confirm"}`), DiffHash: "legacy-" + ids.NewV7().String(), Summary: "Confirm the month's rate",
@@ -255,7 +255,7 @@ func TestAPlanDecidedWithoutAFootprintShowsOnlyWhatNoPreviewGuarded(t *testing.T
 // A contact the plan touched, named nowhere in its payload or summary, is
 // found through the footprint by both the export and the erasure.
 func TestAContactOnlyADecidedPlansFootprintNamesIsExportedAndErased(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	buyer := s.e.SeedContact(t, "Open Buyer", &s.e.Rep1)
 	contact := s.e.SeedContact(t, "Footprint Subject", &s.e.Rep1)
 	note, _, err := s.e.Activities.LogActivity(s.e.Admin(), activities.LogActivityInput{

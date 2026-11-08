@@ -247,6 +247,10 @@ type lateApprovalEffect struct {
 func registerLateApprovalEffects(svc *approvals.Service, pool *pgxpool.Pool, send SendPath) {
 	send = send.withPoolDefaults(pool)
 	store, gate := sendStore(pool, send), consentGateFor(pool)
+	for _, kind := range []string{previewSendEmail, previewSendCompanyEmail} {
+		svc.WithStagePrecheck(kind, agentMailPrecheck(store, gate))
+	}
+	svc.WithStagePrecheck(operationSendMessage, agentChannelPrecheck(store, gate))
 	for kind, late := range lateApprovalEffects {
 		svc.WithEffect(kind, late.effect(svc, store, gate, send.Delivery))
 		svc.WithPrecheck(kind, late.precheck(store, gate, send.Delivery))
