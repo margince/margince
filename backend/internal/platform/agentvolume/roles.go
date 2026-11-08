@@ -23,8 +23,8 @@ type Allowance struct {
 // its own counts as the installation value. A human with no live role gets the
 // installation value.
 //
-// It is derived on every call from the policy and the caller's roles and never
-// cached, so no caller is judged by the roles of the one before it.
+// It is derived on every call from the policy and the caller's roles. Nothing
+// per caller is cached, so no caller is judged by the roles of the one before.
 func (p Policy) For(roles []string) Allowance {
 	out := Allowance{From: make(map[Counter]string, len(usageCounters))}
 	for _, c := range usageCounters {

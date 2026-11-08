@@ -287,7 +287,7 @@ function roleNames(row: UserUsage, t: ReturnType<typeof useT>): string {
 }
 
 // What one user's agents may do per window, count by count, and the role each
-// count comes from: the highest among their roles, or the installation value.
+// count comes from. That is the highest of their roles, or the installation value.
 function AllowanceCheck({ rows }: Readonly<{ rows: readonly UserUsage[] }>) {
   const t = useT();
   const { locale } = useLocale();

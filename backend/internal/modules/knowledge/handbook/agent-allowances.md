@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/agentallowances.tsx frontend/src/features/automations/agentallowances.roles.tsx frontend/src/features/automations/agentusage.tsx backend/internal/platform/agentvolume/roles.go backend/internal/modules/identity/agentroleallowances.go backend/internal/modules/identity/settingsagentallowances.go -->
+<!-- describes: frontend/src/features/automations/agentallowances.tsx frontend/src/features/automations/agentallowances.roles.tsx frontend/src/features/automations/agentallowances.form.tsx frontend/src/features/automations/agentusage.tsx backend/internal/platform/agentvolume/roles.go backend/internal/modules/identity/agentroleallowances.go backend/internal/modules/identity/settingsagentallowances.go -->
 # How much an agent may do
 
 Each agent passport may do only so much in each window. This page says what is

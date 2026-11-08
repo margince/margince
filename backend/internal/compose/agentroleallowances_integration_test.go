@@ -73,8 +73,8 @@ func TestTheAdminPresetYieldsToAnInstallationValueSomebodyChose(t *testing.T) {
 	}
 }
 
-// A role's own values bind its users' agents through the meter's real source,
-// and an agent holding two roles gets the higher of the two for each count.
+// A role's own values bind its users' agents through the meter's real source.
+// An agent holding two roles gets the higher of the two for each count.
 func TestARoleValueAnAdminSavedBindsThatRolesAgents(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))
@@ -151,8 +151,8 @@ func TestARoleSaveRefusesWhatWouldBindNobody(t *testing.T) {
 	}
 }
 
-// A user without the installation grant cannot set a role's values, and no
-// agent can, even one whose human could: it would be raising its own allowance.
+// A user without the installation grant cannot set a role's values. No agent
+// can either, even one whose human could: it would raise its own allowance.
 func TestOnlyAnAdministratorsOwnSessionSetsRoleValues(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))

@@ -21,14 +21,13 @@ import (
 )
 
 // adminRoleKey is the built-in Admin role. A role key is fixed when the role is
-// made and never reused, so the preset binds the role and not a name an admin
-// can edit.
+// made and never reused. So the preset binds the role, not an editable name.
 const adminRoleKey = "admin"
 
 // AdminAllowancePreset is what the built-in Admin role's agents may do where
 // nobody chose otherwise. It raises calls and changes for a large reading or
-// maintenance task, and leaves sends at the installation value: such a task is
-// no reason to send more mail.
+// maintenance task. Sends keep the installation value: such a task is no reason
+// to send more mail.
 var AdminAllowancePreset = agentvolume.Limits{Calls: 20000, Writes: 2000}
 
 // allowanceCounts pairs each governed count with its installation setting, its
@@ -88,10 +87,9 @@ func roleValuesOf(c *config.Config, installation agentvolume.Limits, maps savedR
 	return out
 }
 
-// presetBinds reports whether the Admin preset applies to one count: nobody
-// saved an Admin value for it, and the installation value is still the one
-// Margince ships and no boot source sets. So an upgrade over values an operator
-// chose leaves Admin on them.
+// presetBinds reports whether the Admin preset applies to one count. Nobody
+// saved an Admin value for it, and the installation value is still the shipped
+// one, set by no boot source. An upgrade over chosen values leaves Admin on them.
 func presetBinds(c *config.Config, installation *config.Setting[int], value, shipped int, saved map[string]int) bool {
 	if _, chosen := saved[adminRoleKey]; chosen {
 		return false
@@ -113,8 +111,8 @@ type RoleAllowanceSet struct {
 const roleAllowancesField = "agent_role_allowances"
 
 // saveRoleAllowancesTx replaces every role's values with sets. A role left out
-// holds none of its own, and Admin left out returns to the preset; Admin sent
-// with a zero keeps the installation value instead.
+// holds none of its own. Admin left out returns to the preset; Admin sent with a
+// zero keeps the installation value instead.
 func (s *InstallationSettingsStore) saveRoleAllowancesTx(ctx context.Context, tx pgx.Tx, sets *[]RoleAllowanceSet) error {
 	if sets == nil {
 		return nil

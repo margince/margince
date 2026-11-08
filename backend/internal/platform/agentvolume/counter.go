@@ -130,9 +130,8 @@ func (l Limits) withDefaults() Limits {
 	return l
 }
 
-// Of answers the threshold for one counter. Cost is absent on purpose: its
-// ceiling is a share of the workspace's own AI budget, resolved per call through
-// CostCeiling rather than configured per deployment here.
+// Of answers the threshold for one counter. Cost has none here. Its ceiling is a
+// share of the workspace's own AI budget, resolved per call through CostCeiling.
 func (l Limits) Of(c Counter) int {
 	switch c {
 	case Writes:

@@ -1,0 +1,281 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { components } from "../../api/schema";
+import { Button, TextInput } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { describedByIds } from "../../design-system/describedby";
+import { Eyebrow } from "../../design-system/eyebrow";
+import { PanelBody } from "../../design-system/panel";
+import { Select } from "../../design-system/select";
+import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { boundsText } from "../../format/bounds";
+import { formatNumber } from "../../format/format";
+import { formatInterval } from "../../format/interval";
+import { type FieldLock, lockFor } from "../../format/settinglocks";
+import { type Locale, useT } from "../../i18n";
+import {
+  AGENT_ALLOWANCE_BOUNDS,
+  type Allowances,
+  adminPresetDraft,
+  COUNTS,
+  type Counts,
+  changesOf,
+  chosenWindow,
+  type Draft,
+  defaultsDraft,
+  EMPTY_ROLE_DRAFT,
+  hasRefusal,
+  hasRoleRefusal,
+  parseDraft,
+  type RoleAllowanceSet,
+  type RoleDrafts,
+  roleChangesOf,
+} from "./agentallowances.draft";
+import { RolesForm, roleDiffLines } from "./agentallowances.roles";
+
+// The edit form of the allowances card: the installation value, the window,
+// every role's values, and what a save will do.
+
+type Locks = components["schemas"]["InstallationSettings"]["locks"];
+type AllowancePatch = Partial<Record<Counts | "agent_window_hours", number>> & {
+  agent_role_allowances?: RoleAllowanceSet[];
+};
+
+// The lengths an admin picks from. The one already saved is added when it is
+// not among them, so a value set through the API still shows and keeps.
+const WINDOW_PRESETS = [1, 6, 12, 24, 168] as const;
+
+export function InstallationHead() {
+  const t = useT();
+  return (
+    <PanelBody className="form-stack">
+      <Eyebrow as="h3">{t("agentAllowances.installation.title")}</Eyebrow>
+      <p className="t-caption">{t("agentAllowances.installation.sub")}</p>
+    </PanelBody>
+  );
+}
+
+export function AllowanceForm({
+  allowances,
+  locks,
+  draft,
+  roleDrafts,
+  locale,
+  busy,
+  onDraft,
+  onRoleDrafts,
+  onSave,
+  onCancel,
+}: Readonly<{
+  allowances: Allowances;
+  locks: Locks;
+  draft: Draft;
+  roleDrafts: RoleDrafts;
+  locale: Locale;
+  busy: boolean;
+  onDraft: (next: Draft) => void;
+  onRoleDrafts: (next: RoleDrafts) => void;
+  onSave: (patch: AllowancePatch) => void;
+  onCancel: () => void;
+}>) {
+  const t = useT();
+  const lockOf = (property: keyof Draft): FieldLock =>
+    lockFor(locks, `installation.${property}`, t);
+  const windowLock = lockOf("agent_window_hours");
+  const parsed = parseDraft(draft);
+  const roles = roleChangesOf(allowances, roleDrafts);
+  const patch: AllowancePatch = {
+    ...changesOf(allowances, parsed),
+    ...(roles === undefined ? {} : { agent_role_allowances: roles }),
+  };
+  const changed = Object.keys(patch).length > 0;
+  const refused = hasRefusal(parsed) || hasRoleRefusal(roleDrafts);
+  return (
+    <>
+      <InstallationHead />
+      <SettingList bleed="settings">
+        {COUNTS.map((row) => {
+          const refused = parsed[row.property] === null;
+          const lock = lockOf(row.property);
+          return (
+            <SettingRow
+              key={row.property}
+              label={t(`agentAllowances.${row.copy}.label`)}
+              description={t(`agentAllowances.${row.copy}.help`)}
+              control={(control) => (
+                <div className="settingrow-measure numbersetting">
+                  <TextInput
+                    {...control}
+                    className="t-num"
+                    data-testid={`allowance-${row.property}`}
+                    inputMode="numeric"
+                    aria-describedby={describedByIds(
+                      control["aria-describedby"],
+                      `${control.id}-note`,
+                    )}
+                    aria-invalid={refused ? true : undefined}
+                    value={draft[row.property]}
+                    disabled={busy || lock.disabled}
+                    onChange={(e) =>
+                      onDraft({ ...draft, [row.property]: e.target.value })
+                    }
+                  />
+                  <span id={`${control.id}-note`} className="t-caption">
+                    {lock.disabled
+                      ? lock.reason
+                      : refused
+                        ? t(
+                            "operations.refusal.count",
+                            boundsText(
+                              AGENT_ALLOWANCE_BOUNDS[row.property],
+                              locale,
+                            ),
+                          )
+                        : t("agentAllowances.default", {
+                            value: formatNumber(
+                              allowances.defaults[row.property],
+                              locale,
+                            ),
+                          })}
+                  </span>
+                </div>
+              )}
+            />
+          );
+        })}
+        <SettingRow
+          label={t("agentAllowances.window.label")}
+          description={
+            windowLock.disabled
+              ? windowLock.reason
+              : t("agentAllowances.window.help")
+          }
+          control={(control) => (
+            <Select
+              {...control}
+              value={draft.agent_window_hours}
+              disabled={busy || windowLock.disabled}
+              options={windowOptions(allowances, locale)}
+              onChange={(value) =>
+                onDraft({ ...draft, agent_window_hours: value })
+              }
+              testId="allowance-agent_window_hours"
+            />
+          )}
+        />
+      </SettingList>
+      <RolesForm
+        allowances={allowances}
+        drafts={roleDrafts}
+        busy={busy}
+        onDrafts={onRoleDrafts}
+      />
+      <PanelBody className="form-stack">
+        {changed && (
+          <Diff
+            allowances={allowances}
+            patch={patch}
+            roleDrafts={roleDrafts}
+            locale={locale}
+          />
+        )}
+        <div className="form-actions">
+          <Button
+            variant="primary"
+            disabled={!changed || refused}
+            pending={busy}
+            onClick={() => onSave(patch)}
+          >
+            {t("agentAllowances.save")}
+          </Button>
+          <Button disabled={busy} onClick={onCancel}>
+            {t("agentAllowances.cancel")}
+          </Button>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              onDraft(
+                defaultsDraft(
+                  allowances,
+                  (property) => lockOf(property).disabled,
+                ),
+              );
+              onRoleDrafts(defaultRoleDrafts(allowances));
+            }}
+          >
+            {t("agentAllowances.useDefaults")}
+          </Button>
+        </div>
+      </PanelBody>
+    </>
+  );
+}
+
+// Every role back to the installation value, and Admin to its preset.
+function defaultRoleDrafts(allowances: Allowances): RoleDrafts {
+  return Object.fromEntries(
+    allowances.roles.map((role) => [
+      role.role_key,
+      role.holds_preset ? adminPresetDraft(allowances) : EMPTY_ROLE_DRAFT,
+    ]),
+  );
+}
+
+function windowOptions(allowances: Allowances, locale: Locale) {
+  const hours = new Set<number>([...WINDOW_PRESETS, chosenWindow(allowances)]);
+  return [...hours]
+    .sort((a, b) => a - b)
+    .map((value) => ({
+      value: String(value),
+      label: formatInterval(value * 3_600, locale),
+    }));
+}
+
+// What a save would do, before it does it. A count binds within a minute; a
+// window length waits for the next reset, and the line says so.
+function Diff({
+  allowances,
+  patch,
+  roleDrafts,
+  locale,
+}: Readonly<{
+  allowances: Allowances;
+  patch: AllowancePatch;
+  roleDrafts: RoleDrafts;
+  locale: Locale;
+}>) {
+  const t = useT();
+  const roleLines = roleDiffLines(allowances, roleDrafts, t, locale);
+  const lines = COUNTS.flatMap((row) => {
+    const next = patch[row.property];
+    return next === undefined
+      ? []
+      : [
+          t("agentAllowances.diff.count", {
+            label: t(`agentAllowances.${row.copy}.label`),
+            from: formatNumber(allowances[row.property], locale),
+            to: formatNumber(next, locale),
+          }),
+        ];
+  });
+  const hours = patch.agent_window_hours;
+  return (
+    <Callout tone="warning" title={t("agentAllowances.diff.title")}>
+      {lines.length > 0 && <p>{lines.join(" · ")}</p>}
+      {roleLines.length > 0 && <p>{roleLines.join(" · ")}</p>}
+      {lines.length + roleLines.length > 0 && (
+        <p>{t("agentAllowances.diff.counts")}</p>
+      )}
+      {roleLines.length > 0 && <p>{t("agentAllowances.diff.roles")}</p>}
+      {hours !== undefined && (
+        <p>
+          {t("agentAllowances.diff.window", {
+            from: formatInterval(chosenWindow(allowances) * 3_600, locale),
+            to: formatInterval(hours * 3_600, locale),
+          })}
+        </p>
+      )}
+    </Callout>
+  );
+}

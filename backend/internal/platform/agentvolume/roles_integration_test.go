@@ -16,8 +16,8 @@ import (
 )
 
 // Roles choose the limit and never the counter. One passport's count stays
-// where it is when its human loses Admin or an admin edits a role, so the
-// lower limit refuses at once and nothing starts the window again.
+// put when its human loses Admin or an admin edits a role. The lower limit
+// refuses at once, and nothing starts the window again.
 func TestARoleChangeKeepsTheCountAndMovesOnlyTheLimit(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: rolePolicy()}

@@ -12,9 +12,9 @@ import {
 } from "../../testing/story-utils";
 import { AgentUsageByUserCard } from "./agentusage";
 
-// Three users, each drawn against the allowance their own roles give: an
-// Admin far inside the preset, a two-role user near a limit, and a User
-// stopped at the installation value.
+// Three users, each drawn against the allowance their own roles give. An
+// Admin is far inside the preset, a two-role user is near a limit, and a User
+// is stopped at the installation value.
 const PAGE = agentUsagePage;
 
 function story(allow: Parameters<typeof meRoute>[0], page: object = PAGE) {

@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// An agent refused on its allowance is told which limit stopped it, the
-// ceiling, what it used and when to come back, in fields and in the header.
+// An agent refused on its allowance is told which limit stopped it and the
+// ceiling. It is also told its use and when to come back, in fields and a header.
 func TestAnAllowanceRefusalNamesItsLimitAndWhenToRetry(t *testing.T) {
 	resets := time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC)
 	refusal := &auth.VolumeExceededError{Reading: agentvolume.Reading{

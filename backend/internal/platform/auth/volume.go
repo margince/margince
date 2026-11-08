@@ -93,8 +93,8 @@ func (e *VolumeExceededError) Error() string {
 }
 
 // FaultReference names the limit that refused, so a client backs off on fields
-// rather than parsing the sentence: which counter, its ceiling, what was used
-// and when the window resets.
+// rather than parsing the sentence. It gives the counter, its ceiling, the use
+// and the reset.
 func (e *VolumeExceededError) FaultReference() map[string]any {
 	return map[string]any{"limit": map[string]any{
 		"kind":      string(e.Reading.Counter),
@@ -109,8 +109,8 @@ func (e *VolumeExceededError) Unreferenced() error {
 	return fmt.Errorf("%s: %w", e.Error(), apperrors.ErrBudgetExceeded)
 }
 
-// RetryAfterSeconds is how long until the window resets, rounded up so a client
-// that waits exactly this long finds the new window open.
+// RetryAfterSeconds is how long until the window resets, rounded up. A client
+// that waits this long finds the new window open.
 func (e *VolumeExceededError) RetryAfterSeconds() int {
 	return int(math.Ceil(e.Reading.ResetsIn.Seconds()))
 }

@@ -169,7 +169,7 @@ const sameRoleDraft = (a: RoleDraft, b: RoleDraft) =>
 
 // What a save sends for the roles: nothing while no row moved, so the preset
 // and every role's values stay as they are. Once one did, the save replaces
-// them all, so it carries every role with a value. Admin at exactly the
+// them all, so it carries every role with a value. Admin at the
 // preset is left out and stays on it; Admin emptied is sent as zeros, which
 // keeps the installation value.
 export function roleChangesOf(

@@ -50,8 +50,8 @@ func TestEachCounterTakesTheHighestOfTheUsersRoles(t *testing.T) {
 	}
 }
 
-// A role set below the installation value lowers only a user it is the whole
-// allowance of: any other role they hold counts as the installation value.
+// A role set below the installation value lowers only a user holding no other
+// role. Any other role they hold counts as the installation value.
 func TestALowerRoleValueBindsOnlyWhereNoOtherRoleRaisesIt(t *testing.T) {
 	p := rolePolicy()
 	if got := p.For([]string{"guest"}).Limits.Calls; got != 100 {
@@ -79,8 +79,8 @@ func agentOf(ctx context.Context, roles ...string) context.Context {
 }
 
 // The meter holds one policy for every caller. Each call is judged by its own
-// caller's roles, so an ordinary user's call right after an Admin's gets the
-// ordinary allowance, and a human's call is not judged by any role at all.
+// caller's roles. A User's call right after an Admin's gets the User's
+// allowance, and a human's call is judged by no role at all.
 func TestTheHeldPolicyNeverLendsOneCallersAllowanceToTheNext(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: rolePolicy()}

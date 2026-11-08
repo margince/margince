@@ -149,7 +149,7 @@ type Reading struct {
 	// with the bucket, because a bucket number means nothing under another length.
 	Window time.Duration
 	// ResetsAt is when this window ends, and ResetsIn how long that is by the
-	// meter's own clock, so a refusal says when to retry without a clock of its own.
+	// meter's clock. A refusal then says when to retry with no clock of its own.
 	ResetsAt time.Time
 	ResetsIn time.Duration
 }

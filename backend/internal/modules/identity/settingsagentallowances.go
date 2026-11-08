@@ -53,9 +53,9 @@ var AgentCallsPerWindow = config.DefineStored(config.Spec[int]{
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
 // AgentRoleWritesPerWindow, AgentRoleEgressPerWindow and AgentRoleCallsPerWindow
-// are each role's own value for one count, keyed by role key: the durable
-// identity of a role, which a rename leaves alone. A role absent from a map, or
-// set to 0, uses the installation value.
+// are each role's own value for one count. They are keyed by role key, which a
+// rename leaves alone. A role absent from a map, or set to 0, uses the
+// installation value.
 var AgentRoleWritesPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Key:      "installation.agent_role_writes_per_window",
 	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_WRITES_PER_WINDOW",

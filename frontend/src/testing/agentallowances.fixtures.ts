@@ -103,9 +103,9 @@ const from = (limit: number, role_key: string | null = null): From => ({
   role_key,
 });
 
-// Three users against their own limits: an Admin far inside the preset, a user
-// whose two roles each raise one count and who is near a limit, and a User
-// stopped at the installation value.
+// Three users against their own limits. An Admin is far inside the preset. A
+// user whose two roles each raise one count is near a limit. A User is stopped
+// at the installation value.
 export const agentUsagePage: components["schemas"]["AgentUsageByUser"] = {
   resets_at: "2026-10-15T00:00:00Z",
   data: [
