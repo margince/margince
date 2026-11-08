@@ -1,8 +1,8 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { interactionIcon } from "../../components/interactionchrome";
 import { useActivityGate } from "../../components/activitygate";
+import { interactionIcon } from "../../components/interactionchrome";
 import { RecordNextBar } from "../../components/latestinbound";
 import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
