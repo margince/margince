@@ -12,16 +12,17 @@ import { edgesOf } from "./import-reach.ts";
 export type TestKind = "render" | "parse" | "program";
 
 // Milliseconds on the CI runner: a fixed part for loading what the kind loads,
-// and a part per kilobyte of test source. Fitted to six runs of the full suite.
-// The parse kind was fitted again once those files ran unisolated, from two
-// runs scaled to the render fit. A stale fit makes the split less even and
-// never drops or repeats a file.
+// and a part per kilobyte of test source. Render is fitted to six runs of the
+// full suite. Parse and program are fitted to three runs of the unisolated
+// source-scan project. Each shard is its own runner, so each is first scaled
+// to the render fit. A stale fit makes the split less even and never drops or
+// repeats a file.
 const COST_MS: Readonly<
   Record<TestKind, { fixed: number; perKilobyte: number }>
 > = {
   render: { fixed: 700, perKilobyte: 110 },
-  parse: { fixed: 1950, perKilobyte: 570 },
-  program: { fixed: 0, perKilobyte: 2300 },
+  parse: { fixed: 1400, perKilobyte: 650 },
+  program: { fixed: 0, perKilobyte: 2500 },
 };
 
 // A value import: `import type` is erased and loads nothing.
