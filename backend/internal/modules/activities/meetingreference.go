@@ -66,7 +66,7 @@ func EnsureMeetingReference(ctx context.Context, tx pgx.Tx, ref ids.UUID) error 
 		return err
 	}
 	var kind string
-	if err := tx.QueryRow(ctx, `SELECT kind FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, ref).Scan(&kind); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT kind FROM activity WHERE id = $1`, ref).Scan(&kind); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

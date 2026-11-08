@@ -280,7 +280,7 @@ func ReadActivityAuthorship(
 		       END
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.deal_id IS NOT NULL
-		 WHERE a.id = $%[1]d AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))%[3]s`,
+		 WHERE a.id = $%[1]d AND a.archived_at IS NULL%[3]s`,
 		idPos, markerPos, scope), args...).Scan(&out.DealID, &direction,
 		&out.OccurredAt, &out.DateOnly, &meetingStatus, &out.Kind, &out.HasTranscript,
 		&out.TranscriptLines)

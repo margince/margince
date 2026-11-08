@@ -28,7 +28,6 @@ import {
   PROFILE,
   panel,
   pendingCount,
-  ROUTE,
   render,
   settlesOnLine,
   stubAgentRailApi,
@@ -122,7 +121,7 @@ describe("AgentRail", () => {
   // a resting surface says nothing rather than inventing something to report.
   it("is idle and says nothing needs you when every source is connected and nothing is queued", async () => {
     stubAgentRailApi();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("idle"),
     );
@@ -142,7 +141,7 @@ describe("AgentRail", () => {
           ],
         }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
@@ -157,7 +156,7 @@ describe("AgentRail", () => {
 
   it("goes to error when no AI model is configured", async () => {
     stubAgentRailApi({ profile: () => jsonResponse(PROFILE("unconfigured")) });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
@@ -170,7 +169,7 @@ describe("AgentRail", () => {
   it("stays idle on the development AI posture and names it in the runtime row, not as a fault", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({ profile: () => jsonResponse(PROFILE("development")) });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("idle"),
     );
@@ -191,7 +190,7 @@ describe("AgentRail", () => {
         jsonResponse(meFixture({ allow: { ai_diagnostics: ["read"] } })),
       license: () => jsonResponse(LICENSE("absent")),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("idle"),
     );
@@ -218,7 +217,7 @@ describe("AgentRail", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const { container } = render(ROUTE, { client });
+    const { container } = render({ client });
     // A connectors read still in flight also reads as idle, so the state is
     // asserted only once the 500 has landed in the cache as an error.
     await waitFor(() =>
@@ -235,7 +234,7 @@ describe("AgentRail", () => {
   it("does not move the Core for the tool's own reads", async () => {
     vi.useFakeTimers();
     stubAgentRailApi({ connectors: () => new Promise<Response>(() => {}) });
-    const { container } = render(ROUTE);
+    const { container } = render();
     // Past both the BUSY_ON_MS/BUSY_OFF_MS steady windows (app/activity.ts)
     // and the ticker's own LINGER_MS, so what is asserted below is the settled
     // reading and not a window either of those two is still inside.
@@ -249,7 +248,7 @@ describe("AgentRail", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const { container } = render(ROUTE, {
+    const { container } = render({
       client,
       children: <PendingWrite />,
     });
@@ -265,7 +264,7 @@ describe("AgentRail", () => {
     const fetchMock = stubAgentRailApi({
       approvals: () => jsonResponse(pendingCount(3)),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(
       container,
       en["agent.line.waiting_other"].replace("{count}", "3"),
@@ -293,7 +292,7 @@ describe("AgentRail", () => {
       dedupe: () =>
         jsonResponse({ data: [CANDIDATE("d-1"), CANDIDATE("d-2")] }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, en["agent.line.allClear"]);
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
 
@@ -316,7 +315,7 @@ describe("AgentRail", () => {
   it("prints no count and no approvals row while the approvals read has not answered", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({ approvals: () => new Promise<Response>(() => {}) });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     expect(container.querySelector(".arbadge")).toBeNull();
     expect(
@@ -332,7 +331,7 @@ describe("AgentRail", () => {
   it("says nothing about what is waiting until the read answers, and all-clear only when it answered zero", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({ approvals: () => new Promise<Response>(() => {}) });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     // The whole section is absent: its heading, its all-clear and its tile. An
     // unread count is reported by saying nothing, never by an all-clear the
@@ -349,7 +348,7 @@ describe("AgentRail", () => {
   it("says all-clear once the read answers zero", async () => {
     const user = userEvent.setup();
     stubAgentRailApi();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     // The section's OWN sentence. This used to be scoped to the workspace
     // section by hand, because the resting line in the head said "Nothing needs
@@ -380,7 +379,7 @@ describe("AgentRail", () => {
           403,
         ),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(
@@ -432,7 +431,7 @@ describe("AgentRail", () => {
     );
     const bar = document.createElement("nav");
     bar.className = "rail";
-    const { container } = render(ROUTE, { bar: { current: bar } });
+    const { container } = render({ bar: { current: bar } });
 
     await openPanel(user, container);
     const loose = panel();
@@ -454,7 +453,7 @@ describe("AgentRail", () => {
   it("carries no notch on the sidebar", async () => {
     const user = userEvent.setup();
     stubAgentRailApi();
-    const { container } = render(ROUTE);
+    const { container } = render();
 
     await openPanel(user, container);
     expect(panel().getAttribute("style")).not.toContain("--arCaretX");
@@ -463,7 +462,7 @@ describe("AgentRail", () => {
   it("opens the panel on a click of the section and flips its expanded state", async () => {
     const user = userEvent.setup();
     stubAgentRailApi();
-    const { container } = render(ROUTE);
+    const { container } = render();
     expect(document.querySelector(".arloose")).toBeNull();
     const trigger = container.querySelector(".artoggle");
     expect(trigger?.getAttribute("aria-expanded")).toBe("false");
@@ -480,7 +479,7 @@ describe("AgentRail", () => {
     stubAgentRailApi({
       me: () => jsonResponse(meFixture({ allow: { license: ["read"] } })),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
@@ -492,7 +491,7 @@ describe("AgentRail", () => {
   it("says nothing has run yet when the seat may read /ai/calls and none has", async () => {
     const user = userEvent.setup();
     stubAgentRailApi();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
@@ -512,7 +511,7 @@ describe("AgentRail", () => {
           ...{ tasks: [AI_CALL.task], task_options: [{ task: AI_CALL.task }] },
         }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
@@ -527,7 +526,7 @@ describe("AgentRail", () => {
   it("shows no spend figure when nothing in the month was priced", async () => {
     const user = userEvent.setup();
     stubAgentRailApi();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
@@ -547,7 +546,7 @@ describe("AgentRail", () => {
     const fetchMock = stubAgentRailApi({
       aiSpend: () => jsonResponse(PRICED_SPEND),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(container.querySelector(".arspend")?.textContent).toContain(
         "$1.20",
@@ -570,7 +569,7 @@ describe("AgentRail", () => {
     stubAgentRailApi({
       aiSpend: () => jsonResponse({ ...PRICED_SPEND, cost_est_minor: 0 }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(container.querySelector(".arspend")?.textContent).toContain(
         "$0.00",
@@ -588,7 +587,7 @@ describe("AgentRail", () => {
       me: () => jsonResponse(meFixture({ roles: ["ops"], allow: OPERATOR })),
       aiSpend: () => jsonResponse(PRICED_SPEND),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(panel().querySelector(".armeta")?.textContent).toContain(
@@ -616,7 +615,7 @@ describe("AgentRail", () => {
   // for one at all, not just decline to show it.
   it("never asks for the 360 read when the route is not a company record", async () => {
     const fetchMock = stubAgentRailApi();
-    render(ROUTE);
+    render();
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const askedFor360 = fetchMock.mock.calls.some(([request]) =>
       new URL(request.url).pathname.endsWith("/360"),
@@ -632,7 +631,7 @@ describe("AgentRail", () => {
     stubAgentRailApi({
       approvals: () => jsonResponse(pendingCount(1)),
     });
-    const view = render(ROUTE);
+    const view = render();
     // The unanswered queue reaches a reader through this panel's own line, with
     // its count. It is not published to the margins: a contour standing for as
     // long as the queue does is a ring around the window on any installation

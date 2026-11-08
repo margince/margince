@@ -39,7 +39,7 @@ func (s *Store) RecordDirectedExecutionTx(ctx context.Context, tx pgx.Tx, delive
 	tag, err := tx.Exec(ctx, `
 		UPDATE comms_outbound
 		   SET execution_authority = 'instruction', instruction_id = $2
-		 WHERE id = $1 AND activity_thread_available(thread_key)`, deliveryID, instructionID)
+		 WHERE id = $1`, deliveryID, instructionID)
 	if err != nil {
 		return fmt.Errorf("comms: recording the authority this delivery goes out under: %w", err)
 	}

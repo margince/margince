@@ -22,23 +22,10 @@ import {
 } from "../../scripts/lib/source-tree";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { STAT_CARD_TONES, StatCard } from "./statcard";
+import { STAT_CARD_ACTIONS, STAT_CARD_TONES, StatCard } from "./statcard";
 
-// THE DOOR OUT OF A READING SAYS "Open", AND NOTHING ELSE EVER.
-//
-// It used to be the caller's word: `openLabel` let each reading name its own
-// destination, and what the product got was several spellings of one control —
-// "Review urgent work", "View today's meetings", "Review leads owed a reply" —
-// which is a different door on every card to anybody reading them as a set.
-// The reading is already named on the card the door sits in, and a screen
-// reader hears it as the button's DESCRIPTION, so the word itself has one job
-// and one spelling.
-//
-// Three assertions, because the prop can come back three ways and each is
-// invisible to the other two: as a rendered word (the render test), as an
-// attribute somewhere in the tree (the sweep), and as a second word written
-// straight into the foot (the source check). The fourth holds the message the
-// first one reads, so a door that says "Öffnen" in `en` still fails here.
+// Action names belong to the primitive; a caller selects a supported action
+// rather than inventing another label for the same control.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const sourceRoot = join(here, "..");
@@ -186,6 +173,22 @@ describe("the door says Open, or View records for records in place", () => {
     );
 
     expect(screen.getByRole("link", { name: en["stat.open"] })).not.toBeNull();
+  });
+
+  it("names a forecast drill with the shared action", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard
+          label="Expected finish"
+          value="12,000 EUR"
+          opens="forecast"
+          href="#/analytics/forecast"
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByRole("link", { name: en["stat.forecast"] }),
+    ).not.toBeNull();
   });
 
   it("pins the English word, which is what every door in the product reads", () => {
@@ -416,6 +419,13 @@ describe("a reading's name and figure are never cut", () => {
 });
 
 describe("the foot speaks once per action", () => {
+  it.each(Object.values(STAT_CARD_ACTIONS))(
+    "uses the shared action key %s",
+    (key) => {
+      expect(en[key].length).toBeGreaterThan(0);
+    },
+  );
+
   it("writes one message per action into the card's foot", () => {
     const path = join(here, "statcard.tsx");
     const source = sourceFileAt(path);
@@ -424,13 +434,7 @@ describe("the foot speaks once per action", () => {
     expect(foot).not.toBeUndefined();
     if (foot === undefined) return;
 
-    // Every word the foot can draw: a `t(...)` lookup or a literal written
-    // straight in. One lookup per action and no literals; a third of either
-    // is a door saying something the rest of the product's doors do not.
-    expect(messageLookups(foot)).toEqual([
-      't("stat.records")',
-      't("stat.open")',
-    ]);
+    expect(messageLookups(foot)).toHaveLength(1);
     expect(literalWords(foot)).toEqual([]);
   });
 });

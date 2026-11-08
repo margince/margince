@@ -40,7 +40,7 @@ func previewPromotionActivities(ctx context.Context, tx pgx.Tx, lead ids.LeadID,
 		return nil, 0, err
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT l.activity_id, %s,
-		EXISTS (SELECT 1 FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = l.activity_id AND %s)
+		EXISTS (SELECT 1 FROM activity a WHERE a.id = l.activity_id AND %s)
 		FROM activity_link l WHERE l.lead_id = $%d ORDER BY l.activity_id`,
 		promotionExistingContactLink("l", storekit.SQLf("$%d", contactPos)), readable, leadPos), args...)
 	if err != nil {

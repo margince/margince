@@ -14,7 +14,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -112,7 +111,7 @@ func foldedColumns(t *testing.T) []foldedColumn {
 	}
 	var columns []foldedColumn
 	for _, path := range paths {
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

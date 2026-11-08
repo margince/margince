@@ -111,7 +111,7 @@ func (h promiseTakeOverHandlers) write(ctx context.Context, tx pgx.Tx, promise c
 	}
 	// Locked first, so the audience read below and the reader check are of
 	// one source that no concurrent narrowing can change before commit.
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, promise.Source); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity WHERE id = $1 FOR SHARE`, promise.Source); err != nil {
 		return fmt.Errorf("compose: locking the promise's source: %w", err)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, promise.Source); err != nil {
@@ -132,12 +132,20 @@ func (h promiseTakeOverHandlers) write(ctx context.Context, tx pgx.Tx, promise c
 		Locator: promise.Locator, Summary: promise.Body, Body: takenOverBody(promise),
 		SourceActivityID: promise.Source, DueAt: promise.DueAt, Assignee: taker, PrivateTo: privateTo,
 		Links:  []activities.ActivityLinkInput{{EntityType: string(recordTypeContact), EntityID: promise.Contact}},
-		Origin: activities.OriginHuman,
+		Origin: takenOverOrigin(ctx),
 	})
 	if err != nil {
 		return err
 	}
 	return h.claims.RecordPromiseTakenTx(ctx, tx, promise, task, taker, h.now().UTC())
+}
+
+// takenOverOrigin is whose hands took the promise: a colleague's or their agent's.
+func takenOverOrigin(ctx context.Context) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return activities.OriginAgent
+	}
+	return activities.OriginHuman
 }
 
 // takenOverAudience is who may read the task. The task carries the promise's
@@ -158,7 +166,7 @@ func takenOverAudience(ctx context.Context, tx pgx.Tx, source, taker ids.UUID) (
 			apperrors.ErrPermissionDenied)
 	}
 	var audience string
-	if err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, source).Scan(&audience); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1`, source).Scan(&audience); err != nil {
 		return nil, fmt.Errorf("compose: reading who may read the promise's source: %w", err)
 	}
 	if audience != string(crmcontracts.ActivityAudienceWorkspace) {
@@ -167,15 +175,15 @@ func takenOverAudience(ctx context.Context, tx pgx.Tx, source, taker ids.UUID) (
 	return privateTo, nil
 }
 
-// takingColleague is the signed-in colleague behind the call. An agent, a
-// connector or one of the product's own passes is refused. Taking over a
-// promise is a colleague's word that they will keep it.
+// takingColleague is the signed-in user behind the call, or the user whose
+// passport an agent holds. Anything acting for nobody is refused. Taking over a
+// promise is a user's word that they will keep it.
 func takingColleague(ctx context.Context) (ids.UUID, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return ids.Nil, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return ids.Nil, fmt.Errorf("only a signed-in colleague can take over a promise: %w", apperrors.ErrPermissionDenied)
 	}
 	return actor.UserID, nil

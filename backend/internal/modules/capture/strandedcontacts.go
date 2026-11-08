@@ -90,7 +90,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			         WHERE l.entity_type = 'contact' AND l.contact_id = p.id
 			           AND a.captured_by LIKE 'connector:%'
 			           AND lower(btrim(coalesce(a.counterparty_email, ''))) = pe.email
-			           AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+			           AND a.archived_at IS NULL AND a.restricted_at IS NULL
 			         ORDER BY a.occurred_at DESC, a.id DESC
 			         LIMIT 1)
 			  FROM contact p
@@ -104,7 +104,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			                    WHERE q.email = pe.email)
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
 			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
-			                      AND al.actor_type = 'human')
+			                      AND `+storekit.AuditForAUser("al")+`)
 			   -- The message the projection above looks for, asked here as a
 			   -- FILTER so a contact the engine cannot judge does not consume
 			   -- the page. A contact known only from a meeting has no such
@@ -209,7 +209,7 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 			   AND `+noiseJudgedStandsSQL("pe.email", "p.owner_id")+`
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
 			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
-			                      AND al.actor_type = 'human')
+			                      AND `+storekit.AuditForAUser("al")+`)
 			 ORDER BY random()
 			 LIMIT $1`, limit)
 		if err != nil {

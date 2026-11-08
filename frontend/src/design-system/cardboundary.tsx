@@ -4,6 +4,8 @@
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { useT } from "../i18n";
+import { resetLocaleFailures } from "../i18n/catalogs";
+import { retryStaleChunk } from "../lib/stalebuild";
 import { Button, EmptyState } from "./atoms";
 import "./cardboundary.css";
 
@@ -56,8 +58,9 @@ type BoundaryProps = Readonly<{
   title: string;
   retryLabel: string;
   children: ReactNode;
+  fallback?: ReactNode;
 }>;
-type BoundaryState = Readonly<{ failed: boolean }>;
+type BoundaryState = Readonly<{ failed: boolean; error?: unknown }>;
 
 // React reports a caught error to the console with its component stack on its
 // own, so this boundary adds no reporting of its own — the same failure logged
@@ -65,20 +68,22 @@ type BoundaryState = Readonly<{ failed: boolean }>;
 class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
   state: BoundaryState = { failed: false };
 
-  static getDerivedStateFromError(): BoundaryState {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown): BoundaryState {
+    return { failed: true, error };
   }
 
   private readonly retry = () => {
+    if (retryStaleChunk(this.state.error)) return;
     // The cache is reset BEFORE the re-render: a query that threw keeps its
     // failed result, so a boundary that only cleared its own state would hand
     // the same error straight back and the button would do nothing visible.
     this.props.onReset();
-    this.setState({ failed: false });
+    this.setState({ failed: false, error: undefined });
   };
 
   render(): ReactNode {
     if (this.state.failed) {
+      if (this.props.fallback !== undefined) return this.props.fallback;
       return (
         <CardFailure
           title={this.props.title}
@@ -102,13 +107,20 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
  * They say nothing about which card this is — the card's own place on the page
  * already does.
  */
-export function CardBoundary({ children }: Readonly<{ children: ReactNode }>) {
+export function CardBoundary({
+  children,
+  fallback,
+}: Readonly<{ children: ReactNode; fallback?: ReactNode }>) {
   const t = useT();
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (
         <CardRenderBoundary
-          onReset={reset}
+          onReset={() => {
+            resetLocaleFailures();
+            reset();
+          }}
+          fallback={fallback}
           title={t("card.errorTitle")}
           retryLabel={t("card.errorRetry")}
         >
@@ -117,4 +129,10 @@ export function CardBoundary({ children }: Readonly<{ children: ReactNode }>) {
       )}
     </QueryErrorResetBoundary>
   );
+}
+
+export function SilentCardBoundary({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return <CardBoundary fallback={null}>{children}</CardBoundary>;
 }

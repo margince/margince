@@ -19,9 +19,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -73,8 +75,9 @@ func (s *Store) CompleteOpenSystemTasksForContact(ctx context.Context, contactID
 }
 
 // CompleteCarriedSystemTasks completes the open system-minted tasks among a
-// NAMED set of activities — the ones a promotion moved from the lead onto the
-// contact, which the lead.promoted payload carries.
+// NAMED set of activities. A promotion names the ones it moved from the lead
+// onto the contact, which the lead.promoted payload carries. The review pass
+// names the review tasks whose findings are all settled.
 //
 // Named ids rather than a link column, which is what makes it exact for a
 // MERGE. The contact-keyed reading answers "every open system task on this
@@ -112,7 +115,7 @@ func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID 
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	landed := arg(activityID)
 	where := storekit.SQLf(`a.source_system = ANY($%[2]d)
-			AND EXISTS (SELECT 1 FROM activity landed WHERE activity_thread_available(landed.thread_key) AND landed.id = $%[1]d AND %[3]s
+			AND EXISTS (SELECT 1 FROM activity landed WHERE landed.id = $%[1]d AND %[3]s
 			            AND landed.occurred_at > coalesce(%[5]s, '-infinity') -- occurred_at raw: past the reminder's anchor, a window's lower edge
 			            )
 			AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND (
@@ -264,34 +267,11 @@ func (s *Store) completeOpenSystemTasks(
 func (s *Store) flipSystemTasks(
 	ctx context.Context, where string, arg func(any) int, args *[]any, done bool,
 ) (int, error) {
-	type openTask struct {
-		id      ids.ActivityID
-		version int64
-	}
-	var open []openTask
+	var open []systemTask
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		query := storekit.SQLf(`
-			SELECT a.id, a.version FROM activity a
-			WHERE activity_thread_available(a.thread_key) AND %s AND a.kind = $%d AND a.source = $%d
-			  AND (a.captured_by = $%d OR a.captured_by LIKE $%d)
-			  AND a.is_done = $%d AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
-			ORDER BY a.id`,
-			where,
-			arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),
-			arg(systemCapturedBy), arg(systemCapturedByPattern), arg(done))
-		rows, err := tx.Query(ctx, query, (*args)...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var task openTask
-			if err := rows.Scan(&task.id, &task.version); err != nil {
-				return err
-			}
-			open = append(open, task)
-		}
-		return rows.Err()
+		var err error
+		open, err = selectSystemTasks(ctx, tx, where, arg, args, done)
+		return err
 	})
 	if err != nil {
 		return 0, err
@@ -307,6 +287,67 @@ func (s *Store) flipSystemTasks(
 		}
 	}
 	return completed, nil
+}
+
+// systemTask is one system-minted task a selection found, at the version read.
+type systemTask struct {
+	id      ids.ActivityID
+	version int64
+}
+
+// selectSystemTasks reads the system-minted tasks the predicate names whose
+// done state is `done`, in id order. It locks them, so a caller updating in
+// this transaction applies the version it read and cannot lose the batch to a
+// concurrent edit.
+func selectSystemTasks(
+	ctx context.Context, tx pgx.Tx, where string, arg func(any) int, args *[]any, done bool,
+) ([]systemTask, error) {
+	query := storekit.SQLf(`
+		SELECT a.id, a.version FROM activity a
+		WHERE %s AND a.kind = $%d AND a.source = $%d
+		  AND (a.captured_by = $%d OR a.captured_by LIKE $%d)
+		  AND a.is_done = $%d AND a.archived_at IS NULL
+		ORDER BY a.id FOR UPDATE OF a`,
+		where,
+		arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),
+		arg(systemCapturedBy), arg(systemCapturedByPattern), arg(done))
+	rows, err := tx.Query(ctx, query, (*args)...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (systemTask, error) {
+		var task systemTask
+		err := row.Scan(&task.id, &task.version)
+		return task, err
+	})
+}
+
+// CompleteSystemTasksTx completes the named open system-minted tasks inside
+// the caller's transaction. It takes the update a user's tick takes, so each
+// keeps its audit row and event. A task somebody wrote by hand is left alone.
+func (s *Store) CompleteSystemTasksTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (int, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return 0, err
+	}
+	if len(activityIDs) == 0 {
+		return 0, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	open, err := selectSystemTasks(ctx, tx, storekit.SQLf("a.id = ANY($%d)", arg(activityIDs)), arg, &args, false)
+	if err != nil {
+		return 0, err
+	}
+	done := true
+	for _, task := range open {
+		at := s.now()
+		in := UpdateActivityInput{IsDone: &done, IfVersion: &task.version}
+		in.recordedAt, in.recordZone = &at, s.recordZone
+		if _, err := updateActivityInTx(ctx, tx, task.id, in); err != nil {
+			return 0, fmt.Errorf("completing system task %s: %w", task.id, err)
+		}
+	}
+	return len(open), nil
 }
 
 // The two activity_link columns this file resolves follow-ups through, named

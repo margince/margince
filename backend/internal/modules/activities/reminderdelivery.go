@@ -39,7 +39,7 @@ func (s *Store) recordReminderClaim(ctx context.Context, id ids.ActivityID, remi
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO activity_reminder_delivery (activity_id, delivered_for, delivered_to)
 			SELECT id, remind_at, assignee_id FROM activity
-			 WHERE activity_thread_available(thread_key) AND id = $1 AND remind_at = $2 AND assignee_id = $3 AND NOT is_done AND (archived_at IS NULL AND activity_thread_available(thread_key))
+			 WHERE id = $1 AND remind_at = $2 AND assignee_id = $3 AND NOT is_done AND archived_at IS NULL
 			   FOR SHARE
 			ON CONFLICT (activity_id) DO UPDATE
 			   SET delivered_for = excluded.delivered_for, delivered_to = excluded.delivered_to

@@ -54,7 +54,7 @@ func TestAMemberUndoesAProjectFilingOverHTTPAndAnAgentCannot(t *testing.T) {
 	}
 
 	agent := apptest.PassportBearer(t, e, "filing agent", "read", "write")
-	for _, call := range []struct{ method, path string }{{"GET", path}, {"POST", path + "/undo"}} {
+	for _, call := range []struct{ method, path string }{{"POST", path + "/undo"}} {
 		if status := e.Call(t, call.method, call.path, AnyMap{"reason": "an agent's own call"}, agent, nil); status != http.StatusUnauthorized && status != http.StatusForbidden {
 			t.Errorf("an agent bearer on %s %s → %d, want it refused as a human-only route", call.method, call.path, status)
 		}

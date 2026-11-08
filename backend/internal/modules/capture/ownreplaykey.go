@@ -33,10 +33,8 @@ package capture
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -97,6 +95,10 @@ func (s *Sink) fileUnderOwnReplayKey(
 	// its own — a connector that stored its own original, or a record with no raw
 	// at all — and then what it already names IS this message's own.
 	scoped.StoredOriginal = ids.Nil
+	scoped, err := releaseHeldOriginalForScopedKeyTx(ctx, tx, scoped)
+	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	own, err := storeRawCapture(ctx, tx, scoped)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
@@ -145,18 +147,17 @@ func (s *Sink) upsertRefused(
 	if !errors.Is(refusal, errInvisibleIncumbent) {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, refusal
 	}
+	if internalMailAdmitted(ctx) {
+		ref, admitted, err := s.admitInternalMailCopyTx(ctx, tx, id, rec, fields, birth, memberBound)
+		if err != nil || admitted {
+			return ref, false, counterpartyDecision{}, err
+		}
+	}
 	mine, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	if mine {
-		var available bool
-		if err := tx.QueryRow(ctx, `SELECT activity_thread_available(thread_key) FROM activity WHERE id=@id`, pgx.NamedArgs{"id": id}).Scan(&available); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if !available {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, fmt.Errorf("message is being repaired; retry capture: %w", apperrors.ErrConflict)
-		}
 		return datasource.EntityRef{}, false, counterpartyDecision{}, refusal
 	}
 	return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)

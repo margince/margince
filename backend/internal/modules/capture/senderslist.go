@@ -19,12 +19,14 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -33,6 +35,7 @@ import (
 
 // SenderDecision is one sender and what became of them.
 type SenderDecision struct {
+	Total   int
 	Address string
 	// Kind is what the classifier concluded — contact, newsletter, personal,
 	// advisor and the rest — or empty when it has not answered yet.
@@ -87,22 +90,23 @@ func (d SenderDecision) Overruled() bool { return d.Decision != "" }
 // write an override for any address they can guess and read back what the
 // classifier privately concluded about a colleague's correspondence with it —
 // `advisor` among them, which exists to hide that somebody has a lawyer.
-func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindows) ([]SenderDecision, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindows, queries ...SenderQuery) ([]SenderDecision, error) {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return nil, apperrors.ErrPermissionDenied
 	}
+	where, args := senderFilters(actor.UserID, windows, queries...)
 	var out []SenderDecision
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
+		rows, err := tx.Query(ctx, `SELECT * FROM (
 			SELECT coalesce(latest.email, o.address) AS address,
 			       coalesce(latest.kind, '')         AS kind,
 			       coalesce(latest.status, '')       AS status,
 			       coalesce(o.decision, '')     AS decision,
-			       coalesce(o.overruled_kind, '') AS overruled_kind,
+			       coalesce(o.overruled_kind, '') AS overruled_kind, count(*) OVER() AS total,
 			       -- Only for a personal verdict the owner has not overruled:
 			       -- every other kind is held, and an override cancels the sweep,
 			       -- so a date on either would name a deletion that never comes.
@@ -133,7 +137,7 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			         WHERE owner_id = $1 ORDER BY email, created_at DESC, id DESC) latest
 			  FULL OUTER JOIN (SELECT * FROM capture_sender_override WHERE user_id = $1) o
 			    ON o.address = latest.email
-			 ORDER BY address`, actor.UserID, windows.ByOwner, windows.ByClassifier)
+			`+where, args...)
 		if err != nil {
 			return fmt.Errorf("capture: listing a seat's sender decisions: %w", err)
 		}
@@ -142,7 +146,7 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			var d SenderDecision
 			var deletesAt *time.Time
 			if err := rows.Scan(&d.Address, &d.Kind, &d.Status,
-				&d.Decision, &d.OverruledKind, &deletesAt); err != nil {
+				&d.Decision, &d.OverruledKind, &d.Total, &deletesAt); err != nil {
 				return fmt.Errorf("capture: listing a seat's sender decisions: %w", err)
 			}
 			if deletesAt != nil {
@@ -180,7 +184,7 @@ func senderMailTx(ctx context.Context, tx pgx.Tx, user ids.UUID, out []SenderDec
 		SELECT a.counterparty_email, count(*), max(a.occurred_at), `+occurredday.LatestPrecisionSQL("a", "")+`
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = `+seat+`
-		 WHERE a.counterparty_email = ANY(`+listed+`) AND a.kind = 'email' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.counterparty_email = ANY(`+listed+`) AND a.kind = 'email' AND a.archived_at IS NULL
 		 GROUP BY a.counterparty_email`, args...)
 	if err != nil {
 		return fmt.Errorf("capture: counting a seat's mail per sender: %w", err)
@@ -258,4 +262,40 @@ func senderContactsTx(ctx context.Context, tx pgx.Tx, out []SenderDecision, addr
 		}
 	}
 	return nil
+}
+
+// SenderQuery bounds the sender-correction search while preserving unpaged callers.
+type SenderQuery struct {
+	Q, Decision, After string
+	Overrides          bool
+	Limit              *int
+}
+
+func senderFilters(user ids.UUID, windows PersonalPurgeWindows, queries ...SenderQuery) (string, []any) {
+	query := SenderQuery{}
+	if len(queries) > 0 {
+		query = queries[0]
+	}
+	args := []any{user, windows.ByOwner, windows.ByClassifier}
+	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
+	where := ` WHERE true`
+	if query.Q != "" {
+		pattern := arg("%" + storekit.EscapeLike(strings.TrimSpace(query.Q)) + "%")
+		where += ` AND (coalesce(latest.email,o.address) ILIKE ` + pattern + ` OR latest.display_name ILIKE ` + pattern + `)`
+	}
+	if query.Decision != "" {
+		where += ` AND coalesce(nullif(o.decision,''),latest.kind,latest.status)=` + arg(query.Decision)
+	}
+	if query.Overrides {
+		where += ` AND o.address IS NOT NULL`
+	}
+	where += `) page WHERE true`
+	if query.After != "" {
+		where += ` AND address>` + arg(query.After)
+	}
+	where += ` ORDER BY address`
+	if query.Limit != nil || query.After != "" {
+		where += ` LIMIT ` + arg(storekit.ClampLimit(query.Limit)+1)
+	}
+	return where, args
 }

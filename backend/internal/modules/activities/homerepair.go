@@ -61,7 +61,7 @@ func readHomeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact
 	}
 	exactArg := arg(exact)
 	query := storekit.SQLf(`SELECT a.id,a.version,a.source_activity_id,coalesce(a.source_system,''),coalesce(a.source_id,''),a.captured_by,a.assignee_id,a.due_at,
- %s FROM activity a WHERE activity_thread_available(a.thread_key) AND a.kind='task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+ %s FROM activity a WHERE a.kind='task' AND NOT a.is_done AND a.archived_at IS NULL
  AND ($%d::uuid IS NULL OR a.id=$%d) AND a.id > $%d AND (%s) AND (a.source_system=ANY($%d) OR %s)
  ORDER BY a.id LIMIT $%d`, pristineRepairTaskSQL("a"), exactArg, exactArg, arg(after), scope,
 		arg([]string{CommitmentTaskSource, EmailRequestTaskSource}), SystemMintedExpr("a"), arg(storekit.ClampLimit(&limit)))
@@ -105,7 +105,7 @@ func RequestReminderPastHorizonTx(ctx context.Context, tx pgx.Tx, task HomeRepai
 		return false, err
 	}
 	var occurredAt time.Time
-	query := `SELECT occurred_at FROM activity WHERE activity_thread_available(thread_key) AND id=@source`
+	query := `SELECT occurred_at FROM activity WHERE id=@source`
 	if forDecision {
 		query += " FOR UPDATE"
 	}

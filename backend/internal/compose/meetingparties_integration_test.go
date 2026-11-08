@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -58,8 +59,15 @@ func partiesContact(t *testing.T, e *integration.Env, name string, owner ids.UUI
 // the writer records each as a participant.
 func partiesMeeting(ctx context.Context, t *testing.T, e *integration.Env, subject string, with ...ids.UUID) ids.UUID {
 	t.Helper()
+	return partiesMeetingWithStatus(ctx, t, e, subject, nil, with...)
+}
+
+// partiesMeetingWithStatus is partiesMeeting with a recorded outcome; nil
+// leaves the meeting awaiting one.
+func partiesMeetingWithStatus(ctx context.Context, t *testing.T, e *integration.Env, subject string, status *string, with ...ids.UUID) ids.UUID {
+	t.Helper()
 	at := time.Now().Add(-2 * time.Hour)
-	in := activities.LogActivityInput{Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual"}
+	in := activities.LogActivityInput{Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual", MeetingStatus: status}
 	for _, contact := range with {
 		in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 	}
@@ -475,9 +483,16 @@ func TestHeldMeetingAmongColleaguesReachesNoCompany(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("employing the colleague at Acme: %v", err)
 	}
+	room := addressedContact(t, e, "Boardroom", "room@resource.calendar.google.com")
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: ptrContact(room), CompanyID: &acmeID, Source: "manual"}); err != nil {
+		t.Fatal(err)
+	}
 	customer := partiesContact(t, e, "Ines Buyer", ids.UUID{}, &acmeID)
-	internal := partiesMeeting(e.Admin(), t, e, "Team sync", colleague)
-	external := partiesMeeting(e.Admin(), t, e, "Review", customer)
+	held := meetingoutcome.Held
+	internal := partiesMeetingWithStatus(e.Admin(), t, e, "Team sync", &held, colleague)
+	resourceMeeting := partiesMeetingWithStatus(e.Admin(), t, e, "Room reservation", &held, room)
+	external := partiesMeetingWithStatus(e.Admin(), t, e, "Review", &held, customer)
+	unreported := partiesMeeting(e.Admin(), t, e, "Follow-up", customer)
 
 	reached := func(meeting ids.UUID) int {
 		return e.WsCount(t, `SELECT count(*) FROM (`+activities.HeldMeetingCounterparties()+`) mc WHERE mc.activity_id = $1`, meeting)
@@ -487,6 +502,12 @@ func TestHeldMeetingAmongColleaguesReachesNoCompany(t *testing.T) {
 	}
 	if n := reached(external); n != 1 {
 		t.Errorf("the meeting with a customer reaches %d companies, want Acme", n)
+	}
+	if n := reached(resourceMeeting); n != 0 {
+		t.Fatalf("a calendar room reaches %d companies", n)
+	}
+	if n := reached(unreported); n != 0 {
+		t.Errorf("a past meeting nobody reported held reaches %d companies, want none", n)
 	}
 }
 

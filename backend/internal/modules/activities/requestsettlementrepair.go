@@ -101,18 +101,18 @@ func settlementRepairItemTx(ctx context.Context, tx pgx.Tx, request ids.UUID, as
 		return SettlementRepairItem{}, err
 	}
 	query := `SELECT a.version, coalesce((SELECT sum(r.version) FROM activity r
-	       WHERE activity_thread_available(r.thread_key) AND r.source_system = $4 AND r.source_activity_id = a.id), 0),
+	       WHERE r.source_system = $4 AND r.source_activity_id = a.id), 0),
 	     s.judged_through_activity_id::text || '|' || s.decided_at::text || '|' || s.decided_by
 	       || '|' || coalesce(s.revalidation_requested_at::text, ''),
-	     (a.restricted_at IS NOT NULL OR NOT (` + settlementEvidenceAvailableSQL() + `)), s.revalidation_requested_at IS NOT NULL,
+	     a.restricted_at IS NOT NULL, s.revalidation_requested_at IS NOT NULL,
 	     EXISTS (SELECT 1 FROM audit_log written WHERE written.entity_type = 'activity'
 	       AND written.entity_id = a.id AND written.actor_type = 'system' AND written.actor_id = $5
 	       AND written.after->>'` + settlementVerdictCol + `' = '` + RequestSettled + `'
 	       AND written.after->>'` + settlementThroughCol + `' = s.judged_through_activity_id::text),
-	     EXISTS (SELECT 1 FROM activity r WHERE activity_thread_available(r.thread_key) AND r.source_system = $4 AND r.source_activity_id = a.id
+	     EXISTS (SELECT 1 FROM activity r WHERE r.source_system = $4 AND r.source_activity_id = a.id
 	       AND ` + storekit.HumanWroteActivityClause("r") + `),
 	     ` + occurredday.FromSQL("a", "$3") + `,
-	     (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.audience = 'workspace' AND a.restricted_at IS NULL
+	     a.archived_at IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL
 	       AND EXISTS (` + settlementAnswersSQL() + `)
 	   FROM activity_request_settlement s JOIN activity a ON a.id = s.request_activity_id
 	  WHERE s.request_activity_id = $2 AND ` + legacySettledSQL

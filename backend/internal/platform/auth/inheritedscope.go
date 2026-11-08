@@ -35,43 +35,11 @@ import (
 // aggregate, a capture-side gate) and must still exclude what is held.
 // alias names the activity table in the outer query.
 func ActivityAvailableClause(alias string) string {
-	return activityUnrestrictedClause(alias) + " AND activity_thread_available(" + alias + ".thread_key)"
+	return alias + ".restricted_at IS NULL"
 }
 
-func activityUnrestrictedClause(alias string) string { return alias + ".restricted_at IS NULL" }
-
-// ActivityDiscoverClause is the activity analogue of ScopeClause, and the
-// weaker of the two activity gates: it answers whether the caller may learn
-// that an activity EXISTS — its occurred_at, direction, kind, who owns it —
-// without its content. Activities have no owner, but their free-text
-// inherits the sensitivity of the records they attach to. An activity is
-// discoverable when ANY linked contact/company/deal/lead/project is
-// visible under the caller's row scope, or when it has no links at all (a
-// workspace-shared note). It lives here, not in a module: it is the one
-// scope rule that spans the record tables and activity_link rows, and scope
-// policy has exactly one spelling (ADR-0054 §8). alias names the activity
-// table in the outer query.
-//
-// A reader that shows subject, body, participants, thread, attachments or
-// anything derived from them composes ActivityContentClause instead; this
-// clause is for the safe markers alone (a last-touch date, an open-task
-// count, an evidence probe), and a caller that picks it for content is the
-// defect restrictedreaders_test.go and the module census exist to catch.
-//
-// It is never empty: an unbounded principal is spared the link-walk, not the
-// availability test (ActivityAvailableClause). Callers written for the older
-// "empty means unscoped" contract keep working — an always-present clause is
-// what they append when it is present.
-func ActivityDiscoverClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return "", err
-	}
-	return activityDiscoverClause(p, alias, arg), nil
-}
-
-func activityDiscoverClause(p principal.Principal, alias string, arg func(any) int) string {
-	available := ActivityAvailableClause(alias)
+func discoverGateFor(p principal.Principal, alias string, arg func(any) int) string {
+	available := ActivityAvailableClause(alias) + " AND " + internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
 		return available
 	}
@@ -101,8 +69,8 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// host_user_id: that column labels whose calendar a row came off, which is
 	// ownership rather than membership, and a label is not evidence that anybody
 	// was present.
-	return fmt.Sprintf(`%[1]s AND (%[2]s OR %[3]s)`,
-		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg, ActivityAvailableClause("assigned_source")))
+	return fmt.Sprintf(`%[1]s AND (%[4]s.internal_mail_authorization IS NOT NULL OR %[2]s OR %[3]s)`,
+		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg), alias)
 }
 
 // activityReachArms is discovery through the row's own links or its attendance.
@@ -118,13 +86,13 @@ func activityReachArms(p principal.Principal, alias string, arg func(any) int) s
 // thread whose message the holder sent. The holder must still find that source
 // message, so the task tells nobody else that it exists. Its content still
 // needs the source's own content gate (activityContentAudienceArm).
-func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) int, sourceAvailable string) string {
+func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) int) string {
 	source := "assigned_source"
 	return fmt.Sprintf(`(%[1]s.source_system = '%[2]s' AND %[1]s.assignee_id = $%[3]d AND EXISTS (
 	   SELECT 1 FROM activity %[4]s WHERE %[4]s.id = %[1]s.source_activity_id
 	      AND %[5]s AND (%[6]s)))`,
 		alias, provenance.CommitmentTaskSource, arg(p.UserID), source,
-		sourceAvailable, activityReachArms(p, source, arg))
+		ActivityAvailableClause(source), activityReachArms(p, source, arg))
 }
 
 // activityAttendanceArm is the discovery half of membership: the caller was on
@@ -162,14 +130,17 @@ func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) in
 // a seat that may already read a row still reads it. This arm only decides who
 // may learn a row EXISTS through attendance rather than through its links.
 func activityAttendanceArm(p principal.Principal, alias string, arg func(any) int) string {
-	me := arg(p.UserID)
+	return activityAttendanceForMemberSQL(alias, memberIdentitySQL(arg(p.UserID)))
+}
+
+func activityAttendanceForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
-	   OR EXISTS (SELECT 1 FROM activity_participant ap
-	               WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
-	   OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
-	        WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
-	       AND %[4]s))`,
-		alias, memberIdentitySQL(me), SenderStampsCheckedStep, senderAtOwnDomain(alias))
+    OR EXISTS (SELECT 1 FROM activity_participant ap
+                WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
+    OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
+         WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
+        AND %[4]s))`,
+		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias))
 }
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
@@ -216,32 +187,12 @@ func activityMembershipArm(p principal.Principal, alias string, arg func(any) in
 		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias))
 }
 
-// ActivityContentClause is the stronger activity gate: discoverable AND the
-// caller is in the activity's AUDIENCE. An activity's audience is
-// `workspace` (the default — everyone who can discover it reads it),
-// `participants` (the humans on it: the capturing mailbox owner, anyone
-// stamped as a participant by seat) or `selected` (the participants plus
-// the users and teams named in activity_audience_member). Every reader that
-// serves content — subject, body, attachments, participants, thread, and
-// everything derived from them: search, embeddings, briefs, exports,
-// webhooks — composes this one.
-//
-// The audience is a property of the ROW a human set, so it does not yield
-// to row_scope=all: an admin reading a colleague's limited mail is the
-// disclosure the limit exists to prevent. Only the system principal — the
-// relay, the privacy engines, the indexers writing on behalf of nobody —
-// reads the audience arm away. The arms sit behind the cheap audience
-// column test, so the EXISTS probes run for limited rows alone.
-func ActivityContentClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return "", err
-	}
-	discover := activityDiscoverClause(p, alias, arg)
+func contentGateFor(p principal.Principal, alias string, arg func(any) int) string {
+	discover := discoverGateFor(p, alias, arg)
 	if p.Type == principal.PrincipalSystem {
-		return discover + " AND " + CommitmentContentRetainedClause(alias), nil
+		return discover + " AND " + CommitmentContentRetainedClause(alias)
 	}
-	return discover + " AND " + activityContentAudienceArm(p, alias, arg), nil
+	return discover + " AND " + activityContentAudienceArm(p, alias, arg)
 }
 
 // Source availability is independent of the task's audience. A reminder cannot
@@ -253,7 +204,7 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
-	source := activityDiscoverClause(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
+	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
 	sourceID := provenance.TaskSourceActivitySQL(alias)
 	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
 	 OR EXISTS (SELECT 1 FROM activity %[4]s
@@ -275,7 +226,7 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 		return "", err
 	}
 	if p.Type == principal.PrincipalSystem {
-		return CommitmentContentRetainedClause(alias), nil
+		return CommitmentContentRetainedClause(alias) + " AND " + internalMailAccessClause(p, alias, arg), nil
 	}
 	return activityContentAudienceArm(p, alias, arg), nil
 }
@@ -305,7 +256,7 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// The two membership arms are activityMembershipArm's, composed rather than
 	// repeated: discovery asks the same question of the same two tables, and a
 	// second copy is how one of them gains an arm the other lacks.
-	return fmt.Sprintf(`(%[1]s.audience = 'workspace'
+	ordinary := fmt.Sprintf(`(%[1]s.audience = 'workspace'
 	   OR %[5]s
 	   OR %[4]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
@@ -313,6 +264,7 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	        AND ((am.subject_type = 'user' AND am.subject_id IN (%[2]s))
 	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[3]d))))))`,
 		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg))
+	return "(" + ordinary + " AND " + internalMailAccessClause(p, alias, arg) + ")"
 }
 
 // EnsureActivityVisible is EnsureVisible for activities under the DISCOVER
@@ -365,7 +317,7 @@ func ensureActivity(ctx context.Context, tx pgx.Tx, id ids.UUID, clauseFor activ
 	}
 	var visible bool
 	err = tx.QueryRow(ctx,
-		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%d AND %s)`, idPos, clause),
+		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%d AND %s)`, idPos, clause),
 		args...).Scan(&visible)
 	if err != nil {
 		return err

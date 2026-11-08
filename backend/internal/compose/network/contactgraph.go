@@ -287,16 +287,14 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = "true"
-	}
+	scope += " AND " + auth.ActivityExternalEvidenceClause("a")
 	limitPos := arg(receiptsPerEdge)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.subject, a.occurred_at, a.occurred_precision, a.kind, %s
 		  FROM activity a
 		  LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
-		 WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM activity_participant up
 		                WHERE up.activity_id = a.id AND up.user_id = $%d)
 		   AND EXISTS (SELECT 1 FROM activity_participant pp
@@ -404,6 +402,7 @@ func wireEdge(e search.InteractionEdge, from, to string, now time.Time) crmcontr
 		Interactions90d: e.Count90d,
 		Inbound90d:      &in,
 		Outbound90d:     &outCount,
+		Sent90d:         e.SentCount90d,
 		LastAt:          &last,
 	}
 }

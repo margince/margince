@@ -51,7 +51,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 ## graph_contact_edge
 
-6 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
+10 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -60,20 +60,33 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 | `contact_b` | `uuid` | yes |  |
 | `count_90d` | `integer`, default `0` | yes |  |
 | `count_total` | `integer`, default `0` | yes |  |
+| `deferred_run_id` | `uuid` |  | Points at `capture_backfill.id`. |
 | `last_at` | `timestamp with time zone` | yes |  |
+| `processed_generation` | `bigint`, default `0` | yes |  |
+| `read_snapshot` | `pg_snapshot` |  |  |
+| `requested_generation` | `bigint`, default `0` | yes |  |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `deferred_run_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
 - `graph_contact_edge_ordered`: `CHECK ((contact_a < contact_b))`
+- `graph_contact_edge_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))`
 
 **Indexes**
 
 - `graph_contact_edge_pkey`: `unique, btree (contact_a, contact_b)`
 - `idx_graph_contact_edge_b`: `btree (contact_b)`
+- `idx_graph_contact_edge_deferred`: `btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL)`
+- `idx_graph_contact_edge_work`: `btree (contact_a, contact_b) WHERE ((requested_generation > processed_generation) AND (deferred_run_id IS NULL))`
 
 ## graph_interaction_edge
 
-10 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
+18 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -81,22 +94,37 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `count_90d` | `integer`, default `0` | yes |  |
 | `count_total` | `integer`, default `0` | yes |  |
+| `deferred_run_id` | `uuid` |  | Points at `capture_backfill.id`. |
 | `in_count_90d` | `integer`, default `0` | yes |  |
 | `last_at` | `timestamp with time zone` | yes |  |
 | `last_inbound_at` | `timestamp with time zone` |  |  |
+| `last_met_at` | `timestamp with time zone` |  |  |
 | `last_outbound_at` | `timestamp with time zone` |  |  |
+| `late_count_90d` | `integer` |  |  |
+| `late_out_count_90d` | `integer` |  |  |
 | `out_count_90d` | `integer`, default `0` | yes |  |
+| `processed_generation` | `bigint`, default `0` | yes |  |
+| `read_snapshot` | `pg_snapshot` |  |  |
+| `requested_generation` | `bigint`, default `0` | yes |  |
+| `sent_count_90d` | `integer` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `deferred_run_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `user_id` | `app_user` | deleting the parent deletes this row |
+
+**Rules**
+
+- `graph_interaction_edge_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))`
 
 **Indexes**
 
 - `graph_interaction_edge_pkey`: `unique, btree (user_id, contact_id)`
 - `idx_graph_edge_contact`: `btree (contact_id, last_at DESC)`
 - `idx_graph_edge_user`: `btree (user_id, last_at DESC)`
+- `idx_graph_interaction_edge_deferred`: `btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL)`
+- `idx_graph_interaction_edge_work`: `btree (user_id, contact_id) WHERE ((requested_generation > processed_generation) AND (deferred_run_id IS NULL))`

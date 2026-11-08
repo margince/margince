@@ -40,7 +40,7 @@ const learnBudget = 60 * time.Second
 // rows will find them — that is what it is for — so a thin week never becomes a
 // request, and the week is stamped insufficient_evidence without a bill.
 func (w *weeklyGenerateWorker) learn(ctx context.Context, review weekly.Review, now time.Time) {
-	if w.learner == nil {
+	if w.learner == nil || review.LeadsWithheld {
 		// No lane in this role. The deterministic review is the product either
 		// way, and the screen says nobody looked.
 		return

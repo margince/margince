@@ -43,7 +43,7 @@ type UntoldLead struct {
 // EraseUntoldLeadTx deletes the lead and the records that carry its details,
 // on the caller's transaction, so the deletion commits with the failure that
 // caused it.
-func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead, purgers ...RawCapturePurger) error {
+func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	if err := refuseAnythingButAnUntoldLead(ctx, tx, in); err != nil {
 		return err
 	}
@@ -61,15 +61,16 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead, purgers ..
 			 WHERE id = $1`, in.ApprovalID); err != nil {
 			return fmt.Errorf("emptying the proposal the untold lead came from: %w", err)
 		}
+		// The proposal's own history and its requested event carry the name it
+		// was staged under, so emptying the row alone leaves the name behind.
+		if err := tombstoneCollateralScrubs(ctx, tx, "approval", []ids.UUID{in.ApprovalID.UUID}, untoldLeadReason, causeUntoldLead); err != nil {
+			return err
+		}
 	}
 	if in.LeadID.IsZero() {
 		return nil
 	}
-	var purge RawCapturePurger
-	if len(purgers) > 0 {
-		purge = purgers[0]
-	}
-	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID, purge)
+	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID)
 	if err != nil {
 		return err
 	}
@@ -84,6 +85,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead, purgers ..
 	if err != nil {
 		return fmt.Errorf("tombstoning the untold lead: %w", err)
 	}
+	if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+		return err
+	}
 	reason := untoldLeadReason
 	if err := storekit.EmitEventForEntity(ctx, tx, auditID, "lead", in.LeadID.UUID,
 		retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason)); err != nil {
@@ -95,30 +99,23 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead, purgers ..
 // deleteNoticeActivities deletes the timeline row of the notice mail, which
 // takes the delivery and its decisions by cascade: the delivery holds the
 // recipient address. A row under a statutory hold stays where it is.
-func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID, leadID ids.UUID, purge RawCapturePurger) ([]ids.UUID, error) {
+func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID, leadID ids.UUID) ([]ids.UUID, error) {
 	if deliveryID.IsZero() {
 		return nil, nil
 	}
 	// Only a delivery filed under this lead: a delivery id naming somebody
 	// else's mail deletes nothing.
-	rows, err := tx.Query(ctx, `SELECT id FROM activity
- WHERE id IN (SELECT o.activity_id FROM comms_outbound o
- JOIN activity_link al ON al.activity_id=o.activity_id AND al.lead_id=@lead
- WHERE o.id=@delivery) AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"lead": leadID, "delivery": deliveryID})
+	rows, err := tx.Query(ctx, `
+		DELETE FROM activity
+		 WHERE id IN (SELECT o.activity_id FROM comms_outbound o
+		                JOIN activity_link al ON al.activity_id = o.activity_id AND al.lead_id = $2
+		               WHERE o.id = $1)
+		   AND restricted_at IS NULL
+		RETURNING id`, deliveryID, leadID)
 	if err != nil {
-		return nil, fmt.Errorf("locking the untold lead's notice mail: %w", err)
-	}
-	notices, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, err
-	}
-	if err := purgeErasedActivityProjectionsTx(ctx, tx, notices, purge); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM activity WHERE id=ANY(@notices::uuid[])`, pgx.NamedArgs{"notices": notices}); err != nil {
 		return nil, fmt.Errorf("deleting the untold lead's notice mail: %w", err)
 	}
-	return notices, nil
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
 // deleteLeadRecordsTx deletes the lead row and the records no foreign key

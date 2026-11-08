@@ -29,6 +29,10 @@ type UnlabeledEmail struct {
 	// but the same call also judges whether a REPLY was positive, and that
 	// question is only meaningful about a message somebody sent us.
 	Inbound bool
+	// Version is the row's version when it was read. SetCaptureLabel applies
+	// the verdict only to that version. Text that changed during the model
+	// call is classified again, not labelled from its previous text.
+	Version int64
 }
 
 // UnlabeledCaptureEmails reads the oldest connector-captured emails not
@@ -59,9 +63,9 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 			       -- which is the safe way round — the message is still labelled,
 			       -- and it is asked no reply question rather than having its
 			       -- direction guessed.
-			       coalesce(direction = 'inbound', false)
+			       coalesce(direction = 'inbound', false), version
 			FROM activity
-			WHERE activity_thread_available(thread_key) AND `+ClassifyBacklogPredicate("$3")+`
+			WHERE `+ClassifyBacklogPredicate("$3")+`
 			ORDER BY occurred_at
 			LIMIT $2`, bodyLimit, limit, ruleset)
 		if err != nil {
@@ -70,7 +74,7 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 		defer rows.Close()
 		for rows.Next() {
 			var m UnlabeledEmail
-			if err := rows.Scan(&m.ID, &m.Subject, &m.Body, &m.Inbound); err != nil {
+			if err := rows.Scan(&m.ID, &m.Subject, &m.Body, &m.Inbound, &m.Version); err != nil {
 				return err
 			}
 			out = append(out, m)
@@ -84,42 +88,31 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 }
 
 // SetCaptureLabel writes one verdict, reporting whether it applied. The
-// capture_label IS NULL predicate is the CAS: a concurrent pass that
-// labeled the row first wins and this write reports applied=false — the
-// earlier verdict stands, never an overwrite.
-func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string) (applied bool, err error) {
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// All THREE exclusions are re-tested at WRITE time, not only in the
-		// backlog that selected this row. The classifier reads a batch, spends a
-		// model call per message and writes the answers back, and the row can
-		// change inside that window.
-		//
-		// The archive: a noise disposition or the retention sweep takes the
-		// message off the timeline, and a label landing afterwards puts a
-		// hidden message back on a shared worklist. Nothing would clear it —
-		// the backlog excludes archived rows, so no later pass revisits one.
-		//
-		// The audience: a human or a verdict limits the message, and without
-		// this clause the write lands after the narrowing and re-labels a
-		// message whose text the worklist's readers may no longer open —
-		// nothing would clear it a second time, because the narrowing already
-		// ran.
-		//
-		// The statutory hold: activity_refuse_restricted_mutation rejects a
-		// write once restricted_at is set, so a label arriving AFTER a hold
-		// already fails at the database. The order this clause covers is the
-		// other one — label first, hold second — which commits the hold with a
-		// derived label already on the row, and the trigger then refuses every
-		// attempt to remove it.
-		tag, err := tx.Exec(ctx, `
-			UPDATE activity SET capture_label = $2, capture_labeled_at = now()
-			WHERE id = $1 AND capture_label IS NULL AND (archived_at IS NULL AND activity_thread_available(thread_key))
-			  AND audience = 'workspace' AND restricted_at IS NULL`, id, label)
-		if err != nil {
-			return fmt.Errorf("activities: setting capture label: %w", err)
-		}
-		applied = tag.RowsAffected() > 0
-		return nil
+// capture_label IS NULL predicate is the CAS. A concurrent pass that labeled
+// the row first wins, and this write reports applied=false. The earlier verdict
+// stands, never an overwrite. A row whose version moved since readVersion also
+// reports applied=false, because the verdict is about old text.
+func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string, readVersion int64) (applied bool, err error) {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
+		applied, err = setCaptureLabelTx(ctx, tx, id, label, readVersion)
+		return err
 	})
 	return applied, err
+}
+
+// setCaptureLabelTx is the label write on the caller's transaction.
+//
+// The exclusions are re-tested at write time, not only in the backlog that
+// selected the row, because the row can change during the model call. A label
+// must not put an archived or narrowed message back on a shared worklist. A
+// statutory hold fixes a derived label in place once it is set.
+func setCaptureLabelTx(ctx context.Context, tx pgx.Tx, id ids.UUID, label string, readVersion int64) (bool, error) {
+	tag, err := tx.Exec(ctx, `
+		UPDATE activity SET capture_label = $2, capture_labeled_at = now()
+		WHERE id = $1 AND capture_label IS NULL AND archived_at IS NULL
+		  AND audience = 'workspace' AND restricted_at IS NULL AND version = $3`, id, label, readVersion)
+	if err != nil {
+		return false, fmt.Errorf("activities: setting capture label: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }

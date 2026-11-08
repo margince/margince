@@ -243,6 +243,8 @@ func (s *AutoEnrichStore) ReleaseBudget(ctx context.Context, slot BudgetSlot) er
 	if !slot.Reserved {
 		return nil
 	}
+	// Returning an already reserved slot must survive the page losing its lease.
+	ctx = database.WithoutTransactionGuard(ctx)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_auto_enrich_budget

@@ -26,7 +26,7 @@ import (
 func sectionsReader(e *forecastEnv, user ids.UUID, teams []ids.UUID, scope principal.RowScope, without ...string) context.Context {
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"report_definition", "installation_settings", "deal", "pipeline", "lead", "company", "partner", "commission", "activity"} {
+	for _, object := range []string{"report_definition", "installation_settings", "deal", "pipeline", "lead", "company", "partner", "commission", "activity", "product"} {
 		if !slices.Contains(without, object) {
 			grants[object] = principal.ObjectGrant{Read: true}
 		}

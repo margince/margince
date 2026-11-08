@@ -58,7 +58,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectPos := arg(id)
-	where := []string{"(a.archived_at IS NULL AND activity_thread_available(a.thread_key))"}
+	where := []string{"a.archived_at IS NULL"}
 	scope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return ProjectActivityFacts{}, err
@@ -89,7 +89,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 		return ProjectActivityFacts{}, err
 	}
 	current := CurrentTaskClause("a", asOf, identities, arg)
-	counts := relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", arg(asOf)))
+	counts := relstrength.ExternalActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", arg(asOf)))
 	var facts ProjectActivityFacts
 	// The candidate set is every activity with ANY link into the project's
 	// neighbourhood; each is then classified once, so an activity linked to

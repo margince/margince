@@ -41,7 +41,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	args = append(args, s.now())
 	instant := fmt.Sprintf("$%d", len(args))
 	var pending bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%d`, reviewableRequestSQL(instant), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	source, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
@@ -78,7 +78,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 		request.Subject = in.Subject
 	}
 	request.Body = in.Body
-	request.DueAt, request.RemindAt = in.DueAt, in.RemindAt
+	request.DueAt, request.DueHasTime, request.RemindAt = in.DueAt, in.DueHasTime, in.RemindAt
 	request.CustomFields, request.customColumns, request.customChecked = in.CustomFields, in.customColumns, in.customChecked
 	return s.LogActivityTx(ctx, tx, request)
 }
@@ -144,7 +144,7 @@ func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activi
 func readMailSharedWithWorkspace(ctx context.Context, tx pgx.Tx, message ids.UUID) (bool, error) {
 	var shared bool
 	if err := tx.QueryRow(ctx, `
-		SELECT audience = 'workspace' AND (restricted_at IS NULL AND activity_thread_available(thread_key)) FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, message).Scan(&shared); err != nil {
+		SELECT audience = 'workspace' AND restricted_at IS NULL FROM activity WHERE id = $1`, message).Scan(&shared); err != nil {
 		return false, fmt.Errorf("activities: reading who may read a request: %w", err)
 	}
 	return shared, nil

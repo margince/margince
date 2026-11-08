@@ -19,11 +19,13 @@ package activities
 // forget.
 
 import (
+	"context"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -42,6 +44,9 @@ type activityScan struct {
 	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
 	// the record.
 	assigneeID, hostUserID *ids.UUID
+	// dueHasTime is answered on a task only; the column is false on every
+	// other kind and means nothing there.
+	dueHasTime bool
 	// sourceActivityID is the activity this one was derived from — the meeting
 	// whose transcript proposed a task. Scanned as a typed id and mapped to the
 	// contract's openapi UUID, like the two above.
@@ -55,6 +60,9 @@ type activityScan struct {
 	occurredPrecision string
 	// The nullable strings that become typed contract enums.
 	channelProvider, direction, meetingStatus, invitationStatus, threadKey, captureLabel *string
+	// callOutcome is a marker like the meeting status: how a call ended is a
+	// fact about it, not something anyone said, so a withheld row keeps it.
+	callOutcome *string
 	// audienceReason says why a derived audience is what it is. It travels with
 	// the content, not with the markers: "held because personnel" describes
 	// what the message is about.
@@ -113,14 +121,16 @@ var activityProjection = []activityColumn{
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
 	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
+	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
 	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},
 	{"a.duration_seconds", func(s *activityScan) any { return &s.a.DurationSeconds }},
 	{"a.meeting_status", func(s *activityScan) any { return &s.meetingStatus }},
+	{"a.call_outcome", func(s *activityScan) any { return &s.callOutcome }},
 	{"(SELECT status FROM meeting_invitation WHERE activity_id=a.id AND status<>'erased')", func(s *activityScan) any { return &s.invitationStatus }},
-	{"a.host_user_id", func(s *activityScan) any { return &s.hostUserID }},
+	{storekit.KnownMeetingHostSQL("a"), func(s *activityScan) any { return &s.hostUserID }},
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
 	{"a.source", func(s *activityScan) any { return &s.a.Source }},
@@ -129,7 +139,7 @@ var activityProjection = []activityColumn{
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.source_author_id", func(s *activityScan) any { return &s.sourceAuthorID }},
 	{"a.source_author_name", func(s *activityScan) any { return &s.sourceAuthorName }},
-	// Author names remain meaningful after a colleague leaves.
+	// The author's current display name: see sourceAuthorSeatNameSQL below.
 	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
 	{writerSeatSQL, func(s *activityScan) any { return &s.writerSeat }},
 	{writerSeatNameSQL, func(s *activityScan) any { return &s.writerSeatName }},
@@ -148,20 +158,27 @@ var activityProjection = []activityColumn{
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
+	{"", func(s *activityScan) any { return &s.a.CanShareInternal }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
-// sourceAuthorSeatNameSQL carries its lookup because projections have independent queries.
-// Departed colleagues remain the authors of their earlier work.
+// sourceAuthorSeatNameSQL resolves the author's current display name as a
+// subselect rather than a join.
 //
-// ALIASED, and the alias is load-bearing even though no activity reader needs
-// it today. An unaliased subselect takes its output name from the column inside
-// it, so this arrives as `display_name`; a select list that also draws a column
-// of that name then has two of them, and `ORDER BY "display_name"` fails with
-// SQLSTATE 42702. The record stores' copies of this helper shipped unaliased
-// and took the accounts list down for exactly that reason. No activity
-// projection draws a `display_name` today — this is aliased so the next one
-// does not rediscover it.
+// Three readers compose their own `FROM activity a WHERE …` around this
+// projection. A join would have to be added to each of them and to the next one.
+// The contact360 timeline lost a column twice that way. A column that carries its
+// own source needs nothing of its callers.
+//
+// No liveness filter. Who wrote something in August is a fact about August. A
+// colleague who has since left was still its author. readEmailParties refuses the
+// same filter for the same reason.
+//
+// The alias matters even though no activity reader needs it today. An unaliased
+// subselect takes its output name from the inner column, so it arrives as
+// `display_name`. A select list that also draws a column of that name then has
+// two, and `ORDER BY "display_name"` fails with SQLSTATE 42702. The record stores'
+// unaliased copies of this helper broke the accounts list that way.
 const sourceAuthorSeatNameSQL = `(SELECT u.display_name FROM app_user u ` +
 	`WHERE u.id = a.source_author_id) AS source_author_seat_name`
 
@@ -206,13 +223,18 @@ const activityLive = "a.archived_at IS NULL"
 // activityColumns renders the select list. contentArm is the predicate
 // auth.ActivityAudienceArm rendered for this query's arguments, which is why
 // the final column's SQL cannot be a constant.
-func activityColumns(contentArm string) string {
+func activityColumns(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
+	share, err := auth.ActivityInternalMailShareClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
 		out[i] = c.sql
 	}
 	out[len(out)-1] = "(" + contentArm + ") AS content_available"
-	return strings.Join(out, ", ")
+	out[len(out)-2] = "CASE WHEN a.internal_mail_authorization IS NOT NULL THEN (" + share + ") ELSE NULL END AS can_share_internal"
+	return strings.Join(out, ", "), nil
 }
 
 // activityScanTargets answers the destinations, in the projection's order.
@@ -238,6 +260,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 		// at the provider — goes; the markers stay.
 		state = crmcontracts.ActivityContentStateWithheld
 		a.Subject, a.Body, a.SourceId = nil, nil, nil
+		a.CanShareInternal = nil
 		// The language too: it was read off the body, so answering it would
 		// tell a caller one fact about text they may not read.
 		a.Language = nil
@@ -247,6 +270,9 @@ func (s *activityScan) record() crmcontracts.Activity {
 
 	a.Id = openapi_types.UUID(s.id)
 	a.AssigneeId = uuidPtr(s.assigneeID)
+	if s.kind == string(crmcontracts.ActivityKindTask) {
+		a.DueHasTime = new(s.dueHasTime)
+	}
 	// The meeting a task was read out of. A marker, not content: which record
 	// produced this one is a fact like its date, and opening it is a separate
 	// read under the caller's own scope.
@@ -304,6 +330,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 		m := crmcontracts.ActivityMeetingStatus(*s.meetingStatus)
 		a.MeetingStatus = &m
 	}
+	if s.callOutcome != nil {
+		outcome := crmcontracts.ActivityCallOutcome(*s.callOutcome)
+		a.CallOutcome = &outcome
+	}
 	a.ThreadKey = threadKey
 	a.AudienceReason = audienceReason
 	if captureLabel != nil {
@@ -312,11 +342,13 @@ func (s *activityScan) record() crmcontracts.Activity {
 	}
 	bulk := s.bulkMailAttested
 	a.BulkMailAttested = &bulk
-	// The calendar method and the sender stamp describe what a message is, so
-	// they travel with its content. The origin is the product's own fact.
+	// The calendar method, the sender stamp and the bulk stamp describe what a
+	// message is, so they travel with its content. The origin is the product's
+	// own fact.
 	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
 	if s.contentAvailable {
 		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
+		evidence.BulkMail = s.bulkMailAttested
 	}
 	a.AutomaticKind = automaticKindToWire(evidence)
 	version := s.version

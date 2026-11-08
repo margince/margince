@@ -61,7 +61,7 @@ func (f ActivityLeadFiler) FileOnLead(ctx context.Context, tx pgx.Tx, id ids.Act
 		return written, err
 	}
 	var inbound bool
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(direction = 'inbound', false) FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND archived_at IS NULL`, id).Scan(&inbound); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(direction = 'inbound', false) FROM activity WHERE id = $1 AND archived_at IS NULL`, id).Scan(&inbound); err != nil {
 		return false, err
 	}
 	if !inbound {

@@ -68,11 +68,9 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
-	// Human-only in the STORE as well as the router table. The route is
-	// declared human-only today, but a store that relies on the routing
-	// declaration alone is one x-mcp-tool away from being agent-reachable
-	// without anybody revisiting this function.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Checked in the STORE as well as the router table. The user or their agent
+	// records a promise; passportless work never does.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -202,7 +200,7 @@ func (s *Store) readClaims(
  (c.needs_review OR (c.kind IN ('commitment_ours','commitment_theirs') AND NOT `+admission+`)),
 		       c.corrected_at, c.task_activity_id, c.taken_by_user_id, taker.display_name, c.taken_at
 		FROM conversation_claim c
-		JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		LEFT JOIN app_user taker ON taker.id = c.taken_by_user_id
 		WHERE c.contact_id = $%d AND c.archived_at IS NULL AND (%s) AND %s AND (%s)
 		ORDER BY %s
@@ -347,7 +345,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 		       l.project_id, c.body, coalesce(pr.full_name, ''), c.due_at,
 		       c.source_activity_id, (%[4]s) AS contact_visible
 		  FROM conversation_claim c
-		  JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN activity_link l ON l.activity_id = a.id AND l.project_id = ANY($%[1]d)
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+theirPromiseOpen(now, arg)+`

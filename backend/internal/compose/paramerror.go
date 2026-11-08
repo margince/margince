@@ -6,6 +6,8 @@ package compose
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -14,14 +16,22 @@ import (
 // contractRouter builds the generated /v1 router. Every parameter refusal sits
 // innermost, so a caller refused for who they are hears that before they hear
 // their query was wrong.
-func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) http.Handler {
-	return crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
+//
+// It returns the chi router itself, so the body ceiling can ask which route a path
+// resolves to before the router serves it.
+func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) *chi.Mux {
+	router := chi.NewRouter()
+	router.Use(compressAPIJSON)
+	middlewares := append([]crmcontracts.MiddlewareFunc{refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...)
+	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
-		Middlewares: append([]crmcontracts.MiddlewareFunc{refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...),
+		BaseRouter:  router,
+		Middlewares: append(middlewares, announceDeprecatedOperation),
 		// The generated default writes err.Error() as text/plain, an
 		// off-contract shape that also leaks the parser's internal text.
 		ErrorHandlerFunc: paramParseError,
 	})
+	return router
 }
 
 // paramParseError maps a generated request-parameter parse failure onto
@@ -31,6 +41,7 @@ func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.Midd
 // detail — so a bad cursor/limit/sort/UUID answers problem+json, not a
 // text/plain leak.
 func paramParseError(w http.ResponseWriter, r *http.Request, err error) {
+	setDeprecationHeaders(w, r)
 	param := "request"
 	switch e := err.(type) {
 	case *crmcontracts.RequiredParamError:

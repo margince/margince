@@ -74,7 +74,7 @@ func RetractSignatureFieldsTx(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 // limited. A widening that committed since leaves the fields standing.
 func sourceStillNarrowedTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (bool, error) {
 	var audience string
-	err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, activityID).Scan(&audience)
+	err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1 FOR SHARE`, activityID).Scan(&audience)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return true, nil
 	}
@@ -135,9 +135,11 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 		// a contact whose only signature was somebody else's can still gain
 		// their own from a later message.
 		if _, err := tx.Exec(ctx, `
-			DELETE FROM contact_signature_enrich_state st
-			 USING activity a
-			 WHERE st.activity_id = a.id AND NOT `+relstrength.SenderSQL("st.contact_id", "a")); err != nil {
+			WITH locked AS (SELECT st.contact_id FROM contact_signature_enrich_state st
+ JOIN activity a ON a.id=st.activity_id WHERE NOT `+relstrength.SenderSQL("st.contact_id", "a")+`
+ ORDER BY st.contact_id FOR UPDATE OF st)
+ UPDATE contact_signature_enrich_state st SET `+signatureReopenSetSQL+`
+ FROM locked WHERE st.contact_id=locked.contact_id`); err != nil {
 			return fmt.Errorf("contacts: reopening the misread signature watermarks: %w", err)
 		}
 		return nil

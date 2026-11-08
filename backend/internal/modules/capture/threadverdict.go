@@ -18,11 +18,13 @@ package capture
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -61,6 +63,11 @@ type PendingThread struct {
 	// answer on its own — `Aufhebungsvertrag_final.pdf` is a termination
 	// agreement whatever the covering note says.
 	Attachments []string
+	// Documents are the stored documents among them, at most
+	// MaxThreadDocuments, for the engine to read an excerpt of.
+	Documents []ThreadDocument
+	// DocumentsOmitted counts the first message's documents past that cap.
+	DocumentsOmitted int
 	// Claim is the lease token this row was taken under. Every write back to
 	// the row carries it, so a worker that outran its lease cannot overwrite an
 	// answer the row's new holder has since written.
@@ -103,7 +110,17 @@ func (s *ThreadVerdictStore) EnsureTx(
 		// no conversation for a verdict to be about.
 		return nil
 	}
-	_, err := tx.Exec(ctx, `
+	current, err := storekit.LockActivityThreadTx(ctx, tx, firstActivity)
+	if err != nil {
+		return err
+	}
+	if current != "" {
+		threadKey = current
+	}
+	if err := LockThreadHoldTx(ctx, tx, threadKey); err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict (thread_key, user_id, first_activity_id, status, next_attempt_at)
 		VALUES ($1, $2, $3, 'pending', $4)
 		ON CONFLICT (thread_key, user_id) DO UPDATE
@@ -141,6 +158,9 @@ func (s *ThreadVerdictStore) EnsureTx(
 // step retires instead of being re-claimed at every lease expiry forever.
 func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]PendingThread, error) {
 	claim := ids.NewV7()
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	p := func(v any) string { return "$" + strconv.Itoa(arg(v)) }
 	var out []PendingThread
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The pick is MATERIALIZED so it runs once. An IN over a LIMITed subquery can be
@@ -152,25 +172,27 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			      AND next_attempt_at <= now()
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			    ORDER BY next_attempt_at
-			    LIMIT $1
+			    LIMIT `+p(limit)+`
 			    FOR UPDATE SKIP LOCKED)
 			UPDATE capture_thread_verdict v
 			   SET attempts = v.attempts + 1,
-			       claimed_until = now() + make_interval(secs => $2),
-			       claimed_by = $3,
+			       claimed_until = now() + make_interval(secs => `+p(threadVerdictLease.Seconds())+`),
+			       claimed_by = `+p(claim)+`,
 			       updated_at = now()
 			 WHERE v.id IN (SELECT id FROM picked)
 			RETURNING v.id, v.thread_key, v.user_id, v.first_activity_id,
 			          coalesce(left((SELECT a.subject FROM activity a
-			                          WHERE activity_thread_available(a.thread_key) AND a.id = v.first_activity_id AND a.restricted_at IS NULL), $4), ''),
+			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), `+p(MaxCapturedSubjectChars)+`), ''),
 			          coalesce(left((SELECT a.body FROM activity a
-			                          WHERE activity_thread_available(a.thread_key) AND a.id = v.first_activity_id AND a.restricted_at IS NULL), $5), ''),
+			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), `+p(MaxCapturedBodyChars)+`), ''),
 			          coalesce((SELECT array_agg(at.filename ORDER BY at.filename)
 			                      FROM attachment at
 			                     WHERE at.entity_type = 'activity' AND at.entity_id = v.first_activity_id
-			                       AND at.archived_at IS NULL), '{}')`,
-			limit, threadVerdictLease.Seconds(), claim,
-			MaxCapturedSubjectChars, MaxCapturedBodyChars)
+			                       AND at.archived_at IS NULL), '{}'),
+			          coalesce((SELECT `+storedFilesSQL("v.first_activity_id", p(maxStoredFiles+1))+`
+			             WHERE EXISTS (SELECT 1 FROM activity a
+			                            WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL)), '[]')`,
+			args...)
 		if err != nil {
 			return err
 		}
@@ -178,13 +200,15 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 		for rows.Next() {
 			t := PendingThread{Claim: claim}
 			var activity *ids.UUID
+			var files []ThreadDocument
 			if err := rows.Scan(&t.ID, &t.ThreadKey, &t.UserID, &activity,
-				&t.Subject, &t.Body, &t.Attachments); err != nil {
+				&t.Subject, &t.Body, &t.Attachments, &files); err != nil {
 				return err
 			}
 			if activity != nil {
 				t.ActivityID = *activity
 			}
+			t.Documents, t.DocumentsOmitted = threadDocuments(files)
 			out = append(out, t)
 		}
 		return rows.Err()
@@ -226,7 +250,7 @@ func (s *ThreadVerdictStore) ResolveAs(
 		       disposition_reason = NULLIF($6, ''),
 		       resolved_at = now(), next_attempt_at = NULL,
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
-		 WHERE id = $1 AND activity_thread_available(thread_key) AND status = 'pending' AND claimed_by = $7`,
+		 WHERE id = $1 AND status = 'pending' AND claimed_by = $7`,
 		t.ID, status, kind, confidence, seen, reason, t.Claim)
 	if err != nil {
 		return false, fmt.Errorf("capture: resolving the confidentiality verdict for a thread: %w", err)
@@ -355,7 +379,7 @@ func (s *ThreadVerdictStore) RecordOutcomeTx(
 	_, err := tx.Exec(ctx, `
 		UPDATE capture_import
 		   SET verdict_status = $3, verdict_reason = NULLIF($4, '')
-		 WHERE activity_id = $1 AND user_id = $2 AND EXISTS (SELECT 1 FROM activity outcome_source WHERE outcome_source.id = capture_import.activity_id AND activity_thread_available(outcome_source.thread_key))`,
+		 WHERE activity_id = $1 AND user_id = $2`,
 		row.ActivityID, row.UserID, status, rowReasonForKind(kind))
 	if err != nil {
 		return fmt.Errorf("capture: recording a thread verdict on its import row: %w", err)

@@ -31,6 +31,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // importLine matches the one line a shim is allowed to contain.
@@ -51,7 +53,7 @@ func skipRulebookDir(name string) bool {
 func rulebookDirs(t *testing.T) []string {
 	t.Helper()
 	var dirs []string
-	err := filepath.WalkDir(repoRoot, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(repoRoot, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -106,7 +108,7 @@ func TestEveryClaudeShimIsNothingButTheImport(t *testing.T) {
 	t.Parallel()
 	for _, dir := range rulebookDirs(t) {
 		path := filepath.Join(dir, "CLAUDE.md")
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue // reported by TestEveryRulebookHasAClaudeShim

@@ -422,10 +422,12 @@ func (s *TraceStore) hideUnreadableLinks(ctx context.Context, tx pgx.Tx, entries
 		return err
 	}
 	if scope == "" {
-		scope = "true"
+		// An unbounded reader sees every one of them; the probe would be a
+		// round trip to learn nothing.
+		return nil
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ANY($1) AND %s`, scope), args...)
+		`SELECT a.id FROM activity a WHERE a.id = ANY($1) AND %s`, scope), args...)
 	if err != nil {
 		return fmt.Errorf("capture: checking which linked activities are readable: %w", err)
 	}

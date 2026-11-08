@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -134,8 +135,8 @@ func NewFollowUpReconciler(db *database.DB, stager FollowUpStager, log *slog.Log
 	return &FollowUpReconciler{db: db, stager: stager, log: log, now: time.Now}
 }
 
-// WithClock keeps the pass window and proposed dates on the same clock.
-func (r *FollowUpReconciler) WithClock(now func() time.Time) *FollowUpReconciler {
+// SetClock keeps the pass window and proposed dates on the same clock.
+func (r *FollowUpReconciler) SetClock(now func() time.Time) *FollowUpReconciler {
 	if now != nil {
 		r.now = now
 	}
@@ -178,8 +179,9 @@ type followUpCandidate struct {
 // (occurredday.BegunSQL), not from its stored noon.
 //
 // A meeting is evidence only once it is over, the waiting queue's reading: a
-// meeting running right now is not yet a touch to reconcile. It must also have
-// taken place, since storekit.MeetingIsOverSQL calls a canceled one over too.
+// meeting running right now is not yet a touch to reconcile. It must also be
+// recorded held (meetingoutcome.HeldSQL): storekit.MeetingIsOverSQL calls a
+// canceled one over too, and a past meeting nobody reported is no conversation.
 //
 // Extracted from reconcileWorkspace so the statement, its two bounds and the
 // reason for them sit together rather than being read past on the way to the
@@ -192,10 +194,6 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 		return "", nil, err
 	}
 	current := storekit.CurrentTaskClause("t", now, identities, arg)
-	noStep, err := NoOpenNextStepSQL(ctx, "d.id", "$3", current, arg)
-	if err != nil {
-		return "", nil, err
-	}
 	return fmt.Sprintf(`
 		SELECT d.id, d.name, ev.activity_id, ev.kind, ev.direction, ev.occurred_at, ev.subject
 		FROM deal d
@@ -204,7 +202,7 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 			WHERE a.kind IN ('call','email','meeting')
-			  AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			  AND a.archived_at IS NULL
 			  -- The subject lands in an approval every decider of the
 			  -- deal reads, so only a message the whole workspace may
 			  -- read is evidence here; a limited one is its audience's.
@@ -216,18 +214,22 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			  AND %[5]s
 			  AND %[4]s
 			  AND (a.kind <> 'meeting' OR (%[1]s AND %[3]s))
+			  -- A call grounds a follow-up only when it reached somebody: a
+			  -- voicemail is no conversation to follow up on.
+			  AND (a.kind <> 'call' OR %[6]s)
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT 1
 		) ev ON true
 		WHERE d.status = 'open' AND d.archived_at IS NULL
-		  AND %[2]s
+		  AND NOT %[2]s
 		ORDER BY d.id
 		LIMIT $2`,
 		storekit.MeetingIsOverSQL("a", "$3"),
-		noStep,
-		relstrength.MeetingCountsSQL("a"),
+		OpenNextStepSQL("d.id", "$3", current),
+		meetingoutcome.HeldSQL("a"),
 		occurredday.BegunSQL("a", "$3"),
-		occurredday.FromSQL("a", "$1")), args, nil
+		occurredday.FromSQL("a", "$1"),
+		relstrength.CallCountsSQL("a")), args, nil
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {

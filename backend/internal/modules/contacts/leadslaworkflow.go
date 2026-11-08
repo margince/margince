@@ -234,9 +234,9 @@ func mayAnswerSQL(lead, alias string) string {
 // activity under alias.
 func inboundBeforeSQL(lead, alias string) string {
 	return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link li JOIN activity ai ON ai.id = li.activity_id
-		WHERE li.lead_id = %[1]s AND ai.direction = 'inbound' AND (ai.archived_at IS NULL AND activity_thread_available(ai.thread_key)) AND %[3]s
+		WHERE li.lead_id = %[1]s AND ai.direction = 'inbound' AND ai.archived_at IS NULL AND %[3]s
 		  AND ai.occurred_at < %[2]s.occurred_at -- occurred_at raw: an inbound before the touch, an ordering of rows
-		)`, lead, alias, auth.ActivityAvailableClause("ai"))
+		)`, lead, alias, auth.ActivityExternalEvidenceClause("ai"))
 }
 
 // humanLoggedNote is the ONE spelling of "a rep typed this note into the
@@ -270,8 +270,8 @@ func (s *Store) leadResponseTouches(ctx context.Context, activityID ids.Activity
 		arg := func(value any) int { args = append(args, value); return len(args) }
 		q := `SELECT l.lead_id, ` + leadTouchColumns(ctx, "l.lead_id", arg) + `
 			FROM activity_link l JOIN activity a ON a.id = l.activity_id
-			WHERE l.activity_id = $1 AND l.lead_id IS NOT NULL AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
-			  AND ` + auth.ActivityAvailableClause("a")
+			WHERE l.activity_id = $1 AND l.lead_id IS NOT NULL AND a.archived_at IS NULL
+			  AND ` + auth.ActivityExternalEvidenceClause("a")
 		rows, err := tx.Query(ctx, q, args...)
 		if err != nil {
 			return err

@@ -14,7 +14,7 @@ import { LocaleProvider, translate } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AgentConnectionsCard } from "./agent-token-settings";
 
-// Settings → Sign-in and apps: how long a connected agent's passport lives.
+// Settings → Sign-in and security: how long a connected agent's passport lives.
 // Every role reads it; installation_settings:update changes it, and a value
 // past the passport's own ceiling is refused in the box before the request.
 

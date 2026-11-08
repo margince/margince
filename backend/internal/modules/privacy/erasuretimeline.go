@@ -113,6 +113,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	// is no redelivery left for the key to deduplicate.
 	rows, err := tx.Query(ctx, `
 		UPDATE activity a SET subject = $5, body = NULL, raw = NULL, agenda_fingerprint = NULL,
+ internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it
 		  -- read. A verdict saying a subject replied negatively is a claim about
@@ -143,9 +144,6 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	}
 	redacted, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
-		return nil, err
-	}
-	if err := e.purgeErasedActivityProjections(ctx, tx, redacted); err != nil {
 		return nil, err
 	}
 	if err := clearActivityCustomValues(ctx, tx, redacted); err != nil {
@@ -206,7 +204,7 @@ func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Conte
 	if leads == nil {
 		leads = []ids.UUID{}
 	}
-	args := pgx.StrictNamedArgs{"contact_id": contactID, "leads": leads}
+	args := pgx.StrictNamedArgs{"contact_id": contactID, leadsParameter: leads}
 	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, args); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list history: %w", err)
 	}
@@ -337,9 +335,9 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	}
 	for _, email := range emails {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)
-			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email)); err != nil {
+			INSERT INTO erasure_suppression (kind, value_hash, key_id)
+			VALUES ('email', $1, $2)
+			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email), storekit.SuppressionKeyID()); err != nil {
 			return 0, 0, err
 		}
 	}

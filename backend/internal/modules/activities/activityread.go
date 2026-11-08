@@ -218,7 +218,7 @@ func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActiviti
 	// Measured only when the waiting filter is asked for. The spread is a
 	// percentile over a year, a scan no other list should pay for.
 	if in.WaitingReplyAsOf != nil {
-		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
+		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
 			return nil, storekit.Page{}, err
 		}
 	}
@@ -290,9 +290,13 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	//
 	// The hold says no principal reads restricted content.
 	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
-	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1`
+	columns, err := activityColumns(ctx, content, arg)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	q := `SELECT ` + columns + ` FROM activity a WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
-		q += ` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`
+		q += ` AND a.archived_at IS NULL`
 	}
 	a, err := scanActivity(tx.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -302,25 +306,11 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
-	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := AttachLinks(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithCreators(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithOffersEmail(ctx, tx, one); err != nil {
+	// No columns: each caller fills the custom values with the catalog it read.
+	if err := FinishActivityRows(ctx, tx, CustomColumns{}, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := WithCommitmentAdmissions(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := StampActivityAffordances(ctx, tx, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	return one[0], nil
@@ -463,14 +453,18 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if err != nil {
 			return err
 		}
+		columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			return err
+		}
 		// The list's own projection, counted. Not `count(*)` over the join
 		// directly: the content clauses put placeholders in the SELECT list, and
 		// a statement that binds an argument it never mentions is one Postgres
 		// refuses outright ("could not determine data type of parameter"). The
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM (SELECT `+activityColumns(content)+
-				` FROM activity a WHERE activity_thread_available(a.thread_key) AND `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+			`SELECT count(*) FROM (SELECT `+columns+
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
 	})
 	return total, err
 }

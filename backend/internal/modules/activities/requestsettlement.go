@@ -122,7 +122,6 @@ type RepliedRequest struct {
 // older verdict without it is skipped while its answer is still the newest. A
 // still_owed verdict from an older rule is never skipped.
 var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `))
- AND ` + settlementEvidenceAvailableSQL() + `
  AND a.audience = 'workspace'
  AND a.counterparty_email IS NOT NULL
  AND EXISTS (` + settlementAnswersSQL() + `)
@@ -142,8 +141,8 @@ var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettle
 // with the same correspondent, and the answers off its thread.
 var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
  AND NOT EXISTS (SELECT 1 FROM activity later
-   WHERE activity_thread_available(later.thread_key) AND later.thread_key = a.thread_key AND later.kind = a.kind
-     AND later.counterparty_email = a.counterparty_email AND (later.archived_at IS NULL AND activity_thread_available(later.thread_key))
+   WHERE later.thread_key = a.thread_key AND later.kind = a.kind
+     AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
      AND ` + occurredday.BegunSQL("later", "$1") + ` AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
      AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
  AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
@@ -157,9 +156,9 @@ var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
 // settlement model may be shown.
 func settlementAnswersSQL() string {
 	return `SELECT reply.id, reply.occurred_at FROM activity reply
-   WHERE activity_thread_available(reply.thread_key) AND (` + ourOutboundInThisThread("reply", "a") + `
+   WHERE (` + ourOutboundInThisThread("reply", "a") + `
      OR (` + correspondentInThisThread("reply", "a") + ` AND ` + CapturedInboundSQL("reply") + `))
-     AND reply.audience = 'workspace' AND (reply.restricted_at IS NULL AND activity_thread_available(reply.thread_key))
+     AND reply.audience = 'workspace' AND reply.restricted_at IS NULL
      AND ` + occurredday.BegunSQL("reply", "$1") + `
      AND (reply.occurred_at, reply.id) > (a.occurred_at, a.id)
  UNION ` + offThreadAnswersSQL("a", "$1")
@@ -221,11 +220,11 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			  FROM activity a
 			  CROSS JOIN LATERAL (%[2]s) latest
 			  LEFT JOIN LATERAL (SELECT reminder.id, reminder.version FROM activity reminder
-			    WHERE activity_thread_available(reminder.thread_key) AND reminder.source_system = '%[3]s' AND reminder.source_activity_id = a.id
+			    WHERE reminder.source_system = '%[3]s' AND reminder.source_activity_id = a.id
 			      AND %[4]s LIMIT 1) done ON true
 			  LEFT JOIN activity task
 			    ON task.source_system = '%[3]s' AND task.source_activity_id = a.id
-			   AND (task.archived_at IS NULL AND activity_thread_available(task.thread_key)) AND task.is_done = false
+			   AND task.archived_at IS NULL AND task.is_done = false
 			 WHERE %[5]s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
 			 LIMIT $3`, settlementEvidenceSQL(), newestAnswerRow, EmailRequestTaskSource, settlementCompletedTaskSQL("reminder"), repliedRequestsSQL),

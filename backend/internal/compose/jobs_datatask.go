@@ -12,8 +12,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
@@ -50,6 +52,8 @@ const dataTaskRunLock = "data_task_run"
 // dataTaskBusyWait is how long a run waits behind a live one.
 const dataTaskBusyWait = 30 * time.Second
 
+const dataTaskDefaultPace = time.Second
+
 func dataTaskInsertOpts() *river.InsertOpts {
 	return jobs.QueuedAs[DataTaskRunArgs](&river.InsertOpts{
 		MaxAttempts: rowOwnedMaxAttempts,
@@ -60,10 +64,10 @@ func dataTaskInsertOpts() *river.InsertOpts {
 func addDataTaskJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	pace := cfg.DataTasksPace
 	if pace <= 0 {
-		pace = time.Second
+		pace = dataTaskDefaultPace
 	}
 	addDeclaredWorker[DataTaskRunArgs](reg, &dataTaskRunWorker{pool: pool, pace: pace, log: log})
-	addDeclaredWorker[DataTaskReconcileArgs](reg, &dataTaskReconcileWorker{pool: pool, log: log})
+	addDeclaredWorker[DataTaskReconcileArgs](reg, &dataTaskReconcileWorker{pool: pool, log: log, pace: pace})
 	return periodicFor(cfg, DataTaskReconcileArgs{})
 }
 
@@ -86,10 +90,6 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	more, err := runQueuedThreadRepairs(ctx, w.pool)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
 	outcome, err := engine.Execute(ctx)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -100,7 +100,7 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 	if outcome.Busy {
 		return river.JobSnooze(dataTaskBusyWait)
 	}
-	if outcome.More || more {
+	if outcome.More {
 		return river.JobSnooze(w.pace)
 	}
 	return nil
@@ -109,6 +109,7 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 type dataTaskReconcileWorker struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
+	pace time.Duration
 }
 
 func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTaskReconcileArgs]) error {
@@ -119,10 +120,33 @@ func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTas
 	if err := w.discardDeadRuns(ctx); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	if err := enqueueThreadRepairRun(ctx, w.pool); err != nil {
+	progress, err := reconcileDataTaskProgress(ctx, engine)
+	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return jobs.FaultContext(ctx, reconcileDataTasks(ctx, engine))
+	evidenceBatch := participantEvidenceRepairLimit(progress)
+	if evidenceBatch == 0 {
+		return nil
+	}
+	changed := 0
+	err = storekit.RetryLockCycles(ctx, func() error {
+		return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+			var err error
+			changed, err = activities.RepairParticipantEvidenceTx(ctx, tx, evidenceBatch)
+			return err
+		})
+	})
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if changed == evidenceBatch {
+		pace := w.pace
+		if pace <= 0 {
+			pace = dataTaskDefaultPace
+		}
+		return river.JobSnooze(pace)
+	}
+	return nil
 }
 
 // discardDeadRuns closes a run row a killed worker left running.
@@ -158,12 +182,17 @@ func (w *dataTaskRunWorker) logger() *slog.Logger {
 }
 
 func reconcileDataTasks(ctx context.Context, engine *datatask.Engine) error {
+	_, err := reconcileDataTaskProgress(ctx, engine)
+	return err
+}
+
+func reconcileDataTaskProgress(ctx context.Context, engine *datatask.Engine) ([]datatask.Progress, error) {
 	if err := engine.Seed(ctx); err != nil {
-		return jobs.FaultContext(ctx, err)
+		return nil, jobs.FaultContext(ctx, err)
 	}
 	progress, err := engine.List(ctx)
 	if err != nil {
-		return jobs.FaultContext(ctx, err)
+		return nil, jobs.FaultContext(ctx, err)
 	}
 	for _, p := range progress {
 		if p.AwaitingReview() {
@@ -172,13 +201,13 @@ func reconcileDataTasks(ctx context.Context, engine *datatask.Engine) error {
 		if p.Status == datatask.Pending || p.Status == datatask.Running {
 			client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
 			if err != nil {
-				return jobs.FaultContext(ctx, err)
+				return progress, jobs.FaultContext(ctx, err)
 			}
 			_, err = client.Insert(ctx, DataTaskRunArgs{}, dataTaskInsertOpts())
-			return jobs.FaultContext(ctx, err)
+			return progress, jobs.FaultContext(ctx, err)
 		}
 	}
-	return nil
+	return progress, nil
 }
 
 func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool) (context.Context, *datatask.Engine, error) {
@@ -192,30 +221,4 @@ func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool) (context.Context
 	}
 	engine, err := newDataTaskEngine(pool, buildinfo.ReleaseVersion, time.Now)
 	return ctx, engine, err
-}
-
-func runQueuedThreadRepairs(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
-	done := false
-	err := InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
-		_, _, complete, err := capture.ThreadRepairBatchTx(ctx, tx, 100, ids.NewV7(), threadRepairApplier(pool))
-		done = complete
-		return err
-	})
-	return !done, err
-}
-
-func enqueueThreadRepairRun(ctx context.Context, pool *pgxpool.Pool) error {
-	var pending bool
-	err := InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM capture_thread_pending) OR EXISTS(SELECT 1 FROM capture_thread_repair)`).Scan(&pending)
-	})
-	if err != nil || !pending {
-		return err
-	}
-	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
-	if err != nil {
-		return err
-	}
-	_, err = client.Insert(ctx, DataTaskRunArgs{}, dataTaskInsertOpts())
-	return err
 }

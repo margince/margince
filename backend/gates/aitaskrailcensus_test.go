@@ -26,7 +26,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -115,7 +114,7 @@ func everyRoutableTask(t *testing.T) []ai.Task {
 func taskConstantsDeclaredInSource(t *testing.T) []string {
 	t.Helper()
 	dir := filepath.Join("internal", "modules", "ai")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the ai package: %v", err)
 	}

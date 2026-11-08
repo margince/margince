@@ -153,13 +153,37 @@ func (a *recordingAdvancer) AdvanceProjectPhase(
 
 // recordingDisqualifier captures the id and the pin Handle passed to the store.
 type recordingDisqualifier struct {
-	id  ids.UUID
-	pin *int64
+	id        ids.UUID
+	why       LeadDisqualification
+	pin       *int64
+	badReason error
 }
 
-func (d *recordingDisqualifier) DisqualifyLead(_ context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
-	d.id, d.pin = id, ifVersion
+func (d *recordingDisqualifier) CheckDisqualifyReason(context.Context, ids.UUID) error {
+	return d.badReason
+}
+
+func (d *recordingDisqualifier) DisqualifyLead(_ context.Context, id ids.UUID, why LeadDisqualification, ifVersion *int64) (json.RawMessage, error) {
+	d.id, d.why, d.pin = id, why, ifVersion
 	return nil, nil
+}
+
+// A reason no rep could pick is refused while staging, so nobody is asked to
+// release a call that would then fail.
+func TestDisqualifyLeadRefusesABadReasonBeforeStaging(t *testing.T) {
+	leadID, reasonID := ids.NewV7(), ids.NewV7()
+	badReason := errors.New("not an active reason")
+	tool := disqualifyLead{
+		p:            stubRecordProvider{rec: stagedRecord(datasource.EntityLead, leadID, true)},
+		disqualifier: &recordingDisqualifier{badReason: badReason},
+	}
+	args := `{"lead_id":"` + leadID.String() + `","reason_id":"` + reasonID.String() + `"}`
+	if _, err := tool.StageInfo(context.Background(), json.RawMessage(args)); !errors.Is(err, badReason) {
+		t.Fatalf("staging with a bad reason answered %v, want the reason refused", err)
+	}
+	if _, err := tool.StageInfo(context.Background(), json.RawMessage(`{"lead_id":"`+leadID.String()+`"}`)); err != nil {
+		t.Fatalf("staging with no reason answered %v, want it staged", err)
+	}
 }
 
 // The tool decodes and hands off — the lead's own gates are the store's. What
@@ -581,3 +605,15 @@ func TestEveryEnforcedEnumValueIsAlsoAdvertised(t *testing.T) {
 // sides. And an enum with no Go predicate behind it cannot be compared at all:
 // where the schema IS the only statement of the vocabulary, there is nothing to
 // hold it against.
+
+func TestDisqualifyLeadHandsItsReasonToTheStore(t *testing.T) {
+	seam := &recordingDisqualifier{}
+	lead, reason := ids.NewV7(), ids.NewV7()
+	args := json.RawMessage(`{"lead_id":"` + lead.String() + `","reason_id":"` + reason.String() + `","note":"Address bounced"}`)
+	if _, err := (disqualifyLead{disqualifier: seam}).Handle(context.Background(), args); err != nil {
+		t.Fatal(err)
+	}
+	if seam.why.ReasonID == nil || *seam.why.ReasonID != reason || seam.why.Note == nil || *seam.why.Note != "Address bounced" {
+		t.Fatalf("the store was told %+v", seam.why)
+	}
+}

@@ -10,11 +10,12 @@ import {
   OverviewText,
 } from "../../design-system/overviewcard";
 import { formatNumber, formatSignedNumber } from "../../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { originLabelFor, useLeadOrigins } from "../../lib/leadorigins";
 import { scoreFactorLabel } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
+import { FactorSources } from "./leads.score.sources";
 import { useLeadScore } from "./leadscore.queries";
 import { isEngagementFactor, isFitFactor } from "./leadstandingparts";
 
@@ -89,11 +90,7 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
 
 // What kind of point a factor is, under its name. It is who the lead is, what they
 // did (and in how many activities), or whose judgement a hand-set signal is.
-function factorKind(
-  factor: ScoreFactor,
-  t: Translator,
-  locale: Locale,
-): ReactNode {
+function factorKind(factor: ScoreFactor, t: Translator): ReactNode {
   if (factor.signal_kind) {
     return (
       <>
@@ -113,15 +110,16 @@ function factorKind(
   if (!isEngagementFactor(factor.factor)) {
     return null;
   }
-  const activities = factor.source_activity_ids?.length ?? 0;
-  return [
-    t("lead.dims.engagement"),
-    activities > 0
-      ? t("lead.scoreSources", { count: formatNumber(activities, locale) })
-      : undefined,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  if ((factor.source_activity_ids?.length ?? 0) === 0) {
+    return t("lead.dims.engagement");
+  }
+  return (
+    <>
+      {t("lead.dims.engagement")}
+      {" · "}
+      <FactorSources factor={factor} />
+    </>
+  );
 }
 
 function FactorRow({ factor }: Readonly<{ factor: ScoreFactor }>) {
@@ -131,7 +129,7 @@ function FactorRow({ factor }: Readonly<{ factor: ScoreFactor }>) {
   return (
     <OverviewRow
       title={scoreFactorLabel(factor.factor, t)}
-      sub={factorKind(factor, t, locale)}
+      sub={factorKind(factor, t)}
       right={
         <Badge tone={points < 0 ? "warning" : "success"}>
           {formatSignedNumber(points, locale)}

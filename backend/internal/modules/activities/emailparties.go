@@ -160,7 +160,7 @@ func receivedFromSQL() string {
 		SELECT a.id, 'from', a.counterparty_email, NULL::uuid, NULL::text, NULL::uuid, '', '',
 		       a.created_at, a.id
 		  FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.id = ANY($1) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.direction = 'inbound'
+		 WHERE a.id = ANY($1) AND a.archived_at IS NULL AND a.direction = 'inbound'
 		   AND coalesce(a.counterparty_email, '') <> ''
 		   AND NOT EXISTS (SELECT 1 FROM activity_participant ap
 		         WHERE ap.activity_id = a.id AND ap.role = 'from' AND NOT ` + unstatedContactSQL("ap") + `)`

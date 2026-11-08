@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -119,6 +120,29 @@ func validateFrameworkInput(in crmcontracts.ReportingFrameworkInput) error {
 	}
 	if in.Template != reportingSales && in.Template != "sdr" {
 		return refuse("template", "invalid", "choose sales or SDR defaults")
+	}
+	return validateCoverageThresholds(in.AccountCoverage)
+}
+
+// validateCoverageThresholds refuses a limit outside the range the contract
+// states, so a published framework never judges by a number no screen offers.
+func validateCoverageThresholds(in *crmcontracts.AccountCoverageThresholds) error {
+	if in == nil {
+		return nil
+	}
+	for _, limit := range []struct {
+		name     string
+		value    *int
+		min, max int
+	}{
+		{"max_engaged_seats", in.MaxEngagedSeats, 0, 10},
+		{"untouched_days", in.UntouchedDays, 1, 365},
+		{"silent_days", in.SilentDays, 1, 365},
+		{"won_within_days", in.WonWithinDays, 1, 730},
+	} {
+		if limit.value != nil && (*limit.value < limit.min || *limit.value > limit.max) {
+			return refuse("account_coverage."+limit.name, "out_of_range", fmt.Sprintf("choose a number from %d to %d", limit.min, limit.max))
+		}
 	}
 	return nil
 }

@@ -338,31 +338,3 @@ func TestTheBackfillReadsOnlyTheMessagesOwnStoredParts(t *testing.T) {
 		t.Errorf("the marker says unreadable %d times, want 1", n)
 	}
 }
-
-func TestCalendarMetadataBackfillCannotAdvancePastAnUnavailableMessage(t *testing.T) {
-	o := setupOwed(t)
-	o.contact(t, "Pat Buyer", "pat@customer.example")
-	decline := o.captureRaw(t, declineMail(o.seat, o.now.Add(-time.Hour)))
-	o.asCapturedBeforeTheColumn(t, decline, time.Hour)
-	run := beginUnavailableThread(t, o.e, o.threadKey(t, decline))
-	version := o.count(t, `SELECT version FROM activity WHERE id=$1`, decline)
-	if changed := runCalendarMethodBackfill(t, o, nil); changed != 1 {
-		t.Fatalf("backfill settled%d messages", changed)
-	}
-	if got := o.calendarMethod(t, decline); got != "REPLY" {
-		t.Fatalf("blocked message was marked without its method: %q", got)
-	}
-	if next := o.count(t, `SELECT version FROM activity WHERE id=$1`, decline); next != version+1 {
-		t.Fatalf("metadata version=%d before=%d", next, version)
-	}
-	if rows := o.count(t, `SELECT count(*) FROM activity_calendar_method_backfill WHERE activity_id=$1 AND outcome='set'`, decline); rows != 1 {
-		t.Fatalf("checked calendar method markers=%d", rows)
-	}
-	finishUnavailableThread(t, o.e, run)
-	if got := o.calendarMethod(t, decline); got != "REPLY" {
-		t.Fatalf("published metadata=%q", got)
-	}
-	if changed := runCalendarMethodBackfill(t, o, nil); changed != 0 {
-		t.Fatalf("replayed backfill changed%d messages", changed)
-	}
-}

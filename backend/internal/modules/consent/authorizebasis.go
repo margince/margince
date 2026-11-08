@@ -54,6 +54,12 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 		return err
 	}
 	threadKey := threadKeyOf(ctx, tx, req.AnchorActivityID)
+	if err := storekit.LockThreadKeysTx(ctx, tx, threadKey); err != nil {
+		return err
+	}
+	if threadKey != threadKeyOf(ctx, tx, req.AnchorActivityID) {
+		return storekit.RetryThreadTransaction(ctx, tx)
+	}
 	live, err := basisAlreadyLive(ctx, tx, subject, res.Basis, threadKey)
 	if err != nil {
 		return err
@@ -61,8 +67,7 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 	if live {
 		return nil
 	}
-	// Locked here and not earlier, so a send that records nothing and a send
-	// whose basis already stands take no lock at all.
+	// The subject row is locked only when this transaction records new evidence.
 	//
 	// A merge archives the retired record and carries its consent rows across.
 	// A basis written after the carry had passed would sit on a record no read
@@ -84,13 +89,12 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 		anchor := req.AnchorActivityID
 		sourceActivity = &anchor
 	}
-	var recorded ids.UUID
-	if err := tx.QueryRow(ctx, `
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO communication_basis
 		  (contact_id, lead_id, kind, thread_key, source_activity_id, valid_until, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		contactID, leadID, string(res.Basis), nullableText(threadKey),
-		sourceActivity, validUntil, by).Scan(&recorded); err != nil {
+		sourceActivity, validUntil, by); err != nil {
 		return fmt.Errorf("consent: record the ground this message relied on: %w", err)
 	}
 	// AUDITED, like every other consent-basis write beside it
@@ -109,8 +113,6 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 	}
 	if _, err := storekit.AuditEvent(ctx, tx, "update", subjectAuditEntity(subject), subjectID, map[string]any{
 		"communication_basis": string(res.Basis),
-		basisAuditIDField:     recorded,
-		basisSourceAuditField: sourceActivity,
 		"resolved_category":   string(res.Category),
 	}); err != nil {
 		return err
@@ -151,12 +153,11 @@ func basisAlreadyLive(ctx context.Context, tx pgx.Tx, subject subjectRef, basis 
 	var found bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM communication_basis b
+			SELECT 1 FROM communication_basis
 			 WHERE ($1 = 'contact' AND contact_id = $2::uuid
 			        OR $1 = 'lead' AND lead_id = $2::uuid)
 			   AND kind = $3
 			   AND revoked_at IS NULL
-               AND `+threadBasisOriginLiveSQL("b")+`
 			   AND (valid_until IS NULL OR valid_until > now())
 			   -- IS NOT DISTINCT FROM, so a threadless basis matches the
 			   -- threadless case rather than never matching itself: NULL = NULL
@@ -189,7 +190,7 @@ func threadKeyOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) string {
 		// archived_at excludes a restricted row too (the activity_restricted_is_archived
 		// CHECK), so a held message never names the conversation a basis is
 		// scoped to. Losing the key only widens the row, per the note above.
-		`SELECT thread_key FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (archived_at IS NULL AND activity_thread_available(thread_key))`,
+		`SELECT thread_key FROM activity WHERE id = $1 AND archived_at IS NULL`,
 		anchor).Scan(&key); err != nil {
 		return ""
 	}
@@ -202,7 +203,9 @@ func threadKeyOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) string {
 // lockSendSubject takes the subject's row before a send writes evidence onto
 // it, in the order the merge takes them: the subject's row first.
 //
-// A retired subject cannot receive new send evidence.
+// It refuses a subject a merge has retired, because `LockSubjectLive` requires
+// `archived_at IS NULL`. The caller sees `apperrors.ErrNotFound`, so the send
+// is refused rather than recorded against a record nobody reads.
 func lockSendSubject(ctx context.Context, tx pgx.Tx, subject subjectRef) error {
 	id, err := ids.Parse(subject.ID)
 	if err != nil {

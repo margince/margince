@@ -66,6 +66,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -320,7 +321,7 @@ func scanTreeForCitations(t *testing.T, known map[string]map[string]bool) (found
 			unread[f.path] = true
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join("..", f.path))
+		body, err := gatekit.ReadFile(filepath.Join("..", f.path))
 		if err != nil {
 			// A tracked path can be absent mid-rebase, and a gitlink
 			// (submodule) reads as a directory.
@@ -511,7 +512,7 @@ func knownMigrationVersions(t *testing.T) map[string]map[string]bool {
 // embeddedNamespaces reads the //go:embed line that declares them.
 func embeddedNamespaces(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(namespaceOwner)
+	raw, err := gatekit.ReadFile(namespaceOwner)
 	if err != nil {
 		t.Fatalf("reading %s: %v", namespaceOwner, err)
 	}
@@ -543,7 +544,7 @@ func readCitationRegister(t *testing.T, path string) map[string]bool {
 // stated here rather than in a pull request.
 func registerEntries(t *testing.T, path string) []string {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

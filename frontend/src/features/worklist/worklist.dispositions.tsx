@@ -34,6 +34,7 @@ import {
   knownDispositions,
   type PutDownAnswer,
   SWIPE_SIDES,
+  verbCopy,
   writeState,
 } from "./worklist.verbbutton";
 
@@ -193,6 +194,8 @@ export function usePutDown(item: WorklistItem) {
   };
   return {
     offered,
+    source: item.source,
+    rowId: item.id,
     put,
     // The answer whose write is out, or nothing while none is. Not a bare
     // boolean: every control in the band reads the same value, and what each
@@ -228,7 +231,7 @@ export function PutDownByThumb({
   // counter shared by both would be moved by a flick the other way, so a reader
   // alternating directions would never step through either side's judgements.
   const [walked, setWalked] = useState({ start: 0, end: 0 });
-  const write = usePutDown(item);
+  const write = useRowPutDown(item);
   const { offered, put, t } = write;
   if (!folded || offered.length === 0) {
     return <PutDown value={write}>{children}</PutDown>;
@@ -243,7 +246,7 @@ export function PutDownByThumb({
       onStage={(side) =>
         setWalked((seen) => ({ ...seen, [side]: seen[side] + 1 }))
       }
-      {...swipeActions(offered, t, put, walked)}
+      {...swipeActions(offered, t, put, walked, item.source)}
     >
       <PutDown value={write}>{children}</PutDown>
     </SwipeRow>
@@ -269,13 +272,21 @@ function PutDown({
 
 export type PutDown = ReturnType<typeof usePutDown>;
 
-// The row's one write, the one PutDownByThumb holds, so a press in the menu and
-// a swipe confirm cannot write twice. Verbs drawn outside a row get their own.
-// Both hooks run either way, because a hook cannot be called conditionally.
+// The row's one write, the one PutDownByThumb or OneRowWrite holds, so a press
+// in the menu and a swipe confirm cannot write twice. Verbs drawn outside a row
+// get their own. Both hooks run either way: a hook cannot be called conditionally.
 export function useRowPutDown(item: WorklistItem): PutDown {
   const shared = useContext(PutDownContext);
   const own = usePutDown(item);
-  return shared ?? own;
+  return shared?.rowId === item.id ? shared : own;
+}
+
+// One write for a card that draws its own controls around a row, such as a tick.
+export function OneRowWrite({
+  item,
+  children,
+}: Readonly<{ item: WorklistItem; children: React.ReactNode }>) {
+  return <PutDown value={usePutDown(item)}>{children}</PutDown>;
 }
 
 // Done, beside the row's answer: the one judgement that finishes the row. Below
@@ -283,13 +294,14 @@ export function useRowPutDown(item: WorklistItem): PutDown {
 // design-system/swiperow.tsx's header.
 export function DoneVerb({ write }: Readonly<{ write: PutDown }>) {
   const folded = useFoldedViewport();
-  const { offered, put, writing, t } = write;
+  const { offered, put, writing, t, source } = write;
   if (folded || !offered.includes("handled")) {
     return null;
   }
   return (
     <DispositionButton
       disposition="handled"
+      source={source}
       writing={writing}
       onPress={() => put("handled")}
       t={t}
@@ -303,10 +315,11 @@ export function DoneVerb({ write }: Readonly<{ write: PutDown }>) {
 // or a screen reader takes, and they mount on the menu's first open.
 export function PutDownLines({ write }: Readonly<{ write: PutDown }>) {
   const folded = useFoldedViewport();
-  const { offered, put, writing, t, locale } = write;
+  const { offered, put, writing, t, locale, source } = write;
   const line = (disposition: WorklistDisposition) => (
     <DispositionButton
       disposition={disposition}
+      source={source}
       writing={writing}
       onPress={() => put(disposition)}
       t={t}
@@ -359,7 +372,7 @@ export function PutDownLines({ write }: Readonly<{ write: PutDown }>) {
 // The judgements that say the row is not the reader's work. They come last in
 // the menu, since they take the row off the list.
 export function HandBackLines({ write }: Readonly<{ write: PutDown }>) {
-  const { offered, put, writing, t } = write;
+  const { offered, put, writing, t, source } = write;
   return (
     <>
       {offered
@@ -371,6 +384,7 @@ export function HandBackLines({ write }: Readonly<{ write: PutDown }>) {
           <DispositionButton
             key={disposition}
             disposition={disposition}
+            source={source}
             writing={writing}
             onPress={() => put(disposition)}
             t={t}
@@ -392,6 +406,7 @@ export function swipeActions(
   t: T,
   put: (disposition: WorklistDisposition) => void,
   walked: Readonly<{ start: number; end: number }>,
+  source = "",
 ) {
   const side = (which: "start" | "end") => {
     const here = offered.filter((one) => SWIPE_SIDES[one] === which);
@@ -404,7 +419,7 @@ export function swipeActions(
       return undefined;
     }
     return {
-      label: t(`worklist.disposition.verb.${one}` as const),
+      label: t(verbCopy(one, source).label),
       onAct: () => put(one),
     };
   };
@@ -431,6 +446,9 @@ function doneText(
 ): string {
   // Only a waiting message comes back when they write again. Any other row
   // comes back when something new happens on what it is about.
+  if (disposition === "handled" && source === "domain_question") {
+    return t("worklist.disposition.done.notNow");
+  }
   if (disposition === "handled" && source !== "customer_waiting") {
     return t("worklist.disposition.done.handledRow");
   }

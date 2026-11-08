@@ -35,7 +35,7 @@ func GuessedMailboxActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, 
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id > $1
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id > $1
 		   AND EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND `+guessedMailboxSeatSQL()+`)
 		 ORDER BY a.id LIMIT $2 FOR UPDATE OF a`, after, limit)
 	if err != nil {
@@ -53,7 +53,7 @@ func GuessedMailboxActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, 
 func CountGuessedMailboxActivities(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
 	var count int64
 	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM activity a
-		   WHERE activity_thread_available(a.thread_key) AND EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND `+guessedMailboxSeatSQL()+`)
+		   WHERE EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND `+guessedMailboxSeatSQL()+`)
 		 LIMIT $1) guessed`, maximum+1).Scan(&count); err != nil {
 		return 0, fmt.Errorf("activities: counting mail with a guessed mailbox owner: %w", err)
 	}

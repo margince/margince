@@ -32,7 +32,7 @@ func SeatMayHoldPrivateWorkTx(ctx context.Context, tx pgx.Tx, source ids.UUID, p
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	row := arg(source)
 	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.id = $%d AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s AND %s AND %s)`,
+		 WHERE a.id = $%d AND a.archived_at IS NULL AND %s AND %s AND %s)`,
 		row, ActivityAvailableClause("a"), activityAttendanceArm(holder, "a", arg), activityAudienceArm(holder, "a", arg))
 	var may bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&may); err != nil {

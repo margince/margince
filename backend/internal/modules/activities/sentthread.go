@@ -37,7 +37,7 @@ func SentFromHereBySeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, candida
 	}
 	where := fmt.Sprintf("a.id = ANY($%d::uuid[]) AND a.source_system = $%d", arg(candidates), arg(connector.EmailSourceSystem))
 	rows, err := tx.Query(ctx, `SELECT a.id, a.captured_by FROM activity a
- WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.direction = 'outbound' AND a.source = 'manual'
+ WHERE a.archived_at IS NULL AND a.direction = 'outbound' AND a.source = 'manual'
  AND `+where+` AND `+content, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading sent thread neighbours: %w", err)

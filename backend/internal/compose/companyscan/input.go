@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/companybrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -27,7 +28,7 @@ import (
 // floorVersion names the shape of the input and the merge. It is hand-bumped:
 // nothing about it is a prompt to hash, and a change to what the scan reads
 // is a change to every stored fingerprint.
-const floorVersion = "company-scan-floor-v2"
+const floorVersion = "company-scan-floor-v3"
 
 // promptVersion is derived from the prompt AS SENT, at one fixed language —
 // the language is its own fingerprint component. A rewording re-reads every
@@ -58,11 +59,12 @@ type Input struct {
 
 // MessageIn is one exchange as the model reads it.
 type MessageIn struct {
-	ID        ids.UUID  `json:"id"`
-	Kind      string    `json:"kind"`
-	Direction string    `json:"direction,omitempty"`
-	Subject   string    `json:"subject,omitempty"`
-	At        time.Time `json:"at"`
+	Commitments []crmcontracts.CommitmentAdmission `json:"commitments,omitempty"`
+	ID          ids.UUID                           `json:"id"`
+	Kind        string                             `json:"kind"`
+	Direction   string                             `json:"direction,omitempty"`
+	Subject     string                             `json:"subject,omitempty"`
+	At          time.Time                          `json:"at"`
 	// Text is the body's opening, bounded by scanBodyChars; UnreadChars says
 	// how much was cut, so the model — and a reader of the trace — knows a
 	// quote can only come from what was shown.

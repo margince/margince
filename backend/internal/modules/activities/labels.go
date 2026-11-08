@@ -62,7 +62,7 @@ func (s *Store) ActivityLabels(ctx context.Context, want []ids.UUID) (map[ids.UU
 		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
 			SELECT a.id, coalesce(CASE WHEN (%s) THEN a.subject END, '')
 			  FROM activity a
-			 WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND (%s)`,
+			 WHERE a.id = ANY($%d) AND a.archived_at IS NULL AND (%s)`,
 			content, idsPos, discover), args...)
 		labels = found
 		return err

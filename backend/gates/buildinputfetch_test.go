@@ -33,12 +33,13 @@ package gates
 // exists today, and either would be a larger change than a forgotten flag.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // goProxyFallThrough is the value that falls through on any proxy error. Go's
@@ -68,7 +69,7 @@ func TestEveryGoWorkflowFallsThroughAFailingModuleProxy(t *testing.T) {
 
 	running := 0
 	for _, path := range files {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
@@ -107,7 +108,7 @@ func TestEveryPinnedToolDownloadRetries(t *testing.T) {
 		t.Fatalf("no pin scripts matched %s; this gate would pass vacuously", pinScriptGlob)
 	}
 	for _, path := range scripts {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative script path from the glob above
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative script path from the glob above
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

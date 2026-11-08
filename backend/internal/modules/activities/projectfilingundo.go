@@ -185,7 +185,7 @@ func withdrawProjectFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fi
 	}
 	cleared, err := tx.Exec(ctx,
 		`UPDATE activity SET retention_class = NULL, retention_class_at = NULL
-		  WHERE id = $1 AND retention_class IS NOT NULL AND (archived_at IS NULL AND activity_thread_available(thread_key))`, id)
+		  WHERE id = $1 AND retention_class IS NOT NULL AND archived_at IS NULL`, id)
 	if err != nil {
 		return err
 	}

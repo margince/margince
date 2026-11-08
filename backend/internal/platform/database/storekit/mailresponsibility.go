@@ -173,7 +173,7 @@ func DirectMailActivitiesSQL(identities, seat, keep string) string {
 		kept = " AND (" + keep + ")"
 	}
 	return `ARRAY(SELECT recipient.activity_id FROM activity_participant recipient
- JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND (mail.archived_at IS NULL AND activity_thread_available(mail.thread_key))` + kept + `
+ JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND mail.archived_at IS NULL` + kept + `
  WHERE ` + strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
 }
 

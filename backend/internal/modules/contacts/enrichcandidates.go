@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -27,14 +28,14 @@ import (
 // pass has not read. Every test on the mail itself is in signatureSourceSQL, so
 // this query and OlderSignatureSources cannot read different mail.
 var signatureCandidateSQL = `
-			SELECT p.id, p.full_name, coalesce(pe.email, ''), ` + olderMailMayFillTitleSQL("p") + `, a.id, coalesce(a.body, '')
+			SELECT p.id, p.full_name, coalesce(pe.email, ''), ` + olderMailMayFillTitleSQL("p") + `, a.id, coalesce(a.body, ''),COALESCE(st.requested_generation,0),pg_current_snapshot()::text
 			FROM contact p
 			LEFT JOIN contact_email pe ON pe.contact_id = p.id AND pe.is_primary AND pe.archived_at IS NULL
 			JOIN LATERAL (
 				SELECT a.id, a.body, a.occurred_at
 				FROM activity_link al
 				JOIN activity a ON a.id = al.activity_id
-				WHERE activity_thread_available(a.thread_key) AND activity_thread_available(a.thread_key) AND ` + signatureSourceSQL("$2") + `
+				WHERE ` + signatureSourceSQL("$2") + `
 				ORDER BY a.occurred_at DESC, a.id DESC
 				LIMIT 1
 			) a ON true
@@ -45,7 +46,10 @@ var signatureCandidateSQL = `
 			-- asking. The watermark keeps that affordable: NEW mail, not a
 			-- missing answer, makes somebody a candidate.
 			WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL
-			  AND (st.last_activity_at IS NULL OR a.occurred_at > st.last_activity_at) -- occurred_at raw: new mail past the watermark
+			  AND (st.deferred_run_id IS NULL OR st.live_generation>st.processed_generation)
+			  AND ($%[1]d::uuid[] IS NULL OR p.id=ANY($%[1]d::uuid[]))
+			  AND ` + signatureAfterWatermarkSQL("a.occurred_at", "a.id") + // occurred_at raw: source ordering against the last read, not whether an activity happened.
+	`
 			-- Freshest mail first. The pass is capped and runs within minutes of
 			-- a message arriving, so the contact who just wrote is the one a rep
 			-- is about to look at.
@@ -61,7 +65,7 @@ var olderSignatureSourcesSQL = `
 			JOIN activity_link al ON al.contact_id = p.id
 			JOIN activity a ON a.id = al.activity_id
 			WHERE p.id = $3 AND p.archived_at IS NULL AND p.merged_into_id IS NULL
-			  AND activity_thread_available(a.thread_key) AND ` + signatureSourceSQL("$2") + `
+			  AND ` + signatureSourceSQL("$2") + `
 			  AND (a.occurred_at, a.id) < (newest.occurred_at, newest.id)
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $1`
@@ -75,7 +79,7 @@ var readableSignatureSourceSQL = `
 			JOIN activity_link al ON al.contact_id = p.id
 			JOIN activity a ON a.id = al.activity_id
 			WHERE p.id = $1 AND a.id = $3 AND p.archived_at IS NULL AND p.merged_into_id IS NULL
-			  AND activity_thread_available(a.thread_key) AND ` + signatureSourceSQL("$2")
+			  AND ` + signatureSourceSQL("$2")
 
 // signatureSourceSQL holds the tests one mail must pass before this pass reads
 // it for the contact's signature. The caller joins `activity_link al` and
@@ -98,7 +102,7 @@ func signatureSourceSQL(defaultEnabled string) string {
 // A bare connector:<name> stamp matches no connection and follows the workspace
 // default.
 func signatureMailSQL(defaultEnabled string) string {
-	return `a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL AND activity_thread_available(a.thread_key)
+	return `a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
 				  -- A row held under a statutory obligation is out of reach of
 				  -- the model call this feeds, which is processing.
 				  AND a.restricted_at IS NULL
@@ -162,7 +166,7 @@ func capturingMailboxSQL(activity string) string {
 // audience='selected' is deliberately absent: it admits named users and teams
 // beyond the participants, so it is not bounded by "the owner was there".
 func SignatureSourceEligible(contact, activity string) string {
-	return fmt.Sprintf(`(activity_thread_available(%[2]s.thread_key) AND (
+	return correspondence.ExternalSQL(activity) + " AND " + fmt.Sprintf(`(
 		    %[2]s.audience = 'workspace'
 		    OR (%[1]s.visibility = 'owner' AND %[2]s.audience = 'participants'
 		        AND (EXISTS (SELECT 1 FROM capture_import ci
@@ -172,7 +176,7 @@ func SignatureSourceEligible(contact, activity string) string {
 		        AND NOT EXISTS (SELECT 1 FROM record_grant rg
 		                         WHERE rg.record_type = 'contact' AND rg.record_id = %[1]s.id
 		                           AND (rg.expires_at IS NULL OR rg.expires_at > now())))
-		  ))`, contact, activity, auth.ParticipantStandsSQL("ap", activity))
+		  )`, contact, activity, auth.ParticipantStandsSQL("ap", activity))
 }
 
 // SignatureCandidates lists the contacts whose newest readable mail this pass
@@ -187,16 +191,32 @@ func SignatureSourceEligible(contact, activity string) string {
 // archived. defaultEnabled is the workspace answer for a
 // mailbox that never made its own choice.
 func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabled bool) ([]SignatureCandidate, error) {
+	return s.selectSignatureCandidates(ctx, limit, defaultEnabled, nil)
+}
+
+// SignatureCandidatesForContacts reuses the eligibility engine for a bounded contact shortlist.
+func (s *Store) SignatureCandidatesForContacts(ctx context.Context, contactIDs []ids.ContactID, limit int, defaultEnabled bool) ([]SignatureCandidate, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	if len(contactIDs) == 0 {
+		return nil, nil
+	}
+	return s.selectSignatureCandidates(ctx, limit, defaultEnabled, contactIDs)
+}
+
+func (s *Store) selectSignatureCandidates(ctx context.Context, limit int, defaultEnabled bool, contactIDs []ids.ContactID) ([]SignatureCandidate, error) {
 	var out []SignatureCandidate
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, signatureCandidateSQL, limit, defaultEnabled)
+		args := []any{limit, defaultEnabled, contactIDs}
+		rows, err := tx.Query(ctx, fmt.Sprintf(signatureCandidateSQL, len(args)), args...)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var c SignatureCandidate
-			if err := rows.Scan(&c.ContactID, &c.FullName, &c.Email, &c.OlderMailMayFillTitle, &c.ActivityID, &c.Body); err != nil {
+			if err := rows.Scan(&c.ContactID, &c.FullName, &c.Email, &c.OlderMailMayFillTitle, &c.ActivityID, &c.Body, &c.Generation, &c.Snapshot); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -245,4 +265,24 @@ func (s *Store) ReadableSignatureBody(ctx context.Context, contactID ids.Contact
 		return "", false, fmt.Errorf("contacts: reading a signature source: %w", err)
 	}
 	return body, true, nil
+}
+
+func signatureAfterWatermarkSQL(occurredAt, activityID string) string {
+	return `(st.last_activity_at IS NULL OR (` + occurredAt + `,` + activityID + `) > (st.last_activity_at,st.activity_id))`
+}
+
+// SignatureContactsForActivityTx reuses source eligibility before creating work for a message's contacts.
+func SignatureContactsForActivityTx(ctx context.Context, tx pgx.Tx, activity ids.UUID, defaultEnabled bool, target *ids.UUID) ([]ids.ContactID, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	args := []any{activity, defaultEnabled, target}
+	policy := signatureSourceSQL(fmt.Sprintf("$%d", len(args)-1))
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT DISTINCT p.id FROM activity a
+ JOIN activity_link al ON al.activity_id=a.id JOIN contact p ON p.id=al.contact_id
+ WHERE a.id=$%[1]d AND ($%[2]d::uuid IS NULL OR p.id=$%[2]d) AND p.archived_at IS NULL AND p.merged_into_id IS NULL AND `+policy, len(args)-2, len(args)), args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.ContactID])
 }

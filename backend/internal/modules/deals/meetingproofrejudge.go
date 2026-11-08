@@ -126,7 +126,7 @@ func meetingProvesHeld(ctx context.Context, tx pgx.Tx, activityID ids.UUID, part
 	var transcript bool
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT a.meeting_status, a.source_system IS NOT DISTINCT FROM $%[2]d AND coalesce(a.body, '') <> ''
-		  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%[1]d%[3]s FOR SHARE OF a`, idPos, markerPos, scope), args...).Scan(&status, &transcript)
+		  FROM activity a WHERE a.id = $%[1]d%[3]s FOR SHARE OF a`, idPos, markerPos, scope), args...).Scan(&status, &transcript)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil
 	}

@@ -653,6 +653,15 @@
   --fontDisplayFigure:
     var(--fontWeightBold) clamp(2rem, 2.8vw, 2.75rem) / 1.05
     var(--fontFamilyHeading);
+  /* The figures of an Analytics plate: medium weight, so a row of them reads
+     as one calm band under the view's name. */
+  --fontPlateFigure:
+    var(--fontWeightMedium) 1.375rem / 1.75rem var(--fontFamilyHeading);
+  /* The plate's lead figure. It scales with its cell (cqi), so it fits whole
+     instead of ending cut, and never falls under the figures beside it. */
+  --fontPlateLeadFigure:
+    var(--fontWeightMedium) clamp(1.375rem, 13cqi, 2.25rem) / 1.05
+    var(--fontFamilyHeading);
   /* The line under the full-window greeting. The line is tall enough for a
      record chip to sit in it without pushing the next line down. */
   --fontLead: var(--fontWeightRegular) 1.3125rem / 2.5rem var(--fontFamilyBody);
@@ -777,6 +786,16 @@
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
+/* On a phone a --space-5 inset spends a tenth of the width per pane, and nested
+   panes pay it twice. The width is PHONE_MAX_WIDTH in lib/viewport.ts. */
+@media (max-width: 700px) {
+  :root {
+    --padCard: var(--space-3);
+    --padPane: var(--space-3);
+    --padPanel: var(--space-3);
+  }
+}
+
 /* Dark palette. --bgInkField is absent: it is one dark plate in both themes. */
 [data-theme="dark"] {
   --bgPage: #0c1311;
@@ -805,7 +824,7 @@
   --ladder3Edge: #31383a;
   --ladder4Edge: #3b4345;
 
-  --accent: #3aae94;
+  --accent: #16a34a;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
      fill that ISN'T --accent and doesn't lighten here (a toast on
      --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
@@ -815,12 +834,12 @@
      it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
   /* Lighter than --accent, so it reads on --accentLight over each dark ground. */
-  --accentText: #66d5ba;
-  --accentLight: rgba(58, 174, 148, 0.16);
-  --accentMed: rgba(58, 174, 148, 0.28);
-  /* Dark ink: white fails AA on the light dark-theme accent. Not --textOnAccent,
+  --accentText: #4ade80;
+  --accentLight: rgba(22, 163, 74, 0.16);
+  --accentMed: rgba(22, 163, 74, 0.28);
+  /* Dark ink: white fails AA on the lifted dark-theme accent. Not --textOnAccent,
      which still inks fills that stay dark here (--bgInkField, --ai). */
-  --textOnAccentControl: #07221d;
+  --textOnAccentControl: #06130b;
   /* The same flip, one theme later: a filled state control's ground is the
      tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
      near-black pane barely has to move a hue before it reads on it. So the ink
@@ -966,14 +985,14 @@
     --ladder3Edge: #31383a;
     --ladder4Edge: #3b4345;
 
-    --accent: #3aae94;
+    --accent: #16a34a;
 
-    --accentText: #66d5ba;
+    --accentText: #4ade80;
 
-    --accentLight: rgba(58, 174, 148, 0.16);
-    --accentMed: rgba(58, 174, 148, 0.28);
+    --accentLight: rgba(22, 163, 74, 0.16);
+    --accentMed: rgba(22, 163, 74, 0.28);
 
-    --textOnAccentControl: #07221d;
+    --textOnAccentControl: #06130b;
     --textOnStatusControl: #04240f;
 
     --avatarGroundL: 0.32;
@@ -1072,6 +1091,16 @@
   :where(*)::after,
   :where(*)::backdrop {
     corner-shape: squircle;
+  }
+}
+
+/* A phone caps every corner at --r-sm. This block follows the squircle block,
+   so var(--r-sm) is the doubled rung where the browser draws squircles. */
+@media (max-width: 700px) {
+  :root {
+    --r-control: var(--r-sm);
+    --r-md: var(--r-sm);
+    --r-lg: var(--r-sm);
   }
 }
 

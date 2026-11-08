@@ -22,7 +22,7 @@ var contextSurfaceBySource = map[crmcontracts.WorklistItemSource]string{
 	"approval": "inline", "dedupe_candidate": "inline", "contact_case": "inline", "deal_suggestion": "inline",
 	"tag_suggestion": "inline", "failed_approval": "inline", "domain_question": "inline",
 	"notice": "inline", "weekly_commitment": "inline",
-	"dsr": "queue", "capture_health": "queue", "ai_work_health": "queue", "automation_run": "queue",
+	"dsr": "queue", "capture_health": "queue", "booking_health": "queue", "ai_work_health": "queue", "automation_run": "queue",
 	"batch": "group",
 }
 

@@ -13,11 +13,11 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import { inWorker } from "../../scripts/lib/in-worker";
+import type * as Sweep from "../../scripts/lib/jsx-magnitude.sweep";
 import {
   extensionFrontendFiles,
   filesUnder,
-  plantedProgram,
-  programOver,
   sourceFileAt,
 } from "../../scripts/lib/source-tree";
 
@@ -230,287 +230,24 @@ function sourceFiles(): string[] {
     .sort();
 }
 
-type Finding = Readonly<{ file: string; line: number; text: string }>;
-
-// What one file yielded: the sites that ARE the defect, and the sites this lane
-// could not read well enough to say either way. Keeping them apart is the point
-// — a census that folds the second into "clean" is the one that fails short.
-type Verdict = Readonly<{ findings: Finding[]; unjudged: Finding[] }>;
-
-const NUMBER_LIKE =
-  ts.TypeFlags.Number |
-  ts.TypeFlags.NumberLiteral |
-  ts.TypeFlags.Enum |
-  ts.TypeFlags.EnumLiteral;
-
-const TEXT_LIKE = ts.TypeFlags.String | ts.TypeFlags.StringLiteral;
-
-const NULLISH = ts.TypeFlags.Undefined | ts.TypeFlags.Null | ts.TypeFlags.Void;
-
-function constituents(type: ts.Type): ts.Type[] {
-  const parts = type.isUnion() ? type.types : [type];
-  return parts.filter((part) => (part.flags & NULLISH) === 0);
-}
-
-/**
- * Whether this type is a magnitude and nothing else.
- *
- * EVERY constituent must be numeric, not merely one of them. `number |
- * undefined` is a magnitude that may be absent and is in scope; `ReactNode` and
- * `0 | Element` both carry a number beside something that is not one, and
- * neither is a figure a formatter could be applied to at that site.
- */
-function isMagnitude(type: ts.Type): boolean {
-  const parts = constituents(type);
-  return (
-    parts.length > 0 && parts.every((part) => (part.flags & NUMBER_LIKE) !== 0)
-  );
-}
-
-/**
- * Whether the checker declined to say what this is.
- *
- * `never` and the error type are how an unresolved import comes back, and both
- * answer "not a magnitude" to every question below — which is indistinguishable
- * from a ruled site unless it is counted separately. `any` is folded in with
- * them because the tree bans it, so its only source here is that same failure.
- */
-function isUnreadable(type: ts.Type): boolean {
-  return constituents(type).some(
-    (part) => (part.flags & (ts.TypeFlags.Never | ts.TypeFlags.Any)) !== 0,
-  );
-}
-
-/** Whether a prop declared with this type is drawn as TEXT and only as text. */
-function isTextSlot(type: ts.Type): boolean {
-  const parts = constituents(type);
-  return (
-    parts.length > 0 && parts.every((part) => (part.flags & TEXT_LIKE) !== 0)
-  );
-}
-
-/**
- * Whether this object's every value is text — which is what a catalog
- * sentence's parameters are.
- *
- * Asked of the SIGNATURE and not of the callee's name, so it holds for `t()`,
- * for `translate()`, for the `Translator` a helper takes as a parameter, and
- * for anything else declared to take words. #2463 narrowed that type so a raw
- * number can no longer reach a sentence; what it could not refuse is a site
- * that satisfies it with `String(count)`, which is this arm's whole subject.
- */
-function isTextTable(type: ts.Type, checker: ts.TypeChecker): boolean {
-  // The nullable strip is not tidying. The parameter is OPTIONAL, so the
-  // contextual type at every real call site is `Record<string, string> |
-  // undefined` — and a union carries no index signature, so asking the union
-  // yields nothing for every site there is, which reads exactly like a clean
-  // tree. The planted case is what holds this: it fails if the strip goes.
-  const index = checker.getIndexInfoOfType(
-    checker.getNonNullableType(type),
-    ts.IndexKind.String,
-  );
-  return index !== undefined && isTextSlot(index.type);
-}
-
-/**
- * Whether this type is React's own name for rendered content.
- *
- * Named, and it is the platform's declaration rather than a list of ours:
- * `ReactNode` is where React says "this is drawn", and a prop declared with it
- * accepts a number the component will render bare. The caller is the only site
- * that can rule such a number, because inside the component the type has
- * stopped being a magnitude.
- */
-function isRenderedContent(type: ts.Type): boolean {
-  return type.aliasSymbol?.getName() === "ReactNode";
-}
-
-/**
- * Whether this attribute is geometry on an element the BROWSER draws.
- *
- * Both halves are needed. The name alone is too wide: `SVGAttributes` declares
- * `values`, `order` and `result`, and one of our own components is free to take
- * a `string` prop called any of those and render it as words. So the exclusion
- * only applies to an INTRINSIC tag, which is the only place React's own
- * attribute declarations are what the prop means.
- */
-function isDrawnGeometry(
-  node: ts.JsxAttribute,
-  geometry: Set<string>,
-): boolean {
-  const tag = node.parent.parent.tagName;
-  const intrinsic = ts.isIdentifier(tag) && /^[a-z]/.test(tag.text);
-  return intrinsic && geometry.has(node.name.getText());
-}
-
-/**
- * The positions in one file where a value is drawn for a reader.
- *
- * Both halves come from the checker. A JSX child is structural. An attribute is
- * judged on its CONTEXTUAL type — the type the receiving prop declares — which
- * is what puts `aria-label`, `title`, `alt` and `StatCard`'s `value` in scope
- * without this file listing a prop name, and what keeps `size={14}` out of it:
- * a prop declared `number` is not text, and the ruling for what it draws
- * belongs at the component's own render site.
- */
-function renderedPositions(
-  parsed: ts.SourceFile,
-  checker: ts.TypeChecker,
-  geometry: Set<string>,
-): ts.Expression[] {
-  const found: ts.Expression[] = [];
-  const walk = (node: ts.Node): void => {
-    if (
-      ts.isJsxExpression(node) &&
-      node.expression !== undefined &&
-      (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))
-    ) {
-      found.push(node.expression);
-    }
-    // Judged on the SHAPE the object is contextualized into, not on the callee.
-    // Narrowing this to call arguments would read better and cost recognition:
-    // a params object built as a variable and handed to `t()` a line later is
-    // still a catalog parameter, and this arm is the only thing that sees it.
-    // The reach it buys instead — a `Record<string, string>` nobody renders —
-    // asks for a ruling on a string no reader meets, which is a wasted call
-    // rather than a missed magnitude. Over-recognition is the safe direction
-    // here, and the only one an assertion can catch when it goes wrong.
-    if (
-      ts.isPropertyAssignment(node) &&
-      ts.isObjectLiteralExpression(node.parent)
-    ) {
-      const table = checker.getContextualType(node.parent);
-      if (table !== undefined && isTextTable(table, checker)) {
-        found.push(node.initializer);
-      }
-    }
-    if (
-      ts.isJsxAttribute(node) &&
-      node.initializer !== undefined &&
-      ts.isJsxExpression(node.initializer) &&
-      node.initializer.expression !== undefined
-    ) {
-      const declared = checker.getContextualType(node.initializer.expression);
-      if (
-        declared !== undefined &&
-        (isTextSlot(declared) || isRenderedContent(declared)) &&
-        !isDrawnGeometry(node, geometry)
-      ) {
-        found.push(node.initializer.expression);
-      }
-    }
-    node.forEachChild(walk);
-  };
-  walk(parsed);
-  return found;
-}
-
-/**
- * Whether this expression carries a magnitude into the position it sits in.
- *
- * Three shapes, and the second and third exist because a conversion satisfies
- * the type without answering the question: `String(count)` and `count.toFixed(2)`
- * are both `string`, and both print US grouping to a German reader.
- */
-function carriesMagnitude(
-  node: ts.Expression,
-  checker: ts.TypeChecker,
-  blind: Set<string>,
-): boolean {
-  if (isMagnitude(checker.getTypeAtLocation(node))) {
-    return true;
-  }
-  if (
-    ts.isCallExpression(node) &&
-    ts.isIdentifier(node.expression) &&
-    node.expression.text === "String" &&
-    node.arguments.length === 1
-  ) {
-    return isMagnitude(checker.getTypeAtLocation(node.arguments[0]));
-  }
-  if (
-    ts.isCallExpression(node) &&
-    (ts.isPropertyAccessExpression(node.expression) ||
-      ts.isElementAccessExpression(node.expression))
-  ) {
-    const member = ts.isPropertyAccessExpression(node.expression)
-      ? node.expression.name.text
-      : ts.isStringLiteralLike(node.expression.argumentExpression)
-        ? node.expression.argumentExpression.text
-        : undefined;
-    return (
-      member !== undefined &&
-      blind.has(member) &&
-      isMagnitude(checker.getTypeAtLocation(node.expression.expression))
-    );
-  }
-  if (ts.isTemplateExpression(node)) {
-    return node.templateSpans.some((span) =>
-      isMagnitude(checker.getTypeAtLocation(span.expression)),
-    );
-  }
-  // A conditional draws whichever branch it picks, so a magnitude in either arm
-  // is drawn. Without this a site says `{a ? count : other}` and the union of
-  // the two arms is judged instead of the figure the reader is shown.
-  if (ts.isConditionalExpression(node)) {
-    return (
-      carriesMagnitude(node.whenTrue, checker, blind) ||
-      carriesMagnitude(node.whenFalse, checker, blind)
-    );
-  }
-  if (ts.isParenthesizedExpression(node)) {
-    return carriesMagnitude(node.expression, checker, blind);
-  }
-  return false;
-}
-
-function findingsIn(
-  parsed: ts.SourceFile,
-  checker: ts.TypeChecker,
-  blind: Set<string>,
-  geometry: Set<string>,
-  label: string,
-): Verdict {
-  const at = (node: ts.Expression): Finding => ({
-    file: label,
-    line: parsed.getLineAndCharacterOfPosition(node.getStart()).line + 1,
-    text: node.getText().replace(/\s+/g, " ").slice(0, 80),
-  });
-  const findings: Finding[] = [];
-  const unjudged: Finding[] = [];
-  for (const node of renderedPositions(parsed, checker, geometry)) {
-    if (isUnreadable(checker.getTypeAtLocation(node))) {
-      unjudged.push(at(node));
-    } else if (carriesMagnitude(node, checker, blind)) {
-      findings.push(at(node));
-    }
-  }
-  return { findings, unjudged };
-}
+// The typed sweep runs off the coverage count, which slows the checker: see
+// in-worker.ts.
+const SWEEP = new URL(
+  "../../scripts/lib/jsx-magnitude.sweep.ts",
+  import.meta.url,
+);
+const blind = blindStringifiers();
+const geometry = svgGeometry();
+const files = sourceFiles();
+const { unloaded, findings, unjudged } = await inWorker<typeof Sweep, "sweep">(
+  SWEEP,
+  "sweep",
+  files,
+  blind,
+  geometry,
+);
 
 describe("a magnitude is drawn in the reader's own notation", () => {
-  const blind = blindStringifiers();
-  const geometry = svgGeometry();
-  const files = sourceFiles();
-  const program = programOver(files, frontendRoot);
-  const checker = program.getTypeChecker();
-  const verdicts = files.flatMap((path) => {
-    const parsed = program.getSourceFile(path);
-    return parsed === undefined
-      ? []
-      : [
-          findingsIn(
-            parsed,
-            checker,
-            blind,
-            geometry,
-            relative(frontendRoot, path),
-          ),
-        ];
-  });
-  const all = verdicts.flatMap((verdict) => verdict.findings);
-  const unjudged = verdicts.flatMap((verdict) => verdict.unjudged);
-
   it("reads the tree it is meant to sweep, extension screens included", () => {
     // DERIVED from the directory listing. A floor does not hold this: the sweep
     // reads several hundred files, so any `toBeGreaterThan` still clears when
@@ -534,9 +271,7 @@ describe("a magnitude is drawn in the reader's own notation", () => {
     // Stories are swept, and the sweep is TYPED — a corpus the program failed
     // to load would yield no findings and read exactly like a clean tree.
     expect(files.some((path) => path.endsWith(".stories.tsx"))).toBe(true);
-    expect(
-      files.filter((path) => program.getSourceFile(path) === undefined),
-    ).toEqual([]);
+    expect(unloaded).toEqual([]);
   });
 
   it("derives the stringifiers that answer in nobody's notation", () => {
@@ -568,7 +303,7 @@ describe("a magnitude is drawn in the reader's own notation", () => {
     expect(geometry.has("title")).toBe(false);
   });
 
-  it("sees each shape of the defect, including the ones a grep cannot", () => {
+  it("sees each shape of the defect, including the ones a grep cannot", async () => {
     // Each line says for ITSELF whether it is a finding, so the expectation is
     // read off the fixture rather than kept beside it as a list of line numbers
     // that has to agree with it — which is the very defect this gate is about.
@@ -634,7 +369,9 @@ describe("a magnitude is drawn in the reader's own notation", () => {
       // than reporting it as this.
       { code: "<p>{count && <b>x</b>}</p>", finding: false },
     ];
-    const fixture = plant(
+    const fixture = await inWorker<typeof Sweep, "plant">(
+      SWEEP,
+      "plant",
       planted.map(({ code }) => code),
       blind,
       geometry,
@@ -658,74 +395,6 @@ describe("a magnitude is drawn in the reader's own notation", () => {
   });
 
   it("finds nothing left in the tree", () => {
-    expect(all).toEqual([]);
+    expect(findings).toEqual([]);
   });
 });
-
-/**
- * Judge one fixture line per line, in a program that has the real declarations.
- *
- * A syntactic fixture would prove nothing here: every arm above turns on a TYPE
- * — whether `count` is a magnitude, whether `body` is drawn — so the fixture has
- * to be COMPILED against declarations rather than parsed. The declarations for
- * `format.ts` and React are the real ones; only the locals are invented.
- *
- * The preamble is emitted as a single line so that a finding's line number is
- * the planted case's own index. A second list mapping one to the other is the
- * defect this gate exists to catch, and putting one inside the gate is how it
- * gets written twice.
- */
-function plant(
-  lines: string[],
-  blind: Set<string>,
-  geometry: Set<string>,
-): Finding[] {
-  const fixtureName = join(srcRoot, "jsx-magnitude-fixture.tsx");
-  const preamble = [
-    'import type { ReactNode } from "react";',
-    'import { formatNumber, identifierNumber, ordinalNumber } from "./format/format";',
-    "declare const count: number;",
-    "declare const maybeCount: number | undefined;",
-    "declare const limit: number;",
-    "declare const label: string;",
-    "declare const other: string;",
-    "declare const tag: string;",
-    "declare const ready: boolean;",
-    'declare const loc: "en";',
-    "declare function t(key: string, params?: Record<string, string>): string;",
-    "declare function Stat(props: { value: string }): ReactNode;",
-    "declare function Slot(props: { body: ReactNode }): ReactNode;",
-    "declare function Icon(props: { size: number }): ReactNode;",
-    "declare function Chart(props: { values: string }): ReactNode;",
-    "void [formatNumber, identifierNumber, ordinalNumber, t];",
-  ].join(" ");
-  const source = [preamble, ...lines.map((line) => `void (${line});`)].join(
-    "\n",
-  );
-  const program = plantedProgram(fixtureName, source, frontendRoot);
-  const parsed = program.getSourceFile(fixtureName);
-  if (parsed === undefined) {
-    throw new Error("the planted fixture did not compile");
-  }
-  const verdict = findingsIn(
-    parsed,
-    program.getTypeChecker(),
-    blind,
-    geometry,
-    "fixture",
-  );
-  // A fixture line the checker could not read is a broken fixture, not a
-  // finding and not a pass: it would silently turn a planted case into a green
-  // one, which is the failure mode this whole file is written against.
-  if (verdict.unjudged.length > 0) {
-    throw new Error(
-      `the planted fixture did not type: lines ${verdict.unjudged
-        .map((site) => site.line - 1)
-        .join(", ")}`,
-    );
-  }
-  return verdict.findings.map((finding) => ({
-    ...finding,
-    line: finding.line - 1,
-  }));
-}

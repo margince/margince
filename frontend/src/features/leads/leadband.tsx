@@ -15,20 +15,6 @@ import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];
 
-// What the page's write refused, stated once for both of them.
-//
-// Two mutations, one sentence: the patch every field goes through, and the
-// claim that takes an unowned lead. They are alternatives — a pick is one or
-// the other — so whichever refused is the one to name.
-//
-// Spelled once because two readers ask it: the notice below, to say so, and the
-// band around it, to decide whether it has anything to draw at all. Two
-// spellings is how a band comes to be drawn around a notice that renders
-// nothing.
-function writeRefusal(writer: LeadWriter) {
-  return writer.patch.error ?? writer.claim.error;
-}
-
 // The one sentence this page says about the lead taking no changes, with the
 // closure it names. Both terminal states archive the row, so keying this off
 // archived_at alone told every promoted lead it had been disqualified; the
@@ -75,7 +61,8 @@ export function leadBand({
   reasonId: string;
   t: ReturnType<typeof useT>;
 }>): ReactNode | undefined {
-  const refusal = writeRefusal(writer);
+  // The owner's write is not read here: its dialog states its own refusal.
+  const refusal = writer.patch.error;
   const sentence = lead.archived_at
     ? undefined
     : terminalSentence(lead, writer, t);

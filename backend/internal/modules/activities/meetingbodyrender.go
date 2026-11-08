@@ -48,17 +48,17 @@ func RenderMeetingBodyTx(ctx context.Context, tx pgx.Tx, r MeetingBodyRender) (b
 		return false, err
 	}
 	var subject, before *string
-	if err := tx.QueryRow(ctx, `SELECT subject, language FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, r.Activity).
+	if err := tx.QueryRow(ctx, `SELECT subject, language FROM activity WHERE id = $1`, r.Activity).
 		Scan(&subject, &before); err != nil {
 		return false, fmt.Errorf("activities: reading a meeting to render its description: %w", err)
 	}
 	var language *string
-	if detected := string(textlang.DetectFirst(r.Body, deref(subject))); detected != "" {
+	if detected := string(textlang.OfMessage(r.Body, deref(subject))); detected != "" {
 		language = &detected
 	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity a SET body = $2, language = $3
-		 WHERE a.id = $1 AND a.version = $4 AND a.body = $5 AND a.kind = 'meeting' AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.id = $1 AND a.version = $4 AND a.body = $5 AND a.kind = 'meeting' AND a.restricted_at IS NULL
 		   AND NOT EXISTS (SELECT 1 FROM audit_log edit
 		         WHERE edit.entity_type = 'activity' AND edit.entity_id = a.id
 		           AND (edit.actor_type = 'human' AND (edit.after ? 'body' OR edit.before ? 'body')

@@ -26,7 +26,7 @@ func mayReadLead(ctx context.Context) (bool, error) {
 
 func activityIsInbound(ctx context.Context, tx pgx.Tx, activity ids.ActivityID) (bool, error) {
 	var inbound bool
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(direction = 'inbound', false) FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (archived_at IS NULL AND activity_thread_available(thread_key))`, activity).Scan(&inbound); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(direction = 'inbound', false) FROM activity WHERE id = $1 AND archived_at IS NULL`, activity).Scan(&inbound); err != nil {
 		return false, fmt.Errorf("contacts: reading a captured activity's direction: %w", err)
 	}
 	return inbound, nil

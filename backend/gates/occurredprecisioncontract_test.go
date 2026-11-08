@@ -20,7 +20,6 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -55,51 +54,59 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
-	"api/crm.yaml AssessNoticeSource.obtained_at":            "The privacy user enters a source date; this does not copy a captured activity timestamp.",
-	"api/crm.yaml NoticeCase.source_obtained_at":             "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
-	"api/crm.yaml NoticeCaseReview.source_obtained_at":       "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",
-	"api/crm.yaml HealthFinding.first_observed_at":           "when operational evidence first recorded a condition, not an activity time",
-	"api/crm.yaml JobHealthGroup.first_at":                   "the first retained job execution instant",
-	"api/crm.yaml JobHealthGroup.latest_at":                  "the latest retained job execution instant",
-	"api/crm.yaml AgentClient.last_used_at":                  "when an agent client last called Margince, a request's own instant",
-	"api/crm.yaml AiCallAttempt.occurred_at":                 "when a model call was made, an ai_call row's own instant",
-	"api/crm.yaml AiCallSummary.occurred_at":                 "when a model call was made, an ai_call row's own instant",
-	"api/crm.yaml AiRunModelUsage.last_used_at":              "when a model was last called, an ai_call row's own instant",
-	"api/crm.yaml AiRungHealth.last_call_at":                 "when a model tier last answered, an ai_call row's own instant",
-	"api/crm.yaml AuditHistoryEntry.occurred_at":             "when an audit row was written, the write's own instant",
-	"api/crm.yaml AuditLogEntry.occurred_at":                 "when an audit row was written, the write's own instant",
-	"api/crm.yaml Automation.last_run_at":                    "when an automation last ran, the run's own instant",
-	"api/crm.yaml AutomationRun.occurred_at":                 "when an automation ran, the run's own instant",
-	"api/crm.yaml CaptureConnection.last_synced_at":          "when a mailbox sync last ran, the sync's own instant",
-	"api/crm.yaml CaptureConnectionConcern.last_success_at":  "when this mailbox last synced successfully, the observer's clock",
-	"api/crm.yaml CaptureConnection.last_success_at":         "when this mailbox last synced successfully, the observer's clock",
-	"api/crm.yaml MailCaptureCoverage.last_success_at":       "a successful sync checkpoint, not the time of a mail activity",
-	"api/crm.yaml CaptureSweepHealth.last_succeeded_at":      "when a capture pass last finished, the pass's own instant",
-	"api/crm.yaml CaptureTraceEntry.occurred_at":             "when capture logged a step, the trace row's own instant",
-	"api/crm.yaml ClaimEvidence.last_verified_at":            "when a human last confirmed a claim, that act's own instant",
-	"api/crm.yaml CompanyFinanceSummary.last_synced_at":      "when a finance sync last finished, the sync's own instant",
-	"api/crm.yaml CompanyOfferedValue.offered_at":            "when a source last offered the value, the offer's own instant",
-	"api/crm.yaml ConsentEvent.occurred_at":                  "when consent changed, the ledger row's own instant",
-	"api/crm.yaml ContactConsentGuardEntry.reason_at":        "when an objection was recorded, the proof row's own instant",
-	"api/crm.yaml DataTaskProgress.last_progress_at":         "when a data task last moved, the task's own instant",
-	"api/crm.yaml DealRoomParticipant.last_seen_at":          "when a buyer last made a request to the deal room, a request's own instant",
-	"api/crm.yaml ExtensionIngestRefusal.last_refused_at":    "when an extension's write was last refused, the refusal's own instant",
-	"api/crm.yaml ExtensionUnitIngestHealth.last_refused_at": "when an extension's write was last refused, the refusal's own instant",
-	"api/crm.yaml FinanceConnection.last_attempt_at":         "when a finance sync was last tried, the attempt's own instant",
-	"api/crm.yaml FinanceConnection.last_success_at":         "when a finance sync last succeeded, the sync's own instant",
-	"api/crm.yaml InputCheck.last_seen_at":                   "when a check run last found the problem, the run's own instant",
-	"api/crm.yaml MorningDigest.connectors.last_synced_at":   "when a connector last synced, the sync's own instant",
-	"api/crm.yaml MySession.last_active_at":                  "when a sign-in session last made a request, a request's own instant",
-	"api/crm.yaml PassportSummary.last_used_at":              "when an agent passport was last used, a request's own instant",
-	"api/crm.yaml ProviderConnection.last_used_at":           "when a provider key was last used, a call's own instant",
-	"api/crm.yaml ProviderConnection.last_verified_at":       "when a provider key was last checked, the check's own instant",
-	"api/crm.yaml RecordViewAck.last_viewed_at":              "when a reader last acknowledged a record, a request's own instant",
-	"api/crm.yaml ReportingCaptureStatus.last_attempt_at":    "when a report capture was last tried, the attempt's own instant",
-	"api/crm.yaml ReportingCaptureStatus.last_success_at":    "when a report capture last succeeded, the capture's own instant",
-	"api/crm.yaml TechnicalEnrichLane.last_success_at":       "when an enrichment source last answered, the call's own instant",
-	"api/crm.yaml User.last_active_at":                       "when a member last made a request, a request's own instant",
-	"api/crm.yaml UserSession.last_active_at":                "when a sign-in session last made a request, a request's own instant",
-	"api/crm.yaml VoiceProfile.last_built_at":                "when a voice profile was last built, the build's own instant",
+	"api/crm.yaml MarginceChangeBundle.latest_at":                         "when Margince last changed the deal, the correction row's own write instant, not an activity time",
+	"api/crm.yaml ReportingForecastBasis.call_at":                         "when a manager submitted a forecast call, the call row's exact write instant",
+	"api/crm.yaml AssessNoticeSource.obtained_at":                         "The privacy user enters a source date; this does not copy a captured activity timestamp.",
+	"api/crm.yaml NoticeCase.source_obtained_at":                          "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
+	"api/crm.yaml NoticeCaseReview.source_obtained_at":                    "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",
+	"api/crm.yaml HealthFinding.first_observed_at":                        "when operational evidence first recorded a condition, not an activity time",
+	"api/crm.yaml SalesInitiative.launch_at":                              "when a manager launched the initiative, the row's own instant",
+	"api/crm.yaml ReportingContext.initiative_launch_at":                  "the same launch instant, named on the report frame",
+	"api/crm.yaml JobHealthGroup.first_at":                                "the first retained job execution instant",
+	"api/crm.yaml JobHealthGroup.latest_at":                               "the latest retained job execution instant",
+	"api/crm.yaml AgentClient.last_used_at":                               "when an agent client last called Margince, a request's own instant",
+	"api/crm.yaml AiCallAttempt.occurred_at":                              "when a model call was made, an ai_call row's own instant",
+	"api/crm.yaml AiCallSummary.occurred_at":                              "when a model call was made, an ai_call row's own instant",
+	"api/crm.yaml AiRunModelUsage.last_used_at":                           "when a model was last called, an ai_call row's own instant",
+	"api/crm.yaml AiRungHealth.last_call_at":                              "when a model tier last answered, an ai_call row's own instant",
+	"api/crm.yaml AuditHistoryEntry.occurred_at":                          "when an audit row was written, the write's own instant",
+	"api/crm.yaml AuditLogEntry.occurred_at":                              "when an audit row was written, the write's own instant",
+	"api/crm.yaml Automation.last_run_at":                                 "when an automation last ran, the run's own instant",
+	"api/crm.yaml AutomationRun.occurred_at":                              "when an automation ran, the run's own instant",
+	"api/crm.yaml CaptureConnection.last_synced_at":                       "when a mailbox sync last ran, the sync's own instant",
+	"api/crm.yaml CaptureConnectionConcern.last_success_at":               "when this mailbox last synced successfully, the observer's clock",
+	"api/crm.yaml CaptureConnection.last_success_at":                      "when this mailbox last synced successfully, the observer's clock",
+	"api/crm.yaml MailCaptureCoverage.last_success_at":                    "a successful sync checkpoint, not the time of a mail activity",
+	"api/crm.yaml CaptureSweepHealth.last_succeeded_at":                   "when a capture pass last finished, the pass's own instant",
+	"api/crm.yaml CaptureTraceEntry.occurred_at":                          "when capture logged a step, the trace row's own instant",
+	"api/crm.yaml ClaimEvidence.last_verified_at":                         "when a human last confirmed a claim, that act's own instant",
+	"api/crm.yaml CompanyFinanceSummary.last_synced_at":                   "when a finance sync last finished, the sync's own instant",
+	"api/crm.yaml CompanyOfferedValue.offered_at":                         "when a source last offered the value, the offer's own instant",
+	"api/crm.yaml ConsentEvent.occurred_at":                               "when consent changed, the ledger row's own instant",
+	"api/crm.yaml ContactConsentGuardEntry.reason_at":                     "when an objection was recorded, the proof row's own instant",
+	"api/crm.yaml DataTaskProgress.last_progress_at":                      "when a data task last moved, the task's own instant",
+	"api/crm.yaml DealRoomParticipant.last_seen_at":                       "when a buyer last made a request to the deal room, a request's own instant",
+	"api/crm.yaml ExtensionIngestRefusal.last_refused_at":                 "when an extension's write was last refused, the refusal's own instant",
+	"api/crm.yaml ExtensionUnitIngestHealth.last_refused_at":              "when an extension's write was last refused, the refusal's own instant",
+	"api/crm.yaml FinanceConnection.last_attempt_at":                      "when a finance sync was last tried, the attempt's own instant",
+	"api/crm.yaml FinanceConnection.last_success_at":                      "when a finance sync last succeeded, the sync's own instant",
+	"api/crm.yaml InputCheck.last_seen_at":                                "when a check run last found the problem, the run's own instant",
+	"api/crm.yaml MorningDigest.connectors.last_synced_at":                "when a connector last synced, the sync's own instant",
+	"api/crm.yaml MySession.last_active_at":                               "when a sign-in session last made a request, a request's own instant",
+	"api/crm.yaml PassportSummary.last_used_at":                           "when an agent passport was last used, a request's own instant",
+	"api/crm.yaml ProviderConnection.last_used_at":                        "when a provider key was last used, a call's own instant",
+	"api/crm.yaml ProviderConnection.last_verified_at":                    "when a provider key was last checked, the check's own instant",
+	"api/crm.yaml RecordViewAck.last_viewed_at":                           "when a reader last acknowledged a record, a request's own instant",
+	"api/crm.yaml ReportingCaptureStatus.last_attempt_at":                 "when a report capture was last tried, the attempt's own instant",
+	"api/crm.yaml ReportingCaptureStatus.last_success_at":                 "when a report capture last succeeded, the capture's own instant",
+	"api/crm.yaml TechnicalEnrichLane.last_success_at":                    "when an enrichment source last answered, the call's own instant",
+	"api/crm.yaml User.last_active_at":                                    "when a member last made a request, a request's own instant",
+	"api/crm.yaml UserSession.last_active_at":                             "when a sign-in session last made a request, a request's own instant",
+	"api/crm.yaml VoiceProfile.last_built_at":                             "when a voice profile was last built, the build's own instant",
+	"api/crm.yaml ExistingCustomerNotice.evidence_dated_at":               "the date an admin reads off the proof of a collection notice, not an activity time",
+	"api/crm.yaml DeclareExistingCustomerNoticeRequest.evidence_dated_at": "the same proof date, as the admin enters it",
+	"api/crm.yaml ExistingCustomerNotice.withdrawn_at":                    "when an admin withdrew a collection-notice declaration, the row's own instant",
+	"api/crm.yaml DealMarginceCheck.next_check_at":                        "the day after the deal's close date, when the nightly check is due again, not an activity time",
 	"api/crm.yaml ConsentQualifyingEvent.occurred_at": "the proof a consent guard holds in consent_qualifying_event; no client draws it, " +
 		"and the guard measures it against windows of 90 days and more, which a date's hours do not move",
 	"api/crm.yaml QualifyingEventRecord.occurred_at":             "a qualifying exchange a rep stated, stored in consent_qualifying_event, not an activity",
@@ -107,6 +114,8 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml RecordCommunicationContextRequest.occurred_at": "a rep's statement about a contact, written to consent_qualifying_event, not an activity",
 	"api/crm.yaml NoticeAcquisition.occurred_at": "when a contact's data was acquired, stated by a rep or taken from captured mail's sent " +
 		"instant, held in contact_acquisition_evidence and not an activity",
+	"api/crm.yaml ContactAcquisitionRequest.occurred_at": "the earliest live request in contact_acquisition_evidence, " +
+		"the same rows NoticeAcquisition reads, and not an activity",
 	"api/crm.yaml NoticeOrigin.occurred_at":                         "when the event behind a notification was emitted, the bus's own instant",
 	"api/crm.yaml ListDependency.occurred_at":                       "when an export ran or a list rule was made, not an activity",
 	"api/crm.yaml ListHistoryEntry.occurred_at":                     "when a list membership or revision changed, not an activity",
@@ -170,9 +179,11 @@ const (
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
-	"created_at":          rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
-	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp, "suspended_at": rowStamp,
-	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
+	"enrolled_at":         "server timestamp of source enrollment, never an activity occurrence",
+	"opened_at":           actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
+	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
+	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp,
+	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
 	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,
 	"corrected_at": rowStamp, "effective_at": rowStamp, "latest_captured_at": rowStamp, "value_captured_at": rowStamp,
 
@@ -190,7 +201,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"scheduled_at": aheadStamp, "remind_at": aheadStamp, "due_at": aheadStamp, "next_step_due_at": aheadStamp,
 	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp, "next_expiry_at": aheadStamp,
 
-	"accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
+	"answered_at": actStamp, "accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
 	"resolved_at": actStamp, "closed_at": actStamp, "submitted_at": actStamp, "requested_at": actStamp,
 	"delivered_at": actStamp, "read_at": actStamp, "assigned_at": actStamp, "routed_at": actStamp,
 	"promoted_at": actStamp, "qualified_at": actStamp, "taken_at": actStamp, "issued_at": actStamp,
@@ -214,7 +225,7 @@ func TestEveryActivityTimeOnTheWireCarriesItsPrecision(t *testing.T) {
 	root := gatekit.ModuleRoot(t)
 	seen, precise := 0, 0
 	for _, spec := range precisionContracts {
-		raw, err := os.ReadFile(filepath.Join(root, spec)) // #nosec G304 -- a contract of this module
+		raw, err := gatekit.ReadFile(filepath.Join(root, spec)) // #nosec G304 -- a contract of this module
 		if err != nil {
 			t.Fatal(err)
 		}

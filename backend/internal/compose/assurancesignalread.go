@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -23,7 +24,16 @@ import (
 // is also where each finding learns whether its inputs moved since the check,
 // so no surface can show a finding without that answer.
 func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int) ([]assurance.Exception, error) {
-	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0)
+	return assuranceExceptionsWith(ctx, tx, owners, requested, limit, nil)
+}
+
+// assuranceExceptionsWith is that read with findings the owner filter cannot
+// reach merged in before ranking, so the cap cuts one list.
+func assuranceExceptionsWith(
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
+	extra []assurance.Exception, dimensions ...crmcontracts.ReportingContext,
+) ([]assurance.Exception, error) {
+	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0, dimensions...)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +46,12 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 	if err != nil {
 		return nil, err
 	}
-	found = append(found, calls...)
+	return rankedWithin(ctx, tx, append(append(found, calls...), extra...), limit)
+}
+
+// rankedWithin is the end of every findings read: rank, cut to the cap, then
+// mark which of the kept ones have out-of-date inputs.
+func rankedWithin(ctx context.Context, tx pgx.Tx, found []assurance.Exception, limit int) ([]assurance.Exception, error) {
 	if err := rankFindings(ctx, tx, found); err != nil {
 		return nil, err
 	}
@@ -155,7 +170,7 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 	// or its suggestion's evidence cites. Each copy is planned separately, and
 	// the planner's memory stays with the pooled connection.
 	open := `SELECT %[1]s FROM assurance_exception oe WHERE oe.subject_kind = 'signal' AND oe.status = 'open'`
-	readable, err := auth.ContentReadableActivitiesSQL(ctx, `SELECT ra.id FROM activity ra WHERE activity_thread_available(ra.thread_key) AND (ra.archived_at IS NULL AND activity_thread_available(ra.thread_key)) AND ra.id IN (
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, `SELECT ra.id FROM activity ra WHERE ra.archived_at IS NULL AND ra.id IN (
    SELECT `+storekit.CitedActivityID("cite")+` FROM signal os, jsonb_array_elements(os.evidence) cite
     WHERE cite->>'source_type' = 'activity' AND os.id IN (`+fmt.Sprintf(open, "oe.subject_id")+`)
    UNION ALL `+deals.SuggestionEvidenceActivitiesSQL(fmt.Sprintf(open, "oe.observed->>'suggestion_id'"))+`)`, arg)

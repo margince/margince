@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,10 +31,12 @@ func (s *Sink) WithPartyReceiptSettlement(settle PartyReceiptSettlement) *Sink {
 	return &clone
 }
 
-// PartyAuthority checks the capturing member both before admission and inside its write.
+// PartyAuthority checks the capturing member before admission, inside its
+// write, and inside every capture write of a mailbox run (HeldAuthorityTx).
 type PartyAuthority interface {
 	EffectiveAuthority(context.Context, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error)
 	EffectiveAuthorityTx(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
+	HeldAuthorityTx(context.Context, pgx.Tx, ids.UUID) (authz.RBAC, principal.SeatType, error)
 }
 
 // WithPartyAuthority binds admission to current member authority.
@@ -113,51 +116,30 @@ func (s *Sink) admitPartiesAs(ctx context.Context, activity ids.ActivityID, sour
 		return ctx, false, err
 	}
 	var failed error
-	deferred := false
 	for _, party := range parties {
 		if err := s.admitOneParty(acting, activity, source, party); err != nil {
 			if errors.Is(err, errPartyAuthorityChanged) {
 				return ctx, false, nil
 			}
 			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-				deferred = true
 				continue
 			}
 			failed = errors.Join(failed, err)
 		}
 	}
-	return acting, failed == nil && !deferred, failed
+	return acting, failed == nil, failed
 }
 
 func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, source partySource, party admissionParty) error {
 	var rec connector.NormalizedRecord
 	var decision counterpartyDecision
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activity.UUID); err != nil {
-			return err
-		}
-		room, err := partyAdmissionHasRoomTx(ctx, tx, activity, 1)
-		if err != nil || !room {
-			return err
-		}
-		private, err := storedMessageIsPrivateTx(ctx, tx, activity, source.User)
-		if err != nil || private {
-			return err
-		}
-		if err := readPartyAdmissionRecord(ctx, tx, activity, source, &rec); err != nil {
-			return err
-		}
-		cp := connector.Counterparty{Email: normalizeEmail(party.Email), DisplayName: party.Name, Domain: owndomain.OfAddress(party.Email)}
-		subject, err := s.ladderSubjectTx(ctx, tx, connector.NormalizedRecord{Counterparty: cp, Addresses: []string{cp.Email}})
-		if err != nil || subject.Email == "" {
-			return err
-		}
-		excluded, err := excludedTx(ctx, tx, rec)
-		if err != nil || excluded != "" {
-			return err
-		}
-		decision, err = s.decideMailSubject(ctx, tx, rec, activity.UUID, cp)
-		return err
+	// A cycle Postgres breaks is a lost decision, not a refused party, so the whole
+	// transaction runs again from an empty decision.
+	err := storekit.RetryLockCycles(ctx, func() error {
+		rec, decision = connector.NormalizedRecord{}, counterpartyDecision{}
+		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			return s.decidePartyTx(ctx, tx, activity, source, party, &rec, &decision)
+		})
 	})
 	if err != nil {
 		return err
@@ -166,7 +148,9 @@ func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, sourc
 		return nil
 	}
 	cp := decision.subject
-	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{Admission: s.partyAdmissionGuard(activity, source, party), Email: cp.Email, DisplayName: cp.DisplayName, Domain: cp.Domain, OwnerID: decision.owner, ActivityID: activity.UUID, Source: captureSource(rec), CapturedBy: decision.capturedBy, SuppressCompany: decision.suppressCompany, Replied: decision.replied})
+	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{HoldAuthority: func(ctx context.Context, tx pgx.Tx) error {
+		return s.holdEnsureLocksTx(ctx, tx, source.User, activity)
+	}, Admission: s.partyAdmissionGuard(activity, source, party), Email: cp.Email, DisplayName: cp.DisplayName, Domain: cp.Domain, OwnerID: decision.owner, ActivityID: activity.UUID, Source: captureSource(rec), CapturedBy: decision.capturedBy, SuppressCompany: decision.suppressCompany, Replied: decision.replied})
 	if err != nil {
 		return fmt.Errorf("admit a captured participant: %w", err)
 	}
@@ -174,8 +158,46 @@ func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, sourc
 	return nil
 }
 
-func (s *Sink) admitCapturedParties(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
-	if ref.Type != datasource.EntityActivity {
+// decidePartyTx reads what one party's admission turns on. A party it refuses
+// leaves decision empty, which admits nobody.
+func (s *Sink) decidePartyTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, source partySource, party admissionParty, rec *connector.NormalizedRecord, decision *counterpartyDecision) error {
+	// Authority before the row, the order both ensure paths take.
+	if err := s.holdPartyAuthorityTx(ctx, tx, source.User); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activity.UUID); err != nil {
+		return err
+	}
+	room, err := partyAdmissionHasRoomTx(ctx, tx, activity, 1)
+	if err != nil || !room {
+		return err
+	}
+	private, err := storedMessageIsPrivateTx(ctx, tx, activity, source.User)
+	if err != nil || private {
+		return err
+	}
+	if err := readPartyAdmissionRecord(ctx, tx, activity, source, rec); err != nil {
+		return err
+	}
+	cp := connector.Counterparty{Email: normalizeEmail(party.Email), DisplayName: party.Name, Domain: owndomain.OfAddress(party.Email)}
+	subject, err := s.ladderSubjectTx(ctx, tx, connector.NormalizedRecord{Counterparty: cp, Addresses: []string{cp.Email}})
+	if err != nil || subject.Email == "" {
+		return err
+	}
+	excluded, err := excludedTx(ctx, tx, *rec)
+	if err != nil || excluded != "" {
+		return err
+	}
+	*decision, err = s.decideMailSubject(ctx, tx, *rec, activity.UUID, cp)
+	return err
+}
+
+// admitCapturedParties admits the parties a capture's proof names.
+// nothingToAdmit marks a new message whose stored evidence awaits no admission.
+// Mail the seat only received names no other party, so the reads are skipped.
+// A replay still runs, as the retry of an admission that failed before.
+func (s *Sink) admitCapturedParties(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, nothingToAdmit bool) {
+	if ref.Type != datasource.EntityActivity || nothingToAdmit {
 		return
 	}
 	if err := s.AdmitActivityParties(ctx, ids.From[ids.ActivityKind](ref.ID)); err != nil {
@@ -186,7 +208,7 @@ func (s *Sink) admitCapturedParties(ctx context.Context, rec connector.Normalize
 func (s *Sink) readAdmissionParties(ctx context.Context, activity ids.ActivityID, source partySource) ([]admissionParty, bool, error) {
 	var parties []admissionParty
 	ready := false
-	err := s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 			return err
 		}

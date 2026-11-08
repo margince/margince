@@ -117,8 +117,20 @@ func (s *Store) promotionEmployerFactsTx(ctx context.Context, tx pgx.Tx, lead cr
 	facts := promotionEmployerFacts{
 		Format: promotionContextFormat, CreateCompany: createCompany, TypedName: strings.TrimSpace(deref(lead.CompanyName)),
 	}
-	if lead.CompanyId != nil {
-		facts.LinkedCompany = new(ids.UUID(*lead.CompanyId))
+	linked, err := leadLinkedCompany(ctx, tx, ids.From[ids.LeadKind](ids.UUID(lead.Id)))
+	if err != nil {
+		return facts, err
+	}
+	if linked != nil {
+		if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+			return facts, err
+		}
+		// Writes hold the company before the lead. A context read must not
+		// acquire a company lock after a caller has locked the lead.
+		if err := auth.EnsureVisibleLive(ctx, tx, companyEntity, linked.UUID); err != nil {
+			return facts, auth.NameMissingReference(leadCompanyIDColumn, err)
+		}
+		facts.LinkedCompany = &linked.UUID
 	}
 	if facts.LinkedCompany != nil || lead.Email == nil {
 		return facts, nil

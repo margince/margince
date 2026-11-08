@@ -1,0 +1,9 @@
+-- Put the check back present and unvalidated, as this migration found it.
+-- Postgres has no ALTER that un-validates, so it is dropped and re-added.
+SET LOCAL lock_timeout = '3s';
+
+ALTER TABLE deal_correction
+    DROP CONSTRAINT deal_correction_tier_check,
+    ADD CONSTRAINT deal_correction_tier_check
+        CHECK (correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text,
+                                       'downgrade_and_review'::text, 'close_lost'::text])) NOT VALID;

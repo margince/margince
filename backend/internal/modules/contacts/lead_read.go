@@ -42,6 +42,10 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // sorting the column means the label beside it.
 const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lead.source)`
 
+// leadWebFormNameSQL is the current name of the website form a lead came
+// through. A deleted form leaves it NULL, and the lead still reads as a web form.
+var leadWebFormNameSQL = `(SELECT f.name FROM web_form f WHERE f.id::text = ` + provenance.WebFormIDSQL("lead") + `)`
+
 // leadNextTaskDueSQL is when the next open task a reader may open falls due —
 // the deadline the Next task column prints, taking the audience for the reason
 // the pair beside it does.
@@ -55,7 +59,7 @@ func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
 
 func leadNextTaskDueSQL(work string) string {
 	return `(SELECT ` + storekit.TaskDueSQL("a") + ` FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
 	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
 }
@@ -80,8 +84,8 @@ func leadLastActivityPrecisionSQL() string {
 // leadTouchesSQL is the activities the last-touch clock reads.
 func leadTouchesSQL() string {
 	return `FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
-	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a")
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
+	     AND ` + relstrength.ExternalActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a")
 }
 
 func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
@@ -90,13 +94,13 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 		return "", err
 	}
 	return `id, full_name, email, phone, title, company_name, candidate_company_key,
-	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
+	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, product_id, source_system, source_id,
 	promoted_contact_id, promoted_at, merged_into_id, from_contact_id, source, captured_by,
 	source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("lead") + `,
 	version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
-	` + leadSourceLabelSQL + `,
+	` + leadSourceLabelSQL + `, ` + leadWebFormNameSQL + `,
 	origin, origin_detail, ` + leadOriginLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
 	(SELECT r.label FROM lead_disqualify_reason r WHERE r.id = lead.disqualify_reason_id),
@@ -104,7 +108,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	` + leadQualificationEvidenceSQL(slaNow(ctx), arg) + `,
 	` + leadLastActivitySQL() + `, ` + leadLastActivityPrecisionSQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
 	-- The next open task, as the pair it is: its title and its deadline
 	-- describe ONE task, so they select one row. The subject is content and
 	-- the due date is a marker, but splitting them by that distinction would
@@ -117,7 +121,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	-- actually open. The count and the max beside them are aggregate markers
 	-- over all tasks and owe nothing.
 	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
 	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
 	` + leadNextTaskDueSQL(work) + `,
@@ -224,7 +228,7 @@ func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []cr
 func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
+	var ownerID, projectID, productID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
@@ -239,11 +243,11 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 
 	dests := []any{
 		&id, &l.FullName, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
-		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &l.SourceSystem, &l.SourceId,
+		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &productID, &l.SourceSystem, &l.SourceId,
 		&promotedContact, &l.PromotedAt, &mergedInto, &fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
-		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
+		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
 		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,
@@ -260,6 +264,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.Id = openapi_types.UUID(id)
 	l.OwnerId = uuidPtr(ownerID)
 	l.ProjectId = uuidPtr(projectID)
+	l.ProductId = uuidPtr(productID)
 	l.PromotedContactId = uuidPtr(promotedContact)
 	// What separates a merged-away lead from a disqualified one. Both are
 	// archived and neither carries a promoted_contact_id, so without this the

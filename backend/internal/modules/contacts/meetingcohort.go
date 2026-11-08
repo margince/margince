@@ -73,9 +73,9 @@ func linkAttendedMeetings(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		INSERT INTO activity_link (activity_id, entity_type, contact_id)
 		SELECT a.id, 'contact', $1
 		  FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.kind = 'meeting'
+		 WHERE a.kind = 'meeting'
 		   AND a.captured_by LIKE 'connector:%'
-		   AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+		   AND a.restricted_at IS NULL
 		   AND a.archived_at IS NULL
 		   AND EXISTS (
 		       SELECT 1 FROM activity_participant ap

@@ -310,15 +310,13 @@ func contactCorrespondence(
 	if err != nil {
 		return "", err
 	}
-	if scope == "" {
-		scope = "TRUE"
-	}
+	scope += " AND " + auth.ActivityExternalEvidenceClause("a")
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT coalesce(a.subject, ''), coalesce(a.body, '')
 		  FROM activity a
 		  JOIN activity_participant ap
 		    ON ap.activity_id = a.id AND ap.role = 'from' AND ap.contact_id = $%d
-		 WHERE a.direction = 'inbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.direction = 'inbound' AND a.archived_at IS NULL
 		   AND %s AND %s AND (%s)
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT $%d`, contactPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", sincePos)), occurredday.BegunSQL("a", fmt.Sprintf("$%d", untilPos)), scope, capPos), args...)

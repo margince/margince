@@ -42,7 +42,7 @@ func kindsOf(changes []Change) map[string]Change {
 // came back.
 func TestChangesReportsAReplyThatEndedALongSilence(t *testing.T) {
 	in := ChangeInputs{
-		Current:              Inputs{LastInteraction: daysAgo(3), Count90d: 4, Inbound90d: 2, Outbound90d: 2},
+		Current:              Inputs{LastTouch: daysAgo(3), LastEngaged: daysAgo(3), Count90d: 4, Inbound90d: 2, Outbound90d: 2},
 		LatestInbound:        instantAt(daysAgo(3)),
 		PrecedingInteraction: instantAt(daysAgo(44)),
 	}
@@ -60,7 +60,7 @@ func TestChangesReportsAReplyThatEndedALongSilence(t *testing.T) {
 // long enough to be news. Reporting every reply would make the surface noise.
 func TestChangesIgnoresAReplyInAnActiveThread(t *testing.T) {
 	in := ChangeInputs{
-		Current:              Inputs{LastInteraction: daysAgo(1), Count90d: 12, Inbound90d: 6, Outbound90d: 6},
+		Current:              Inputs{LastTouch: daysAgo(1), LastEngaged: daysAgo(1), Count90d: 12, Inbound90d: 6, Outbound90d: 6},
 		LatestInbound:        instantAt(daysAgo(1)),
 		PrecedingInteraction: instantAt(daysAgo(3)),
 	}
@@ -73,7 +73,7 @@ func TestChangesIgnoresAReplyInAnActiveThread(t *testing.T) {
 // behind it to have broken.
 func TestChangesDoesNotCallAFirstContactAReturn(t *testing.T) {
 	in := ChangeInputs{
-		Current:       Inputs{LastInteraction: daysAgo(2), Count90d: 1, Inbound90d: 1},
+		Current:       Inputs{LastTouch: daysAgo(2), LastEngaged: daysAgo(2), Count90d: 1, Inbound90d: 1},
 		LatestInbound: instantAt(daysAgo(2)),
 	}
 	if _, found := kindsOf(Changes(in, now))[ChangeRepliedAfterGap]; found {
@@ -85,7 +85,7 @@ func TestChangesDoesNotCallAFirstContactAReturn(t *testing.T) {
 // silence since is.
 func TestChangesDropsAStaleReturnAndReportsTheSilenceSince(t *testing.T) {
 	in := ChangeInputs{
-		Current:              Inputs{LastInteraction: daysAgo(100), Count90d: 0},
+		Current:              Inputs{LastTouch: daysAgo(100), LastEngaged: daysAgo(100), Count90d: 0},
 		LastTouch:            instantAt(daysAgo(100)),
 		LatestInbound:        instantAt(daysAgo(100)),
 		PrecedingInteraction: instantAt(daysAgo(200)),
@@ -116,8 +116,8 @@ func TestChangesSaysNothingAboutARelationshipThatNeverStarted(t *testing.T) {
 func TestChangesReportsABandCrossingAndNotADriftWithinOne(t *testing.T) {
 	// Busy and recent now, sparse and old a half-life ago: a real move.
 	moved := ChangeInputs{
-		Current:  Inputs{LastInteraction: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
-		Previous: Inputs{LastInteraction: daysAgo(40), Count90d: 1, Inbound90d: 1},
+		Current:  Inputs{LastTouch: daysAgo(1), LastEngaged: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Previous: Inputs{LastTouch: daysAgo(40), LastEngaged: daysAgo(40), Count90d: 1, Inbound90d: 1},
 	}
 	c, found := kindsOf(Changes(moved, now))[ChangeWarmed]
 	if !found {
@@ -130,8 +130,8 @@ func TestChangesReportsABandCrossingAndNotADriftWithinOne(t *testing.T) {
 	// The same counts on both sides: only decay separates the two scores, and
 	// decay alone is not news.
 	steady := ChangeInputs{
-		Current:  Inputs{LastInteraction: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
-		Previous: Inputs{LastInteraction: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Current:  Inputs{LastTouch: daysAgo(1), LastEngaged: daysAgo(1), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Previous: Inputs{LastTouch: daysAgo(31), LastEngaged: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
 	}
 	for _, c := range Changes(steady, now) {
 		if c.Kind == ChangeWarmed || c.Kind == ChangeCooled {
@@ -143,8 +143,8 @@ func TestChangesReportsABandCrossingAndNotADriftWithinOne(t *testing.T) {
 // A relationship that stopped is reported as cooling, in that direction.
 func TestChangesReportsCoolingWhenTheBandFell(t *testing.T) {
 	in := ChangeInputs{
-		Current:  Inputs{LastInteraction: daysAgo(60), Count90d: 2, Inbound90d: 1, Outbound90d: 1},
-		Previous: Inputs{LastInteraction: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
+		Current:  Inputs{LastTouch: daysAgo(60), LastEngaged: daysAgo(60), Count90d: 2, Inbound90d: 1, Outbound90d: 1},
+		Previous: Inputs{LastTouch: daysAgo(31), LastEngaged: daysAgo(31), Count90d: 20, Inbound90d: 10, Outbound90d: 10},
 	}
 	got := kindsOf(Changes(in, now))
 	if _, found := got[ChangeWarmed]; found {
@@ -163,7 +163,7 @@ func TestChangesReportsCoolingWhenTheBandFell(t *testing.T) {
 // interaction. A newer fold row the owner rejects must not shorten the silence.
 func TestWentQuietCountsFromTheLastTouchNotTheFold(t *testing.T) {
 	in := ChangeInputs{
-		Current:   Inputs{LastInteraction: daysAgo(5), Count90d: 1},
+		Current:   Inputs{LastTouch: daysAgo(5), LastEngaged: daysAgo(5), Count90d: 1},
 		LastTouch: instantAt(daysAgo(60)),
 	}
 	c, found := kindsOf(Changes(in, now))[ChangeWentQuiet]
@@ -216,5 +216,20 @@ func TestADayEntryCountsItsSilenceFromItsOwnDate(t *testing.T) {
 	}, read))[ChangeRepliedAfterGap]
 	if replied.Days != ReplyGapDays {
 		t.Fatalf("the reply broke a %d-day silence, want %d", replied.Days, ReplyGapDays)
+	}
+}
+
+// An unanswered send of ours does not report the relationship as warmed.
+func TestChangesReportsNoWarmingAfterAnUnansweredSend(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	tenDaysAgo := now.AddDate(0, 0, -10)
+	got := Changes(ChangeInputs{
+		Current:  Inputs{LastTouch: &now, LastEngaged: &tenDaysAgo, Count90d: 17, Inbound90d: 4, Outbound90d: 7},
+		Previous: Inputs{LastTouch: &tenDaysAgo, LastEngaged: &tenDaysAgo, Count90d: 16, Inbound90d: 4, Outbound90d: 6},
+	}, now)
+	for _, change := range got {
+		if change.Kind == ChangeWarmed {
+			t.Fatalf("an unanswered send reported %+v", change)
+		}
 	}
 }

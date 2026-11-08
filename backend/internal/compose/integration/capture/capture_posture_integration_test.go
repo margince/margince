@@ -177,10 +177,11 @@ func TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence(t *testing.T) {
 		t.Fatalf("holding the thread as its owner: %v", err)
 	}
 
-	held, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB())
+	heldPage, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB(), capturemod.HeldThreadQuery{})
 	if err != nil {
 		t.Fatalf("listing held threads: %v", err)
 	}
+	held := heldPage.Threads
 	if len(held) != 1 {
 		t.Fatalf("want exactly one held thread, got %d", len(held))
 	}
@@ -627,9 +628,9 @@ func TestAClearedThreadIsInheritedOnlyBySendersTheVerdictSaw(t *testing.T) {
 	setPosture(t, env, e.Rep1, capturemod.PostureClassified)
 
 	// A thread the classifier cleared, having seen exactly one address on it.
-	// The opener is a real message whose topic and parent identity can be inherited.
-	sync(t, email("buyer@acme.example", "Buyer", captureOwner, "thread-root@acme.example", ""))
-	clearThreadOf(t, e, e.Rep1, "thread-root@acme.example", "buyer@acme.example")
+	// (Seeded directly: the engine that writes verdicts is a later change, and
+	// this is the rule it will have to satisfy.)
+	seedThreadVerdict(t, e, e.Rep1, "thread-root@acme.example", "cleared", []string{"buyer@acme.example"})
 
 	// A reply from the address the verdict saw takes its answer.
 	sync(t, email("buyer@acme.example", "Buyer", captureOwner,
@@ -652,6 +653,21 @@ func TestAClearedThreadIsInheritedOnlyBySendersTheVerdictSaw(t *testing.T) {
 	// than left carrying an answer this message just contradicted.
 	if got := threadVerdictStatus(t, e, e.Rep1, "thread-root@acme.example"); got != "pending" {
 		t.Fatalf("the ledger is %q after an unseen sender, want pending", got)
+	}
+}
+
+// seedThreadVerdict writes what a classifier concluded about one thread for one
+// seat. The engine that writes these lands with the classifier; this is the
+// shape it must produce, asserted now so that change inherits a spec.
+func seedThreadVerdict(t *testing.T, e *integration.SearchEnv, user ids.UUID, threadKey, status string, seen []string) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_thread_verdict (thread_key, user_id, status, seen_addresses, resolved_at)
+			VALUES ($1, $2, $3, $4, now())`, threadKey, user, status, seen)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the thread verdict: %v", err)
 	}
 }
 
@@ -912,5 +928,42 @@ func setImportVerdictReason(
 		return err
 	}); err != nil {
 		t.Fatalf("restoring the pre-translation verdict reason: %v", err)
+	}
+}
+
+// An agent holds a thread of its user's mailbox as its user does, and the ledger
+// names the same seat.
+func TestAnAgentHoldsAThreadOfItsUsersMailbox(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	allowSharedPosture(t, e)
+	setPosture(t, env, e.Rep1, capturemod.PostureShared)
+
+	sync(t, customerMail("agent-hold-open-1@acme.example"))
+	activityID := oneActivityID(t, e)
+	var threadKey string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey)
+	}); err != nil {
+		t.Fatalf("reading the thread to hold: %v", err)
+	}
+	seat := sharingContext(e, e.Rep1)
+	agent, ok := principal.Actor(seat)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	agent.Type, agent.ID = principal.PrincipalAgent, "agent:"+ids.NewV7().String()
+	agent.PassportID, agent.OnBehalfOf = ids.NewV7(), agent.UserID
+	if _, err := compose.NewThreadAudienceSetter(e.Pool).Decide(principal.WithActor(seat, agent), threadKey, false); err != nil {
+		t.Fatalf("the agent holding the thread: %v", err)
+	}
+	heldPage, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB(), capturemod.HeldThreadQuery{})
+	if err != nil {
+		t.Fatalf("listing held threads: %v", err)
+	}
+	held := heldPage.Threads
+	if len(held) != 1 || !held[0].HasActivity {
+		t.Fatalf("held threads = %+v, want the one its agent held", held)
 	}
 }

@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -54,13 +55,13 @@ func (s *Store) GetEmailPresentation(ctx context.Context, id ids.ActivityID, thr
 	}
 	var out crmcontracts.EmailPresentation
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readEmailPresentation(ctx, tx, id, threadCursor)
+		out, err = readEmailPresentation(ctx, tx, id, threadCursor, s.now())
 		return err
 	})
 	return out, err
 }
 
-func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string) (crmcontracts.EmailPresentation, error) {
+func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string, asOf time.Time) (crmcontracts.EmailPresentation, error) {
 	// The same discover gate and per-row audience test every activity read
 	// carries: a caller who may know the row exists reads it, and the audience
 	// decides whether its content comes along.
@@ -96,6 +97,9 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		return withheldPresentation(out, activity), nil
 	}
 	out.BodyCompleteness = activity.BodyCompleteness
+	if activity.Language != nil {
+		out.Language = new(crmcontracts.EmailPresentationLanguage(*activity.Language))
+	}
 
 	parties, err := readEmailParties(ctx, tx, id)
 	if err != nil {
@@ -128,7 +132,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		out.Links = *activity.Links
 	}
 
-	access, err := readEmailAccess(ctx, tx, id, activity)
+	access, writable, err := readEmailAccess(ctx, tx, id, activity)
 	if err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
@@ -138,7 +142,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
-	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary); err != nil {
+	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 
@@ -154,6 +158,9 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	// than being promised to every reader and refused on click.
 	out.CanReply = true
 	out.CanRelink = access.CanChange && access.ChangeMode == crmcontracts.EmailAccessChangeModeMessageAudience
+	if activity.CanShareInternal != nil {
+		out.CanRelink = writable
+	}
 	return out, nil
 }
 
@@ -225,7 +232,7 @@ func callerIsSenderSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool
 		        WHERE ci.activity_id = $1 AND ci.user_id = $2
 		       UNION ALL
 		       SELECT 1 FROM activity a
-		        WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+		        WHERE a.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
                  AND a.captured_by LIKE '%:' || $2::text)`,
 		id.UUID, actor.UserID).Scan(&sender); err != nil {
 		return false, fmt.Errorf("activities: reading whether the caller sent this message: %w", err)

@@ -132,10 +132,8 @@ func RelinkActivityInTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Re
 // module because the row does; a gone or archived activity answers the same
 // not-found every live read gives.
 func LockActivityLive(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
-	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
-		return err
-	}
-	return auth.EnsureActivityThreadAvailable(ctx, tx, id.UUID)
+	_, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly)
+	return err
 }
 
 // admitRelink is the pre-transaction admission every relink door shares: the
@@ -410,7 +408,7 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 // rows in the same sequence. The per-row write check decides which of them move.
 func liveConversationMembers(ctx context.Context, tx pgx.Tx, anchor ids.ActivityID, domain string) ([]ids.ActivityID, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a, activity anchor
-		 WHERE anchor.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+		 WHERE anchor.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		   AND (a.id = anchor.id OR `+SameCorrespondenceSQL("a", "anchor", "$2::text", "")+`)
 		 ORDER BY a.id`, anchor, domain)
 	if err != nil {

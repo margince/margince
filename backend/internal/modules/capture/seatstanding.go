@@ -51,7 +51,7 @@ func SeatHoldsActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (boo
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM activity a
-			 WHERE activity_thread_available(a.thread_key) AND a.id = $1
+			 WHERE a.id = $1
 			   AND (
 			     a.captured_by LIKE $2
 			     OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $3)

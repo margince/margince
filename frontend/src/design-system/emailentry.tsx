@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { Badge } from "./atoms";
 import { VisibilityBadge } from "./visibility";
 import "./emailentry.css";
 
@@ -333,7 +334,11 @@ export function EmailEntry({
             vocabulary contains every value of it, so the row prints the state
             it was sent and never re-derives one. */}
         <VisibilityBadge state={summary.display_status} />
-        {row.move && <span>{t(row.move)}</span>}
+        {row.move && (
+          <Badge tone={summary.move === "needs_reply" ? "warning" : undefined}>
+            {t(row.move)}
+          </Badge>
+        )}
         <EmailFiles summaries={[summary]} />
       </span>
       {/* Why it did not arrive. The lead line above already says that it did

@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -24,23 +25,16 @@ func joiningSink(t *testing.T) *Sink {
 	t.Helper()
 	return (&Sink{}).WithThreadJoin(ThreadJoiner{
 		RecordReferences: func(context.Context, pgx.Tx, ids.ActivityID, []string) error { return nil },
-
-		Repair:       func(context.Context, pgx.Tx, int, ids.UUID, string) (int, int, bool, error) { return 0, 0, true, nil },
-		InheritSeat:  func(context.Context, pgx.Tx, string, string, ids.UUID) error { return nil },
-		InheritBasis: func(context.Context, pgx.Tx, ids.UUID, string, string) error { return nil },
+		Neighbours: func(context.Context, pgx.Tx, ids.ActivityID, string, []string) ([]ids.ActivityID, error) {
+			t.Error("the neighbour probe ran for a record that cannot merge — it costs a query per capture")
+			return nil, nil
+		},
+		Earliest: func(context.Context, pgx.Tx, []string) (string, error) { return "", nil },
+		Merge:    func(context.Context, pgx.Tx, string, string) error { return nil },
 	})
 }
 
-// The lock is off the common path, which is the claim takeMergeLockFirst's comment
-// makes and the reason the probe is there at all. A workspace-wide lock taken by
-// every capture would serialise the whole sync.
-//
-// An email is NOT here, even one carrying no References. A stored reply can point
-// at it, which makes it a merge candidate its own header cannot reveal, so the
-// probe has to ask — see takeMergeLockFirst.
-//
-// The case passes a nil transaction on purpose: a decision that reaches for one
-// has already failed, and the nil would panic rather than pass quietly.
+// Non-mail records need no mail component locks.
 func TestTheMergeLockIsSkippedByACaptureThatCannotMerge(t *testing.T) {
 	t.Parallel()
 
@@ -138,13 +132,40 @@ func (c countingTx) Exec(_ context.Context, sql string, _ ...any) (pgconn.Comman
 	return pgconn.NewCommandTag("SELECT 1"), nil
 }
 
-func TestAnEmailTakesTheBoundaryLockBeforeWriting(t *testing.T) {
-	locks := 0
-	err := joiningSink(t).takeMergeLockFirst(context.Background(), countingTx{locks: &locks}, connector.NormalizedRecord{NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "message@example.test"}})
-	if err != nil {
-		t.Fatal(err)
+// probingSink answers the neighbour question with whatever a case needs. That
+// lets an email case reach the decision the source-system guard would otherwise
+// short-circuit.
+func probingSink(links []ids.ActivityID, probeErr error) *Sink {
+	return (&Sink{}).WithThreadJoin(ThreadJoiner{
+		RecordReferences: func(context.Context, pgx.Tx, ids.ActivityID, []string) error { return nil },
+		Neighbours: func(context.Context, pgx.Tx, ids.ActivityID, string, []string) ([]ids.ActivityID, error) {
+			return links, probeErr
+		},
+		Earliest: func(context.Context, pgx.Tx, []string) (string, error) { return "", nil },
+		Merge:    func(context.Context, pgx.Tx, string, string) error { return nil },
+	})
+}
+
+func anEmail() connector.NormalizedRecord {
+	return connector.NormalizedRecord{
+		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "m-probe"},
 	}
-	if locks != 1 {
-		t.Fatalf("boundary locks=%d, want 1", locks)
+}
+
+// And a probe that fails stops the capture rather than carrying on unlocked. A
+// capture that cannot tell whether it may merge must not write a row it would
+// then lock out of order.
+func TestAFailingNeighbourProbeStopsTheCaptureBeforeItLocks(t *testing.T) {
+	t.Parallel()
+
+	locks := 0
+	err := probingSink(nil, errors.New("the database refused")).takeMergeLockFirst(
+		context.Background(), countingTx{locks: &locks}, anEmail())
+	if err == nil {
+		t.Error("the neighbour probe failed and the capture carried on, so whether this message " +
+			"may merge was never established")
+	}
+	if locks != 0 {
+		t.Errorf("the lock was taken %d time(s) after the probe failed, want 0", locks)
 	}
 }

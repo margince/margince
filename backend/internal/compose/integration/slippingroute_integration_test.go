@@ -45,7 +45,7 @@ func newSlippingApp(t *testing.T, slug string) *slippingApp {
 		}
 	})
 	apptest.BootstrapWorkspaceSession(t, e, "Slipping Doors", slug+"@fable.test", "Admin")
-	bearer, passport := passportWithID(t, e, "slipping agent", "read")
+	bearer, passport := apptest.PassportWithID(t, e, "slipping agent", "read")
 	app := &slippingApp{
 		e: e, meter: meter, bearer: bearer, passport: passport, deals: map[string]string{},
 		mcp: apptest.NewMCPClient(e, strings.TrimPrefix(bearer["Authorization"], "Bearer ")),

@@ -115,7 +115,7 @@ func nextBookedMeeting(
 	var subject *string
 	err = tx.QueryRow(ctx, `SELECT a.id, a.subject, a.occurred_at, a.occurred_precision
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND `+joinAnd(where)+`
+		WHERE `+joinAnd(where)+`
 		ORDER BY `+occurredday.StartSQL("a")+`, a.id
 		LIMIT 1`, args...).Scan(&meeting.ID, &subject, &meeting.StartsAt, &meeting.Precision)
 	if errors.Is(err, pgx.ErrNoRows) {

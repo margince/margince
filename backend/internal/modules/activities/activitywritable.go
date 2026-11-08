@@ -78,7 +78,7 @@ func stampAwaitingOutcome(ctx context.Context, tx pgx.Tx, page []crmcontracts.Ac
 	if err != nil {
 		return err
 	}
-	query := sprintf(`SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d::uuid[]) AND %s`,
+	query := sprintf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d::uuid[]) AND %s`,
 		arg(slices.Collect(maps.Keys(at))), owed)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {

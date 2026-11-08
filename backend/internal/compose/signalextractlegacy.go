@@ -201,7 +201,7 @@ func legacyThread(ctx context.Context, tx pgx.Tx, legacy legacyCommitment) (sett
 	var at time.Time
 	err := tx.QueryRow(ctx, `
 		SELECT thread_key, occurred_at FROM activity
-		 WHERE activity_thread_available(thread_key) AND id = $1 AND kind = 'email' AND (archived_at IS NULL AND activity_thread_available(thread_key)) AND restricted_at IS NULL`,
+		 WHERE id = $1 AND kind = 'email' AND archived_at IS NULL AND restricted_at IS NULL`,
 		legacy.cited).Scan(&key, &at)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && key == nil) {
 		return thread, nil

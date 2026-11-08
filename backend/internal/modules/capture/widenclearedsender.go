@@ -86,7 +86,7 @@ const clearedSenderWidenDue = `EXISTS (
 			   AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending'))
 	   AND i.verdict_reasons = ARRAY['posture']
 	   AND a.counterparty_email = $1
-	   AND a.restricted_at IS NULL AND activity_thread_available(a.thread_key)`
+	   AND a.restricted_at IS NULL`
 
 // ClearedSenderRemainingTx counts what a further pass would still claim, so a
 // caller can prove each pass made progress rather than trusting that it did.
@@ -153,7 +153,7 @@ func WidenClearedSenderTx(
 	if err := rows.Err(); err != nil {
 		return 0, fmt.Errorf("capture: claiming the import rows a cleared sender re-opens: %w", err)
 	}
-	// Sorted before recomputing, because the recompute takes FOR UPDATE on each
+	// Sorted before recomputing, because the recompute row-locks each
 	// activity in turn. Two passes claiming different seats' import rows for an
 	// overlapping set of activities would otherwise take those row locks in
 	// whatever order each UPDATE returned them, which is a deadlock the import

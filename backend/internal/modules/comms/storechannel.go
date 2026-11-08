@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/platform/auth"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -94,9 +93,6 @@ func (s *Store) StageChannelTx(ctx context.Context, tx pgx.Tx, in StageChannelIn
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("comms: encoding the attachment snapshot: %w", err)
 	}
-	if err := auth.EnsureActivityThreadAvailable(ctx, tx, in.ActivityID.UUID); err != nil {
-		return ids.Nil, err
-	}
 	id := ids.NewV7()
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO comms_outbound
@@ -163,19 +159,9 @@ func (s *Store) ParkTransmitted(ctx context.Context, id ids.UUID, reason, provid
 // attempt that lost a race to one which already closed the row reports
 // ErrTerminal rather than marking a finished delivery live again.
 func (s *Store) MarkInFlight(ctx context.Context, id ids.UUID) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureDeliveryThreadAvailableTx(ctx, tx, id); err != nil {
-			return err
-		}
-		tag, err := tx.Exec(ctx, `UPDATE comms_outbound SET inflight_at = @at WHERE id = @id AND status = 'pending'`, pgx.NamedArgs{"id": id, "at": s.now().UTC()})
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
-			return ErrTerminal
-		}
-		return nil
-	})
+	return s.update(ctx, `
+		UPDATE comms_outbound SET inflight_at = $2
+		 WHERE id = $1 AND status = 'pending'`, id, s.now().UTC())
 }
 
 // ClearInFlight retracts the marker, and its caller is the one place that may:

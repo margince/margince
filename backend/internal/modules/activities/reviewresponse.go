@@ -227,7 +227,7 @@ func ReadDealOutcomeReviews(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (
 	}
 	rows, err := tx.Query(ctx,
 		reviewSelect+` r JOIN activity a ON a.id = r.activity_id
-		 WHERE activity_thread_available(a.thread_key) AND `+where+` ORDER BY r.created_at DESC, r.id DESC`, args...)
+		 WHERE `+where+` ORDER BY r.created_at DESC, r.id DESC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the deal's reviews: %w", err)
 	}

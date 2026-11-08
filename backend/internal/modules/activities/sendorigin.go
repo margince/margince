@@ -190,7 +190,7 @@ func (o SendOrigin) lockAnchorLive(ctx context.Context, tx pgx.Tx) error {
 	// no reason to impose.
 	var id ids.UUID
 	err := tx.QueryRow(ctx,
-		`SELECT id FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (archived_at IS NULL AND activity_thread_available(thread_key)) FOR SHARE`,
+		`SELECT id FROM activity WHERE id = $1 AND archived_at IS NULL FOR SHARE`,
 		o.anchor.UUID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("the message this replies to is no longer available: %w", apperrors.ErrNotFound)

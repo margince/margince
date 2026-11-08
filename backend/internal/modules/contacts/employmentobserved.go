@@ -35,7 +35,7 @@ func employmentFirstObservedSQL(contact, domain, activity, skew string) string {
 		    AND %[4]s
 		),
 		(SELECT ev.occurred_at FROM activity ev
-		  WHERE activity_thread_available(ev.thread_key) AND ev.id = %[3]s
+		  WHERE ev.id = %[3]s
 		    AND %[4]s
 		))`,
 		contact, domain, activity, occurredday.BegunSQL("ev", "now() + "+skew+"::interval"))
@@ -56,7 +56,7 @@ func observeEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInpu
 	err := tx.QueryRow(ctx, `
 		WITH msg AS (
 			SELECT m.occurred_at FROM activity m
-			 WHERE activity_thread_available(m.thread_key) AND m.id = $4
+			 WHERE m.id = $4
 			   AND `+occurredday.BegunSQL("m", "now() + $5::interval")+`
 		),
 		edge AS (

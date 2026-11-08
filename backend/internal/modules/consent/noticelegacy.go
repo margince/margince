@@ -45,7 +45,7 @@ func (c NoticeCase) needsSourceReview() bool {
 	if c.State == NoticeSourceReview {
 		return true
 	}
-	if c.SourceKind != nil || c.Acquisition == nil || c.Acquisition.Kind != "unknown_legacy" {
+	if c.SourceKind != nil || c.Acquisition == nil || c.Acquisition.Kind != acquiredUnknownLegacy {
 		return false
 	}
 	return slices.Contains(SettleableNoticeStates(), string(c.State))

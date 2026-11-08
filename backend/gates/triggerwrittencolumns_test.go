@@ -38,7 +38,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -279,7 +278,6 @@ func assignmentTarget(assignment string) string {
 // dead assignment that arrives in the same function later. What the register
 // adds is the product claim the shape cannot carry: WHY this row has to move.
 var touchStatements = gatekit.Waive(map[string]string{
-	"internal/modules/activities/threadsplit.go:ThreadPublishedTx":                "publication changes the conversation readers can observe after the barrier lifts; the locked activity revision moves so subscribers retry the published partition and staged approvals cannot reuse its hidden revision",
 	"internal/modules/identity/memberretirement.go:recordMemberSurvivor":          "the survivor's merged aliases change its account editor and retirement preview, so its locked revision must move",
 	"internal/modules/identity/teams.go:recordTeamChange":                         "team membership is part of the member editor snapshot; the authorization lock serializes access changes and its revision must move",
 	"internal/modules/identity/userrole.go:changeUserRoleTx":                      "role assignments are part of the member editor snapshot; the authorization lock serializes role changes and its revision must move",
@@ -309,7 +307,7 @@ const judgedWriteFloor = 120
 // trigger already writes.
 func touchTriggerTables(t *testing.T) map[string]map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -344,7 +342,7 @@ func TestNoStatementWritesAColumnItsTriggerAlreadyWrites(t *testing.T) {
 	touched := touchTriggerTables(t)
 	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform", "internal/shared"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 				return err
@@ -431,7 +429,7 @@ func declarationName(decl ast.Decl) string {
 // wrong in the direction of deleting a live assignment.
 func TestTheTouchTriggerFunctionsStillWriteWhatThisGateSays(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -471,11 +469,11 @@ func TestNothingInGoTurnsOffTheTouchTrigger(t *testing.T) {
 	const guc = "margince.last_activity_move"
 	found := 0
 	for _, root := range []string{"internal", "cmd", "tools"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 -- a *.go path from walking this repository's own tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking this repository's own tree
 			if err != nil {
 				return err
 			}
@@ -492,7 +490,7 @@ func TestNothingInGoTurnsOffTheTouchTrigger(t *testing.T) {
 	}
 	// And the setting still exists where it is supposed to, or this test is
 	// reading for a string nothing uses and passing for the wrong reason.
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

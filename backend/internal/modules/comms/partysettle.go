@@ -15,6 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// WithPartySettlement adds domain effects that must succeed before a receipt's derivation work retires.
+func WithPartySettlement(settle func(context.Context, pgx.Tx, ids.ActivityID) error) StoreOption {
+	return func(s *Store) { s.partySettlement = settle }
+}
+
 // SettlePartyAdmission retires derivation work for one durable send receipt.
 func (s *Store) SettlePartyAdmission(ctx context.Context, delivery ids.UUID) error {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
@@ -41,10 +46,12 @@ func (s *Store) SettlePartyAdmission(ctx context.Context, delivery ids.UUID) err
 		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activity); err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `UPDATE comms_outbound receipt SET party_admission_pending=false
- WHERE id=@delivery AND status='sent' AND EXISTS(SELECT 1 FROM activity source
- WHERE source.id=receipt.activity_id AND source.restricted_at IS NULL
- AND activity_thread_available(source.thread_key))`, pgx.NamedArgs{"delivery": delivery})
+		if s.partySettlement != nil {
+			if err := s.partySettlement(ctx, tx, ids.From[ids.ActivityKind](activity)); err != nil {
+				return err
+			}
+		}
+		_, err = tx.Exec(ctx, `UPDATE comms_outbound SET party_admission_pending=false WHERE id=@delivery AND status='sent'`, pgx.NamedArgs{"delivery": delivery})
 		return err
 	})
 }

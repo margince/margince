@@ -56,7 +56,7 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 		WHEN 'reply' THEN EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = %s
-			WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			WHERE a.archived_at IS NULL
 			  AND a.direction = 'inbound'
 			  AND a.occurred_at > %s -- occurred_at raw: since the item was set down, a window's lower edge
 			  AND %s)
@@ -73,7 +73,7 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 		-- occurred_at has long passed lifts the snooze the moment it is set.
 		WHEN 'meeting' THEN EXISTS (
 			SELECT 1 FROM activity m
-			WHERE activity_thread_available(m.thread_key) AND m.id = %s AND m.kind = '%s'
+			WHERE m.id = %s AND m.kind = '%s'
 			  AND %s)
 		ELSE false
 	END)`, condition, deal, setDown, occurredday.HappenedSQL("a", asOf), ref, activities.KindMeeting, storekit.MeetingIsOverSQL("m", asOf))

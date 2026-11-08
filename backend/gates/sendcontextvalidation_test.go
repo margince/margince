@@ -26,7 +26,6 @@ import (
 	"go/token"
 	"io/fs"
 	"maps"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -539,7 +538,7 @@ func literalOf(spec *ast.ValueSpec) string {
 func parseTreeFiles(t *testing.T, fset *token.FileSet, root string) map[string]*ast.File {
 	t.Helper()
 	out := map[string]*ast.File{}
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

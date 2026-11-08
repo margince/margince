@@ -91,7 +91,7 @@ func (s *Store) correspondenceDomainTx(ctx context.Context, tx pgx.Tx, anchor id
 		return "", nil
 	}
 	var counterparty string
-	err := tx.QueryRow(ctx, `SELECT coalesce(counterparty_email, '') FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key))`, anchor).Scan(&counterparty)
+	err := tx.QueryRow(ctx, `SELECT coalesce(counterparty_email, '') FROM activity WHERE id = $1 AND restricted_at IS NULL`, anchor).Scan(&counterparty)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}

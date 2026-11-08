@@ -11,18 +11,33 @@ func LiveLeadInquiryClause(alias string) string {
 	return "NOT starts_with(COALESCE(" + alias + ".source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "') AND EXISTS (SELECT 1 FROM activity_link incoming" +
 		" JOIN activity request ON request.id = incoming.activity_id WHERE incoming.lead_id = " + alias + ".id" +
 		" AND request.kind = 'email' AND request.direction = 'inbound'" +
-		" AND (request.archived_at IS NULL AND activity_thread_available(request.thread_key)) AND request.restricted_at IS NULL" +
+		" AND request.archived_at IS NULL AND request.restricted_at IS NULL" +
 		" AND NOT starts_with(COALESCE(request.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "'))"
 }
 
-var importedFollowupTaskIDsSQL = `SELECT emitted.envelope->'entity'->>'id'
- FROM workflow_run automatic
- JOIN lead imported ON imported.id::text = automatic.planned #>> '{0,Target,ID}'
- JOIN event_outbox emitted ON emitted.envelope->'trace'->>'causation_id' = automatic.trigger_event::text
- WHERE automatic.handler = 'route_lead'
+// importedRouteRuns are the route_lead runs for imported leads, aliased automatic.
+const importedRouteRuns = ` FROM workflow_run automatic
+ JOIN lead imported ON imported.id::text = automatic.planned #>> '{0,Target,ID}'`
+
+// importedFollowupCause is true when the event_outbox row aliased emitted is
+// the task capture one of importedRouteRuns caused.
+func importedFollowupCause(emitted string) string {
+	return emitted + `.envelope->'trace'->>'causation_id' = automatic.trigger_event::text
+   AND automatic.handler = 'route_lead'
    AND starts_with(COALESCE(imported.source_system, ''), '` + provenance.ReservedSourceSystemPrefix + `')
-   AND emitted.envelope->>'type' = 'activity.captured'
-   AND emitted.envelope->'entity'->>'id' IS NOT NULL`
+   AND ` + emitted + `.envelope->>'type' = 'activity.captured'
+   AND ` + emitted + `.envelope->'entity'->>'id' IS NOT NULL`
+}
+
+var importedFollowupTaskIDsSQL = `SELECT emitted.envelope->'entity'->>'id'` + importedRouteRuns +
+	` JOIN event_outbox emitted ON ` + importedFollowupCause("emitted")
+
+// ImportedFollowupEvidenceSQL is true when the event_outbox row aliased alias
+// is the evidence LiveIntakeTaskClause tells an imported follow-up by, so a
+// retention sweep keeps it.
+func ImportedFollowupEvidenceSQL(alias string) string {
+	return `EXISTS (SELECT 1` + importedRouteRuns + ` WHERE ` + importedFollowupCause(alias) + `)`
+}
 
 // LiveIntakeTaskClause removes untouched automatic intake work, including
 // legacy import follow-ups identified by their causal trace. Edited tasks stay.

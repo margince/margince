@@ -21,12 +21,10 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -153,13 +151,11 @@ func TestAMailedCardQueuesItsImport(t *testing.T) {
 func TestOnlyWorkspaceReadableMailLendsItsCard(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	e.GrantRole(t, e.Rep1, "rep")
 
 	narrowed := seedCardMail(ctx, t, e, e.Rep1, "participants")
 	open := seedCardMail(ctx, t, e, e.Rep1, "workspace")
 
-	blob := blobstore.NewMemory()
-	worker := newVCardIngestWorker(e.Pool, blob, quietIngestLog())
+	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 
 	// The refusal is not a fault: a narrowed source is an ANSWER, and returning
 	// an error would have River retry into the same refusal until it exhausts.
@@ -179,30 +175,6 @@ func TestOnlyWorkspaceReadableMailLendsItsCard(t *testing.T) {
 		t.Errorf("an open message lent %d card(s), want 1 — the refusal above proves "+
 			"nothing if the reader cannot read a message it is allowed to", len(keys))
 	}
-	t.Run("repair waits without spending an import attempt", func(t *testing.T) {
-		e.WsExec(t, `UPDATE activity SET thread_key=id::text WHERE id=$1`, open)
-		run := beginUnavailableThread(t, e, open.String())
-		job := &river.Job[VCardIngestArgs]{Args: VCardIngestArgs{Workspace: e.WS, Activity: open}}
-		wait := worker.Work(ctx, job)
-		if snooze, ok := errors.AsType[*river.JobSnoozeError](wait); !ok || snooze.Duration <= 0 {
-			t.Fatalf("hidden source attempt=%v, want durable postponement", wait)
-		}
-		if count := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE email='robin@vcard.example'`); count != 0 {
-			t.Fatal("a hidden source imported its card")
-		}
-		finishUnavailableThread(t, e, run)
-		key := e.WsScalar(t, `SELECT storage_key FROM attachment WHERE activity_id=$1`, open)
-		card := "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Robin Example\r\nEMAIL:robin@vcard.example\r\nEND:VCARD\r\n"
-		if err := blob.Put(ctx, key, strings.NewReader(card), int64(len(card)), "text/vcard"); err != nil {
-			t.Fatal(err)
-		}
-		if err := worker.Work(ctx, job); err != nil {
-			t.Fatal(err)
-		}
-		if count := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE email='robin@vcard.example'`); count != 1 {
-			t.Fatalf("published source imported%d cards", count)
-		}
-	})
 }
 
 // cardKeysOf answers the attachments the import would read from one message.

@@ -119,6 +119,10 @@ type SendEmailInput struct {
 	// close the learning signal that draft opened. Empty is the ordinary case:
 	// mail the human composed independently resolves no draft.
 	DraftRef string
+	// SendingEntity is the legal entity the message goes out for, never read
+	// from a request. PrepareSend resolves it from the sender. A scheduled
+	// payload keeps the one its scheduling resolved. Zero means unresolved.
+	SendingEntity ids.UUID
 	// MailDraftID names the rep's saved draft this message was composed in,
 	// discarded in the transaction that sends or schedules it. Never frozen
 	// into a scheduled payload: the draft is gone once the schedule commits.
@@ -438,7 +442,7 @@ func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageI
 	err := tx.QueryRow(ctx,
 		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, '')
 		   FROM activity
-		  WHERE activity_thread_available(thread_key) AND id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key)) AND archived_at IS NULL`,
+		  WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`,
 		id).Scan(&kind, &parent, &root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return threading{}, apperrors.ErrNotFound

@@ -53,9 +53,9 @@ func sourceLendsItsCard(ctx context.Context, tx pgx.Tx, source ids.UUID) (bool, 
 	var open bool
 	err := tx.QueryRow(ctx, `
 		SELECT audience = 'workspace'
-		       AND (restricted_at IS NULL AND activity_thread_available(thread_key))
+		       AND restricted_at IS NULL
 		       AND archived_at IS NULL
-		  FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, source).Scan(&open)
+		  FROM activity WHERE id = $1 FOR SHARE`, source).Scan(&open)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return false, nil

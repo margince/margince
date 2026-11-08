@@ -146,6 +146,7 @@ export function ContactTabPanel({
       return (
         <ContactFilesTab
           contactId={contactId}
+          contactName={view.contact.full_name}
           refusedReasonId={refusedReasonId}
           onOpenEmail={onOpenEmail}
         />

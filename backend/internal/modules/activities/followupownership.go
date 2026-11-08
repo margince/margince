@@ -133,7 +133,7 @@ func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.Le
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
-			  AND a.is_done = false AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			  AND a.is_done = false AND a.archived_at IS NULL
 			  AND a.assignee_id IS DISTINCT FROM $6
 			ORDER BY a.id`,
 			leadID, string(crmcontracts.ActivityKindTask), systemSource,
@@ -156,7 +156,7 @@ func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.Le
 	}
 	moved := 0
 	for _, task := range wrong {
-		reassigned, err := s.assignSystemTask(ctx, task.id, task.version, owner)
+		reassigned, err := s.assignSystemTask(ctx, task.id, task.version, owner, unclaimedOr(owner))
 		if err != nil {
 			return 0, fmt.Errorf("assigning system task %s: %w", task.id, err)
 		}
@@ -208,12 +208,11 @@ const assignmentAttempts = 3
 // another firing: lead.updated fires when the LEAD changes, and the task's own
 // edits do not produce one.
 //
-// A task that has come to disagree with the lead about its owner is left alone.
-// That is the case where somebody did decide, and re-reading the lead's owner
-// over their decision is how an automation takes work back off the contact it
-// was just handed to.
+// A task whose assignee mayMove refuses after a re-read is left alone. There
+// somebody did decide. Writing the record's owner over their decision would
+// take work back off the contact it was just handed to.
 func (s *Store) assignSystemTask(
-	ctx context.Context, id ids.ActivityID, version int64, owner ids.UserID,
+	ctx context.Context, id ids.ActivityID, version int64, owner ids.UserID, mayMove func(assignee *ids.UUID) bool,
 ) (bool, error) {
 	for range assignmentAttempts {
 		_, err := s.UpdateActivity(ctx, id, UpdateActivityInput{
@@ -239,7 +238,7 @@ func (s *Store) assignSystemTask(
 			}
 			return false, err
 		}
-		if current.AssigneeId != nil && ids.UUID(*current.AssigneeId) != owner.UUID {
+		if !mayMove((*ids.UUID)(current.AssigneeId)) {
 			// Somebody assigned it to a different contact while this call was in
 			// flight. Their decision is newer than the one this call is
 			// carrying, so it stands.
@@ -251,4 +250,60 @@ func (s *Store) assignSystemTask(
 		version = *current.Version
 	}
 	return false, nil
+}
+
+// unclaimedOr admits a task nobody holds or the owner already holds: the lead
+// follow-up's rule for a task it may still point at the owner.
+func unclaimedOr(owner ids.UserID) func(*ids.UUID) bool {
+	return func(assignee *ids.UUID) bool { return assignee == nil || *assignee == owner.UUID }
+}
+
+// heldBy admits a task whose assignee is still the one given, nil meaning
+// nobody.
+func heldBy(seat *ids.UserID) func(*ids.UUID) bool {
+	return func(assignee *ids.UUID) bool {
+		if seat == nil || assignee == nil {
+			return seat == nil && assignee == nil
+		}
+		return *assignee == seat.UUID
+	}
+}
+
+// FollowSystemTaskOwner moves one open system-minted task to a record's new
+// owner, but only while its assignee is still the seat the system gave it.
+// An assignee somebody chose is not that seat, so their choice stays. It
+// answers whether the task now sits with the owner. A task an earlier call
+// already moved answers yes, so a caller that failed to record that move can
+// record it on its retry.
+//
+// A new owner who cannot hold work leaves the task where it is: the write
+// refuses that seat as not found, as AlignSystemTaskAssigneeToLead's does.
+func (s *Store) FollowSystemTaskOwner(
+	ctx context.Context, id ids.ActivityID, given *ids.UserID, owner ids.UserID,
+) (bool, error) {
+	var version int64
+	var assignee *ids.UUID
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT a.version, a.assignee_id FROM activity a
+			WHERE a.id = $1 AND a.kind = $2 AND a.source = $3
+			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
+			  AND a.is_done = false AND a.archived_at IS NULL`,
+			id, string(crmcontracts.ActivityKindTask), systemSource,
+			systemCapturedBy, systemCapturedByPattern).Scan(&version, &assignee)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("activities: reading the system task to reassign: %w", err)
+	}
+	if assignee != nil && *assignee == owner.UUID {
+		return true, nil
+	}
+	stillGiven := heldBy(given)
+	if !stillGiven(assignee) {
+		return false, nil
+	}
+	return s.assignSystemTask(ctx, id, version, owner, stillGiven)
 }

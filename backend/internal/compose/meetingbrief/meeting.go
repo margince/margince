@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // attendeeCap bounds who is named. This is "who is in the room" for prep, not
@@ -134,7 +135,10 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
-	happened := occurredday.HappenedSQL("pa", fmt.Sprintf("$%d", arg(now)))
+	// A last touch is contact we had: a past meeting nobody called off, not a
+	// call that reached nobody (relstrength.HadContactSQL).
+	nowAt := fmt.Sprintf("$%d", arg(now))
+	happened := occurredday.HappenedSQL("pa", nowAt) + " AND " + relstrength.HadContactSQL("pa", nowAt)
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err
@@ -213,7 +217,7 @@ const meetingQuery = `
 	                    SELECT json_build_object('at', pa.occurred_at, 'date_only', pa.occurred_precision = 'day')
 	                    FROM activity pa
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
-	                    WHERE pp.contact_id = p.id AND (pa.archived_at IS NULL AND activity_thread_available(pa.thread_key))
+	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at -- occurred_at raw: a touch before this meeting, an ordering of rows
 	                      AND %[9]s
 	                      AND pa.audience = 'workspace'
@@ -284,7 +288,7 @@ const meetingQuery = `
 	           dd.expected_close_date NULLS LAST, dd.id
 	  LIMIT 1
 	) d ON TRUE
-	WHERE a.id = $%[3]d AND a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`
+	WHERE a.id = $%[3]d AND a.kind = 'meeting' AND a.archived_at IS NULL`
 
 // roomScopes is every row-scope clause the meeting statement composes, each
 // deciding what the caller may be TOLD rather than filtering afterwards.

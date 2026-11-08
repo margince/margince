@@ -51,6 +51,9 @@ type ResponseMetrics struct {
 	DisposedNotSales int
 }
 
+// everyMessage is the sample clause that judges every message in the window.
+const everyMessage = ""
+
 // firstResponseSQL measures the wait on messages that WERE answered.
 //
 // The answer is the first one firstAnswerAtSQL finds: our reply on the thread,
@@ -67,12 +70,41 @@ type ResponseMetrics struct {
 // its question is the opposite end: the point past which this installation
 // essentially does not answer at all (waitinghorizon.go).
 var firstResponseSQL = `
+	-- The messages judged come first, so the answer read below runs only over
+	-- them: a sample (%[6]s) must bound that read, not trim its result.
+	WITH judged AS MATERIALIZED (
+	  SELECT inbound.id FROM activity inbound
+	   WHERE inbound.kind IN ('email', 'message')
+	     AND inbound.direction = 'inbound'
+	     AND inbound.archived_at IS NULL
+	     AND ` + occurredday.WithinSQL("inbound", "$1", "$2") + `
+	     AND %[1]s
+	     -- A COLLEAGUE's message is not a customer waiting, and this reading
+	     -- answers "how fast do we answer customers". Without the same exclusion
+	     -- the queue applies, an internal thread nobody replies to would drag the
+	     -- rate down over work the queue never showed anybody.
+	     AND NOT %[4]s
+	     -- A SALES thread, by the same four arms waitingRepliesSQL qualifies on.
+	     -- Restated rather than shared because this query has no wl join to hang
+	     -- them off; what must not drift is the DEFINITION, and a test feeding
+	     -- both readers one timeline holds that better than a shared fragment
+	     -- neither could read.
+	     AND EXISTS (
+	           SELECT 1 FROM activity_link sales
+	            WHERE sales.activity_id = inbound.id
+	              AND (sales.contact_id IS NOT NULL
+	                OR sales.company_id IS NOT NULL
+	                OR EXISTS (SELECT 1 FROM deal d
+	                            WHERE d.id = sales.deal_id AND %[2]s)
+	                OR EXISTS (SELECT 1 FROM lead ld
+	                            WHERE ld.id = sales.lead_id AND %[3]s)))
+	   %[6]s)
 	SELECT count(*),
 	       COALESCE(
 	         percentile_cont(%[5]s) WITHIN GROUP (
 	           ORDER BY EXTRACT(EPOCH FROM (reply.occurred_at - inbound.occurred_at)) / 60
 	         )::bigint, 0)
-	  FROM activity inbound
+	  FROM judged JOIN activity inbound ON inbound.id = judged.id
 	  -- The FIRST answer after it, not the newest: what a customer waited is the
 	  -- time to the answer they actually got. Unbounded above, because an answer
 	  -- that came after the window closed still ends a wait the window opened.
@@ -86,31 +118,7 @@ var firstResponseSQL = `
 	         SELECT ` + firstAnswerAtSQL("inbound", "'infinity'::timestamptz") + ` AS occurred_at
 	         OFFSET 0
 	       ) reply
-	 WHERE inbound.kind IN ('email', 'message')
-	   AND inbound.direction = 'inbound'
-	   AND (inbound.archived_at IS NULL AND activity_thread_available(inbound.thread_key))
-	   AND reply.occurred_at IS NOT NULL
-	   AND ` + occurredday.WithinSQL("inbound", "$1", "$2") + `
-	   AND %[1]s
-	   -- A COLLEAGUE's message is not a customer waiting, and this reading
-	   -- answers "how fast do we answer customers". Without the same exclusion
-	   -- the queue applies, an internal thread nobody replies to would drag the
-	   -- rate down over work the queue never showed anybody.
-	   AND NOT %[4]s
-	   -- A SALES thread, by the same four arms waitingRepliesSQL qualifies on.
-	   -- Restated rather than shared because this query has no wl join to hang
-	   -- them off; what must not drift is the DEFINITION, and a test feeding
-	   -- both readers one timeline holds that better than a shared fragment
-	   -- neither could read.
-	   AND EXISTS (
-	         SELECT 1 FROM activity_link sales
-	          WHERE sales.activity_id = inbound.id
-	            AND (sales.contact_id IS NOT NULL
-	              OR sales.company_id IS NOT NULL
-	              OR EXISTS (SELECT 1 FROM deal d
-	                          WHERE d.id = sales.deal_id AND %[2]s)
-	              OR EXISTS (SELECT 1 FROM lead ld
-	                          WHERE ld.id = sales.lead_id AND %[3]s)))`
+	 WHERE reply.occurred_at IS NOT NULL`
 
 // dispositionsSQL counts what readers put down in the window.
 //
@@ -230,7 +238,7 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),
 			ownDomainSenderSQL("inbound", arg(ownDomains)),
-			medianPercentile)
+			medianPercentile, everyMessage)
 		if err := tx.QueryRow(ctx, query, args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)
 		}

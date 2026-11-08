@@ -3,10 +3,9 @@
 
 package capture
 
-// What the MAILBOX OWNER concluded about a thread, which outranks the
-// classifier: the seat whose correspondence it is decides, and their answer is
-// recorded as its own status so a later reader can tell a contact's decision
-// from a model's.
+// What the MAILBOX OWNER or their agent concluded about a thread, which outranks
+// the classifier. The seat whose correspondence it is decides. Their answer is
+// its own status, so a later reader can tell a contact's decision from a model's.
 
 import (
 	"context"
@@ -23,7 +22,7 @@ import (
 // DecideAsOwner records what the mailbox owner themselves concluded about a
 // thread, overruling whatever a classifier said.
 //
-// A human decision is not a verdict with a different author: it is the end of
+// An owner's decision is not a verdict with a different author: it is the end of
 // the question. The row resolves, its attempts stop mattering, and no later
 // pass re-asks — a classifier that could overturn an owner would make the
 // owner's click advisory, which is not what a contact clicking "keep this
@@ -36,10 +35,7 @@ import (
 func (s *ThreadVerdictStore) DecideAsOwner(
 	ctx context.Context, tx pgx.Tx, threadKey string, share bool,
 ) error {
-	if err := auth.RequireHuman(ctx); err != nil {
-		return err
-	}
-	if err := auth.EnsureThreadAvailable(ctx, tx, threadKey); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)
@@ -49,6 +45,9 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 	status := VerdictHeldByOwner
 	if share {
 		status = VerdictSharedByOwner
+	}
+	if err := LockThreadHoldTx(ctx, tx, threadKey); err != nil {
+		return err
 	}
 	// A thread this call opens fresh (never through EnsureTx — a message born
 	// open under a `shared` mailbox never did) needs an anchor of its own, or
@@ -89,7 +88,7 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 		UPDATE capture_import i
 		   SET verdict_status = $3
 		  FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.id = i.activity_id
+		 WHERE a.id = i.activity_id
 		   AND a.thread_key = $1
 		   AND a.restricted_at IS NULL
 		   AND a.archived_at IS NULL
@@ -132,7 +131,7 @@ func ThreadActivityIDsTx(ctx context.Context, tx pgx.Tx, threadKey string, user 
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $2
-		 WHERE a.thread_key = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.thread_key = $1 AND a.archived_at IS NULL
 		   AND a.restricted_at IS NULL
 		 ORDER BY a.id`, threadKey, user)
 	if err != nil {

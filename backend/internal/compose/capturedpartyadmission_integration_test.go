@@ -292,21 +292,16 @@ func TestCapturedPartiesCannotUseAnArchivedSendAsAdmissionProof(t *testing.T) {
 
 func partyOwnerContext(t *testing.T, e *integration.Env) context.Context {
 	t.Helper()
-	return partySeatContext(t, e, e.AdminUser)
-}
-
-func partySeatContext(t *testing.T, e *integration.Env, user ids.UUID) context.Context {
-	t.Helper()
 	authority := identity.NewService(e.Pool)
-	rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, user)
+	rbac, err := authority.EffectiveRBAC(e.Admin(), e.WS, e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	seat, err := authority.SeatType(e.Admin(), e.WS, user)
+	seat, err := authority.SeatType(e.Admin(), e.WS, e.AdminUser)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, OnBehalfOf: user, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs, SeatType: seat})
+	return principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.AdminUser.String(), UserID: e.AdminUser, OnBehalfOf: e.AdminUser, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs, SeatType: seat})
 }
 
 func activatePartySeat(t *testing.T, e *integration.Env, user ids.UUID) {
@@ -319,5 +314,36 @@ func activatePartySeat(t *testing.T, e *integration.Env, user ids.UUID) {
 		return identity.OperatorResetPassword(e.Admin(), tx, ids.From[ids.WorkspaceKind](e.WS), email, "temporary test phrase")
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Two proven sends to one address admit it whatever each says. One proven send
+// decides by its own words, however many unproven sends sit beside it.
+func TestCapturedPartiesCountsOnlyProvenSendsToTheAddress(t *testing.T) {
+	const declining, engaging = "We are not interested. Please remove us.", "Could we discuss the product requirements?"
+	proven, unproven := partyMailProof{outbound: true, sentByOwner: true}, partyMailProof{outbound: true}
+	type send struct {
+		proof partyMailProof
+		body  string
+	}
+	for _, tc := range []struct {
+		name  string
+		sends []send
+		admit bool
+	}{
+		{"two declining proven sends", []send{{proven, declining}, {proven, declining}}, true},
+		{"one declining proven send among unproven ones", []send{{unproven, engaging}, {unproven, engaging}, {proven, declining}}, false},
+		{"one engaging proven send among unproven ones", []send{{unproven, engaging}, {unproven, engaging}, {proven, engaging}}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			for _, s := range tc.sends {
+				capturePartiesMail(t, e, s.proof, "Bob Buyer <bob@buyer.test>", "", s.body)
+			}
+			admitted := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE lower(email)='bob@buyer.test' AND archived_at IS NULL`) == 1
+			if admitted != tc.admit {
+				t.Fatalf("bob@buyer.test admitted=%v, want %v", admitted, tc.admit)
+			}
+		})
 	}
 }

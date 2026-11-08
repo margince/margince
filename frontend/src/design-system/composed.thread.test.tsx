@@ -3,7 +3,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { viewerZone } from "../format/timezone";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { GroupedTimelineList } from "./timeline";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
@@ -57,6 +57,36 @@ describe("a thread's card", () => {
       screen.getByText("10 messages · 4 from them, 5 from your team"),
     ).toBeTruthy();
     expect(screen.getByText("Calendar invitation")).toBeTruthy();
+  });
+
+  it("marks a newsletter and leaves it out of either side's count", () => {
+    const reply = entry({
+      id: "in1",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+    });
+    const newsletter = entry({
+      id: "news",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+      automaticKind: "bulk",
+    });
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            newsletter,
+            reply,
+            entry({ id: "out1", direction: "outbound" }),
+          ]),
+        ]}
+      />,
+    );
+    expect(
+      screen.getByText("3 messages · 1 from them, 1 from your team"),
+    ).toBeTruthy();
+    expect(screen.getByText("Sent to a mailing list")).toBeTruthy();
   });
 
   it("names the kind, the count and who it was with, and seats the verbs in its head", () => {
@@ -316,7 +346,7 @@ describe("a row's place on the axis", () => {
 it("shows commitment review counts on a thread without exposing private readings", () => {
   render(
     <GroupedTimelineList
-      zone={viewerZone()}
+      zone={browserZone()}
       groups={[
         thread([
           entry({ id: "visible", commitmentReviewCount: 2 }),

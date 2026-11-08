@@ -20,7 +20,7 @@ func localMeetingSlots(ctx context.Context, tx pgx.Tx, host ids.UserID, from, to
 	args := schedulingArgs{}
 	h, f, t, id := args.add(host), args.add(from), args.add(to), args.add(exclude)
 	rows, err := tx.Query(ctx, `SELECT occurred_at,occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second' -- meeting end: only an instant holds an hour of the host calendar (refuseDayHeldSlot)
- FROM activity a WHERE activity_thread_available(a.thread_key) AND host_user_id=`+h+` AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
+ FROM activity a WHERE host_user_id=`+h+` AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
  AND `+occupiesHostSlotSQL+`
  AND meeting_status IS DISTINCT FROM 'canceled' AND `+t+`>occurred_at -- occurred_at raw: the range's upper edge; only an instant holds a host hour
  AND occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'>`+f+` -- meeting end: only an instant holds an hour of the host calendar (refuseDayHeldSlot)

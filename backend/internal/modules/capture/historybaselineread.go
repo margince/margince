@@ -50,7 +50,7 @@ func SeatHistoryBaselinesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 		       NOT EXISTS (SELECT 1 FROM unnest(ci.delivered_by) AS d(mailbox)
 		                    WHERE split_part(d.mailbox, ':', 1) = split_part(a.captured_by, ':', 2))
 		  FROM capture_import ci
-		  JOIN activity a ON a.id = ci.activity_id AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+		  JOIN activity a ON a.id = ci.activity_id AND a.restricted_at IS NULL
 		 WHERE ci.activity_id = $1 AND ci.user_id = $2`, activityID, seat).
 		Scan(&out.SourceAt, &delivered, &importedAt, &out.FirstCapture, &legacyProvider, &legacy)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -51,7 +51,29 @@ type SMTP struct {
 	FromAddress string
 	// Now stamps the Date header; the wall clock when nil.
 	Now func() time.Time
+	// Letterhead is who product mail comes from: the installation's own
+	// company, with its logo when one is stored. Send and SendBranded refuse
+	// without one, so a relay built field by field fails at its first send
+	// rather than mailing as nobody.
+	Letterhead LetterheadSource
 }
+
+// LetterheadSource reads the letterhead product mail is drawn under, in the
+// mail's language, with the inline images its markup refers to. It returns
+// no error: a source that cannot read the logo in time answers with the name
+// alone, because a reset mail must not wait on a slow object store.
+type LetterheadSource interface {
+	Letterhead(ctx context.Context, language string) (emailview.Letterhead, []connector.InlineImage)
+}
+
+// BrandedSender sends product mail under the installation's letterhead.
+type BrandedSender interface {
+	SendBranded(ctx context.Context, to, subject string, message emailview.Message) error
+}
+
+// ErrNoLetterhead is the refusal of a relay that was built without a
+// letterhead source.
+var ErrNoLetterhead = errors.New("mailer: no letterhead source is wired")
 
 // Send submits the message through the configured relay. TLS is
 // REQUIRED: a reset mail carries a live credential, so a relay that
@@ -60,7 +82,34 @@ type SMTP struct {
 // docker mailhog or a host postfix), where the wire never leaves the
 // machine.
 func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
-	return s.SendAlternative(ctx, to, subject, textBody, emailview.Render(emailview.Message{Title: subject, Text: textBody}), "")
+	return s.SendBranded(ctx, to, subject, emailview.Message{Title: subject, Text: textBody})
+}
+
+// SendBranded renders message under the installation's letterhead and sends
+// it with the letterhead's logo as an inline part.
+func (s SMTP) SendBranded(ctx context.Context, to, subject string, message emailview.Message) error {
+	if s.Letterhead == nil {
+		return ErrNoLetterhead
+	}
+	head, inline := s.Letterhead.Letterhead(ctx, message.Language)
+	return s.send(ctx, to, subject, textLetterhead(head)+message.Text, emailview.Render(message, head), "", inline)
+}
+
+// textLetterhead heads the plain-text alternative the way the logo heads the
+// markup: the company's name, then the attribution, then a blank line. A
+// reader whose client shows text only still sees who the mail comes from.
+// The message's own text is left as the builder wrote it.
+func textLetterhead(head emailview.Letterhead) string {
+	var lines []string
+	for _, line := range []string{head.Name, head.Attribution} {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	return strings.Join(lines, "\n") + "\n\n"
 }
 
 // SendIdentified is Send with the Message-ID header set to messageID. An
@@ -75,35 +124,34 @@ func (s SMTP) SendIdentified(ctx context.Context, to, subject, textBody, message
 
 // SendAlternative submits readable text and HTML under one message identity.
 func (s SMTP) SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error {
+	return s.send(ctx, to, subject, textBody, htmlBody, messageID, nil)
+}
+
+// SendRelated is SendAlternative with the inline images the markup shows by
+// content id.
+func (s SMTP) SendRelated(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error {
+	return s.send(ctx, to, subject, textBody, htmlBody, messageID, inline)
+}
+
+func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error {
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
 		return errors.New("mailer: recipient and subject must be single-line (header injection)")
 	}
 	if messageID != "" && !connector.ValidMessageID(messageID) {
 		return connector.ErrInvalidMessageID
 	}
-	msg, err := s.composeAlternative(to, subject, textBody, htmlBody, messageID)
+	msg, err := s.composeAlternative(to, subject, textBody, htmlBody, messageID, inline)
 	if err != nil {
 		return err
 	}
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	client, err := s.connect(ctx, addr)
+	client, w, err := s.openMessage(ctx, addr, to)
 	if err != nil {
-		return err
+		return &NotTakenError{Err: err}
 	}
 	defer closeQuietly(client)
-
-	if err := client.Mail(s.FromAddress); err != nil {
-		return fmt.Errorf("mailer: relay %s refused the sender: %w", addr, err)
-	}
-	if err := client.Rcpt(to); err != nil {
-		return fmt.Errorf("mailer: relay %s refused the recipient: %w", addr, err)
-	}
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
-	}
 	if _, err := w.Write(msg); err != nil {
-		return fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)
+		return &NotTakenError{Err: fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)}
 	}
 	if err := w.Close(); err != nil {
 		return fmt.Errorf("mailer: relay %s did not accept the message: %w", addr, err)
@@ -113,6 +161,29 @@ func (s SMTP) SendAlternative(ctx context.Context, to, subject, textBody, htmlBo
 			"relay", addr, "cause", err)
 	}
 	return nil
+}
+
+// openMessage runs the exchange up to the message body. On an error the
+// relay holds nothing of this message.
+func (s SMTP) openMessage(ctx context.Context, addr, to string) (*smtp.Client, io.WriteCloser, error) {
+	client, err := s.connect(ctx, addr)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := client.Mail(s.FromAddress); err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the sender: %w", addr, err)
+	}
+	if err := client.Rcpt(to); err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the recipient: %w", addr, err)
+	}
+	w, err := client.Data()
+	if err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
+	}
+	return client, w, nil
 }
 
 // helloName is what this installation announces to the relay.
@@ -142,7 +213,7 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("mailer: relay %s unreachable: %w", addr, err)
 	}
-	if err := conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+	if err := conn.SetDeadline(exchangeDeadline(ctx)); err != nil {
 		closeQuietly(conn)
 		return nil, fmt.Errorf("mailer: relay %s deadline setup failed: %w", addr, err)
 	}
@@ -181,6 +252,18 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 	return client, nil
 }
 
+// exchangeDeadline is when the relay exchange must end: 30 seconds from now,
+// or the caller's own deadline when that comes first. A caller that stops
+// waiting for the relay also stops the exchange. So the relay cannot take the
+// message after the caller reported it as not taken.
+func exchangeDeadline(ctx context.Context) time.Time {
+	deadline := time.Now().Add(30 * time.Second)
+	if callerDeadline, ok := ctx.Deadline(); ok && callerDeadline.Before(deadline) {
+		return callerDeadline
+	}
+	return deadline
+}
+
 // isLoopback reports whether the relay lives on this machine — the one
 // posture where a missing STARTTLS is acceptable (the bytes never touch
 // a network).
@@ -202,4 +285,10 @@ func closeQuietly(c io.Closer) {
 // AlternativeSender preserves the already-authorized HTML and text alternatives.
 type AlternativeSender interface {
 	SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error
+}
+
+// RelatedSender is an AlternativeSender that also attaches the images the
+// markup shows inline.
+type RelatedSender interface {
+	SendRelated(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error
 }

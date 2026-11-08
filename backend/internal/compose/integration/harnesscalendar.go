@@ -91,3 +91,14 @@ func (m CalendarMeeting) Cancel(t *testing.T, e *Env) {
 		t.Fatalf("canceling meeting %s: %v", m.Event, err)
 	}
 }
+
+// RecordHeld records a captured meeting's outcome as held, the way a member
+// reports it through the activities writer.
+func (e *Env) RecordHeld(t *testing.T, meeting ids.UUID) {
+	t.Helper()
+	held := "held"
+	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](meeting),
+		activities.UpdateActivityInput{MeetingStatus: &held}); err != nil {
+		t.Fatalf("recording meeting %s held: %v", meeting, err)
+	}
+}

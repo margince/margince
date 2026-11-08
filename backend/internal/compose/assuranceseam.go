@@ -20,23 +20,21 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // assuranceSubjectsSQL is AssuranceSubjects' one read, held at package
 // level so the function stays within the length a reader holds at once.
-const assuranceSubjectsSQL = `
+var assuranceSubjectsSQL = `
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
 		       d.expected_close_date, d.close_date_provisional,
-		       d.forecast_category, s.name, d.stage_id,
+		       ` + deals.WinProbabilitySQL("d") + `, s.name, d.stage_id,
 		       COALESCE((SELECT max(h.changed_at) FROM deal_stage_history h
 		                  WHERE h.deal_id = d.id AND h.to_stage_id = d.stage_id), d.created_at),
 		       d.created_at, d.wait_until,
@@ -99,7 +97,7 @@ const assuranceSubjectsSQL = `
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
-		           AND a.archived_at IS NULL AND activity_thread_available(a.thread_key)
+		           AND a.archived_at IS NULL
 		           AND ((a.kind = 'task' AND a.is_done = false AND %[1]s)
 		                -- MeetingAheadSQL admits NULL, a meeting nothing has said
 		                -- is off. An imported one carries no status, and the strict form raised a
@@ -124,14 +122,7 @@ const assuranceSubjectsSQL = `
 		               AND e.met
 		               AND e.refuted_at IS NULL
 		               AND %[5]s)) AS unmet_exit_criteria,
-               EXISTS(SELECT 1 FROM (
-                 SELECT linked.activity_id FROM activity_link linked WHERE linked.deal_id=d.id
-                 UNION SELECT source_task.source_activity_id FROM activity_link linked
-                   JOIN activity source_task ON source_task.id=linked.activity_id
-                   WHERE linked.deal_id=d.id AND source_task.source_activity_id IS NOT NULL
-                 ) needed JOIN activity deferred_source ON deferred_source.id=needed.activity_id
-                 WHERE deferred_source.archived_at IS NULL
-                   AND %[11]s) AS sources_deferred
+		       %[11]s AS mail_boxes
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'%[9]s
@@ -189,44 +180,58 @@ func assuranceSubjects(
 	if err != nil {
 		return nil, err
 	}
-	pending, err := auth.ActivityRepairPendingClause(principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: assuranceActor}), "deferred_source", arg)
+	byOwner, err := mailCoverageByOwner(ctx, tx, now)
 	if err != nil {
 		return nil, err
 	}
-	query := assuranceSubjectsQuery(now, identities, only, pending, arg)
+	byConnection, err := mailCoverageByConnection(ctx, tx, now)
+	if err != nil {
+		return nil, err
+	}
+	mailCovered := dealMailCovered(sourceChecked(coverage, sourceMail), byOwner, byConnection)
+	query := assuranceSubjectsQuery(now, identities, only, arg)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
 	}
 	defer rows.Close()
 
-	mailCovered := sourceChecked(coverage, sourceMail)
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
+	subjects, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
 		return scanAssuranceSubject(row, now, zone, mailCovered)
 	})
+	if err != nil {
+		return nil, err
+	}
+	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range subjects {
+		subjects[i].Likely = subjects[i].WinProbability >= threshold
+	}
+	return subjects, nil
 }
 
-func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered bool) (assurance.Subject, error) {
+func scanAssuranceSubject(
+	row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered func(owner *ids.UUID, mailboxes []string) bool,
+) (assurance.Subject, error) {
 	var out assurance.Subject
 	var dealID ids.UUID
 	var owner *ids.UUID
-	var currency, category, stage *string
+	var currency, stage *string
 	var stageID *ids.UUID
 	var evidence deals.ViabilityInput
 	var fingerprint string
-	var deferred bool
+	var mailboxes []string
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
-		&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &stageID, &out.StageEnteredAt,
+		&out.ExpectedClose, &out.CloseProvisional, &out.WinProbability, &stage, &stageID, &out.StageEnteredAt,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
 		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &deferred)
+		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &mailboxes)
 	if err != nil {
 		return out, err
-	}
-	if deferred {
-		return out, fmt.Errorf("conversation evidence is being repaired; retry assessment: %w", apperrors.ErrConflict)
 	}
 	out.DealID = dealID.String()
 	if owner != nil {
@@ -235,9 +240,6 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	if currency != nil {
 		out.Currency = *currency
 	}
-	if category != nil {
-		out.Category = *category
-	}
 	if stage != nil {
 		out.StageName = *stage
 	}
@@ -245,7 +247,7 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 		out.StageID = stageID.String()
 	}
 	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
-	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered
+	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner, mailboxes)
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{
 		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
@@ -255,22 +257,35 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 }
 
 // customerProgressSQL admits a row that is the CUSTOMER moving the deal. That is
-// a message a contact on it wrote, or a meeting or call with them that happened.
+// a message a contact on it wrote, or a call or meeting with them that kept us
+// in touch (relstrength.HadContactSQL). A past meeting counts with no outcome.
 // Our own mail, a task, a field edit and a machine's mail never count. Nor do a
 // message not every member may read, or a refusal. An unjudged message counts,
 // because every message from before the verdict existed is unjudged.
 func customerProgressSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) +
+	return "(" + visibleToAllSQL(alias) + " AND " + customerProgressAnyAudienceSQL(alias, asOf) + ")"
+}
+
+// customerProgressAnyAudienceSQL is customerProgressSQL over every message,
+// those only their participants may read included. Only its date may be used.
+func customerProgressAnyAudienceSQL(alias, asOf string) string {
+	return "(" + relstrength.DirectionClockSQL(alias, asOf) +
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
+		relstrength.HadContactSQL(alias, asOf) + " AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
 }
 
 // customerRefusalSQL admits a message a contact on the deal wrote that was
 // judged a refusal.
 func customerRefusalSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
+	return "(" + visibleToAllSQL(alias) + " AND " + customerRefusalAnyAudienceSQL(alias, asOf) + ")"
+}
+
+// customerRefusalAnyAudienceSQL is customerRefusalSQL over every message.
+func customerRefusalAnyAudienceSQL(alias, asOf string) string {
+	return "(" + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
 }
 
@@ -284,7 +299,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
 	return fmt.Sprintf(`(SELECT CASE
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
-		                  WHERE pl.deal_id = %[1]s.id AND (pa.archived_at IS NULL AND activity_thread_available(pa.thread_key))
+		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
 		                    AND NOT %[8]s AND %[7]s) THEN NULL
 		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
 		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
@@ -300,7 +315,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 
 // assuranceSubjectsQuery is the statement assuranceSubjects runs. Rendered
 // apart so a test can read which tables the check reads.
-func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, pending string, arg func(any) int) string {
+func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, arg func(any) int) string {
 	// A task the product filed itself asks for a next step; it is not one.
 	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
@@ -309,7 +324,7 @@ func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, p
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
-		storekit.AuditNotFromAnImport("au"), pending)
+		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"))
 }
 
 // onlyDealSQL narrows the read to the deals in only, or not at all when only is
@@ -325,7 +340,7 @@ func onlyDealSQL(only []ids.UUID, arg func(any) int) string {
 // the system and its answer reaches every reader of the forecast, so a limited
 // or restricted message must not move it.
 func visibleToAllSQL(alias string) string {
-	return "(activity_thread_available(" + alias + ".thread_key) AND " + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
+	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
 }
 
 // customerWroteSQL is a message one of the deal's contacts wrote.
@@ -366,66 +381,6 @@ func AssuranceCoverage(ctx context.Context, tx pgx.Tx, now time.Time) []assuranc
 	return []assurance.SourceCoverage{
 		mailCoverage(ctx, tx, now),
 		offerCoverage(now),
-	}
-}
-
-// sourceMail names the mailbox in coverage rows; the assurance store's CHECK
-// constraint owns the vocabulary.
-const sourceMail = "mail"
-
-// mailProviders are the capture connectors that carry mail. gcal is calendar
-// and the chat providers are messaging; a healthy WhatsApp says nothing about
-// whether anybody read the mailbox a close date would be checked against.
-var mailProviders = []string{providerGmail, "imap", providerGraph, "offline_demo"}
-
-// mailCoverage grades the mailbox by CONNECTOR health, not by mail volume.
-//
-// It used to read max(occurred_at) over captured email, which conflates two
-// different facts: a quiet mailbox on a healthy connector was reported stale —
-// nothing arrived, so "the source fell behind" — while a broken connector under
-// recent mail read as checked. The sync checkpoint is the fact this state
-// actually claims: when the connector last successfully read the source.
-func mailCoverage(ctx context.Context, tx pgx.Tx, now time.Time) assurance.SourceCoverage {
-	// Aggregates fail CLOSED over every live, not-deliberately-disconnected
-	// connection: min() ignores NULL, so a never-synced broken mailbox next to
-	// a healthy one would otherwise vanish from the aggregate and the run
-	// would claim checked over a source it never read.
-	var live, reauth, unsynced int
-	var oldestSuccess *time.Time
-	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE c.status <> 'disconnected'),
-		       count(*) FILTER (WHERE c.status = 'reauth_required'),
-		       count(*) FILTER (WHERE c.status <> 'disconnected' AND s.last_success_at IS NULL),
-		       min(s.last_success_at) FILTER (WHERE c.status <> 'disconnected')
-		FROM capture_connection c
-		LEFT JOIN capture_sync_state s ON s.connection_id = c.id
-		WHERE c.provider = ANY($1) AND c.archived_at IS NULL`,
-		mailProviders).Scan(&live, &reauth, &unsynced, &oldestSuccess); err != nil {
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
-	}
-	switch {
-	case live == 0:
-		// Never configured, or every mailbox deliberately disconnected. Either
-		// way there is nothing to fix, only something to decide, and the two
-		// route to different contacts than a broken connector does.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageNotConnected}
-	case reauth > 0:
-		// Somebody must re-grant access; until then part of the mailbox is
-		// unreadable for a permission reason, not a technical one.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoveragePermissionLimited}
-	case unsynced > 0:
-		// At least one live mailbox has never been read. One healthy sibling
-		// does not make the source checked — the claim covers all of them.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageUnavailable}
-	case now.Sub(*oldestSuccess) > staleAfter:
-		// The slowest mailbox decides: "mail was checked" over three mailboxes
-		// means all three, so the oldest checkpoint grades the source and caps
-		// the checked-through date below.
-		return assurance.SourceCoverage{Source: sourceMail, State: assurance.CoverageStale}
-	default:
-		return assurance.SourceCoverage{
-			Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: oldestSuccess,
-		}
 	}
 }
 

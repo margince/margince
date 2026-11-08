@@ -42,15 +42,16 @@ func DealRefileCeilingTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 		return ids.Nil, err
 	}
 	var ceiling ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE (archived_at IS NULL AND activity_thread_available(thread_key)) AND restricted_at IS NULL ORDER BY id DESC LIMIT 1`).Scan(&ceiling)
+	err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE archived_at IS NULL AND restricted_at IS NULL ORDER BY id DESC LIMIT 1`).Scan(&ceiling)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}
 	return ceiling, err
 }
 
-// RefileCandidatesTx advances by inspected identity, including ambiguous activities.
-func (r DealRepair) RefileCandidatesTx(ctx context.Context, tx pgx.Tx, scope DealRefileScope, asOf time.Time, after, ceiling ids.UUID) ([]ids.UUID, error) {
+// RefileCandidatesTx advances by inspected identity, including ambiguous
+// activities, and returns at most limit of them.
+func (r DealRepair) RefileCandidatesTx(ctx context.Context, tx pgx.Tx, scope DealRefileScope, asOf time.Time, after, ceiling ids.UUID, limit int) ([]ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func (r DealRepair) RefileCandidatesTx(ctx context.Context, tx pgx.Tx, scope Dea
  SELECT 1 FROM relationship employer WHERE employer.contact_id=participant.contact_id
  AND `+employment.CurrentMembershipSQL("employer")+`
  AND employer.company_id=ANY($%d::uuid[])))))
- ORDER BY a.id LIMIT $%d`, capturedConnectorActivitySQL, horizon, arg(after), arg(ceiling), arg(scope.All), arg(scope.Activities), arg(scope.Contacts), arg(scope.Companies), arg(scope.Projects), arg(scope.Contacts), arg(scope.Companies), arg(DealRefileLimit))
+ ORDER BY a.id LIMIT $%d`, capturedConnectorActivitySQL, horizon, arg(after), arg(ceiling), arg(scope.All), arg(scope.Activities), arg(scope.Contacts), arg(scope.Companies), arg(scope.Projects), arg(scope.Contacts), arg(scope.Companies), arg(limit))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

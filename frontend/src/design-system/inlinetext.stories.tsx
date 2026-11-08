@@ -3,10 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
+import { FieldGrid, FieldRow } from "./fieldgrid";
 import { InlineText } from "./inlinetext";
 
 const meta: Meta = {
@@ -54,16 +55,19 @@ export const FormattedReading: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Change Budget" }),
+    await user.click(
+      await canvas.findByRole("button", { name: "Change Budget €48,000.00" }),
     );
-    await expect(await canvas.findByRole("spinbutton")).toHaveValue(48000);
+    const dialog = await screen.findByRole("dialog", { name: "Budget" });
+    await expect(within(dialog).getByRole("spinbutton")).toHaveValue(48000);
   },
 };
 export const Paragraph: Story = { render: () => <Example multiline /> };
 
-// A refused save keeps the draft open and says why as the field's error beneath it.
+// A refused save keeps the dialog open on the draft and says why as the
+// field's error beneath it.
 export const RefusedSave: Story = {
   render: () => (
     <InlineText
@@ -80,11 +84,12 @@ export const RefusedSave: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button"));
-    const field = await canvas.findByRole("textbox");
-    await userEvent.type(field, "s{Enter}");
-    const refusal = await canvas.findByRole("alert");
+    await user.click(await canvas.findByRole("button"));
+    const dialog = await screen.findByRole("dialog", { name: "Website" });
+    await user.type(within(dialog).getByRole("textbox"), "s{Enter}");
+    const refusal = await within(dialog).findByRole("alert");
     await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
   },
@@ -104,23 +109,118 @@ function DayExample() {
   );
 }
 
-// A day picked in the calendar saves it, the way Enter saves a typed one.
+// A day picked in the calendar is the draft; Save stores it.
 export const Day: Story = {
   render: () => <DayExample />,
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Change Expected close" }),
-    );
-    await userEvent.click(
-      await canvas.findByRole("button", { name: /^Choose date/ }),
+    await user.click(
+      await canvas.findByRole("button", { name: /^Change Expected close/ }),
     );
     const page = within(canvasElement.ownerDocument.body);
-    await userEvent.click(
+    const dialog = await page.findByRole("dialog", { name: "Expected close" });
+    await user.click(
+      within(dialog).getByRole("button", { name: /^Choose date/ }),
+    );
+    await user.click(
       await page.findByRole("button", { name: "Tuesday, 10 March 2026" }),
     );
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
     await expect(
-      await canvas.findByRole("button", { name: "Change Expected close" }),
-    ).toHaveTextContent("2026-03-10");
+      await canvas.findByRole("button", {
+        name: "Change Expected close 2026-03-10",
+      }),
+    ).toBeVisible();
+  },
+};
+
+// In a grid: a plain value, a link, an empty field, a suggested value
+// and a long run that wraps from the start edge.
+function GridExample({ canEdit }: Readonly<{ canEdit: boolean }>) {
+  const save = async () => undefined;
+  return (
+    <FieldGrid>
+      <FieldRow label="Legal name">
+        <InlineText
+          label="Legal name"
+          value="Acme Robotics GmbH"
+          placeholder="Add legal name"
+          canEdit={canEdit}
+          onSave={save}
+        />
+      </FieldRow>
+      <FieldRow label="Email">
+        <InlineText
+          label="Email"
+          value="ana@example.com"
+          type="email"
+          link={
+            <a className="link-button" href="mailto:ana@example.com">
+              ana@example.com
+            </a>
+          }
+          placeholder="Add email"
+          canEdit={canEdit}
+          onSave={save}
+        />
+      </FieldRow>
+      <FieldRow label="Website">
+        <InlineText
+          label="Website"
+          value=""
+          placeholder="Add website"
+          canEdit={canEdit}
+          onSave={save}
+        />
+      </FieldRow>
+      <FieldRow label="Role">
+        <InlineText
+          label="Role"
+          value=""
+          suggested="Head of Procurement"
+          placeholder="Add role"
+          canEdit={canEdit}
+          onSave={save}
+        />
+      </FieldRow>
+      <FieldRow label="Domain">
+        <InlineText
+          label="Domain"
+          value="industrial-automation-and-robotics-integration.example"
+          placeholder="Add domain"
+          canEdit={canEdit}
+          onSave={save}
+        />
+      </FieldRow>
+    </FieldGrid>
+  );
+}
+
+export const InGrid: Story = {
+  render: () => <GridExample canEdit />,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("link", { name: "ana@example.com" }),
+    ).toHaveAttribute("href", "mailto:ana@example.com");
+    await user.click(canvas.getByRole("button", { name: "Change Email" }));
+    const dialog = await screen.findByRole("dialog", { name: "Email" });
+    // The dialog fades in from transparent, so visible is a state it reaches.
+    await waitFor(() => expect(dialog).toBeVisible());
+  },
+};
+
+export const InGridDark: Story = {
+  render: () => <GridExample canEdit />,
+  globals: { theme: "dark" },
+};
+
+// A reader who may not edit sees plain values: no fill, no bubble, no pointer.
+export const InGridReadOnly: Story = {
+  render: () => <GridExample canEdit={false} />,
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("button")).toBeNull();
   },
 };

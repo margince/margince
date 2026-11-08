@@ -6,18 +6,24 @@ import { Button, SegmentedControl } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate, useRoute } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
+import { AnalyticsBoard } from "./analytics.board";
 import type { AnalyticsScope } from "./analytics.context";
-import { executionLabel } from "./reporting.model";
+import { CustomReportDrawer } from "./reporting.custombuilder";
+import { CustomReportPreview } from "./reporting.custompreview";
+import { REPORTING_PERIODS } from "./reporting.filters";
+import { InitiativeReports } from "./reporting.initiatives";
+import { executionLabel, type ReportingSelection } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
 import { PreparedReports } from "./reporting.preparedpanel";
+import { ProductReports } from "./reporting.productpanel";
 import { ReportingReportDetail } from "./reporting.report";
 
 export function ReportingLibrary({
@@ -28,10 +34,11 @@ export function ReportingLibrary({
   const [params] = useUrlParams();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const canCreate = useCanWrite("report_definition", "create");
   const canSeeSchedules = useCan("report_schedule", "read");
   const [filter, setFilter] = useState("all");
+  const [building, setBuilding] = useState(false);
   const route = useRoute();
   const { cursor, next: setCursor, back, canBack } = useReportingPages();
   const query = useQuery({
@@ -50,6 +57,7 @@ export function ReportingLibrary({
       );
     },
   });
+  if (route.id2 === "preview") return <CustomReportPreview />;
   if (route.id2)
     return (
       <ReportingReportDetail
@@ -58,183 +66,229 @@ export function ReportingLibrary({
         editionId={route.id3}
       />
     );
+  // Saved and prepared reports are the work; reports per product and per
+  // initiative sit beside them as doors.
   return (
-    <>
-      {scope && (
-        <PreparedReports
-          scope={{
-            kind: scope.kind,
-            id: scope.id ?? undefined,
-            label: scope.label,
-          }}
-          ownLens={ownLens}
-        />
-      )}
-      <Panel
-        title={t("reporting.reports")}
-        titleAction={
-          <>
-            {/* The two ways a report starts: a Performance view kept as it is,
+    <AnalyticsBoard
+      railLabel={t("analytics.board.rail")}
+      rail={
+        <>
+          <ProductReports />
+          <InitiativeReports />
+        </>
+      }
+      main={
+        <>
+          <Panel
+            title={t("reporting.reports")}
+            flatHead
+            titleAction={
+              <>
+                {/* The two ways a report starts: a Performance view kept as it is,
               or a question of the reader's own. */}
-            {canCreate ? (
-              <AppLink
-                className="btn btn-ghost"
-                href={analyticsSectionHref("performance", params)}
+                {canCreate ? (
+                  <AppLink
+                    className="btn btn-ghost"
+                    href={analyticsSectionHref("performance", params)}
+                  >
+                    {t("reporting.createReport")}
+                  </AppLink>
+                ) : null}
+                {canCreate && scope ? (
+                  <Button variant="primary" onClick={() => setBuilding(true)}>
+                    {t("reporting.newCustomReport")}
+                  </Button>
+                ) : null}
+                <AppLink
+                  className="btn btn-ghost"
+                  href={analyticsSectionHref("questions", params)}
+                >
+                  {t("reporting.askQuestion")}
+                </AppLink>
+              </>
+            }
+          >
+            {building && scope && (
+              <CustomReportDrawer
+                initial={newReportSelection(scope, params)}
+                onClose={() => setBuilding(false)}
+              />
+            )}
+            <PanelBody className="reporting-library-body">
+              {canSeeSchedules && (
+                <SegmentedControl
+                  options={["all", "scheduled"]}
+                  value={filter}
+                  labels={{
+                    all: t("reporting.all"),
+                    scheduled: t("reporting.scheduled"),
+                  }}
+                  onChange={(next) => {
+                    setFilter(next);
+                    setCursor(undefined);
+                  }}
+                  label={t("reporting.reports")}
+                />
+              )}
+              <QueryGate
+                query={query}
+                pendingLabel={t("reporting.reports")}
+                empty={(result) => result.data.length === 0}
               >
-                {t("reporting.createReport")}
-              </AppLink>
-            ) : null}
-            <AppLink
-              className="btn btn-ghost"
-              href={analyticsSectionHref("questions", params)}
-            >
-              {t("reporting.newCustomReport")}
-            </AppLink>
-          </>
-        }
-      >
-        <PanelBody>
-          {canSeeSchedules && (
-            <SegmentedControl
-              options={["all", "scheduled"]}
-              value={filter}
-              labels={{
-                all: t("reporting.all"),
-                scheduled: t("reporting.scheduled"),
+                {(reports) => (
+                  <>
+                    <DataTable
+                      label={t("reporting.reports")}
+                      rows={reports.data}
+                      rowKey={(report) => report.id}
+                      columns={[
+                        {
+                          key: "name",
+                          header: t("reporting.name"),
+                          render: (report) => (
+                            <>
+                              <Button
+                                variant="link"
+                                onClick={() =>
+                                  navigate({
+                                    screen: "analytics",
+                                    id: "reports",
+                                    id2: report.id,
+                                  })
+                                }
+                              >
+                                {report.name}
+                              </Button>
+                              <p className="t-sub">
+                                {report.selection.scope.label} ·{" "}
+                                {t(`reporting.${report.selection.period}`)}
+                              </p>
+                            </>
+                          ),
+                        },
+                        {
+                          key: "editions",
+                          header: t("reporting.latestSnapshot"),
+                          render: (report) => (
+                            <>
+                              {report.latest_captured_at && (
+                                <p className="t-sub">
+                                  {formatDateTime(
+                                    report.latest_captured_at,
+                                    locale,
+                                    zone,
+                                  )}
+                                </p>
+                              )}
+                            </>
+                          ),
+                        },
+                        {
+                          key: "schedule",
+                          header: t("reporting.schedule"),
+                          render: (report) => (
+                            <>
+                              {report.cadence
+                                ? report.cadence
+                                    .split(", ")
+                                    .map((frequency) =>
+                                      frequency === "weekly"
+                                        ? t("reporting.weekly")
+                                        : t("reporting.monthly"),
+                                    )
+                                    .join(", ")
+                                : "—"}
+                              {!!report.paused_schedule_count && (
+                                <p className="t-sub">
+                                  {plural(
+                                    "reporting.pausedSchedules",
+                                    report.paused_schedule_count,
+                                    {
+                                      count: formatAnalyticsNumber(
+                                        report.paused_schedule_count,
+                                        locale,
+                                      ),
+                                    },
+                                  )}
+                                </p>
+                              )}
+                              {report.next_due_at && (
+                                <p className="t-sub">
+                                  {t("reporting.nextRun", {
+                                    at: formatDateTime(
+                                      report.next_due_at,
+                                      locale,
+                                      zone,
+                                    ),
+                                  })}
+                                </p>
+                              )}
+                              {report.last_status && (
+                                <p className="t-sub">
+                                  {executionLabel(report.last_status, t)}
+                                </p>
+                              )}
+                            </>
+                          ),
+                        },
+                        {
+                          key: "audience",
+                          header: t("reporting.audience"),
+                          render: (report) => t(`reporting.${report.audience}`),
+                        },
+                      ]}
+                    />
+                    {canBack && (
+                      <Button variant="ghost" onClick={back}>
+                        {t("reporting.back")}
+                      </Button>
+                    )}
+                    {reports.next_cursor && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setCursor(reports.next_cursor)}
+                      >
+                        {t("reporting.next")}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </QueryGate>
+            </PanelBody>
+          </Panel>
+          {scope && (
+            <PreparedReports
+              scope={{
+                kind: scope.kind,
+                id: scope.id ?? undefined,
+                label: scope.label,
               }}
-              onChange={(next) => {
-                setFilter(next);
-                setCursor(undefined);
-              }}
-              label={t("reporting.reports")}
+              ownLens={ownLens}
             />
           )}
-          <QueryGate
-            query={query}
-            pendingLabel={t("reporting.reports")}
-            empty={(result) => result.data.length === 0}
-          >
-            {(reports) => (
-              <>
-                <DataTable
-                  label={t("reporting.reports")}
-                  rows={reports.data}
-                  rowKey={(report) => report.id}
-                  columns={[
-                    {
-                      key: "name",
-                      header: t("reporting.name"),
-                      render: (report) => (
-                        <>
-                          <Button
-                            variant="link"
-                            onClick={() =>
-                              navigate({
-                                screen: "analytics",
-                                id: "reports",
-                                id2: report.id,
-                              })
-                            }
-                          >
-                            {report.name}
-                          </Button>
-                          <p className="t-sub">
-                            {report.selection.scope.label} ·{" "}
-                            {t(`reporting.${report.selection.period}`)}
-                          </p>
-                        </>
-                      ),
-                    },
-                    {
-                      key: "editions",
-                      header: t("reporting.latestSnapshot"),
-                      render: (report) => (
-                        <>
-                          {report.latest_captured_at && (
-                            <p className="t-sub">
-                              {formatDateTime(
-                                report.latest_captured_at,
-                                locale,
-                                zone,
-                              )}
-                            </p>
-                          )}
-                        </>
-                      ),
-                    },
-                    {
-                      key: "schedule",
-                      header: t("reporting.schedule"),
-                      render: (report) => (
-                        <>
-                          {report.cadence
-                            ? report.cadence
-                                .split(", ")
-                                .map((frequency) =>
-                                  frequency === "weekly"
-                                    ? t("reporting.weekly")
-                                    : t("reporting.monthly"),
-                                )
-                                .join(", ")
-                            : "—"}
-                          {!!report.paused_schedule_count && (
-                            <p className="t-sub">
-                              {plural(
-                                "reporting.pausedSchedules",
-                                report.paused_schedule_count,
-                                {
-                                  count: formatNumber(
-                                    report.paused_schedule_count,
-                                    locale,
-                                  ),
-                                },
-                              )}
-                            </p>
-                          )}
-                          {report.next_due_at && (
-                            <p className="t-sub">
-                              {t("reporting.nextRun", {
-                                at: formatDateTime(
-                                  report.next_due_at,
-                                  locale,
-                                  zone,
-                                ),
-                              })}
-                            </p>
-                          )}
-                          {report.last_status && (
-                            <p className="t-sub">
-                              {executionLabel(report.last_status, t)}
-                            </p>
-                          )}
-                        </>
-                      ),
-                    },
-                    {
-                      key: "audience",
-                      header: t("reporting.audience"),
-                      render: (report) => t(`reporting.${report.audience}`),
-                    },
-                  ]}
-                />
-                {canBack && (
-                  <Button variant="ghost" onClick={back}>
-                    {t("reporting.back")}
-                  </Button>
-                )}
-                {reports.next_cursor && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setCursor(reports.next_cursor)}
-                  >
-                    {t("reporting.next")}
-                  </Button>
-                )}
-              </>
-            )}
-          </QueryGate>
-        </PanelBody>
-      </Panel>
-    </>
+        </>
+      }
+    />
   );
+}
+
+/**
+ * Where a new custom report starts: the page's period and scope, the default
+ * pipeline, and no product, initiative, country, industry or value basis.
+ */
+function newReportSelection(
+  scope: AnalyticsScope,
+  params: ReadonlyMap<string, string>,
+): ReportingSelection {
+  const period =
+    REPORTING_PERIODS.find((value) => value === params.get("period")) ??
+    "this_quarter";
+  return {
+    scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
+    period,
+    target_basis: period === "this_quarter" ? "fiscal_quarter" : "month",
+    close_window: "all_open",
+    metrics: ["bookings_won", "open_pipeline"],
+    blocks: ["bookings_trend", "stage_distribution"],
+  };
 }

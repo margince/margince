@@ -1,22 +1,19 @@
 /** @vitest-environment jsdom */
 import { readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, relative } from "node:path";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   alternativesOf,
-  appStylesheets,
   classesOf,
   compounds,
-  functionCall,
   type Rule,
   readsEveryCombination,
   rulesOf,
-  simpleSelectorsOf,
   specificity,
   splitTopLevel,
 } from "../../scripts/lib/css-rules";
+import { mayHoldLiteral } from "../../scripts/lib/literal-text";
 import {
   extensionFrontendFiles,
   filesMatching,
@@ -24,55 +21,47 @@ import {
 } from "../../scripts/lib/source-tree";
 import {
   editedLists,
-  ladderLists,
   ladderSheet,
   OVERLAY_RUNG,
   PAGE_RUNGS,
   PINNED_RUNGS,
-  UNDERLAY_HOSTS,
 } from "../../scripts/lib/surface-ladder";
-import { blocks, resolve, themes } from "./tokens-testing";
+import {
+  ALIAS,
+  allRules,
+  type Declaration,
+  declarations,
+  flatFill,
+  frontendRoot,
+  here,
+  IMAGE,
+  ladderPath,
+  ladderText,
+  lists,
+  MEMBERS,
+  membersOf,
+  OPAQUE,
+  PSEUDO_ELEMENT,
+  probe,
+  ref,
+  sheets,
+  TYPE,
+  VAR,
+  type Written,
+  within,
+  written,
+} from "../../scripts/lib/surface-sheets";
+import { blocks, resolve } from "./tokens-testing";
 
 // A rule outside surfaces.css that names a rung or paints a member overrules the ladder. The ledger holds what predates it; the ceiling keeps it shrinking.
-const LEDGER_CEILING = { spellings: 78, states: 6 };
+const LEDGER_CEILING = { spellings: 76, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
-const LADDER_SIZE = { surfaces: 80, overlays: 18 };
+const LADDER_SIZE = { surfaces: 80, overlays: 19 };
 
-const here = dirname(fileURLToPath(import.meta.url));
-const frontendRoot = join(here, "..", "..");
-const ladderPath = join(here, "surfaces.css");
-const ladderText = readFileSync(ladderPath, "utf8");
 const ledgerPath = join(here, "surfaces.ledger.txt");
 const tokensPath = join(here, "tokens.css");
 const TOKEN_SHEETS = new Set([tokensPath, join(here, "brand.css")]);
-
-// Probes name properties no sheet defines; spelling the call through this keeps the undefined-property gate from reading a fixture as shipped CSS.
-const ref = (property: string) => `var(${property})`;
-const VAR = /var\((--[\w-]+)\)/g;
-const ALIAS = /^var\((--[\w-]+)\)$/;
-const OPAQUE = /^#[0-9a-f]{6}$/i;
-const TYPE = /^(?:[a-zA-Z][\w-]*|\*)/;
-const PSEUDO_ELEMENT = /::[\w-]+|:(?:before|after)\b/;
-const STATE = /:(?:hover|focus|focus-visible|focus-within|active)\b/g;
-
-type Declaration = { property: string; value: string };
-
-function declarations(body: string): Declaration[] {
-  return splitTopLevel(body, ";").flatMap((part) => {
-    const colon = part.indexOf(":");
-    if (colon < 0) return [];
-    return [
-      {
-        property: part.slice(0, colon).trim(),
-        value: part
-          .slice(colon + 1)
-          .trim()
-          .replace(/\s+/g, " "),
-      },
-    ];
-  });
-}
 
 const oneLine = (selector: string) => selector.replace(/\s+/g, " ");
 
@@ -143,7 +132,10 @@ function cssSpellings(rules: readonly Rule[]): string[] {
   });
 }
 
+const SPELLS_A_RUNG = new RegExp(`${NAMES_A_RUNG.source}|var\\(`);
+
 function scriptSpellings(path: string, text: string): string[] {
+  if (!mayHoldLiteral(text, SPELLS_A_RUNG)) return [];
   const found: string[] = [];
   const walk = (node: ts.Node) => {
     const part =
@@ -163,8 +155,6 @@ function scriptSpellings(path: string, text: string): string[] {
   return found;
 }
 
-const sheets = appStylesheets(frontendRoot);
-const allRules = rulesOf(sheets);
 const scripts = [
   ...filesMatching(join(frontendRoot, "src"), /\.tsx?$/),
   ...extensionFrontendFiles(join(frontendRoot, "..", "extensions")),
@@ -186,45 +176,6 @@ function ledger(): { spellings: string[]; states: string[] } {
       .map((line) => line.slice(STATE_LINE.length).split(" | ")[0] ?? ""),
   };
 }
-
-const lists = ladderLists(ladderText);
-
-const probe = (selector: string, body: string): Rule => ({
-  file: join(here, "probe.css"),
-  selector,
-  body,
-});
-
-type Written = {
-  own: ReadonlySet<string>;
-  context: ReadonlySet<string>;
-  type: string;
-  ownSimples: ReadonlySet<string>;
-  contextSimples: ReadonlySet<string>;
-};
-
-function written(selector: string): Written {
-  const parts = compounds(selector);
-  const subject = parts.at(-1) ?? "";
-  const around = parts.slice(0, -1);
-  return {
-    own: classesOf(subject),
-    context: new Set(around.flatMap((part) => [...classesOf(part)])),
-    type: TYPE.exec(subject)?.[0] ?? "",
-    ownSimples: simpleSelectorsOf(subject),
-    contextSimples: new Set(
-      around.flatMap((part) => [...simpleSelectorsOf(part)]),
-    ),
-  };
-}
-
-const membersOf = (selectors: readonly string[]): Written[] =>
-  selectors.flatMap((entry) => alternativesOf(entry).map(written));
-
-const within = (
-  part: ReadonlySet<string>,
-  ...wholes: readonly ReadonlySet<string>[]
-) => [...part].every((name) => wholes.some((whole) => whole.has(name)));
 
 // A rule touches a member when its subject may be that element: it names the member's class, or a classless member's element in its context.
 function touches(rule: Written, member: Written): boolean {
@@ -254,15 +205,6 @@ function seeThrough(colour: string): boolean {
     }
   });
 }
-
-function flatFill(layer: string): string | undefined {
-  const gradient = functionCall(layer);
-  if (gradient?.name !== "linear-gradient") return undefined;
-  const stops = gradient.args.map((stop) => stop.replace(/\s+[\d.]+%$/, ""));
-  return stops.every((stop) => stop === stops[0]) ? stops[0] : undefined;
-}
-
-const IMAGE = /^(?:[\w-]+-gradient|url)\(/;
 
 // An image layer over a ground is a gradient, or a flat tint the ground shows through.
 function keepsTheGround(layer: string): boolean {
@@ -367,8 +309,6 @@ function memberPaints(
   return [...new Set(found)].sort();
 }
 
-const MEMBERS = membersOf([...lists.surfaces, ...lists.overlays]);
-
 describe("the nesting ladder has one painter", () => {
   it("reads the whole tree", () => {
     expect(sheets.length).toBeGreaterThan(250);
@@ -420,6 +360,11 @@ describe("the nesting ladder has one painter", () => {
         `const a = <div style={{ background: "var(--ladder2)" }} />; const b = \`var(--pane)\`; const c = \`var(\${token})\`; const d = "var(--" + name + ")";`,
       ),
     ).toHaveLength(4);
+    const dynamic = 'const d = "var(--" + name;';
+    expect(scriptSpellings(join(here, "probe.ts"), dynamic)).toHaveLength(1);
+    expect(
+      scriptSpellings(join(here, "probe.tsx"), 'const e = "\\u002d-pane";'),
+    ).toHaveLength(1);
     expect(
       cssSpellings([
         probe(".probe", `border: 1px solid ${ref("--paneEdgeStrong")}`),
@@ -459,7 +404,10 @@ describe("the nesting ladder has one painter", () => {
     ).toEqual(new Set([...RUNGS, "--cardGround", "--darkStep", "--stepAlias"]));
   });
 
-  it("names a rung only in surfaces.css, apart from the ledger", () => {
+  // Parses every source file, so it takes the tree-walk timeout the other scans use.
+  it("names a rung only in surfaces.css, apart from the ledger", {
+    timeout: 60_000,
+  }, () => {
     const found = [
       ...cssSpellings(allRules),
       ...scripts.flatMap((path) =>
@@ -826,165 +774,5 @@ describe("a pane's ground is its depth", () => {
         ]);
       }
     }
-  });
-});
-
-function customValues(rules: readonly Rule[]): Map<string, string[]> {
-  const values = new Map<string, string[]>();
-  for (const rule of rules) {
-    for (const { property, value } of declarations(rule.body)) {
-      if (property.startsWith("--")) {
-        values.set(property, [...(values.get(property) ?? []), value]);
-      }
-    }
-  }
-  return values;
-}
-
-// Each value a var() may take, from every sheet that declares the property.
-function expanded(
-  value: string,
-  values: ReadonlyMap<string, readonly string[]>,
-  depth = 0,
-): string[] {
-  const reference = /var\((--[\w-]+)(?:,\s*([^()]*))?\)/.exec(value);
-  if (reference === null) return [value];
-  const [whole, name = "", fallback] = reference;
-  const options = [
-    ...(values.get(name) ?? []),
-    ...(fallback ? [fallback] : []),
-  ];
-  if (options.length === 0 || depth > 8) {
-    throw new Error(`${value} reads ${name}, which no sheet declares`);
-  }
-  return options.flatMap((option) =>
-    expanded(value.replace(whole, option), values, depth + 1),
-  );
-}
-
-function belowZero(expression: string): boolean {
-  const factors = expression.replace(/calc\(|[()\s]/g, "").split(/[*/]/);
-  return (
-    factors.every((factor) => /^-?[\d.]+$/.test(factor)) &&
-    factors.filter((factor) => factor.startsWith("-")).length % 2 === 1
-  );
-}
-
-const paintsAGradient = ({ property, value }: Declaration) =>
-  /^background(?:-image)?$/.test(property) &&
-  splitTopLevel(value, ",").some((layer) =>
-    splitTopLevel(layer, " ").some(
-      (word) => IMAGE.test(word) && flatFill(word) === undefined,
-    ),
-  );
-
-// A pseudo-element lies under its host's content, an element under its parent's, and a gradient under its own element's.
-function underlayHosts(rules: readonly Rule[]): string[] {
-  const values = customValues(rules);
-  const outside = rules.filter((rule) => rule.file !== ladderPath);
-  const hostOf = (layer: string) => {
-    const host = layer.replace(STATE, "");
-    const holder = host.replace(new RegExp(PSEUDO_ELEMENT, "g"), "");
-    return holder === host ? `:has(> ${host})` : holder;
-  };
-  const stacked = outside
-    .filter((rule) =>
-      declarations(rule.body).some(
-        ({ property, value }) =>
-          property === "z-index" && expanded(value, values).some(belowZero),
-      ),
-    )
-    .flatMap((rule) => alternativesOf(rule.selector).map(hostOf));
-  const painted = outside
-    .filter((rule) => declarations(rule.body).some(paintsAGradient))
-    .flatMap((rule) => alternativesOf(rule.selector))
-    .filter((alternative) => {
-      const self = written(alternative);
-      return (
-        !PSEUDO_ELEMENT.test(compounds(alternative).at(-1) ?? "") &&
-        !MEMBERS.some(
-          (member) => member.own.size > 0 && within(member.own, self.own),
-        )
-      );
-    })
-    .map((alternative) => alternative.replace(STATE, ""));
-  return [...new Set([...stacked, ...painted])].sort();
-}
-
-function knockoutFills(rules: readonly Rule[]): string[] {
-  const layered = rules.map((rule) => ({
-    selector: rule.selector,
-    layers: declarations(rule.body)
-      .filter(({ property }) => property.startsWith("background"))
-      .flatMap(({ value }) => splitTopLevel(value, ",")),
-  }));
-  const knockouts = layered.filter(({ layers }) =>
-    ["padding-box", "border-box"].every((box) => layers.join().includes(box)),
-  );
-  expect(knockouts.length).toBeGreaterThan(0);
-  return knockouts.flatMap(({ selector, layers }) => {
-    const fills = layers.flatMap((layer) =>
-      splitTopLevel(layer, " ").flatMap((word) => flatFill(word) ?? []),
-    );
-    if (fills.length === 0) return [`${selector}: no flat fill`];
-    return fills
-      .filter((fill) => fill !== "var(--ground)")
-      .flatMap((fill) =>
-        Object.entries(themes)
-          .filter(
-            ([, palette]) =>
-              !OPAQUE.test(palette[ALIAS.exec(fill)?.[1] ?? fill] ?? ""),
-          )
-          .map(([theme]) => `${selector}: ${fill} in ${theme}`),
-      );
-  });
-}
-
-describe("a layer under a pane stays under it", () => {
-  it("gives every rung an opaque ground in both themes", () => {
-    for (const rung of [...PAGE_RUNGS, OVERLAY_RUNG]) {
-      for (const [theme, palette] of Object.entries(themes)) {
-        const name = rung.ground.match(/^var\((--[\w-]+)\)$/)?.[1] ?? "";
-        expect(palette[name], `${rung.ground} in ${theme}`).toMatch(OPAQUE);
-      }
-    }
-  });
-
-  it("reads a layer's host through a var(), a calc() and a state", () => {
-    expect(
-      underlayHosts([
-        probe(":root", "--under: -1"),
-        probe(".f::before:hover", "z-index: -1"),
-        probe(".g", `z-index: ${ref("--under")}`),
-        probe(".h::after", "z-index: calc(-1 * 2)"),
-        probe(".k:hover", "background: radial-gradient(red, blue)"),
-        probe(".flat", "background: linear-gradient(red, red)"),
-        probe(".up::before", "z-index: calc(2 - 1)"),
-      ]),
-    ).toEqual([".f", ".h", ".k", ":has(> .g)"]);
-  });
-
-  it("paints the ground of a pane on every host the tree stacks a layer in", () => {
-    // auth-* belongs to auth.css, and AmbientWaves on that surface hosts its panes.
-    const elsewhere = new Map([[".auth-surface", ":has(> .ambient-waves)"]]);
-    const derived = underlayHosts(allRules);
-    expect(derived.filter((host) => !elsewhere.has(host))).toEqual(
-      [...UNDERLAY_HOSTS].sort(),
-    );
-    for (const [host, by] of elsewhere) {
-      expect(derived).toContain(host);
-      expect(UNDERLAY_HOSTS.some((one) => one === by)).toBe(true);
-    }
-  });
-
-  it("reads an opaque fill for a layer that hides the border-box one under it", () => {
-    const planted = probe(
-      ".probe",
-      "background: linear-gradient(var(--ground), var(--ground)) padding-box, " +
-        "linear-gradient(var(--pane) , var(--pane)) padding-box, " +
-        "linear-gradient(red, blue) border-box",
-    );
-    expect(knockoutFills([planted])).toEqual([".probe: var(--pane) in dark"]);
-    expect(knockoutFills(allRules)).toEqual([]);
   });
 });

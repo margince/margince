@@ -64,8 +64,9 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 	for _, sib := range undecided {
 		// A holding verdict takes every message: "this conversation is
 		// private" is true of the whole conversation whoever wrote which part.
-		// An opening one takes only what the verdict actually read.
-		if holdingVerdict(status) || addressWasSeen(sib.from, seen) {
+		// An opening one takes only what the verdict actually read, and it never
+		// read the documents on a message other than the one it judged.
+		if holdingVerdict(status) || (addressWasSeen(sib.from, seen) && !sib.carriesDocument) {
 			out.Stamped = append(out.Stamped, sib.id)
 			continue
 		}
@@ -93,10 +94,12 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 // the selector finds the thread again while any of its messages is undecided.
 const threadSiblingBatch = 500
 
-// sibling is one already-imported message of the thread and who wrote it.
+// sibling is one already-imported message of the thread, who wrote it, and
+// whether it carries a document an opening verdict has not read.
 type sibling struct {
-	id   ids.UUID
-	from string
+	id              ids.UUID
+	from            string
+	carriesDocument bool
 }
 
 // undecidedSiblingsTx reads the messages of this thread that this seat imported
@@ -113,14 +116,14 @@ func undecidedSiblingsTx(
 	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
 ) ([]sibling, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, lower(btrim(coalesce(a.counterparty_email, '')))
+		SELECT a.id, lower(btrim(coalesce(a.counterparty_email, ''))), `+storedFilesSQL("a.id", "$5")+`
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $2
 		 WHERE a.thread_key = $1
-		   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		   AND (i.verdict_status IS NULL OR i.verdict_status = $3)
 		 ORDER BY a.occurred_at, a.id
-		 LIMIT $4`, threadKey, user, VerdictPending, threadSiblingBatch)
+		 LIMIT $4`, threadKey, user, VerdictPending, threadSiblingBatch, maxStoredFiles+1)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading a thread's undecided messages: %w", err)
 	}
@@ -128,9 +131,11 @@ func undecidedSiblingsTx(
 	var out []sibling
 	for rows.Next() {
 		var s sibling
-		if err := rows.Scan(&s.id, &s.from); err != nil {
+		var files []ThreadDocument
+		if err := rows.Scan(&s.id, &s.from, &files); err != nil {
 			return nil, fmt.Errorf("capture: reading a thread's undecided messages: %w", err)
 		}
+		s.carriesDocument = hasThreadDocument(files)
 		out = append(out, s)
 	}
 	if err := rows.Err(); err != nil {
@@ -184,6 +189,10 @@ func stampSiblingsTx(
 // unbounded run. The delay is what keeps a pass's cost proportional to the
 // threads it claimed.
 //
+// The answer it held was about the message it read, and the reopened question
+// carries none of it. A classification left beside the new pointer would read
+// as an answer about a message nobody has judged.
+//
 // A CLASSIFIER's answer only. An owner who shared their own thread ended the
 // question — no later pass re-asks, because a classifier that could overturn
 // them would make the click advisory, which is not what somebody pressing
@@ -196,6 +205,7 @@ func reopenAtSiblingTx(
 	_, err := tx.Exec(ctx, `
 		UPDATE capture_thread_verdict
 		   SET status = $4, first_activity_id = $3,
+		       kind = NULL, confidence = NULL, disposition_reason = NULL,
 		       resolved_at = NULL, next_attempt_at = now() + interval '1 minute',
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
 		 WHERE thread_key = $1 AND user_id = $2

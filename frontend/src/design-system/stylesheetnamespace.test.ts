@@ -29,7 +29,7 @@ const sheets = appStylesheets(frontendRoot).map((file) => ({
 
 const namespaces = [
   { prefix: "askai-", home: "features/ai/ai.css" },
-  { prefix: "auth-", home: "features/sign-in/auth.css" },
+  { prefix: "auth-", home: "components/auth-core.css" },
   { prefix: "book-", home: "features/booking/book.css" },
   { prefix: "clientsurface-", home: "features/settings/client.css" },
   {
@@ -56,9 +56,8 @@ const namespaces = [
   { prefix: "querygate-", home: "design-system/querystates.css" },
   {
     prefix: "relationshiprows-",
-    home: "features/records/relationshiprows.css",
+    home: "components/relationshiprows.css",
   },
-  { prefix: "relationships-", home: "features/records/relationships.css" },
   {
     prefix: "repeatablerowsfield-",
     home: "components/repeatablerowsfield.css",

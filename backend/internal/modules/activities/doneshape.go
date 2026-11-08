@@ -31,7 +31,7 @@ const directionOutbound = "outbound"
 func activityShape(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (kind string, direction *string, err error) {
 	// Archived rows are excluded although the content gate before this already
 	// refused them, so the read holds that on its own.
-	err = tx.QueryRow(ctx, `SELECT kind, direction FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (archived_at IS NULL AND activity_thread_available(thread_key))`,
+	err = tx.QueryRow(ctx, `SELECT kind, direction FROM activity WHERE id = $1 AND archived_at IS NULL`,
 		id).Scan(&kind, &direction)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil, apperrors.ErrNotFound

@@ -36,6 +36,10 @@ const answeredSweepContacts = 200
 func publishAnsweredTx(
 	ctx context.Context, tx pgx.Tx, store *contacts.Store, contactID ids.ContactID, email string,
 ) error {
+	awaits, err := store.AwaitsAnAnswerTx(ctx, tx, contactID)
+	if err != nil || !awaits {
+		return err
+	}
 	answered, err := capture.AddressAnsweredTx(ctx, tx, email)
 	if err != nil || !answered {
 		return err

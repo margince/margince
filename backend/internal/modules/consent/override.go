@@ -174,6 +174,12 @@ func (s *Store) allowAdmittedTx(
 	if err != nil {
 		return ids.UUID{}, err
 	}
+	// The vouch serves the reps of the recorder's own entity and no other, so
+	// a colleague of another legal entity never sends on it.
+	entity, err := sendingEntityOf(ctx, tx)
+	if err != nil {
+		return ids.UUID{}, err
+	}
 
 	// ON CONFLICT DO NOTHING would be wrong here too: a second vouch is a
 	// second occasion somebody decided to overrule the engine, possibly for a
@@ -182,10 +188,10 @@ func (s *Store) allowAdmittedTx(
 	var overrideID ids.UUID
 	if err = tx.QueryRow(ctx, `
 		INSERT INTO communication_override
-		    (`+sub.column+`, category, reason, decided_by_level, captured_by)
-		VALUES ($1, $2, $3, $4, $5)
+		    (`+sub.column+`, category, reason, decided_by_level, captured_by, legal_entity_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`,
-		sub.id, in.Category, in.Reason, string(level), by).Scan(&overrideID); err != nil {
+		sub.id, in.Category, in.Reason, string(level), by, entity).Scan(&overrideID); err != nil {
 		return ids.UUID{}, fmt.Errorf("consent: recording the override: %w", err)
 	}
 
@@ -367,9 +373,10 @@ func (s *Store) revokeOverrideAdmittedTx(
 	// may act on a peer admin's row, because admin is the top human authority and
 	// no higher seat exists to reach an admin-recorded override. A subject-level
 	// decision stays beyond every seat — CanRevoke keeps that square closed.
-	if !level.CanRevoke(commsauthz.AuthorityLevel(decided)) {
-		return fmt.Errorf(
-			"this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
+	// An override holds a user's or an admin's level, and a user's revokes
+	// neither. So the admin gate asks the same question, and records it.
+	if err := auth.RequireAdmin(ctx); err != nil || !level.CanRevoke(commsauthz.AuthorityLevel(decided)) {
+		return fmt.Errorf("this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
 	}
 
 	revoked, err := revokeOverrideChain(ctx, tx, root, in.OverrideID)

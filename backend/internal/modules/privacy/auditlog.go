@@ -89,20 +89,6 @@ type AuditPage struct {
 	HasMore    bool
 }
 
-// ListAuditLog reads the installation's audit history, newest first.
-//
-// Human-only: an agent reading the log that records its own governance would
-// observe exactly the oversight trail that bounds it. The agent gate refuses
-// the route as well, and this is the arm that survives a routing change.
-//
-// Admin-only, and deliberately NOT "unbounded row scope". This is the
-// unrestricted compliance read, distinct from the per-record history every
-// member may read on records they can see, and the spec's governance matrix
-// reserves it for the admin alone. Row scope is the wrong predicate for it:
-// ops and read_only both seed with scope `all`, so an unbounded check handed
-// the whole governance trail to two roles the matrix denies — the compliance
-// read is oversight OF ops' machine-origin actions and cannot sit with the
-// role it oversees.
 // auditActivityAlias names the activity an audit row is ABOUT, joined so the
 // audience the row's author set can be asked about it. It is deliberately not
 // `a` or one of the app_user aliases already in the statement.
@@ -150,15 +136,8 @@ func ScrubNewerThanRowSQL(typeExpr, idExpr, rowAlias, verbsPlaceholder string) s
 // scrubverbs_test.go holds every verb this module writes against this list.
 func ScrubVerbs() []string { return fieldHistoryScrubActions }
 
-// scanAuditEntry reads one ledger line and applies what the row itself says a
-// caller may see of it.
-//
-// Two withholdings, one treatment. An activity outside the caller's audience
-// carries content they may not read; a record scrubbed after this row was
-// written carries what an erasure certified gone, and audit_log is append-only,
-// so the read is where that is enforced or nowhere. Either way the ROW stays: a
-// compliance log answers who did what and when, and a write that happened is not
-// a fact an erasure undoes.
+// Audit metadata stays visible when restricted content or legacy erased values
+// are hidden, so the log still answers who acted and when.
 func scanAuditEntry(rows pgx.Rows) (AuditEntry, error) {
 	var e AuditEntry
 	// The nullable envelope ids scan through untyped locals, then widen to their
@@ -257,14 +236,21 @@ const auditContentStateKey = "content_state"
 // cannot be partially redacted.
 var auditWithheldImage = []byte(`{"` + auditContentStateKey + `":"` + string(crmcontracts.ActivityContentStateWithheld) + `"}`)
 
+// ListAuditLog reads the installation's audit history, newest first.
+//
+// A user who may read the trail may hand that read to the agent on their passport.
+// The agent sees its own entries there under its own name.
+//
+// Gated on a grant and not on unbounded row scope, because the governance matrix
+// reserves this unrestricted compliance read for the admin. Row scope is the wrong
+// predicate: ops and read_only both seed with scope `all`, and this read is
+// oversight of ops' machine-origin actions.
 func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPage, error) {
-	// Human is spelled out rather than delegated to auth.RequireHuman, which
-	// only turns agents away: nothing internal reads this trail, so connector
-	// and system principals are refused here too — which is also why
-	// RequireAdmin's system bypass below is unreachable.
+	// Connector and system principals are refused too, because nothing internal
+	// reads this trail. So RequireAdmin's system bypass below is unreachable.
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return AuditPage{}, fmt.Errorf("human-only compliance read: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return AuditPage{}, fmt.Errorf("this compliance read is for a user or their agent: %w", apperrors.ErrPermissionDenied)
 	}
 	// A grant rather than the literal admin role, so an installation can hand
 	// the trail to whoever answers for it. Admin alone by default, and ops
@@ -341,7 +327,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        a.evidence, a.occurred_at, a.batch_id,
 			        `+auditattribution.ActorNameColumn+`, obo.display_name, oc.client_name,
 			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
-			          OR (`+auditActivityAlias+`.id IS NOT NULL AND activity_thread_available(`+auditActivityAlias+`.thread_key) AND (`+audience+`))) AS content_readable,
+			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
 			 FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+auditActivityJoin+`
 			 WHERE `+where+`

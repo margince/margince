@@ -16,8 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-func answeredSQL(inbound, until string) string   { return storekit.AnsweredSQL(inbound, until) }
-func unansweredSQL(inbound, until string) string { return storekit.UnansweredSQL(inbound, until) }
+func answeredSQL(inbound, until string) string { return storekit.AnsweredSQL(inbound, until) }
 func answeredReadableSQL(inbound, until, readable string) string {
 	return storekit.AnsweredReadableSQL(inbound, until, readable)
 }
@@ -35,6 +34,7 @@ func normalisedSubject(column string) string        { return storekit.Normalised
 // Confirmed requests survive replies until fulfilled, settled or dismissed.
 // Unclassified manually logged mail retains the newest-unanswered rule.
 // Machine senders and calendar responses require confirmed requests too.
+// Bulk mail waits only once a human accepted it; a verdict alone does not.
 //
 // Two judgements end the obligation and are each counted in
 // /worklist/hidden: a human's not-sales call on the thread, and the
@@ -55,19 +55,20 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
+	 AND (` + acceptedRequestSQL + ` OR NOT a.bulk_mail_attested)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer
-	         WHERE activity_thread_available(newer.thread_key) AND newer.thread_key = a.thread_key
+	         WHERE newer.thread_key = a.thread_key
 	           AND newer.kind = a.kind
 	           AND newer.kind IN ('email', 'message')
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
-	           AND (newer.archived_at IS NULL AND activity_thread_available(newer.thread_key))
+	           AND newer.archived_at IS NULL
 	           AND ` + occurredday.BegunSQL("newer", asOf) + `
 	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
-	       AND ` + unansweredSQL("a", asOf) + `)))`
+	       AND NOT ` + answeredSQL("a", asOf) + `)))`
 }
 
 // machineSenderSQL is true when the message came from an address no human

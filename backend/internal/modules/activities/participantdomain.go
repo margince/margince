@@ -32,7 +32,7 @@ const unfoldedParticipants = `FROM activity_participant
 // the same as the insert that fills it for new rows.
 func FoldParticipantDomainsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, int, error) {
 	rows, err := tx.Query(ctx, `SELECT id, address `+unfoldedParticipants+`
-		   AND id > $1 ORDER BY id LIMIT $2 FOR UPDATE`, after, limit)
+		   AND id > $1 ORDER BY id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, 0, fmt.Errorf("activities: reading participant addresses to fold: %w", err)
 	}
@@ -43,6 +43,17 @@ func FoldParticipantDomainsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 	inspected := make([]ids.UUID, 0, len(written))
 	for _, row := range written {
 		inspected = append(inspected, row.ID)
+	}
+	if err := lockParticipantEvidenceParents(ctx, tx, inspected); err != nil {
+		return nil, 0, err
+	}
+	locked, err := tx.Query(ctx, `SELECT id,address FROM activity_participant WHERE id=ANY(@ids) ORDER BY id FOR UPDATE`, pgx.StrictNamedArgs{participantEvidenceIDsParam: inspected})
+	if err != nil {
+		return nil, 0, err
+	}
+	written, err = pgx.CollectRows(locked, pgx.RowToStructByPos[participantAddress])
+	if err != nil {
+		return nil, 0, err
 	}
 	changed, err := storeParticipantDomains(ctx, tx, written)
 	return inspected, changed, err

@@ -28,6 +28,9 @@ var announcedBy = map[string]struct{ family, why string }{
 		"for every deal at once and the next run reads it"},
 	"capture_thread_verdict": {"", "a held thread hides a signal's evidence, and every read of the findings " +
 		"checks the cited message's visibility again"},
+	"capture_import": {"", "which mail connections delivered a deal's mail; a first import comes with its " +
+		"activity.captured, a later mailbox delivering the same message emits no event, and the viability " +
+		"fingerprint carries the set so a receipt read before it changed is stale"},
 	"contact_email": {"", "the address a contact writes from; adding one moves no deal until mail " +
 		"from it arrives, which is an activity event"},
 	"import_run": {"", "tells an imported task edit from a human one; a finished import run does not change"},
@@ -73,7 +76,7 @@ func tablesRead(statements ...string) []string {
 func checkReads() string {
 	arg := func(any) int { return 1 }
 	at := time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)
-	return assuranceSubjectsQuery(at, "''", nil, "false", arg) + assuranceSignalSubjectsQuery(at, arg)
+	return assuranceSubjectsQuery(at, "''", nil, arg) + assuranceSignalSubjectsQuery(at, arg)
 }
 
 // undecidedFamilies answers two lists. undecided holds the types, in a family

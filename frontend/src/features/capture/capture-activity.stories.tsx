@@ -153,7 +153,7 @@ function story(
 }
 
 const meta: Meta<typeof CaptureActivityTab> = {
-  title: "Settings/You/Capture activity/Capture activity",
+  title: "Settings/You/Connections/Capture activity",
   component: CaptureActivityTab,
 };
 export default meta;

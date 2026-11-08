@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -38,6 +39,9 @@ import (
 type sendRefs struct {
 	ownTasks, teamTasks, approvals []ids.UUID
 	records                        []notices.Target
+	// changesSince is where the Margince changes a morning counts start; nil
+	// when it counts none.
+	changesSince *time.Time
 }
 
 func (r *sendRefs) canonical() {
@@ -77,6 +81,10 @@ type basisRow struct {
 // commitment proposal rests on.
 const commitmentAdmissionTable = "activity_commitment_admission"
 
+// marginceChangesBasis names the seat's counted Margince changes. Its version
+// is their fingerprint and its key the window's start.
+const marginceChangesBasis = "deal_correction"
+
 // sendBasis is the payload's rows and the recipient they are authorised for.
 // excluded names the shown items that no longer qualify; a payload is read
 // again without them rather than sent with them.
@@ -109,6 +117,16 @@ func readSendBasis(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUID
 	ctx, live, err := basisAuthorityAndRecords(ctx, tx, seat, refs, shown, &basis)
 	if err != nil || !live {
 		return basis, err
+	}
+	if refs.changesSince != nil {
+		fingerprint, err := deals.PendingChangesFingerprintTx(ctx, tx, seat, *refs.changesSince, false)
+		if err != nil {
+			return basis, err
+		}
+		basis.rows = append(basis.rows, basisRow{
+			table: marginceChangesBasis, id: seat,
+			key: refs.changesSince.Format(time.RFC3339Nano), version: fingerprint,
+		})
 	}
 	read, err := readShownItems(ctx, tx, seat, team, refs, now)
 	if err != nil {
@@ -154,7 +172,7 @@ func readShownItems(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUI
 	}
 	currentWork := storekit.CurrentTaskClause("t", now, identities, arg)
 	items, err := tx.Query(ctx, `SELECT t.id, 'activity', t.version, (`+sendTaskEligibleSQL+` AND `+currentWork+`), '{}'::uuid[], t.source_activity_id, NULL::text, NULL::text, NULL::uuid
-		  FROM activity t WHERE activity_thread_available(t.thread_key) AND t.kind = 'task' AND t.id = ANY($1)
+		  FROM activity t WHERE t.kind = 'task' AND t.id = ANY($1)
 		UNION ALL
 		SELECT a.id, 'approval', a.version, `+sendApprovalEligibleSQL+`,
 		       coalesce((SELECT array_agg(c::uuid) FROM jsonb_array_elements_text(coalesce(a.proposed_change->'claim_ids', '[]'::jsonb)) c), '{}')
@@ -393,7 +411,7 @@ func holdSendBasisTx(ctx context.Context, tx pgx.Tx, basis sendBasis, clock func
 		return fmt.Errorf("send: holding the recipient: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM team_membership m WHERE m.user_id = $1
-		    OR (m.team_id = $2 AND m.user_id IN (SELECT assignee_id FROM activity WHERE activity_thread_available(thread_key) AND id = ANY($3) AND (archived_at IS NULL AND activity_thread_available(thread_key))))
+		    OR (m.team_id = $2 AND m.user_id IN (SELECT assignee_id FROM activity WHERE id = ANY($3) AND archived_at IS NULL))
 		   FOR SHARE OF m`, basis.seat, basis.team, basis.refs.teamTasks); err != nil {
 		return fmt.Errorf("send: holding the recipient's teams: %w", err)
 	}
@@ -441,6 +459,20 @@ func holdBasisRows(ctx context.Context, tx pgx.Tx, basis []basisRow) error {
 		}
 	}
 	for _, row := range basis {
+		if row.table == marginceChangesBasis {
+			since, err := time.Parse(time.RFC3339Nano, row.key)
+			if err != nil {
+				return err
+			}
+			fingerprint, err := deals.PendingChangesFingerprintTx(ctx, tx, row.id, since, true)
+			if err != nil {
+				return err
+			}
+			if fingerprint != row.version {
+				return errSendBasisChanged
+			}
+			continue
+		}
 		if row.table != commitmentAdmissionTable {
 			continue
 		}

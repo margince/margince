@@ -24,8 +24,8 @@ var threadOwedAnswerSQL = `status = 'pending'
 	AND next_attempt_at IS NOT NULL
 	AND attempts < ` + strconv.Itoa(ThreadVerdictMaxAttempts) + `
 	AND EXISTS (SELECT 1 FROM activity a
-	             WHERE activity_thread_available(a.thread_key) AND a.id = first_activity_id
-	               AND a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+	             WHERE a.id = first_activity_id
+	               AND a.restricted_at IS NULL)
 	AND EXISTS (SELECT 1 FROM capture_connection c
 	             WHERE c.user_id = capture_thread_verdict.user_id
 	               AND c.archived_at IS NULL
@@ -52,7 +52,7 @@ func ReadThreadBacklog(ctx context.Context, db *database.DB) (ThreadBacklog, err
 		if err := tx.QueryRow(ctx, `
 			SELECT count(*),
 			       COALESCE(EXTRACT(EPOCH FROM now() - min(
-			         (SELECT a.created_at FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = first_activity_id))), 0)
+			         (SELECT a.created_at FROM activity a WHERE a.id = first_activity_id))), 0)
 			  FROM capture_thread_verdict
 			 WHERE `+threadOwedAnswerSQL).Scan(&out.Waiting, &seconds); err != nil {
 			return err

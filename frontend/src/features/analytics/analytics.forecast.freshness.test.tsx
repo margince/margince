@@ -21,6 +21,7 @@ type InputCheck = components["schemas"]["InputCheck"];
 
 const RUN: Assurance = {
   run_id: "r-1",
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
   as_of: "2026-09-07T03:00:00Z",
   status: "complete",
   readiness: "ready",
@@ -56,9 +57,6 @@ function show(run: Assurance, checks: InputCheck[]) {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/forecast/assurance/exceptions")) {
         return jsonResponse({ data: checks });
-      }
-      if (url.includes("/forecast/assurance/enforcement")) {
-        return jsonResponse({}, 404);
       }
       if (url.includes("/forecast/assurance")) {
         return jsonResponse(run);
@@ -182,7 +180,7 @@ describe("an input check the records moved past", () => {
 
     expect(
       await screen.findByText(
-        "It is not known whether the records changed since this check: no check that read every source has run since Margince started tracking changes. Choose Check again to run one.",
+        "Margince has not yet confirmed whether the records changed since this check. Wait for an update, or choose Check again to read them now.",
       ),
     ).toBeTruthy();
     expect(

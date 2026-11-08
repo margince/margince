@@ -180,7 +180,7 @@ func activityMemberClause(ctx context.Context, typeCol, idCol string, arg func(a
 		return "", err
 	}
 	return fmt.Sprintf(
-		`(%s = 'activity' AND EXISTS (SELECT 1 FROM activity av WHERE activity_thread_available(av.thread_key) AND av.id = %s AND %s))`,
+		`(%s = 'activity' AND EXISTS (SELECT 1 FROM activity av WHERE av.id = %s AND %s))`,
 		typeCol, idCol, activityClause,
 	), nil
 }
@@ -247,7 +247,7 @@ func carriesNoLimitedMessage(ctx context.Context, alias string, arg func(any) in
 	return fmt.Sprintf(
 		`(%[1]s.entity_type NOT IN ('activity', 'attachment')
 		  OR (%[1]s.entity_type = 'activity' AND EXISTS (
-		       SELECT 1 FROM activity av WHERE activity_thread_available(av.thread_key) AND av.id = %[1]s.entity_id AND %[2]s))
+		       SELECT 1 FROM activity av WHERE av.id = %[1]s.entity_id AND %[2]s))
 		  OR (%[1]s.entity_type = 'attachment' AND NOT EXISTS (
 		       SELECT 1 FROM attachment ata
 		        JOIN activity av ON av.id = ata.entity_id

@@ -20,7 +20,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // latestQualifyingEvent finds the most recent thing on the record that makes
@@ -49,8 +51,11 @@ import (
 // here — resolveCategory answers CategoryReplyToInbound from the anchor before
 // the legacy verdict is consulted — so a rep answering a months-old thread is
 // unaffected. The window governs contact the subject did not prompt.
-func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, eventSource, error) {
-	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since)
+//
+// address names the recipient the event must cover (requestCoversSQL); nil asks
+// about the contact as a whole, which only the legacy verdict does.
+func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, eventSource, error) {
+	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since, asOf, address)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -69,7 +74,7 @@ func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, sin
 	// order costs nothing: each arm answers about a different record, so at most
 	// one of them describes any given fact, and reaching this one means neither
 	// a human nor the mail timeline had already answered.
-	event, found, err = meetingQualifyingEvent(ctx, tx, contactID, since)
+	event, found, err = meetingQualifyingEvent(ctx, tx, contactID, since, asOf)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -150,9 +155,11 @@ func RecordSubjectInquiry(
 	return nil
 }
 
-// The `source` column's two machine values. A human's own claim writes 'human'
-// (qualifyingevent.go) and neither of these.
+// The `source` column's values. A user's own claim writes sourceKindHuman and
+// their agent's writes sourceKindAgent (qualifyingevent.go). The rest are machine.
 const (
+	sourceKindHuman = "human"
+	sourceKindAgent = "agent"
 	// sourceKindDerived: read off the timeline at send time.
 	sourceKindDerived = "derived"
 	// sourceKindCaptured: the door that took the event wrote it as it happened.
@@ -183,16 +190,24 @@ func stampQualifyingEvent(
 	return err
 }
 
-// recordedQualifyingEvent reads a row a human or an integration wrote.
-func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
+// recordedQualifyingEvent reads a recorded qualifying-event row, whichever writer
+// left it: a human, their passport agent, an integration, the transmit path or a booking.
+// A row dated after asOf does not count yet: older derived stamps carry a booked
+// meeting's future start.
+func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
+	var id string
 	var sourceType, sourceID, note *string
+	var args []any
+	arg := func(value any) string { args = append(args, value); return storekit.SQLf("$%d", len(args)) }
+	contact, from, until, addr := arg(contactID), arg(since), arg(asOf), arg(address)
 	err := tx.QueryRow(ctx, `
-		SELECT kind, occurred_at, source_entity_type, source_entity_id, note
+		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
-		WHERE contact_id = $1 AND occurred_at >= $2
+		WHERE contact_id = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
+		  AND (`+addr+`::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", addr)+`)
 		ORDER BY occurred_at DESC
-		LIMIT 1`, contactID, since).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
+		LIMIT 1`, args...).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -207,6 +222,9 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	}
 	if note != nil {
 		event.Note = *note
+	}
+	if handRecordedKinds[event.Kind] {
+		event.ID = id
 	}
 	return event, true, nil
 }
@@ -238,7 +256,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
 		JOIN activity_participant p ON p.activity_id = a.id
 		     AND p.role = 'from' AND p.contact_id = $1::uuid
-		WHERE a.direction = 'inbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
 		  AND `+occurredday.FromSQL("a", "$2")+`
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
@@ -304,31 +322,26 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 // admitted — the calendar mappers record no acceptance state, so most captured
 // meetings carry none, and refusing those would refuse the whole feature.
 //
-// And it must not be dated beyond the horizon. A future meeting is the case this
-// arm exists for, but "future" has to mean the diary rather than the next
-// century: the derived row is stamped and later read back without revalidating
-// its source, so a meeting dated 2099 would authorize sending forever.
+// And it must have taken place by the reading clock (relstrength.MeetingInTouchSQL). A
+// booking still in the diary is not ground yet: the derived row is stamped and
+// read back later without revalidating its source.
 //
 // No authorship test, unlike the inbound arm — that is a difference rather than
 // an omission. That arm needs role 'from' because a filing link says only that a
 // message belongs on somebody's record, and being copied on somebody else's mail
 // initiates nothing. Attendance carries no such ambiguity: every attendee of a
 // meeting a connector captured is a party to it.
-func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
+func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
 	err := tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
-		WHERE a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
-		  AND a.counterparty_email IS NULL
-		  AND a.captured_by LIKE 'connector:%'
-		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
+		WHERE `+capturedMeetingSQL("$3")+`
 		  AND `+occurredday.FromSQL("a", "$2")+`
-		  AND a.occurred_at <= now() + $3::interval -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, contactID, since, meetingHorizonInterval).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, contactID, since, asOf).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -341,12 +354,14 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	return event, true, nil
 }
 
-// meetingHorizonInterval is how far into the diary a meeting still says a
-// relationship is live.
-//
-// A quarter, because that is the outer edge of a real booking — a demo, a
-// renewal review, a conference — and the derived row outlives its source: it is
-// stamped once and read back afterwards without revalidating the activity, so a
-// meeting dated far enough ahead would authorize sending indefinitely. The bound
-// is what keeps "a meeting in the diary" from meaning "a date somebody typed".
-const meetingHorizonInterval = "90 days"
+// capturedMeetingSQL is "activity a is a meeting that counts as evidence". A
+// connector captured it and it names no counterparty string. It was not declined
+// or abandoned, and it took place by asOf (relstrength.MeetingInTouchSQL). A
+// meeting a rep typed by hand is not evidence of anything the contact did.
+// meetingQualifyingEvent and requestedNegotiation both read this one rule.
+func capturedMeetingSQL(asOf string) string {
+	return `a.kind = 'meeting' AND a.archived_at IS NULL
+		  AND a.counterparty_email IS NULL
+		  AND a.captured_by LIKE 'connector:%'
+		  AND ` + relstrength.MeetingInTouchSQL("a", asOf)
+}

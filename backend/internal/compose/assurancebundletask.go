@@ -84,7 +84,7 @@ func taskStillOpenTx(ctx context.Context, tx pgx.Tx, task ids.UUID) (bool, error
 	err := tx.QueryRow(ctx, `
 		SELECT NOT a.is_done
 		  FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.id = $1 AND a.archived_at IS NULL
 		 FOR SHARE`, task).Scan(&open)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Archived or erased since the read. Gone is gone, as it is above.
@@ -109,7 +109,7 @@ var bundleTaskSource = provenance.AssuranceTaskSource
 //
 // sourceID is the natural key that makes a retry a no-op:
 // activity.replayedActivity resolves it before inserting, against
-// uq_activity_source. runTaskKey and reviewTaskKey are the two keys.
+// uq_activity_source. runTaskKey is the key.
 func mintBundleTask(
 	ctx context.Context, deps bundleDeps, sourceID string, subject subjectFindings, dueAt *time.Time,
 ) (ids.UUID, error) {

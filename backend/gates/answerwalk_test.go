@@ -33,7 +33,8 @@ const answerWalkOwner = "internal/platform/database/storekit/answered.go:threadA
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
 var answerWalksAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/awaitingreply.go:awaitingTheirAnswerSQL": "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
+	"internal/modules/capture/senderstanding.go:WithheldUnansweredOutboundTx": "asks whether the address the owner wrote to has answered the workspace at all, through capture's addressAnswered (the reply evidence the verdict and the reply promotion share). It decides whether a released contact stays outbound_no_answer, never a needs-reply badge",
+	"internal/modules/activities/awaitingreply.go:awaitingTheirAnswerSQL":     "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
 	answerWalkOwner: "the thread arm of the one answer: every surface that shows needs-reply, a waiting row, request review or the response time reads it through answeredSQL or firstAnswerAtSQL",
 	"internal/modules/activities/awaitingreply.go:awaitingRepliesSQL":                "the waiting-replies lane query; it lists rows through awaitingTheirAnswerSQL and asks the same mirror question about our outbound",
 	"internal/modules/activities/emailmove.go:EmailStatesFor":                        "the email row's page read; its move is moveSQL, and it asks no answer question of its own",
@@ -44,7 +45,7 @@ var answerWalksAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities/ourownoutbound.go:ourOutboundInThisThread":          "the settlement pass and the owed-verdict prior message find OUR attested message to one correspondent, to stamp what a request was judged through or to show the model what we last wrote. A reply settles no request by itself, so this decides no badge and no lane row; the settlement's answers off the thread come from answered.go's own arms",
 	"internal/compose/requestsettle.go:conversationRows":                             "reads the request and the messages after it, both directions, bound to one attested correspondent, as the settlement model's evidence, or the one such message a verdict is recorded through; it answers nothing itself",
 	"internal/modules/activities/promisefollowup.go:promiseFollowUpSQL":              "our follow-up on a promise we made: our later mail on the promise's thread to the contact it was made to. The Done? cue offers it and the company scan holds a commitment finding to it; it asks about a promise, never whether an inbound was answered",
-	"internal/modules/capture/sinkreply.go:emitReplyNow":                             "capture records a counterparty reply to an earlier outbound message, with native ancestry resolving coarse-clock ties; this emits engagement evidence, rather than deciding whether an inbound request remains unanswered",
+	"internal/modules/capture/sinkreply.go:emitReply":                                "capture's reply formula: an inbound on a thread we wrote on is a reply for the engagement score, whichever came first; a question about the counterparty, not about whether this message is owed",
 	"internal/modules/consent/authorizeevidence.go:copiedOnThisMatter":               "the consent gate's Cc rule asks whether one of our seats sent a captured mail on the thread a recipient was copied on, as evidence for writing to them about that thread; it never asks whether an inbound was answered and decides no badge",
 	"internal/modules/capture/correspondencegate.go:wroteOnTwoThreadsTx":             "counts the separate threads we wrote to one address on, as evidence of a relationship for the first-time-sender gate; it reads no inbound and answers nothing",
 	"internal/modules/capture/correspondencegate.go:wroteBackTx":                     "the entry point of wroteBack's question; it decides no badge and no lane row",
@@ -207,7 +208,7 @@ func fragmentKey(call *ast.CallExpr, pkg string) (key, callee string) {
 func kernelFragments(t *testing.T) map[string]fragment {
 	t.Helper()
 	out := map[string]fragment{}
-	err := filepath.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
@@ -254,7 +255,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 			walkRoot = filepath.Join("..", "extensions")
 		}
 		packages := map[string]map[string]*ast.File{}
-		err := filepath.WalkDir(walkRoot, func(path string, entry fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(walkRoot, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err

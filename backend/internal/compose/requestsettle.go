@@ -228,11 +228,11 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
 		       coalesce(left(body, $1), ''), occurred_at, NOT `+provenance.MailBodyCompleteSQL("activity")+`
 		  FROM activity
-		 WHERE activity_thread_available(thread_key) AND thread_key = (SELECT thread_key FROM activity WHERE activity_thread_available(thread_key) AND id = $2)
+		 WHERE thread_key = (SELECT thread_key FROM activity WHERE id = $2)
 		   AND thread_key IS NOT NULL
-		   AND kind = (SELECT kind FROM activity WHERE activity_thread_available(thread_key) AND id = $2)
+		   AND kind = (SELECT kind FROM activity WHERE id = $2)
 		   AND channel_provider IS NOT DISTINCT FROM
-		       (SELECT channel_provider FROM activity WHERE activity_thread_available(thread_key) AND id = $2)
+		       (SELECT channel_provider FROM activity WHERE id = $2)
 		   -- One correspondent, because the thread triple names no one. A
 		   -- sender types their own References root, so a stranger who has seen
 		   -- one of our Message-IDs can hang a message off another customer's
@@ -243,14 +243,14 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   -- copy, the one exception activities.ourOutboundInThisThread makes.
 		   AND counterparty_email = $5
 		   AND (id = $2 OR `+activities.CapturedInboundSQL("activity")+` OR counterparty_outbound_attested OR sent_by_colleague IS NOT NULL)
-		   AND (archived_at IS NULL AND activity_thread_available(thread_key))
+		   AND archived_at IS NULL
 		   -- The audience, tested HERE and not only in the read that offered
 		   -- this request: the candidate query runs in its own statement and a
 		   -- thread can be narrowed between the two, which under read-committed
 		   -- this statement is the first to see.
 		   AND audience = 'workspace' AND restricted_at IS NULL
 		   AND `+occurredday.BegunSQL("activity", "$3")+`
-		   AND (occurred_at, id) >= ((SELECT occurred_at FROM activity WHERE activity_thread_available(thread_key) AND id = $2), $2)
+		   AND (occurred_at, id) >= ((SELECT occurred_at FROM activity WHERE id = $2), $2)
 		   AND ($6::uuid IS NULL OR id = $6)
 		 ORDER BY id = $2 DESC, occurred_at DESC, id DESC
 		 LIMIT $4`, extractBodyLimit, requestID, asOf, limit, counterparty, only)

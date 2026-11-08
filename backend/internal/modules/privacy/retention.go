@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -73,7 +74,12 @@ func retentionAppliedPayload(
 		policy := openapi_types.UUID(*policyID)
 		payload.Policy = &policy
 	}
-	payload.Reason = reason
+	if reason != nil {
+		request := fulfillingCase(*reason)
+		if (request != (ids.UUID{}) && *reason == "dsr:"+request.String()) || slices.Contains(fixedPrivacyReasons(), *reason) {
+			payload.Reason = reason
+		}
+	}
 	return payload
 }
 
@@ -161,6 +167,8 @@ type RetentionService struct {
 	// fallback path, so the erase action refuses when it is nil rather than
 	// skipping it.
 	purgeRawCaptures RawCapturePurger
+	// outboxReaders are the modules that still read published events.
+	outboxReaders *storekit.OutboxReaders
 }
 
 // NewRetentionService wires the nightly evaluator.
@@ -184,37 +192,37 @@ func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger
 	}
 }
 
-// EdgeInvalidator re-folds the relationship aggregates an activity fed, inside
-// the caller's transaction.
+// RawCapturePurger deletes the provider originals behind the given activities,
+// inside the caller's transaction so they die with the text they duplicate.
 //
-// It is a SEAM rather than a call because the fold lives in the search module
-// and a module never imports a sibling; compose injects the real one. The
-// alternative — writing the fold a second time here — was tried and was wrong
-// in the way second copies are: it deleted the pairs that lost all their
-// evidence and left every surviving pair still counting the removed
-// interaction.
-type EdgeInvalidator func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error
-
-// WithEdgeInvalidator returns a service that keeps the relationship graph true
-// as retention removes the interactions under it, IN THE SAME TRANSACTION.
+// It is a seam rather than a fourth DELETE in this package. Privacy may write
+// the table, and does twice (see doc.go). The natural-key join that finds those
+// rows belongs to capture, which writes them. A copy of that join here would
+// drift, and the drifted half would leave originals behind while reporting
+// success. capture.PendingStore.PurgeRawCaptureTx is the implementation.
 //
-// Synchronous on purpose. The consumer also handles `retention.applied`, and
-// the recompute is idempotent so running twice costs nothing — but a bus is a
-// thing that can be behind, and "the aggregate is corrected unless the queue is
-// slow" is not a property worth having when the correction is a deletion
-// obligation. The event path is the backstop; this is the guarantee.
-func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionService {
-	out := *s
-	out.invalidateEdges = fn
-	return &out
-}
-
-// RawCapturePurger keeps capture's original and projection ownership together.
-// Content erasure invalidates both; original expiration preserves retained thread evidence.
+// An unwired seam means something else here than for EdgeInvalidator beside it.
+// A missing edge invalidator leaves an aggregate for the bus consumer of
+// retention.applied to correct later. Nothing else ages raw_capture out, as
+// PurgeRawCaptureTx's comment explains. The Art. 17 purge cannot stand in: it is
+// scoped to a contact, and a retention window is scoped to time. So the purger
+// is a constructor argument, and EvaluateInstallation refuses the whole pass,
+// before it touches a record, if it is nil.
+//
+// PurgeTextCopiesTx empties the copies other modules took of the given
+// activities' text, such as a voice sample read from sent mail. It rides the
+// same seam because every path that destroys the original destroys them too.
+// PurgeTextNamingTx empties those copies that name an erased subject by full
+// name or address, whatever text they were taken from. The delivery methods
+// reach webhook bodies (retentioncopies.go).
 type RawCapturePurger interface {
-	PurgeActivityProjectionsTx(context.Context, pgx.Tx, []ids.UUID) error
 	PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error
 	PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error
+	PurgeTextCopiesTx(context.Context, pgx.Tx, []ids.UUID) error
+	PurgeTextNamingTx(ctx context.Context, tx pgx.Tx, fullName string, emails []string) error
+	DeliveryCopiesPastTx(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int) ([]RecordCopy, error)
+	ClearDeliveryCopiesTx(ctx context.Context, tx pgx.Tx, deliveries []ids.UUID) error
+	ScrubDeliveryCopiesTx(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID) error
 }
 
 // ErrRetentionSeamMissing is the refusal a pass makes when it was built without
@@ -222,16 +230,6 @@ type RawCapturePurger interface {
 // so a caller can tell a misconfiguration from a failed erasure; the
 // constructor's signature is what stops it arising.
 var ErrRetentionSeamMissing = errors.New("privacy: the retention pass has no raw-capture purger, so activity/erase would clear the parsed copy and leave the provider original standing")
-
-// invalidateGraph runs the injected invalidator, if the role wired one. A role
-// that did not is not broken: the consumer still corrects the aggregate on the
-// next delivery.
-func (s *RetentionService) invalidateGraph(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	if s.invalidateEdges == nil {
-		return nil
-	}
-	return s.invalidateEdges(ctx, tx, id)
-}
 
 type retentionPolicy struct {
 	// ID stays ids.UUID: a retention policy is a config row, not a
@@ -306,11 +304,17 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 	if err := s.evaluateHeldCommitments(ctx); err != nil {
 		return err
 	}
+	if err := s.retryMarkedAuditCopies(ctx); err != nil {
+		return err
+	}
 	retainOnly, err := s.retainOnly(ctx)
 	if err != nil {
 		return err
 	}
 	if err := s.evaluateEmbedCallRetention(ctx, retainOnly); err != nil {
+		return err
+	}
+	if err := s.pruneRecordCopies(ctx, retainOnly); err != nil {
 		return err
 	}
 	if retainOnly {
@@ -460,11 +464,6 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 func isDestructive(action string) bool {
 	return action == actionAnonymize || action == actionErase
 }
-
-// voiceSignalRetention note: the deadline itself is stamped per row
-// (voice_learning_signal.retention_until, set at capture); this sweep only
-// honors it — the window is the ai module's fixed operational floor, not a
-// policy-configurable domain record.
 
 // WithPayloadVault lets destructive actions retire sealed booking capabilities.
 func (s *RetentionService) WithPayloadVault(payloads PayloadPurger) *RetentionService {

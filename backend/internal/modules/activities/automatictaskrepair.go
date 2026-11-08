@@ -81,7 +81,7 @@ func automaticTaskRepairBasis(ctx context.Context, tx pgx.Tx, task HomeRepairTas
 	id, version := arg(task.ID), arg(task.Version)
 	current := storekit.CurrentTaskClause("a", asOf, "'[]'::jsonb", arg)
 	query := storekit.SQLf(`SELECT %s, a.source_activity_id IS NULL,
- a.due_at IS NOT NULL AND (%s) IS NULL, %s FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id=$%d AND a.version=$%d`,
+ a.due_at IS NOT NULL AND (%s) IS NULL, %s FROM activity a WHERE a.id=$%d AND a.version=$%d`,
 		provenance.TaskSourceActivitySQL("a"), storekit.TaskDueSQL("a"), current, id, version)
 	basis := AutomaticTaskRepair{Supported: true}
 	err := tx.QueryRow(ctx, query, args...).Scan(&basis.SourceID, &basis.NormalizeSource, &basis.ClearDue, &basis.Current)
@@ -98,7 +98,8 @@ func (s *Store) RepairAutomaticTaskTx(ctx context.Context, tx pgx.Tx, task HomeR
 		return err
 	}
 	input := UpdateActivityInput{IfVersion: &task.Version}
-	if _, _, err := admitActivityPatch(ctx, tx, task.ID, &input); err != nil {
+	current, _, err := admitActivityPatch(ctx, tx, task.ID, &input)
+	if err != nil {
 		return err
 	}
 	if err := refuseIfTouched(ctx, tx, task.ID, archiveOptions{pristineTask: true}); err != nil {
@@ -111,15 +112,23 @@ func (s *Store) RepairAutomaticTaskTx(ctx context.Context, tx pgx.Tx, task HomeR
 	if !basis.Supported || !basis.Current || (!basis.NormalizeSource && !basis.ClearDue) {
 		return apperrors.ErrConflict
 	}
+	// A reminder belongs to the deadline it was set for. Clearing a generated
+	// deadline ends its reminder in the same statement, or the reminder keeps
+	// leading the Worklist for a task that is no longer due.
+	endsReminder := basis.ClearDue && current.RemindAt != nil
 	before, after := automaticRepairImages(task, basis)
+	if endsReminder {
+		before["remind_at"], after["remind_at"] = *current.RemindAt, nil
+	}
 	args := pgx.NamedArgs{
 		"id": task.ID, "version": task.Version, "normalize": basis.NormalizeSource,
 		ledgerSourceKey: basis.SourceID, "clear_due": basis.ClearDue,
 	}
 	var nextVersion int64
 	query := `UPDATE activity SET source_activity_id=CASE WHEN @normalize THEN @source::uuid ELSE source_activity_id END,
- due_at=CASE WHEN @clear_due THEN NULL ELSE due_at END
- WHERE id=@id AND version=@version AND (archived_at IS NULL AND activity_thread_available(thread_key)) RETURNING version`
+ due_at=CASE WHEN @clear_due THEN NULL ELSE due_at END,
+ remind_at=CASE WHEN @clear_due THEN NULL ELSE remind_at END
+ WHERE id=@id AND version=@version AND archived_at IS NULL RETURNING version`
 	if err := tx.QueryRow(ctx, query, args).Scan(&nextVersion); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrVersionSkew
@@ -135,6 +144,9 @@ func (s *Store) RepairAutomaticTaskTx(ctx context.Context, tx pgx.Tx, task HomeR
 		return err
 	}
 	event := crmcontracts.PublicEventActivityUpdated{ChangedFields: crmcontracts.PublicEventActivityChangedFields{AutomaticTaskRepaired: new(true)}}
+	if endsReminder {
+		event.ChangedFields.RemindAtCleared = new(true)
+	}
 	if err := storekit.EmitEvent(ctx, tx, audit, task.ID.UUID, event); err != nil {
 		return fmt.Errorf("recording automatic task correction: %w", err)
 	}

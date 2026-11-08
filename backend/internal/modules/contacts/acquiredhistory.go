@@ -30,25 +30,35 @@ func receivedBeforeConnectedTx(ctx context.Context, tx pgx.Tx, email string) (bo
 }
 
 // The versioned correction retains its narrower scope; runtime admission also covers fellow recipients.
+// Lateral key fences prevent cached plans from hashing the whole mailbox.
 const sentHistorySQL = `EXISTS (
- SELECT 1 FROM activity a
- JOIN capture_import ci ON ci.activity_id = a.id
- JOIN activity_participant s ON s.activity_id = a.id AND s.role = 'from' AND s.user_id = ci.user_id
- WHERE (a.counterparty_email = ce.email OR (@expanded AND EXISTS (
- SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND p.role IN ('to', 'cc') AND p.address = ce.email)))
- AND a.kind = 'email' AND a.direction = 'outbound'
- AND a.counterparty_outbound_attested AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
- AND a.occurred_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id) -- occurred_at raw: mail sent before the mailbox connected, an instant
+ WITH candidates AS MATERIALIZED (
+ SELECT id FROM activity WHERE counterparty_email=ce.email
+ UNION ALL SELECT activity_id FROM (` + historyRecipientsSQL + `) recipients WHERE @expanded)
+ SELECT 1 FROM candidates c
+ CROSS JOIN LATERAL (
+ SELECT id,occurred_at,kind,direction,counterparty_outbound_attested,archived_at
+ FROM activity WHERE id=c.id OFFSET 0) a
+ CROSS JOIN LATERAL (
+ SELECT user_id FROM capture_import WHERE activity_id=a.id OFFSET 0) ci
+ WHERE a.kind='email' AND a.direction='outbound'
+ AND a.counterparty_outbound_attested AND a.archived_at IS NULL
+ AND EXISTS (SELECT 1 FROM activity_participant s WHERE s.activity_id=a.id
+ AND s.role='from' AND s.user_id=ci.user_id OFFSET 0)
+ AND a.occurred_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id=ci.user_id) -- occurred_at raw: sent mail predates the mailbox connection, an instant
 )`
 
 const receivedHistorySQL = `EXISTS (
- SELECT 1 FROM activity_participant p
- JOIN activity a ON a.id = p.activity_id
- JOIN capture_import ci ON ci.activity_id = a.id
- WHERE p.address = ce.email AND p.role IN ('to', 'cc')
- AND a.kind = 'email' AND (a.direction = 'inbound' OR (@expanded AND a.sent_by_colleague IS NOT NULL))
- AND NOT a.bulk_mail_attested AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
- AND ci.provider_received_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id))`
+ WITH recipients AS MATERIALIZED (` + historyRecipientsSQL + `)
+ SELECT 1 FROM recipients p
+ CROSS JOIN LATERAL (
+ SELECT id,kind,direction,sent_by_colleague,bulk_mail_attested,archived_at
+ FROM activity WHERE id=p.activity_id OFFSET 0) a
+ CROSS JOIN LATERAL (
+ SELECT user_id,provider_received_at FROM capture_import WHERE activity_id=a.id OFFSET 0) ci
+ WHERE a.kind='email' AND (a.direction='inbound' OR (@expanded AND a.sent_by_colleague IS NOT NULL))
+ AND NOT a.bulk_mail_attested AND a.archived_at IS NULL
+ AND ci.provider_received_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id=ci.user_id))`
 
 const (
 	historyEmailParam    = "email"

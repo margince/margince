@@ -61,7 +61,7 @@ func assuranceSignalSubjectsQuery(now time.Time, arg func(any) int) string {
  AND coalesce(`+deals.SuggestionFloorExpr("c.id")+`, '-infinity'::timestamptz) < source.occurred_at -- occurred_at raw: past the suggestion floor, a window's lower edge
  AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
   WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-   WHERE activity_thread_available(ca.thread_key) AND ca.id = `+storekit.CitedActivityID("cite")+` AND `+workspaceEvidence("ca")+`))
+   WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND `+workspaceEvidence("ca")+`))
  AND `+unlinkedCommercialMatter("s")+`
  ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now), scoutBuyerSignal("s"))
 }

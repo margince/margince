@@ -67,12 +67,12 @@ func TestTheChangeFoldReadsACandidateSetInOneStatement(t *testing.T) {
 	at := func(ago int) *time.Time { moment := day(ago); return &moment }
 	want := map[ids.ContactID]relstrength.ChangeInputs{
 		busy: {
-			Current:  relstrength.Inputs{LastInteraction: at(5), Count90d: 3, Inbound90d: 2, Outbound90d: 1},
-			Previous: relstrength.Inputs{LastInteraction: at(60), Count90d: 2, Inbound90d: 1, Outbound90d: 1},
+			Current:  relstrength.Inputs{LastTouch: at(5), LastEngaged: at(5), Count90d: 3, Inbound90d: 2, Outbound90d: 1},
+			Previous: relstrength.Inputs{LastTouch: at(60), LastEngaged: at(60), Count90d: 2, Inbound90d: 1, Outbound90d: 1},
 		},
 		lapsed: {
-			Current:  relstrength.Inputs{LastInteraction: at(70), Count90d: 1, Inbound90d: 1},
-			Previous: relstrength.Inputs{LastInteraction: at(70), Count90d: 1, Inbound90d: 1},
+			Current:  relstrength.Inputs{LastTouch: at(70), LastEngaged: at(70), Count90d: 1, Inbound90d: 1},
+			Previous: relstrength.Inputs{LastTouch: at(70), LastEngaged: at(70), Count90d: 1, Inbound90d: 1},
 		},
 		silent: {},
 	}
@@ -121,7 +121,7 @@ func TestTheChangeFoldReadsACandidateSetInOneStatement(t *testing.T) {
 func sameChangeInputs(got, want relstrength.ChangeInputs) bool {
 	sameInstant := func(a, b *time.Time) bool { return (a == nil) == (b == nil) && (a == nil || a.Equal(*b)) }
 	sameWindow := func(a, b relstrength.Inputs) bool {
-		return sameInstant(a.LastInteraction, b.LastInteraction) &&
+		return sameInstant(a.LastTouch, b.LastTouch) && sameInstant(a.LastEngaged, b.LastEngaged) &&
 			a.Count90d == b.Count90d && a.Inbound90d == b.Inbound90d && a.Outbound90d == b.Outbound90d
 	}
 	return sameWindow(got.Current, want.Current) && sameWindow(got.Previous, want.Previous)

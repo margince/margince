@@ -14,12 +14,14 @@ import (
 func reportingDealFields(metric crmcontracts.ReportingMetricID) []string {
 	fields := []string{reportingName, fieldOwnerID, "pipeline_id", "stage_id", reportingStatusField}
 	switch metric {
-	case reportingBookingsWon:
+	case reportingBookingsWon, reportingBookingsMix:
 		fields = append(fields, "closed_at", "amount_minor", reportingCurrency)
 	case reportingClosedWinRate:
 		fields = append(fields, "closed_at")
 	case reportingQualifiedPipelineCreated:
 		fields = append(fields, "amount_minor", reportingCurrency)
+	case reportingQualifiedOpportunitiesCreated:
+		// A count reads no amount.
 	case reportingStageAge:
 		fields = append(fields, "created_at", "expected_close_date")
 	case reportingStageConversion:
@@ -30,7 +32,7 @@ func reportingDealFields(metric crmcontracts.ReportingMetricID) []string {
 	case reportingPartnerWon:
 		fields = append(fields, "closed_at", reportingAmountField, reportingCurrency, reportingPartnerField, "partner_attribution")
 	default:
-		fields = append(fields, "amount_minor", reportingCurrency, "expected_close_date", "forecast_category", "win_probability")
+		fields = append(fields, "amount_minor", reportingCurrency, "expected_close_date", "win_probability")
 	}
 	return fields
 }

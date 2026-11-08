@@ -13,10 +13,8 @@ package deals
 // visibly had one.
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -51,12 +49,12 @@ func OpenNextStepSQL(dealExpr, asOf, currentTask string) string {
 		EXISTS (
 			SELECT 1 FROM activity t
 			JOIN activity_link tl ON tl.activity_id = t.id AND tl.deal_id = %[1]s
-			WHERE t.kind = 'task' AND t.is_done = false AND (t.archived_at IS NULL AND activity_thread_available(t.thread_key)) AND %[4]s
+			WHERE t.kind = 'task' AND t.is_done = false AND t.archived_at IS NULL AND %[4]s
 		)
 		OR EXISTS (
 			SELECT 1 FROM activity m
 			JOIN activity_link ml ON ml.activity_id = m.id AND ml.deal_id = %[1]s
-			WHERE m.kind = 'meeting' AND (m.archived_at IS NULL AND activity_thread_available(m.thread_key))
+			WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 			  AND %[3]s AND NOT %[5]s
 			  AND %[2]s < %[6]s
 		)
@@ -82,23 +80,4 @@ func meetingStillStandingSQL(alias string) string {
 	return fmt.Sprintf(
 		`(%[1]s.meeting_status IS NULL OR %[1]s.meeting_status NOT IN ('canceled', 'no_show', 'held'))`,
 		alias)
-}
-
-// NoOpenNextStepSQL refuses an absence claim while reachable supporting evidence is incomplete.
-func NoOpenNextStepSQL(ctx context.Context, dealExpr, asOf, currentTask string, arg func(any) int) (string, error) {
-	pending, err := auth.ActivityRepairPendingClause(ctx, "pending_step", arg)
-	if err != nil {
-		return "", err
-	}
-	sourcePending, err := auth.ActivityRepairPendingClause(ctx, "pending_source", arg)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf(`(NOT %s AND NOT EXISTS (
-  SELECT 1 FROM activity pending_step
-  JOIN activity_link pending_link ON pending_link.activity_id=pending_step.id AND pending_link.deal_id=%s
-  WHERE pending_step.archived_at IS NULL AND ((%s)
-   OR (pending_step.kind='task' AND pending_step.restricted_at IS NULL AND EXISTS (
-    SELECT 1 FROM activity pending_source WHERE pending_source.id=pending_step.source_activity_id AND (%s))))
- ))`, OpenNextStepSQL(dealExpr, asOf, currentTask), dealExpr, pending, sourcePending), nil
 }

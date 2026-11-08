@@ -30,7 +30,7 @@ var versionQueries = map[string]string{
 	typeContact: `SELECT version FROM contact WHERE id = $1`,
 	typeLead:    `SELECT version FROM lead WHERE id = $1`,
 	typeProject: `SELECT version FROM project WHERE id = $1`,
-	"activity":  `SELECT version FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key)) AND archived_at IS NULL`,
+	"activity":  `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`,
 }
 
 // attachVersion adds the record's version to an undoable answer. An answer that

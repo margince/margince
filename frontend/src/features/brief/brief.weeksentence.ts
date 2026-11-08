@@ -134,7 +134,10 @@ export function weekSentence(
   if (!review) {
     return null;
   }
-  const { figures } = weeklyNumericStatus(review.numeric_summary);
+  const { figures } = weeklyNumericStatus(
+    review.numeric_summary,
+    review.leads_withheld,
+  );
   // A week before any source began is not a quiet week: nothing measured it.
   if (beforeRecordedHistory(figures)) {
     return { key: "brief.week.beforeHistory", values: {} };

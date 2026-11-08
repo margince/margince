@@ -43,15 +43,10 @@ const entityTypeCompany = "company"
 // ack can never rewind a newer one — two tabs open on the same account
 // converge on the later visit instead of racing the baseline backwards.
 //
-// The human gate is explicit and load-bearing, not defense in depth. An
-// agent principal carries the granting human's id as its UserID
-// (identity/passport.go stamps OnBehalfOf there for row scope), so
-// "resolve the acting user" would happily write a baseline marking an
-// account as SEEN by a human who never opened it — consuming their unread
-// marker on their behalf. The transport's x-agent-access: human-only says
-// the same thing one layer up; this is the layer that owns the write.
+// An agent carries its user's id, so this spends that user's unread marker. Only
+// an agent on a passport may, and its tool tells it to ask first.
 func (s *Service) Acknowledge(ctx context.Context, companyID ids.CompanyID) (crmcontracts.RecordViewAck, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.RecordViewAck{}, err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
@@ -157,7 +152,7 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.created_at > $%d AND %s AND (%s)%s`,
+		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
 		sincePos, activities.CompanyLinkedActivityExists(companyPos), activityScope, a.opts.projectScope(arg))
 	if err := tx.QueryRow(ctx, query, args...).Scan(&out.NewActivities); err != nil {
 		return out, fmt.Errorf("count new activities: %w", err)
@@ -242,12 +237,11 @@ func (s *Service) dealStageMoves(ctx context.Context, tx pgx.Tx, companyID ids.C
 	return moves, true, nil
 }
 
-// actingUser resolves the user this baseline belongs to. It answers for
-// agents too — an agent's UserID is the granting human's — so it is a
-// lookup, not a gate: Acknowledge's auth.RequireHuman is what keeps an
-// agent from writing that human's mark. A principal with no user id at
-// all (system, connector) has no baseline, and that is a refusal rather
-// than a shared default row.
+// actingUser resolves the user this baseline belongs to. An agent's UserID is
+// the granting human's, so this is a lookup and not a gate. Acknowledge's
+// auth.RequireHumanOrItsAgent decides who may write that human's mark. A
+// principal with no user id at all (system, connector) has no baseline, and
+// that is a refusal rather than a shared default row.
 func actingUser(ctx context.Context) (ids.UserID, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.UserID == (ids.UUID{}) {

@@ -54,7 +54,7 @@ func OffThreadAnswersTx(ctx context.Context, tx pgx.Tx, request ids.UUID, asOf t
 		  CROSS JOIN LATERAL (`+offThreadAnswersSQL("a", "$2")+`) found
 		  JOIN activity answer ON answer.id = found.id
 		 WHERE a.id = $1
-		   AND (answer.archived_at IS NULL AND activity_thread_available(answer.thread_key)) AND answer.restricted_at IS NULL
+		   AND answer.archived_at IS NULL AND answer.restricted_at IS NULL
 		   AND answer.audience = 'workspace'
 		 ORDER BY answer.occurred_at DESC, answer.id DESC
 		 LIMIT $4`, request, asOf, bodyLimit, limit)

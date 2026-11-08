@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -153,7 +154,7 @@ var meetingFollowUpsSQL = `
 	                GROUP BY rc.id) met) attendees
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	 WHERE a.kind = 'meeting'
-	   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+	   AND a.archived_at IS NULL
 	   AND NOT ` + ImportedHistorySQL + `
 	   AND %[12]s
 	   AND %[15]s
@@ -180,7 +181,8 @@ var meetingFollowUpsSQL = `
 	                    WHERE later.id <> a.id
 	                      AND later.archived_at IS NULL
 	                      AND later.direction IS DISTINCT FROM 'inbound'
-	                      AND ` + followUpEvidenceSQL("later", "%[6]s", "%[7]s") + `
+	                      AND %[6]s
+	                      AND %[7]s
 	                      AND %[16]s
 	                      AND ` + occurredday.BegunSQL("later", "$%[1]d::timestamptz") + `)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
@@ -194,7 +196,7 @@ var meetingFollowUpsSQL = `
 // past meeting owes an outcome, which the outcome lane asks for once; it owes
 // no follow-up yet.
 func meetingHeldSQL(alias, now string) string {
-	return "(" + alias + ".meeting_status = 'held' AND " + occurredday.BegunSQL(alias, now) + ")"
+	return "(" + meetingoutcome.HeldSQL(alias) + " AND " + occurredday.BegunSQL(alias, now) + ")"
 }
 
 func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
@@ -218,7 +220,7 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
-		g.later, relstrength.InteractionCountsSQL("later"), reader,
+		g.later, relstrength.InteractionCountsSQL("later", at), reader,
 		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
 		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	)), args, nil
@@ -231,7 +233,7 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 func meetingCandidatesSQL(asOf, window, reader, held string) string {
 	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, ` + followUpFromSQL + ` AS follow_from
 	  FROM activity a
-	 WHERE activity_thread_available(a.thread_key) AND a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND NOT ` + ImportedHistorySQL + `
+	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND NOT ` + ImportedHistorySQL + `
 	   AND ` + held + `
 	   AND ` + meetingEndSQL + ` <= ` + asOf + `::timestamptz - make_interval(days => ` + window + `::int)
 	   AND ` + meetingEndSQL + fmt.Sprintf(` >= %s::timestamptz - make_interval(days => %s::int + %d)`, asOf, window, AwaitingReplyLookbackDays) + `
@@ -258,7 +260,7 @@ func meetingNeedSQL() string {
 	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
 	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached
 	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = recipient.contact_id
-	   JOIN activity later ON later.id = touched.activity_id AND (later.restricted_at IS NULL AND activity_thread_available(later.thread_key))
+	   JOIN activity later ON later.id = touched.activity_id AND later.restricted_at IS NULL
 	    AND later.occurred_at >= recipient.since -- occurred_at raw: FromSQL implies it, so the set is never narrower
 `
 }
