@@ -5,7 +5,7 @@ import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
 import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelRow } from "../../design-system/panel";
 import {
@@ -73,7 +73,13 @@ function answered(state: SectionState): boolean {
 export function SchedulePanel({
   day,
   state,
-}: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
+  onOpenMeeting,
+}: Readonly<{
+  day: Worklist | undefined;
+  state: SectionState;
+  /** Opens one meeting by its activity id; without it the title is text. */
+  onOpenMeeting?: (id: string) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
@@ -99,7 +105,10 @@ export function SchedulePanel({
         emptyLabel={t("brief.rail.quietSchedule")}
       >
         {meetings.length === 0 && answered(state) && day && (
-          <NoMeetingRows calendar={calendarDay(day)} />
+          <NoMeetingRows
+            calendar={calendarDay(day)}
+            onOpenMeeting={onOpenMeeting}
+          />
         )}
         {meetings.map((item) => (
           <PanelRow key={item.id} className="rail-schedule-row">
@@ -124,11 +133,19 @@ export function SchedulePanel({
 }
 
 /** What the panel says on a day it has no meeting rows to draw. */
-function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
+function NoMeetingRows({
+  calendar,
+  onOpenMeeting,
+}: Readonly<{
+  calendar: CalendarDay;
+  onOpenMeeting?: (id: string) => void;
+}>) {
   const t = useT();
   switch (calendar.state) {
     case "quiet":
-      return <NextMeetingRow next={calendar.next} />;
+      return (
+        <NextMeetingRow next={calendar.next} onOpenMeeting={onOpenMeeting} />
+      );
     case "not_connected":
       return (
         <>
@@ -136,7 +153,12 @@ function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
             sentence={t("brief.schedule.notConnected")}
             verb={t("brief.schedule.connect")}
           />
-          {calendar.next && <NextMeetingRow next={calendar.next} />}
+          {calendar.next && (
+            <NextMeetingRow
+              next={calendar.next}
+              onOpenMeeting={onOpenMeeting}
+            />
+          )}
         </>
       );
     case "unreadable":
@@ -146,7 +168,12 @@ function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
             sentence={t("brief.schedule.unreadable")}
             verb={t("brief.schedule.reconnect")}
           />
-          {calendar.next && <NextMeetingRow next={calendar.next} />}
+          {calendar.next && (
+            <NextMeetingRow
+              next={calendar.next}
+              onOpenMeeting={onOpenMeeting}
+            />
+          )}
         </>
       );
     case "unread":
@@ -178,7 +205,10 @@ function CalendarRow({
  * The next booked conversation, on the schedule's own line. Its gutter carries
  * a date rather than a time, which is what tells it apart from today's rows.
  */
-function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
+function NextMeetingRow({
+  next,
+  onOpenMeeting,
+}: Readonly<{ next: NextMeeting; onOpenMeeting?: (id: string) => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
@@ -196,8 +226,14 @@ function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
       </span>
       <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
-        {next.linked_deal_id ? (
-          <EntityRef kind="deal" id={next.linked_deal_id} name={subject} />
+        {/* The title opens the meeting itself; its deal is one click on. */}
+        {onOpenMeeting ? (
+          <Button
+            variant="link"
+            onClick={() => onOpenMeeting(next.activity_id)}
+          >
+            {subject}
+          </Button>
         ) : (
           <span className="t-body">{subject}</span>
         )}

@@ -133,17 +133,22 @@ describe("the schedule panel", () => {
       calendar: "connected" as const,
       next_meeting: NEXT,
     };
-    draw(<SchedulePanel day={day} state="ready" />);
+    const opened: string[] = [];
+    draw(
+      <SchedulePanel
+        day={day}
+        state="ready"
+        onOpenMeeting={(id) => opened.push(id)}
+      />,
+    );
 
     const panel = screen.getByRole("region");
     expect(panel.querySelector(".rail-schedule-when")?.textContent).toBe(
       formatDateAbbrev(NEXT.starts_at, "en", zone),
     );
-    expect(
-      within(panel)
-        .getByRole("link", { name: "Weber kickoff" })
-        .getAttribute("href"),
-    ).toContain("deal-1");
+    // The title opens the meeting itself, never the deal it is filed on.
+    within(panel).getByRole("button", { name: "Weber kickoff" }).click();
+    expect(opened).toEqual([NEXT.activity_id]);
     expect(
       within(panel)
         .getByRole("link", { name: "Anna Weber" })
@@ -200,9 +205,7 @@ describe("the schedule panel", () => {
     expect(
       within(panel).getByRole("link", { name: en["brief.schedule.connect"] }),
     ).toBeTruthy();
-    expect(
-      within(panel).getByRole("link", { name: "Weber kickoff" }),
-    ).toBeTruthy();
+    expect(within(panel).getByText("Weber kickoff")).toBeTruthy();
   });
 
   // A read that has not landed is not a clear day. Collapsing here would send a

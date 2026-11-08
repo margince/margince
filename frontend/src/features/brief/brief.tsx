@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useEffect, useId, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -26,6 +32,7 @@ import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
+  ActivityDetailModal,
   MeetingDetailModal,
   TaskDetailModal,
 } from "../worklist/taskdetailmodal";
@@ -323,7 +330,7 @@ function PersonalMorning({
         aside={
           <>
             {/* The day's meetings first: the work is read against them. */}
-            <SchedulePanel day={day} state={state} />
+            <ScheduleWithMeetings day={day} state={state} />
             {day && (
               <div className="brief-overview">
                 <Eyebrow as="h2" className="brief-section-label">
@@ -412,5 +419,24 @@ function FocusDetails({
         <WorklistPane item={item} answer />
       </DrawerBody>
     </Modal>
+  );
+}
+
+// The schedule, whose meeting titles open the meeting over Home.
+function ScheduleWithMeetings({
+  day,
+  state,
+}: Readonly<Omit<ComponentProps<typeof SchedulePanel>, "onOpenMeeting">>) {
+  const [meeting, setMeeting] = useState<string | null>(null);
+  return (
+    <>
+      <SchedulePanel day={day} state={state} onOpenMeeting={setMeeting} />
+      {meeting && (
+        <ActivityDetailModal
+          activityId={meeting}
+          onClose={() => setMeeting(null)}
+        />
+      )}
+    </>
   );
 }

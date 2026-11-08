@@ -240,7 +240,7 @@ export function whenText(
 ): string | null {
   if (item.source === "notice" && item.notice_origin)
     return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
-  const held = scheduledText(item, t, locale, record);
+  const held = scheduledText(item, t, locale, viewer);
   if (held) return held;
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;
