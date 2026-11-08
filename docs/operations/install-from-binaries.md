@@ -12,6 +12,8 @@ more of you and leaves you holding each part.
 ## Before you start
 
 - A host that meets [system-requirements.md](system-requirements.md).
+- A copy of the source, entered at its root, which is where every command
+  below runs: `git clone https://github.com/margince/margince && cd margince`.
 - Postgres and Redis reachable from it, with a Postgres role that may create
   the schema.
 - Go, to build with. The repository names the version it builds under in
@@ -38,11 +40,11 @@ Vite build served as static files, which
 
 With anything under `extensions/`, build through the composed workspace
 instead, or the binaries resolve the committed stub and leave every enabled
-extension out. `make -C backend composition` writes that workspace, and each
-program is built against it:
+extension out. The first command writes that workspace, and each program is
+built against it:
 
 ```sh
-make -C backend composition
+GOWORK="$PWD/go.work" go run -C backend ./tools/gen-composition
 GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-migrate ./cmd/migrate
 GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-api     ./cmd/api
 GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-worker  ./cmd/worker
@@ -65,15 +67,19 @@ cp config/margince.example.yaml margince.yaml
 That file names the first company and the first admin, which is how an
 installation gets its way in. The admin's password comes by reference, from
 `config/margince-admin-password`, a file only `make dev` writes. Write your own,
-at least 12 characters, and keep it out of the repository:
+at least 12 characters. The file is made readable by you alone before the
+password goes in. The password is read without echo, so it stays out of your
+shell history:
 
 ```sh
-umask 077 && printf '%s' 'a password of your own' > config/margince-admin-password
+install -m 600 /dev/null config/margince-admin-password
+stty -echo; printf 'Admin password: '; read -r pw; stty echo; echo
+printf '%s' "$pw" > config/margince-admin-password; unset pw
 ```
 
-Leave `bootstrap_admin` out instead, and the API prints a one-time setup token
-on its first boot. Whoever claims the installation with it enters the company
-and the first admin.
+The repository ignores that path. Claiming an installation through the setup
+screen instead needs the web app, which
+[how-to/deploy-margince.md](../how-to/deploy-margince.md) serves.
 
 `config/margince.defaults.yaml` is every setting
 at its default, for reading rather than copying. It names no company, so an
@@ -115,14 +121,18 @@ flags each takes, are in
 Both read the same configuration, and each runs until it is stopped. They need
 a terminal each. Both connect as the serving role, `margince_app`, which they
 read from `MARGINCE_DSN`. The owner DSN the migration used does not carry over.
-The API also takes the address it listens on:
+Both reach Redis at `MARGINCE_REDIS`, which is `localhost:16379` unless you set
+it. The API takes the address it listens on, and the worker the address of its
+probes:
 
 ```sh
-MARGINCE_DSN=postgres://margince_app:...@db/margince ./bin/margince-api --config margince.yaml --addr 127.0.0.1:8080
+export MARGINCE_DSN=postgres://margince_app:...@db/margince MARGINCE_REDIS=redis-host:6379
+./bin/margince-api --config margince.yaml --addr 127.0.0.1:8080
 ```
 
 ```sh
-MARGINCE_DSN=postgres://margince_app:...@db/margince ./bin/margince-worker --config margince.yaml
+export MARGINCE_DSN=postgres://margince_app:...@db/margince MARGINCE_REDIS=redis-host:6379
+./bin/margince-worker --config margince.yaml --observe-addr 127.0.0.1:9091
 ```
 
 The API prints the address it serves on, the base path, and where the outbox
@@ -155,7 +165,12 @@ ready
 ```
 
 It answers `503` and `unready: <name>` while a dependency it needs is not
-answering, and the name says which one.
+answering, and the name says which one. The API checks Redis only when it runs
+the event relay itself. When the worker runs it, as above, ask the worker too:
+
+```sh
+curl -i http://127.0.0.1:9091/readyz
+```
 
 Read a probe rather than the front page: a front page that renders says less
 than a probe that reports the database and the bus. The probes an operator
