@@ -69145,7 +69145,7 @@ type GetAiUsageSummaryParams struct {
 	// From Default: the first day of the current UTC month. Must not be after `to`.
 	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
 
-	// To Default: today.
+	// To Default: today. At most 366 days after `from`.
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 

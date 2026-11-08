@@ -82317,7 +82317,7 @@ export interface operations {
             query?: {
                 /** @description Default: the first day of the current UTC month. Must not be after `to`. */
                 from?: string;
-                /** @description Default: today. */
+                /** @description Default: today. At most 366 days after `from`. */
                 to?: string;
             };
             header?: never;

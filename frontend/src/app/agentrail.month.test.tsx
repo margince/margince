@@ -8,6 +8,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { currentMonth } from "../features/ai/aiusage";
 import { LocaleProvider } from "../i18n";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
 
@@ -27,9 +28,20 @@ describe("the agent rail's month", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("is the month the usage screen names", async () => {
+    // Half an hour before December in UTC, and already December in Tokyo. The
+    // two readings differ here, so a rail that read UTC's month would ask for
+    // November.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-30T23:30:00Z"));
+    const readerZone = "Asia/Tokyo";
+    const month = currentMonth(readerZone);
+    expect(month.from).toBe("2026-12-01");
+    expect(currentMonth("UTC").from).toBe("2026-11-01");
+
     const summaryQueries: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -60,14 +72,16 @@ describe("the agent rail's month", () => {
     render(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
-          <AgentRail route={{ screen: "deals" }} />
+          <ViewerZoneProvider zone={readerZone}>
+            <AgentRail />
+          </ViewerZoneProvider>
         </LocaleProvider>
       </QueryClientProvider>,
     );
 
     await waitFor(() => expect(summaryQueries.length).toBeGreaterThan(0));
-    const month = currentMonth();
-    expect(summaryQueries[0]).toContain(`from=${month.from}`);
-    expect(summaryQueries[0]).toContain(`to=${month.to}`);
+    const asked = new URLSearchParams(summaryQueries[0]);
+    expect(asked.get("from")).toBe(month.from);
+    expect(asked.get("to")).toBe(month.to);
   });
 });

@@ -29,6 +29,25 @@ import (
 // whole metering history. A year covers every UI view.
 const maxUsageWindowDays = 366
 
+// usageWindowRefusal is the refusal a usage window earns, or nil. The report
+// and the summary both aggregate every metered call in it, so both take one
+// rule: in order, and no wider than maxUsageWindowDays.
+func usageWindowRefusal(from, to time.Time) *httperr.DetailedError {
+	if to.Before(from) {
+		return &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity, Code: "window_inverted",
+			Detail: "`from` must not be after `to`.",
+		}
+	}
+	if to.Sub(from) > maxUsageWindowDays*24*time.Hour {
+		return &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity, Code: "window_too_wide",
+			Detail: "The usage window is capped at 366 days — narrow `from`/`to`.",
+		}
+	}
+	return nil
+}
+
 // GetAiUsage implements (GET /ai/usage).
 func (h Handlers) GetAiUsage(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAiUsageParams) {
 	from, to := h.meter.UsageWindow()
@@ -38,18 +57,8 @@ func (h Handlers) GetAiUsage(w http.ResponseWriter, r *http.Request, params crmc
 	if params.To != nil {
 		to = params.To.Time
 	}
-	if to.Before(from) {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "window_inverted",
-			Detail: "`from` must not be after `to`.",
-		})
-		return
-	}
-	if to.Sub(from) > maxUsageWindowDays*24*time.Hour {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "window_too_wide",
-			Detail: "The usage window is capped at 366 days — narrow `from`/`to`.",
-		})
+	if refusal := usageWindowRefusal(from, to); refusal != nil {
+		httperr.Write(w, r, refusal)
 		return
 	}
 	days, budget, err := h.meter.UsageReport(r.Context(), h.budget, h.rates, from, to)
@@ -187,11 +196,8 @@ func (h Handlers) GetAiUsageSummary(
 	if params.To != nil {
 		to = params.To.Time
 	}
-	if to.Before(from) {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "window_inverted",
-			Detail: "`from` must not be after `to`.",
-		})
+	if refusal := usageWindowRefusal(from, to); refusal != nil {
+		httperr.Write(w, r, refusal)
 		return
 	}
 	spend, err := h.meter.SpendOver(r.Context(), h.rates, from, to)

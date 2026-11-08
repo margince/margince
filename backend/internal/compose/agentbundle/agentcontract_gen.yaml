@@ -15722,7 +15722,7 @@ paths:
         total and needs none of the report's lines, budget or decisions.
       parameters:
         - {name: from, in: query, schema: {type: string, format: date}, description: 'Default: the first day of the current UTC month. Must not be after `to`.'}
-        - {name: to, in: query, schema: {type: string, format: date}, description: 'Default: today.'}
+        - {name: to, in: query, schema: {type: string, format: date}, description: 'Default: today. At most 366 days after `from`.'}
       responses:
         '200':
           description: The month's spend.
