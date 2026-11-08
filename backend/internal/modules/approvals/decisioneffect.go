@@ -117,13 +117,35 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 	}
 	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
 		if err := effect(storekit.WithReleasingApproval(releasing(ctx, id), id.UUID), id, a.ProposedChange, a.DiffHash); err != nil {
-			return s.recordEffectFailure(ctx, a,
-				"this was approved, but the work it released did not run",
+			return s.recordEffectFailure(ctx, a, effectFailureSentence(err),
 				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
 		}
 		s.recordEffectRan(ctx, id)
 	}
 	return nil
+}
+
+// ErrEffectUnconfirmed is an effect whose write went to another system and was
+// not confirmed, so it may have landed. An effect returns it only after
+// redeeming, so the approval is spent and is never re-driven.
+var ErrEffectUnconfirmed = errors.New("approvals: the released write was not confirmed")
+
+// ErrEffectFollowUpFailed is an effect whose change landed and whose later
+// bookkeeping did not. It too is returned only after redeeming.
+var ErrEffectFollowUpFailed = errors.New("approvals: the released change landed and a later step failed")
+
+// effectFailureSentence is what the decider reads about a failed effect.
+func effectFailureSentence(err error) string {
+	switch {
+	case errors.Is(err, ErrEffectFollowUpFailed):
+		return "this was approved and the change was made, but the automation that asked for it " +
+			"could not be marked finished"
+	case errors.Is(err, ErrEffectUnconfirmed):
+		return "this was approved and sent on, but the system it went to never confirmed it, " +
+			"so it may have happened. Check the record before you ask for it again"
+	default:
+		return "this was approved, but the work it released did not run"
+	}
 }
 
 // recordEffectFailure marks an approved row whose effect did not run, and
