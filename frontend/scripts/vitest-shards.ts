@@ -5,6 +5,8 @@
 // count and leaves the time to chance. The few files that type-check the whole
 // tree cost minutes each, so this splits by expected cost instead.
 
+import { globSync } from "node:fs";
+import { join } from "node:path";
 import type { TestSequencer, TestSpecification, Vitest } from "vitest/node";
 
 /**
@@ -47,6 +49,27 @@ async function costsOf(
   const { testCosts } = await import("./lib/test-cost.ts");
   const paths = [...new Set(files.map((spec) => spec.moduleId))];
   return new Map([...testCosts(paths)].map(([path, { cost }]) => [path, cost]));
+}
+
+// Vitest's default include. A file this misses stays in the isolated project,
+// so a gap here costs time and never drops a file.
+const TEST_FILES = "**/*.{test,spec}.{ts,tsx,mts,cts,js,jsx,mjs,cjs}";
+
+/**
+ * The test files under `frontendRoot` that load the TypeScript compiler, as
+ * paths relative to it: the parse and program kinds of the cost model.
+ */
+export async function compilerTests(frontendRoot: string): Promise<string[]> {
+  const { testCosts } = await import("./lib/test-cost.ts");
+  const files = globSync(TEST_FILES, {
+    cwd: frontendRoot,
+    exclude: (path) =>
+      path === "node_modules" || path.endsWith("/node_modules"),
+  });
+  const costs = testCosts(files.map((file) => join(frontendRoot, file)));
+  return files
+    .filter((file) => costs.get(join(frontendRoot, file))?.kind !== "render")
+    .sort();
 }
 
 export class CostSequencer implements TestSequencer {
