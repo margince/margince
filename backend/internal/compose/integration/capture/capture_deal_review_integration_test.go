@@ -263,21 +263,22 @@ func TestTheRepairKeepsAColleaguesFilingMadeWhileItWaited(t *testing.T) {
 	wantDeals(t, e, "aba1@acme.example", first)
 }
 
-// The rule's new answer is a deal a colleague closes while the repair waits
-// for its row. The repair asks the deal's admission before it takes anything
-// back, so it reports the refusal. The rule's old link comes off and nothing
-// is written in its place. The change is announced with the relink event
-// its consumers read.
+// The rule's new answer, from the project a colleague filed the mail under, is
+// a deal a colleague closes while the repair waits for its row. The repair asks
+// the deal's admission before it takes anything back, so it reports the
+// refusal. The rule's old link comes off and nothing is written in its place.
+// The change is announced with the relink event its consumers read.
 func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	alice := w.employee(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	first := w.deal(t, "Acme rollout")
 	env.sync(t, mailFrom("alice@acme.example", "ref1@acme.example", "", "status"))
 	wantDeals(t, e, "ref1@acme.example", first)
-	closing := w.deal(t, "Acme reporting")
-	w.stakeholder(t, alice, closing)
+	reporting := w.project(t, "Reporting")
+	closing := w.dealOnProject(t, "Acme reporting", reporting.ID)
+	relinkAsColleague(t, e, w, activityOf(t, e, "ref1@acme.example"), "project", reporting.ID)
 	var lost ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
@@ -441,7 +442,9 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 	w := newDealWorld(t, e)
 	w.employee(t, "alice@acme.example", w.customer)
 	env.sync(t, mailFrom("alice@acme.example", "ev1@acme.example", "", "status"))
-	deal := w.deal(t, "Acme rollout")
+	rollout := w.project(t, "Rollout")
+	deal := w.dealOnProject(t, "Acme rollout", rollout.ID)
+	relinkAsColleague(t, e, w, activityOf(t, e, "ev1@acme.example"), "project", rollout.ID)
 	if changed := newRepairer(e, w).run(t); changed != 1 {
 		t.Fatalf("the repair changed %d mails, want 1", changed)
 	}
