@@ -105,10 +105,14 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 	if err := s.runPrecheck(ctx, id, approve, edited); err != nil {
 		return row{}, err
 	}
+	footprint, err := s.footprintToStore(ctx, id, edited)
+	if err != nil {
+		return row{}, err
+	}
 	var a row
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited, by)
+		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited, footprint, by)
 		if err != nil {
 			return err
 		}
@@ -226,7 +230,7 @@ func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.
 	return a, nil
 }
 
-func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
+func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited, footprint json.RawMessage, by decider) (row, error) {
 	// An automatic apply binds the owner, reads the mode and holds the target
 	// before the row lock (bindUnderPolicy has the lock order).
 	if by == decidedBySystem {
@@ -313,9 +317,9 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4,
-		        decided_by_system = $5
+		        decided_by_system = $5, plan_footprint = $6
 		 WHERE id = $1`,
-		id, status, p.UserID, reason, bool(by)); err != nil {
+		id, status, p.UserID, reason, bool(by), footprint); err != nil {
 		return row{}, err
 	}
 	// The track record the autonomy ladder is earned on, counted in the same

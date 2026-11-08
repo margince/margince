@@ -11,7 +11,7 @@ import {
   preloadEntries,
 } from "./scripts/vite-entry-chunks.ts";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
-import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
+import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import { CostSequencer } from "./scripts/vitest-shards.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
@@ -141,7 +141,7 @@ export default defineConfig({
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
     svgr({ svgrOptions: { dimensions: false } }),
     serveMcpApps(),
-    materialSymbolsLicense(),
+    thirdPartyNotices(),
     pwa({ release }),
   ],
   // The release this bundle was built from, compiled IN.
