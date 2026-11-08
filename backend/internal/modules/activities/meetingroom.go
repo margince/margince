@@ -106,7 +106,7 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 	// live human is a colleague. An address also held by a contact or a seat on
 	// this meeting is that attendee, not a second one. A contact whose email is
 	// the address a listed colleague attends by is that colleague, never a
-	// second entry; names alone never merge two people.
+	// second entry; names alone never merge two attendees.
 	return fmt.Sprintf(`(SELECT dl.deal_id FROM activity_link dl
 		          JOIN deal d ON d.id = dl.deal_id AND d.archived_at IS NULL
 		         WHERE dl.activity_id = a.id AND (%[1]s) LIMIT 1),

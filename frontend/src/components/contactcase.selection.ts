@@ -91,7 +91,7 @@ export function pairLocked(
 }
 
 /**
- * The members ticked when the review opens: never a second person. The
+ * The members ticked when the review opens: never a second contact. The
  * reader picks who is a duplicate. Only the contact they opened the review
  * from starts ticked, and only when it is in a pair they may merge.
  */

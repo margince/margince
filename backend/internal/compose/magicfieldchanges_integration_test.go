@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -25,7 +26,7 @@ import (
 // receipt read Done for you uses.
 func dealReceiptChanges(ctx context.Context, t *testing.T, pool *pgxpool.Pool, audit, deal ids.UUID) []crmcontracts.MagicFieldChange {
 	t.Helper()
-	svc := newMagicService(pool, approvals.NewService(InstallationDB(pool)), time.Now)
+	svc := newMagicService(pool, approvals.NewService(InstallationDB(pool)), func() time.Time { return clocktest.Now(t) })
 	changes, err := svc.ReceiptChanges(ctx, []magic.ReceiptRecord{{ReceiptID: audit, EntityType: "deal", EntityID: deal}})
 	if err != nil {
 		t.Fatal(err)

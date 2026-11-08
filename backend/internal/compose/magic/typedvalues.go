@@ -91,11 +91,12 @@ func heldCurrencies(ctx context.Context, tx pgx.Tx, entries []entry) (map[ids.UU
 		}
 		return nil, err
 	}
+	// The trail is pinned to 'deal' as a literal, so the read visibly reaches no activity image.
 	rows, err := tx.Query(ctx, `
 		SELECT d.id, COALESCE(d.currency::text, ''),
 		       (SELECT max(a.occurred_at) FROM audit_log a
-		         WHERE a.entity_type = $1 AND a.entity_id = d.id AND a.after ? $2)
-		  FROM deal d WHERE d.id = ANY($3)`, typeDeal, values.AmountCurrency, deals)
+		         WHERE a.entity_type = 'deal' AND a.entity_id = d.id AND a.after ? $1)
+		  FROM deal d WHERE d.id = ANY($2)`, values.AmountCurrency, deals)
 	if err != nil {
 		return nil, fmt.Errorf("read the currency a deal holds: %w", err)
 	}

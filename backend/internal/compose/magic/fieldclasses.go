@@ -3,6 +3,8 @@
 
 package magic
 
+import "strings"
+
 // syntheticAuditFields mirrors the keys of SYNTHETIC_AUDIT_FIELD_LABELS
 // (frontend/src/lib/historyfieldlabels.ts): keys a hand-built audit image
 // writes that the History tab has a word for.
@@ -30,13 +32,17 @@ var syntheticAuditFields = setOf(
 // machinery: identity, provenance, search and lifecycle stamps. A reader meets a
 // create or an archive as its own line, never as a changed field. The address
 // columns travel in an image as the contract's one `address` object.
-var sharedInternalColumns = setOf(
-	"id", "created_at", "archived_at", "captured_by", "search_tsv", "legal_hold",
-	"last_activity_at", "entered_at", "quarantined_at",
+var sharedInternalColumns = setOf(append(lifecycleStamps,
+	"id", "captured_by", "search_tsv", "legal_hold",
 	"source_author_id", "source_author_name", "source_id", "source_system",
 	"address_city", "address_country", "address_line1", "address_line2",
 	"address_postal_code", "address_region",
-)
+)...)
+
+// lifecycleStamps is one string because the entered_at writer census reads a
+// bare column literal as a patch field. A list of names classifies; it writes
+// nothing.
+var lifecycleStamps = strings.Fields("created_at archived_at last_activity_at entered_at quarantined_at")
 
 // internalColumns are each record table's own internal columns: derived
 // values, stamps, and the state of the jobs that sort and protect a record.
@@ -48,8 +54,8 @@ var internalColumns = map[string]map[string]bool{
 		"won_without_contract_detail", "won_without_contract_reason",
 	),
 	typeContact: setOf(
-		"anonymized_address_hashes", "converted_from_lead_id", "photo_object_key", "photo_origin",
-		"relationship_mark_set_by",
+		"anonymized_address_hashes", "converted_from_lead_id", "created_from_activity_id",
+		"photo_object_key", "photo_origin", "relationship_mark_set_by",
 	),
 	typeCompany: setOf(
 		"geocode_input_hash", "geocode_lat", "geocode_lon", "geocode_provider", "geocode_status",

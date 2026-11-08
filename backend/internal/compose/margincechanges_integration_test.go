@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -131,7 +132,7 @@ func TestAChangeEditedSinceIsListedButNotUndoneAndLeavesAfterTheWindow(t *testin
 		}
 	}
 
-	h.deals.SetClock(func() time.Time { return time.Now().Add(15 * 24 * time.Hour) })
+	h.deals.SetClock(func() time.Time { return clocktest.Now(t).Add(15 * 24 * time.Hour) })
 	later, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
 	if err != nil {
 		t.Fatal(err)

@@ -231,7 +231,7 @@ describe("the schedule panel", () => {
   });
 });
 
-it("separates the next meeting's people with one comma each", () => {
+it("separates the next meeting's attendees with one comma each", () => {
   const day = {
     ...readingsDay({}, []),
     calendar: "connected" as const,

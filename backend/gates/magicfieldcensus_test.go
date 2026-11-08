@@ -3,6 +3,8 @@
 
 //gate:kind census H2
 
+//go:build !integration
+
 package gates
 
 // Every column of a record a reader edits is shown on a receipt or declared
@@ -71,6 +73,7 @@ func liveFieldClassification() fieldClassification {
 
 // referenceReadings is the reading a presented column must have when its
 // foreign key names one of these tables, so its value is labelled by name.
+// gatekit:fixture the reading each referenced table's value is named by
 var referenceReadings = map[string]string{"app_user": "member", "stage": "stage"}
 
 func magicFieldFindings(schema recordTables, rule fieldClassification) []string {

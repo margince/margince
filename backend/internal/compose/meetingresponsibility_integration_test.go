@@ -11,7 +11,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"log/slog"
 	"testing"
 	"time"
@@ -22,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -353,8 +353,8 @@ func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
 	}
 }
 
-// A colleague who attends by their own address and is also on file as a
-// contact with that email is one person in the room, named as the colleague.
+// A colleague can attend by their own address and also be on file as a contact
+// with that email. The room names them once, as the colleague.
 func TestAColleagueOnFileAsAContactIsNamedOnceInTheRoom(t *testing.T) {
 	e := integration.Setup(t)
 	clock := func() time.Time { return laneDay }

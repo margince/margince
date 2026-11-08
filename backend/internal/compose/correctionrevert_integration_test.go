@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -317,14 +318,14 @@ func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 }
 
 // A later human edit of the corrected field takes the Undo away on the
-// receipt, as it does on the deal's own list: the writer would refuse it.
+// receipt, as it does on the deal's own list. The writer would refuse it.
 func TestTheReceiptRefusesUndoOnACorrectionEditedSince(t *testing.T) {
 	e := setupCloseDate(t)
 	deal := e.seedSweepDeal(t, "Corrected, then edited by hand", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	since := time.Now().Add(-time.Hour)
+	since := clocktest.Now(t).Add(-time.Hour)
 	date := today().AddDate(0, 0, 90)
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{ExpectedClose: &date}); err != nil {
 		t.Fatal(err)

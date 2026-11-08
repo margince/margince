@@ -3,6 +3,8 @@
 
 //gate:kind falsification H3
 
+//go:build !integration
+
 package gates
 
 // The receipt field census, falsified: each finding it reports, planted.

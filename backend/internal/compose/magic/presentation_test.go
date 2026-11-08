@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -141,7 +142,7 @@ func (s stubNames) Labels(_ context.Context, entityType string, want []ids.UUID)
 func TestAStageOrMemberIsNamedOnlyWhereTheReaderMayReadIt(t *testing.T) {
 	qualify, propose := ids.NewV7(), ids.NewV7()
 	ann, hidden := ids.NewV7(), ids.NewV7()
-	svc := NewService(nil, nil, time.Now).WithReferenceNames(stubNames{
+	svc := NewService(nil, nil, func() time.Time { return clocktest.Now(t) }).WithReferenceNames(stubNames{
 		"stage": {qualify: "Qualify", propose: "Propose"},
 		"user":  {ann: "Ann Lee"},
 	})
