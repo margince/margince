@@ -211,7 +211,12 @@ func (s *Store) applyEmploymentEvidence(ctx context.Context, tx pgx.Tx, contact 
 	if !selected {
 		return apperrors.ErrNotFound
 	}
-	return nil
+	if len(episodes) == 0 {
+		return nil
+	}
+	// Once, after every episode, rather than as each one retires an employer.
+	// An earlier episode's employer may be one a later episode replaced.
+	return fileEmployerTwins(ctx, tx, contact, connectorCapturedBy(episodes[0].provider))
 }
 
 func employmentGroup(episodes []employmentEvidence, req crmcontracts.EmploymentImportRequest, action string) string {

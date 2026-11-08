@@ -76,9 +76,22 @@ var companyUnarchive = storekit.UnarchiveShape{
 }
 
 // RestoreContactTx brings an archived contact back on the caller's
-// transaction, conditioned on ifVersion. with.Erased is required
-// (storekit.RestoreWith says why).
+// transaction, conditioned on ifVersion, and files the employer twins the
+// restore can create. with.Erased is required (storekit.RestoreWith says why).
 func (s *Store) RestoreContactTx(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, with storekit.RestoreWith,
+) (storekit.RestoreReport, error) {
+	report, err := s.RestoreContactLeavingTwinsTx(ctx, tx, id, ifVersion, with)
+	if err != nil {
+		return report, err
+	}
+	return report, s.FileRestoredEmployerTwinsTx(ctx, tx, []ids.ContactID{id})
+}
+
+// RestoreContactLeavingTwinsTx is RestoreContactTx for a caller that restores
+// several contacts in one transaction. It files their twins afterwards with
+// FileRestoredEmployerTwinsTx, once every contact row it changes is locked.
+func (s *Store) RestoreContactLeavingTwinsTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
 	if err := ensureRestorable(ctx, tx, contactEntity, id.UUID); err != nil {
@@ -87,18 +100,40 @@ func (s *Store) RestoreContactTx(
 	if err := refuseRestoreOverLead(ctx, tx, id); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	report, err := storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, with)
-	if err != nil {
-		return report, err
-	}
-	// The restore brings the contact's employment edges back with it, so it can
-	// hand the contact an employer it shares with a live one. The create's
-	// duplicate check ran before the archive, and it cannot have seen this.
+	return storekit.Unarchive(ctx, tx, contactUnarchive, id.UUID, ifVersion, with)
+}
+
+// FileRestoredEmployerTwinsTx files the same-employer twins of contacts a
+// restore brought back. A restore returns the contact's employment edges, so
+// it can hand the contact an employer it shares with a live one. The create's
+// duplicate check ran before the archive, and it cannot have seen this.
+//
+// Every contact's lanes are taken first, sorted across all of them. A writer
+// restoring many contacts then holds no lane while it waits on a contact row.
+func (s *Store) FileRestoredEmployerTwinsTx(ctx context.Context, tx pgx.Tx, restored []ids.ContactID) error {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return report, err
+		return err
 	}
-	return report, fileEmployerTwins(ctx, tx, id, by)
+	subjects := make([]contactSubject, 0, len(restored))
+	for _, id := range restored {
+		subject, found, err := readContactSubject(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if found {
+			subjects = append(subjects, subject)
+		}
+	}
+	if err := lockLanesForContacts(ctx, tx, subjects); err != nil {
+		return err
+	}
+	for _, id := range restored {
+		if err := fileEmployerTwins(ctx, tx, id, by); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // refuseRestoreOverLead refuses bringing a contact back while a live lead holds
