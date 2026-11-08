@@ -17496,6 +17496,7 @@ export const en = {
   "contact.moment.rule.job_change": "Changed jobs",
   "contact.moment.rule.overdue_promise": "Commitment overdue",
   "contact.moment.rule.gone_quiet": "Gone quiet",
+  "contact.moment.rule.awaiting_reply": "Waiting on them",
   "contact.moment.rule.open_promise": "Commitment due",
   "contact.moment.rule.public_signal": "In the news",
   "contact.moment.rule.missing_next_step": "No next step",

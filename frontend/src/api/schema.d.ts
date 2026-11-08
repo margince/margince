@@ -35095,7 +35095,7 @@ export interface components {
          *     card.
          * @enum {string}
          */
-        ContactMomentRule: "privacy_notice_due" | "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
+        ContactMomentRule: "privacy_notice_due" | "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "awaiting_reply" | "open_promise" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
         /** @description One thing that actually happened, which the reader can open. */
         ContactMomentEvidence: {
             /** @enum {string} */

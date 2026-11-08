@@ -17188,6 +17188,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.moment.rule.job_change": "Đã đổi việc",
   "contact.moment.rule.overdue_promise": "Cam kết quá hạn",
   "contact.moment.rule.gone_quiet": "Đã im lặng",
+  "contact.moment.rule.awaiting_reply": "Chờ họ trả lời",
   "contact.moment.rule.open_promise": "Cam kết đến hạn",
   "contact.moment.rule.public_signal": "Xuất hiện trên tin tức",
   "contact.moment.rule.missing_next_step": "Chưa có bước tiếp theo",
