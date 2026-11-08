@@ -39,7 +39,6 @@ var stillShowsRecordIDs = map[string]string{
 	"offer_draft/draft":                      "product ids in the catalog",
 	"request_settlement/request_settle":      "request ids; integration replies are scripted by id",
 	"stage_evidence_extract/criteria":        "span and criterion ids",
-	"summarize/company_dossier":              "profile field ids",
 	"tag_suggest/interest":                   "the source record id on each span",
 	"weekly_learnings/learn":                 "deal ids in the week JSON",
 }
