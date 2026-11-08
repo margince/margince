@@ -36,7 +36,7 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 }
 
 // footprint builds approval's plan as a pending read does and keeps only what
-// it touched, so a decision can store it whatever the status now reads.
+// it touched. A writer stores it whatever the status now reads.
 func (r approvalPreviewReader) footprint(ctx context.Context, approval crmcontracts.Approval) (*approvalplan.Footprint, error) {
 	_, footprint, err := r.readAs(ctx, approval, approvals.EffectContext)
 	return footprint, err

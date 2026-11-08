@@ -139,8 +139,8 @@ func (s *Service) pastFootprint(ctx context.Context, subject row) (*approvalplan
 	return &footprint, nil
 }
 
-// withheldPlan is the preview a plan no longer pending shows a reader it is
-// hidden from, so every surface words it as it words a pending one.
+// withheldPlan is the preview a reader gets for a past plan hidden from them.
+// Every surface then words it as it words a pending one.
 func withheldPlan() *crmcontracts.ApprovalPreview {
 	return &crmcontracts.ApprovalPreview{Version: 1, State: PreviewNeedsWiderSight, Changes: []crmcontracts.ApprovalPreviewChange{}}
 }

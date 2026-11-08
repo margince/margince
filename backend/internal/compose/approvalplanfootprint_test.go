@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A footprint is stored on the approval for good, so it holds the references
-// and field names the checks read and none of the values the plan showed.
+// A footprint is stored on the approval for good. It holds the references and
+// field names the checks read, and none of the values the plan showed.
 func TestAPlanFootprintHoldsReferencesAndFieldNamesButNoValue(t *testing.T) {
 	company, contact := ids.NewV7(), ids.NewV7()
 	companyType, contactType := entityCompany, string(recordTypeContact)
