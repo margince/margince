@@ -5,6 +5,7 @@ import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { InvitationBadge } from "../../components/booking-meeting-parts";
+import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
@@ -337,7 +338,9 @@ export function NextMeetingCard({
             )}
             {invitation && <JoinCall invitation={invitation} />}
           </ul>
-          {attendees.length > 0 && (
+          {(attendees.length > 0 ||
+            next.other_participants ||
+            next.participants_more) && (
             <div className="pe-meeting-attendees">
               <AvatarStack
                 contacts={attendees.map((who) => ({
@@ -347,6 +350,11 @@ export function NextMeetingCard({
               />
               <span className="t-caption">
                 {attendees.map((who) => who.full_name).join(", ")}
+                <MeetingOthers
+                  others={next.other_participants}
+                  more={next.participants_more}
+                  afterContacts={attendees.length > 0}
+                />
               </span>
             </div>
           )}

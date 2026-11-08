@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The changes Margince made to the reader's deals, as one summary row with an
-// Undo per deal and one for all of them. Counts are deals: three changes to
-// one deal are one deal and one Undo.
+// The words for what Margince changed on a deal, and the Undo of one deal or
+// many. Counts are deals: three changes to one deal are one deal and one Undo.
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
@@ -16,14 +15,12 @@ import { useCanWrite } from "../lib/capability";
 import { undoResultText } from "../lib/changecopy";
 import {
   archiveQuestion,
+  type BundleUndoRun,
   type MarginceChangeBundle,
-  type MarginceChangeSummary,
+  pendingChangesQuery,
+  stillPending,
   useUndoMarginceChanges,
 } from "../lib/marginchanges";
-import { EntityRef } from "./entityref";
-
-/** How many deals the summary row names; the rest are behind "View all". */
-const SUMMARY_DEALS = 5;
 
 const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   close_lost: "changes.kind.close_lost",
@@ -44,170 +41,197 @@ export function bundleKinds(kinds: readonly string[], t: Translator): string {
     .join(" · ");
 }
 
-/** The summary row Home shows once enough deals changed. */
-export function ChangeSummaryRow({
-  summary,
-}: Readonly<{ summary: MarginceChangeSummary }>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const count = (n: number) => formatNumber(n, locale);
-  const parts = [
-    summary.closed > 0 &&
-      plural("changes.part.closed", summary.closed, {
-        count: count(summary.closed),
-      }),
-    summary.opened > 0 &&
-      plural("changes.part.opened", summary.opened, {
-        count: count(summary.opened),
-      }),
-    summary.revived > 0 &&
-      plural("changes.part.revived", summary.revived, {
-        count: count(summary.revived),
-      }),
-    summary.moved > 0 &&
-      plural("changes.part.moved", summary.moved, {
-        count: count(summary.moved),
-      }),
-    summary.redated > 0 &&
-      plural("changes.part.redated", summary.redated, {
-        count: count(summary.redated),
-      }),
-    summary.revalued > 0 &&
-      plural("changes.part.revalued", summary.revalued, {
-        count: count(summary.revalued),
-      }),
-    summary.probabilities > 0 &&
-      plural("changes.part.probabilities", summary.probabilities, {
-        count: count(summary.probabilities),
-      }),
-  ].filter(Boolean);
-  return (
-    <div className="magic-line">
-      <p className="magic-line-text">
-        {plural("changes.summary", summary.deals, {
-          count: count(summary.deals),
-          parts: parts.join(", "),
-        })}
-      </p>
-      <ul className="magic-lines" aria-label={t("changes.deal.title")}>
-        {summary.bundles.slice(0, SUMMARY_DEALS).map((bundle) => (
-          <li className="magic-line" key={bundle.deal_id}>
-            <p className="magic-line-text">
-              <span className="magic-line-subject">
-                <EntityRef
-                  kind="deal"
-                  id={bundle.deal_id}
-                  name={bundle.deal_name}
-                />
-              </span>{" "}
-              <span className="t-caption">{bundleKinds(bundle.kinds, t)}</span>
-            </p>
-            <div className="magic-line-controls">
-              <BundleUndo bundles={[bundle]} label={t("common.undo")} />
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div className="magic-line-controls">
-        <AppLink href="#/worklist">{t("changes.viewAll")}</AppLink>
-        <BundleUndo bundles={summary.bundles} label={t("changes.undoAll")} />
-      </div>
-    </div>
-  );
-}
+// The question, and the bundles it was asked about: the confirmation goes back
+// at that read's version, not at the one the press first sent.
+type ArchiveQuestion = NonNullable<ReturnType<typeof archiveQuestion>> & {
+  sent: readonly MarginceChangeBundle[];
+};
 
 /**
- * Undoes whole deals. One deal answers in the words for its kinds; many
- * answer with how many were undone and how many kept a change.
+ * Undoes whole deals. One deal answers in the words for its kinds. Many answer
+ * with a count for each outcome, and the deals a failed batch never answered
+ * for can be sent again. `onDone` hears each answer the server gave.
  */
 export function BundleUndo({
   bundles,
   label,
-}: Readonly<{ bundles: readonly MarginceChangeBundle[]; label: string }>) {
+  onDone,
+}: Readonly<{
+  bundles: readonly MarginceChangeBundle[];
+  label: string;
+  onDone?: () => void;
+}>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
+  const client = useQueryClient();
   const writable = useCanWrite("deal", "update");
   const undo = useUndoMarginceChanges();
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [asking, setAsking] = useState<{
-    notes: number;
-    tasks: number;
-    work: string;
-    kind: string;
-  } | null>(null);
-  if (answer) {
-    return <span role="status">{answer}</span>;
-  }
-  if (!writable || bundles.length === 0) {
+  const [run, setRun] = useState<BundleUndoRun | null>(null);
+  const [asking, setAsking] = useState<ArchiveQuestion | null>(null);
+  const [rereading, setRereading] = useState(false);
+  if (!run && (!writable || bundles.length === 0)) {
     return null;
   }
-  const press = (archiveConfirmedFor?: string) =>
+  const press = (
+    chosen: readonly MarginceChangeBundle[],
+    archiveConfirmedFor?: string,
+  ) =>
     undo.mutate(
-      { bundles, archiveConfirmedFor },
+      { bundles: chosen, archiveConfirmedFor },
       {
-        onSuccess: (results) => {
-          const only = results.length === 1 ? results[0] : undefined;
+        onSuccess: (answer) => {
+          const merged = mergeRuns(run, answer);
+          const only =
+            bundles.length === 1 && merged.results.length === 1
+              ? merged.results[0]
+              : undefined;
           const question = only && archiveQuestion(only);
           if (question) {
-            setAsking(question);
+            setAsking({ ...question, sent: chosen });
             return;
           }
           setAsking(null);
-          if (only) {
-            setAnswer(undoResultText(only, t));
-            return;
-          }
-          const kept = results.filter((r) => r.outcome !== "undone").length;
-          setAnswer(
-            kept === 0
-              ? plural("changes.undoAllDone", results.length, {
-                  count: formatNumber(results.length, locale),
-                })
-              : t("changes.undoAllPartly", {
-                  undone: formatNumber(results.length - kept, locale),
-                  kept: formatNumber(kept, locale),
-                }),
-          );
+          setRun(merged);
+          if (answer.results.length > 0) onDone?.();
         },
       },
     );
+  // A batch that failed may still have landed, so the deals are read again and
+  // only what still waits goes back.
+  const retry = async (unsent: readonly MarginceChangeBundle[]) => {
+    setRereading(true);
+    try {
+      const fresh = await client.fetchQuery({
+        ...pendingChangesQuery(),
+        staleTime: 0,
+      });
+      const again = stillPending(unsent, fresh);
+      if (again.length === 0) {
+        setRun((last) => last && { ...last, unsent: [], error: undefined });
+        onDone?.();
+        return;
+      }
+      press(again);
+    } catch (error) {
+      setRun((last) => last && { ...last, error });
+    } finally {
+      setRereading(false);
+    }
+  };
+  if (run && !asking) {
+    return (
+      <BundleUndoAnswer
+        run={run}
+        single={bundles.length === 1}
+        pending={undo.isPending || rereading}
+        onRetry={() => void retry(run.unsent)}
+      />
+    );
+  }
   return (
     <>
-      {asking ? (
-        <>
-          <span role="status">
-            {t(
-              asking.kind === "deal_revive"
-                ? "changes.undo.confirmRelost"
-                : "changes.undo.confirmArchive",
-              {
-                notes: formatNumber(asking.notes, locale),
-                tasks: formatNumber(asking.tasks, locale),
-              },
-            )}
-          </span>
-          <Button
-            variant="ghost"
-            pending={undo.isPending}
-            busyLabel={t("history.undo.busy")}
-            onClick={() => press(asking.work)}
-          >
-            {label}
-          </Button>
-        </>
-      ) : (
-        <Button
-          variant="ghost"
-          pending={undo.isPending}
-          busyLabel={t("history.undo.busy")}
-          onClick={() => press()}
-        >
-          {label}
-        </Button>
+      {asking && (
+        <span role="status">
+          <ConfirmWords asking={asking} />
+        </span>
       )}
+      <Button
+        variant="ghost"
+        pending={undo.isPending}
+        busyLabel={t("history.undo.busy")}
+        onClick={() => press(asking?.sent ?? bundles, asking?.work)}
+      >
+        {label}
+      </Button>
       {undo.isError && <ErrorLine error={undo.error} />}
     </>
   );
+}
+
+function ConfirmWords({ asking }: Readonly<{ asking: ArchiveQuestion }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return t(
+    asking.kind === "deal_revive"
+      ? "changes.undo.confirmRelost"
+      : "changes.undo.confirmArchive",
+    {
+      notes: formatNumber(asking.notes, locale),
+      tasks: formatNumber(asking.tasks, locale),
+    },
+  );
+}
+
+// A retry answers for the deals it sent again, so their earlier answer is
+// replaced and every other one is kept.
+function mergeRuns(
+  last: BundleUndoRun | null,
+  answer: BundleUndoRun,
+): BundleUndoRun {
+  const answered = new Set(answer.results.map((result) => result.deal_id));
+  const kept = (last?.results ?? []).filter(
+    (result) => !answered.has(result.deal_id),
+  );
+  return { ...answer, results: [...kept, ...answer.results] };
+}
+
+function BundleUndoAnswer({
+  run,
+  single,
+  pending,
+  onRetry,
+}: Readonly<{
+  run: BundleUndoRun;
+  single: boolean;
+  pending: boolean;
+  onRetry: () => void;
+}>) {
+  const t = useT();
+  const only = single && run.unsent.length === 0 ? run.results[0] : undefined;
+  return (
+    <>
+      <span role="status">
+        {only ? undoResultText(only, t) : <BulkCounts run={run} />}
+      </span>
+      {run.unsent.length > 0 && (
+        <Button
+          variant="ghost"
+          pending={pending}
+          busyLabel={t("history.undo.busy")}
+          onClick={onRetry}
+        >
+          {t("changes.bulk.retry")}
+        </Button>
+      )}
+      {run.error !== undefined && run.error !== null && (
+        <ErrorLine error={run.error} />
+      )}
+    </>
+  );
+}
+
+/** How many deals each outcome reached, one sentence per outcome. */
+function BulkCounts({ run }: Readonly<{ run: BundleUndoRun }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const count = (key: Parameters<typeof plural>[0], n: number) =>
+    n > 0 ? plural(key, n, { count: formatNumber(n, locale) }) : null;
+  const confirm = run.results.filter((result) => archiveQuestion(result));
+  const refused = run.results.filter(
+    (result) => result.outcome === "refused" && !archiveQuestion(result),
+  );
+  return [
+    count(
+      "changes.bulk.undone",
+      run.results.filter((result) => result.outcome === "undone").length,
+    ),
+    count(
+      "changes.bulk.partly",
+      run.results.filter((result) => result.outcome === "partly_undone").length,
+    ),
+    count("changes.bulk.kept", refused.length),
+    count("changes.bulk.confirm", confirm.length),
+    count("changes.bulk.unsent", run.unsent.length),
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

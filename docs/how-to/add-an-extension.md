@@ -12,7 +12,9 @@ retention floors; the example below builds one.
 An extension is its own Go module. It reaches the core only through the `backend/pkg/**` surface that carries
 the allow mark.
 
-**A `require` in `instance/go.mod` turns it on**, with a `replace` to its folder. Nothing else does.
+**A `require` in `instance/go.mod` turns it on**, with a `replace` to its folder.
+
+[Build a custom Margince](build-a-custom-margince.md) says how to mark an example for development and tests.
 
 `extensions/openchannel` is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
 key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/de`

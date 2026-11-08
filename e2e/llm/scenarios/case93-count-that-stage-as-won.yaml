@@ -1,4 +1,7 @@
-# CASE 93 — Whether a stage closes a deal stays with the user. The tool says so, so the model sends no semantic change, says so and does not claim it is done.
+# CASE 93 — Whether a stage closes a deal stays with the user. The server refuses an
+# agent's semantic change, so the outcome is the answer: it says the user does it in
+# the app and never claims it is done. Moving the deals themselves would succeed, so
+# change_state stays forbidden.
 name: case93_count_that_stage_as_won
 criteria: [1]
 writes: true
@@ -8,7 +11,6 @@ prompt: |
 
 must_not_call_with:
   - change_state~.
-  - 'change_settings~"semantic"'
 
 may_call:
   - change_settings

@@ -27,6 +27,7 @@ type captureAttempt struct {
 	duplicate       *ids.LeadID
 	duplicateFields json.RawMessage
 	dropped         string
+	admission       admissionNote
 }
 
 func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields, owner ids.UUID) (activityLanding, error) {
@@ -36,14 +37,21 @@ func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		return landed, err
 	}
 	// The privacy check must inspect the provider copy after resolving its owner.
-	if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
-		return landed, err
+	ctx, deferred := s.deferOriginal(ctx, rec)
+	if !deferred {
+		if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+			return landed, err
+		}
 	}
 	if internalMailAdmitted(ctx) {
 		rec.Links = nil
 	}
 	landed.ref, landed.created, landed.decision, err = s.captureActivity(ctx, tx, rec, fields)
 	if err != nil {
+		return landed, err
+	}
+	// A message that turned out not to be new stores its original as before.
+	if _, err = releaseHeldOriginalTx(ctx, tx, rec); err != nil {
 		return landed, err
 	}
 	landed.internal = internalMailAdmitted(ctx)

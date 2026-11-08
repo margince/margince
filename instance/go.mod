@@ -9,7 +9,7 @@ require (
 	github.com/margince/margince/backend v0.0.0
 	github.com/margince/margince/composition v0.0.0
 	github.com/margince/margince/extensions/de v0.0.0
-	github.com/margince/margince/extensions/finance-demo v0.0.0
+	github.com/margince/margince/extensions/finance-demo v0.0.0 // margince:development-only
 	github.com/margince/margince/extensions/openchannel v0.0.0
 	github.com/margince/margince/extensions/vn v0.0.0
 )

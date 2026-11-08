@@ -373,7 +373,7 @@ class AgentLimitReadersTest(unittest.TestCase):
 
     SEAT = "admin@demo.test"
 
-    def read(self, entries, rules=(), zone="Europe/Lisbon", draft=None, welcome=None):
+    def read(self, entries, rules=(), zone="Europe/Lisbon", draft=None, welcome=None, saved=()):
         def ok(data):
             return json.dumps({"data": data}), False
 
@@ -394,7 +394,8 @@ class AgentLimitReadersTest(unittest.TestCase):
         replies = {"list_records": list_records, "read_record": read_record, "read_details": read_details,
                    "read_view": ok({"data": list(rules), "page": {"has_more": False}}),
                    "read_workspace": ok({"id": "u1", "display_name": "Sofia Meier"}),
-                   "whoami": ok({"email": self.SEAT, "timezone": zone})}
+                   "whoami": ok({"email": self.SEAT, "timezone": zone}),
+                   "read_reports": ok({"data": list(saved), "page": {"has_more": False}})}
         tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]
         with FakeMcp(tools, replies=replies) as server:
             session = mcpclient.Session(server.url, "tok")
@@ -431,6 +432,20 @@ class AgentLimitReadersTest(unittest.TestCase):
         self.assertEqual(problems, [f'ended with timezone=Europe/Berlin on the seat "{self.SEAT}", wanted Europe/Lisbon'])
         with self.assertRaisesRegex(endstate.Unreadable, "acts for"):
             self.read(['me "someone@demo.test" timezone=Europe/Lisbon'])
+
+    def test_figures_kept_for_finance_need_a_saved_question(self):
+        entries = committed("case20-put-it-in-the-board-pack.yaml")
+        question = {"run_id": "r1", "entity": "pipeline-current"}
+        self.assertEqual(self.read(entries, saved=[question])[1], [])
+        self.assertEqual(self.read(entries, saved=[question, dict(question, run_id="r2")])[1], [])
+        _, problems = self.read(entries)
+        self.assertEqual(problems, [f'ended with 0 saved questions on the seat "{self.SEAT}", wanted 1+'])
+
+    def test_a_saved_questions_entry_is_checked_before_any_run(self):
+        for entry in ('me "admin@demo.test" saved_questions=1', 'me "admin@demo.test" saved_questions=51+',
+                      'company "Acme" saved_questions=1+'):
+            with self.assertRaisesRegex(ValueError, "saved_questions is read on me"):
+                endstate.parse(entry)
 
     USERS_DRAFT = {"subject": "Preisworkshop in Köln", "agent_drafted": False}
 

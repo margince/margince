@@ -42,11 +42,12 @@ export function useReceiptUndo() {
   const [undone, setUndone] = useState(false);
   const [refused, setRefused] = useState<string | null>(null);
   const restore = useRecordRestore();
-  const press = (variables: RestorePress) =>
+  const press = (variables: RestorePress, onDone?: () => void) =>
     restore.mutate(variables, {
       onSuccess: () => {
         setRefused(null);
         setUndone(true);
+        onDone?.();
         void refreshAfterUndo(client, variables);
       },
       onError: (error) => {

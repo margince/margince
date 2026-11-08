@@ -1,14 +1,14 @@
-# CASE 108 — An agent verb that always calls a model spends `enrich`, so the
-# drafted introduction lives on run_research. The model reaches it there, on a
-# passport that holds enrich, and says what it wrote and that nothing was sent.
+# CASE 108 — The user asks for the message to Sofia that asks her for an
+# introduction. Margince's drafter (run_research draft_intro_request, on a
+# passport that holds enrich) is one way to write it; the relationship records
+# and the model's own words are another. The answer is scored, not the path.
 #
 # The seed gives Sofia Meier three mails with Heike Brandt at Nordwind Armaturen
-# (case 49), so the route exists and draft_intro_request can name both. The ask
-# is to the COLLEAGUE: the forwardable note to Heike is a different message, and
-# a first mail to Heike is a third. Neither is what was asked for, but neither is
-# forbidden; must_call_with names the one that was.
+# (case 49). The ask is to the COLLEAGUE: the forwardable note to Heike is a
+# different message, and a first mail to Heike is a third.
 #
 # Nothing is written: the draft comes back for the user to send themself.
+
 name: case108_ask_sofia_for_an_intro
 criteria: [1]
 passport: research
@@ -26,10 +26,10 @@ prompt: |
   Margince draft the message I should send Sofia to ask her for the
   introduction.
 
-must_call:
-  - draft_intro_request
-
+# The model chooses how the message is drafted: Margince's own drafter, or the
+# relationship records and its own words. The answer is what is checked.
 may_call:
+  - draft_intro_request
   - read_relationships
   - search_records
   - list_records
@@ -38,12 +38,13 @@ may_call:
   - read_workspace
   - draft_intro_note
 
-must_call_with:
-  - run_research.action=draft_intro_request
-
 must_mention:
   - "Sofia"
   - "Heike"
+  - "(?i)introduc"
+  # The message is to Sofia: a greeting or a To line names her. A note that
+  # greets Heike is the forwardable note, a different message.
+  - "(?im)\b(?:hi|hello|hey|dear|hallo|liebe|morning|afternoon|evening)\W+Sofia\b|\b(?-i:To)\b\W{0,3}Sofia\b|^\W*Sofia\s*[,—–-]"
 
 must_not_mention:
   - "(?i)\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:sent|emailed|messaged|forwarded)\b"

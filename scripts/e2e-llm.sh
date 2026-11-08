@@ -28,7 +28,9 @@ ROOT="$(git rev-parse --show-toplevel)"
 SLUG="${E2E_LLM_SLUG:-e2ellm}"
 SCENARIO_DIR="${E2E_LLM_SCENARIOS:-$ROOT/e2e/llm/scenarios}"
 RECORD_DIR="${E2E_LLM_RECORDS:-$ROOT/e2e/llm/records}"
-ONLY="${SCENARIO:-}"
+# SCENARIO names one scenario or several, separated by spaces: one boot and
+# one seed serve them all, where a loop of single names pays both each time.
+ONLY=" ${SCENARIO:-} "
 
 # THE CANDIDATE AND ITS ROUTE ARE CHOSEN, and the model each names is pinned.
 #
@@ -36,11 +38,11 @@ ONLY="${SCENARIO:-}"
 # consumer app defaults to — because a pass rate that moves when a CLI changes
 # its default cannot be read as the product moving.
 #
-#   E2E_LLM_CANDIDATE  claude | gpt | mistral                    (default claude)
+#   E2E_LLM_CANDIDATE  claude | gpt | gemini | mistral           (default claude)
 #   E2E_LLM_VIA        api | openrouter — e2e/llm/drive.py, the neutral bridge:
 #                      every vendor offered the same tools under the server's own
 #                      instructions. The comparable route, filed under the model.
-#                      cli — `claude -p` or `codex exec`, each with its own system
+#                      cli — `claude -p`, `codex exec` or `agy -p`, each with its own system
 #                      prompt and tools, filed apart under <model>@<cli>.
 #                                                                (default api)
 #   E2E_LLM_MODEL      a different model, or
@@ -96,6 +98,15 @@ fi
 
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
 
+# A name SCENARIO lists that no scenario carries would run nothing for it and
+# report the sweep as complete, so every listed name is matched before a boot.
+if [[ -n "${ONLY// /}" ]]; then
+  known=" $(for f in "$SCENARIO_DIR"/*.yaml; do python3 "$ROOT/e2e/llm/check.py" --field name "$f"; done | tr '\n' ' ') "
+  for wanted in $ONLY; do
+    [[ "$known" == *" $wanted "* ]] || { echo "SCENARIO names $wanted, which no scenario under $SCENARIO_DIR is" >&2; exit 1; }
+  done
+fi
+
 # MODEL FOLDER WIRE KEY_ENV EFFORT DRIVER, or the reason this candidate has no
 # such route — refused here, before anything boots.
 ROUTE="$(python3 "$ROOT/e2e/llm/check.py" --candidate "$CANDIDATE" "$VIA" "${E2E_LLM_MODEL:-}" \
@@ -119,6 +130,9 @@ if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
 fi
 if [[ "$WIRE" = codex-cli ]]; then
   command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }
+fi
+if [[ "$WIRE" = agy-cli ]]; then
+  command -v agy >/dev/null || { echo "the agy (Antigravity) CLI is not on PATH" >&2; exit 1; }
 fi
 
 # E2E_LLM_STACK_PRESET binds the lane's own stack to a committed preset before
@@ -511,7 +525,7 @@ else:
     echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
     echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
     echo "  not override; anything else points at the stack or the passport." >&2
-    return 1
+    return 3
   fi
 
   # A NONZERO EXIT IS SCORED ONLY WHEN THE RESULT OWNS IT. The CLI exits nonzero
@@ -628,6 +642,8 @@ done
 
 PASSED=0
 FAILED=0
+SWEEP_CALLS=0
+PROVISIONAL=()
 # The runs the lane INTENDED, summed as it goes. The sweep total's denominator
 # cannot come from the transcripts it is counting: a run that wrote none would
 # then be missing from both halves and the total would report itself complete.
@@ -638,7 +654,7 @@ REPORT="$WORK/report.txt"
 
 for scenario in "$SCENARIO_DIR"/*.yaml; do
   name="$(python3 "$ROOT/e2e/llm/check.py" --field name "$scenario")"
-  if [[ -n "$ONLY" ]] && [[ "$ONLY" != "$name" ]]; then continue; fi
+  if [[ -n "${ONLY// /}" && "$ONLY" != *" $name "* ]]; then continue; fi
 
   runs="$(python3 "$ROOT/e2e/llm/check.py" --field runs "$scenario")"
   pass_at="$(python3 "$ROOT/e2e/llm/check.py" --field pass_at "$scenario")"
@@ -710,7 +726,9 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     if [[ "$run_status" -eq 3 ]]; then
       echo
       echo "HARNESS: $name run $i could not be run:"
-      tail -5 "$transcript.err" | sed 's/^/  /'
+      # A CLI driver files its reason in the transcript, not on stderr.
+      { tail -5 "$transcript.err"; grep -ho '"result": "HARNESS: [^"]*' "$transcript" | cut -d'"' -f4; } 2>/dev/null \
+        | sed '/^$/d; s/^/  /' || true
       echo "  This is not a use-case failure. Nothing was scored."
       keep_transcript "$transcript"
       exit 2
@@ -784,6 +802,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # broken use cases: every remaining run would be unscorable the same way,
     # each costs a fresh stack, and the answer is the same after eighteen of
     # them as after one.
+    # A run that called nothing is scored on its answer like any other. Only a
+    # sweep in which no run reached the server says the server never attached.
+    if grep -qE '"name": ?"mcp__'"$MCP_SERVER"'__' "$transcript"; then
+      SWEEP_CALLS=$((SWEEP_CALLS + 1))
+    fi
     scored=0
     python3 "$ROOT/e2e/llm/check.py" --check "$scenario" "$transcript" >> "$results" 2>&1 || scored=$?
     case "$scored" in
@@ -834,6 +857,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   transcripts=("$WORK/$name".run*.jsonl)
   shopt -u nullglob
 
+  # A verdict written before any run of the sweep reached the server is held
+  # back: the sweep's end decides whether the server ever attached.
+  if [[ "$SWEEP_CALLS" -eq 0 ]]; then
+    PROVISIONAL+=("$name")
+    if [[ -f "$VERDICT_DIR/${name}.json" ]]; then cp -p "$VERDICT_DIR/${name}.json" "$WORK/${name}.prior.json"; fi
+  fi
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
@@ -850,6 +879,22 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   rm -f "$RECORD_DIR/$name".run*.jsonl
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
+
+# A run that called nothing is scored on its answer, but a sweep in which no run
+# reached the server says it never attached: its verdicts are taken back.
+if [[ "$SWEEP_CALLS" -eq 0 && ${#PROVISIONAL[@]} -gt 0 ]]; then
+  for name in "${PROVISIONAL[@]}"; do
+    if [[ -f "$WORK/${name}.prior.json" ]]; then
+      cp -p "$WORK/${name}.prior.json" "$VERDICT_DIR/${name}.json"
+    else
+      rm -f "$VERDICT_DIR/${name}.json"
+    fi
+  done
+  echo
+  echo "HARNESS: no run of this sweep called the lane's server, so it may never have attached."
+  echo "  Read one run's answer and its system line. Nothing was recorded."
+  exit 2
+fi
 
 echo
 echo "================ e2e-llm ================"

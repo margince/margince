@@ -11037,6 +11037,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/read-views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The views the read_view agent tool reads, and the arguments each takes.
+         * @description The answer the `describe_views` agent tool gives, run by the same tool on both
+         *     doors: the document `margince://schema/views` publishes.
+         */
+        get: operations["describeReadViews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/search": {
         parameters: {
             query?: never;
@@ -15978,7 +15999,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Disclosure duties this installation owes, soonest deadline first.
+         * Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
          * @description Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
          *     when it falls due.
          *
@@ -16021,7 +16042,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One disclosure duty.
+         * One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
          * @description The same case the queue lists, read on its own, for a surface that opens one duty rather
          *     than working a page of them.
          *
@@ -16056,7 +16077,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a disclosure duty an owner.
+         * Give a privacy notice already owed (from notice_cases) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -16115,7 +16136,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Disclosure duties this installation owes, soonest deadline first.
+         * Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
          * @description Acquisition-source reviews and notice duties, under privacy-request read authority.
          *     Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
          *     when their acquisition date is unknown, the deadline is labelled as a latest possible bound.
@@ -16140,7 +16161,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * One disclosure duty.
+         * One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
          * @description The administrative record for a source review or notice duty. Human privacy-request read
          *     authority covers the record; contact names remain limited by ordinary contact visibility.
          */
@@ -16165,7 +16186,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Give a disclosure duty an owner.
+         * Give a contact's privacy-notice case (from notice_case_reviews) an owner.
          * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
          *     nobody has taken.
          *
@@ -16193,7 +16214,7 @@ export interface paths {
         /** Read accessible evidence for a contact source assessment. */
         get: operations["getNoticeSourceEvidence"];
         put?: never;
-        /** Confirm the source of an unassessed contact. */
+        /** Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first. */
         post: operations["assessNoticeSource"];
         delete?: never;
         options?: never;
@@ -16212,7 +16233,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Preview the source assessment without changing the case. */
+        /** Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them. */
         post: operations["previewNoticeSource"];
         delete?: never;
         options?: never;
@@ -21937,7 +21958,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The notification centre — every notice addressed to the acting contact, newest first.
+         * The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
          * @description The acting human's own notifications, newest first, read and unread; another seat's are
          *     not an error, they are absent.
          *
@@ -30727,11 +30748,15 @@ export interface components {
              */
             target?: {
                 /**
-                 * @description A record's class, as its own endpoint spells it, or one of two non-record targets:
+                 * @description A record's class, as its own endpoint spells it, or a non-record review target:
                  *     `approval` (a pending decision, `id` is the approval) and `data_task` (a
                  *     background correction run, `id` is the `run_id` that failed). A client opens the
                  *     corrections list rather than that run: a manual re-run replaces the `run_id`, so the
-                 *     one a notice names may no longer be listed.
+                 *     one a notice names may no longer be listed. Manual privacy reviews use
+                 *     `knowledge_document` (download the retained file), `email_signature` (the
+                 *     recipient's own account settings), `activity` (open the retained note in its
+                 *     drawer), `legal_entity` (Company settings), or `signature_template` (Company
+                 *     settings; `id` identifies the erasure whose review flagged the workspace template).
                  */
                 type: string;
                 /** Format: uuid */
@@ -31392,6 +31417,11 @@ export interface components {
             /** @description The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists. */
             readonly acquisition_request?: components["schemas"]["ContactAcquisitionRequest"];
             /**
+             * Format: uuid
+             * @description The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
+             */
+            readonly created_from_activity_id?: string | null;
+            /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
              */
@@ -31534,6 +31564,11 @@ export interface components {
         /** @description Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
         CreateContactRequest: {
             full_name: string;
+            /**
+             * Format: uuid
+             * @description The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
+             */
+            created_from_activity_id?: string | null;
             first_name?: string | null;
             last_name?: string | null;
             title?: string | null;
@@ -33335,6 +33370,10 @@ export interface components {
             linked_deal_id?: string | null;
             /** @description The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it. */
             participants: components["schemas"]["Company360MeetingParticipant"][];
+            /** @description The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too. */
+            other_participants?: components["schemas"]["MeetingOtherParticipant"][];
+            /** @description How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named. */
+            participants_more?: number;
         };
         /** @description One attendee of the next meeting, named only when the caller may read them. */
         Company360MeetingParticipant: {
@@ -34092,6 +34131,10 @@ export interface components {
                 contact_id: string;
                 full_name: string;
             }[];
+            /** @description The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too. */
+            other_participants?: components["schemas"]["MeetingOtherParticipant"][];
+            /** @description How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named. */
+            participants_more?: number;
         };
         /**
          * @description The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
@@ -35914,6 +35957,23 @@ export interface components {
         ReportBlockGrammar: {
             blocks: {
                 [key: string]: unknown;
+            };
+        };
+        /** @description What `describe_views` answers. */
+        ReadViewsCatalog: {
+            views: {
+                version: string;
+                views: {
+                    view: string;
+                    path: string[];
+                    query: {
+                        name: string;
+                        type: string;
+                        required?: boolean;
+                        enum?: string[];
+                        format?: string;
+                    }[];
+                }[];
             };
         };
         /** @description What `describe_report_vocabulary` answers. */
@@ -39638,6 +39698,13 @@ export interface components {
              * @description The renewing message's source time when the decision was recorded.
              */
             renewed_at?: string;
+        };
+        /** @description One attendee of a meeting who is not a contact. */
+        MeetingOtherParticipant: {
+            /** @enum {string} */
+            kind: "colleague" | "address";
+            /** @description A colleague's display name, or the name the invitation gave an address, else the address. */
+            name: string;
         };
         /** @description One guest on a meeting who is not a colleague seat. */
         MeetingGuest: {
@@ -46764,7 +46831,10 @@ export interface components {
          *     The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
          */
         SettingsAvailability: {
-            /** @description True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it. */
+            /**
+             * @deprecated
+             * @description Deprecated. Still required and returned for compatibility throughout the API notice window. New clients read `read_enabled` from `GET /company/context/capabilities` instead. This field continues to report whether the company-context rollout has typed reads active. It does not gate the installation's Company settings page.
+             */
             company_context: boolean;
             /** @description Reporting is always available. Retained for compatibility with older clients. */
             reporting?: boolean;
@@ -53772,6 +53842,12 @@ export interface components {
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
             /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
+            /**
              * @description True when the reader may not read activities. A meeting is an activity, so every
              *     meeting figure in the team's counts and each member's row reads zero and says nothing,
              *     and no member carries a meetings pattern. Absent from an older server.
@@ -54264,6 +54340,12 @@ export interface components {
          */
         WeeklyReview: {
             /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
+            /**
              * @description True when the reader may not read activities. A meeting is an activity, so every
              *     meeting figure in this review, its prior week and its scorecard reads zero and says
              *     nothing, and the narrative and learnings read as not run. Absent from an older server.
@@ -54510,6 +54592,12 @@ export interface components {
         };
         /** @description The week before this one, for comparison. */
         WeeklyReviewPrior: {
+            /**
+             * @description True when lead figures were not measured with lead-read authority, or the reader
+             *     lacks that authority now. Lead counts are redacted placeholders, never measurements
+             *     of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+             */
+            leads_withheld?: boolean;
             /** Format: date */
             local_week_start: string;
             counts: components["schemas"]["WeeklyReviewCounts"];
@@ -56030,6 +56118,12 @@ export interface components {
             kind: string;
             /** @description What was done, in the words the act itself recorded. */
             summary: string;
+            /** @description `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses. */
+            headline?: string;
+            /** @description Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it. */
+            reason?: string;
+            /** @description The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote. */
+            customer_quote?: string;
             /** @description The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /**
@@ -56394,7 +56488,7 @@ export interface components {
             due_today: number;
             /** @description The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar. */
             planned: number;
-            /** @description Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is. */
+            /** @description Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count. */
             review: number;
         };
         /**
@@ -56828,7 +56922,9 @@ export interface components {
              *     `today` is work a seller executes. `review` is a judgement somebody must make
              *     before work continues — an approval, a duplicate pair, an introduction.
              *     `system_health` is a source or automation an administrator must restore.
-             *     `receipt` is completed work, reported so the reader can see it happened.
+             *     `receipt` is deprecated and retained only for published-client compatibility
+             *     through the API notice window. The work queue never emits it. Completed-work
+             *     receipts are served by `GET /worklist/handled` and have their own presentation.
              *
              *     A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
              *     `source` that a browser could recompute: two rows of one source can differ,
@@ -57502,7 +57598,10 @@ export interface components {
             audit_log_id: string;
             /** @description The kind of change; absent when the change could not be read. */
             kind?: string;
-            /** @enum {string} */
+            /**
+             * @description Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
+             * @enum {string}
+             */
             reason: "accepted" | "already_undone" | "changed_since" | "not_found" | "not_permitted" | "version_skew" | "needs_confirmation";
             /** @description With `needs_confirmation`, the notes the team added to the opened or reopened deal. */
             team_notes?: number;
@@ -74543,6 +74642,11 @@ export interface operations {
                 close_window?: "fiscal_quarter" | "all_open";
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
+                product_id?: components["schemas"]["ReportingProductId"];
+                initiative_id?: components["schemas"]["ReportingInitiativeId"];
+                country?: components["schemas"]["ReportingCountry"];
+                industry?: components["schemas"]["ReportingIndustry"];
+                value_basis?: components["schemas"]["ReportingValueBasis"];
             };
             header?: never;
             path?: never;
@@ -77225,6 +77329,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListFiltersVocabulary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    describeReadViews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The read_view catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadViewsCatalog"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -86087,9 +86213,11 @@ export interface operations {
                 /** @description Admin management view — include deactivated/suspended members. Honored only for an admin caller. */
                 include_inactive?: boolean;
                 /**
-                 * @description Also list invited seats — members who have not signed in yet. Each row's `status` says so.
-                 *     A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
-                 *     Naming the colleagues a record already points at is `GET /users/names`.
+                 * @deprecated
+                 * @description Deprecated compatibility option. Also lists invited seats that have not signed in yet.
+                 *     Assignment pickers use the default active roster and leave out rows whose `is_agent` is
+                 *     true. Resolve known colleague ids with `GET /users/names`. This option remains accepted
+                 *     throughout the API compatibility window.
                  */
                 include_invited?: boolean;
             };

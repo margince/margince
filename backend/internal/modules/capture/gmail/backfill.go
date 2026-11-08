@@ -121,7 +121,7 @@ func (w *pageWalk) walk() error {
 	if judge, ok := w.sink.(connector.PreStoreJudge); ok {
 		if headers, ok := w.c.api.(HeaderFetcher); ok {
 			var err error
-			if keep, err = w.judgeHeaders(headers, judge); err != nil {
+			if keep, err = w.judgeWhereItPays(headers, judge); err != nil {
 				return err
 			}
 		}
@@ -150,14 +150,14 @@ func (w *pageWalk) walk() error {
 // spam, or kept out by the Sink's own gates — is counted here and not fetched.
 // Anything the headers cannot settle the same way the full message would is
 // downloaded in full and judged there, as before.
-func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJudge) ([]string, error) {
-	keep := make([]string, 0, len(w.ids))
-	err := inOrder(w.ctx, len(w.ids),
+func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJudge, ids []string) ([]string, error) {
+	keep := make([]string, 0, len(ids))
+	err := inOrder(w.ctx, len(ids),
 		func(ctx context.Context, i int) (Message, error) {
-			return w.getHeaders(ctx, headers, w.ids[i])
+			return w.getHeaders(ctx, headers, ids[i])
 		},
 		func(i int, msg Message, err error) error {
-			id := w.ids[i]
+			id := ids[i]
 			msgCtx, message := capturemetrics.BeginMessage(w.ctx)
 			if errors.Is(err, ErrMessageGone) {
 				return w.settleMessage(message, id, false, nil)
@@ -182,6 +182,37 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 			return w.settleMessage(message, id, false, nil)
 		}, w.c.rawMemory, headerFetchReservation)
 	return keep, err
+}
+
+// headerSample is how many of a page's messages the header pass judges before
+// it decides whether judging the rest is worth the quota.
+const headerSample = 10
+
+// judgeWhereItPays runs the header pass on a sample of the page. It runs it on
+// the rest only when the sample dropped enough to pay for it. Each header read
+// costs quota whether or not it saves a download, and that quota bounds an
+// import. The same gates judge every message: one the header pass keeps is
+// judged in full when it is stored.
+func (w *pageWalk) judgeWhereItPays(headers HeaderFetcher, judge connector.PreStoreJudge) ([]string, error) {
+	sample := w.ids[:min(headerSample, len(w.ids))]
+	kept, err := w.judgeHeaders(headers, judge, sample)
+	if err != nil {
+		return nil, err
+	}
+	rest := w.ids[len(sample):]
+	if !headerPassPays(len(sample), len(sample)-len(kept)) {
+		return append(kept, rest...), nil
+	}
+	restKept, err := w.judgeHeaders(headers, judge, rest)
+	return append(kept, restKept...), err
+}
+
+// headerPassPays is whether reading headers for every message costs less quota
+// than the downloads its drops save, at the rate the sample dropped.
+func headerPassPays(judged, dropped int) bool {
+	header := getQuotaCost("/messages/id", url.Values{paramFormat: {formatMetadata}})
+	raw := getQuotaCost("/messages/id", url.Values{paramFormat: {formatRaw}})
+	return dropped*raw > judged*header
 }
 
 // dropFromHeaders answers whether a message can be skipped on its headers
@@ -246,6 +277,14 @@ func (w *pageWalk) settle(id string, captured bool, err error) error {
 	w.progress.Observed(w.ctx, w.finished, w.res.Captured, w.res.Skipped+w.res.Failed)
 	return nil
 }
+
+// paramFormat names the message format a get asks for; the two this connector
+// sends are a header read and the full raw message.
+const (
+	paramFormat    = "format"
+	formatMetadata = "metadata"
+	formatRaw      = "RAW"
+)
 
 // paramMaxResults is Gmail's page-size query parameter.
 const paramMaxResults = "maxResults"

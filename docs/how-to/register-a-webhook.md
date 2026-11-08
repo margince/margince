@@ -130,9 +130,11 @@ curl -X POST http://localhost:8080/v1/webhook-subscriptions \
 - In a JSON template, put `{{ path }}` inside quotes for text, and `{{ path | json }}` outside
   quotes for a whole value. The server refuses any other place with a `422` that names the line and
   column.
+- For a money field, write `{{ data.amount_minor_at_change | money data.currency_at_change }}`
+  inside quotes. It renders `56,830.20 USD`.
 - Each event's fields are in [reference/webhook-events.md](../reference/webhook-events.md). A
-  delivery also carries `entity.name` (a deal, company or project) and `entity.url`, a link to the
-  record when `MARGINCE_PUBLIC_BASE_URL` is set.
+  delivery also carries `entity.name` and `entity.owner_name` (a deal, company or project) and
+  `entity.url`, a link to the record when `MARGINCE_PUBLIC_BASE_URL` is set.
 - Try a template first with `POST /v1/webhook-subscriptions/body-preview`
   (`{"event_type": "deal.stage_changed", "body_template": "…"}`). It renders a sample event and sends
   nothing.

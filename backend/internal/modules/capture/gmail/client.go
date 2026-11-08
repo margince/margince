@@ -13,7 +13,6 @@ package gmail
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,7 +20,6 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
@@ -47,6 +45,10 @@ const (
 	googleTokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101 false positive: Google's public OAuth token *endpoint URL*, not a credential
 	gmailAPIBase   = "https://gmail.googleapis.com/gmail/v1/users/me"
 )
+
+// googleEndpoints is where the client calls Google. Only a binary built with
+// the loadrig tag can point it elsewhere (endpoints_loadrig.go).
+var googleEndpoints = struct{ auth, token, api string }{googleAuthURL, googleTokenURL, gmailAPIBase}
 
 // The package sentinels wrap the shared connector vocabulary (ADR-0063) so
 // the registry classifies failures without knowing this provider: auth parks
@@ -180,10 +182,10 @@ type OAuthConfig struct {
 //nolint:ireturn // returns the OAuth seam by design — the connector holds it as an interface so tests substitute a stub
 func NewOAuth(cfg OAuthConfig) OAuth {
 	if cfg.AuthURL == "" {
-		cfg.AuthURL = googleAuthURL
+		cfg.AuthURL = googleEndpoints.auth
 	}
 	if cfg.TokenURL == "" {
-		cfg.TokenURL = googleTokenURL
+		cfg.TokenURL = googleEndpoints.token
 	}
 	return oauthflow.New(oauthflow.Config{
 		Provider:     "gmail",
@@ -228,7 +230,7 @@ func NewAPIWithQuota(client *http.Client, base string, mailbox, project int) API
 		client = boundedHTTPClient()
 	}
 	if base == "" {
-		base = gmailAPIBase
+		base = googleEndpoints.api
 	}
 	return &httpAPI{client: client, base: base, quota: newQuotaPacing(mailbox, project)}
 }
@@ -331,11 +333,11 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 
 func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Message, error) {
 	var out struct {
-		Raw          string        `json:"raw"`
+		Raw          webSafeRFC822 `json:"raw"`
 		LabelIDs     messageLabels `json:"labelIds"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 		InternalDate string        `json:"internalDate"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	}
-	q := url.Values{"format": {"RAW"}}
+	q := url.Values{paramFormat: {formatRaw}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxRawMessageBytes)
 	if status == http.StatusNotFound {
 		// Enumerated a moment ago, gone now — nothing to fetch. Skip it and
@@ -347,13 +349,8 @@ func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Messag
 	if err != nil {
 		return Message{}, err
 	}
-	// Gmail encodes the RFC822 as web-safe (URL) base64, padding-optional.
-	decoded, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(out.Raw, "="))
-	if err != nil {
-		return Message{}, fmt.Errorf("gmail: decoding raw message %s: %w", msgID, ErrUnreachable)
-	}
 	return Message{
-		RFC822: decoded, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
+		RFC822: out.Raw, FiledAsSent: hasSentLabel(out.LabelIDs), Labels: out.LabelIDs,
 		ReceivedAt: internalDate(out.InternalDate),
 	}, nil
 }

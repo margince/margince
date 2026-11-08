@@ -6,7 +6,7 @@ package graph
 import (
 	"context"
 	"errors"
-	"slices"
+	"maps"
 	"testing"
 	"time"
 
@@ -282,8 +282,8 @@ func TestBackfillFetchesThroughTheListedFolderAndSkipsAMovedMessage(t *testing.T
 	if err != nil {
 		t.Fatalf("BackfillPage: %v", err)
 	}
-	if want := []string{inboxFolderID, sentFolderID}; !slices.Equal(api.fetchedFrom, want) {
-		t.Fatalf("fetched from folders %v, want the listed folders %v", api.fetchedFrom, want)
+	if want := map[string]string{"m-moved": inboxFolderID, "m-out": sentFolderID}; !maps.Equal(api.fetchedVia, want) {
+		t.Fatalf("fetched through folders %v, want each through its listed folder %v", api.fetchedVia, want)
 	}
 	if res.Skipped != 1 || res.Captured != 1 || len(sink.recs) != 1 {
 		t.Fatalf("tally = %+v with %d records, want the moved message skipped", res, len(sink.recs))

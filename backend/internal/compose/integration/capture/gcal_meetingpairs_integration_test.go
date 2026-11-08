@@ -10,12 +10,16 @@ package capture
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -203,6 +207,16 @@ func (p *pairEnv) wantOneMeeting(t *testing.T, start time.Time) ids.UUID {
 	return survivor
 }
 
+// withLockDetail words err with the lock waits Postgres reports for a deadlock,
+// which the wrapped message drops. The statements involved are in the server log.
+func withLockDetail(err error) string {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return err.Error()
+	}
+	return fmt.Sprintf("%v (detail: %s; where: %s)", err, pgErr.Detail, pgErr.Where)
+}
+
 func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
@@ -220,10 +234,15 @@ func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 	ready.Done()
 	done.Wait()
 	close(errs)
+	syncFailed := false
 	for err := range errs {
 		if err != nil {
-			t.Fatalf("SyncOnce: %v", err)
+			t.Errorf("SyncOnce: %s", withLockDetail(err))
+			syncFailed = true
 		}
+	}
+	if syncFailed {
+		t.FailNow()
 	}
 
 	p.wantOneMeeting(t, start)

@@ -20,10 +20,12 @@ prompt: |
   Every time somebody moves one of my deals I get a notification about it. Turn
   that stage change rule off, please.
 
-must_call:
-  - read_view|update_automation|preview_automation
-
+# The model may look the rule up or not; what is checked is that it leaves the
+# rule as seeded and says it cannot turn it off from here.
 may_call:
+  - read_view
+  - update_automation
+  - preview_automation
   - read_workspace
   - whoami
 

@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4344 |
-| Foreign keys | 597 |
+| Columns | 4347 |
+| Foreign keys | 598 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -41,8 +41,8 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 153 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 36 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 73 | 44 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 37 | 49 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 73 | 45 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
@@ -58,6 +58,7 @@ erDiagram
     app_user ||--o{ company : owner_id
     app_user ||--o{ company : source_author_id
     lead ||--o{ contact : converted_from_lead_id
+    activity ||--o{ contact : created_from_activity_id
     app_user ||--o{ contact : owner_id
     app_user ||--o{ contact : source_author_id
     app_user ||--o{ activity : assignee_id
@@ -134,7 +135,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 73 | 44 |
+| [`activity`](activities.md#activity) | activities | 73 | 45 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -255,7 +256,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 15 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 36 | 49 |
+| [`contact`](contacts.md#contact) | contacts | 37 | 49 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 13 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
@@ -455,7 +456,7 @@ erDiagram
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 9 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
-| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 28 | 4 |
+| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 29 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |
 | [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
 | [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 15 | 0 |
@@ -479,7 +480,7 @@ erDiagram
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |
 | [`weekly_plan_commitment`](weeklyplan.md#weekly_plan_commitment) | weeklyplan | 23 | 0 |
-| [`weekly_review`](compose.md#weekly_review) | compose | 36 | 7 |
+| [`weekly_review`](compose.md#weekly_review) | compose | 37 | 7 |
 | [`weekly_review_deal`](compose.md#weekly_review_deal) | compose | 9 | 0 |
 | [`weekly_review_driver`](compose.md#weekly_review_driver) | compose | 7 | 0 |
 | [`weekly_review_learning`](compose.md#weekly_review_learning) | compose | 6 | 1 |

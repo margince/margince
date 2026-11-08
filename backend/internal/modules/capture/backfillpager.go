@@ -266,6 +266,11 @@ const (
 	backfillRateBackoffCap  = 30 * time.Minute
 )
 
+// backfillPageDelay is the wait between a committed page and the next one. The
+// admission slot already keeps an import from crowding out another, so a page
+// that finished starts the next at once.
+const backfillPageDelay time.Duration = 0
+
 // commitBackfillPage advances the cursor and remaining counters together.
 // Creation credits already belong to their domain transactions.
 func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, generation int, res connector.BackfillPageResult) (done, completed bool, err error) {
@@ -301,7 +306,7 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 			if finishing {
 				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
 			}
-			return rescheduleBackfillTx(ctx, tx, backfillID, time.Second)
+			return rescheduleBackfillTx(ctx, tx, backfillID, backfillPageDelay)
 		}
 		return cancelReboundBackfillTx(ctx, tx, backfillID)
 	})

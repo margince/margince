@@ -14,10 +14,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | | |
 |---|---:|
 | Tools | 48 |
-| Resources | 13 |
-| Tool catalog | 228.6 KB |
-| Resource catalog | 5.1 KB |
-| Approx. wire tokens | 59849 |
+| Resources | 14 |
+| Tool catalog | 227.5 KB |
+| Resource catalog | 5.5 KB |
+| Approx. wire tokens | 59652 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,22 +33,23 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.7 KB | 23% | Yes, every step |
-| Input schemas | 112.5 KB | 49% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.8 KB | 23% | Yes, every step |
+| Input schemas | 111.3 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **166.2 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **165.1 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (13)
+### Resources (14)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
 - [`margince://schema/record-fields`](#record_fields): Record write vocabulary
 - [`margince://schema/reports`](#report_vocabulary): Report plan vocabulary
+- [`margince://schema/views`](#read_view_views): Views read_view reads
 - [`margince://schema/report-blocks`](#report_blocks): Report block grammar
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
 - [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
@@ -67,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 706 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1935 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1957 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 834 |
@@ -103,11 +104,11 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 984 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2671 |
+| [`read_view`](#read_view) | Read a view | yes |  | 638 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2687 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1680 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -164,6 +165,18 @@ carrying it.
 What each prebuilt report accepts in a report plan: the names its group_by, filters and aggregates
 admit, what it answers with no plan at all, and what a filter means when its name alone does not
 say. read_reports with kind=run names this document instead of carrying it.
+```
+
+### read_view_views
+
+`margince://schema/views` · application/json
+
+**Views read_view reads**
+
+```text
+Every view read_view reads, with the path arguments it needs and the query arguments it takes: each
+one's JSON type, and whether it is required, with its allowed words or format. A view that pages
+also takes cursor and limit.
 ```
 
 ### report_blocks
@@ -1300,18 +1313,18 @@ files one activity under another record too, and relink_many a named set; with
 replace_existing_of_type they move it off the old record of that type instead. ready says the user
 is ready for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell
 the user before you file under a project, which only a member can undo from the activity. attach
-checks the record first; read list_documents before attaching the same file again. Use
-schedule_meeting to book a meeting still to come, change_state with move_deal when the same event
-moves a deal, so move and note are one change, and change_reports record_decision for a sales
-review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged
-answer's approval id is what the retry carries. (Governance: runs immediately for
-accept_document_fields, archive_document, attach, bring_back, cancel_send, check_new_send,
-check_send, discard_draft, hide_document, log, preview_sign_off, read_document_fields,
-read_transcript, ready, request_document_access, reschedule_send, save_draft, set_aside,
-set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per
-call from its arguments for relink, relink_many; the user's yes is needed for the action
-archive_document, so tell them what the call will change and get it before calling, unless they
-asked for this call themselves; requires passport scope "write".)
+checks the record first; read list_documents before attaching the same file again. A logged meeting
+names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book
+a meeting still to come, change_state with move_deal when the same event moves a deal, so move and
+note are one change, and change_reports record_decision for a sales review's decision, which a note
+cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the
+retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach,
+bring_back, cancel_send, check_new_send, check_send, discard_draft, hide_document, log,
+preview_sign_off, read_document_fields, read_transcript, ready, request_document_access,
+reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience,
+show_document, task, unready; decided per call from its arguments for relink, relink_many; the
+user's yes is needed for the action archive_document, so tell them what the call will change and get
+it before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1750,9 +1763,9 @@ change_tags to tag a record. (Runs immediately; the user's yes is needed for the
 add_consumer_mail_domain, add_workspace_email_domain, archive_corpus, disconnect_channel,
 disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
 remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture,
-share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so tell them what the
-call will change and get it before calling, unless they asked for this call themselves; requires
-passport scope "write".)
+set_sender_decision, share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so
+tell them what the call will change and get it before calling, unless they asked for this call
+themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -11150,6 +11163,9 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "contract_id": {
       "type": "string"
     },
+    "country": {
+      "type": "string"
+    },
     "cursor": {
       "type": "string"
     },
@@ -11200,6 +11216,12 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "include_hidden": {
       "type": "boolean"
     },
+    "industry": {
+      "type": "string"
+    },
+    "initiative_id": {
+      "type": "string"
+    },
     "kind": {
       "type": "string"
     },
@@ -11238,6 +11260,9 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     },
     "pipeline_id": {
       "description": "comes from the workspace's pipeline list",
+      "type": "string"
+    },
+    "product_id": {
       "type": "string"
     },
     "project_id": {
@@ -11300,94 +11325,13 @@ routes. Name the view, its id and filters. Unknown arguments are refused with th
     "thread_cursor": {
       "type": "string"
     },
+    "value_basis": {
+      "type": "string"
+    },
     "view": {
-      "enum": [
-        "acquisition_sources",
-        "activity_review_templates",
-        "agent_open_api_document",
-        "automation",
-        "automation_catalog",
-        "automations",
-        "bulk_change",
-        "company_360",
-        "company_contacts",
-        "company_coverage",
-        "company_documents",
-        "company_facts",
-        "company_finance_summary",
-        "company_graph",
-        "company_hierarchy_rollup",
-        "company_profile_fields",
-        "company_strength",
-        "company_vat_check",
-        "consent_purposes",
-        "contact_360",
-        "contact_case",
-        "contact_cases",
-        "contact_conversation_suggestions",
-        "contact_graph",
-        "contact_strength",
-        "custom_field_live_lists",
-        "custom_fields",
-        "deal_commitments",
-        "deal_documents",
-        "deal_outcome_reviews",
-        "deal_stakeholders",
-        "deal_status",
-        "dedupe_candidate",
-        "dedupe_candidates",
-        "email_presentation",
-        "email_signature_template",
-        "explain_report",
-        "export_reporting_edition",
-        "export_reporting_evaluation",
-        "filter_vocabulary",
-        "follow_up_settings",
-        "forecast_calls",
-        "import_run",
-        "latest_inbound",
-        "latest_site_read",
-        "latest_technical_enrich",
-        "latest_transcript_read",
-        "lead_conversation_suggestions",
-        "lead_disqualify_reasons",
-        "lead_origins",
-        "lead_settings",
-        "lead_sources",
-        "list_members",
-        "lists",
-        "loss_reasons",
-        "meeting_brief",
-        "meeting_invitation",
-        "name_seats",
-        "partner_stages",
-        "pipeline",
-        "preview_contact_employment_import",
-        "project_health_assessments",
-        "project_stakeholders",
-        "record_assignments",
-        "record_lists",
-        "record_roles",
-        "relationships",
-        "reply_recipient",
-        "reporting_execution",
-        "reporting_executions",
-        "reporting_framework",
-        "reporting_schedules",
-        "reporting_target",
-        "reporting_targets",
-        "scheduling_profile",
-        "signal",
-        "signal_intro_path",
-        "signal_warmth",
-        "signals",
-        "site_read",
-        "stage",
-        "stage_evidence",
-        "stage_exit_criteria",
-        "stages",
-        "teams",
-        "transcript_read"
+      "description": "a view named in margince://schema/views or read_workspace with topic=views",
+      "examples": [
+        "acquisition_sources"
       ],
       "type": "string"
     }
@@ -11629,7 +11573,8 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "boolean"
     },
     "include_invited": {
-      "description": "colleagues only: Also list invited seats that have not signed in yet",
+      "deprecated": true,
+      "description": "colleagues only: Deprecated compatibility option. Also list invited seats that have not signed in yet",
       "type": "boolean"
     },
     "kind": {
@@ -11841,7 +11786,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "integer"
     },
     "topic": {
-      "description": "colleagues, pipelines or channel_providers; or which names a tool accepts: query, analytics, record_fields, list_filters, report_blocks, report_vocabulary",
+      "description": "colleagues, pipelines or channel_providers; or which names a tool accepts: query, analytics, record_fields, list_filters, report_blocks, report_vocabulary, views",
       "enum": [
         "actions",
         "agent_tools",
@@ -11949,6 +11894,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
         "system_health",
         "tax_rates",
         "user_handover",
+        "views",
         "voice_build",
         "voice_corpus_sources",
         "voice_learning_summary",
@@ -12211,8 +12157,8 @@ invitation to every attendee: the contact, and any further addresses. invite rea
 outside the workspace, so name them and the time and get the user's yes first; the call stages for
 approval. Read check_availability before choosing a time. Use change_activities with log to record a
 meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect
-its status before claiming it was delivered. (Governance: a human approves every call before it
-runs; requires passport scope "send".)
+its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance:
+a human approves every call before it runs; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>

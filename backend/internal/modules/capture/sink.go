@@ -69,9 +69,8 @@ type Sink struct {
 	nameParticipants ParticipantNamer
 	// scoreLead scores a lead the sink created. Nil keeps the column default.
 	scoreLead LeadScorer
-	// cancelMeeting closes a captured meeting the calendar says is off — called
-	// off by its organizer, or declined by the seat whose calendar it is. Nil
-	// captures meetings and cancels none.
+	// cancelMeeting closes a meeting cancelled by its organizer.
+	// Nil captures meetings and cancels none.
 	cancelMeeting MeetingCloser
 	// cancelMeetingByID closes the meeting a cancelled event's cross-door
 	// identity resolved to, when nothing was captured under its natural key.
@@ -222,6 +221,10 @@ var (
 // key. Replays return the existing row and write nothing new, so an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
+	return s.captureRecord(ctx, rec, rec.CalendarAnswer != nil && rec.CalendarAnswer.Response == connector.ResponseDeclined)
+}
+
+func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord, existingOnly bool) (datasource.EntityRef, error) {
 	noteDelivered(ctx, rec)
 	rec = maskCapturedCredentials(rec)
 	actor, err := admitRecord(ctx, rec)
@@ -237,8 +240,12 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		return s.db.Tx(ctx, func(tx pgx.Tx) error {
 			rec = original
 			attempt = captureAttempt{}
-			ctx, err := s.admitWriteTx(ctx, tx, rec)
+			ctx, err := s.admitWriteTx(withAdmissionNote(ctx, &attempt.admission), tx, rec)
 			if err != nil {
+				return err
+			}
+
+			if err := s.prepareActivityCapture(ctx, tx, rec, existingOnly); err != nil {
 				return err
 			}
 
@@ -254,9 +261,6 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
-				if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
-					return err
-				}
 				attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
 				return err
 			case LeadFields:
@@ -275,6 +279,10 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}
+	return s.finishCapture(ctx, rec, attempt)
+}
+
+func (s *Sink) finishCapture(ctx context.Context, rec connector.NormalizedRecord, attempt captureAttempt) (datasource.EntityRef, error) {
 	ref := attempt.ref
 	if attempt.dropped != "" {
 		// The breadcrumb is committed; only now does the connector learn the
@@ -298,7 +306,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// surfaced as a capture failure (the 60s p95 already delivered).
 		s.ensureCounterparty(ctx, rec, ref, attempt.decision)
 	}
-	s.admitCapturedParties(ctx, rec, ref)
+	s.admitCapturedParties(ctx, rec, ref, attempt.created && !attempt.admission.pending)
 	// The project ladder runs on the same terms as the counterparty step —
 	// after the commit, in its own transaction, never failing the capture —
 	// and on EVERY capture of the activity rather than only the first.

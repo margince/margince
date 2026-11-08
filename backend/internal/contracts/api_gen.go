@@ -16414,6 +16414,24 @@ func (e MeetingInvitationChangeAction) Valid() bool {
 	}
 }
 
+// Defines values for MeetingOtherParticipantKind.
+const (
+	MeetingOtherParticipantKindAddress   MeetingOtherParticipantKind = "address"
+	MeetingOtherParticipantKindColleague MeetingOtherParticipantKind = "colleague"
+)
+
+// Valid indicates whether the value is a known member of the MeetingOtherParticipantKind enum.
+func (e MeetingOtherParticipantKind) Valid() bool {
+	switch e {
+	case MeetingOtherParticipantKindAddress:
+		return true
+	case MeetingOtherParticipantKindColleague:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingPlanReadiness.
 const (
 	MeetingPlanReadinessMeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
@@ -38301,10 +38319,16 @@ type Company360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
 	// Participants The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it.
 	Participants []Company360MeetingParticipant `json:"participants"`
-	StartsAt     time.Time                      `json:"starts_at"`
-	Subject      string                         `json:"subject"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
+	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
+	StartsAt         time.Time `json:"starts_at"`
+	Subject          string    `json:"subject"`
 }
 
 // Company360NextStep One open task on the account, ordered overdue → due → undated.
@@ -41043,7 +41067,10 @@ type Contact struct {
 	// absent value and never "System". Served only to a human session, never to an
 	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
-	Emails    *[]ContactEmail       `json:"emails,omitempty"`
+
+	// CreatedFromActivityId The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
+	CreatedFromActivityId *openapi_types.UUID `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmail     `json:"emails,omitempty"`
 
 	// Employer Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `contact_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the contact does not cover) or when the employer sits outside their company row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for.
 	Employer  *ContactEmployer `json:"employer,omitempty"`
@@ -41389,13 +41416,19 @@ type Contact360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses no contact or seat on the meeting holds, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
 	Participants *[]struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
 		FullName  string             `json:"full_name"`
 	} `json:"participants,omitempty"`
-	StartsAt time.Time `json:"starts_at"`
-	Subject  *string   `json:"subject,omitempty"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named, with the guests a crowded calendar event stored no row for. Absent when every attendee is named.
+	ParticipantsMore *int      `json:"participants_more,omitempty" minimum:"1"`
+	StartsAt         time.Time `json:"starts_at"`
+	Subject          *string   `json:"subject,omitempty"`
 }
 
 // Contact360SinceLastVisit What changed on this contact since the caller last acknowledged seeing them.
@@ -43159,15 +43192,18 @@ type CreateContactRequest struct {
 	// into the contact in the same write, and a conversion the server refuses fails the
 	// whole write. An agent sending this field is refused with 422
 	// `convert_needs_a_human`: an agent converts with `promote_lead`.
-	ConvertLeadIds *[]openapi_types.UUID   `json:"convert_lead_ids,omitempty"`
-	Emails         *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName      *string                 `json:"first_name,omitempty"`
-	FullName       string                  `json:"full_name"`
-	LastName       *string                 `json:"last_name,omitempty"`
-	OwnerId        *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones         *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social         *map[string]interface{} `json:"social,omitempty"`
-	Source         string                  `json:"source"`
+	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
+
+	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
+	CreatedFromActivityId *openapi_types.UUID     `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName             *string                 `json:"first_name,omitempty"`
+	FullName              string                  `json:"full_name"`
+	LastName              *string                 `json:"last_name,omitempty"`
+	OwnerId               *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones                *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social                *map[string]interface{} `json:"social,omitempty"`
+	Source                string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -53047,6 +53083,17 @@ type MeetingInvitationRequest struct {
 	VideoCall *bool `json:"video_call,omitempty"`
 }
 
+// MeetingOtherParticipant One attendee of a meeting who is not a contact.
+type MeetingOtherParticipant struct {
+	Kind MeetingOtherParticipantKind `json:"kind"`
+
+	// Name A colleague's display name, or the name the invitation gave an address, else the address.
+	Name string `json:"name"`
+}
+
+// MeetingOtherParticipantKind defines model for MeetingOtherParticipant.Kind.
+type MeetingOtherParticipantKind string
+
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
 // KNOWN about it.
 //
@@ -54182,11 +54229,15 @@ type NotificationItem struct {
 	Target *struct {
 		Id openapi_types.UUID `json:"id"`
 
-		// Type A record's class, as its own endpoint spells it, or one of two non-record targets:
+		// Type A record's class, as its own endpoint spells it, or a non-record review target:
 		// `approval` (a pending decision, `id` is the approval) and `data_task` (a
 		// background correction run, `id` is the `run_id` that failed). A client opens the
 		// corrections list rather than that run: a manual re-run replaces the `run_id`, so the
-		// one a notice names may no longer be listed.
+		// one a notice names may no longer be listed. Manual privacy reviews use
+		// `knowledge_document` (download the retained file), `email_signature` (the
+		// recipient's own account settings), `activity` (open the retained note in its
+		// drawer), `legal_entity` (Company settings), or `signature_template` (Company
+		// settings; `id` identifies the erasure whose review flagged the workspace template).
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
 }
@@ -56730,6 +56781,24 @@ type RbacObjectGrant struct {
 	Update bool `json:"update"`
 }
 
+// ReadViewsCatalog What `describe_views` answers.
+type ReadViewsCatalog struct {
+	Views struct {
+		Version string `json:"version"`
+		Views   []struct {
+			Path  []string `json:"path"`
+			Query []struct {
+				Enum     *[]string `json:"enum,omitempty"`
+				Format   *string   `json:"format,omitempty"`
+				Name     string    `json:"name"`
+				Required *bool     `json:"required,omitempty"`
+				Type     string    `json:"type"`
+			} `json:"query"`
+			View string `json:"view"`
+		} `json:"views"`
+	} `json:"views"`
+}
+
 // ReaderCalendar Whether the reader's own calendar connections feed the meetings this product holds.
 //
 // `not_connected` — the reader has no live calendar connection: none was made, or every
@@ -56752,6 +56821,12 @@ type Receipt struct {
 	// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 	CloseDateChange *CloseDateChange `json:"close_date_change,omitempty"`
 
+	// CustomerQuote The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote.
+	CustomerQuote *string `json:"customer_quote,omitempty"`
+
+	// Headline `summary` without the reason and the customer's words appended to it, for a client that draws `reason` and `customer_quote` on lines of their own. Absent on a receipt whose summary carries neither, and on older responses.
+	Headline *string `json:"headline,omitempty"`
+
 	// Id The completed act, as its own surface spells it.
 	Id openapi_types.UUID `json:"id"`
 
@@ -56760,6 +56835,9 @@ type Receipt struct {
 
 	// OccurredAt When it happened.
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// Reason Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
+	Reason *string `json:"reason,omitempty"`
 
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
@@ -61283,7 +61361,8 @@ type SettingOriginSource string
 // Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
 // The whole object is optional, and a client that cannot read it should treat every surface here as unavailable — the fail-closed direction hides a page that exists rather than offering one that does not.
 type SettingsAvailability struct {
-	// CompanyContext True when the installation's company-context rollout has typed reads active — the same predicate `GET /company-context/capabilities` reports as `read_enabled`, and the same one its own endpoints gate on. False leaves the Company page to the installation and currency settings beside it.
+	// CompanyContext Deprecated. Still required and returned for compatibility throughout the API notice window. New clients read `read_enabled` from `GET /company/context/capabilities` instead. This field continues to report whether the company-context rollout has typed reads active. It does not gate the installation's Company settings page.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompanyContext bool `json:"company_context"`
 
 	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
@@ -62727,9 +62806,14 @@ type TeamWeeklyReview struct {
 	// Exceptions LIVE, computed on every read and never frozen: the open input-check findings on deals
 	// the team's members own now, under the reader's own deal scope. Absent when the read
 	// did not ask.
-	Exceptions     *[]InputCheck      `json:"exceptions,omitempty"`
-	GeneratedAt    time.Time          `json:"generated_at"`
-	Id             openapi_types.UUID `json:"id"`
+	Exceptions  *[]InputCheck      `json:"exceptions,omitempty"`
+	GeneratedAt time.Time          `json:"generated_at"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld  *bool              `json:"leads_withheld,omitempty"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
 	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
@@ -63070,7 +63154,9 @@ type UndoMarginceChangeKept struct {
 	AuditLogId openapi_types.UUID `json:"audit_log_id"`
 
 	// Kind The kind of change; absent when the change could not be read.
-	Kind   *string                      `json:"kind,omitempty"`
+	Kind *string `json:"kind,omitempty"`
+
+	// Reason Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
 	Reason UndoMarginceChangeKeptReason `json:"reason"`
 
 	// TeamNotes With `needs_confirmation`, the notes the team added to the opened or reopened deal.
@@ -63083,7 +63169,7 @@ type UndoMarginceChangeKept struct {
 	TeamWork *string `json:"team_work,omitempty"`
 }
 
-// UndoMarginceChangeKeptReason defines model for UndoMarginceChangeKept.Reason.
+// UndoMarginceChangeKeptReason Why the change was kept. `accepted` is no longer sent: a change marked reviewed still undoes. A client keeps reading it from an older server.
 type UndoMarginceChangeKeptReason string
 
 // UndoMarginceChangeResult What happened to one deal. `undone` lists the kinds taken back; `kept` lists each
@@ -65641,6 +65727,11 @@ type WeeklyReview struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 	Id          openapi_types.UUID `json:"id"`
 
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld *bool `json:"leads_withheld,omitempty"`
+
 	// Learnings What the week TAUGHT, as against what it was.
 	//
 	// `state` is load-bearing beside `items`: `not_run` means no pass has looked at this
@@ -65995,7 +66086,12 @@ type WeeklyReviewPipeline struct {
 
 // WeeklyReviewPrior The week before this one, for comparison.
 type WeeklyReviewPrior struct {
-	Counts         WeeklyReviewCounts `json:"counts"`
+	Counts WeeklyReviewCounts `json:"counts"`
+
+	// LeadsWithheld True when lead figures were not measured with lead-read authority, or the reader
+	// lacks that authority now. Lead counts are redacted placeholders, never measurements
+	// of zero. Clients show an unavailable section and no lead comparisons. Absent on an older server.
+	LeadsWithheld  *bool              `json:"leads_withheld,omitempty"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
 	// Pipeline Absent under the same rule as the current week's.
@@ -66518,7 +66614,7 @@ type WorklistBuckets struct {
 	// Planned The rest of the seller work: a task to do, a meeting to prepare, a lead to reach, a deal drifting below the material bar.
 	Planned int `json:"planned" minimum:"0"`
 
-	// Review Everything that is not seller work — the `review`, `system_health` and `receipt` destinations together, because the one line above the queue says how much is waiting on judgement rather than which of the three kinds it is.
+	// Review Work in the `review` and `system_health` destinations. Completed-work receipts are served separately and never contribute to this queue count.
 	Review int `json:"review" minimum:"0"`
 
 	// Urgent Seller work at the top two levels: somebody is waiting, or a promise is breaking. The same rule as the sibling `urgent`, narrowed to `today` rows.
@@ -67019,7 +67115,9 @@ type WorklistItem struct {
 	// `today` is work a seller executes. `review` is a judgement somebody must make
 	// before work continues — an approval, a duplicate pair, an introduction.
 	// `system_health` is a source or automation an administrator must restore.
-	// `receipt` is completed work, reported so the reader can see it happened.
+	// `receipt` is deprecated and retained only for published-client compatibility
+	// through the API notice window. The work queue never emits it. Completed-work
+	// receipts are served by `GET /worklist/handled` and have their own presentation.
 	//
 	// A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
 	// `source` that a browser could recompute: two rows of one source can differ,
@@ -67302,7 +67400,9 @@ type WorklistItemConsequence string
 // `today` is work a seller executes. `review` is a judgement somebody must make
 // before work continues — an approval, a duplicate pair, an introduction.
 // `system_health` is a source or automation an administrator must restore.
-// `receipt` is completed work, reported so the reader can see it happened.
+// `receipt` is deprecated and retained only for published-client compatibility
+// through the API notice window. The work queue never emits it. Completed-work
+// receipts are served by `GET /worklist/handled` and have their own presentation.
 //
 // A CLIENT NEVER DERIVES THIS. It is not a function of `category`, `band` or
 // `source` that a browser could recompute: two rows of one source can differ,
@@ -68763,6 +68863,11 @@ type ExportReportingEvaluationParams struct {
 	CloseWindow       *ExportReportingEvaluationParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
 	Metrics           *[]ReportingMetricID                        `form:"metrics,omitempty" json:"metrics,omitempty"`
 	Blocks            *[]ReportingBlockKind                       `form:"blocks,omitempty" json:"blocks,omitempty"`
+	ProductId         *ReportingProductId                         `form:"product_id,omitempty" json:"product_id,omitempty"`
+	InitiativeId      *ReportingInitiativeId                      `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	Country           *ReportingCountry                           `form:"country,omitempty" json:"country,omitempty"`
+	Industry          *ReportingIndustry                          `form:"industry,omitempty" json:"industry,omitempty"`
+	ValueBasis        *ReportingValueBasis                        `form:"value_basis,omitempty" json:"value_basis,omitempty"`
 }
 
 // ExportReportingEvaluationParamsScopeKind defines parameters for ExportReportingEvaluation.
@@ -75298,9 +75403,10 @@ type ListUsersParams struct {
 	// IncludeInactive Admin management view — include deactivated/suspended members. Honored only for an admin caller.
 	IncludeInactive *bool `form:"include_inactive,omitempty" json:"include_inactive,omitempty"`
 
-	// IncludeInvited Also list invited seats — members who have not signed in yet. Each row's `status` says so.
-	// A picker that may hand an invited colleague work, such as a record responsibility, asks for them.
-	// Naming the colleagues a record already points at is `GET /users/names`.
+	// IncludeInvited Deprecated compatibility option. Also lists invited seats that have not signed in yet.
+	// Assignment pickers use the default active roster and leave out rows whose `is_agent` is
+	// true. Resolve known colleague ids with `GET /users/names`. This option remains accepted
+	// throughout the API compatibility window.
 	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
 
@@ -79198,6 +79304,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "created_by")
 	}
 
+	if raw, found := object["created_from_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.CreatedFromActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_from_activity_id': %w", err)
+		}
+		delete(object, "created_from_activity_id")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -79501,6 +79615,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["created_by"], err = json.Marshal(a.CreatedBy)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
+	}
+
+	if a.CreatedFromActivityId != nil {
+		object["created_from_activity_id"], err = json.Marshal(a.CreatedFromActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_from_activity_id': %w", err)
 		}
 	}
 
@@ -81068,6 +81189,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "convert_lead_ids")
 	}
 
+	if raw, found := object["created_from_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.CreatedFromActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_from_activity_id': %w", err)
+		}
+		delete(object, "created_from_activity_id")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -81216,6 +81345,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["convert_lead_ids"], err = json.Marshal(a.ConvertLeadIds)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'convert_lead_ids': %w", err)
+		}
+	}
+
+	if a.CreatedFromActivityId != nil {
+		object["created_from_activity_id"], err = json.Marshal(a.CreatedFromActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_from_activity_id': %w", err)
 		}
 	}
 
@@ -92208,7 +92344,7 @@ type ServerInterface interface {
 	// Get ready for a meeting about one record.
 	// (GET /meeting-prep)
 	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
-	// The notification centre — every notice addressed to the acting contact, newest first.
+	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
 	// Raise a coaching notice for a colleague. It lands in their Worklist's notices lane.
@@ -92349,31 +92485,31 @@ type ServerInterface interface {
 	// State who this installation is.
 	// (PUT /privacy/controller-particulars)
 	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
-	// Disclosure duties this installation owes, soonest deadline first.
+	// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
 	// (GET /privacy/notice-case-reviews)
 	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
-	// One disclosure duty.
+	// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
 	// (GET /privacy/notice-case-reviews/{id})
 	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a disclosure duty an owner.
+	// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read accessible evidence for a contact source assessment.
 	// (GET /privacy/notice-case-reviews/{id}/source)
 	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
-	// Confirm the source of an unassessed contact.
+	// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Preview the source assessment without changing the case.
+	// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 	// (POST /privacy/notice-case-reviews/{id}/source/preview)
 	PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Disclosure duties this installation owes, soonest deadline first.
+	// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
-	// One disclosure duty.
+	// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
 	// (GET /privacy/notice-cases/{id})
 	GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Give a disclosure duty an owner.
+	// Give a privacy notice already owed (from notice_cases) an owner.
 	// (POST /privacy/notice-cases/{id}/assign)
 	AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
@@ -92562,6 +92698,9 @@ type ServerInterface interface {
 	// Everything a workspace query plan may say, for this caller.
 	// (GET /query-vocabulary)
 	DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request)
+	// The views the read_view agent tool reads, and the arguments each takes.
+	// (GET /read-views)
+	DescribeReadViews(w http.ResponseWriter, r *http.Request)
 	// The fields a record create or update may write, for each record type.
 	// (GET /record-fields)
 	DescribeRecordFields(w http.ResponseWriter, r *http.Request)
@@ -97506,7 +97645,7 @@ func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The notification centre — every notice addressed to the acting contact, newest first.
+// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews.
 // (GET /notices)
 func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -97788,19 +97927,19 @@ func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disclosure duties this installation owes, soonest deadline first.
+// Every contact's privacy-notice case, including a source nobody has confirmed yet (a bought list, an import), soonest deadline first. Start here for what we owe one contact.
 // (GET /privacy/notice-case-reviews)
 func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One disclosure duty.
+// One contact's privacy-notice case — its source, whether a notice is owed, and by when. The id comes from notice_case_reviews, not the contact's id.
 // (GET /privacy/notice-case-reviews/{id})
 func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a disclosure duty an owner.
+// Give a contact's privacy-notice case (from notice_case_reviews) an owner.
 // (POST /privacy/notice-case-reviews/{id}/assign)
 func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -97812,31 +97951,31 @@ func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm the source of an unassessed contact.
+// Confirm where a contact came from (bought list, import, their own enquiry), which decides whether a privacy notice is owed. Preview it first.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Preview the source assessment without changing the case.
+// Preview what confirming a contact's source decides — whether a notice is owed and by when — without changing the case. Confirming is the user's decision, so offer confirm_notice_source and ask them.
 // (POST /privacy/notice-case-reviews/{id}/source/preview)
 func (_ Unimplemented) PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disclosure duties this installation owes, soonest deadline first.
+// Privacy notices already owed, where the source is confirmed, soonest deadline first. A contact whose source nobody has confirmed is in notice_case_reviews.
 // (GET /privacy/notice-cases)
 func (_ Unimplemented) ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// One disclosure duty.
+// One privacy notice owed, where the source is confirmed. The case id comes from notice_cases, not the contact's id.
 // (GET /privacy/notice-cases/{id})
 func (_ Unimplemented) GetNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Give a disclosure duty an owner.
+// Give a privacy notice already owed (from notice_cases) an owner.
 // (POST /privacy/notice-cases/{id}/assign)
 func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -98211,6 +98350,12 @@ func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Reque
 // Everything a workspace query plan may say, for this caller.
 // (GET /query-vocabulary)
 func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The views the read_view agent tool reads, and the arguments each takes.
+// (GET /read-views)
+func (_ Unimplemented) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103961,6 +104106,71 @@ func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWrit
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocks"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocks", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "initiative_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "initiative_id", r.URL.Query(), &params.InitiativeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "initiative_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "initiative_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "value_basis" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "value_basis", r.URL.Query(), &params.ValueBasis, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "value_basis"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "value_basis", Err: err})
 		}
 		return
 	}
@@ -136055,6 +136265,28 @@ func (siw *ServerInterfaceWrapper) DescribeQueryVocabulary(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// DescribeReadViews operation middleware
+func (siw *ServerInterfaceWrapper) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeReadViews(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeRecordFields operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 
@@ -147593,6 +147825,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/query-vocabulary", wrapper.DescribeQueryVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/read-views", wrapper.DescribeReadViews)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-fields", wrapper.DescribeRecordFields)

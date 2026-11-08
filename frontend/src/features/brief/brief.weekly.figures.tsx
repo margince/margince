@@ -150,6 +150,11 @@ function difference(
   figure: WeekFigure,
   review: WeeklyReview,
 ): number | undefined {
+  if (
+    figure.figure === "leads" &&
+    (review.leads_withheld || review.prior?.leads_withheld)
+  )
+    return undefined;
   const now = figure.count(review.counts);
   const prior = review.prior?.counts;
   const before = prior ? figure.count(prior) : undefined;
@@ -357,7 +362,11 @@ export function FiguresTable({
     label: figure.label,
     week: figureValue(figures[figure.figure], figure.shown(review.counts), t),
     prior:
-      prior && figure.count(prior) !== undefined ? figure.shown(prior) : "—",
+      figure.figure === "leads" && review.prior?.leads_withheld
+        ? t("reporting.unavailable")
+        : prior && figure.count(prior) !== undefined
+          ? figure.shown(prior)
+          : "—",
     change:
       figures[figure.figure].kind === "measured"
         ? (change(figure, review, locale) ?? "—")

@@ -98,6 +98,13 @@ lock jobs. Read `margince_worker_pinned_sessions` and
 `margince_worker_session_budget_snoozes_total` with the pool wait metrics when sizing this limit.
 Those connections have no separate pool; other short work may use them too.
 
+`capture_sync`, `document_extract` and `voice_build` hold a session lock for each unit of work.
+A closed connection frees the lock at once. The next capture pass, document request or voice
+retry can then take the work. A live holder keeps its work even when another job starts.
+The voice retry pass runs each minute and keeps the due time of a budget deferral.
+The document and voice rows check the claim's start time on writes, so an old worker cannot
+replace a newer result.
+
 The statement cache setting bounds entries, not bytes. It also bounds the `description` cache.
 A smaller cache may cause repeated `Prepare` calls. Measure with
 `TestWorkerCacheReportsHistoryPreparationCost` before reducing it. `work_mem` is per query
@@ -170,7 +177,8 @@ before changing how many imports run together.
 ## Mail import queue
 
 `capture.history_concurrency` bounds running history imports across the installation, with a default
-of one. Every process must use the same value. Requests beyond that budget stay `queued` and read no
+of one. Each running import adds its own database and worker memory load, so the default lets
+one mailbox import at a time. Every process must use the same value. Requests beyond that budget stay `queued` and read no
 mail. `capture.history_hold` accepts requests but starts no new page. Both keys are listed in
 [configuration](configuration.md).
 
@@ -241,6 +249,12 @@ Set `capture.gmail_mailbox_quota` and `capture.gmail_project_quota` to the effec
 by Google, with the same values in each process. Older projects may have different limits. The
 defaults and environment keys are in [configuration](configuration.md). Method costs follow the
 [Google quota table](https://developers.google.com/workspace/gmail/api/reference/quota).
+
+The mailbox budget is what bounds a history import: a full message costs three times a header
+read. Gmail reads the headers of the first 10 messages of each page and drops the ones the
+capture gates would keep out. It goes on reading headers for the rest of the page only when the
+sample dropped more than one message in three. Otherwise it downloads the rest in full, and the
+same gates judge each message when it is stored.
 
 A largest call still fits at a rolling-minute boundary. A provider retry deadline can only make
 the shared wait longer. A mailbox-only limit leaves other mailboxes ready. Longer waits return

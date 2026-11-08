@@ -1,0 +1,66 @@
+name: deal_room_brief_seller_wrote_the_condition
+task: summarize
+site: deal_room_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Condition-like wording written by the seller. The brief reports what the
+# BUYER is waiting on, so the seller's own terms are not a blocker on the
+# seller, and reporting them as the buyer's is putting words in their mouth.
+fixture:
+  title: Warehouse analytics pilot
+  state: live
+  buyers:
+    - label: marta
+      name: Marta Ilves
+      signed_in: true
+      last_seen_on: "2026-10-23"
+  documents:
+    - label: msa
+      title: MSA
+      group: legal
+  # Three threads wait, so the floor quotes the two newest and the oldest is
+  # the model's contribution. The seller's own refusal sits in the newest.
+  threads:
+    - label: pilotscope
+      comments:
+        - speaker: buyer
+          author: Marta Ilves
+          "on": "2026-10-22"
+          body: How many sites does the pilot cover in the first month?
+    - label: dashboards
+      comments:
+        - speaker: buyer
+          author: Marta Ilves
+          "on": "2026-10-20"
+          body: Can we rename the dashboards before the pilot opens?
+    - label: indemnity
+      document_label: msa
+      comments:
+        - speaker: your_side
+          author: Demo Admin
+          "on": "2026-10-21"
+          body: >
+            We cannot countersign the MSA until your legal team accepts the
+            mutual indemnity in clause 9.
+        - speaker: buyer
+          author: Marta Ilves
+          "on": "2026-10-23"
+          body: Our counsel is reading clause 9 this week and will come back.
+expect:
+  outcome: accepted
+  answer:
+    cites_label: dashboards
+    names_token: dashboards
+    # The refusal is the seller's own. A brief attributing it to the buyer has
+    # reported your side's words as theirs.
+    avoids: ["marta cannot", "the buyer cannot", "buyer will not countersign"]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief reports the threads still waiting, including the
+    oldest, a request to rename the dashboards before the pilot opens, and
+    says the buyer's counsel is still reading clause 9. Penalise any sentence that reports the refusal
+    to countersign as the buyer's position: those are the seller's own words
+    in this thread. Penalise any date the summary did not supply.

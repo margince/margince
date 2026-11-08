@@ -57,6 +57,7 @@ var schedulerClaims = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/signaturework.go":  "Selects retry work whose scheduled time has arrived; equality is runnable, with no overdue status shown to a reader.",
 	"internal/compose/runnerservice.go":           "fires a cron-seeded agent when its scheduled moment has arrived. `!now.Before(due)` is the inclusive reading on purpose: a job due exactly on a tick must run on that tick, and nothing here is shown to a reader as late.",
 	"internal/modules/agents/runner/claimjobs.go": "claims the next runner job whose scheduled moment has arrived. This is the scheduler's question, and a job due exactly now must run rather than wait a tick; nothing here is shown to a reader as late.",
+	"internal/compose/backfillscheduler.go":       "decides whether a history page's next River job is due now or later, so River inserts it available or scheduled. This is the scheduler's question, and nothing here is shown to a reader as late.",
 })
 
 // asksIfLateInSQL matches a statement asking whether a due column has been

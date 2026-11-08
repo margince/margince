@@ -1,12 +1,9 @@
 <!-- prose:plain -->
 # Test the MCP surface end to end with a real assistant
 
-Find out whether a real assistant (Claude, GPT or Mistral) can do the daily jobs of a user through the MCP surface of Margince.
-It must also say true things while it works. `make e2e-llm` starts its own stack, and fills it with test data. It gives a real
-model the scenario prompts under `e2e/llm/scenarios/`, and grades what the model called and what it said. The results go to [reference/mcp-tool-coverage.md](../reference/mcp-tool-coverage.md).
+Find out whether a real assistant (Claude, GPT, Gemini or Mistral) can do the daily jobs of a user through the MCP surface of Margince. It must also say true things while it works. `make e2e-llm` starts its own stack, and fills it with test data. It gives a real model the scenario prompts under `e2e/llm/scenarios/`, and grades what the model called and what it said. The results go to [reference/mcp-tool-coverage.md](../reference/mcp-tool-coverage.md).
 
-This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own credentials.
-The Go tests pin payloads and errors for free. This lane answers the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
+This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own credentials. The Go tests pin payloads and errors for free. This lane answers the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
 
 > **Start free.** `make test-e2e-llm-check` needs no key, network or stack. It runs the checker, the recorded verdicts of the judge and the unit tests of the bridge, against stand-ins in the same program. Run it after any change under `e2e/llm/`.
 
@@ -18,6 +15,7 @@ See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red
 |---|---|
 | `claude` (default) | `claude-sonnet-5-5` |
 | `gpt` | `gpt-5.6-sol` |
+| `gemini` | `gemini-3.8-flash-medium` |
 | `mistral` | `mistral-medium-3-5` |
 
 The table is in `e2e/llm/candidates.json`.
@@ -26,15 +24,16 @@ The table is in `e2e/llm/candidates.json`.
 |---|---|---|---|
 | `api` (default) | `e2e/llm/drive.py`, the neutral bridge | the vendor key: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `MISTRAL_API_KEY` | `<model>` |
 | `openrouter` | the neutral bridge, through OpenRouter | `OPENAI_COMPATIBLE_API_KEY` | `<model>` |
-| `cli` | `claude -p` or `codex exec` (no Mistral CLI) | a Claude credential, or a `codex login` | `<model>@<cli>` |
+| `cli` | `claude -p`, `codex exec` or `agy -p` (no Mistral CLI; Gemini runs only here) | a Claude credential, a `codex login`, or an Antigravity sign-in | `<model>@<cli>` |
 
-**Only the bridge compares models.** It gives every vendor the same tools, and the
-instructions of the server as the system prompt. It also gives the same cap of 20 turns, and the same
-cap on results. A CLI uses the system prompt and agent loop of its own vendor. So its
-number is filed on its own, and never sits in the comparison column. The CLI routes
+**Only the bridge compares models.** It gives every vendor the same tools, and the instructions of the server as the system prompt. It also gives the same cap of 20 turns, and the same cap on results. A CLI uses the system prompt and agent loop of its own vendor. So its number is filed on its own, and never sits in the comparison column. The CLI routes
 are the way to run a long sweep on a subscription at small cost.
 
 A CLI starts with nothing of yours: `e2e/llm/clean.py` starts it, and the judge, in an empty folder. The claude CLI loads no settings, no `memory_paths` and no `skills`. Codex gets a home folder that holds only a copy of your login, and a new login it gets goes back to yours. The lane stops a run whose `init` line shows a repository folder, a `memory_paths` entry, a user plugin or a skill. It also stops a run with a `hook_started` line. Codex prints neither, so `e2e/llm/tests/test_codex.py` checks how it starts instead.
+
+Gemini runs through the Antigravity CLI (`E2E_LLM_CANDIDATE=gemini`, after you run `agy` once and sign in). Each run gets an empty folder that holds one agent file. That agent names the lane's server as its only MCP server, and turns off your own servers, rules and skill files. In print mode `agy` refuses any action it would ask you about, and `--settings` allows only the lane's server.
+
+`agy` does not list MCP tools to the model. The model reads the schema of a tool from a file under `~/.gemini/antigravity-cli/`. It reads a long result back from a file there too. The lane allows those reads and stops a run on any other tool. `e2e/llm/tests/test_agy.py` checks how it starts.
 
 Records made before this check did not measure a model that knows nothing about Margince. A Claude CLI run read the `CLAUDE.md` and `AGENTS.md` of this repository, and your own settings. Measure those records again before you compare them with a new one. A codex record is in question too if your codex home held plugins, hooks, `memories`, `skills` or an `AGENTS.md`. `ls backend/internal/compose/aicert/records/mcp_e2e*/*@{claude,codex}-cli/` lists them.
 
@@ -130,45 +129,26 @@ Most of the time of a case goes to the start and seed of its stack, not to the m
 2. **Merge cases that overlap.** Fold two cases that test the same thing on one tool into one. Never drop the only case that names a tool in `must_call`.
    Generate the coverage page again (section 8): its count of tools that no case requires must not grow.
 3. **Run a discovery pass.** Fix all that it finds ([improve-mcp-quality.md](improve-mcp-quality.md)).
-4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on both models ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
+4. **Freeze the copy for the final pass.** After a copy change, run again only the cases that the change can move, on every target ([improve-mcp-quality.md](improve-mcp-quality.md#6-run-again-what-changed-plus-controls)).
 5. **Name the commit in the PR.** A verdict file does not say which copy it measured. So the PR body says which cases ran on which commit.
 
-**Run one model at a time.** Two stacks, each with the CLI of its model, ran out of RAM on one machine, and the system stopped both. The judge also uses your Claude subscription. To run two at once, give each its own worktree and its own `E2E_LLM_SLUG`.
+**Run lanes, not one long command.** A lane is one worktree with its own `E2E_LLM_SLUG`. The lanes share the Postgres, Redis and object store containers, so each adds only an API, a worker and one database. One stack still serves one case at a time. Every run restores the database from the snapshot, which would remove a second case's data. Two lanes work on one machine; four made it slow, because each lane's start and the judge use the CPU.
 
-### Sweeping through a subscription limit
+### Sweep with `scripts/e2e-llm-sweep.sh`
 
-A CLI route uses a subscription with a limit for each time window. When the limit runs out, the lane stops with exit 2 and scores nothing, so that run is no failure.
-Codex reports `Your workspace is out of credits`, and the claude CLI prints its own message about the limit. A sweep run as one command ends at that scenario.
-
-Run the scenarios one at a time instead. Skip the ones with a score, and wait when a stop names a limit: more cases would only stop the same way.
-Save it as a script. It stops on a reason it does not know, so that you read that scenario, and do not skip it.
+`SCENARIO` takes several names, so one boot, seed and search rebuild serve a whole batch. `scripts/e2e-llm-sweep.sh` runs one lane: each case it is given, in batches.
+After each batch it runs again on what is left. A case is finished once its verdict was written after `E2E_SWEEP_SINCE`, in any worktree that `E2E_SWEEP_WORKTREES` names, so a restart skips what any lane finished.
+A subscription limit makes it wait and go on. A batch that finishes nothing twice stops it, so that you read the log.
 
 ```bash
-mkdir -p .tmp/sweep
-for f in e2e/llm/scenarios/*.yaml; do
-  name="$(python3 e2e/llm/check.py --field name "$f")"
-  [[ -f ".tmp/sweep/$name.done" ]] && continue
-  while :; do
-    rm -f e2e/llm/records/"$name".run*.jsonl     # read only this attempt's transcripts
-    MARGINCE_E2E_LLM=1 E2E_LLM_CANDIDATE=gpt E2E_LLM_VIA=cli \
-      E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
-      SCENARIO="$name" make e2e-llm > ".tmp/sweep/$name.log" 2>&1
-    if grep -q '^scenarios: ' ".tmp/sweep/$name.log"; then
-      touch ".tmp/sweep/$name.done"; break         # scored, pass or fail
-    fi
-    if grep -qiE 'out of credits|usage limit|answered HTTP 429' \
-        ".tmp/sweep/$name.log" e2e/llm/records/"$name".run*.jsonl 2>/dev/null; then
-      sleep 1800; continue                         # wait for the limit to reset
-    fi
-    echo "$name stopped for another reason; read .tmp/sweep/$name.log" >&2
-    exit 1
-  done
-done
+export E2E_LLM_CANDIDATE=gemini E2E_LLM_VIA=cli MARGINCE_E2E_LLM=1 \
+  E2E_LLM_STACK_PRESET=config/presets/openrouter_cloud_eu.yaml \
+  E2E_SWEEP_SINCE="$(date +%s)" E2E_SWEEP_WORKTREES="$PWD ../lane-b"
+scripts/e2e-llm-sweep.sh sweepa 1 3 4 5 6           # in this worktree
+(cd ../lane-b && scripts/e2e-llm-sweep.sh sweepb 9 10 20 22 23)
 ```
 
-`make` returns 2 for a scored failure, and also for a harness stop. So the
-`scenarios:` summary line of the lane, and not the exit code, says whether a scenario has
-a score.
+Give each lane half the cases, some long and some short. The batch logs are under `.tmp/sweep/`.
 
 ## 5. Read the result
 
@@ -301,12 +281,13 @@ Before you call a red scenario a product regression, rule out the harness:
 
 | Sign | Cause | Fix |
 |---|---|---|
-| Every run "called nothing" | The MCP server never connected: a server name turned off in the config of the claude CLI, or a codex run that could not reach its tools | Read the system line of the transcript; the lane stops on both |
+| `no run of this sweep called the lane's server` | The MCP server may never have connected: a server name turned off in the config of the claude CLI, or a CLI that could not reach its tools. Or every case you picked rightly needs no call. The verdicts of that sweep are taken back | Read one run's answer and the system line of its transcript |
 | `did not start clean: …` | The claude CLI loaded more than the server of the lane: a repository folder, `memory_paths`, a plugin, a skill or a hook | Read the `init` line of the transcript, and its `hook_started` lines for a hook. A new CLI version may load from a new place: turn it off in `e2e/llm/clean.py` |
 | `search_context` returns `semantic_ranking_degraded_to_lexical` | No embedding model serves the stack | section 2 |
 | `the stack refused the reindex (HTTP …)` | The `.env.local` of the checkout has no key for the provider of the preset, so no case is scored | section 2 |
 | `CERTIFICATE_VERIFY_FAILED` | A Python with no CA bundle | The bridge uses the system bundle instead; check that it exists |
 | OpenRouter 404 `No endpoints found that can handle the requested parameters` | `require_parameters` routing, and a parameter that no endpoint declares | Remove the parameter from the request of the bridge |
+| `agy used a tool outside the lane's MCP server: read_file …` | The model reached for its own file tool, most often when the prompt is not clear | A harness stop, never a score. Run the case again; if it happens again, the prompt is not clear enough for Gemini |
 | `codex refused to call …: MCP tool call requires approval` | Codex in `exec` mode refuses MCP writes it would ask about | The lane approves its own server (`default_tools_approval_mode`). This stop means the installed codex no longer accepts that key. Find the key it does accept with `codex exec --strict-config -c 'mcp_servers.x.<key>="approve"' "hi"` (it refuses an unknown key before any model call), and set it in `run_codex` in `e2e/llm/drive.py` |
 | Turn cap reached | The model makes one tool call per turn | A finding, not a bug: the cap is the same for every candidate |
 | `the run never finished: no result event` | The driver (claude CLI, codex, or the bridge) ended part of the way through a run. A CLI that exits with an error code, under a result that reports no error, stops the lane in the same way | A harness stop, never a score. Every driver writes a last result when the model ends the run, at the turn cap too. The stop prints the last lines the driver wrote to stderr |

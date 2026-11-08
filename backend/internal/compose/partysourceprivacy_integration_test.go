@@ -50,6 +50,9 @@ func TestCapturedPartyEvidenceIsExportedAndErasedWithoutAProviderOriginal(t *tes
 	if len(exported.CapturePartySources) != 0 {
 		t.Fatal("held message evidence was disclosed")
 	}
+	if len(exported.ThreadVerdicts) != 0 {
+		t.Fatal("held thread classification was disclosed")
+	}
 	shared, err := NewThreadAudienceSetter(e.Pool).Decide(partyOwnerContext(t, e), rec.ThreadKey, true)
 	if err != nil || !shared.Shared {
 		t.Fatalf("owner sharing: %+v %v", shared, err)

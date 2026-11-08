@@ -714,59 +714,78 @@
   flex-direction: column;
   gap: var(--space-6);
 }
-/* What the agent changed, headed on an indigo band: indigo says the agent did
-   it. Each change is its own card, kept or undone where it stands. */
-.brief-main .brief-agent-section > .brief-section-label {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--aiMed);
-  border-radius: var(--r-md);
-  background: var(--aiLight);
-  color: var(--aiText);
+/* Done for you: one deal per row, parted by hairlines, its changes under
+   its name. Each change reads what moved, then why, then its verbs, with no
+   card around it and no footer of its own. */
+.brief-done-deals,
+.brief-done-changes {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.brief-main .brief-agent-section .magic-lines {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.brief-done-deals {
+  gap: var(--space-4);
 }
-/* Each change is a card like a task's: its mark in the tick's column, what
-   changed and when, then its verbs on a ruled line at the end. */
-.brief-main .brief-agent-section .magic-line {
-  grid-template-columns: var(--space-8) minmax(0, 1fr) auto;
-  column-gap: var(--space-3);
-  row-gap: var(--space-3);
-  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-3);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-rest);
+.brief-done-deal {
+  display: grid;
+  gap: var(--space-2);
 }
-.brief-main .brief-agent-section .magic-line > .magic-mark {
-  justify-self: center;
-}
-.brief-main .brief-agent-section .magic-line-when {
-  grid-column: 3;
-  grid-row: 1;
-}
-/* The detail and the verbs each take a row of their own, in the
-   order they are written, so a change without detail leaves no gap. */
-.brief-main .brief-agent-section .magic-line > .disclosure,
-.brief-main .brief-agent-section .magic-line-controls {
-  grid-row: auto;
-  grid-column: 2 / -1;
-}
-/* A summary card's deals sit under its sentence, not in the mark column. */
-.brief-main .brief-agent-section .magic-line > .magic-lines {
-  grid-column: 2 / -1;
-}
-.brief-main .brief-agent-section .magic-line-controls {
-  justify-content: flex-end;
-  padding-block-start: var(--space-3);
+.brief-done-deal + .brief-done-deal {
+  padding-block-start: var(--space-4);
   border-block-start: 1px solid var(--borderSubtle);
 }
-/* A phone keeps the words their width: a narrower mark column and inset. */
-@media (max-width: 600px) {
-  .brief-main .brief-agent-section .magic-line {
-    grid-template-columns: var(--space-6) minmax(0, 1fr) auto;
-    padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
-  }
+.brief-done-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.brief-done-changes {
+  gap: var(--space-3);
+}
+.brief-done-change {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: baseline;
+}
+.brief-done-what,
+.brief-done-reason {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.brief-done-when {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.brief-done-change > .brief-done-reason,
+.brief-done-change > .brief-done-quote,
+.brief-done-change > .disclosure,
+.brief-done-change > .brief-done-controls {
+  grid-column: 1 / -1;
+}
+.brief-done-change > .disclosure {
+  margin-block: 0;
+}
+.brief-done-quote {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--borderSubtle);
+}
+.brief-done-quote blockquote {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.brief-done-controls,
+.brief-done-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.brief-done-foot {
+  padding-block-start: var(--space-4);
 }
 /* The name moves to its own line whole rather than breaking after the lead. */
 .glance-greeting-name {

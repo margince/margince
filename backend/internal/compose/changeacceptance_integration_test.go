@@ -56,8 +56,11 @@ func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
 	if audits != 1 || events != 1 {
 		t.Fatalf("acceptance must record one audit and linked event: %d, %d", audits, events)
 	}
-	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err == nil {
-		t.Fatal("an accepted change was undone")
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err != nil {
+		t.Fatalf("a change marked reviewed must still undo: %v", err)
+	}
+	if after, err := e.Deals.AppliedChangeReview(e.Admin(), dealID, change); err != nil || !after.Accepted || !after.Reversed {
+		t.Fatalf("after undoing a reviewed change = %+v, %v; want the review kept beside the reversal", after, err)
 	}
 
 	undone := e.seedSweepDeal(t, "Undo before accepting", e.early, nil, new(-12), 3)

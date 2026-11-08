@@ -319,6 +319,7 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	// path the fn/commit error is the one the caller must see.
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
 	defer func() { _ = tx.Rollback(ctx) }()
+	defer openTxMemo(tx)()
 
 	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err

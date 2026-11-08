@@ -57,6 +57,8 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":          "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
+	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":              "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/consent/ruleselectors.go:leadCountryCandidates":        "the marketing rule selector's lead arm: the country of the company a recipient lead is filed under picks which country's messaging rules judge the send. No lead column is selected beyond the join key; what leaves is a pack choice and the pack code a decision records",
 	"internal/modules/consent/gateaddress.go:AddressHasSubject":              "whether any contact or lead holds a calendar guest's address. A boolean that only ever sends the address to the consent gate; nothing of the lead is selected",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx": "An exact-address existence predicate only removes already held identities from a content-gated conversation suggestion. No lead id or column leaves the query, and a missing lead read grant must not suggest a duplicate contact.",
@@ -85,6 +87,8 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":          "The subject export follows only its authenticated contact and lead twins. AssembleSAR requires a human with contact.delete and unbounded scope; this private builder returns SELECT queries, not lead rows or mutations.",
+	"internal/modules/privacy/historicalaudit.go:historicalAuditUnderHold":           "the system-only audit cleanup locks a lead and reads only its legal-hold flag. The entry point requires system authority, and the flag prevents destruction rather than disclosing a lead",
 	"internal/modules/contacts/linkedinrepair.go:NormalizeLeadLinkedInTx":            "the bounded data task reads stored profile values under auth.RequireSystem so it can rewrite old LinkedIn host spellings through the ordinary audit and event shape. The values leave only as the corrected lead row and its audit image",
 	"internal/modules/weeklyplan/linkedkeys.go":                                      "the backfill of the per-type record keys asks only whether the lead its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no lead column leaves the statement",
 	"internal/modules/contacts/deduperecheck.go:readLeadSide":                        "the nightly duplicate re-check reads both leads of an open pair, under the system principal behind auth.RequireSystem, to re-score it. Its only effect is whether the pair stays on the review queue; no lead column reaches any caller",
@@ -181,21 +185,12 @@ var notTheLeadTable = gatekit.Waive(map[string]string{
 	"internal/modules/deals/wonstints.go:wonStints": "`extract(epoch FROM lead(h.changed_at) OVER moves - h.changed_at)` — the window function that reads the NEXT row's value, measuring how long a deal sat in each stage. The statement never names the lead table",
 })
 
-// deferredLeadReads: a DISCLOSING read that is still ungated, each naming the
-// issue that will close it.
-var deferredLeadReads = gatekit.Waive(map[string]string{
-	"internal/compose/weekly/weeklycounts.go:countWeekLeads": "the week's routed / answered-in-target / breached counts. It takes the ROW half (auth.ScopeClauseFor on lead) and never the object half, so a seat whose role grants no lead read is still answered lead figures for its own rows. Deferred rather than gated because the answer turns on what a weekly review SAYS to such a seat: failing the whole review is fail-closed and breaks a report whose other blocks are fine, and zeroed counts read as failure at work nobody asked of them — which this file's own doc names as the thing it must not print. #5466",
-	"internal/compose/weekly/weeklyscorecard.go:hasLeads":    "whether the rep carried a funnel at all, the presence question the lead block hangs off. Same row-half-only shape and the same open question as countWeekLeads beside it. #5466",
-	"internal/compose/weekly/weeklyscorecard.go:scoreLeads":  "the lead block itself. It already models the absent case — an absent block IS the answer for a rep who carried no leads — so it is the one of the three a refusal could be folded into cleanly; it is deferred with the other two because a review whose block is omitted and whose counts are not would be worse than either. #5466",
-})
-
 var leadVerdicts = []namedVerdict{
 	{"predicate", predicateLeadReads},
 	{"lifecycle", lifecycleLeadReads},
 	{"callee-gated", calleeGatedLeadReads},
 	{"not-the-table", notTheLeadTable},
 	{"ruled", ruledLeadReads},
-	{"deferred", deferredLeadReads},
 }
 
 // wantMinimumGatedLeadSites is the floor below the count of sites that satisfy
@@ -253,14 +248,13 @@ func TestEveryReaderOfTheLeadTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
 			"same as a clean tree", satisfied, wantMinimumGatedLeadSites)
 	}
-	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
+	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled",
 		satisfied, len(predicateLeadReads.Subjects()), len(lifecycleLeadReads.Subjects()),
-		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()), len(deferredLeadReads.Subjects()))
+		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()))
 
 	predicateLeadReads.AssertAllMatched(t)
 	lifecycleLeadReads.AssertAllMatched(t)
 	calleeGatedLeadReads.AssertAllMatched(t)
 	notTheLeadTable.AssertAllMatched(t)
 	ruledLeadReads.AssertAllMatched(t)
-	deferredLeadReads.AssertAllMatched(t)
 }

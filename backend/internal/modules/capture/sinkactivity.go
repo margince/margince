@@ -244,7 +244,7 @@ func (s *Sink) finishNewActivity(
 	// before staging, because this is the last point where the bodies are
 	// still only in memory: once stageParts has run they are in the object
 	// store, and the raw original points at them rather than carrying them.
-	rec, err := s.keepParts(ctx, tx, id, rec, fields)
+	rec, err := s.keepPartsAndOriginal(ctx, tx, id, rec, fields)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -288,7 +288,7 @@ func (s *Sink) finishNewActivity(
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCaptureEventPayload(fields.Kind, fields.ChannelProvider, rec.NaturalKey.SourceSystem)); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCaptureEventPayload(ctx, fields.Kind, fields.ChannelProvider, rec.NaturalKey.SourceSystem)); err != nil {
 		return counterpartyDecision{}, err
 	}
 	if internalMailAdmitted(ctx) {
@@ -380,8 +380,9 @@ func (s *Sink) finishNewActivity(
 // capture ingestion path — the one emit site (of the event's two) that
 // names an originating source system; the direct-log path
 // (activities/activity.go) sets no fields but kind.
-func activityCaptureEventPayload(kind, channelProvider, sourceSystem string) crmcontracts.PublicEventActivityCaptured {
+func activityCaptureEventPayload(ctx context.Context, kind, channelProvider, sourceSystem string) crmcontracts.PublicEventActivityCaptured {
 	p := crmcontracts.PublicEventActivityCaptured{Kind: kind, SourceSystem: &sourceSystem}
+	p.Imported, p.ImportRunId = storekit.ImportMark(ctx)
 	// Present only for a message, matching the envelope's own rule. This is the
 	// path that carries every inbound channel message, so a consumer that could
 	// once read the transport off the kind reads it here instead (ADR-0107/A158).

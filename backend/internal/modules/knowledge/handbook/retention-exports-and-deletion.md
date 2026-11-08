@@ -57,6 +57,19 @@ To erase a contact on request, an admin opens **Settings → Privacy and retenti
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
+The audit details and stored event copies of the records being erased lose their personal values too. The audit still keeps who acted, what happened and when.
+
+### What still needs a human review after erasure?
+
+A **Manual privacy review needed** notification points to retained text that may name the contact.
+Descriptions, signatures, uploaded files and their search copies are kept for a human to review.
+Held notes and possible name matches are flagged too. Open the notice and decide what may be removed.
+An inactive member's signature needs help from whoever runs Margince; the notice names it.
+
+Matching full names and email addresses are removed from notes without contact or lead links.
+Other note text stays. If no active administrator or ops member can read the retained content,
+erasure stops and says how to restore review access and retry.
+
 ### How do I answer a data access request?
 To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
 
@@ -154,6 +167,8 @@ private folder names.
 **Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history.
 
 **Anonymizing a contact** clears the names, title and address, sets the name to "Erased Subject", and clears every custom field. It deletes their email addresses, phone numbers, and their names on other sites and services. No block entry is written: the law allows the contact to come back.
+
+Anonymizing a contact or lead closes their pending duplicate matches. Saved names and values are cleared from all their matches, including matches already decided. The decisions stay.
 
 **Erasing a call transcript** clears the text and puts "Erased" in place of the subject, and deletes the files too. It keeps who the meeting was with and when: the record of the meeting stays and what was said goes.
 

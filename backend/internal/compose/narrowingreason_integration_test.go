@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -559,3 +560,58 @@ func narrowingReasonOf(t *testing.T, e *integration.Env, email string) *string {
 	}
 	return reason
 }
+
+// The reply evidence is asked only of a contact a reply could publish: one its
+// owner holds because nobody had answered. Once the reply published it, there
+// is nothing left to ask.
+func TestOnlyAContactNobodyHadAnsweredAwaitsAnAnswer(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "buyer@awaits.example"
+	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-awaits"))
+	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
+	// awaitsAfter asks after one change to the row, then rolls the change back.
+	awaitsAfter := func(change string, args ...any) bool {
+		t.Helper()
+		var got bool
+		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			var id ids.ContactID
+			if err := tx.QueryRow(context.Background(),
+				`SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id); err != nil {
+				return err
+			}
+			if change != "" {
+				if _, err := tx.Exec(context.Background(), change, append([]any{id}, args...)...); err != nil {
+					return err
+				}
+			}
+			var err error
+			if got, err = contacts.NewStore(e.DB()).AwaitsAnAnswerTx(e.Admin(), tx, id); err != nil {
+				return err
+			}
+			return errRolledBack
+		})
+		if !errors.Is(err, errRolledBack) {
+			t.Fatal(err)
+		}
+		return got
+	}
+	awaits := func() bool { t.Helper(); return awaitsAfter("") }
+	if !awaits() {
+		t.Fatal("a contact kept only because nobody had answered does not await an answer")
+	}
+	if awaitsAfter(`UPDATE contact SET narrowing_reason = $2 WHERE id = $1`, string(contacts.NarrowedAwaitingVerdict)) {
+		t.Fatal("a contact kept for another reason awaits an answer")
+	}
+	if awaitsAfter(`UPDATE contact SET archived_at = now() WHERE id = $1`) {
+		t.Fatal("an archived contact awaits an answer")
+	}
+	if awaitsAfter(`UPDATE contact SET visibility = 'workspace', narrowing_reason = NULL WHERE id = $1`) {
+		t.Fatal("a contact the workspace already sees awaits an answer")
+	}
+	captureInboundThroughRealSink(t, e, e.Rep1, "reply-awaits", email, "thr-awaits")
+	if awaits() {
+		t.Fatal("a published contact still awaits an answer")
+	}
+}
+
+var errRolledBack = errors.New("rolled back on purpose")

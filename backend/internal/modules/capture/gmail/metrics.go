@@ -139,7 +139,7 @@ func getOp(path string, q url.Values) string {
 	switch {
 	case path == "/messages":
 		return capturemetrics.OpList
-	case strings.HasPrefix(path, "/messages/") && q.Get("format") == "metadata":
+	case strings.HasPrefix(path, "/messages/") && q.Get(paramFormat) == formatMetadata:
 		return capturemetrics.OpGetMetadata
 	case strings.HasPrefix(path, "/messages/"):
 		return capturemetrics.OpGetRaw

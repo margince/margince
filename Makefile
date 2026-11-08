@@ -1,3 +1,5 @@
+include scripts/composition-profile.mk
+
 # Thin delegator: the real Makefile lives in backend/ (the Go module root).
 # `make check` is the merge gate; `make dev` boots everything.
 # The frontend lane is separate (`make frontend-check`) — it needs node+pnpm,
@@ -359,6 +361,7 @@ FORCE:
 
 # The match-anything rule above would otherwise try to remake this file.
 Makefile: ;
+scripts/composition-profile.mk: ;
 
 ## check-fe — the frontend half of the gate (part of `make check`). Its first
 ## leg, fe-typecheck-composed, installs the frontend deps, and the check below
@@ -658,6 +661,7 @@ FE_SHARD ?=
 ## between majors (.vitest-reports → .vitest/blob); the upload step reads it too.
 FE_BLOB_DIR := .vitest-reports
 fe-unit:
+	node --test scripts/ensure-pnpm.test.mjs
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
@@ -739,6 +743,7 @@ fe-storybook:
 ## fe-install — install the frontend deps (pnpm, frozen lockfile). The FE half
 ## of `make install`; also what `fe-uat` / `dev` assume has run.
 fe-install:
+	node scripts/ensure-pnpm.mjs
 	cd frontend && pnpm install --frozen-lockfile
 
 ## fe-typecheck — TypeScript typecheck of the frontend (tsc project build, no
@@ -876,13 +881,13 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
 ## A scenario stops once its verdict is settled; E2E_LLM_ALL_RUNS=1 makes every run.
-## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+## SCENARIO=<name> runs one, or several names in quotes. E2E_LLM_KEEP=1 leaves the stack up.
 ##
-## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
+## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|gemini|mistral, each pinned
 ## to the model its consumer app defaults to (e2e/llm/candidates.json), and
 ## E2E_LLM_VIA=api|openrouter|cli. api and openrouter run e2e/llm/drive.py, the
 ## neutral bridge that offers every vendor the same tools under the server's own
-## instructions — the comparable route. cli runs `claude -p` or `codex exec`,
+## instructions — the comparable route. cli runs `claude -p`, `codex exec` or `agy -p`,
 ## each with its own system prompt, filed apart under <model>@<cli>. The judge
 ## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter. Codex reports no list of
 ## the tools it offered, so its run is held against the lane's own tools/list;
@@ -1318,6 +1323,7 @@ make-target-parity:
 ## test-make-target-parity — the gate's own test: the shipped Makefiles pass and
 ## each planted forwarding mistake fails.
 test-make-target-parity:
+	@bash scripts/test-composition-profile.sh
 	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — strict compatibility against CHECK_BASE_REF
@@ -1325,6 +1331,7 @@ test-make-target-parity:
 ## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
 CHECK_BASE_REF ?= origin/main
 contract-breaking-check:
+	@bash scripts/check-contract-breaking.test.sh
 	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.
