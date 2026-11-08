@@ -38,6 +38,15 @@ const PAGE = {
       egress: counter(20, 40),
       calls: counter(980, 2_000),
       state: "stopped",
+      roles: [
+        { role_key: "manager", role_name: "Team Lead" },
+        { role_key: "ops", role_name: "Ops / Integrations" },
+      ],
+      allowance: {
+        writes: { limit: 200, role_key: null },
+        egress: { limit: 20, role_key: null },
+        calls: { limit: 1_000, role_key: "manager" },
+      },
     },
   ],
 };
@@ -101,6 +110,23 @@ describe("AgentUsageByUserCard", () => {
     expect(
       screen.getByText(/Every allowance resets .*2026.* UTC/),
     ).toBeTruthy();
+  });
+
+  it("names each user's roles and where each of their counts comes from", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor({ ai_diagnostics: ["read"] }, () => jsonResponse(PAGE)),
+    );
+    render(<AgentUsageByUserCard />);
+
+    const row = (await screen.findByText("Minh Tran")).closest("tr");
+    if (!row) {
+      throw new Error("the user row is not rendered");
+    }
+    expect(within(row).getByText("Team Lead, Ops / Integrations")).toBeTruthy();
+    const check = screen.getByTestId("allowance-check");
+    expect(within(check).getByText("From Team Lead")).toBeTruthy();
+    expect(within(check).getAllByText("Installation value")).toHaveLength(2);
   });
 
   it("asks for nothing and says why when the seat may not read AI usage", async () => {

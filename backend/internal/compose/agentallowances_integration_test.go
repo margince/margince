@@ -43,7 +43,7 @@ func patchAllowances(ctx context.Context, t *testing.T, h installationSettingsHa
 }
 
 const defaultAgentAllowances = `{"agent_writes_per_window":200,` +
-	`"agent_egress_per_window":20,"agent_calls_per_window":1000,"agent_window_hours":24}`
+	`"agent_egress_per_window":20,"agent_calls_per_window":1000,"agent_window_hours":24,"agent_role_allowances":[]}`
 
 // allowanceHandlers builds the surface on a store whose clock reads now(). It
 // puts the defaults back when the test ends, because the settings are

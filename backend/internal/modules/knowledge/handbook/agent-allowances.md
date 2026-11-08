@@ -1,0 +1,84 @@
+<!-- prose:plain -->
+<!-- describes: frontend/src/features/automations/agentallowances.tsx frontend/src/features/automations/agentallowances.roles.tsx frontend/src/features/automations/agentusage.tsx backend/internal/platform/agentvolume/roles.go backend/internal/modules/identity/agentroleallowances.go backend/internal/modules/identity/settingsagentallowances.go -->
+# How much an agent may do
+
+Each agent passport may do only so much in each window. This page says what is
+counted, how the count differs by role, and what an agent is told when it stops.
+What an agent may do at all is in
+[Agents, passports and what they may do](agents-and-passports.md).
+
+## Allowances per window
+
+Each passport gets an allowance per window: changes made, calls that go out,
+and total calls. Every call counts once, a read too. A long list is still one
+call. By default the window is 24 hours, and the allowances are 200
+changes, 20 calls that go out and 1,000 calls in total. An administrator
+changes them under **Settings › AI usage › Agent passport allowances**: press
+**Edit allowances**, change the values, and press **Save**. One more count shows
+how many AI tokens the agent used; it is only for you to see, and limits
+nothing.
+
+A connected app's passports share one allowance: a renewed passport goes on
+counting where the last one stopped. MCP tool calls and API calls count against
+the same allowance. A person working in the browser is never counted.
+
+## Allowances by role
+
+The allowance can differ by role. Under **By role** on the same card, each role
+shows its value for each kind and where the value comes from. **Set for this
+role** is a value an administrator chose. **Installation** is the value at the
+top of the card, which a role with no value of its own uses. For each kind, an
+agent gets the highest value among the roles of the user who connected it.
+Roles you made yourself work the same way. To set a value, press **Edit
+allowances**, type it in the role's box, and press **Save**. Leave a box empty,
+or press **Use the installation value**, to give the role the installation value
+again.
+
+The built-in Admin role starts with more: 20,000 calls in total and 2,000
+changes, shown as **Admin preset**. Calls that go out stay at the installation
+value, because a large task is no reason to send more mail. The preset applies
+to a kind only while that kind's installation value is still the default. If
+your installation already had its own value before, Admin keeps that value until
+you set one for Admin.
+
+A role chooses how much, never what: an Admin's agent still needs the same
+permissions and the same approvals. A change of role or value resets nothing.
+An agent keeps what it used this window, and a lower value refuses it on its
+next call. Take Admin away from a user, and their agents drop to the lower value
+on their next call. Archive a role, and its value binds nobody.
+
+## When an allowance runs out
+
+The allowances work differently when they run out. For changes, the agent is
+refused, and a card goes to whoever approved the connection. Their approval
+widens the window by one more allowance. Calls that go out and total calls are
+fixed stops. No approval raises them, and only the end of the window clears
+them. An agent that only reads can still reach the total and stop.
+
+When an agent is stopped, it is told which limit stopped it, the limit and when
+the window resets. Over the API the answer is a `429` with a `Retry-After`
+header. The per-minute limits of an MCP connection are separate, short pauses,
+the same for every role.
+
+Only whoever approved the connection can answer a request to widen it. An
+administrator cannot, and neither can the owner of the company. An agent's
+limit is that colleague's own authority.
+
+The window is fixed, not rolling, so every allowance starts over at the same
+moment. A changed allowance applies within a minute, in the window that is
+running. Raise one, and a stopped agent can go on. Lower one, and an agent
+already past it is refused on its next call. A new window size waits for the
+next reset, so no agent starts over early; the card says when it starts.
+
+## Where to see usage
+
+In **Settings → AI access**, each row under **Your connections** and **Passports**
+shows the allowance closest to running out. Open a row to see all three, and,
+for a stopped passport, which limit stopped it. Revoked passports are hidden;
+the button under the list shows them.
+
+**AI usage › Agent usage by user** shows how much each user's agents used, never
+which passport or what it read. Each user is shown against their own allowance,
+with their roles under their name. **What one user's agents get** shows one
+user's allowance for each kind and the role it comes from. Administrators,
+Management and operations users see it.

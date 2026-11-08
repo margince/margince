@@ -39,7 +39,7 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 	var subjects []agentvolume.Holder
 	for _, holder := range holders {
 		for _, subject := range holder.Subjects {
-			subjects = append(subjects, agentvolume.Holder{Subject: subject, Roles: holder.Roles})
+			subjects = append(subjects, agentvolume.Holder{Subject: subject, Roles: holder.RoleKeys()})
 		}
 	}
 	usage, err := h.passportUsage.Usage(r.Context(), ws, subjects)
@@ -54,7 +54,7 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 	}
 	data := make([]crmcontracts.AgentUserUsage, 0, len(holders))
 	for _, holder := range holders {
-		data = append(data, userUsage(holder, usage, h.passportUsage.AllowanceFor(r.Context(), holder.Roles)))
+		data = append(data, userUsage(holder, usage, h.passportUsage.AllowanceFor(r.Context(), holder.RoleKeys())))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AgentUsageByUser{
 		Data: data, ResetsAt: h.resetsAt(r.Context(), usage),
@@ -71,16 +71,16 @@ func userUsage(holder AgentUsageHolder, usage map[string]agentvolume.Usage, allo
 		state = state.Worst(usage[subject].State())
 	}
 	wire := toAgentUsage(total)
-	roles := holder.Roles
-	if roles == nil {
-		roles = []string{}
+	roles := make([]crmcontracts.AgentUserRole, 0, len(holder.Roles))
+	for _, role := range holder.Roles {
+		roles = append(roles, crmcontracts.AgentUserRole{RoleKey: role.Key, RoleName: role.Name})
 	}
 	return crmcontracts.AgentUserUsage{
 		UserId: openapi_types.UUID(holder.UserID), DisplayName: holder.DisplayName,
 		PassportCount: len(holder.Subjects),
 		Writes:        wire.Writes, Egress: wire.Egress, Calls: wire.Calls,
-		State:    crmcontracts.AgentUsageState(state),
-		RoleKeys: roles, Allowance: toResolvedAllowance(allowance),
+		State: crmcontracts.AgentUsageState(state),
+		Roles: roles, Allowance: toResolvedAllowance(allowance),
 	}
 }
 

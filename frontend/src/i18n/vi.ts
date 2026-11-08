@@ -15631,7 +15631,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.window.help":
     "Một hạn mức kéo dài bao lâu. Độ dài mới bắt đầu ở lần đặt lại kế tiếp, nên không passport nào được hạn mức mới sớm.",
   "agentAllowances.burst":
-    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport.",
+    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport, như nhau cho mọi vai trò.",
   "agentAllowances.pending.title": "Đang chờ đổi khung thời gian",
   "agentAllowances.pending.body":
     "Từ {date} UTC, mỗi khung kéo dài {interval}. Đến lúc đó, khung hiện tại vẫn tiếp tục đếm.",
@@ -15653,6 +15653,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Con số có hiệu lực trong vòng một phút, ngay trong khung đang chạy. Agent đã vượt con số được hạ xuống sẽ bị từ chối ở lệnh gọi kế tiếp.",
   "agentAllowances.diff.window":
     "Khung thời gian {from} → {to}, bắt đầu từ lần đặt lại kế tiếp.",
+  "agentAllowances.installation.title": "Giá trị của hệ thống",
+  "agentAllowances.installation.sub":
+    "Dùng cho mọi vai trò không có giá trị riêng.",
+  "agentAllowances.roles.title": "Theo vai trò",
+  "agentAllowances.roles.rule":
+    "Với mỗi loại, agent nhận giá trị cao nhất trong các vai trò của thành viên. Vai trò không có giá trị riêng dùng giá trị của hệ thống.",
+  "agentAllowances.roles.col.role": "Vai trò",
+  "agentAllowances.roles.builtIn": "Có sẵn",
+  "agentAllowances.roles.source.role": "Đặt cho vai trò này",
+  "agentAllowances.roles.source.admin_preset": "Mức sẵn của Quản trị",
+  "agentAllowances.roles.source.installation": "Hệ thống",
+  "agentAllowances.roles.editHelp":
+    "Để trống một ô để dùng giá trị của hệ thống. Lệnh gọi từ 50 đến 20.000, thay đổi từ 10 đến 5.000, lượt gửi từ 1 đến 200.",
+  "agentAllowances.roles.preset":
+    "Quản trị bắt đầu ở {calls} lệnh gọi và {changes} thay đổi khi giá trị của hệ thống còn là mặc định. Lượt gửi giữ giá trị của hệ thống.",
+  "agentAllowances.roles.inherits": "Theo {value}",
+  "agentAllowances.roles.inputLabel": "{kind} cho {role}",
+  "agentAllowances.roles.useInstallation": "Dùng giá trị của hệ thống",
+  "agentAllowances.roles.refusal":
+    "Nhập một số nguyên trong khoảng cho phép, hoặc để trống ô.",
+  "agentAllowances.diff.role": "Vai trò {role}, {label} {from} → {to}",
+  "agentAllowances.diff.inherited": "giá trị của hệ thống",
+  "agentAllowances.diff.roles":
+    "Những gì agent đã dùng trong khung này vẫn được tính. Không có gì bị đặt lại.",
   "agentUsage.title": "Mức dùng agent theo thành viên",
   "agentUsage.sub":
     "Khung thời gian này, cộng dồn theo các passport và kết nối của từng thành viên. Chỉ cho biết dùng bao nhiêu, không bao giờ cho biết passport nào hay đã đọc gì.",
@@ -15670,6 +15694,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentUsage.state.ok": "Đang hoạt động",
   "agentUsage.state.near": "Gần chạm giới hạn",
   "agentUsage.state.stopped": "Đã dừng",
+  "agentUsage.noRole": "Chưa có vai trò",
+  "agentUsage.check.title": "Agent của một thành viên được dùng bao nhiêu",
+  "agentUsage.check.label": "Thành viên",
+  "agentUsage.check.fromRole": "Từ {role}",
+  "agentUsage.check.fromInstallation": "Giá trị của hệ thống",
+  "agentUsage.check.note":
+    "Mỗi passport hoặc kết nối được tính riêng theo các giá trị này, gồm cả lệnh gọi công cụ và yêu cầu API.",
+  "agentUsage.stopped.calls":
+    "Đã dừng vì giới hạn tổng số lệnh gọi: {used} / {limit}. Có thể gọi lại khi khung thời gian đặt lại lúc {date} UTC.",
+  "agentUsage.stopped.egress":
+    "Đã dừng vì giới hạn lượt gửi: {used} / {limit}. Việc gửi chờ đến khi khung thời gian đặt lại lúc {date} UTC.",
+  "agentUsage.stopped.writes":
+    "Đã dừng vì giới hạn thay đổi: {used} / {limit}. Chủ sở hữu có thể cho phép thêm, hoặc agent thay đổi lại được khi khung thời gian đặt lại lúc {date} UTC.",
   "settings.passportColWindow": "Khung này",
   "settings.passportUsageToggle": "Xem mức dùng khung này của {name}",
   "settings.passportsShowRevoked_one": "Hiện {count} passport đã thu hồi",

@@ -142,6 +142,18 @@ The three limits and the window length are installation settings (`agent_allowan
 read through a cache of one minute (`agentvolume.PolicyRefresh`). The defaults are 200 `writes`, 20 `egress` and
 1,000 `calls` in a 24-hour window. A changed limit binds in the running window.
 
+A role may set its own value for each limit, keyed by role key (`installation.agent_role_*_per_window`). The cache
+holds the installation values and every role's values. Each call takes its own limits from that cache and the live
+roles of the human who gave the passport (`agentvolume.Policy.For`). Per counter it takes the highest among those
+roles, and a role with no value of its own gives the installation value. Nothing per caller is cached, so one caller's limits
+never reach the next. The built-in `admin` role starts at 20,000 `calls` and 2,000 `writes`
+(`identity.AdminAllowancePreset`), for a counter whose installation value is still the default and set by no boot
+source. Roles choose the limit and never the counter.
+
+A refused REST request answers `429 rate_limited` with `details.limit` (`kind`, `ceiling`, `used`, `resets_at`) and
+a `Retry-After` header. A refused tool call names the same limit, ceiling and reset in its error text. A per-minute
+refusal at the transport carries `details.limit.kind = "pacing"`.
+
 A changed length waits for a reset. It takes the first reset that is a minute or more later, so a save in the last
 minute waits for the reset after that. The bucket number comes from the moment and the length, so a length that
 changed mid-window would restart every count. The passports of one OAuth grant share their counters

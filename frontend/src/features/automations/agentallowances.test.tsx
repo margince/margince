@@ -12,7 +12,10 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider, translate } from "../../i18n";
-import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
+import {
+  defaultAgentAllowances,
+  roleTunedAgentAllowances,
+} from "../../testing/agentallowances.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AgentAllowancesCard } from "./agentallowances";
 
@@ -411,4 +414,114 @@ it("redraws the usage bars against a saved allowance", async () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["agent-usage"] }),
   );
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ["passports"] });
+});
+
+describe("AgentAllowancesCard by role", () => {
+  it("lists every role with each value and where it comes from", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, roleTunedAgentAllowances).fetchMock,
+    );
+    render(<AgentAllowancesCard />);
+
+    const admin = await screen.findByTestId("role-allowance-admin");
+    expect(admin).toHaveTextContent("20,000");
+    expect(admin).toHaveTextContent("Admin preset");
+    expect(admin).toHaveTextContent("Built-in");
+    const custom = screen.getByTestId("role-allowance-custom_field_research");
+    expect(custom).toHaveTextContent("Field research");
+    expect(custom).toHaveTextContent("5,000");
+    expect(custom).toHaveTextContent("Set for this role");
+    expect(custom).not.toHaveTextContent("Built-in");
+    expect(screen.getByTestId("role-allowance-rep")).toHaveTextContent(
+      "Installation",
+    );
+    expect(
+      screen.getByText(translate("en", "agentAllowances.state.changed")),
+    ).toBeTruthy();
+  });
+
+  it("saves every role with a value, leaving Admin on its preset", async () => {
+    const { fetchMock, patches } = backendFor(EDITOR, roleTunedAgentAllowances);
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    const box = await screen.findByTestId(
+      "role-custom_field_research-agent_calls_per_window",
+    );
+    await user.clear(box);
+    await user.type(box, "8000");
+    expect(
+      screen.getByText(/Field research, Calls in total 5,000 → 8,000/),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    );
+
+    await waitFor(() => expect(patches).toHaveLength(1));
+    const sent = (
+      patches[0] as { agent_role_allowances: { role_key: string }[] }
+    ).agent_role_allowances;
+    expect(sent.map((set) => set.role_key)).toEqual([
+      "manager",
+      "ops",
+      "custom_field_research",
+    ]);
+    expect(sent[2]).toEqual({
+      role_key: "custom_field_research",
+      agent_calls_per_window: 8000,
+      agent_writes_per_window: 0,
+      agent_egress_per_window: 0,
+    });
+  });
+
+  it("sends Admin as zeros once its row is emptied", async () => {
+    const { fetchMock, patches } = backendFor(EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    const [adminRow] = await screen.findAllByRole("button", {
+      name: translate("en", "agentAllowances.roles.useInstallation"),
+    });
+    await user.click(adminRow);
+    await user.click(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    );
+
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0]).toEqual({
+      agent_role_allowances: [
+        {
+          role_key: "admin",
+          agent_calls_per_window: 0,
+          agent_writes_per_window: 0,
+          agent_egress_per_window: 0,
+        },
+      ],
+    });
+  });
+
+  it("refuses a role value outside its range in the box", async () => {
+    vi.stubGlobal("fetch", backendFor(EDITOR).fetchMock);
+    const user = userEvent.setup();
+    render(<AgentAllowancesCard />);
+
+    await openForm(user);
+    const box = await screen.findByTestId("role-rep-agent_calls_per_window");
+    await user.type(box, "49");
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(
+      screen.getByRole("button", {
+        name: translate("en", "agentAllowances.save"),
+      }),
+    ).toBeDisabled();
+  });
 });

@@ -25943,6 +25943,14 @@ export interface components {
             /** @description Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window. */
             agent_calls_per_window?: number;
             /**
+             * @description Set every role's own allowances at once, replacing what each role held. Each item names
+             *     a live role by its `role_key`. A role left out holds no values of its own and uses the
+             *     installation value. The built-in Admin role left out returns to the Admin preset; Admin
+             *     sent with `0` for a count uses the installation value for it instead. Applies within a
+             *     minute, in the running window, and resets no count.
+             */
+            agent_role_allowances?: components["schemas"]["AgentRoleAllowanceSet"][];
+            /**
              * @description Set how long one agent allowance window lasts, in hours. The window in force is never
              *     cut short: the new length takes effect at its next reset, and the response names that
              *     moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
@@ -27039,6 +27047,44 @@ export interface components {
             agent_egress_per_window: number;
             agent_calls_per_window: number;
             agent_window_hours: number;
+            /** @description The Admin preset for changing calls. */
+            admin_writes_per_window: number;
+            /** @description The Admin preset for calls of any kind. The preset leaves sends at the installation value. */
+            admin_calls_per_window: number;
+        };
+        /** @description One live role and the allowance its users' agents get for each count. */
+        AgentRoleAllowance: {
+            /** @description The role's key: its identity, which a rename leaves alone. */
+            role_key: string;
+            role_name: string;
+            /** @description True for a role Margince ships. */
+            system: boolean;
+            agent_writes_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+            agent_egress_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+            agent_calls_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+        };
+        AgentRoleAllowanceValue: {
+            /** @description The allowance this role gives for the count. */
+            value: number;
+            /**
+             * @description Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+             *     Admin preset, which binds the built-in Admin role for a count while nobody saved an
+             *     Admin value for it and the installation value is still the default, set by no boot
+             *     source. `installation` is the installation value, which the role inherits.
+             * @enum {string}
+             */
+            source: "role" | "admin_preset" | "installation";
+        };
+        /** @description One role's own allowances in a save. `0` for a count uses the installation value. */
+        AgentRoleAllowanceSet: {
+            /** @description The key of a live role. */
+            role_key: string;
+            /** @description 0, or 10 to 5000. */
+            agent_writes_per_window: number;
+            /** @description 0, or 1 to 200. */
+            agent_egress_per_window: number;
+            /** @description 0, or 50 to 20000. */
+            agent_calls_per_window: number;
         };
         /**
          * @description How much one agent may do in one window. A passport a user minted has its own allowance;
@@ -27049,6 +27095,12 @@ export interface components {
          *     a count applies within a minute, in the window that is running: a raised count gives
          *     headroom within that minute, and a lowered one refuses an agent already past it on its
          *     next call. The per-minute limits are fixed by the build and shown here read-only.
+         *
+         *     The three counts here are the installation value. `roles` lists what each live role gives.
+         *     An agent gets, for each count, the highest allowance among the live roles of the user who
+         *     connected it, where a role with no value of its own gives the installation value. Roles
+         *     choose the limit only: the count is still one per passport or connection, for tool calls
+         *     and API requests together, and a change of role or value resets nothing.
          */
         AgentAllowanceSettings: {
             /** @description How many changing calls one passport or connection may make per window. Default 200. */
@@ -27080,6 +27132,8 @@ export interface components {
              */
             agent_window_next_starts_at?: string | null;
             defaults: components["schemas"]["AgentAllowanceDefaults"];
+            /** @description Every live role, the seeded ones first in their order, then the others by name. */
+            roles: components["schemas"]["AgentRoleAllowance"][];
             /** @description How many tool calls one passport may make per minute. Fixed by the build. */
             mcp_calls_per_minute: number;
             /** @description How many streams one passport may open per minute. Fixed by the build. */
@@ -30821,6 +30875,11 @@ export interface components {
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
              *     `errors` array of `{ field, code, message }` on 422 validation.
+             *
+             *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
+             *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
+             *     `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
+             *     The `Retry-After` header says how many seconds until the call can succeed.
              */
             details?: {
                 [key: string]: unknown;
@@ -53633,14 +53692,38 @@ export interface components {
             egress: components["schemas"]["AgentCounterUsage"];
             calls: components["schemas"]["AgentCounterUsage"];
             state: components["schemas"]["AgentUsageState"];
+            /** @description The user's live roles, which choose their agents' allowance, by name. */
+            roles: components["schemas"]["AgentUserRole"][];
+            allowance: components["schemas"]["AgentRoleResolvedAllowance"];
+        };
+        AgentUserRole: {
+            role_key: string;
+            role_name: string;
+        };
+        /**
+         * @description What each one of this user's passports or connections may do per window, before any release,
+         *     and the role each count comes from.
+         */
+        AgentRoleResolvedAllowance: {
+            writes: components["schemas"]["AgentAllowanceFrom"];
+            egress: components["schemas"]["AgentAllowanceFrom"];
+            calls: components["schemas"]["AgentAllowanceFrom"];
+        };
+        AgentAllowanceFrom: {
+            limit: number;
+            /**
+             * @description The role whose own value, or the Admin preset, gives this count: the highest among the
+             *     user's roles. Null when it is the installation value.
+             */
+            role_key: string | null;
         };
         /** @description One allowance in the running window. */
         AgentCounterUsage: {
             /** @description What has been used in this window. */
             used: number;
             /**
-             * @description The allowance in force: the installation's value, plus one more allowance for each
-             *     release a user granted in this window.
+             * @description The allowance in force: what the roles of the user who connected the agent give, plus
+             *     one more allowance for each release a user granted in this window.
              */
             limit: number;
             /** @description How many times a user released more in this window. */

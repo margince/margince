@@ -31725,6 +31725,12 @@ type AgentUsageByUser struct {
 // that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 type AgentUsageState string
 
+// AgentUserRole defines model for AgentUserRole.
+type AgentUserRole struct {
+	RoleKey  string `json:"role_key"`
+	RoleName string `json:"role_name"`
+}
+
 // AgentUserUsage One user's agents in the running window. Each count and allowance is the sum over
 // their live passports and connections, so a user with two passports has twice the
 // allowance. `state` is the worst state of any one of them.
@@ -31743,8 +31749,8 @@ type AgentUserUsage struct {
 	// PassportCount Live passports and connections. A connection counts once.
 	PassportCount int `json:"passport_count" minimum:"1"`
 
-	// RoleKeys The user's live roles, which choose their agents' allowance.
-	RoleKeys []string `json:"role_keys"`
+	// Roles The user's live roles, which choose their agents' allowance, by name.
+	Roles []AgentUserRole `json:"roles"`
 
 	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.

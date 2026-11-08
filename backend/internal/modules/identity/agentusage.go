@@ -27,7 +27,19 @@ type AgentUsageHolder struct {
 	UserID      ids.UUID
 	DisplayName string
 	Subjects    []string
-	Roles       []string
+	Roles       []HeldRole
+}
+
+// HeldRole is one live role a user holds, by key and by name.
+type HeldRole struct{ Key, Name string }
+
+// RoleKeys are the keys of the holder's roles, which the meter judges by.
+func (h AgentUsageHolder) RoleKeys() []string {
+	keys := make([]string, len(h.Roles))
+	for i, role := range h.Roles {
+		keys[i] = role.Key
+	}
+	return keys
 }
 
 // AgentUsageHolders lists every user with a live passport or connection.
@@ -89,12 +101,20 @@ func addHolderRolesTx(ctx context.Context, tx pgx.Tx, holders []AgentUsageHolder
 	for i, holder := range holders {
 		users[i] = holder.UserID
 	}
-	_, roles, err := loadRoleDocuments(ctx, tx, users)
+	_, held, err := loadRoleDocuments(ctx, tx, users)
+	if err != nil {
+		return err
+	}
+	live, err := liveRolesTx(ctx, tx)
 	if err != nil {
 		return err
 	}
 	for i := range holders {
-		holders[i].Roles = roles[holders[i].UserID]
+		for _, r := range live {
+			if slices.Contains(held[holders[i].UserID], r.key) {
+				holders[i].Roles = append(holders[i].Roles, HeldRole{Key: r.key, Name: r.name})
+			}
+		}
 	}
 	return nil
 }

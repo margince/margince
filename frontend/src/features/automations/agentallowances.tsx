@@ -8,6 +8,7 @@ import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { describedByIds } from "../../design-system/describedby";
+import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
@@ -25,8 +26,10 @@ import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
 import {
+  ADMIN_ROLE,
   AGENT_ALLOWANCE_BOUNDS,
   type Allowances,
+  adminPresetDraft,
   COUNTS,
   type Counts,
   changesOf,
@@ -34,12 +37,26 @@ import {
   type Draft,
   defaultsDraft,
   draftOf,
+  EMPTY_ROLE_DRAFT,
   hasRefusal,
+  hasRoleRefusal,
   parseDraft,
+  type RoleAllowanceSet,
+  type RoleDrafts,
+  roleChangesOf,
+  roleDraftsOf,
 } from "./agentallowances.draft";
+import {
+  RolesForm,
+  RolesReadout,
+  roleDiffLines,
+} from "./agentallowances.roles";
 import { useResetLine } from "./agentusage";
 
 type Locks = components["schemas"]["InstallationSettings"]["locks"];
+type AllowancePatch = Partial<Record<Counts | "agent_window_hours", number>> & {
+  agent_role_allowances?: RoleAllowanceSet[];
+};
 
 // The lengths an admin picks from. The one already saved is added when it is
 // not among them, so a value set through the API still shows and keeps.
@@ -108,6 +125,7 @@ function AllowancesBody({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [roleDrafts, setRoleDrafts] = useState<RoleDrafts>({});
   useUnsavedGuard(draft !== null);
   // A new allowance is the limit every usage bar is drawn against.
   const update = useUpdateInstallationSettings(() => {
@@ -120,15 +138,20 @@ function AllowancesBody({
   return (
     <>
       {draft === null ? (
-        <AllowanceReadout allowances={allowances} locale={locale} />
+        <>
+          <AllowanceReadout allowances={allowances} locale={locale} />
+          <RolesReadout allowances={allowances} />
+        </>
       ) : (
         <AllowanceForm
           allowances={allowances}
           locks={locks}
           draft={draft}
+          roleDrafts={roleDrafts}
           locale={locale}
           busy={update.isPending}
           onDraft={setDraft}
+          onRoleDrafts={setRoleDrafts}
           onSave={(patch) => update.mutate(patch)}
           onCancel={() => {
             setDraft(null);
@@ -156,6 +179,7 @@ function AllowancesBody({
               onClick={() => {
                 update.reset();
                 setDraft(draftOf(allowances));
+                setRoleDrafts(roleDraftsOf(allowances.roles));
               }}
             >
               {t("agentAllowances.edit")}
@@ -191,30 +215,45 @@ function AllowanceReadout({
 }: Readonly<{ allowances: Allowances; locale: Locale }>) {
   const t = useT();
   return (
-    <StatStrip testId="allowance-readout">
-      {COUNTS.map((row) => (
-        <StatCard
-          key={row.property}
-          label={t(`agentAllowances.${row.copy}.label`)}
-          value={formatNumber(allowances[row.property], locale)}
-          detail={t(
-            row.release
-              ? "agentAllowances.note.release"
-              : "agentAllowances.note.stop",
-          )}
-        />
-      ))}
-    </StatStrip>
+    <>
+      <InstallationHead />
+      <StatStrip testId="allowance-readout">
+        {COUNTS.map((row) => (
+          <StatCard
+            key={row.property}
+            label={t(`agentAllowances.${row.copy}.label`)}
+            value={formatNumber(allowances[row.property], locale)}
+            detail={t(
+              row.release
+                ? "agentAllowances.note.release"
+                : "agentAllowances.note.stop",
+            )}
+          />
+        ))}
+      </StatStrip>
+    </>
+  );
+}
+
+function InstallationHead() {
+  const t = useT();
+  return (
+    <PanelBody className="form-stack">
+      <Eyebrow as="h3">{t("agentAllowances.installation.title")}</Eyebrow>
+      <p className="t-caption">{t("agentAllowances.installation.sub")}</p>
+    </PanelBody>
   );
 }
 
 // Says in words whether any value is off its default, so a reader of the plain
-// numbers knows if they are looking at what ships.
+// numbers knows if they are looking at what ships. A role's own value is one.
 function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
   const t = useT();
   const atDefaults =
     COUNTS.every(
-      (row) => allowances[row.property] === allowances.defaults[row.property],
+      (row) =>
+        allowances[row.property] === allowances.defaults[row.property] &&
+        allowances.roles.every((role) => role[row.property].source !== "role"),
     ) && chosenWindow(allowances) === allowances.defaults.agent_window_hours;
   return (
     <Callout
@@ -234,21 +273,23 @@ function AllowanceForm({
   allowances,
   locks,
   draft,
+  roleDrafts,
   locale,
   busy,
   onDraft,
+  onRoleDrafts,
   onSave,
   onCancel,
 }: Readonly<{
   allowances: Allowances;
   locks: Locks;
   draft: Draft;
+  roleDrafts: RoleDrafts;
   locale: Locale;
   busy: boolean;
   onDraft: (next: Draft) => void;
-  onSave: (
-    patch: Partial<Record<Counts | "agent_window_hours", number>>,
-  ) => void;
+  onRoleDrafts: (next: RoleDrafts) => void;
+  onSave: (patch: AllowancePatch) => void;
   onCancel: () => void;
 }>) {
   const t = useT();
@@ -256,10 +297,16 @@ function AllowanceForm({
     lockFor(locks, `installation.${property}`, t);
   const windowLock = lockOf("agent_window_hours");
   const parsed = parseDraft(draft);
-  const patch = changesOf(allowances, parsed);
+  const roles = roleChangesOf(allowances, roleDrafts);
+  const patch: AllowancePatch = {
+    ...changesOf(allowances, parsed),
+    ...(roles === undefined ? {} : { agent_role_allowances: roles }),
+  };
   const changed = Object.keys(patch).length > 0;
+  const refused = hasRefusal(parsed) || hasRoleRefusal(roleDrafts);
   return (
     <>
+      <InstallationHead />
       <SettingList bleed="settings">
         {COUNTS.map((row) => {
           const refused = parsed[row.property] === null;
@@ -331,14 +378,25 @@ function AllowanceForm({
           )}
         />
       </SettingList>
+      <RolesForm
+        allowances={allowances}
+        drafts={roleDrafts}
+        busy={busy}
+        onDrafts={onRoleDrafts}
+      />
       <PanelBody className="form-stack">
         {changed && (
-          <Diff allowances={allowances} patch={patch} locale={locale} />
+          <Diff
+            allowances={allowances}
+            patch={patch}
+            roleDrafts={roleDrafts}
+            locale={locale}
+          />
         )}
         <div className="form-actions">
           <Button
             variant="primary"
-            disabled={!changed || hasRefusal(parsed)}
+            disabled={!changed || refused}
             pending={busy}
             onClick={() => onSave(patch)}
           >
@@ -349,20 +407,33 @@ function AllowanceForm({
           </Button>
           <Button
             disabled={busy}
-            onClick={() =>
+            onClick={() => {
               onDraft(
                 defaultsDraft(
                   allowances,
                   (property) => lockOf(property).disabled,
                 ),
-              )
-            }
+              );
+              onRoleDrafts(defaultRoleDrafts(allowances));
+            }}
           >
             {t("agentAllowances.useDefaults")}
           </Button>
         </div>
       </PanelBody>
     </>
+  );
+}
+
+// Every role back to the installation value, and Admin to its preset.
+function defaultRoleDrafts(allowances: Allowances): RoleDrafts {
+  return Object.fromEntries(
+    allowances.roles.map((role) => [
+      role.role_key,
+      role.role_key === ADMIN_ROLE
+        ? adminPresetDraft(allowances)
+        : EMPTY_ROLE_DRAFT,
+    ]),
   );
 }
 
@@ -381,13 +452,16 @@ function windowOptions(allowances: Allowances, locale: Locale) {
 function Diff({
   allowances,
   patch,
+  roleDrafts,
   locale,
 }: Readonly<{
   allowances: Allowances;
-  patch: Partial<Record<Counts | "agent_window_hours", number>>;
+  patch: AllowancePatch;
+  roleDrafts: RoleDrafts;
   locale: Locale;
 }>) {
   const t = useT();
+  const roleLines = roleDiffLines(allowances, roleDrafts, t, locale);
   const lines = COUNTS.flatMap((row) => {
     const next = patch[row.property];
     return next === undefined
@@ -404,7 +478,11 @@ function Diff({
   return (
     <Callout tone="warning" title={t("agentAllowances.diff.title")}>
       {lines.length > 0 && <p>{lines.join(" · ")}</p>}
-      {lines.length > 0 && <p>{t("agentAllowances.diff.counts")}</p>}
+      {roleLines.length > 0 && <p>{roleLines.join(" · ")}</p>}
+      {lines.length + roleLines.length > 0 && (
+        <p>{t("agentAllowances.diff.counts")}</p>
+      )}
+      {roleLines.length > 0 && <p>{t("agentAllowances.diff.roles")}</p>}
       {hours !== undefined && (
         <p>
           {t("agentAllowances.diff.window", {

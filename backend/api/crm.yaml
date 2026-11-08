@@ -72352,7 +72352,7 @@ components:
         One user's agents in the running window. Each count and allowance is the sum over
         their live passports and connections, so a user with two passports has twice the
         allowance. `state` is the worst state of any one of them.
-      required: [user_id, display_name, passport_count, writes, egress, calls, state, role_keys, allowance]
+      required: [user_id, display_name, passport_count, writes, egress, calls, state, roles, allowance]
       properties:
         user_id: { type: string, format: uuid }
         display_name: { type: string }
@@ -72361,11 +72361,19 @@ components:
         egress: { $ref: '#/components/schemas/AgentCounterUsage' }
         calls: { $ref: '#/components/schemas/AgentCounterUsage' }
         state: { $ref: '#/components/schemas/AgentUsageState' }
-        role_keys:
+        roles:
           type: array
-          items: { type: string }
-          description: The user's live roles, which choose their agents' allowance.
+          items: { $ref: '#/components/schemas/AgentUserRole' }
+          description: The user's live roles, which choose their agents' allowance, by name.
         allowance: { $ref: '#/components/schemas/AgentRoleResolvedAllowance' }
+
+    AgentUserRole:
+      type: object
+      additionalProperties: false
+      required: [role_key, role_name]
+      properties:
+        role_key: { type: string }
+        role_name: { type: string }
 
     AgentRoleResolvedAllowance:
       type: object

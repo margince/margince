@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
+import {
+  defaultAgentAllowances,
+  roleAllowance,
+  roleTunedAgentAllowances,
+} from "../../testing/agentallowances.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -64,6 +68,53 @@ export const EditingAllowances: Story = {
   },
 };
 
+// Team Lead, Ops and a role an admin made each hold values of their own beside
+// the Admin preset; the rest inherit.
+export const AllowancesByRole: Story = {
+  render: story(MANAGER, roleTunedAgentAllowances),
+};
+
+export const EditingARoleAllowance: Story = {
+  render: story(MANAGER, roleTunedAgentAllowances),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit allowances" }),
+    );
+    const box = await canvas.findByTestId(
+      "role-custom_field_research-agent_calls_per_window",
+    );
+    await userEvent.clear(box);
+    await userEvent.type(box, "8000");
+    await expect(
+      await canvas.findByText(/Field research, Calls in total 5,000 → 8,000/),
+    ).toBeVisible();
+  },
+};
+
+// An installation whose operator set 5,000 calls: Admin inherits that value
+// for calls and keeps the preset for changes.
+export const AdminOnAChosenInstallationValue: Story = {
+  render: story(MANAGER, {
+    ...defaultAgentAllowances,
+    agent_calls_per_window: 5_000,
+    roles: [
+      roleAllowance("admin", "Admin", {
+        agent_calls_per_window: { value: 5_000, source: "installation" },
+        agent_writes_per_window: { value: 2_000, source: "admin_preset" },
+      }),
+      roleAllowance("rep", "User", {
+        agent_calls_per_window: { value: 5_000, source: "installation" },
+      }),
+    ],
+  }),
+};
+
+export const AllowancesByRoleDark: Story = {
+  globals: { theme: "dark" },
+  render: story(MANAGER, roleTunedAgentAllowances),
+};
+
 export const CannotChange: Story = { render: story(READER) };
 
 export const WindowChangeWaitingDark: Story = {
@@ -78,5 +129,5 @@ export const WindowChangeWaitingDark: Story = {
 export const AllowancesAtPhoneWidth: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story(MANAGER),
+  render: story(MANAGER, roleTunedAgentAllowances),
 };

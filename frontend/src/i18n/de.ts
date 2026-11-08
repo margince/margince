@@ -16044,7 +16044,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.window.help":
     "Wie lange ein Kontingent gilt. Eine neue Länge beginnt beim nächsten Zurücksetzen, damit kein Passport zu früh ein frisches Kontingent bekommt.",
   "agentAllowances.burst":
-    "Feste Grenzen der MCP-Verbindung: {calls} Aufrufe und {streams} geöffnete Streams pro Minute und Passport.",
+    "Feste Grenzen der MCP-Verbindung: {calls} Aufrufe und {streams} geöffnete Streams pro Minute und Passport, gleich für jede Rolle.",
   "agentAllowances.pending.title": "Änderung des Zeitfensters steht aus",
   "agentAllowances.pending.body":
     "Ab {date} UTC dauert jedes Zeitfenster {interval}. Bis dahin zählt das laufende Zeitfenster weiter.",
@@ -16066,6 +16066,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Anzahl gilt innerhalb einer Minute, im laufenden Zeitfenster. Ein Agent, der bereits über einer gesenkten Anzahl liegt, wird bei seinem nächsten Aufruf abgelehnt.",
   "agentAllowances.diff.window":
     "Zeitfenster {from} → {to}, ab dem nächsten Zurücksetzen.",
+  "agentAllowances.installation.title": "Wert der Installation",
+  "agentAllowances.installation.sub": "Gilt für jede Rolle ohne eigenen Wert.",
+  "agentAllowances.roles.title": "Nach Rolle",
+  "agentAllowances.roles.rule":
+    "Für jede Art bekommt ein Agent den höchsten Wert unter den Rollen seines Mitglieds. Eine Rolle ohne eigenen Wert nutzt den Wert der Installation.",
+  "agentAllowances.roles.col.role": "Rolle",
+  "agentAllowances.roles.builtIn": "Mitgeliefert",
+  "agentAllowances.roles.source.role": "Für diese Rolle festgelegt",
+  "agentAllowances.roles.source.admin_preset": "Admin-Vorgabe",
+  "agentAllowances.roles.source.installation": "Installation",
+  "agentAllowances.roles.editHelp":
+    "Lass ein Feld leer, um den Wert der Installation zu nutzen. Aufrufe 50 bis 20.000, Änderungen 10 bis 5.000, Sendungen 1 bis 200.",
+  "agentAllowances.roles.preset":
+    "Admin beginnt bei {calls} Aufrufen und {changes} Änderungen, solange der Wert der Installation der Standard ist. Sendungen bleiben beim Wert der Installation.",
+  "agentAllowances.roles.inherits": "Übernimmt {value}",
+  "agentAllowances.roles.inputLabel": "{kind} für {role}",
+  "agentAllowances.roles.useInstallation": "Wert der Installation nutzen",
+  "agentAllowances.roles.refusal":
+    "Gib eine ganze Zahl im Bereich ein oder lass das Feld leer.",
+  "agentAllowances.diff.role": "{role}, {label} {from} → {to}",
+  "agentAllowances.diff.inherited": "Wert der Installation",
+  "agentAllowances.diff.roles":
+    "Was Agenten in diesem Zeitfenster schon genutzt haben, zählt weiter. Nichts wird zurückgesetzt.",
   "agentUsage.title": "Agenten-Nutzung nach Mitglied",
   "agentUsage.sub":
     "Dieses Zeitfenster, summiert über die Passports und Verbindungen jedes Mitglieds. Die Summe zeigt, wie viel genutzt wurde, nie welche Passports es waren oder was sie gelesen haben.",
@@ -16083,6 +16106,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentUsage.state.ok": "Aktiv",
   "agentUsage.state.near": "Nahe an einer Grenze",
   "agentUsage.state.stopped": "Gestoppt",
+  "agentUsage.noRole": "Keine Rolle",
+  "agentUsage.check.title": "Was die Agenten eines Mitglieds bekommen",
+  "agentUsage.check.label": "Mitglied",
+  "agentUsage.check.fromRole": "Aus {role}",
+  "agentUsage.check.fromInstallation": "Wert der Installation",
+  "agentUsage.check.note":
+    "Jeder Passport und jede Verbindung zählt für sich gegen diese Werte, Tool-Aufrufe und API-Anfragen zusammen.",
+  "agentUsage.stopped.calls":
+    "Gestoppt durch die Grenze für Aufrufe insgesamt: {used} von {limit}. Er kann wieder aufrufen, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
+  "agentUsage.stopped.egress":
+    "Gestoppt durch die Grenze für Sendungen: {used} von {limit}. Sendungen warten, bis das Zeitfenster am {date} UTC zurückgesetzt wird.",
+  "agentUsage.stopped.writes":
+    "Gestoppt durch die Grenze für Änderungen: {used} von {limit}. Das zuständige Mitglied kann mehr freigeben, sonst ändert er wieder, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "settings.passportColWindow": "Dieses Zeitfenster",
   "settings.passportUsageToggle":
     "Nutzung dieses Zeitfensters für {name} anzeigen",

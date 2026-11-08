@@ -127,3 +127,34 @@
   justify-items: start;
   inline-size: 8rem;
 }
+
+/* A user's name with the roles that choose their agents' allowance under it. */
+.agent-usage-user {
+  display: grid;
+  gap: var(--space-1);
+}
+/* The user picker sizes to its longest name rather than the panel. */
+.agent-usage-check {
+  max-inline-size: 24rem;
+}
+
+/* A role's name and its built-in mark, the mark wrapping under a long name. */
+.agent-role-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+/* A role's figure over where it comes from, both at the cell's end edge. */
+.agent-role-value {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+}
+/* An inherited figure is the installation's, so it reads quieter than a role's own. */
+.agent-role-value[data-source="installation"] > .t-num {
+  color: var(--textSecondary);
+}
+.agent-role-input {
+  inline-size: 7rem;
+}
