@@ -111,6 +111,11 @@ func (s *Store) RestoreContactLeavingTwinsTx(
 // Every contact's lanes are taken first, sorted across all of them. A writer
 // restoring many contacts then holds no lane while it waits on a contact row.
 func (s *Store) FileRestoredEmployerTwinsTx(ctx context.Context, tx pgx.Tx, restored []ids.ContactID) error {
+	// The restore's own right: only a caller that brought these contacts back
+	// files what the restore created.
+	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
+		return err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
