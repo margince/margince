@@ -75,7 +75,7 @@ test("a settings draft holds the page when the reader leaves for another screen"
   // address back, so the reader is where their work is.
   await page.keyboard.press("Escape");
   await expect(asking).toBeHidden();
-  await expect(page).toHaveURL(/#\/settings\/company$/);
+  await expect(page).toHaveURL(/#\/settings\/company\/regional$/);
   // The draft survived the question: reopening the dialog shows what was typed
   // rather than the value the server still holds.
   await editTimezone(page).click();
