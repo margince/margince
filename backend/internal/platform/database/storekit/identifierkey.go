@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -82,7 +83,7 @@ func SuppressionKeyID() *string {
 	return &key.id
 }
 
-// SuppressionForms is every stored form each value can have, in order: the
+// SuppressionForms answers the stored forms each value can have, in order: the
 // keyed hash when a key is bound, then the unkeyed one rows written before the
 // key, or without one, still hold. Every reader matches against all of them, so
 // a row the re-hash has not reached yet still suppresses.
@@ -99,14 +100,31 @@ func SuppressionForms(values ...string) []string {
 	return forms
 }
 
-// RekeySuppressionHash is the keyed form of a stored unkeyed hash and the id
-// of the key it was made with. It reports false when no key is configured.
-func RekeySuppressionHash(digest string) (hash, keyID string, ok bool) {
+// RekeySuppressionHash is the keyed form of a stored unkeyed hash, made with
+// the key SuppressionKeyID names. It reports false when no key is bound.
+func RekeySuppressionHash(digest string) (string, bool) {
 	key, keyed := currentIdentifierKey()
 	if !keyed {
-		return "", "", false
+		return "", false
 	}
-	return key.keyed(digest), key.id, true
+	return key.keyed(digest), true
+}
+
+// RowQuerier is the one verb a bounded count needs.
+type RowQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// CountUnkeyedIdentifiers counts the rows selector names, stopping one past
+// maximum. It answers zero when no key is bound, since nothing can be re-keyed.
+func CountUnkeyedIdentifiers(ctx context.Context, q RowQuerier, selector string, maximum int64) (int64, error) {
+	if SuppressionKeyID() == nil {
+		return 0, nil
+	}
+	var count int64
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (`+selector+` LIMIT @maximum) bounded`,
+		pgx.StrictNamedArgs{"maximum": maximum + 1}).Scan(&count)
+	return count, err
 }
 
 // RefuseForeignSuppressionKey refuses to start a process whose root key did

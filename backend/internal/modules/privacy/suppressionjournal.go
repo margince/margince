@@ -154,7 +154,7 @@ func journalEntryKey(kind, hash string, rowKeyed bool) string {
 	if rowKeyed {
 		return keyedJournalKey(kind, hash)
 	}
-	if rekeyed, _, ok := storekit.RekeySuppressionHash(hash); ok {
+	if rekeyed, ok := storekit.RekeySuppressionHash(hash); ok {
 		return keyedJournalKey(kind, rekeyed)
 	}
 	return suppressionJournalKey(kind, hash)

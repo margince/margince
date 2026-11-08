@@ -37,9 +37,10 @@ func TestAWorkerOnlyYAMLKeyIsKnownToTheAPI(t *testing.T) {
 	}
 }
 
-// migrate reads the credentials only: a worker or api setting in its registry
-// would let a stray variable change how the schema is applied.
-func TestMigrateReadsOnlyTheDatabaseCredentials(t *testing.T) {
+// migrate reads the credentials, and the root key its data-tasks verb hashes
+// under as the worker does: a worker or api setting in its registry would let
+// a stray variable change how the schema is applied.
+func TestMigrateReadsOnlyTheDatabaseCredentialsAndTheRootKey(t *testing.T) {
 	t.Parallel()
 	reg, err := compose.ProgramRegistry(config.RoleMigrate)
 	if err != nil {
@@ -49,7 +50,7 @@ func TestMigrateReadsOnlyTheDatabaseCredentials(t *testing.T) {
 	for _, s := range reg.All() {
 		keys = append(keys, s.Key())
 	}
-	if len(keys) != 2 || keys[0] != "dsn" || keys[1] != "owner_dsn" {
-		t.Fatalf("migrate reads %v, want [dsn owner_dsn]", keys)
+	if !slices.Equal(keys, []string{"dsn", "keyvault_root_key", "owner_dsn"}) {
+		t.Fatalf("migrate reads %v, want [dsn keyvault_root_key owner_dsn]", keys)
 	}
 }

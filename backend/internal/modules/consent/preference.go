@@ -136,13 +136,18 @@ func resolvePreferenceTokenTx(ctx context.Context, tx pgx.Tx, token string) (Pre
 		merged  bool
 		address *string
 	)
+	row, ok := signedPreferenceRow(token)
+	if !ok {
+		return PreferenceRef{}, apperrors.ErrNotFound
+	}
 	err := tx.QueryRow(ctx, `
 		SELECT pt.contact_id, pt.contact_email_id, pt.revoked_at IS NOT NULL, pe.email
 		  FROM preference_token pt
 		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
-		 WHERE pt.token = $1 AND pt.expires_at > now()
-		   AND (pt.revoked_at IS NULL OR pt.revoked_reason = $2)`,
-		token, PreferenceRevokedMergedIntoSurvivor).Scan(&ref.ContactID, &ref.EmailID, &merged, &address)
+		 WHERE `+preferenceTokenRowSQL+` AND pt.expires_at > now()
+		   AND (pt.revoked_at IS NULL OR pt.revoked_reason = @merged)`,
+		pgx.NamedArgs{"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
+			"merged": PreferenceRevokedMergedIntoSurvivor}).Scan(&ref.ContactID, &ref.EmailID, &merged, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return PreferenceRef{}, apperrors.ErrNotFound
 	}
@@ -300,17 +305,24 @@ func liveAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addresse
 func ensurePreferenceTokenTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emailID ids.UUID,
 ) (string, error) {
-	var token string
+	// Without a root key a link can only be handed out again as stored, so a
+	// row whose link was hashed is not honourable here and is rotated.
+	signed := preferenceLinkKey() != nil
+	var (
+		row    ids.UUID
+		stored *string
+	)
 	err := tx.QueryRow(ctx, `
 		UPDATE preference_token
 		   SET expires_at = now() + make_interval(days => $2)
 		 WHERE contact_id = $1 AND contact_email_id = $4 AND revoked_at IS NULL
 		   AND expires_at > now()
 		   AND created_at > now() - make_interval(days => $3)
-		RETURNING token`,
-		contactID, preferenceTokenTTLDays, preferenceTokenMaxAgeDays, emailID).Scan(&token)
+		   AND ($5 OR token IS NOT NULL)
+		RETURNING id, token`,
+		contactID, preferenceTokenTTLDays, preferenceTokenMaxAgeDays, emailID, signed).Scan(&row, &stored)
 	if err == nil {
-		return token, nil
+		return issuePreferenceLink(row, stored)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return "", err
@@ -333,28 +345,34 @@ func ensurePreferenceTokenTx(
 		contactID, emailID); err != nil {
 		return "", err
 	}
-	fresh, err := newPreferenceToken()
-	if err != nil {
-		return "", err
+	// A signed link is made from the row, so the row stores no link at all.
+	var fresh *string
+	if !signed {
+		minted, err := newPreferenceToken()
+		if err != nil {
+			return "", err
+		}
+		fresh = &minted
 	}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO preference_token (contact_id, contact_email_id, token, expires_at)
 		VALUES ($1, $4, $2, now() + make_interval(days => $3))
 		ON CONFLICT (contact_id, contact_email_id) WHERE revoked_at IS NULL DO NOTHING
-		RETURNING token`, contactID, fresh, preferenceTokenTTLDays, emailID).Scan(&token)
+		RETURNING id, token`, contactID, fresh, preferenceTokenTTLDays, emailID).Scan(&row, &stored)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// A concurrent send won the INSERT — read the winner. Scanned into
-		// token and returned only after, so the caller receives the winning
-		// value rather than the zero one this scan is about to overwrite.
+		// A concurrent send won the INSERT — read the winner.
 		if err := tx.QueryRow(ctx, `
-			SELECT token FROM preference_token
+			SELECT id, token FROM preference_token
 			 WHERE contact_id = $1 AND contact_email_id = $2 AND revoked_at IS NULL`,
-			contactID, emailID).Scan(&token); err != nil {
+			contactID, emailID).Scan(&row, &stored); err != nil {
 			return "", err
 		}
-		return token, nil
+		return issuePreferenceLink(row, stored)
 	}
-	return token, err
+	if err != nil {
+		return "", err
+	}
+	return issuePreferenceLink(row, stored)
 }
 
 func newPreferenceToken() (string, error) {
