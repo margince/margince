@@ -29,9 +29,11 @@ type mailboxDeletionOAuth struct{}
 func (mailboxDeletionOAuth) AccessToken(context.Context, string) (string, error) {
 	return "test-access", nil
 }
+
 func (mailboxDeletionOAuth) Exchange(context.Context, string, string) (oauthflow.TokenGrant, error) {
 	return oauthflow.TokenGrant{}, nil
 }
+
 func (mailboxDeletionOAuth) Refresh(context.Context, string, []string) (oauthflow.TokenRefresh, error) {
 	return oauthflow.TokenRefresh{AccessToken: "test-access"}, nil
 }
