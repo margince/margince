@@ -617,7 +617,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `lost_reason_code_at_change` | `text` |  | Points at `deal_loss_reason.key`. |
 | `owner_id_at_change` | `uuid` |  |  |
 | `pipeline_id_at_change` | `uuid` |  |  |
-| `provenance` | `text` |  | One of `recorded`, `imported`. |
+| `provenance` | `text` |  | One of `recorded`, `imported`, `synced`. |
 | `reversal_of` | `uuid` |  | Points at `deal_stage_history.id`. |
 | `semantic_at_change` | `text` |  | One of `open`, `won`, `lost`. |
 | `to_position_at_change` | `integer` |  |  |
@@ -640,7 +640,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `deal_stage_history_deal_id_id_key`: `UNIQUE (deal_id, id)`
 - `deal_stage_history_import_run_pairing`: `CHECK ( CASE provenance WHEN 'imported' THEN (import_run_id IS NOT NULL) ELSE (import_run_id IS NULL) END)`
-- `deal_stage_history_provenance_check`: `CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded', 'imported']))))`
+- `deal_stage_history_provenance_check`: `CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded', 'imported', 'synced']))))`
 - `deal_stage_history_semantic_at_change_check`: `CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open', 'won', 'lost']))))`
 - `deal_stage_history_win_probability_at_change_check`: `CHECK (((win_probability_at_change IS NULL) OR ((win_probability_at_change >= 0) AND (win_probability_at_change <= 100))))`
 

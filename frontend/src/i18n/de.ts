@@ -1630,7 +1630,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.left_pipeline": "Andere Pipeline",
   "reporting.cohortOutcome.unresolved": "Noch offen",
   "reporting.cohortOutcome.history_partial":
-    "Nächster Wechsel importiert oder unbekannt",
+    "Nächster Wechsel importiert, synchronisiert oder unbekannt",
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",
@@ -1639,7 +1639,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortStillOpenNote":
     "Noch offen heißt: beim Abruf dieser Zahlen gab es noch kein Ergebnis. Diese zählen nicht als verloren und fließen nicht in die Quote ein.",
   "reporting.cohortPartialNote":
-    "Nächster Wechsel importiert oder unbekannt heißt: Der Deal hat die Phase durch einen Wechsel verlassen, den ein Import mitgebracht hat, oder durch einen Wechsel, der gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat. Diese fließen nicht in die Quote ein.",
+    "Nächster Wechsel importiert, synchronisiert oder unbekannt heißt: Der Deal hat die Phase durch einen Wechsel verlassen, den ein Import mitgebracht oder ein anderes CRM synchronisiert hat, oder durch einen Wechsel, der gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat. Diese fließen nicht in die Quote ein.",
   "reporting.cohortStageDaysNote":
     "Die Tage neben einem Ergebnis sind die mittlere Zeit, die ein Deal davor in der Phase war. Die Tage neben Noch offen sind die mittlere Zeit in der Phase bis jetzt.",
   "reporting.cohortLeadDaysNote":

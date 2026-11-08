@@ -4626,7 +4626,7 @@ CASE provenance
 END)
 public.deal_stage_history.deal_stage_history_lost_reason_code_fkey FOREIGN KEY (lost_reason_code_at_change) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_pkey PRIMARY KEY (id)
-public.deal_stage_history.deal_stage_history_provenance_check CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded'::text, 'imported'::text]))))
+public.deal_stage_history.deal_stage_history_provenance_check CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded'::text, 'imported'::text, 'synced'::text]))))
 public.deal_stage_history.deal_stage_history_reversal_fkey FOREIGN KEY (reversal_of) REFERENCES deal_stage_history(id) ON DELETE SET NULL
 public.deal_stage_history.deal_stage_history_semantic_at_change_check CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))))
 public.deal_stage_history.deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE RESTRICT

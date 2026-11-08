@@ -1564,7 +1564,7 @@ export const en = {
   "reporting.cohortOutcome.regressed": "Moved back",
   "reporting.cohortOutcome.left_pipeline": "Other pipeline",
   "reporting.cohortOutcome.unresolved": "Still open",
-  "reporting.cohortOutcome.history_partial": "Next move imported or unknown",
+  "reporting.cohortOutcome.history_partial": "Next move imported, synced or unknown",
   "reporting.cohortOutcome.accepted": "Handoff accepted",
   "reporting.cohortOutcome.qualified": "Qualified",
   "reporting.cohortOutcome.disqualified": "Disqualified",
@@ -1573,7 +1573,7 @@ export const en = {
   "reporting.cohortStillOpenNote":
     "Still open means no outcome yet when these figures were read. These are not counted as lost and stay out of the rate.",
   "reporting.cohortPartialNote":
-    "Next move imported or unknown means the deal left the stage by a move an import brought in, or by a move saved before Margince kept the stage order. These stay out of the rate.",
+    "Next move imported, synced or unknown means the deal left the stage by a move an import brought in or another CRM synced in, or by a move saved before Margince kept the stage order. These stay out of the rate.",
   "reporting.cohortStageDaysNote":
     "Days beside an outcome are the median time a deal spent in the stage before it. Days beside Still open are the median time in the stage so far.",
   "reporting.cohortLeadDaysNote":

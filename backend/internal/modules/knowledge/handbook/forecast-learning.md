@@ -16,8 +16,9 @@ probability to match how they ended. It moves a little at a time. The typed
 probability counts as 20 closed deals. So 20 closed deals count as much as what
 you typed, and 200 mostly replace it.
 
-Only stage moves made in Margince count. A move an import brought in counts for
-nothing. So does a move saved before Margince kept where each move came from.
+Only stage moves made in Margince count. A move an import brought in, or one
+another CRM made and an extension synced in, counts for nothing. So does a move
+saved before Margince kept where each move came from.
 
 Deals that entered the stage in the last two years count. A deal still open
 counts as open until today. A stage with many new deals is not read as a stage
