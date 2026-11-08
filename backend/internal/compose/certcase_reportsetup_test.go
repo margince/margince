@@ -27,9 +27,28 @@ const reportSetupFixtureJSON = `{
   }
 }`
 
+// openGoalFixtureJSON names a goal and leaves its target and deadline unsaid.
+const openGoalFixtureJSON = `{
+  "description": "More qualified opportunities with manufacturing companies.",
+  "today": "2026-11-03", "lang": "en",
+  "products": [{"label": "linden", "name": "Linden press line"}],
+  "catalog": {
+    "industries": [{"id": "manufacturing", "label": "Manufacturing"}],
+    "periods": ["this_month", "this_quarter"],
+    "metrics": [{"id": "qualified_opportunities_created", "label": "Qualified opportunities", "charts": []}],
+    "charts": [],
+    "objectives": [{"id": "qualified_opportunities_created", "label": "Qualified opportunities"}]
+  }
+}`
+
 func runReportSetup(t *testing.T, site, expected string, build func(product func(string) string) string) aitasks.Outcome {
 	t.Helper()
-	prepared, err := reportSetupCases{site: site}.Prepare(json.RawMessage(reportSetupFixtureJSON), json.RawMessage(expected))
+	return runReportSetupOn(t, reportSetupFixtureJSON, site, expected, build)
+}
+
+func runReportSetupOn(t *testing.T, fixture, site, expected string, build func(product func(string) string) string) aitasks.Outcome {
+	t.Helper()
+	prepared, err := reportSetupCases{site: site}.Prepare(json.RawMessage(fixture), json.RawMessage(expected))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -91,6 +110,21 @@ func TestTheInitiativeSetupCaseJudgesTheResolvedGoal(t *testing.T) {
 				t.Fatalf("outcome %s (%s), want %s", outcome.Result, outcome.Detail, tc.want)
 			}
 		})
+	}
+}
+
+func TestAnObjectiveWithNoTargetOrDeadlineIsAskedForNotInvented(t *testing.T) {
+	expected := `{"industry":"manufacturing","objective":"qualified_opportunities_created","unsupported":0}`
+	reply := func(target, deadline string) func(func(string) string) string {
+		return func(func(string) string) string {
+			return `{"name":"Manufacturing pipeline","filters":[{"field":"industry","value":"manufacturing","phrase":"manufacturing companies"}],"metrics":[],"charts":[],"objective":{"metric":"qualified_opportunities_created","target_value":` + target + `,"deadline":` + deadline + `,"phrase":"more qualified opportunities"},"clarifications":["What target and deadline should the initiative have?"],"unsupported":[]}`
+		}
+	}
+	if outcome := runReportSetupOn(t, openGoalFixtureJSON, reportsetup.SiteInitiative, expected, reply("null", "null")); outcome.Result != aitasks.OutcomeAccepted {
+		t.Fatalf("a null target and deadline were %s (%s), want accepted", outcome.Result, outcome.Detail)
+	}
+	if outcome := runReportSetupOn(t, openGoalFixtureJSON, reportsetup.SiteInitiative, expected, reply("null", `"2026-12-31"`)); outcome.Result != aitasks.OutcomeWrongAnswer {
+		t.Fatalf("a deadline the words never gave was %s (%s), want a wrong answer", outcome.Result, outcome.Detail)
 	}
 }
 

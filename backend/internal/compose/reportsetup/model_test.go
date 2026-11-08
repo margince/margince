@@ -114,3 +114,12 @@ func TestParseNamesBackAnAmbiguousLabelAnUnassignedCountryAndASecondValue(t *tes
 		t.Fatalf("named back %+v", out.Unsupported)
 	}
 }
+
+func TestThePromptLetsAnObjectiveLeaveItsTargetAndDeadlineOpen(t *testing.T) {
+	system := Request(setupInput(SiteInitiative)).System
+	for _, want := range []string{`"target_value":123 or null`, `"deadline":"YYYY-MM-DD" or null`, "set that field to null"} {
+		if !strings.Contains(system, want) {
+			t.Errorf("the prompt lacks %q, so a description with no target reads as one that needs a made-up value", want)
+		}
+	}
+}
