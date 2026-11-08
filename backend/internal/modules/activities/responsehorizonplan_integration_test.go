@@ -162,8 +162,8 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 			strings.Contains(n.IndexCond, "regexp_replace") {
 			addressIndexBoundsKind++
 		}
-		// Sparse attested mail lets the planner key on the sender alone: that
-		// reads only the few attested mails to them, never a range of the index.
+		// With little attested mail the planner may key on the sender alone.
+		// That reads only the attested mail to them, never a range of the index.
 		if shape == sparseMailbox && alias == "answer_mail" && n.IndexName == "idx_activity_attested_counterparty" &&
 			strings.HasPrefix(n.IndexCond, "(counterparty_email = ") {
 			addressIndexBoundsKind++
