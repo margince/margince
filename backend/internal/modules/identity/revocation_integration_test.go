@@ -113,6 +113,7 @@ var (
 // plus a plain second user with a known password.
 type revocationEnv struct {
 	owner *pgx.Conn
+	pool  *pgxpool.Pool
 	svc   *Service
 	// ws is the workspace this env bootstrapped, for the fixtures that build a
 	// second service of their own — a pinned handle is what they need, since
@@ -220,7 +221,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	}
 
 	return &revocationEnv{
-		owner: owner, svc: svc, ws: wsID, slug: slug, admin: admin,
+		owner: owner, pool: pool, svc: svc, ws: wsID, slug: slug, admin: admin,
 		member: Identity{UserID: memberID, WorkspaceID: admin.WorkspaceID, Email: memberEmail},
 	}
 }

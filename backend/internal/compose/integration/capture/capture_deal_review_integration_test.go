@@ -263,10 +263,10 @@ func TestTheRepairKeepsAColleaguesFilingMadeWhileItWaited(t *testing.T) {
 	wantDeals(t, e, "aba1@acme.example", first)
 }
 
-// The rule's new answer, from the project a colleague filed the mail under, is
-// a deal a colleague closes while the repair waits for its row. The repair asks
-// the deal's admission before it takes anything back, so it reports the
-// refusal. The rule's old link comes off and nothing is written in its place.
+// The rule's new answer is a deal a colleague closes while the repair waits
+// for its row. It comes from the project a colleague filed the mail under. The
+// repair asks the deal's admission before it takes anything back, so it
+// reports the refusal. The rule's old link comes off and nothing is written in its place.
 // The change is announced with the relink event its consumers read.
 func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	env := newCaptureEnv(t)

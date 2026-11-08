@@ -12,10 +12,16 @@ import (
 // NewApprovalsService binds decisions to current context and responsibility checks.
 func NewApprovalsService(db *database.DB) *approvals.Service {
 	preview := newApprovalPreviewReader(db)
+	store, gate := preview.activities.WithRecipientFiler(newContactsStore(db)), consentGateOn(db)
 	return approvals.NewService(db).
 		WithAssigneeCheck(activities.SeatCanHoldAutomaticWork).
 		WithPreview(preview.read).
 		WithPlanSight(approvals.PlanSight{Footprint: preview.footprint, Clears: preview.viewerClears}).
 		WithContextPin(operationPromoteLead, promotionContextPin(db)).
-		WithEffectActor(approvalEffectActor(db))
+		WithEffectActor(NewApprovalEffectActor(db)).
+		WithStageAdmission(stageCallAdmission).
+		WithStagePrecheck(previewSendEmail, agentMailPrecheck(store, gate)).
+		WithStagePrecheck(previewSendCompanyEmail, agentMailPrecheck(store, gate)).
+		WithStagePrecheck(operationSendMessage, agentChannelPrecheck(store, gate)).
+		WithStagePrecheck(operationInviteMeeting, agentInvitationPrecheck(db))
 }

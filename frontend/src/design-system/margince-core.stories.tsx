@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
+import { Button } from "./atoms";
 import { MarginceCoreScene } from "./margince-core";
 import { BEHAVIOUR } from "./margince-core-motion";
 
@@ -77,6 +79,35 @@ export const Working: Story = { args: { state: "working" } };
  */
 export const IngestWithProgress: Story = {
   args: { state: "ingest", progress: 0.58 },
+};
+
+/**
+ * Under prefers-reduced-motion the ring and the fallback dress change at once.
+ * With the setting on (in the system, or the browser's rendering emulation),
+ * stepping the ring moves it in one frame with no sweep. With it off, each step
+ * sweeps over 0.4s.
+ */
+export const ProgressSteps: Story = {
+  args: { state: "ingest" },
+  render: (args) => {
+    const [progress, setProgress] = useState(0.2);
+    return (
+      <div
+        style={{
+          display: "grid",
+          gap: "var(--space-4)",
+          justifyItems: "center",
+        }}
+      >
+        <MarginceCoreScene {...args} progress={progress} />
+        <Button
+          onClick={() => setProgress((now) => (now >= 0.8 ? 0.2 : now + 0.3))}
+        >
+          Step the ring
+        </Button>
+      </div>
+    );
+  },
 };
 
 /**

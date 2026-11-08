@@ -1237,6 +1237,36 @@
           "maximum": 200,
           "default": 20
         },
+        "agent_role_calls_per_window": {
+          "description": "Calls of any kind, tool or API, one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 20000 while neither Admin nor the installation count has a value set.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "agent_role_egress_per_window": {
+          "description": "Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "agent_role_writes_per_window": {
+          "description": "Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 2000 while neither Admin nor the installation count has a value set.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
         "agent_runner_interval_seconds": {
           "description": "Seconds between the passes of the agent scheduler.",
           "type": [

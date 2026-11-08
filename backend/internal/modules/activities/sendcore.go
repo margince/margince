@@ -104,6 +104,15 @@ func (p PreparedSend) Authorization() commsauthz.Request {
 // scheduled message was composed, which is exactly why a scheduled send runs
 // them again at fire rather than trusting what it froze (ADR-0104 §2).
 func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmailInput, gate ConsentGate, stager DeliveryStager) (PreparedSend, error) {
+	return s.prepareRenderedSend(ctx, origin, in, gate, func() error {
+		if stager == nil {
+			return errNoDeliveryStager
+		}
+		return nil
+	})
+}
+
+func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in SendEmailInput, gate ConsentGate, checkDelivery func() error) (PreparedSend, error) {
 	links, err := origin.Resolve(ctx, s)
 	if err != nil {
 		return PreparedSend{}, err
@@ -115,7 +124,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 			return PreparedSend{}, err
 		}
 	}
-	provider, err := s.refuseUnsendable(ctx, in, gate, stager)
+	provider, err := s.refuseUnsendable(ctx, in, gate, checkDelivery)
 	if err != nil {
 		return PreparedSend{}, err
 	}

@@ -16094,7 +16094,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.window.help":
     "Wie lange ein Kontingent gilt. Eine neue Länge beginnt beim nächsten Zurücksetzen, damit kein Passport zu früh ein frisches Kontingent bekommt.",
   "agentAllowances.burst":
-    "Feste Grenzen der MCP-Verbindung: {calls} Aufrufe und {streams} geöffnete Streams pro Minute und Passport.",
+    "Feste Grenzen der MCP-Verbindung: {calls} Aufrufe und {streams} geöffnete Streams pro Minute und Passport, gleich für jede Rolle.",
   "agentAllowances.pending.title": "Änderung des Zeitfensters steht aus",
   "agentAllowances.pending.body":
     "Ab {date} UTC dauert jedes Zeitfenster {interval}. Bis dahin zählt das laufende Zeitfenster weiter.",
@@ -16116,6 +16116,36 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Anzahl gilt innerhalb einer Minute, im laufenden Zeitfenster. Ein Agent, der bereits über einer gesenkten Anzahl liegt, wird bei seinem nächsten Aufruf abgelehnt.",
   "agentAllowances.diff.window":
     "Zeitfenster {from} → {to}, ab dem nächsten Zurücksetzen.",
+  "agentAllowances.installation.title": "Wert der Installation",
+  "agentAllowances.installation.sub":
+    "Gilt für jede Rolle ohne eigenen Wert, außer wo die Admin-Vorgabe gilt.",
+  "agentAllowances.roles.title": "Nach Rolle",
+  "agentAllowances.roles.rule":
+    "Für jede Art bekommt ein Agent den höchsten Wert unter den Rollen seines Mitglieds. Eine Rolle ohne eigenen Wert nutzt den Wert der Installation, Admin kann stattdessen seine Vorgabe bekommen.",
+  "agentAllowances.roles.col.role": "Rolle",
+  "agentAllowances.roles.builtIn": "Mitgeliefert",
+  "agentAllowances.roles.source.role": "Für diese Rolle festgelegt",
+  "agentAllowances.roles.source.admin_preset": "Admin-Vorgabe",
+  "agentAllowances.roles.source.installation": "Installation",
+  "agentAllowances.roles.source.installation_kept":
+    "Bei der Installation gehalten",
+  "agentAllowances.roles.editHelp":
+    "Lass ein Feld leer, um den Wert der Rolle aufzugeben; sein Platzhalter zeigt den Wert, der dann gilt. Gib 0 ein, damit Admin beim Wert der Installation bleibt. Aufrufe 50 bis 20.000, Änderungen 10 bis 5.000, Sendungen 1 bis 200.",
+  "agentAllowances.roles.preset":
+    "Admin bekommt {calls} Aufrufe und {changes} Änderungen, solange für diese Art weder für Admin noch für die Installation ein Wert gesetzt ist. Die Vorgabe lässt Sendungen, wie sie sind.",
+  "agentAllowances.roles.inherits": "Übernimmt {value}",
+  "agentAllowances.roles.presetValue": "Admin-Vorgabe {value}",
+  "agentAllowances.roles.inputLabel": "{kind} für {role}",
+  "agentAllowances.roles.useInstallation": "Wert der Installation nutzen",
+  "agentAllowances.roles.refusal":
+    "Gib eine ganze Zahl im Bereich ein oder lass das Feld leer.",
+  "agentAllowances.diff.role": "{role}, {label} {from} → {to}",
+  "agentAllowances.diff.inherited": "Wert der Installation",
+  "agentAllowances.diff.toDefaults":
+    "Alle Kontingente gehen auf die Werte zurück, mit denen Margince ausgeliefert wird, die Admin-Vorgabe eingeschlossen. Ein Wert aus der Serverkonfiguration bleibt.",
+  "agentAllowances.diff.preset": "Admin-Vorgabe",
+  "agentAllowances.diff.roles":
+    "Was Agenten in diesem Zeitfenster schon genutzt haben, zählt weiter. Nichts wird zurückgesetzt.",
   "agentUsage.title": "Agenten-Nutzung nach Mitglied",
   "agentUsage.sub":
     "Dieses Zeitfenster, summiert über die Passports und Verbindungen jedes Mitglieds. Die Summe zeigt, wie viel genutzt wurde, nie welche Passports es waren oder was sie gelesen haben.",
@@ -16133,6 +16163,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentUsage.state.ok": "Aktiv",
   "agentUsage.state.near": "Nahe an einer Grenze",
   "agentUsage.state.stopped": "Gestoppt",
+  "agentUsage.noRole": "Keine Rolle",
+  "agentUsage.check.title": "Was die Agenten eines Mitglieds bekommen",
+  "agentUsage.check.label": "Mitglied",
+  "agentUsage.check.fromRole": "Aus {role}",
+  "agentUsage.check.fromInstallation": "Wert der Installation",
+  "agentUsage.check.note":
+    "Jeder Passport und jede Verbindung zählt für sich gegen diese Werte, Tool-Aufrufe und API-Anfragen zusammen.",
+  "agentUsage.stopped.calls":
+    "Gestoppt durch die Grenze für Aufrufe insgesamt: {used} von {limit}. Er kann wieder aufrufen, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
+  "agentUsage.stopped.egress":
+    "Gestoppt durch die Grenze für Sendungen: {used} von {limit}. E-Mails und andere Aufrufe, die Margince verlassen, auch das Lesen von Websites, werden abgelehnt, bis das Zeitfenster am {date} UTC zurückgesetzt wird.",
+  "agentUsage.stopped.writes":
+    "Gestoppt durch die Grenze für Änderungen: {used} von {limit}. Das zuständige Mitglied wird vielleicht um eine Freigabe für mehr gebeten. Sonst ändert er wieder, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "settings.passportColWindow": "Dieses Zeitfenster",
   "settings.passportUsageToggle":
     "Nutzung dieses Zeitfensters für {name} anzeigen",
