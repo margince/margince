@@ -16,7 +16,7 @@ import { Heading } from "../../design-system/heading";
 import { PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDateTime } from "../../format/format";
+import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -178,14 +178,14 @@ function StoredSuggestion({
           <Heading as="h3" size="small">
             <EntityRef kind="deal" id={item.deal_id} name={name} />
           </Heading>
-          <p>
-            {t("worklist.verdict.believes")} {findingOf(item)}
+          <p className="t-caption">
+            {run.annotated_at
+              ? t("worklist.verdict.earlierOn", {
+                  date: formatDate(run.annotated_at, locale, readerZone),
+                })
+              : t("worklist.verdict.believes")}
           </p>
-          {run.annotated_at && (
-            <p className="t-caption">
-              {formatDateTime(run.annotated_at, locale, readerZone)}
-            </p>
-          )}
+          <p>{findingOf(item)}</p>
         </PanelRow>
       )}
     </NamedDeal>

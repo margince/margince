@@ -19210,7 +19210,7 @@ export const en = {
   "worklist.verdict.blocked": "Blocked",
   "worklist.verdict.cold": "Cold",
   "worklist.verdict.believes": "Earlier assessment",
-  "worklist.verdict.asOf": "As of {when}",
+  "worklist.verdict.earlierOn": "Earlier assessment · {date}",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",

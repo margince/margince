@@ -19414,7 +19414,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verdict.blocked": "Blockiert",
   "worklist.verdict.cold": "Kalt",
   "worklist.verdict.believes": "Frühere Bewertung",
-  "worklist.verdict.asOf": "Stand {when}",
+  "worklist.verdict.earlierOn": "Frühere Bewertung · {date}",
   "worklist.untitled.approval": "Freigabe ausstehend",
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",

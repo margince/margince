@@ -18928,7 +18928,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verdict.blocked": "Bị chặn",
   "worklist.verdict.cold": "Đã nguội",
   "worklist.verdict.believes": "Đánh giá trước đó",
-  "worklist.verdict.asOf": "Tính đến {when}",
+  "worklist.verdict.earlierOn": "Đánh giá trước đó · {date}",
   "worklist.untitled.approval": "Phê duyệt đang chờ",
   "worklist.untitled.dedupe_candidate": "Hồ sơ có thể trùng",
   "worklist.untitled.task": "Việc cần làm chưa có tiêu đề",

@@ -151,7 +151,7 @@ it("says no assessment was written yet when no pass annotated the run, and draws
   // And none of them is drawn as a recommendation heading with nothing under it.
   expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
   expect(
-    screen.queryByText(new RegExp(`^${en["worklist.verdict.believes"]} `)),
+    screen.queryByText(new RegExp(`^${en["worklist.verdict.believes"]}`)),
   ).toBeNull();
 });
 
