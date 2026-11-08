@@ -125,14 +125,20 @@ func (s *RetentionService) PurgeActivitiesIf(ctx context.Context, ids []ids.UUID
 
 // purgeOneActivity runs the retention module's own activity/erase executor and
 // audits it as an owner's act. kept reports a message the floor now in force
-// shields, which is left as it is.
+// shields, or a row already gone. Both leave nothing to erase.
 func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason, check ActivityStillPurgeable) (kept bool, err error) {
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var locked ids.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM activity
+ WHERE id = @id AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&locked)
+		if errors.Is(err, pgx.ErrNoRows) {
+			kept = true
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 		if check != nil {
-			var locked ids.UUID
-			if err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE id = @id FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&locked); err != nil {
-				return err
-			}
 			allowed, err := check(ctx, tx, id)
 			if err != nil {
 				return err
