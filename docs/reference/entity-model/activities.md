@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-73 columns · primary key `(id)` · referenced by 45 foreign keys
+75 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -29,6 +29,8 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `claims_host_slot` | `boolean`, default `false` | yes |  |
 | `counterparty_email` | `text` |  |  |
 | `counterparty_outbound_attested` | `boolean`, default `false` | yes |  |
+| `deal_topic_checked_at` | `timestamp with time zone` |  |  |
+| `deal_topic_digest` | `text` |  |  |
 | `direction` | `text` |  | inbound/outbound for email/call; null for note/task. |
 | `domain_evidence_version` | `bigint`, default `0` | yes |  |
 | `done_at` | `timestamp with time zone` |  |  |
