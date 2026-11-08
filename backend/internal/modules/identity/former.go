@@ -152,59 +152,70 @@ func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in 
 }
 
 func mergedFormerSurvivor(ctx context.Context, tx pgx.Tx, email string) (ids.UserID, bool, error) {
-	var survivor ids.UserID
-	var found bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user s
-		 WHERE `+storekit.SeatLoginIsSQL("s", "@"+memberEmailField, "@"+memberDomainField)+`
-		   AND s.merged_into_user_id IS NOT NULL)`, memberLoginArgs(email)).Scan(&found); err != nil {
-		return survivor, false, err
-	}
-	if !found {
-		return survivor, false, nil
-	}
-	// The seed can hold a seat per domain spelling, so the lineage can reach
-	// two live roots. Each root carries the login of the seat it was reached
-	// from, and the root reached from the spelling the caller typed is answered.
+	// The seed can hold a seat per domain spelling, so the address can lead to
+	// more than one lineage. Each seat it matches is walked to its own root. The
+	// walk carries the seat's login and whether it was merged, so the answer
+	// follows the spelling the caller typed.
 	rows, err := tx.Query(ctx, `WITH RECURSIVE lineage AS (
- SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at,s.email AS reached_from FROM app_user s
+ SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at,s.email AS reached_from,
+        s.merged_into_user_id IS NOT NULL AS from_merged FROM app_user s
    WHERE `+storekit.SeatLoginIsSQL("s", "@"+memberEmailField, "@"+memberDomainField)+`
- UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at,l.reached_from FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
- ) SELECT DISTINCT id, reached_from FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL
-   ORDER BY id`, memberLoginArgs(email))
+ UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at,l.reached_from,l.from_merged
+   FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
+ ) SELECT id, reached_from, from_merged, removed_at IS NULL AND archived_at IS NULL FROM lineage
+   WHERE merged_into_user_id IS NULL ORDER BY id, reached_from`, memberLoginArgs(email))
 	if err != nil {
-		return survivor, false, err
+		return ids.UserID{}, false, err
 	}
 	roots, err := pgx.CollectRows(rows, pgx.RowToStructByPos[lineageRoot])
 	if err != nil {
-		return survivor, false, err
+		return ids.UserID{}, false, err
 	}
-	root, ok := rootReachedFrom(roots, typedLoginAddress(email))
-	if !ok {
-		return survivor, false, errRemovedEmail
-	}
-	return root, true, nil
+	return survivorFor(roots, typedLoginAddress(email))
 }
 
-// lineageRoot is a live seat a merge lineage ends at, with the login of the
-// seat the walk started from.
+// lineageRoot is the seat a merge lineage ends at. It carries the login of the
+// seat the walk started from, and whether that seat had been merged.
 type lineageRoot struct {
 	ID          ids.UserID
 	ReachedFrom string
+	FromMerged  bool
+	Live        bool
 }
 
-// rootReachedFrom answers the root the typed spelling's own seat leads to, or
-// the first root when no seat is spelled that way. The roots come in id order,
-// so the answer does not depend on the order the walk returned them in.
-func rootReachedFrom(roots []lineageRoot, typed string) (ids.UserID, bool) {
-	if len(roots) == 0 {
-		return ids.UserID{}, false
-	}
+// survivorFor answers the live seat a former member's address already lives
+// on, or found false when the address names no merged seat.
+//
+// The seat spelled as the caller typed it decides. An unmerged one is not a
+// survivor at all, so the caller provisions as usual. A merged one answers its
+// own root, or the removed address when that root is gone. An address no seat
+// spells as typed answers the first live root of a merged seat.
+func survivorFor(roots []lineageRoot, typed string) (ids.UserID, bool, error) {
 	for _, root := range roots {
-		if strings.EqualFold(root.ReachedFrom, typed) {
-			return root.ID, true
+		if !strings.EqualFold(root.ReachedFrom, typed) {
+			continue
+		}
+		switch {
+		case !root.FromMerged:
+			return ids.UserID{}, false, nil
+		case !root.Live:
+			return ids.UserID{}, false, errRemovedEmail
+		}
+		return root.ID, true, nil
+	}
+	merged := false
+	for _, root := range roots {
+		if root.FromMerged {
+			merged = true
+			if root.Live {
+				return root.ID, true, nil
+			}
 		}
 	}
-	return roots[0].ID, true
+	if merged {
+		return ids.UserID{}, false, errRemovedEmail
+	}
+	return ids.UserID{}, false, nil
 }
 
 func formerMemberAudit(in FormerMemberInput, role string) map[string]any {

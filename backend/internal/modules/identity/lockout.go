@@ -202,12 +202,13 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		outcome := "failed"
 		var userID ids.UserID
 		var state lockoutState
+		target := email
 		err := tx.QueryRow(ctx,
-			`SELECT u.id, u.failed_login_count, u.locked_until, u.updated_at FROM app_user u
+			`SELECT u.id, u.email, u.failed_login_count, u.locked_until, u.updated_at FROM app_user u
 			 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+LiveMemberSQL("u")+`
 			 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+`
 			 FOR UPDATE`,
-			typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
+			typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &target, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
 			// no account to count against; only the audit row lands
@@ -233,12 +234,14 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		// has no resolved user, so the address is the only target identifier.
 		// SuppressionHash (the one identifier hashing rule — trimmed+lowercased
 		// sha256) keeps a brute-force against one target correlatable across
-		// attempts (identical hash) without retaining the PII.
+		// attempts (identical hash) without retaining the PII. A resolved seat
+		// is hashed by its own login, so both spellings of its domain are one
+		// target.
 		_, err = tx.Exec(ctx,
 			`INSERT INTO system_log (actor_type, actor_id, action, detail)
 			 VALUES ('human', 'human:unauthenticated', 'login',
 			         jsonb_build_object('outcome', $1::text, 'email_hash', $2::text))`,
-			outcome, storekit.SuppressionHash(email))
+			outcome, storekit.SuppressionHash(target))
 		return err
 	})
 }

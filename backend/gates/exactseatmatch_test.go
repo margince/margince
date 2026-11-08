@@ -49,6 +49,11 @@ func TestEveryExactSeatMatchFoldsTheDomain(t *testing.T) {
 // lowercased, with the alias it names, if any.
 var emailOperand = regexp.MustCompile(`(?i)lower\(\s*(?:([a-z_]\w*)\.)?email\s*\)`)
 
+// loweredValueOperand is the other spelling of the same comparison: the raw
+// column compared to a lowercased value, as in `email = lower($1)`. It reads
+// the login unfolded just as the first does.
+var loweredValueOperand = regexp.MustCompile(`(?i)(?:\b([a-z_]\w*)\.)?\bemail\s*=\s*lower\(`)
+
 var (
 	comparedAfter  = regexp.MustCompile(`(?i)^\s*(=|<>|!=|\bIN\b|\bNOT\s+IN\b)`)
 	comparedBefore = regexp.MustCompile(`(=|<>|!=)\s*$`)
@@ -98,6 +103,27 @@ func rawSeatMatches(t *testing.T) []seatMatchSite {
 		aliases := boundTables(source)
 		for _, at := range emailOperand.FindAllStringSubmatchIndex(source, -1) {
 			if !comparedAfter.MatchString(source[at[1]:]) && !comparedBefore.MatchString(source[:at[0]]) {
+				continue
+			}
+			operands++
+			alias := ""
+			if at[2] >= 0 {
+				alias = strings.ToLower(source[at[2]:at[3]])
+			}
+			if !readsSeatLogin(source[:at[0]], alias, aliases) {
+				continue
+			}
+			label := ""
+			if alias != "" {
+				label = alias + "."
+			}
+			sites = append(sites, seatMatchSite{file: path, alias: label, line: strings.Count(source[:at[0]], "\n") + 1})
+		}
+		for _, at := range loweredValueOperand.FindAllStringSubmatchIndex(source, -1) {
+			// An alias spliced in from Go (`alias + ".email = ..."`) is a helper's
+			// fragment for some other table, which the lower(alias.email) reading
+			// above cannot see either.
+			if at[0] >= 2 && source[at[0]-2:at[0]] == "\"." {
 				continue
 			}
 			operands++

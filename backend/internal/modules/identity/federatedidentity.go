@@ -68,13 +68,20 @@ func (s *Service) resolveFederatedUser(ctx context.Context, tx pgx.Tx, provider,
 		return ids.UserID{}, false, fmt.Errorf("identity: resolve federated identity: %w", err)
 	}
 
+	// The other spelling of a disabled seat's own login is no way back in. The
+	// subject's link to that seat names the same mailbox, so a live seat under
+	// the other spelling does not inherit it. A recycled address is a different
+	// mailbox, and its transfer stands.
 	var byEmail ids.UserID
 	err = tx.QueryRow(ctx,
 		`SELECT u.id FROM app_user u WHERE `+LiveMemberSQL("u")+`
 		 AND u.password_hash IS NOT NULL AND NOT u.is_agent
 		 AND `+storekit.SeatLoginIsSQL("u", "$1", "$2")+`
+		 AND NOT EXISTS (SELECT 1 FROM federated_identity fi JOIN app_user s ON s.id = fi.user_id
+		                  WHERE fi.provider = $3 AND fi.subject = $4 AND s.id <> u.id
+		                    AND `+storekit.SeatLoginIsSQL("s", "$1", "$2")+`)
 		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+``,
-		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&byEmail)
+		typedLoginAddress(email), owndomain.OfAddress(email), provider, subject).Scan(&byEmail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UserID{}, false, ErrFederatedSignInRefused
 	}

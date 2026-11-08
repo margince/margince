@@ -5429,6 +5429,7 @@ public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.
 public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
+public.idx_app_user_login_folded CREATE INDEX idx_app_user_login_folded ON public.app_user USING btree (email_domain_folded, lower(regexp_replace(email, '@[^@]*$'::text, ''::text)))
 public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)
 public.idx_approval_bundle CREATE INDEX idx_approval_bundle ON public.approval USING btree (bundle_id, created_at) WHERE (bundle_id IS NOT NULL)
 public.idx_approval_expiry_due CREATE INDEX idx_approval_expiry_due ON public.approval USING btree (expires_at) WHERE (status = 'pending'::text)
