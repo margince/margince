@@ -100,6 +100,47 @@ func TestOneDealChangedThreeWaysCountsOnceAndItsUndoReportsWhatWasKept(t *testin
 	}
 }
 
+// A change edited since stays on the list, never in the bundle Undo sends,
+// and leaves the list once the reporting window has passed.
+func TestAChangeEditedSinceIsListedButNotUndoneAndLeavesAfterTheWindow(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	h := newMarginceChangeHandlers(v.Pool)
+	amount := int64(3_000_000)
+	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](v.deal), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
+		t.Fatal(err)
+	}
+
+	summary, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.Deals != 1 || summary.UndoableDeals != 1 || len(summary.Bundles) != 1 {
+		t.Fatalf("summary = %+v, want the one deal listed and still undoable", summary)
+	}
+	bundle := summary.Bundles[0]
+	if len(bundle.AuditLogIDs) != 3 || len(bundle.UndoableAuditLogIDs) != 2 {
+		t.Fatalf("bundle lists %d and offers %d, want three listed and the date and probability offered",
+			len(bundle.AuditLogIDs), len(bundle.UndoableAuditLogIDs))
+	}
+	amountChange := v.WsScalar(t, `SELECT audit_log_id::text FROM deal_correction WHERE deal_id = $1 AND correction = $2`,
+		v.deal, deals.VerdictAmountCorrection)
+	for _, id := range bundle.UndoableAuditLogIDs {
+		if id.String() == amountChange {
+			t.Fatal("the amount a colleague edited since is offered to Undo")
+		}
+	}
+
+	h.deals.SetClock(func() time.Time { return time.Now().Add(15 * 24 * time.Hour) })
+	later, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if later.Deals != 1 || len(later.Bundles) != 1 || len(later.Bundles[0].AuditLogIDs) != 2 {
+		t.Fatalf("after the window = %+v, want only the two undoable changes listed", later)
+	}
+}
+
 // colleague reads every deal of the workspace but owns none of them.
 func (v *dealVerdictEnv) colleague() context.Context {
 	return v.As(v.Rep2, []ids.UUID{v.Team1}, principal.Permissions{

@@ -52757,12 +52757,15 @@ type MailLanguage string
 
 // MarginceChangeBundle Every open change Margince made to one deal. Its Undo takes them all back.
 type MarginceChangeBundle struct {
-	// AuditLogIds The changes, newest first.
+	// AuditLogIds The changes the list shows for this deal, newest first.
 	AuditLogIds []openapi_types.UUID        `json:"audit_log_ids"`
 	DealId      openapi_types.UUID          `json:"deal_id"`
 	DealName    string                      `json:"deal_name"`
 	Kinds       []MarginceChangeBundleKinds `json:"kinds"`
 	LatestAt    time.Time                   `json:"latest_at"`
+
+	// UndoableAuditLogIds The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses.
+	UndoableAuditLogIds *[]openapi_types.UUID `json:"undoable_audit_log_ids,omitempty"`
 
 	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
 	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
@@ -52789,7 +52792,7 @@ type MarginceChangeSummary struct {
 	// Closed Deals Margince closed as lost.
 	Closed int `json:"closed"`
 
-	// Deals Deals with at least one open change.
+	// Deals Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history.
 	Deals int `json:"deals"`
 
 	// Moved Deals Margince moved to a later stage.
@@ -52812,6 +52815,9 @@ type MarginceChangeSummary struct {
 
 	// Truncated True when more bundles exist than were returned. The counts are never cut.
 	Truncated bool `json:"truncated"`
+
+	// UndoableDeals Deals among `deals` with at least one change Undo can still take back. Absent on older responses.
+	UndoableDeals *int `json:"undoable_deals,omitempty"`
 }
 
 // MeResponse defines model for MeResponse.

@@ -57419,8 +57419,10 @@ export interface components {
         MarginceChangeSummary: {
             /** Format: date-time */
             as_of: string;
-            /** @description Deals with at least one open change. */
+            /** @description Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history. */
             deals: number;
+            /** @description Deals among `deals` with at least one change Undo can still take back. Absent on older responses. */
+            undoable_deals?: number;
             /** @description Deals Margince closed as lost. */
             closed: number;
             /** @description Deals given a new close date. */
@@ -57452,8 +57454,10 @@ export interface components {
              * @description The deal's version as read, for the first undo of the bundle.
              */
             version: number;
-            /** @description The changes, newest first. */
+            /** @description The changes the list shows for this deal, newest first. */
             audit_log_ids: string[];
+            /** @description The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses. */
+            undoable_audit_log_ids?: string[];
             kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move" | "deal_open" | "deal_revive")[];
             /**
              * Format: int64

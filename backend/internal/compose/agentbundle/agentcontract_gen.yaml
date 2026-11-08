@@ -53749,7 +53749,13 @@ components:
       required: [as_of, deals, closed, redated, revalued, probabilities, moved, opened, revived, base_currency, bundles, truncated]
       properties:
         as_of: {type: string, format: date-time}
-        deals: {type: integer, description: Deals with at least one open change.}
+        deals:
+          type: integer
+          description: >-
+            Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history.
+        undoable_deals:
+          type: integer
+          description: Deals among `deals` with at least one change Undo can still take back. Absent on older responses.
         closed: {type: integer, description: Deals Margince closed as lost.}
         redated: {type: integer, description: Deals given a new close date.}
         revalued: {type: integer, description: Deals given a new amount.}
@@ -53777,7 +53783,12 @@ components:
         audit_log_ids:
           type: array
           items: {type: string, format: uuid}
-          description: The changes, newest first.
+          description: The changes the list shows for this deal, newest first.
+        undoable_audit_log_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: >-
+            The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses.
         kinds:
           type: array
           items: {type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move, deal_open, deal_revive]}
