@@ -28,7 +28,8 @@ func TestAPlanFootprintHoldsReferencesAndFieldNamesButNoValue(t *testing.T) {
 	rows := []crmcontracts.ApprovalPreviewImportRow{{Object: "lead", Changes: []crmcontracts.ApprovalPreviewChange{
 		{Field: "phone", After: crmcontracts.ApprovalPreviewValue{Kind: previewValueText, Text: "+49 30 999"}},
 	}}}
-	preview := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Details: &details, ImportRows: &rows,
+	preview := &crmcontracts.ApprovalPreview{
+		Version: 1, State: previewReadyState, Details: &details, ImportRows: &rows,
 		Changes: []crmcontracts.ApprovalPreviewChange{{
 			Field:  "company_id",
 			Before: crmcontracts.ApprovalPreviewValue{Kind: previewValueText, Text: "Old Secret Ltd"},

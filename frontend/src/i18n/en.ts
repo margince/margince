@@ -1564,7 +1564,8 @@ export const en = {
   "reporting.cohortOutcome.regressed": "Moved back",
   "reporting.cohortOutcome.left_pipeline": "Other pipeline",
   "reporting.cohortOutcome.unresolved": "Still open",
-  "reporting.cohortOutcome.history_partial": "Next move imported, synced or unknown",
+  "reporting.cohortOutcome.history_partial":
+    "Next move imported, synced or unknown",
   "reporting.cohortOutcome.accepted": "Handoff accepted",
   "reporting.cohortOutcome.qualified": "Qualified",
   "reporting.cohortOutcome.disqualified": "Disqualified",
