@@ -13,7 +13,7 @@ import {
 } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { middayInstant } from "../../format/calendarday";
+import { calendarDay, middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { formatDayRange } from "../../format/format.dates";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -437,5 +437,5 @@ function HelpExchange({
 function weekDays(start: string, locale: Locale, zone: string): string {
   const end = new Date(`${start}T12:00:00Z`);
   end.setUTCDate(end.getUTCDate() + 6);
-  return formatDayRange(start, end.toISOString().slice(0, 10), locale, zone);
+  return formatDayRange(start, calendarDay(end, "UTC"), locale, zone);
 }
