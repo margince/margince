@@ -2170,8 +2170,7 @@ export const en = {
   "brief.plan.period": "Current plan · week of {date}",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.changes.superseded":
-    "This deal changed again. Open the deal to review its current state.",
+  "brief.changes.superseded": "Changed since this update",
   "brief.changes.undone": "Undone",
   "brief.updates.title": "Updates",
   "brief.task.undated": "No due date",
@@ -2612,6 +2611,7 @@ export const en = {
   "history.field.first_name": "First name",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
+  "history.field.stage_id": "Stage",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -6569,9 +6569,6 @@ export const en = {
   "brief.weekly.learnings.experiment": "Experiment",
   // Two empty states, never one: a week nobody read and a week that held no
   // lesson are different facts, and only one of them is about the week.
-  "brief.weekly.learnings.notRun": "This week has not been analyzed yet.",
-  "brief.weekly.learnings.insufficient":
-    "Not enough recorded evidence for useful observations.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
@@ -6612,7 +6609,7 @@ export const en = {
     "Affected by an erasure · counts are minimums",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
-  "plan.title": "Plan for week {week}",
+  "plan.title": "Plan · {dates}",
   "plan.titleThisWeek": "Plan for this week",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Home view",
@@ -6623,7 +6620,7 @@ export const en = {
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
-  "brief.first.title": "Your tasks",
+  "brief.first.title": "Needs you",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
   "brief.intro.urgent": "Urgent",
@@ -6747,8 +6744,9 @@ export const en = {
   "brief.report.chapter.forecast": "Forecast",
   "brief.report.chapter.closed": "Closed deals",
   "brief.report.chapter.movement": "Pipeline movement",
-  "brief.report.chapter.commitments": "The week ahead",
   "brief.report.chapter.figures": "Figures",
+  "brief.report.breakdown": "Scorecard and all figures",
+  "brief.report.howCounted": "How this is counted",
   "brief.report.chapter.observations": "What the week taught",
   "brief.report.closedTotal": "Won {won} · Lost {lost}",
   "brief.report.weeks": "Weeks",
@@ -6801,7 +6799,8 @@ export const en = {
   "brief.glance.nightAnon": "Working late",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.suggestions.review": "Review deal suggestions",
-  "brief.suggestions.empty": "No deal suggestions in this brief.",
+  "brief.suggestions.reviewCount_one": "Review {count} deal suggestion",
+  "brief.suggestions.reviewCount_other": "Review {count} deal suggestions",
   "brief.suggestions.notAnnotated":
     "Ranked for today. The overnight review has not written an assessment for these deals yet.",
   "brief.suggestions.noAssessment":
@@ -6853,7 +6852,7 @@ export const en = {
   // company's rather than this reader's, whose deals they are.
   "brief.snooze.done": "Snoozed until {at}",
   "brief.snooze.undo": "Undo",
-  "brief.readings.meetings": "Upcoming meetings",
+  "brief.readings.meetings": "Meetings today",
   "brief.readings.meetingsBasis": "Remaining on today’s calendar",
   "brief.readings.needsPrep_one": "1 needs prep",
   "brief.readings.needsPrep_other": "{count} need prep",
@@ -6865,8 +6864,8 @@ export const en = {
   "brief.readings.calendarUnreadable": "Not syncing",
   "brief.readings.calendarUnreadableWhy":
     "Reconnect your calendar to count meetings.",
-  "brief.readings.nextMeeting": "Next: {date} · {subject}",
-  "brief.readings.nextMeetingUntitled": "Next: {date}",
+  "brief.readings.nextMeeting": "Next meeting: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Next meeting: {date}",
   "brief.readings.leads": "Prospecting",
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
@@ -9068,7 +9067,7 @@ export const en = {
   // panel opened on a broken installation said "error" at a reader in the
   // product's voice. The sentence beside these says what is HAPPENING; these
   // say what the agent is. One word each, because they sit beside a dot.
-  "agent.state.idle": "Idle",
+  "agent.state.idle": "Agent idle",
   "agent.state.ingest": "Capturing",
   "agent.state.working": "Working",
   "agent.state.warning": "Warning",
@@ -9134,10 +9133,6 @@ export const en = {
   // The four things the agent says once it has run out of news. None claims the
   // agent did anything: they are standing facts about the product, which is
   // what lets them be written here rather than read from the installation.
-  "agent.tip.day": "Tasks, approvals and duplicates are on {name}.",
-  "agent.tip.ask": "Ask the agent with {chord}.",
-  "agent.tip.recap": "Open the agent panel for today’s activity.",
-  "agent.tip.edge": "The screen edge lights up while the agent works.",
   // What the line under the orb names while this tab reads or writes, keyed
   // from `agentrail-copy.ts`. A named variant puts the record's name in.
   "agent.ticker.read.activities": "Loading activities",
@@ -12878,7 +12873,8 @@ export const en = {
   "deal360.rewrite": "Regenerate",
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
-  "deal360.createTask": "Add task",
+  "deal360.createTask": "Create follow-up",
+  "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "deal360.unreadable":
     "This brief did not load. Reload the page, or regenerate it.",
@@ -18662,6 +18658,7 @@ export const en = {
   "worklist.emptyPage": "Nothing in this batch yet. More loads as you scroll.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
+  "worklist.clearOfUrgent": "No urgent work.",
   "worklist.clearOfTasksToday":
     "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
   "worklist.clearOfWhatWasRead": "No items in the sources that loaded.",
@@ -18712,7 +18709,6 @@ export const en = {
   "worklist.pane.deal": "Deal",
   "worklist.why.title": "Why this needs attention",
   "worklist.why.reasons": "Reasons",
-  "worklist.why.consequence": "If nothing is done",
   "worklist.why.detail": "Detail",
   "worklist.ask.approval":
     "An agent proposed a change and is waiting for a decision. Approve it or turn it down.",
@@ -18771,23 +18767,6 @@ export const en = {
     "Nothing was sent after this meeting. Send the attendees a follow-up.",
   "worklist.ask.batch":
     "Several routine decisions that read alike are grouped here. Review them together.",
-  "worklist.consequence.buyer_waits": "They keep waiting.",
-  "worklist.consequence.buyer_waits.named": "{name} keeps waiting.",
-  "worklist.consequence.promise_breaks": "A commitment is broken.",
-  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
-  "worklist.consequence.deal_slips_past_close":
-    "The deal slips past its close date.",
-  "worklist.consequence.meeting_unprepared":
-    "The meeting starts before you said you are ready.",
-  "worklist.consequence.task_slips": "The task slips past its due date.",
-  "worklist.consequence.work_blocked": "Work that waits on this stays blocked.",
-  "worklist.consequence.customer_never_received":
-    "The customer never gets the message.",
-  "worklist.consequence.you_believe_it_happened":
-    "An approved action stays undone while it looks done.",
-  "worklist.consequence.legal_deadline_missed": "A legal deadline is missed.",
-  "worklist.consequence.mailbox_blind": "Mail stops being captured.",
-  "worklist.consequence.data_drifts": "Records go out of date.",
   "worklist.band.now": "Now",
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",
@@ -19158,8 +19137,8 @@ export const en = {
   "worklist.because.below_material.value":
     "{value}, not above typical at-risk deal value",
   "worklist.because.quiet_days": "gone quiet",
-  "worklist.because.quiet_days.value_one": "quiet for {value} day",
-  "worklist.because.quiet_days.value_other": "quiet for {value} days",
+  "worklist.because.quiet_days.value_one": "no activity for {value} day",
+  "worklist.because.quiet_days.value_other": "no activity for {value} days",
   "worklist.because.no_next_step": "no next step recorded",
   "worklist.because.no_champion": "no champion",
   "worklist.because.champion_unknown": "champion unknown",
@@ -19214,7 +19193,7 @@ export const en = {
   "worklist.verdict.blocked": "Blocked",
   "worklist.verdict.cold": "Cold",
   "worklist.verdict.believes": "Earlier assessment",
-  "worklist.verdict.asOf": "As of {when}",
+  "worklist.verdict.earlierOn": "Earlier assessment · {date}",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
@@ -19291,22 +19270,23 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
+  "worklist.verb.meetingHowDidItGo": "How did it go?",
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
   "worklist.verb.meetingWhatHappened": "Meeting notes",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
-  "worklist.verb.meetingHeld": "Held",
+  "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "No-show",
-  "worklist.verb.meetingCanceled": "Mark as canceled",
+  "worklist.verb.meetingCanceled": "Did not happen",
   "worklist.verb.meetingOutcomeRecorded": "Meeting outcome recorded",
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
   "worklist.verb.meetingAddNotesFor": "Add notes to {subject}",
-  "worklist.verb.meetingHeldFor": "Held: {subject}",
-  "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
+  "worklist.verb.meetingHeldFor": "It happened: {subject}",
+  "worklist.verb.meetingCanceledFor": "Did not happen: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "The calendar invitation keeps this meeting. Cancel it through the invitation.",
   "worklist.verb.meetingCalendarManaged":
@@ -19860,6 +19840,10 @@ export const en = {
   "magic.aboutCountAtLeast_one": "at least {count} record",
   "magic.aboutCountAtLeast_other": "at least {count} records",
   "magic.aboutNamedAtLeast": "{label}, and possibly others",
+  "magic.viewChanges_one": "View {count} change",
+  "magic.viewChanges_other": "View {count} changes",
+  "magic.viewChangesAtLeast_one": "View at least {count} change",
+  "magic.viewChangesAtLeast_other": "View at least {count} changes",
   "magic.action.mail_filed": "Filed captured email under this contact",
   "magic.action.company_profile_read": "Read the company’s technical profile",
   "magic.action.fields_changed": "Changed {fields}",
@@ -19923,6 +19907,7 @@ export const en = {
   "magic.records.empty": "None of these records is in view any more.",
   "magic.records.more": "Show more",
   "magic.records.fromTo": "{from} → {to}",
+  "magic.records.hidden_value": "hidden",
   "magic.records.empty_value": "empty",
   "magic.records.count_one": "{count} record",
   "magic.records.count_other": "{count} records",
@@ -19932,7 +19917,6 @@ export const en = {
     "This installation has not checked whether this can be put back.",
   "magic.notShown_one": "{count} change is not shown: {reason}",
   "magic.notShown_other": "{count} changes are not shown: {reason}",
-  "magic.notShown.unadmittedAction": "housekeeping with nothing to tell you",
   "magic.notShown.unknownEntityType": "a record type this page cannot place",
   "magic.notShown.outOfScope": "outside your own records",
   "magic.visibleScope": "Only changes visible to you are shown.",
@@ -21212,13 +21196,17 @@ export const en = {
   "changes.undoDeals_other": "Undo changes on {count} deals",
   "brief.done.undoChanges_one": "Undo {count} change",
   "brief.done.undoChanges_other": "Undo {count} changes",
+  "brief.done.viewChanges_one": "View {count} change",
+  "brief.done.viewChanges_other": "View {count} changes",
+  "brief.done.showNew": "Show new changes",
   "brief.done.history": "View change history",
   "brief.done.dealsLabel": "Deals Margince changed",
-  "brief.done.noReason": "Margince recorded no reason you can read.",
+  "brief.done.noReason": "Reason unavailable",
+  "brief.done.markedLost": "Marked lost",
   "brief.done.customerWrote": "The customer wrote:",
   "brief.changes.markReviewed": "Mark reviewed",
   "brief.changes.reviewed": "Reviewed",
-  "magic.lane.doneOther": "Other finished work",
+  "magic.lane.doneOther": "Other updates",
   "changes.bulk.undone_one": "Undone on {count} deal.",
   "changes.bulk.undone_other": "Undone on {count} deals.",
   "changes.bulk.partly_one": "{count} deal was partly undone.",
@@ -21231,7 +21219,9 @@ export const en = {
     "{count} deals need your confirmation. Undo each on its own row.",
   "changes.bulk.unsent_one": "{count} deal was not sent.",
   "changes.bulk.unsent_other": "{count} deals were not sent.",
+  "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
+  "changes.bulk.unfinished": "Deals not fully undone",
 } as const;
 
 export type MessageKey = keyof typeof en;

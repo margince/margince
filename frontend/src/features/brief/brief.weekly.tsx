@@ -3,8 +3,6 @@
 
 import {
   Activity,
-  ArrowRight,
-  ChartColumn,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -14,19 +12,15 @@ import {
   TrendingUp,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { AppLink } from "../../design-system/applink";
-import { Badge, Button, Card } from "../../design-system/atoms";
-import { PanelBody, PanelRow } from "../../design-system/panel";
+import { Badge, Button, Card, Disclosure } from "../../design-system/atoms";
+import { Panel, PanelBody } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate, formatMoney, formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
-import { useCompanyZone } from "../../lib/companyzone";
-import { routeHash } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { weeklyNumericStatus } from "./brief.numeric";
 import {
@@ -37,7 +31,13 @@ import {
 import { ReportCard } from "./brief.reportcard";
 import { OutlookPanel } from "./brief.waterfall";
 import { ActivityTotal, WeekActivity } from "./brief.weekly.activity";
-import { FiguresTable } from "./brief.weekly.figures";
+import {
+  ClosedDeals,
+  ClosedTotal,
+  MovedCount,
+  MovedDeals,
+} from "./brief.weekly.deals";
+import { FiguresTable, HeadlineFigures } from "./brief.weekly.figures";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
@@ -55,17 +55,31 @@ import "./brief.weekly.css";
 export function WeeklySection({
   plan,
 }: Readonly<{
-  /** The week ahead's plan, a section of the report. */
+  /** The plan for the week now running, drawn after the report. */
   plan?: ReactNode;
 }>) {
+  const t = useT();
   const [params] = useUrlParams();
   const review = useWeeklyReview(params.get("week") ?? undefined);
+  const newest = useWeeklyReviewIndex().data?.[0];
   const data = review.data ?? null;
+  // The report is what was written when its week closed. The plan is live and
+  // belongs to the week now running, so it stands outside the report. Over an
+  // earlier week it waits behind its own opener.
+  const pastWeek = params.has("week") && params.get("week") !== newest;
   return (
-    <article id="brief-weekly" className="brief-report">
-      {data && <WeeklyNarrative review={data} />}
-      <WeeklyBody review={data} state={readState(review)} plan={plan} />
-    </article>
+    <>
+      <article id="brief-weekly" className="brief-report">
+        {data && <WeeklyNarrative review={data} />}
+        <WeeklyBody review={data} state={readState(review)} />
+      </article>
+      {plan &&
+        (pastWeek ? (
+          <Disclosure summary={t("plan.titleThisWeek")}>{plan}</Disclosure>
+        ) : (
+          plan
+        ))}
+    </>
   );
 }
 
@@ -145,11 +159,9 @@ function readState(
 function WeeklyBody({
   review,
   state,
-  plan,
 }: Readonly<{
   review: WeeklyReview | null;
   state: SectionState;
-  plan?: ReactNode;
 }>) {
   const t = useT();
   if (state !== "ready" || review === null) {
@@ -165,9 +177,17 @@ function WeeklyBody({
       </SurfaceState>
     );
   }
+  const numeric = weeklyNumericStatus(
+    review.numeric_summary,
+    review.leads_withheld,
+  );
   return (
     <>
-      {reportSections(review, plan).map((section) =>
+      {/* The week's outcomes once, at the head of the report. */}
+      <Panel className="brief-report-summary">
+        <HeadlineFigures review={review} figures={numeric.figures} />
+      </Panel>
+      {reportSections(review).map((section) =>
         section.icon ? (
           <ReportCard
             key={section.key}
@@ -201,10 +221,7 @@ type Section = Readonly<{
  * happened, the full record, what it taught, then the week ahead. A section
  * with nothing in it is left out.
  */
-function reportSections(
-  review: WeeklyReview,
-  plan: ReactNode | undefined,
-): readonly Section[] {
+function reportSections(review: WeeklyReview): readonly Section[] {
   const numeric = weeklyNumericStatus(
     review.numeric_summary,
     review.leads_withheld,
@@ -242,30 +259,12 @@ function reportSections(
           } satisfies Section,
         ]
       : []),
-    ...optional(plan, {
-      key: "commitments",
-      title: "brief.report.chapter.commitments",
-      body: plan,
-    }),
-    ...optional(learnings, {
+    ...optional(learnings?.items.length, {
       key: "observations",
       icon: Sparkles,
       title: "brief.report.chapter.observations",
-      // Only a lesson the model wrote carries its mark; an empty week is ours.
-      aside: learnings?.items.length ? <AiTag /> : undefined,
+      aside: <AiTag />,
       body: <LearningsPanel learnings={learnings} />,
-    }),
-    ...optional(scorecardRows(review), {
-      key: "scorecard",
-      icon: ChartColumn,
-      title: "brief.weekly.scorecard.title",
-      body: (
-        <ScorecardPanel
-          scorecard={review.scorecard}
-          weekStart={review.local_week_start}
-          meetingsWithheld={review.meetings_withheld}
-        />
-      ),
     }),
     {
       key: "forecast",
@@ -284,12 +283,7 @@ function reportSections(
       footer: (
         <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
       ),
-      body: (
-        <>
-          <FiguresTable review={review} figures={numeric.figures} />
-          <WeeklyWorkings counts={review.counts} figures={numeric.figures} />
-        </>
-      ),
+      body: <FiguresBreakdown review={review} figures={numeric.figures} />,
     },
   ];
 }
@@ -306,145 +300,6 @@ function scorecardRows(review: WeeklyReview): boolean {
   return Boolean(card && (card.lead || card.deal));
 }
 
-/** How many deals moved stage, at the end of the section's label. */
-function MovedCount({ count }: Readonly<{ count: number }>) {
-  const plural = usePlural();
-  const { locale } = useLocale();
-  return (
-    <Badge dot>
-      {plural("brief.report.movedCount", count, {
-        count: formatNumber(count, locale),
-      })}
-    </Badge>
-  );
-}
-
-type Deal = WeeklyReview["deals"][number];
-
-/** The deal's name, linked. The label was frozen with the review, so a deal
- *  renamed since still reads as it did that week. */
-function DealName({ deal }: Readonly<{ deal: Deal }>) {
-  return (
-    <AppLink
-      className="brief-weekly-deal-name link-button"
-      href={routeHash({ screen: "deals", id: deal.deal_id })}
-    >
-      {deal.label}
-    </AppLink>
-  );
-}
-
-/** What the week won and lost, at the end of the section's label. */
-function ClosedTotal({ review }: Readonly<{ review: WeeklyReview }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const pipeline = review.pipeline;
-  if (!pipeline) return null;
-  return (
-    // Green only for a week with no loss; a mixed result reads neutral.
-    <Badge tone={pipeline.lost_minor === 0 ? "success" : undefined} dot>
-      {t("brief.report.closedTotal", {
-        won: formatMoney(pipeline.won_minor, pipeline.currency, locale),
-        lost: formatMoney(pipeline.lost_minor, pipeline.currency, locale),
-      })}
-    </Badge>
-  );
-}
-
-/** The deals the week won and lost: the split of their worth, then a line
- *  each with its outcome and what it closed at. */
-function ClosedDeals({
-  review,
-  deals,
-}: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useCompanyZone();
-  const pipeline = review.pipeline;
-  const total = pipeline ? pipeline.won_minor + pipeline.lost_minor : 0;
-  return (
-    <>
-      {/* The share won against lost, which the total beside the label states
-          in words, so a screen reader is not read it twice. */}
-      {pipeline && total > 0 && (
-        <PanelBody>
-          <div className="brief-report-split" aria-hidden="true">
-            <span
-              className="brief-report-split-won"
-              style={{ flexGrow: pipeline.won_minor }}
-            />
-            <span
-              className="brief-report-split-lost"
-              style={{ flexGrow: pipeline.lost_minor }}
-            />
-          </div>
-        </PanelBody>
-      )}
-      {deals.map((deal) => (
-        <PanelRow key={`${deal.deal_id}-${deal.occurred_at}`}>
-          <div className="brief-report-deal">
-            <span className="brief-report-deal-what">
-              <DealName deal={deal} />
-              <time className="t-caption" dateTime={deal.occurred_at}>
-                {formatDate(deal.occurred_at, locale, recordZone)}
-              </time>
-            </span>
-            <span className="brief-report-keep">
-              <Badge tone={deal.outcome === "won" ? "success" : "warning"} dot>
-                {deal.outcome === "won"
-                  ? t("brief.weekly.outcome.won")
-                  : t("brief.weekly.outcome.lost")}
-              </Badge>
-            </span>
-            <span
-              className="brief-report-deal-amount t-num"
-              data-outcome={deal.outcome}
-            >
-              {deal.amount_minor_at_close != null && deal.currency_at_close
-                ? formatMoney(
-                    deal.amount_minor_at_close,
-                    deal.currency_at_close,
-                    locale,
-                  )
-                : "—"}
-            </span>
-          </div>
-        </PanelRow>
-      ))}
-    </>
-  );
-}
-
-/** The deals that changed stage without closing, and the stage each reached. */
-function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useCompanyZone();
-  return (
-    <>
-      {deals.map((deal) => (
-        <PanelRow key={`${deal.deal_id}-${deal.occurred_at}`}>
-          <div className="brief-report-deal">
-            <span className="brief-report-deal-what">
-              <DealName deal={deal} />
-              {deal.to_stage_label && (
-                <span className="brief-report-stage">
-                  {t("brief.weekly.outcome.moved")}
-                  <ArrowRight aria-hidden="true" size={14} />
-                  <Badge>{deal.to_stage_label}</Badge>
-                </span>
-              )}
-            </span>
-            <time className="t-caption" dateTime={deal.occurred_at}>
-              {formatDate(deal.occurred_at, locale, recordZone)}
-            </time>
-          </div>
-        </PanelRow>
-      ))}
-    </>
-  );
-}
-
 /** Where the week was landing, frozen with the review. */
 function Forecast({ review }: Readonly<{ review: WeeklyReview }>) {
   const { locale } = useLocale();
@@ -457,16 +312,57 @@ function Forecast({ review }: Readonly<{ review: WeeklyReview }>) {
   );
 }
 
-/** What the figures rest on, once, under them. */
+/**
+ * The scorecard, every figure beside the week before, and the workings, in one
+ * breakdown the reader opens. The headline above already says how the week
+ * went.
+ */
+function FiguresBreakdown({
+  review,
+  figures,
+}: Readonly<{
+  review: WeeklyReview;
+  figures: ReturnType<typeof weeklyNumericStatus>["figures"];
+}>) {
+  const t = useT();
+  return (
+    <PanelBody>
+      <Disclosure summary={t("brief.report.breakdown")}>
+        {scorecardRows(review) && (
+          <ScorecardPanel
+            scorecard={review.scorecard}
+            weekStart={review.local_week_start}
+            meetingsWithheld={review.meetings_withheld}
+          />
+        )}
+        <FiguresTable review={review} figures={figures} />
+        <WeeklyWorkings counts={review.counts} figures={figures} />
+      </Disclosure>
+    </PanelBody>
+  );
+}
+
+/**
+ * What the figures rest on, behind its own opener. A partial read stays in
+ * view: it changes how far the figures can be trusted.
+ */
 function FiguresFootnote({
   partial,
   basis,
 }: Readonly<{ partial: boolean; basis: MessageKey }>) {
   const t = useT();
   return (
-    <p className="t-caption brief-report-footnote">
-      {t("brief.weekly.basis")} {t(basis)}
-      {partial && <> {t("brief.weekly.numericPartial")}</>}
-    </p>
+    <>
+      {partial && (
+        <p className="t-caption brief-report-footnote">
+          {t("brief.weekly.numericPartial")}
+        </p>
+      )}
+      <Disclosure summary={t("brief.report.howCounted")}>
+        <p className="t-caption brief-report-footnote">
+          {t("brief.weekly.basis")} {t(basis)}
+        </p>
+      </Disclosure>
+    </>
   );
 }

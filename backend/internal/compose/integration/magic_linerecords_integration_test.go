@@ -28,13 +28,13 @@ import (
 // update that set its next step — one job's work over many records.
 func seedEnrichedDeals(t *testing.T, e *Env, owner ids.UUID, n int) {
 	t.Helper()
-	seedDealUpdates(t, e, owner, n, `{"next_step": "Call the buyer"}`)
+	seedDealUpdates(t, e, owner, n, `{"description": "Call the buyer"}`)
 }
 
 // seedDealUpdates is seedEnrichedDeals with the update's after-image named.
 func seedDealUpdates(t *testing.T, e *Env, owner ids.UUID, n int, after string) {
 	t.Helper()
-	seedDealActions(t, e, owner, n, "update", `{"next_step": null}`, after)
+	seedDealActions(t, e, owner, n, "update", `{"description": null}`, after)
 }
 
 // seedDealActions writes `n` deals the rep owns, each with one machine action
@@ -107,8 +107,8 @@ func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) 
 		t.Fatalf("opened %d records, want the 3 the line counted", len(opened.Data))
 	}
 	for _, rec := range opened.Data {
-		if len(rec.Changes) != 1 || rec.Changes[0].Field != "next_step" || rec.Changes[0].After != "Call the buyer" {
-			t.Errorf("changes %+v, want next_step from empty to the new value", rec.Changes)
+		if len(rec.Changes) != 1 || rec.Changes[0].Field != "description" || rec.Changes[0].After != "Call the buyer" {
+			t.Errorf("changes %+v, want description from empty to the new value", rec.Changes)
 		}
 		if !rec.Undo.Undoable || rec.Undo.Version == nil {
 			t.Errorf("undo %+v, want an undoable change carrying the record's version for If-Match", rec.Undo)
@@ -136,7 +136,7 @@ func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) 
 // other action still shows its images, and so does its record.
 func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
 	e := Setup(t)
-	seedDealActions(t, e, e.Rep1, 1, "advance_stage", `{"next_step": "Qualify"}`, `{"next_step": "Propose"}`)
+	seedDealActions(t, e, e.Rep1, 1, "advance_stage", `{"description": "Qualify"}`, `{"description": "Propose"}`)
 	// Both instants from the database's clock, which dated the entry.
 	micros, err := strconv.ParseInt(e.WsScalar(t, `SELECT (extract(epoch FROM now()) * 1e6)::bigint::text`), 10, 64)
 	if err != nil {
@@ -155,9 +155,9 @@ func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
 		t.Fatalf("done = %+v, want the one stage move", receipt.Done)
 	}
 	line := receipt.Done[0]
-	if line.Before == nil || (*line.Before)["next_step"] != "Qualify" ||
-		line.After == nil || (*line.After)["next_step"] != "Propose" {
-		t.Errorf("line images before=%v after=%v, want next_step from Qualify to Propose", line.Before, line.After)
+	if line.Before == nil || (*line.Before)["description"] != "Qualify" ||
+		line.After == nil || (*line.After)["description"] != "Propose" {
+		t.Errorf("line images before=%v after=%v, want description from Qualify to Propose", line.Before, line.After)
 	}
 
 	opened, err := svc.LineRecords(ctx, ids.UUID(line.Id), since, nil, 0)
@@ -167,9 +167,9 @@ func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
 	if len(opened.Data) != 1 {
 		t.Fatalf("opened %d records, want 1", len(opened.Data))
 	}
-	if changes := opened.Data[0].Changes; len(changes) != 1 || changes[0].Field != "next_step" ||
+	if changes := opened.Data[0].Changes; len(changes) != 1 || changes[0].Field != "description" ||
 		changes[0].Before != "Qualify" || changes[0].After != "Propose" {
-		t.Errorf("changes %+v, want next_step from Qualify to Propose", changes)
+		t.Errorf("changes %+v, want description from Qualify to Propose", changes)
 	}
 }
 
@@ -199,7 +199,7 @@ func TestAnOpenedLineWithholdsWhatTheReadersRoleMasks(t *testing.T) {
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedDealUpdates(t, e, e.Rep1, 1,
-		`{"next_step": "Call the buyer", "amount_minor": 500000, "currency": "EUR"}`)
+		`{"description": "Call the buyer", "amount_minor": 500000, "currency": "EUR"}`)
 	masked := RepPerms
 	masked.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "amount_minor"}}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, masked)
@@ -218,7 +218,7 @@ func TestAnOpenedLineWithholdsWhatTheReadersRoleMasks(t *testing.T) {
 		}
 	}
 	if len(opened.Data[0].Changes) != 1 {
-		t.Errorf("changes %+v, want only next_step", opened.Data[0].Changes)
+		t.Errorf("changes %+v, want only description", opened.Data[0].Changes)
 	}
 }
 

@@ -94,6 +94,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // Apart from both maps above, because no `Update<Type>Request` names these and
 // no hand-built image writes them, so each census would call them orphans.
 const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
+  ["stage_id", "history.field.stage_id"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);

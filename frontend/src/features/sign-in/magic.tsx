@@ -51,12 +51,19 @@ const LANE_HEADING: Readonly<Record<MagicLane, MessageKey>> = {
   watching: "magic.lane.watching",
 };
 
-const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
-  {
-    unadmitted_action: "magic.notShown.unadmittedAction",
-    unknown_entity_type: "magic.notShown.unknownEntityType",
-    out_of_scope: "magic.notShown.outOfScope",
-  };
+// Housekeeping is left out without a count: it tells the reader nothing.
+type ToldNotShown = MagicNotShown & {
+  reason: Exclude<MagicNotShown["reason"], "unadmitted_action">;
+};
+
+const NOT_SHOWN_REASON: Readonly<Record<ToldNotShown["reason"], MessageKey>> = {
+  unknown_entity_type: "magic.notShown.unknownEntityType",
+  out_of_scope: "magic.notShown.outOfScope",
+};
+
+function told(entry: MagicNotShown): entry is ToldNotShown {
+  return entry.reason !== "unadmitted_action";
+}
 
 /**
  * The lanes in `lanes`, in reading order. Home draws the waiting lanes here and
@@ -123,7 +130,7 @@ export function MagicPanel({
   if (read === "empty") {
     return null;
   }
-  const notShown = drawsWaiting ? rowsOf(shown?.not_shown) : [];
+  const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
   const body = (
     <>
       <PanelBody>
@@ -265,9 +272,7 @@ function WithheldSources({
  * Said rather than dropped, because a page showing five lines that never
  * mentions the sixth is a completeness claim nobody made.
  */
-function NotShown({
-  entries,
-}: Readonly<{ entries: readonly MagicNotShown[] }>) {
+function NotShown({ entries }: Readonly<{ entries: readonly ToldNotShown[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();

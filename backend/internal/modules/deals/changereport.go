@@ -28,10 +28,13 @@ type ChangeBundle struct {
 	DealID   ids.DealID
 	DealName string
 	Version  int64
-	// AuditLogIDs name the changes, newest first: the order an Undo takes
-	// them back in.
-	AuditLogIDs []ids.UUID
-	Kinds       []string
+	// AuditLogIDs name the changes the list shows, newest first: the order an
+	// Undo takes them back in. UndoableAuditLogIDs is the part of them Undo
+	// can still take back; the rest were edited since and stay listed for
+	// blockedChangeWindow.
+	AuditLogIDs         []ids.UUID
+	UndoableAuditLogIDs []ids.UUID
+	Kinds               []string
 	// ValueBaseMinor is the deal's value in the base currency; nil when the
 	// deal has no amount or no rate.
 	ValueBaseMinor *int64
@@ -41,13 +44,20 @@ type ChangeBundle struct {
 // ChangeSummary counts the owner's changed deals by kind. A deal with two
 // kinds counts once in Deals and once under each kind.
 type ChangeSummary struct {
-	Deals, Closed, Redated, Revalued, Probabilities, Moved, Opened, Revived int
-	BaseCurrency                                                            string
+	// Deals counts the deals the list shows; UndoableDeals those with at
+	// least one change Undo can still take back.
+	Deals, UndoableDeals                                             int
+	Closed, Redated, Revalued, Probabilities, Moved, Opened, Revived int
+	BaseCurrency                                                     string
 	// Bundles is ordered by value, the largest first. Truncated says
 	// bundleCap cut it; the counts above are never cut.
 	Bundles   []ChangeBundle
 	Truncated bool
 }
+
+// blockedChangeWindow is how long a change edited since stays on the list
+// it can no longer be undone from. After it, the deal's history keeps it.
+const blockedChangeWindow = 14 * 24 * time.Hour
 
 // bundleCap bounds the rows of one summary. The counts come from SQL over
 // every changed deal, so a cut list still reports the true total.
@@ -83,7 +93,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		heldPos, ownerPos, basePos, capPos := arg(heldCorrections), arg(actor.UserID), arg(base), arg(bundleCap+1)
-		sincePos := arg(since)
+		sincePos, stagePos, blockedFromPos := arg(since), arg(stageCorrectionKinds), arg(s.clock().Add(-blockedChangeWindow))
 		counts := kindCountColumns(arg, CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection,
 			VerdictProbabilityCorrection, VerdictStageMoveCorrection, DealOpenCorrection, DealReviveCorrection)
 		scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
@@ -100,37 +110,37 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			return err
 		}
 		query := storekit.SQLf(`
-			WITH bundle AS (
-			  SELECT c.deal_id,
-			         array_agg(c.audit_log_id ORDER BY c.applied_at DESC, c.audit_log_id DESC) AS audits,
-			         array_agg(DISTINCT c.correction) AS kinds,
-			         max(c.applied_at) AS latest
+			WITH waiting AS (
+			  SELECT c.deal_id, c.audit_log_id, c.correction, c.applied_at,
+			         (%s AND %s) AS undoable
 			    FROM deal_correction c
 			    JOIN deal d ON d.id = c.deal_id
+			    JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
 			   WHERE c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL
 			     AND ($%d::timestamptz IS NULL OR c.applied_at >= $%d)
-			     AND d.owner_id = $%d AND d.archived_at IS NULL%s
-			   GROUP BY c.deal_id)
-			SELECT b.deal_id, d.name, d.version, b.audits, b.kinds, b.latest, %s,
-			       count(*) OVER ()%s
+			     AND d.owner_id = $%d AND d.archived_at IS NULL%s),
+			bundle AS (
+			  SELECT w.deal_id,
+			         array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) AS audits,
+			         coalesce(array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) FILTER (WHERE w.undoable), '{}') AS undoable,
+			         array_agg(DISTINCT w.correction) AS kinds,
+			         max(w.applied_at) AS latest
+			    FROM waiting w
+			   WHERE w.undoable OR w.applied_at >= $%d
+			   GROUP BY w.deal_id)
+			SELECT b.deal_id, d.name, d.version, b.audits, b.undoable, b.kinds, b.latest, %s,
+			       count(*) OVER (), count(*) FILTER (WHERE cardinality(b.undoable) > 0) OVER ()%s
 			  FROM bundle b JOIN deal d ON d.id = b.deal_id
-			 ORDER BY 7 DESC NULLS LAST, b.latest DESC, b.deal_id
+			 ORDER BY 8 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
-			heldPos, sincePos, sincePos, ownerPos, where, value, counts, capPos)
+			correctionFieldsStillAppliedSQL("to_jsonb(d)"), correctionStageStillNewestSQL(stagePos),
+			heldPos, sincePos, sincePos, ownerPos, where, blockedFromPos, value, counts, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading the changes Margince made: %w", err)
 		}
 		defer rows.Close()
-		for rows.Next() {
-			var b ChangeBundle
-			if err := rows.Scan(&b.DealID, &b.DealName, &b.Version, &b.AuditLogIDs, &b.Kinds, &b.LatestAt, &b.ValueBaseMinor,
-				&out.Deals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved, &out.Opened, &out.Revived); err != nil {
-				return err
-			}
-			out.Bundles = append(out.Bundles, b)
-		}
-		return rows.Err()
+		return scanChangeBundles(rows, &out)
 	})
 	if err != nil {
 		return ChangeSummary{}, err
@@ -139,6 +149,20 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		out.Bundles, out.Truncated = out.Bundles[:bundleCap], true
 	}
 	return out, nil
+}
+
+// scanChangeBundles reads the summary rows into out. Every row repeats the
+// window counts, so each scan overwrites them with the same totals.
+func scanChangeBundles(rows pgx.Rows, out *ChangeSummary) error {
+	for rows.Next() {
+		var b ChangeBundle
+		if err := rows.Scan(&b.DealID, &b.DealName, &b.Version, &b.AuditLogIDs, &b.UndoableAuditLogIDs, &b.Kinds, &b.LatestAt, &b.ValueBaseMinor,
+			&out.Deals, &out.UndoableDeals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved, &out.Opened, &out.Revived); err != nil {
+			return err
+		}
+		out.Bundles = append(out.Bundles, b)
+	}
+	return rows.Err()
 }
 
 // ChangeCursor is where the next page of one deal's changes starts.

@@ -178,6 +178,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 	if err != nil {
 		return "", err
 	}
+	stageBefore, stageAfter := correctionStageNamesSQL(ctx)
 	return storekit.SQLf(`
 			SELECT c.deal_id, d.name, c.audit_log_id, c.fields,
 			       -- The reason, only for the seat whose grants composed it.
@@ -212,13 +213,25 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
 			       coalesce(a.evidence->>'amount_currency', d.currency::text),
 			       d.owner_id,
-			       (SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id'),
-			       (SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id'),
+			       %[8]s,
+			       %[9]s,
 			       (SELECT h.win_probability_at_change::int FROM deal_stage_history h WHERE h.id = c.stage_history_id)
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-`, readable, before, after, amountShown, arg(VerdictAmountCorrection), valuedAmountKey, valuedCurrencyKey), nil
+`, readable, before, after, amountShown, arg(VerdictAmountCorrection), valuedAmountKey, valuedCurrencyKey,
+		stageBefore, stageAfter), nil
+}
+
+// correctionStageNamesSQL names the stages a correction moved between, only
+// for a reader who may read pipelines: StageLabels holds stage names to the
+// same grant.
+func correctionStageNamesSQL(ctx context.Context) (before, after string) {
+	if !auth.Allows(ctx, "pipeline", principal.ActionRead) {
+		return "NULL::text", "NULL::text"
+	}
+	return "(SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id')",
+		"(SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id')"
 }
 
 // BasisReadableSQL is when the reader at readerPos may read why Margince did

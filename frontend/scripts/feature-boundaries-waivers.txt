@@ -82,7 +82,6 @@ reach features/brief/brief.stories.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.tsx features/automations/approvaldrawer.tsx
 reach features/brief/brief.tsx features/sign-in/magic.tsx
 reach features/brief/brief.tsx features/worklist/taskdetailmodal.tsx
-reach features/brief/brief.tsx features/worklist/worklist.address.ts
 reach features/brief/brief.tsx features/worklist/worklist.pane.tsx
 reach features/brief/brief.tsx features/worklist/worklist.queries.ts
 reach features/brief/briefcoverage.tsx features/worklist/worklist.queries.ts

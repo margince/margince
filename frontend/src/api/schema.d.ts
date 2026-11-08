@@ -55748,12 +55748,13 @@ export interface components {
          *     there too, but the totals the first page stated stay as they were: they still count
          *     the rows that source holds, and the list stops short of them.
          *
-         *     **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
-         *     and deals at risk that the ranked rows left out continue as a tail, merged in one
-         *     order (oldest due date, arrival or expected close first) and reached through
-         *     `next_cursor` to their end. Items past the read limit of any other source are not
-         *     reachable through `next_cursor`. They join a later read as the items in front of
-         *     them are handled.
+         *     **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers,
+         *     deals at risk and staged approvals that the ranked rows left out continue as a tail,
+         *     merged in one order and reached through `next_cursor` to their end. The order is the
+         *     oldest due date, arrival or expected close first. Approvals carry no date in it, so
+         *     they come after the dated rows, newest staged first. Items past the read limit of any
+         *     other source are not reachable through `next_cursor`. They join a later read as the
+         *     items in front of them are handled.
          */
         Worklist: {
             /**
@@ -55928,9 +55929,10 @@ export interface components {
          *     `considered` is how many candidates were read and ranked. It is NOT a total: when
          *     `more_available` is true there are candidates past the bound that this read never
          *     saw, and no field here claims to know how many; `counts[].total` is the exact figure
-         *     per category where one exists. For tasks, waiting customers and deals at risk the
-         *     rest is reached through `next_cursor`. For any other source a reader who needs the
-         *     rest narrows the queue or opens that source's own screen, which pages its own data.
+         *     per category where one exists. For tasks, waiting customers, deals at risk and
+         *     approvals the rest is reached through `next_cursor`. For any other source a reader
+         *     who needs the rest narrows the queue or opens that source's own screen, which pages
+         *     its own data.
          *
          *     `shown` is how many of those candidates survived filtering and the page cut, so
          *     `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -56114,6 +56116,16 @@ export interface components {
              * @description The completed act, as its own surface spells it.
              */
             id: string;
+            /**
+             * @description What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+             * @enum {string}
+             */
+            source?: "correction" | "approval";
+            /**
+             * Format: uuid
+             * @description The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
+             */
+            audit_log_id?: string;
             /** @description The producer's own sub-type — for the label, never for authority. */
             kind: string;
             /** @description What was done, in the words the act itself recorded. */
@@ -57358,6 +57370,15 @@ export interface components {
             changes: components["schemas"]["MagicFieldChange"][];
             undo: components["schemas"]["MagicUndo"];
         };
+        /**
+         * @description One field a change moved. Only fields a reader can understand are listed: a
+         *     field of the record's update request, a custom field, or a stored column the
+         *     server declares as readable. Internal columns are never listed.
+         *
+         *     `before` and `after` keep the stored value (minor units, ids, enum codes).
+         *     The optional fields beside them say how to read it. A client that does not
+         *     know `type` must not print a raw value.
+         */
         MagicFieldChange: {
             /** @description The field's key as the record stores it (`industry`, `legal_name`). */
             field: string;
@@ -57365,6 +57386,22 @@ export interface components {
             before?: unknown;
             /** @description The value after the change; absent when the change cleared it. */
             after?: unknown;
+            /**
+             * @description How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+             * @enum {string}
+             */
+            type?: "money" | "date" | "stage" | "member" | "enum" | "text" | "number" | "boolean" | "reference";
+            /** @description The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount. */
+            currency?: string;
+            /**
+             * @description For a `date`, whether the value is a calendar day or an instant.
+             * @enum {string}
+             */
+            precision?: "day" | "instant";
+            /** @description The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed. */
+            before_label?: string;
+            /** @description The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed. */
+            after_label?: string;
         };
         /** @description The record this line is about, where it names one. */
         MagicEntityRef: {
@@ -57419,8 +57456,10 @@ export interface components {
         MarginceChangeSummary: {
             /** Format: date-time */
             as_of: string;
-            /** @description Deals with at least one open change. */
+            /** @description Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history. */
             deals: number;
+            /** @description Deals among `deals` with at least one change Undo can still take back. Absent on older responses. */
+            undoable_deals?: number;
             /** @description Deals Margince closed as lost. */
             closed: number;
             /** @description Deals given a new close date. */
@@ -57452,8 +57491,10 @@ export interface components {
              * @description The deal's version as read, for the first undo of the bundle.
              */
             version: number;
-            /** @description The changes, newest first. */
+            /** @description The changes the list shows for this deal, newest first. */
             audit_log_ids: string[];
+            /** @description The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses. */
+            undoable_audit_log_ids?: string[];
             kinds: ("close_lost" | "deal_close_date" | "deal_amount" | "deal_probability" | "stage_move" | "deal_open" | "deal_revive")[];
             /**
              * Format: int64

@@ -147,8 +147,13 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 		correction.Actor.OnBehalfOf == nil || ids.UUID(*correction.Actor.OnBehalfOf) != e.Rep1 {
 		t.Errorf("the sweep's correction names %+v, want Margince acting for the deal's owner", correction.Actor)
 	}
-	if change, ok := changeOf(correction, "expected_close_date"); !ok || change.After == nil || change.Before == change.After {
-		t.Errorf("the correction's moved close date reads %+v (found=%t)", change, ok)
+	if change, ok := changeOf(correction, "expected_close_date"); !ok || change.After == nil || change.Before == change.After ||
+		change.Precision == nil || *change.Precision != crmcontracts.MagicFieldChangePrecisionDay {
+		t.Errorf("the correction's moved close date reads %+v (found=%t), want a calendar day", change, ok)
+	}
+	requireImageKey(t, e.Env, ids.UUID(correction.Id), "close_date_provisional")
+	if change, leaked := changeOf(correction, "close_date_provisional"); leaked {
+		t.Errorf("the correction lists close_date_provisional: %+v", change)
 	}
 	if correction.SourceRecord != nil {
 		t.Errorf("a correction cites no message, and names %+v", correction.SourceRecord)

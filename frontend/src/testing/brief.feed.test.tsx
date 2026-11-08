@@ -379,7 +379,7 @@ it("names the host of a meeting in hand on Home's focus card", () => {
   expect(card?.textContent).toContain("hosted by Lena Fischer");
 });
 
-it("shows concrete reasons without ranking or consequence narration", () => {
+it("shows its first concrete reason without ranking or consequence narration", () => {
   stubApi({});
   const { container } = render(
     <BriefFeed day={readingsDay({}, [waitingEmailRow()])} state="ready" />,
@@ -387,7 +387,7 @@ it("shows concrete reasons without ranking or consequence narration", () => {
   const card = inHand(container);
   expect(card.queryByText("Why first?")).toBeNull();
   expect(card.queryByText(/If ignored/)).toBeNull();
-  expect(card.getByText(/waiting 13 days/)).toBeTruthy();
+  expect(card.getByText(/wrote last/)).toBeTruthy();
 });
 
 it.each([true, false])(

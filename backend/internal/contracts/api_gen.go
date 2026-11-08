@@ -16018,6 +16018,63 @@ func (e MagicActorType) Valid() bool {
 	}
 }
 
+// Defines values for MagicFieldChangePrecision.
+const (
+	MagicFieldChangePrecisionDay     MagicFieldChangePrecision = "day"
+	MagicFieldChangePrecisionInstant MagicFieldChangePrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangePrecision enum.
+func (e MagicFieldChangePrecision) Valid() bool {
+	switch e {
+	case MagicFieldChangePrecisionDay:
+		return true
+	case MagicFieldChangePrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicFieldChangeType.
+const (
+	MagicFieldChangeTypeBoolean   MagicFieldChangeType = "boolean"
+	MagicFieldChangeTypeDate      MagicFieldChangeType = "date"
+	MagicFieldChangeTypeEnum      MagicFieldChangeType = "enum"
+	MagicFieldChangeTypeMember    MagicFieldChangeType = "member"
+	MagicFieldChangeTypeMoney     MagicFieldChangeType = "money"
+	MagicFieldChangeTypeNumber    MagicFieldChangeType = "number"
+	MagicFieldChangeTypeReference MagicFieldChangeType = "reference"
+	MagicFieldChangeTypeStage     MagicFieldChangeType = "stage"
+	MagicFieldChangeTypeText      MagicFieldChangeType = "text"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangeType enum.
+func (e MagicFieldChangeType) Valid() bool {
+	switch e {
+	case MagicFieldChangeTypeBoolean:
+		return true
+	case MagicFieldChangeTypeDate:
+		return true
+	case MagicFieldChangeTypeEnum:
+		return true
+	case MagicFieldChangeTypeMember:
+		return true
+	case MagicFieldChangeTypeMoney:
+		return true
+	case MagicFieldChangeTypeNumber:
+		return true
+	case MagicFieldChangeTypeReference:
+		return true
+	case MagicFieldChangeTypeStage:
+		return true
+	case MagicFieldChangeTypeText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MagicLineLane.
 const (
 	MagicLineLaneMagicLaneCouldNotComplete MagicLineLane = "could_not_complete"
@@ -18820,6 +18877,24 @@ func (e ReaderCalendar) Valid() bool {
 	case ReaderCalendarNotConnected:
 		return true
 	case ReaderCalendarUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReceiptSource.
+const (
+	ReceiptSourceApproval   ReceiptSource = "approval"
+	ReceiptSourceCorrection ReceiptSource = "correction"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptSource enum.
+func (e ReceiptSource) Valid() bool {
+	switch e {
+	case ReceiptSourceApproval:
+		return true
+	case ReceiptSourceCorrection:
 		return true
 	default:
 		return false
@@ -52327,17 +52402,44 @@ type MagicEntityRef struct {
 	Type  string  `json:"type"`
 }
 
-// MagicFieldChange defines model for MagicFieldChange.
+// MagicFieldChange One field a change moved. Only fields a reader can understand are listed: a
+// field of the record's update request, a custom field, or a stored column the
+// server declares as readable. Internal columns are never listed.
+//
+// `before` and `after` keep the stored value (minor units, ids, enum codes).
+// The optional fields beside them say how to read it. A client that does not
+// know `type` must not print a raw value.
 type MagicFieldChange struct {
 	// After The value after the change; absent when the change cleared it.
 	After interface{} `json:"after,omitempty"`
 
+	// AfterLabel The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed.
+	AfterLabel *string `json:"after_label,omitempty"`
+
 	// Before The value before the change; absent when the field was empty.
 	Before interface{} `json:"before,omitempty"`
 
+	// BeforeLabel The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed.
+	BeforeLabel *string `json:"before_label,omitempty"`
+
+	// Currency The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount.
+	Currency *string `json:"currency,omitempty"`
+
 	// Field The field's key as the record stores it (`industry`, `legal_name`).
 	Field string `json:"field"`
+
+	// Precision For a `date`, whether the value is a calendar day or an instant.
+	Precision *MagicFieldChangePrecision `json:"precision,omitempty"`
+
+	// Type How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+	Type *MagicFieldChangeType `json:"type,omitempty"`
 }
+
+// MagicFieldChangePrecision For a `date`, whether the value is a calendar day or an instant.
+type MagicFieldChangePrecision string
+
+// MagicFieldChangeType How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+type MagicFieldChangeType string
 
 // MagicLine One thing the machinery did, needs, could not finish, or is watching.
 //
@@ -52745,12 +52847,15 @@ type MailLanguage string
 
 // MarginceChangeBundle Every open change Margince made to one deal. Its Undo takes them all back.
 type MarginceChangeBundle struct {
-	// AuditLogIds The changes, newest first.
+	// AuditLogIds The changes the list shows for this deal, newest first.
 	AuditLogIds []openapi_types.UUID        `json:"audit_log_ids"`
 	DealId      openapi_types.UUID          `json:"deal_id"`
 	DealName    string                      `json:"deal_name"`
 	Kinds       []MarginceChangeBundleKinds `json:"kinds"`
 	LatestAt    time.Time                   `json:"latest_at"`
+
+	// UndoableAuditLogIds The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses.
+	UndoableAuditLogIds *[]openapi_types.UUID `json:"undoable_audit_log_ids,omitempty"`
 
 	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
 	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
@@ -52777,7 +52882,7 @@ type MarginceChangeSummary struct {
 	// Closed Deals Margince closed as lost.
 	Closed int `json:"closed"`
 
-	// Deals Deals with at least one open change.
+	// Deals Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history.
 	Deals int `json:"deals"`
 
 	// Moved Deals Margince moved to a later stage.
@@ -52800,6 +52905,9 @@ type MarginceChangeSummary struct {
 
 	// Truncated True when more bundles exist than were returned. The counts are never cut.
 	Truncated bool `json:"truncated"`
+
+	// UndoableDeals Deals among `deals` with at least one change Undo can still take back. Absent on older responses.
+	UndoableDeals *int `json:"undoable_deals,omitempty"`
 }
 
 // MeResponse defines model for MeResponse.
@@ -56815,6 +56923,9 @@ type Receipt struct {
 	// Actor Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
 	Actor *ReceiptActor `json:"actor,omitempty"`
 
+	// AuditLogId The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
+	AuditLogId *openapi_types.UUID `json:"audit_log_id,omitempty"`
+
 	// Changes Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list).
 	Changes *[]MagicFieldChange `json:"changes,omitempty"`
 
@@ -56842,6 +56953,9 @@ type Receipt struct {
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
+	// Source What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+	Source *ReceiptSource `json:"source,omitempty"`
+
 	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
@@ -56858,6 +56972,9 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptSource What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+type ReceiptSource string
 
 // ReceiptActor Who did the act, and on whose behalf.
 //
@@ -66305,12 +66422,13 @@ type WorkingHours struct {
 // there too, but the totals the first page stated stay as they were: they still count
 // the rows that source holds, and the list stops short of them.
 //
-// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
-// and deals at risk that the ranked rows left out continue as a tail, merged in one
-// order (oldest due date, arrival or expected close first) and reached through
-// `next_cursor` to their end. Items past the read limit of any other source are not
-// reachable through `next_cursor`. They join a later read as the items in front of
-// them are handled.
+// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers,
+// deals at risk and staged approvals that the ranked rows left out continue as a tail,
+// merged in one order and reached through `next_cursor` to their end. The order is the
+// oldest due date, arrival or expected close first. Approvals carry no date in it, so
+// they come after the dated rows, newest staged first. Items past the read limit of any
+// other source are not reachable through `next_cursor`. They join a later read as the
+// items in front of them are handled.
 type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -67650,9 +67768,10 @@ type WorklistPromiseRecipientStatus string
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
 // `more_available` is true there are candidates past the bound that this read never
 // saw, and no field here claims to know how many; `counts[].total` is the exact figure
-// per category where one exists. For tasks, waiting customers and deals at risk the
-// rest is reached through `next_cursor`. For any other source a reader who needs the
-// rest narrows the queue or opens that source's own screen, which pages its own data.
+// per category where one exists. For tasks, waiting customers, deals at risk and
+// approvals the rest is reached through `next_cursor`. For any other source a reader
+// who needs the rest narrows the queue or opens that source's own screen, which pages
+// its own data.
 //
 // `shown` is how many of those candidates survived filtering and the page cut, so
 // `shown` under `considered` means the rest were folded, filtered or below the cut —

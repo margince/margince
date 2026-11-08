@@ -21,6 +21,7 @@ import {
   stillPending,
   useUndoMarginceChanges,
 } from "../lib/marginchanges";
+import { EntityRef } from "./entityref";
 
 const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   close_lost: "changes.kind.close_lost",
@@ -121,6 +122,7 @@ export function BundleUndo({
     return (
       <BundleUndoAnswer
         run={run}
+        bundles={bundles}
         single={bundles.length === 1}
         pending={undo.isPending || rereading}
         onRetry={() => void retry(run.unsent)}
@@ -176,11 +178,13 @@ function mergeRuns(
 
 function BundleUndoAnswer({
   run,
+  bundles,
   single,
   pending,
   onRetry,
 }: Readonly<{
   run: BundleUndoRun;
+  bundles: readonly MarginceChangeBundle[];
   single: boolean;
   pending: boolean;
   onRetry: () => void;
@@ -192,6 +196,7 @@ function BundleUndoAnswer({
       <span role="status">
         {only ? undoResultText(only, t) : <BulkCounts run={run} />}
       </span>
+      {!only && <UnfinishedDeals run={run} bundles={bundles} />}
       {run.unsent.length > 0 && (
         <Button
           variant="ghost"
@@ -206,6 +211,44 @@ function BundleUndoAnswer({
         <ErrorLine error={run.error} />
       )}
     </>
+  );
+}
+
+/**
+ * Each deal the run did not fully undo, linked, with what happened to it. A
+ * deal that needs a confirmation is confirmed on its own page, where the
+ * single-deal Undo asks the question against that deal's current changes.
+ */
+function UnfinishedDeals({
+  run,
+  bundles,
+}: Readonly<{
+  run: BundleUndoRun;
+  bundles: readonly MarginceChangeBundle[];
+}>) {
+  const t = useT();
+  const unfinished = run.results.filter(
+    (result) => result.outcome !== "undone",
+  );
+  if (unfinished.length === 0) return null;
+  return (
+    <ul aria-label={t("changes.bulk.unfinished")}>
+      {unfinished.map((result) => (
+        <li key={result.deal_id}>
+          <EntityRef
+            kind="deal"
+            id={result.deal_id}
+            name={
+              bundles.find((bundle) => bundle.deal_id === result.deal_id)
+                ?.deal_name
+            }
+          />{" "}
+          {archiveQuestion(result)
+            ? t("changes.bulk.confirmOnDeal")
+            : undoResultText(result, t)}
+        </li>
+      ))}
+    </ul>
   );
 }
 

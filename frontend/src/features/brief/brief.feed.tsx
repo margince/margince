@@ -114,6 +114,7 @@ export function BriefFeed({
           }
           emptyLabel={t("brief.feed.clear")}
           loadingLabel={t("brief.feed.loading")}
+          detail={{ onRetry }}
         >
           {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
           {lead && (

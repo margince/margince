@@ -52748,6 +52748,16 @@ components:
       properties:
         close_date_change: {$ref: '#/components/schemas/CloseDateChange'}
         id: {type: string, format: uuid, description: 'The completed act, as its own surface spells it.'}
+        source:
+          type: string
+          enum: [correction, approval]
+          description: >-
+            What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+        audit_log_id:
+          type: string
+          format: uuid
+          description: >-
+            The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
         kind: {type: string, description: "The producer's own sub-type — for the label, never for authority."}
         summary: {type: string, description: 'What was done, in the words the act itself recorded.'}
         headline:
@@ -53684,6 +53694,10 @@ components:
         undo: {$ref: '#/components/schemas/MagicUndo'}
     MagicFieldChange:
       type: object
+      description: |-
+        One field a change moved. Only fields a reader can understand are listed: a
+        field of the record's update request, a custom field, or a stored column the
+        server declares as readable. Internal columns are never listed.
       required: [field]
       properties:
         field:
@@ -53693,6 +53707,27 @@ components:
           description: The value before the change; absent when the field was empty.
         after:
           description: The value after the change; absent when the change cleared it.
+        type:
+          type: string
+          enum: [money, date, stage, member, enum, text, number, boolean, reference]
+          description: >-
+            How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+        currency:
+          type: string
+          description: >-
+            The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount.
+        precision:
+          type: string
+          enum: [day, instant]
+          description: For a `date`, whether the value is a calendar day or an instant.
+        before_label:
+          type: string
+          description: >-
+            The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed.
+        after_label:
+          type: string
+          description: >-
+            The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed.
     MagicEntityRef:
       type: object
       description: The record this line is about, where it names one.
@@ -53750,7 +53785,13 @@ components:
       required: [as_of, deals, closed, redated, revalued, probabilities, moved, opened, revived, base_currency, bundles, truncated]
       properties:
         as_of: {type: string, format: date-time}
-        deals: {type: integer, description: Deals with at least one open change.}
+        deals:
+          type: integer
+          description: >-
+            Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history.
+        undoable_deals:
+          type: integer
+          description: Deals among `deals` with at least one change Undo can still take back. Absent on older responses.
         closed: {type: integer, description: Deals Margince closed as lost.}
         redated: {type: integer, description: Deals given a new close date.}
         revalued: {type: integer, description: Deals given a new amount.}
@@ -53778,7 +53819,12 @@ components:
         audit_log_ids:
           type: array
           items: {type: string, format: uuid}
-          description: The changes, newest first.
+          description: The changes the list shows for this deal, newest first.
+        undoable_audit_log_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: >-
+            The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses.
         kinds:
           type: array
           items: {type: string, enum: [close_lost, deal_close_date, deal_amount, deal_probability, stage_move, deal_open, deal_revive]}

@@ -32,7 +32,7 @@ category's `total` uses the exact counts in `exactSources` (`totals.go`): approv
 windows (`backlog.go`).
 
 Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
-(`backlogmerge.go`). Today those are the task, `customer_waiting` and `deal_at_risk` sources.
+(`backlogmerge.go`). Today those are the task, `customer_waiting`, `deal_at_risk` and `approval` sources.
 
 ## Sources: store, bound and scope
 
@@ -84,7 +84,7 @@ a verb of their own: a task is completed, a decision is decided.
 | `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
 | `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No; step F |
 | `weekly_commitment` | A, C, H | Go | No | Not needed: the lane has no bound, so its rows are its total |
-| `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
+| `approval` | A, C, G, H | Yes, newest staged first | Yes; continued below the ranked rows | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
 | `dedupe_candidate` | A, C, G, H | Yes | Yes | No total; its cut is judged with `contact_case`'s against one count (see below) |
 | `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | No total; step F |
 | `deal_suggestion` | A, C, H | Yes | Yes | `CountOpenSuggestions` exists; no total until the source joins the tail (see below) |
