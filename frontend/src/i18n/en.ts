@@ -19135,8 +19135,8 @@ export const en = {
   "worklist.because.below_material.value":
     "{value}, not above typical at-risk deal value",
   "worklist.because.quiet_days": "gone quiet",
-  "worklist.because.quiet_days.value_one": "quiet for {value} day",
-  "worklist.because.quiet_days.value_other": "quiet for {value} days",
+  "worklist.because.quiet_days.value_one": "no activity for {value} day",
+  "worklist.because.quiet_days.value_other": "no activity for {value} days",
   "worklist.because.no_next_step": "no next step recorded",
   "worklist.because.no_champion": "no champion",
   "worklist.because.champion_unknown": "champion unknown",

@@ -19335,8 +19335,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.below_material.value":
     "{value}, nicht über dem typischen Wert gefährdeter Deals",
   "worklist.because.quiet_days": "verstummt",
-  "worklist.because.quiet_days.value_one": "seit {value} Tag still",
-  "worklist.because.quiet_days.value_other": "seit {value} Tagen still",
+  "worklist.because.quiet_days.value_one": "seit {value} Tag keine Aktivität",
+  "worklist.because.quiet_days.value_other": "seit {value} Tagen keine Aktivität",
   "worklist.because.no_next_step": "kein nächster Schritt erfasst",
   "worklist.because.no_champion": "kein Champion",
   "worklist.because.champion_unknown": "Champion unbekannt",
