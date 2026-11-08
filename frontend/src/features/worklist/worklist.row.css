@@ -273,6 +273,10 @@
    Laid out as a row rather than as prose so the badge reads as a label on the
    sentence beside it, and wrapping so a long line falls under the badge rather
    than pushing the row wide. */
+/* The row text's gap spaces the earlier assessment; a disclosure margin doubles it. */
+.disclosure.worklist-row-verdict {
+  margin-bottom: 0;
+}
 .worklist-row-verdict-body {
   display: flex;
   flex-wrap: wrap;
