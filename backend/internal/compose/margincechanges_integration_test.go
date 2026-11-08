@@ -564,3 +564,40 @@ func TestLastNightStartsWhenThePreviousMorningWasSent(t *testing.T) {
 		})
 	}
 }
+
+// A stage move's receipt names the stages only for a reader who may read
+// pipelines, the grant every other stage name is held to.
+func TestAStageMoveReceiptNamesNoStageToAReaderWithoutPipelineRead(t *testing.T) {
+	v := setupBundle(t)
+	withStages, err := v.Deals.RecentCorrectionsOwnedBy(v.owner(t), v.now.Add(-24*time.Hour), 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !namesAStage(withStages) {
+		t.Fatalf("the owner who may read pipelines sees no stage names: %+v", withStages)
+	}
+	noPipeline := v.As(v.Rep1, []ids.UUID{v.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+		RowScope: principal.RowScopeOwn,
+	})
+	without, err := v.Deals.RecentCorrectionsOwnedBy(noPipeline, v.now.Add(-24*time.Hour), 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(without) == 0 {
+		t.Fatal("the reader without pipeline read lost the receipts, not just the stage names")
+	}
+	if namesAStage(without) {
+		t.Fatalf("a reader without pipeline read is told stage names: %+v", without)
+	}
+}
+
+func namesAStage(receipts []deals.CorrectionReceipt) bool {
+	for _, receipt := range receipts {
+		if receipt.FromStage != nil || receipt.ToStage != nil {
+			return true
+		}
+	}
+	return false
+}
