@@ -261,3 +261,51 @@ it("claims no total when the server's count could not be read", async () => {
   ).toBeTruthy();
   expect(screen.queryByText(/wait.? for your review/)).toBeNull();
 });
+
+it("names each deal a review-all left partly undone, linked to it", async () => {
+  routes(
+    [change(1), change(2)],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+    () =>
+      jsonResponse({
+        results: [
+          {
+            deal_id: dealId(1),
+            outcome: "refused",
+            undone: [],
+            kept: [
+              {
+                audit_log_id: auditId(1),
+                kind: "close_lost",
+                reason: "changed_since",
+              },
+            ],
+          },
+          {
+            deal_id: dealId(2),
+            outcome: "undone",
+            undone: ["close_lost"],
+            kept: [],
+          },
+        ],
+      }),
+  );
+  const user = userEvent.setup();
+  const { container } = render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Review all 2 deals" }),
+  );
+  const drawer = await screen.findByRole("dialog");
+  await user.click(
+    within(drawer).getByRole("button", { name: "Undo changes on 2 deals" }),
+  );
+  const unfinished = await screen
+    .findByRole("list", { hidden: false, name: "" })
+    .catch(() => null);
+  const list =
+    unfinished ??
+    container.ownerDocument.querySelector(".changes-bulk-unfinished");
+  expect(list).toBeTruthy();
+  const links = within(list as HTMLElement).getAllByRole("link");
+  expect(links.map((link) => link.textContent)).toEqual(["Deal 1"]);
+});

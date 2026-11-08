@@ -21486,5 +21486,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
   "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
   "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
+  "changes.bulk.confirmOnDeal":
+    "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",
   "changes.bulk.retry": "Erneut senden",
 };

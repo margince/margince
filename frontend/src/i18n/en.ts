@@ -21231,6 +21231,7 @@ export const en = {
     "{count} deals need your confirmation. Undo each on its own row.",
   "changes.bulk.unsent_one": "{count} deal was not sent.",
   "changes.bulk.unsent_other": "{count} deals were not sent.",
+  "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
 } as const;
 

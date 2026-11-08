@@ -20919,5 +20919,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
   "changes.bulk.unsent_one": "{count} giao dịch chưa được gửi.",
   "changes.bulk.unsent_other": "{count} giao dịch chưa được gửi.",
+  "changes.bulk.confirmOnDeal": "Mở giao dịch để xác nhận hoàn tác.",
   "changes.bulk.retry": "Gửi lại",
 };
