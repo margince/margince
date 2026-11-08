@@ -12,6 +12,7 @@ import {
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { HOME_DAY_TIMING } from "../../lib/elementtiming";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
   type Worklist,
@@ -64,7 +65,12 @@ export function BriefFeed({
     !day?.focus || day.readings?.more_available || laneUnread(day),
   );
   return (
-    <section id="brief-today" className="brief-first" aria-labelledby={titleId}>
+    <section
+      id="brief-today"
+      className="brief-first"
+      aria-labelledby={titleId}
+      elementtiming={HOME_DAY_TIMING}
+    >
       <div className="brief-first-head">
         <Eyebrow as="h2" id={titleId}>
           {t("brief.first.title")}

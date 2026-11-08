@@ -1,4 +1,5 @@
 import type { Page, Request, Response, Route } from "@playwright/test";
+import { HOME_DAY_TIMING } from "../src/lib/elementtiming";
 import {
   JOURNEY_START,
   type JourneyMark,
@@ -257,38 +258,59 @@ export function worklistFetches(page: Page, from: number) {
 const VITALS_KEY = "__homeVitals";
 
 /**
- * Records, from the start of every document the page loads, each
- * largest-contentful-paint entry and each layout shift. Whether a paint sits
- * inside `main` is read when it happens, while its element is still there.
+ * Records, from the start of every document the page loads, each Element
+ * Timing paint of Home's day content and each layout shift.
+ *
+ * Chrome times a text paint only on the block that holds the text, never on a
+ * marked block around it. So every element inside the marked content takes
+ * the mark too, before it first paints.
  */
 export async function recordVitals(page: Page): Promise<void> {
-  await page.addInitScript((key) => {
-    const vitals: Vitals = { paints: [], shifts: [] };
-    Object.assign(window, { [key]: vitals });
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        if (!(entry instanceof LargestContentfulPaint)) continue;
-        const shown = entry.element;
-        const inMain = shown?.closest("main") != null;
-        const element = shown
-          ? `${shown.tagName.toLowerCase()}${shown.id ? `#${shown.id}` : ""}${shown.classList[0] ? `.${shown.classList[0]}` : ""}`
-          : "a removed element";
-        vitals.paints.push({ at: entry.startTime, inMain, element });
-      }
-    }).observe({ type: "largest-contentful-paint", buffered: true });
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        const value = "value" in entry ? entry.value : undefined;
-        const input = "hadRecentInput" in entry && entry.hadRecentInput;
-        if (typeof value !== "number") continue;
-        vitals.shifts.push({
-          at: entry.startTime,
-          value,
-          input: input === true,
-        });
-      }
-    }).observe({ type: "layout-shift", buffered: true });
-  }, VITALS_KEY);
+  await page.addInitScript(
+    ({ key, mark }) => {
+      const vitals: Vitals = { dayPaints: [], shifts: [] };
+      Object.assign(window, { [key]: vitals });
+      const marked = `[elementtiming="${mark}"]`;
+      new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (!(node instanceof Element) || !node.closest(marked)) continue;
+            node.setAttribute("elementtiming", mark);
+            for (const inner of node.querySelectorAll("*"))
+              inner.setAttribute("elementtiming", mark);
+          }
+        }
+      }).observe(document, { childList: true, subtree: true });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!("identifier" in entry) || entry.identifier !== mark) continue;
+          const render = "renderTime" in entry ? entry.renderTime : 0;
+          const load = "loadTime" in entry ? entry.loadTime : 0;
+          const rect =
+            "intersectionRect" in entry ? entry.intersectionRect : null;
+          if (typeof render !== "number" || typeof load !== "number") continue;
+          if (!(rect instanceof DOMRectReadOnly)) continue;
+          vitals.dayPaints.push({
+            at: render || load,
+            area: rect.width * rect.height,
+          });
+        }
+      }).observe({ type: "element", buffered: true });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const value = "value" in entry ? entry.value : undefined;
+          const input = "hadRecentInput" in entry && entry.hadRecentInput;
+          if (typeof value !== "number") continue;
+          vitals.shifts.push({
+            at: entry.startTime,
+            value,
+            input: input === true,
+          });
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+    },
+    { key: VITALS_KEY, mark: HOME_DAY_TIMING },
+  );
 }
 
 /** What the current document has painted and shifted so far. */
