@@ -6467,7 +6467,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chịu ảnh hưởng của một lần xóa · số đếm là mức tối thiểu",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
-  "plan.title": "Kế hoạch tuần {week}",
+  "plan.title": "Kế hoạch · {dates}",
   "plan.titleThisWeek": "Kế hoạch tuần này",
   // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
   "brief.view.label": "Chế độ xem Trang chủ",

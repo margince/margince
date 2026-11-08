@@ -6626,7 +6626,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Von einer Löschung betroffen · Zahlen sind Mindestwerte",
   // Die kommende Woche. Der eingefrorene Rückblick sagt, was war; dies ist der
   // einzige Teil dieser Seite, den noch jemand ändern kann.
-  "plan.title": "Plan für KW {week}",
+  "plan.title": "Plan · {dates}",
   "plan.titleThisWeek": "Plan für diese Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
   "brief.view.label": "Home-Ansicht",

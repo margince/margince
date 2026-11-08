@@ -6611,7 +6611,7 @@ export const en = {
     "Affected by an erasure · counts are minimums",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
-  "plan.title": "Plan for week {week}",
+  "plan.title": "Plan · {dates}",
   "plan.titleThisWeek": "Plan for this week",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Home view",

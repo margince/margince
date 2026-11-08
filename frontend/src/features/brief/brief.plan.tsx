@@ -14,13 +14,15 @@ import {
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { isoWeekOf, middayInstant } from "../../format/calendarday";
+import { middayInstant } from "../../format/calendarday";
 import { formatDate, formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { formatDayRange } from "../../format/format.dates";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type SettableState,
   useAskForHelp,
@@ -134,6 +136,7 @@ export function PlanSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useViewerZone();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
@@ -225,10 +228,7 @@ export function PlanSection({
           <ReportTitle icon={SquareCheck}>
             {plan.data
               ? t("plan.title", {
-                  week: formatNumber(
-                    isoWeekOf(plan.data.local_week_start),
-                    locale,
-                  ),
+                  dates: weekDays(plan.data.local_week_start, locale, zone),
                 })
               : t("plan.titleThisWeek")}
           </ReportTitle>
@@ -495,4 +495,12 @@ function HelpExchange({
       )}
     </div>
   );
+}
+
+// The plan's own seven days, named as dates: a week number makes the reader
+// count, and the report beside it may be about a different week.
+function weekDays(start: string, locale: Locale, zone: string): string {
+  const end = new Date(`${start}T12:00:00Z`);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return formatDayRange(start, end.toISOString().slice(0, 10), locale, zone);
 }

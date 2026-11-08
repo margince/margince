@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button, Card } from "../../design-system/atoms";
+import { Badge, Button, Card, Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
@@ -55,17 +55,31 @@ import "./brief.weekly.css";
 export function WeeklySection({
   plan,
 }: Readonly<{
-  /** The week ahead's plan, a section of the report. */
+  /** The plan for the week now running, drawn after the report. */
   plan?: ReactNode;
 }>) {
+  const t = useT();
   const [params] = useUrlParams();
   const review = useWeeklyReview(params.get("week") ?? undefined);
+  const newest = useWeeklyReviewIndex().data?.[0];
   const data = review.data ?? null;
+  // The report is what was written when its week closed; the plan is live and
+  // belongs to the week now running, so it stands outside the report. Over an
+  // earlier week it waits behind its own opener.
+  const pastWeek = params.has("week") && params.get("week") !== newest;
   return (
-    <article id="brief-weekly" className="brief-report">
-      {data && <WeeklyNarrative review={data} />}
-      <WeeklyBody review={data} state={readState(review)} plan={plan} />
-    </article>
+    <>
+      <article id="brief-weekly" className="brief-report">
+        {data && <WeeklyNarrative review={data} />}
+        <WeeklyBody review={data} state={readState(review)} />
+      </article>
+      {plan &&
+        (pastWeek ? (
+          <Disclosure summary={t("plan.titleThisWeek")}>{plan}</Disclosure>
+        ) : (
+          plan
+        ))}
+    </>
   );
 }
 
@@ -145,11 +159,9 @@ function readState(
 function WeeklyBody({
   review,
   state,
-  plan,
 }: Readonly<{
   review: WeeklyReview | null;
   state: SectionState;
-  plan?: ReactNode;
 }>) {
   const t = useT();
   if (state !== "ready" || review === null) {
@@ -167,7 +179,7 @@ function WeeklyBody({
   }
   return (
     <>
-      {reportSections(review, plan).map((section) =>
+      {reportSections(review).map((section) =>
         section.icon ? (
           <ReportCard
             key={section.key}
@@ -201,10 +213,7 @@ type Section = Readonly<{
  * happened, the full record, what it taught, then the week ahead. A section
  * with nothing in it is left out.
  */
-function reportSections(
-  review: WeeklyReview,
-  plan: ReactNode | undefined,
-): readonly Section[] {
+function reportSections(review: WeeklyReview): readonly Section[] {
   const numeric = weeklyNumericStatus(
     review.numeric_summary,
     review.leads_withheld,
@@ -242,11 +251,6 @@ function reportSections(
           } satisfies Section,
         ]
       : []),
-    ...optional(plan, {
-      key: "commitments",
-      title: "brief.report.chapter.commitments",
-      body: plan,
-    }),
     ...optional(learnings, {
       key: "observations",
       icon: Sparkles,
