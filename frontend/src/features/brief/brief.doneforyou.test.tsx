@@ -192,3 +192,72 @@ it("undoes exactly the changes a deal lists, never one that arrived since", asyn
     ],
   });
 });
+
+it("lists a deal the server counts even when no loaded page holds its changes", async () => {
+  routes([], [bundle(1, [auditId(1, 0), auditId(1, 1)])]);
+  render(<DoneForYou completed={null} />);
+  expect(await screen.findByText("1 deal waits for your review")).toBeTruthy();
+  const open = screen.getByRole("link", { name: "View 2 changes" });
+  expect(open.getAttribute("href")).toContain(dealId(1));
+});
+
+it("reviews all by sending only the shown changes the server still allows", async () => {
+  const unseen = auditId(1, 9);
+  const editedSince = auditId(1, 1);
+  const calls = routes(
+    [change(1, 0), change(1, 1), change(2, 0)],
+    [
+      {
+        ...bundle(1, [auditId(1, 0), editedSince, unseen]),
+        undoable_audit_log_ids: [auditId(1, 0), unseen],
+      },
+      bundle(2, [auditId(2, 0)]),
+    ],
+    () =>
+      jsonResponse({
+        results: [1, 2].map((n) => ({
+          deal_id: dealId(n),
+          outcome: "undone",
+          undone: ["close_lost"],
+          kept: [],
+        })),
+      }),
+  );
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Review all 2 deals" }),
+  );
+  const drawer = await screen.findByRole("dialog");
+  await user.click(
+    within(drawer).getByRole("button", { name: "Undo changes on 2 deals" }),
+  );
+  await screen.findAllByRole("status");
+  const posted = writes(calls).find((c) => c.path === "/deal-corrections/undo");
+  expect(posted?.body).toEqual({
+    items: [
+      { deal_id: dealId(1), version: 7, audit_log_ids: [auditId(1, 0)] },
+      { deal_id: dealId(2), version: 7, audit_log_ids: [auditId(2, 0)] },
+    ],
+  });
+});
+
+it("claims no total when the server's count could not be read", async () => {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "GET /worklist/handled": () =>
+      jsonResponse({
+        as_of: "2026-09-13T08:00:00Z",
+        truncated: false,
+        receipts: [change(1)],
+      }),
+    "GET /deal-corrections/pending": () =>
+      jsonResponse({ title: "unavailable" }, 503),
+  });
+  render(<DoneForYou completed={null} />);
+  expect(
+    await screen.findByRole("heading", { name: en["brief.done.dealsLabel"] }),
+  ).toBeTruthy();
+  expect(screen.queryByText(/wait.? for your review/)).toBeNull();
+});

@@ -21210,6 +21210,8 @@ export const en = {
   "changes.undoDeals_other": "Undo changes on {count} deals",
   "brief.done.undoChanges_one": "Undo {count} change",
   "brief.done.undoChanges_other": "Undo {count} changes",
+  "brief.done.viewChanges_one": "View {count} change",
+  "brief.done.viewChanges_other": "View {count} changes",
   "brief.done.history": "View change history",
   "brief.done.dealsLabel": "Deals Margince changed",
   "brief.done.noReason": "Margince recorded no reason you can read.",
