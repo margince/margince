@@ -186,7 +186,8 @@ func TestCopiesAboutAHeldCompanyOrProjectOutliveTheirWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
-		Name: "Held Project", CompanyID: ids.From[ids.CompanyKind](ids.UUID(company.Id)), Source: "manual"})
+		Name: "Held Project", CompanyID: ids.From[ids.CompanyKind](ids.UUID(company.Id)), Source: "manual",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

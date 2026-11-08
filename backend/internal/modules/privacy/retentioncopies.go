@@ -126,6 +126,10 @@ func (s *RetentionService) publishedEventsPast(ctx context.Context, tx pgx.Tx, c
 	return page, nil
 }
 
+// leadsParameter binds the erased subject's leads in every statement that
+// reaches their copies.
+const leadsParameter = "leads"
+
 // scrubDeliveryCopies clears the webhook bodies rendered from the erased
 // subject and their leads, and cancels those still to be sent.
 func (e *Eraser) scrubDeliveryCopies(ctx context.Context, tx pgx.Tx, subject ids.ContactID, leads []ids.UUID) error {
@@ -135,7 +139,7 @@ func (e *Eraser) scrubDeliveryCopies(ctx context.Context, tx pgx.Tx, subject ids
 		var carried bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM webhook_delivery
 			WHERE (entity_type = 'contact' AND entity_id = @subject) OR (entity_type = 'lead' AND entity_id = ANY(@leads)))`,
-			pgx.StrictNamedArgs{"subject": subject.UUID, "leads": leads}).Scan(&carried); err != nil || !carried {
+			pgx.StrictNamedArgs{"subject": subject.UUID, leadsParameter: leads}).Scan(&carried); err != nil || !carried {
 			return err
 		}
 		return errors.New("privacy: a webhook carried this subject, and this eraser was built without the seam that clears its bodies")

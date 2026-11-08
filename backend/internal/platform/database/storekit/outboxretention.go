@@ -47,7 +47,7 @@ func PublishedOutboxCopies(ctx context.Context, tx pgx.Tx, cutoff time.Time, aft
 		  AND NOT (NOT o.assurance_inputs_read AND o.envelope->>'type' = ANY(@unread::text[]))
 		  AND NOT `+auth.ImportedFollowupEvidenceSQL("o")+needed.String()+`
 		ORDER BY o.id LIMIT @limit`,
-		pgx.StrictNamedArgs{"cutoff": cutoff, "after": after, "unread": readers.UnreadTypes, "limit": limit})
+		pgx.StrictNamedArgs{"cutoff": cutoff, "after": after, "unread": readers.UnreadTypes, pageLimitParameter: limit})
 	if err != nil {
 		return nil, fmt.Errorf("store: reading published events past their window: %w", err)
 	}

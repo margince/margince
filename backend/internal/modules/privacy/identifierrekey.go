@@ -22,6 +22,13 @@ type SuppressionCursor struct {
 	Hash string `json:"hash"`
 }
 
+// The named parameters the rekey pages bind.
+const (
+	rekeyKindParameter  = "kind"
+	rekeyAfterParameter = "after"
+	rekeyLimitParameter = "limit"
+)
+
 // RekeySuppressionListPageTx replaces up to limit unkeyed erasure_suppression
 // rows after the cursor with their keyed form, keeping when each was erased.
 // It answers the rows it inspected. The keyed row is written before the
@@ -38,7 +45,7 @@ func RekeySuppressionListPageTx(ctx context.Context, tx pgx.Tx, after Suppressio
 	rows, err := tx.Query(ctx, `SELECT kind, value_hash, created_at FROM erasure_suppression
 		WHERE key_id IS NULL AND (kind, value_hash) > (@kind, @hash)
 		ORDER BY kind, value_hash LIMIT @limit FOR UPDATE`,
-		pgx.StrictNamedArgs{"kind": after.Kind, "hash": after.Hash, "limit": limit})
+		pgx.StrictNamedArgs{rekeyKindParameter: after.Kind, "hash": after.Hash, rekeyLimitParameter: limit})
 	if err != nil {
 		return nil, fmt.Errorf("privacy: reading unkeyed erasure list rows: %w", err)
 	}
@@ -94,7 +101,7 @@ func RekeyAnonymizedAddressesPageTx(ctx context.Context, tx pgx.Tx, after ids.UU
 	}
 	rows, err := tx.Query(ctx, `SELECT id, anonymized_address_hashes FROM contact
 		WHERE anonymized_address_hashes IS NOT NULL AND anonymized_address_key_id IS NULL AND id > @after
-		ORDER BY id LIMIT @limit FOR UPDATE`, pgx.StrictNamedArgs{"after": after, "limit": limit})
+		ORDER BY id LIMIT @limit FOR UPDATE`, pgx.StrictNamedArgs{rekeyAfterParameter: after, rekeyLimitParameter: limit})
 	if err != nil {
 		return nil, fmt.Errorf("privacy: reading unkeyed anonymized address hashes: %w", err)
 	}

@@ -230,26 +230,9 @@ func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.
 	return a, nil
 }
 
-func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited, footprint json.RawMessage, by decider) (row, error) {
-	// An automatic apply binds the owner, reads the mode and holds the target
-	// before the row lock (bindUnderPolicy has the lock order).
-	if by == decidedBySystem {
-		var err error
-		if ctx, p, err = bindUnderPolicy(ctx, tx, id); err != nil {
-			return row{}, err
-		}
-	}
-	// The row lock makes the pending pre-read and the status write below
-	// one race-free unit: two concurrent decisions cannot both pass the
-	// pending guard. Taken raw — the approval table has no archived_at,
-	// so storekit.LockRow's live filter does not apply here.
-	var locked ids.ApprovalID
-	if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return row{}, apperrors.ErrNotFound
-		}
-		return row{}, err
-	}
+// pendingToDecide reads the locked approval as one the caller may decide now.
+// A refusal for a decided row carries that row; recordDecision reads it.
+func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, edited json.RawMessage, by decider) (row, error) {
 	a, err := readToDecide(ctx, tx, p, id, by)
 	if err != nil {
 		return row{}, err
@@ -283,6 +266,33 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	if approve && retiredKinds[a.Kind] {
 		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
 			a.Kind, apperrors.ErrConflict)
+	}
+	return a, nil
+}
+
+func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited, footprint json.RawMessage, by decider) (row, error) {
+	// An automatic apply binds the owner, reads the mode and holds the target
+	// before the row lock (bindUnderPolicy has the lock order).
+	if by == decidedBySystem {
+		var err error
+		if ctx, p, err = bindUnderPolicy(ctx, tx, id); err != nil {
+			return row{}, err
+		}
+	}
+	// The row lock makes the pending pre-read and the status write below
+	// one race-free unit: two concurrent decisions cannot both pass the
+	// pending guard. Taken raw: the approval table has no archived_at,
+	// so storekit.LockRow's live filter does not apply here.
+	var locked ids.ApprovalID
+	if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return row{}, apperrors.ErrNotFound
+		}
+		return row{}, err
+	}
+	a, err := s.pendingToDecide(ctx, tx, p, id, approve, edited, by)
+	if err != nil {
+		return a, err
 	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected

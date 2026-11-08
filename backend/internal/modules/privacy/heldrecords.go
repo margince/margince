@@ -34,6 +34,9 @@ func (r heldRecord) args(floor FloorPolicy, records any) []any {
 	return []any{current, carried, records}
 }
 
+// legalHoldPredicate is the hold every record with a legal_hold column keeps.
+const legalHoldPredicate = "a.legal_hold"
+
 // heldRecordRule is the legal hold, open dispute or statutory floor that keeps
 // a record of kind, or false for a kind no hold reaches. The audit cleanup asks
 // it of one record and the copy retention of a page of them, so the two keep
@@ -41,15 +44,15 @@ func (r heldRecord) args(floor FloorPolicy, records any) []any {
 func heldRecordRule(kind string) (heldRecord, bool) {
 	switch kind {
 	case contactObject:
-		return heldRecord{from: " FROM contact a", predicate: "a.legal_hold"}, true
+		return heldRecord{from: " FROM contact a", predicate: legalHoldPredicate}, true
 	case "lead":
-		return heldRecord{from: " FROM lead a", predicate: "a.legal_hold"}, true
+		return heldRecord{from: " FROM lead a", predicate: legalHoldPredicate}, true
 	case reportingDeal:
-		return heldRecord{from: " FROM deal a", predicate: "a.legal_hold"}, true
+		return heldRecord{from: " FROM deal a", predicate: legalHoldPredicate}, true
 	case "company":
-		return heldRecord{from: " FROM company a", predicate: "a.legal_hold"}, true
-	case "project":
-		return heldRecord{from: " FROM project a", predicate: "a.legal_hold"}, true
+		return heldRecord{from: " FROM company a", predicate: legalHoldPredicate}, true
+	case entityTypeProject:
+		return heldRecord{from: " FROM project a", predicate: legalHoldPredicate}, true
 	case rightsRequestEntity:
 		return heldRecord{from: " FROM data_subject_request a", predicate: "a.dispute_open"}, true
 	case "activity":
