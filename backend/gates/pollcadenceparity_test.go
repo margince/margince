@@ -40,12 +40,13 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two declarations this gate reconciles, each read as a scalar out of the
@@ -131,7 +132,7 @@ func postponingUnits() (map[string]string, error) {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
 		}
-		raw, err := os.ReadFile(source)
+		raw, err := gatekit.ReadFile(source)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +157,7 @@ func postponingUnits() (map[string]string, error) {
 // and in the direction that reads as agreement.
 func durationIn(t *testing.T, path string, expr *regexp.Regexp, what string) (time.Duration, bool) {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

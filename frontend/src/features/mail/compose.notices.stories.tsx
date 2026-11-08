@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../../testing/story-utils";
-import { StaleThreadNotice, VoiceDegradedNotice } from "./compose.notices";
+import {
+  ChannelDraftNotice,
+  StaleThreadNotice,
+  VoiceDegradedNotice,
+} from "./compose.notices";
 
 // The two notices the composer says about the draft rather than about the
 // message. Their own frames because reaching either in the composer itself
@@ -55,6 +59,14 @@ export const Quiet: Story = {
     <StoryProviders>
       <VoiceDegradedNotice degraded={false} />
       <StaleThreadNotice stale={false} />
+    </StoryProviders>
+  ),
+};
+
+export const ChannelCannotDraft: Story = {
+  render: () => (
+    <StoryProviders>
+      <ChannelDraftNotice requested channel />
     </StoryProviders>
   ),
 };

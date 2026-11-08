@@ -9,6 +9,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
+import { formatPercent } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -64,6 +65,7 @@ const EDITABLE_FACTS = [
   "time_format",
   "fiscal_year_start_month",
   "forecast_forward_measure",
+  "forecast_likely_threshold",
 ] as const;
 
 // Which fact the reader pressed Edit on. The dialog always edits all of them —
@@ -97,7 +99,8 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
       // under the old answer may be drawn again.
       if (
         patch.individual_performance !== undefined ||
-        patch.forecast_self_correcting !== undefined
+        patch.forecast_self_correcting !== undefined ||
+        patch.forecast_likely_threshold !== undefined
       ) {
         void queryClient.invalidateQueries();
       }
@@ -121,7 +124,15 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
   });
 }
 
-export function InstallationSettingsCard() {
+/**
+ * Which half of the installation's facts a tab shows: where and when the
+ * company works, or how its forecast counts.
+ */
+export type InstallationPart = "regional" | "forecast";
+
+export function InstallationSettingsCard({
+  part = "regional",
+}: Readonly<{ part?: InstallationPart }>) {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings();
@@ -129,7 +140,11 @@ export function InstallationSettingsCard() {
   return (
     <QueryGate query={query} pendingLabel={t("nav.settings")}>
       {(settings) => (
-        <InstallationSettingsForm settings={settings} canManage={canManage} />
+        <InstallationSettingsForm
+          settings={settings}
+          canManage={canManage}
+          part={part}
+        />
       )}
     </QueryGate>
   );
@@ -154,9 +169,11 @@ function languageName(code: string, t: ReturnType<typeof useT>): string {
 function InstallationSettingsForm({
   settings,
   canManage,
+  part,
 }: {
   settings: InstallationSettings;
   canManage: boolean;
+  part: InstallationPart;
 }) {
   const t = useT();
   const currencyNote = useCurrencyNote();
@@ -265,88 +282,116 @@ function InstallationSettingsForm({
     );
   };
 
+  const forecast = part === "forecast";
   return (
-    <Panel title={t("installationSettings.companyTitle")}>
+    <Panel
+      title={t(
+        forecast
+          ? "installationSettings.forecastTitle"
+          : "installationSettings.companyTitle",
+      )}
+    >
       {!canManage && (
         <PanelBody>
           <p id={denialId}>{t("installationSettings.readOnly")}</p>
         </PanelBody>
       )}
-      <SettingList bleed="settings">
-        <SettingRow
-          label={t("installationSettings.timezone")}
-          description={t("installationSettings.timezoneHint")}
-          value={settings.timezone}
-          control={editVerb("timezone", t("installationSettings.timezone"))}
-        />
-        <SettingRow
-          label={t("installationSettings.baseCurrency")}
-          description={currencyNote(settings)}
-          value={settings.base_currency}
-          control={editVerb(
-            "base_currency",
-            t("installationSettings.baseCurrency"),
-          )}
-        />
-        <RegionalSettingsRows settings={settings} editVerb={editVerb} />
-        <SettingRow
-          label={t("installationSettings.baseLanguage")}
-          description={t("installationSettings.baseLanguageHint")}
-          // The language's own name, not its code: "Deutsch" is what an
-          // operator recognises, and `en` is what the wire carries.
-          value={languageName(settings.base_language, t)}
-          control={editVerb(
-            "base_language",
-            t("installationSettings.baseLanguage"),
-          )}
-        />
-        <SettingRow
-          label={t("installationSettings.fiscalYearStart")}
-          description={t("installationSettings.fiscalYearStartHint")}
-          // The month and the fiscal year it starts; a bare "4" leaves the
-          // admin to work out what a report will say.
-          value={fiscalYearStartSummary(
-            settings.fiscal_year_start_month,
-            locale,
-            new Date().getFullYear(),
-          )}
-          control={editVerb(
-            "fiscal_year_start_month",
-            t("installationSettings.fiscalYearStart"),
-          )}
-        />
-        <SettingRow
-          label={t("installationSettings.forwardMeasure")}
-          description={t("installationSettings.forwardMeasureHint")}
-          // The measure's own sentence rather than the stored word: an admin
-          // is deciding what a projection means.
-          value={t(
-            `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
-          )}
-          control={editVerb(
-            "forecast_forward_measure",
-            t("installationSettings.forwardMeasure"),
-          )}
-        />
-      </SettingList>
-      <CallingSettingsRows
-        settings={settings}
-        canManage={canManage}
-        denialId={denialId}
-        update={calling}
-      />
-      <IndividualPerformanceRows
-        settings={settings}
-        canManage={canManage}
-        denialId={denialId}
-        update={individual}
-      />
-      <ForecastSelfCorrectingRows
-        settings={settings}
-        canManage={canManage}
-        denialId={denialId}
-        update={selfCorrecting}
-      />
+      {forecast ? (
+        <>
+          <SettingList bleed="settings">
+            <SettingRow
+              label={t("installationSettings.forwardMeasure")}
+              description={t("installationSettings.forwardMeasureHint")}
+              // The measure's own sentence rather than the stored word: an
+              // admin is deciding what a projection means.
+              value={t(
+                `installationSettings.forwardMeasure.${settings.forecast_forward_measure}`,
+              )}
+              control={editVerb(
+                "forecast_forward_measure",
+                t("installationSettings.forwardMeasure"),
+              )}
+            />
+            <SettingRow
+              label={t("installationSettings.likelyThreshold")}
+              description={t("installationSettings.likelyThreshold.help")}
+              value={formatPercent(
+                settings.forecast_likely_threshold / 100,
+                locale,
+              )}
+              control={editVerb(
+                "forecast_likely_threshold",
+                t("installationSettings.likelyThreshold"),
+              )}
+            />
+          </SettingList>
+          <IndividualPerformanceRows
+            settings={settings}
+            canManage={canManage}
+            denialId={denialId}
+            update={individual}
+          />
+          <ForecastSelfCorrectingRows
+            settings={settings}
+            canManage={canManage}
+            denialId={denialId}
+            update={selfCorrecting}
+          />
+        </>
+      ) : (
+        <>
+          <SettingList bleed="settings">
+            <SettingRow
+              label={t("installationSettings.timezone")}
+              description={t("installationSettings.timezoneHint")}
+              value={settings.timezone}
+              control={editVerb("timezone", t("installationSettings.timezone"))}
+            />
+            <SettingRow
+              label={t("installationSettings.baseCurrency")}
+              description={currencyNote(settings)}
+              value={settings.base_currency}
+              control={editVerb(
+                "base_currency",
+                t("installationSettings.baseCurrency"),
+              )}
+            />
+            <RegionalSettingsRows settings={settings} editVerb={editVerb} />
+            <SettingRow
+              label={t("installationSettings.baseLanguage")}
+              description={t("installationSettings.baseLanguageHint")}
+              // The language's own name, not its code: "Deutsch" is what an
+              // operator recognises, and `en` is what the wire carries.
+              value={languageName(settings.base_language, t)}
+              control={editVerb(
+                "base_language",
+                t("installationSettings.baseLanguage"),
+              )}
+            />
+            <SettingRow
+              label={t("installationSettings.fiscalYearStart")}
+              description={t("installationSettings.fiscalYearStartHint")}
+              // The month and the fiscal year it starts; a bare "4" leaves the
+              // admin to work out what a report will say.
+              value={fiscalYearStartSummary(
+                settings.fiscal_year_start_month,
+                locale,
+                new Date().getFullYear(),
+              )}
+              control={editVerb(
+                "fiscal_year_start_month",
+                t("installationSettings.fiscalYearStart"),
+              )}
+            />
+          </SettingList>
+          <CallingSettingsRows
+            settings={settings}
+            canManage={canManage}
+            denialId={denialId}
+            update={calling}
+          />
+        </>
+      )}
       {editing !== null && (
         <InstallationProfileDialog
           settings={settings}

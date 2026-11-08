@@ -21,14 +21,17 @@ report's parts are:
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
   lost.
 - **Pipeline movement**: the deals that changed stage, and the stage each reached.
+- **Activity this week**: what you did on each day, as columns. It counts emails you sent, calls
+  you logged and meetings credited to you, as host or as a guest who took part. Emails you received
+  do not count. The last two days of the week show only when you worked on them. Reports written before this chart existed
+  do not have it, and neither does a reader who may not see activities.
 - **Forecast**: one table of the forecast for the week, month and quarter.
-- **Figures**: every figure beside the week before, and the scorecard. The columns name the weeks
-  by number, such as **Week 27** and **Week 26**. Under the table, each other reading has a row of
-  its own.
+- **Figures**: **Scorecard and all figures** opens the scorecard, every figure beside the week
+  before, and each other reading on a row of its own. The columns name the weeks by number, such as
+  **Week 27** and **Week 26**. **How this is counted** opens what the figures rest on.
 - **Observations**: what worked in the week and what did not, where Margince found something.
-- **The week ahead**: your plan for this week.
 
-**Closed deals**, **Pipeline movement**, **Observations** and **The week ahead** are left out when
+**Closed deals**, **Pipeline movement** and **Observations** are left out when
 they hold nothing. **Forecast** and **Figures** are always there. The last line says when the next report
 comes.
 
@@ -71,6 +74,10 @@ The **Weekly scorecard** is one table. Each row has a count and what the count r
 For leads and meetings it shows leads moved on and leads past the reply target, answered late or not answered.
 It also shows meetings marked held, with booked and no-show meetings beside them. A seat that cannot read activities sees no meeting figures in the review.
 
+Lead figures say **Unavailable** when your role cannot read leads or the week was measured without that access.
+They are not zeros. Other parts of the review stay available. They stay hidden if access is granted later;
+the frozen week cannot be measured again.
+
 For deals it shows stage moves on and back, and the middle value of the days a deal spent in the stage
 it left. It shows how many open deals have a next step, and how many have more than one contact. It
 shows how many have a close date that is not a guess. And it shows forecast moves up against moves
@@ -91,17 +98,16 @@ and each has a tag: **Positive outcome**, **Unsuccessful outcome**, **Pattern**,
 Each carries a warning: the observations show links in recorded work, and do not show what made the
 outcome happen.
 
-Two empty states mean different things. **"This week has not been analyzed yet."** means the reading
-has not run. **"Not enough recorded evidence for useful observations."** means there were fewer than
-three records to name, so no model was asked.
+A week with no observation has no **Observations** part. Either the reading did not run, or there
+were fewer than three records to name, so no model was asked.
 
 An installation with no AI model set up still gets the whole review. It only never gets the
-observations or the written summary, and says so.
+observations or the written summary.
 
 ## Planning a week
 
 **Plan for week {week}**, on **Home → Weekly**, is your plan for the week. It holds what you said
-you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **First**
+you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **Needs you**
 on that day, in the company's time zone. Done ones, ones due later and ones with no date stay out.
 
 Each commitment has a name, and can have a linked record and a due date. Ticking one marks it but

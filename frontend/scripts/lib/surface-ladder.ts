@@ -58,6 +58,7 @@ export const UNDERLAY_HOSTS = [
   ".arhit",
   ".arphead",
   ".avatar-mesh",
+  ".brief-cardpager-stacked",
   ".brief-triage-frame",
   ".co-move",
   ".core-glass",

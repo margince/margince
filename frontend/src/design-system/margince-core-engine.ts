@@ -3,12 +3,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MarginceCoreState } from "./margince-core";
-import {
-  type CoreFrame,
-  type CoreRenderer,
-  createCoreRenderer,
-  readHue,
-} from "./margince-core-gl";
+import { readHue } from "./margince-core-color";
+import type { CoreFrame, CoreRenderer } from "./margince-core-gl";
 import {
   asHero,
   type CoreBehaviour,
@@ -163,7 +159,7 @@ export type CoreRendererFactory = (
 export function runCoreLoop(
   canvas: HTMLCanvasElement,
   wanted: { current: Wanted },
-  makeRenderer: CoreRendererFactory = createCoreRenderer,
+  makeRenderer: CoreRendererFactory,
 ): Loop | null {
   const renderer = makeRenderer(canvas);
   if (!renderer) {
@@ -381,43 +377,49 @@ export function useCoreEngine(
     if (!canvas) {
       return;
     }
-    const loop = runCoreLoop(canvas, wanted);
-    loopRef.current = loop;
-    setLive(loop !== null);
-    if (!loop) {
-      return () => {
-        loopRef.current = null;
-      };
-    }
-    const observer = new ResizeObserver(() => {
-      loop.remeasure();
-      loop.wake();
-    });
-    observer.observe(canvas);
-    const releaseFocus = subscribeToWindowFocus((focused) => {
-      if (focused) {
-        loop.wake();
-      }
-    });
-    // A context lost to a GPU reset is not recoverable in place: the program and
-    // the buffers are gone with it. Reporting it not-live puts the static dress
-    // back, which is the honest picture of what the machine can draw.
-    const onLost = (event: Event) => {
-      event.preventDefault();
-      // Stop as well as report. Reporting alone leaves `tick` re-arming itself
-      // for every state whose eased speed is still above rest, drawing each
-      // frame into a context that no longer exists; and nothing unmounts the
-      // canvas on a loss, so only unmount would ever have ended it.
-      loop.stop();
-      setLive(false);
-    };
-    canvas.addEventListener("webglcontextlost", onLost);
+    let cancelled = false;
+    let release: (() => void) | undefined;
+    void import("./margince-core-gl")
+      .then(({ createCoreRenderer }) => {
+        if (cancelled) return;
+        const loop = runCoreLoop(canvas, wanted, createCoreRenderer);
+        loopRef.current = loop;
+        setLive(loop !== null);
+        if (!loop) {
+          return;
+        }
+        const observer = new ResizeObserver(() => {
+          loop.remeasure();
+          loop.wake();
+        });
+        observer.observe(canvas);
+        const releaseFocus = subscribeToWindowFocus((focused) => {
+          if (focused) {
+            loop.wake();
+          }
+        });
+        // A lost context falls back to the static decoration.
+        const onLost = (event: Event) => {
+          event.preventDefault();
+          // The mounted canvas must stop scheduling frames after context loss.
+          loop.stop();
+          setLive(false);
+        };
+        canvas.addEventListener("webglcontextlost", onLost);
+        release = () => {
+          canvas.removeEventListener("webglcontextlost", onLost);
+          releaseFocus();
+          observer.disconnect();
+          loop.stop();
+          loopRef.current = null;
+        };
+      })
+      .catch((error: unknown) =>
+        console.error("Core animation could not be loaded", error),
+      );
     return () => {
-      canvas.removeEventListener("webglcontextlost", onLost);
-      releaseFocus();
-      observer.disconnect();
-      loop.stop();
-      loopRef.current = null;
+      cancelled = true;
+      release?.();
     };
     // Only the canvas: the loop reads everything else through the ref above, so
     // a state change bends the running loop instead of rebuilding the GL context

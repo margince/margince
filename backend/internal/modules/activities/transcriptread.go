@@ -80,6 +80,9 @@ type TranscriptRead struct {
 	// how many questions are waiting without consulting the inbox. It records
 	// what the read produced; the authority is on each approval row (ADR-0036).
 	ProposalIDs []ids.UUID
+	// Outcome is what a finished reading did, as facts. Nil while it runs, and
+	// on a reading finished before facts were kept.
+	Outcome     *TranscriptReadFacts
 	RequestedBy string
 	StartedAt   *time.Time
 	FinishedAt  *time.Time
@@ -102,13 +105,18 @@ func (r TranscriptRead) Live() bool {
 }
 
 const transcriptReadColumns = `id, activity_id, status, status_detail, line_count,
-	proposal_ids, requested_by, started_at, finished_at, created_at, attempt, attempt_at`
+	proposal_ids, outcome, requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
 func scanTranscriptRead(r pgx.Row) (TranscriptRead, error) {
 	var read TranscriptRead
+	var outcome []byte
 	err := r.Scan(&read.ID, &read.ActivityID, &read.Status, &read.StatusDetail, &read.LineCount,
-		&read.ProposalIDs, &read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt,
+		&read.ProposalIDs, &outcome, &read.RequestedBy, &read.StartedAt, &read.FinishedAt, &read.CreatedAt,
 		&read.Attempt, &read.AttemptAt)
+	if err != nil {
+		return read, err
+	}
+	read.Outcome, err = decodeTranscriptFacts(outcome)
 	return read, err
 }
 
@@ -367,6 +375,8 @@ type TranscriptReadOutcome struct {
 	Detail string
 	// ProposalIDs are the approvals staged, in the order they were staged.
 	ProposalIDs []ids.UUID
+	// Facts is what the reading did, for the report to phrase per reader.
+	Facts *TranscriptReadFacts
 	// LineCount is how many lines the reading actually addressed. The door
 	// stamps its own count when the reading is queued; this is the count at
 	// READ time, which is the one a citation was checked against — a body

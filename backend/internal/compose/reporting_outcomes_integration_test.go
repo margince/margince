@@ -30,7 +30,7 @@ func TestReportingQualifiedPipelineKeepsTheFirstEntryThroughRegression(t *testin
 		t.Fatal(err)
 	}
 	writer := principal.SystemActing(ctx, "system:qualification-fixture")
-	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(clock)
+	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(clock)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	amount, currency := int64(10000), "EUR"
 	at = at.AddDate(0, 0, 1)
@@ -70,7 +70,7 @@ func TestReportingAcceptedCreditSurvivesTransferAndDeduplicatesHandoffs(t *testi
 	ctx = principal.WithActor(ctx, actor)
 	contact := e.seedID(t, `INSERT INTO contact(id,first_name,last_name,full_name,source,captured_by) VALUES($1,'Jamie','Buyer','Jamie Buyer','manual','system:fixture')`)
 	deal, store, writer := reportingWrittenClose(t, e)
-	contactsStore := contacts.NewStore(InstallationDB(e.Pool)).WithClock(clock)
+	contactsStore := contacts.NewStore(InstallationDB(e.Pool)).SetClock(clock)
 	for range 2 {
 		handoff, err := contactsStore.SubmitHandoff(ctx, contacts.NewSDRHandoff{ContactID: &contact})
 		if err != nil {

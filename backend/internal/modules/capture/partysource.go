@@ -27,6 +27,31 @@ type partySourceEvidence struct {
 	Original        *ids.UUID
 }
 
+// awaitsAdmission is whether this evidence leaves other parties to admit:
+// recipients of mail the seat sent, or attendees of a meeting. Mail the seat
+// only received names no one the seat's proof can admit.
+func (in partySourceEvidence) awaitsAdmission() bool {
+	return in.Sent || in.Meeting
+}
+
+// admissionNote is what a capture transaction's party-source writes left to
+// admit, read after commit. The record as the connector handed it over is not
+// enough. The transaction can reclassify it: mail from an owner's alias
+// becomes mail the owner sent.
+type admissionNote struct{ pending bool }
+
+type admissionNoteKey struct{}
+
+func withAdmissionNote(ctx context.Context, note *admissionNote) context.Context {
+	return context.WithValue(ctx, admissionNoteKey{}, note)
+}
+
+func noteAdmission(ctx context.Context, in partySourceEvidence) {
+	if note, ok := ctx.Value(admissionNoteKey{}).(*admissionNote); ok && in.awaitsAdmission() {
+		note.pending = true
+	}
+}
+
 func recordPartySourceTx(ctx context.Context, tx pgx.Tx, in partySourceEvidence) error {
 	if in.User.IsZero() || in.Provider == "" {
 		return nil
@@ -44,7 +69,7 @@ func recordPartySourceTx(ctx context.Context, tx pgx.Tx, in partySourceEvidence)
 	}
 	in.Recipients = retainedPartyAddresses(in.Recipients, erased)
 	in.Addresses = retainedPartyAddresses(in.Addresses, erased)
-	args := pgx.NamedArgs{partyActivityArg: in.Activity, partyUserArg: in.User, partyProviderArg: in.Provider, "sent": in.Sent, "containers": append([]string{}, in.Containers...), "recipients": append([]string{}, in.Recipients...), "addresses": append([]string{}, in.Addresses...), "known": in.ContainersKnown, "blocked": in.Blocked, "original": in.Original, "pending": in.Sent || in.Meeting}
+	args := pgx.NamedArgs{partyActivityArg: in.Activity, partyUserArg: in.User, partyProviderArg: in.Provider, "sent": in.Sent, "containers": append([]string{}, in.Containers...), "recipients": append([]string{}, in.Recipients...), "addresses": append([]string{}, in.Addresses...), "known": in.ContainersKnown, "blocked": in.Blocked, "original": in.Original, "pending": in.awaitsAdmission()}
 	query := `INSERT INTO capture_party_source(activity_id,user_id,provider,sent_by_owner,containers,recipients,policy_addresses,containers_known,admission_blocked,raw_capture_id,admission_pending)
  SELECT @activity,@user,@provider,@sent,@containers,@recipients,@addresses,@known,@blocked,coalesce(a.raw_capture_id,@original),@pending
  FROM activity a WHERE a.id=@activity
@@ -68,6 +93,7 @@ func recordPartySourceTx(ctx context.Context, tx pgx.Tx, in partySourceEvidence)
 	if _, err := tx.Exec(ctx, query, args); err != nil {
 		return err
 	}
+	noteAdmission(ctx, in)
 	outcome := "live"
 	if !in.ContainersKnown {
 		outcome = "restored"

@@ -12,7 +12,6 @@ import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
@@ -20,6 +19,8 @@ import { unwrap } from "../../lib/problem";
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.
 import "./automationdetail.css";
+import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The human surface for the two human-only automation ops
 // (listAutomationRuns / previewAutomation), in its own file so automations.tsx
@@ -40,14 +41,14 @@ export const OUTCOME_LOOK: Readonly<
     }>
   >
 > = {
-  fired: { tone: "success", icon: Check, word: "auto.runs.outcomeFired" },
-  failed: { tone: "danger", icon: X, word: "auto.runs.outcomeFailed" },
-  blocked: { tone: "warning", icon: Ban, word: "auto.runs.outcomeBlocked" },
-  skipped: { tone: "warning", icon: Minus, word: "auto.runs.outcomeSkipped" },
+  fired: { tone: "success", icon: Check, word: RUN_OUTCOME_WORD.fired },
+  failed: { tone: "danger", icon: X, word: RUN_OUTCOME_WORD.failed },
+  blocked: { tone: "warning", icon: Ban, word: RUN_OUTCOME_WORD.blocked },
+  skipped: { tone: "warning", icon: Minus, word: RUN_OUTCOME_WORD.skipped },
   queued_for_approval: {
     tone: "warning",
     icon: Clock,
-    word: "auto.runs.outcomeQueued",
+    word: RUN_OUTCOME_WORD.queued_for_approval,
   },
 };
 
@@ -88,7 +89,7 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
   // A run is an audit-style event: read its time in the VIEWER's own timezone
   // (as audit.tsx / aicalls.tsx do), never a fixed one — an operator in any
   // region sees the firing in their local wall-clock.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <li className="auto-run">
       <div className="auto-run-head">
@@ -114,10 +115,14 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
       {run.action_result && (
         <DetailLine label={t("auto.runs.result")} value={run.action_result} />
       )}
-      {run.reason && (
+      {(run.reason_code || run.reason) && (
         <DetailLine
           label={t("auto.runs.reason")}
-          value={run.reason}
+          value={
+            run.reason_code
+              ? runReasonWords(run.reason_code, t)
+              : (run.reason ?? "")
+          }
           color={reasonColor(run.outcome)}
         />
       )}

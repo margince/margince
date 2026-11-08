@@ -1,7 +1,19 @@
 import type { BrowserContext, Page } from "@playwright/test";
+import type { components } from "../src/api/schema";
 import { routes } from "./mockapi/routes";
 import { answer } from "./mockapi/server";
 import { createMockState, type MockApiOptions } from "./mockapi/state";
+
+// Session preparation adds a query; the principal fixture is scoped to its path.
+export async function servePrincipal(
+  page: Page,
+  principal: components["schemas"]["MeResponse"],
+): Promise<void> {
+  await page.route(
+    (url) => url.pathname === "/v1/me",
+    (route) => route.fulfill({ json: principal }),
+  );
+}
 
 export { anna } from "./mockapi/fixtures";
 export type { MockApiOptions } from "./mockapi/state";

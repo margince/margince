@@ -3,24 +3,8 @@
 
 package compose
 
-// Closing meetings captured before the calendar's RSVP was read.
-//
-// Live capture now closes a meeting the calendar says is off — cancelled by its
-// organizer, or declined by the seat whose calendar it is. Every meeting
-// captured before that carries `meeting_status` NULL, which every surface reads
-// as booked, and no later sync will correct it: a provider stops listing an
-// event once it is off, so the pull that would have carried the news has long
-// since passed.
-//
-// The evidence is already here. Each meeting's raw original is stored verbatim,
-// and the RSVP was always in it — nothing looked. So this re-reads what we hold
-// rather than asking the provider again, which also means it works for a
-// calendar since disconnected.
-//
-// It asks meetingmap the SAME question live capture asks (SettlementOf over the
-// stored bytes). A pass that re-derived "is this meeting off" from the payload
-// would be a second answer to a question that package owns, and the two would
-// part company the first time a provider changed how it says no.
+// Stored originals use the same cancellation decision as live capture. A local
+// calendar removal or an attendee's answer never cancels the shared meeting.
 
 import (
 	"context"
@@ -170,22 +154,9 @@ func backfillOneMeetingRSVP(ctx context.Context, tx pgx.Tx, c rsvpCandidate, pay
 	if c.owner == "" {
 		return rsvpBackfillUnreadable, nil
 	}
-	raw, decodeErr := decodeStoredOriginal(payload)
-	if decodeErr != nil {
-		return rsvpBackfillUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
-	}
-	var settlement meetingmap.Settlement
-	var parseErr error
-	switch c.source {
-	case sourceGCal:
-		settlement, parseErr = gcal.SettlementOf(raw, c.owner)
-	case sourceGraphCal:
-		settlement, parseErr = graphcal.SettlementOf(raw, c.owner)
-	default:
+	settlement, readable := storedMeetingSettlement(c.source, c.owner, payload)
+	if !readable {
 		return rsvpBackfillUnreadable, nil
-	}
-	if parseErr != nil {
-		return rsvpBackfillUnreadable, nil //nolint:nilerr // unreadable is the recorded outcome, not a fault
 	}
 	if settlement != meetingmap.SettleCancel {
 		return rsvpBackfillStillOn, nil
@@ -205,6 +176,25 @@ func backfillOneMeetingRSVP(ctx context.Context, tx pgx.Tx, c rsvpCandidate, pay
 		return rsvpBackfillAnswered, nil
 	}
 	return rsvpBackfillClosed, nil
+}
+
+// storedMeetingSettlement reads one stored calendar original under today's
+// rules, as the calendar of owner sees it. readable is false for a payload no
+// connector's parser decomposes, which is a verdict rather than a fault.
+func storedMeetingSettlement(source, owner string, payload []byte) (settlement meetingmap.Settlement, readable bool) {
+	raw, err := decodeStoredOriginal(payload)
+	if err != nil {
+		return 0, false
+	}
+	switch source {
+	case sourceGCal:
+		settlement, err = gcal.SettlementOf(raw, owner)
+	case sourceGraphCal:
+		settlement, err = graphcal.SettlementOf(raw, owner)
+	default:
+		return 0, false
+	}
+	return settlement, err == nil
 }
 
 // markMeetingRSVPSettled records that this pass has judged one meeting, so it is

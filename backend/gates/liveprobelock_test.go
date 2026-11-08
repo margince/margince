@@ -34,7 +34,6 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -137,7 +136,7 @@ func moduleDirsWith(t *testing.T, identifier string) []string {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from the trusted module tree
+		source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from the trusted module tree
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}

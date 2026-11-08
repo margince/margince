@@ -125,8 +125,7 @@ func (w *WeeklyForecast) closeHorizon(
 		ForwardMeasure: string(measure),
 		BaseCurrency:   baseCurrency,
 		WonMinor:       readings.won,
-		CommitMinor:    readings.commit,
-		BestCaseMinor:  readings.bestCase,
+		LikelyMinor:    readings.likely,
 		WeightedMinor:  readings.weighted,
 	}
 
@@ -165,14 +164,16 @@ func (w *WeeklyForecast) closeHorizon(
 //
 // The landing's forward half IS one of them, so the bars explain that one and
 // the waterfall reconciles to the figure printed above it. A manager call has
-// no reading behind it — it is an authored total — so its bridge explains the
-// commit evidence the fallback landing would have used, which is the closest
-// honest account of what the pipeline did.
+// no reading behind it, since it is an authored total. Its bridge explains the
+// Likely the fallback landing would have used, the closest
+// account of what the pipeline did.
 func movementReadingFor(measure forecasting.ForwardMeasure) forecasting.Reading {
-	if measure == forecasting.MeasureWeighted {
+	switch measure {
+	case forecasting.MeasureWeighted:
 		return forecasting.ReadingWeighted
+	default:
+		return forecasting.ReadingEvidence
 	}
-	return forecasting.ReadingEvidence
 }
 
 // topDrivers picks the deals worth naming under each bar, with the labels they
@@ -327,7 +328,7 @@ func magnitude(v int64) int64 {
 
 // closingReadings are the figures a frozen outlook copies.
 type closingReadings struct {
-	landing, won, commit, bestCase, weighted int64
+	landing, won, likely, weighted int64
 	// full is the whole computation, kept so coverage reads the same one.
 	full forecasting.Readings
 }
@@ -367,15 +368,14 @@ func (w *WeeklyForecast) freezeClosing(
 	if err != nil {
 		return ids.Nil, closingReadings{}, "", err
 	}
-	// landing.Measure and NOT the requested one. A manager-call installation
-	// with no call falls back to commit evidence, and freezing the request
-	// would label a commit-evidence figure as somebody's authored call — the
-	// wrong number under a right word, in a record nobody can correct later.
+	// landing.Measure and not the requested one. A manager-call installation
+	// with no call falls back to Likely. Freezing the request would label a
+	// Likely figure as somebody's authored call. That is the wrong number under
+	// a right word, in a record nobody can correct later.
 	return id, closingReadings{
 		landing:  landing.AmountMinor,
 		won:      readings.WonMinor,
-		commit:   readings.EvidenceMinor,
-		bestCase: readings.BestCaseMinor,
+		likely:   readings.EvidenceMinor,
 		weighted: readings.WeightedMinor,
 		full:     readings,
 	}, landing.Measure, nil

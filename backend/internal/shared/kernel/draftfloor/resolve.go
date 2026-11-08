@@ -84,8 +84,8 @@ func (r *Resolver) WithUserLanguage(user UserLanguage) *Resolver {
 	return r
 }
 
-// WithClock replaces the clock, so a test states the date its case is about.
-func (r *Resolver) WithClock(now Clock) *Resolver {
+// SetClock replaces the clock, so a test states the date its case is about.
+func (r *Resolver) SetClock(now Clock) *Resolver {
 	if now != nil {
 		r.now = now
 	}
@@ -147,7 +147,8 @@ type Written struct {
 	// Body is the correspondence itself, quoted history included.
 	Body string
 	// Subject is the fallback text, read only when the body says nothing.
-	Subject string
+	Subject      string
+	DraftSubject string
 	// Thread is the other messages of the conversation, in the order
 	// draftcore.LanguageEvidence gives them: the recipient's own mail first.
 	// Read after the answered message so a reply whose own text names no
@@ -201,7 +202,7 @@ func (w Written) evidence() []string {
 	out = append(out, w.Addressee...)
 	out = append(out, w.Body, w.Subject)
 	out = append(out, w.Thread...)
-	return append(out, w.Rewrite, w.Purpose)
+	return append(out, w.Rewrite, w.DraftSubject, w.Purpose)
 }
 
 // register is the first du or Sie the evidence shows.

@@ -30,6 +30,7 @@ const (
 func scanReport(row pgx.Row) (crmcontracts.ReportingReport, error) {
 	var report crmcontracts.ReportingReport
 	err := row.Scan(&report.Id, &report.OwnerId, &report.Name, &report.Description, &report.Audience, &report.AudienceTeamId, &report.Revision, &report.Version, &report.CreatedAt, &report.ArchivedAt, &report.Selection, &report.DraftRevision)
+	withChartList(&report.Selection)
 	return report, storedError(err)
 }
 
@@ -149,6 +150,7 @@ func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontract
 // validateRevision checks what one revision holds, and resolves its scope. A
 // draft and a published revision pass the same checks.
 func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *crmcontracts.ReportingSelection) error {
+	withChartList(selection)
 	deriveLayoutBlocks(selection)
 	if err := s.validateSelection(ctx, *selection); err != nil {
 		return err

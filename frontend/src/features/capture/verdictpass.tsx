@@ -1,7 +1,7 @@
 import type { components } from "../../api/schema";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // When the pass a contact is waiting on will run.
 //
@@ -27,6 +27,7 @@ export function VerdictPassNote({
   clock,
   subject,
 }: Readonly<{ clock: Clock | undefined; subject: Subject }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -50,7 +51,7 @@ export function VerdictPassNote({
         subject: t(`verdictPass.subject.${subject}`),
         minutes: formatNumber(minutes, locale),
       })}{" "}
-      {passState(clock, t, locale)}
+      {passState(clock, t, locale, readerZone)}
     </p>
   );
 }
@@ -64,6 +65,7 @@ function passState(
   clock: Clock,
   t: ReturnType<typeof useT>,
   locale: ReturnType<typeof useLocale>["locale"],
+  zone: string,
 ): string {
   if (clock.running) {
     return t("verdictPass.running");
@@ -75,6 +77,6 @@ function passState(
     return "";
   }
   return t("verdictPass.next", {
-    when: formatDateTime(clock.next_pass_at, locale, viewerZone()),
+    when: formatDateTime(clock.next_pass_at, locale, zone),
   });
 }

@@ -246,6 +246,9 @@ func (s *Store) ReorderStages(ctx context.Context, pipelineID ids.PipelineID, st
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := holdLadderForAgent(ctx, tx, pipelineID); err != nil {
+			return err
+		}
 		if err := lockLadder(ctx, tx, pipelineID); err != nil {
 			return err
 		}
@@ -269,6 +272,9 @@ func (s *Store) ReorderStages(ctx context.Context, pipelineID ids.PipelineID, st
 		}
 		if moves := placements(order); len(moves) > 0 {
 			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
+				return err
+			}
+			if err := refuseAgentOnTrustedLadder(ctx, tx, pipelineID); err != nil {
 				return err
 			}
 			if err := writeStageOrder(ctx, tx, pipelineID, ladder, moves); err != nil {

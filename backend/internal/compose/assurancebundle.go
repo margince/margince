@@ -40,7 +40,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -58,8 +57,6 @@ type bundleDeps struct {
 	// exceptions reads the findings THIS RUN observed and nobody has deferred.
 	// It is bundleableFindings in production.
 	exceptions func(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]assurance.Exception, error)
-	// now is the worker's clock, for the deadline a delivered review carries.
-	now func() time.Time
 }
 
 // bundleRunFindings groups one run's open findings into one task per subject.
@@ -74,10 +71,6 @@ type bundleDeps struct {
 // so failing the job here would leave River retrying a pass whose real output
 // already landed, and the retry would re-scan and re-mint. What a failure costs
 // instead is one deal's task, which the next night's cycle mints again.
-//
-// A review is delivered by its own job (jobs_assurancereview.go). This pass
-// only files under a delivered review's task, and completes the review tasks
-// that have nothing left open.
 func bundleRunFindings(
 	ctx context.Context, deps bundleDeps, runID ids.UUID,
 ) (minted int, err error) {
@@ -100,7 +93,8 @@ func bundleRunFindings(
 	defer func() {
 		if closeErr := deps.bundles.CloseCycle(ctx, cycle); closeErr != nil {
 			err = errors.Join(err, fmt.Errorf(
-				"compose: closing the cycle for run %s: %w", runID, closeErr))
+				"compose: closing the cycle for run %s: %w", runID, closeErr,
+			))
 		}
 	}()
 
@@ -132,9 +126,6 @@ func bundleRunFindings(
 		if wasMinted {
 			minted++
 		}
-	}
-	if err := settleReviewTasks(ctx, deps); err != nil {
-		failed = append(failed, err)
 	}
 	if len(failed) > 0 {
 		return minted, errors.Join(failed...)
@@ -249,13 +240,6 @@ func groupBySubject(open []assurance.Exception) []subjectFindings {
 func bundleSubject(
 	ctx context.Context, deps bundleDeps, runID, cycle ids.UUID, subject subjectFindings,
 ) (bool, error) {
-	if review, ok := reviewFinding(subject); ok {
-		episode, err := readEpisodeTask(ctx, deps, review.ID)
-		if err != nil {
-			return false, err
-		}
-		return false, fileUnderDeliveredReview(ctx, deps, cycle, subject, review, episode)
-	}
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {
 		return false, fmt.Errorf("compose: asking for the subject's task: %w", err)
@@ -285,7 +269,6 @@ func bundleSubject(
 func fileUnderTask(
 	ctx context.Context, deps bundleDeps, cycle, task ids.UUID, subject subjectFindings,
 ) error {
-
 	// The findings are filed on ONE transaction that holds the task, because
 	// whether it is still open was read before this line and a rep can answer
 	// it at any moment. Without the hold, a task completed in between takes

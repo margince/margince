@@ -16,7 +16,7 @@ export function captureReview(value: string | undefined): "held" | null {
 export function captureReviewTarget(review: CaptureReview) {
   if (review === "senders") return worklistLaneTarget("decisions");
   return {
-    route: settingsHref("capture-activity"),
+    route: settingsHref("connections", "activity"),
     params: new Map([[CAPTURE_REVIEW_PARAM, review]]),
   };
 }

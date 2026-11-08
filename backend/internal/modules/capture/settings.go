@@ -24,7 +24,8 @@ import (
 
 // Settings is the workspace-shared capture posture (the wire shape).
 type Settings struct {
-	AutoEnrich bool
+	InternalMail *InternalMailSettings
+	AutoEnrich   bool
 	// SignatureEnrich is the workspace DEFAULT; a mailbox that set its own
 	// switch keeps it. See settingsentry.go for why the two are separate.
 	SignatureEnrich bool
@@ -54,6 +55,7 @@ type SiteReadLimits struct {
 // transposed two would compile, pass every test that does not happen to set
 // both, and silently switch mail sharing when it meant to switch enrichment.
 type SettingsPatch struct {
+	InternalMail            *InternalMailPatch
 	AutoEnrich              *bool
 	MailSharing             *bool
 	SharedPostureAllowed    *bool
@@ -118,7 +120,8 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 		return Settings{}, err
 	}
 	out.SiteRead = limits
-	return out, nil
+	out.InternalMail, err = s.internalMailSettings(ctx)
+	return out, err
 }
 
 // SiteReadLimits reads the per-read limits, which the deep-read worker takes
@@ -181,7 +184,18 @@ func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settin
 	// One PATCH is one change: every field commits in one transaction or
 	// neither does — a patch that half-applied would leave the caller's
 	// screen agreeing with neither what they sent nor what stood before.
+	if patch.InternalMail != nil {
+		if err := settings.RequireWrite(ctx, internalMailPolicy); err != nil {
+			return Settings{}, err
+		}
+	}
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
+		if patch.InternalMail != nil {
+			if _, err := s.setInternalMailPolicyTx(ctx, tx, patch.InternalMail.Enabled, patch.InternalMail.Sources); err != nil {
+				return err
+			}
+		}
+
 		for _, f := range []struct {
 			want  *bool
 			entry *config.Setting[bool]

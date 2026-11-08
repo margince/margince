@@ -119,6 +119,10 @@ type SendEmailInput struct {
 	// close the learning signal that draft opened. Empty is the ordinary case:
 	// mail the human composed independently resolves no draft.
 	DraftRef string
+	// SendingEntity is the legal entity the message goes out for, never read
+	// from a request. PrepareSend resolves it from the sender. A scheduled
+	// payload keeps the one its scheduling resolved. Zero means unresolved.
+	SendingEntity ids.UUID
 	// MailDraftID names the rep's saved draft this message was composed in,
 	// discarded in the transaction that sends or schedules it. Never frozen
 	// into a scheduled payload: the draft is gone once the schedule commits.

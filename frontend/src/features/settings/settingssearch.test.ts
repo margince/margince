@@ -48,7 +48,7 @@ describe("settingsSearch", () => {
     ["webhook", "integrations"],
     ["csv", "import"],
     ["licence", "seats"],
-    ["stage", "pipelines"],
+    ["stage", "deals"],
     ["token", "authentication"],
     ["limit", "capture"],
   ] as const)("finds the page that owns %s", (query, page) => {
@@ -86,7 +86,12 @@ describe("settingsSearch", () => {
   it("still answers the names the redesign replaced", () => {
     expect(ids("general")).toContain("company");
     expect(ids("users")).toContain("members");
-    expect(ids("data model")).toContain("fields");
+    expect(ids("data model")).toContain("records");
+    // Pages that became tabs answer their own old names.
+    expect(ids("loss reasons")).toContain("deals");
+    const activity = settingsSearch("capture activity", ALL, t);
+    expect(activity[0]?.page.id).toBe("connections");
+    expect(activity[0]?.tab).toBe("activity");
   });
 
   // Two pages can each honestly answer one word, and picking one would make the
@@ -99,8 +104,12 @@ describe("settingsSearch", () => {
 
   // The page's own name outranks a word it merely answers to.
   it("puts a name match above an alias match", () => {
-    const hits = ids("tags");
-    expect(hits[0]).toBe("tags");
+    // "Tags" names a tab of Records and fields, and other pages carry the
+    // word only as an alias.
+    const hits = settingsSearch("tags", ALL, t);
+    expect(hits[0]?.page.id).toBe("records");
+    expect(hits[0]?.section).toBe(t("settings.part.records.tags"));
+    expect(hits[0]?.tab).toBe("tags");
   });
 
   // A prefix is a stronger signal than a substring: somebody typing "au" is
@@ -151,7 +160,7 @@ describe("settingsSearch", () => {
   // the reader has found the vocabulary or something else.
   it("says which group each hit sits under", () => {
     const [hit] = settingsSearch("audit", ALL, t);
-    expect(hit?.group).toBe(translate("en", "settings.group.governance"));
+    expect(hit?.group).toBe(translate("en", "settings.group.compliance"));
     expect(hit?.label).toBe(translate("en", "settings.tab.audit"));
   });
 
@@ -176,7 +185,7 @@ describe("settingsSearch over the settings a page draws", () => {
 
   it.each([
     ["de", de, "system-health", "operations.retention.label"],
-    ["vi", vi, "company", "installationSettings.timezone"],
+    ["vi", vi, "company", "installationSettings.dateFormat"],
   ] as const)("finds a %s setting by its own label", (_, words, page, key) => {
     const hit = settingsSearch(words(key), ALL, words).find(
       (candidate) => candidate.page.id === page,

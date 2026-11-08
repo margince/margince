@@ -25,7 +25,6 @@ package gates
 // — so the failure mode is a loud one.
 
 import (
-	"os"
 	"reflect"
 	"regexp"
 	"slices"
@@ -34,6 +33,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // mailLabelPairs are the Go fields that must equal a frontend key, per field.
@@ -81,7 +81,7 @@ var mailLabelPairs = []struct {
 // thought to list here.
 func mailLabelLanguages(t *testing.T) []string {
 	t.Helper()
-	document, err := os.ReadFile(mailLanguageContract)
+	document, err := gatekit.ReadFile(mailLanguageContract)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func TestEveryMailLabelMatchesTheScreenThatShowsIt(t *testing.T) {
 // therefore reads as absent, which the caller reports rather than skipping.
 func frontendCatalog(t *testing.T, language string) map[string]string {
 	t.Helper()
-	source, err := os.ReadFile("../frontend/src/i18n/" + language + ".ts")
+	source, err := gatekit.ReadFile("../frontend/src/i18n/" + language + ".ts")
 	if err != nil {
 		t.Fatalf("reading the %s catalog: %v", language, err)
 	}
@@ -192,7 +192,7 @@ func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 // for a mail equal to those the catalog has copy for, in both directions.
 func TestTheContractsMailLanguagesAreTheCatalogs(t *testing.T) {
 	t.Parallel()
-	document, err := os.ReadFile(mailLanguageContract)
+	document, err := gatekit.ReadFile(mailLanguageContract)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// ClassifyWithLogged counts notes and meetings as prior contact, even without mail.
+// ClassifyWithLogged counts notes and past meetings as prior contact, even without mail.
 // It counts as our side: nothing claims the contact wrote.
 func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
 	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {
@@ -48,13 +48,20 @@ func IsLoggedKind(kind crmcontracts.ActivityKind) bool {
 }
 
 // IsLoggedTouch reports a note or meeting that has happened by now in zone
-// (occurredday.Happened). A canceled or missed meeting records no contact. A
-// past meeting still marked booked counts: it most often took place, and reps
-// rarely come back to mark it held.
+// (occurredday.Happened), the Go form of relstrength.HappenedByNowSQL. A
+// meeting is contact once it is past and nobody called it off
+// (relstrength.HadContact); nobody has to report it held.
 func IsLoggedTouch(activity crmcontracts.Activity, now time.Time, zone *time.Location) bool {
-	if !IsLoggedKind(activity.Kind) || !occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
+	at := activitywhen.MomentOf(activity)
+	if !IsLoggedKind(activity.Kind) || !occurredday.Happened(string(activity.Kind), at, now, zone) {
 		return false
 	}
-	status := activity.MeetingStatus
-	return status == nil || relstrength.MeetingStatusCounts(string(*status))
+	var status string
+	if activity.MeetingStatus != nil {
+		status = string(*activity.MeetingStatus)
+	}
+	if activity.Kind == crmcontracts.ActivityKindMeeting {
+		return relstrength.HadContact(string(activity.Kind), status, "", at, now, zone)
+	}
+	return relstrength.MeetingStatusNotCalledOff(status)
 }

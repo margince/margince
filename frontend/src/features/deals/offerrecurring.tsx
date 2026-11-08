@@ -3,7 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { Panel, PanelRow } from "../../design-system/panel";
-import { formatMoney } from "../../format/format";
+import { formatMoney, formatMoneyOrAbsent } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 
 type Offer = components["schemas"]["Offer"];
@@ -18,24 +18,33 @@ type Offer = components["schemas"]["Offer"];
 export function OfferTotalsPanel({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const { locale } = useLocale();
+  if (offer.money_withheld) {
+    return (
+      <Panel title={t("offer.totals")}>
+        <PanelRow>
+          <span className="t-caption">{t("offer.moneyWithheld")}</span>
+        </PanelRow>
+      </Panel>
+    );
+  }
   return (
     <Panel title={t("offer.totals")}>
       <PanelRow>
         <span className="t-label">{t("offer.net")}</span>
         <div className="t-num">
-          {formatMoney(offer.net_minor, offer.currency, locale)}
+          {formatMoneyOrAbsent(offer.net_minor, offer.currency, locale)}
         </div>
       </PanelRow>
       <PanelRow>
         <span className="t-label">{t("offer.tax")}</span>
         <div className="t-num">
-          {formatMoney(offer.tax_minor, offer.currency, locale)}
+          {formatMoneyOrAbsent(offer.tax_minor, offer.currency, locale)}
         </div>
       </PanelRow>
       <PanelRow>
         <span className="t-label">{t("offer.gross")}</span>
         <div className="t-num">
-          {formatMoney(offer.gross_minor, offer.currency, locale)}
+          {formatMoneyOrAbsent(offer.gross_minor, offer.currency, locale)}
         </div>
       </PanelRow>
       <OfferRecurringTotals offer={offer} />

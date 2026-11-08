@@ -150,14 +150,21 @@ func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []i
 	return out, nil
 }
 
-// StampCreators sets on each row of a page who created it, in one statement.
-// Which agents act for a colleague is that colleague's personal data. So only a
-// human session reads it, as only a human reads the record History. A withheld
-// row gets none: whose agent wrote hidden content is part of that content.
+// ReaderMayKnowWhoActed reports whether the caller is told who acted on a
+// record. Which agents act for a colleague is that colleague's personal data.
+// So only a human session reads it, as only a human reads the record History.
+func ReaderMayKnowWhoActed(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	return ok && actor.Type == principal.PrincipalHuman
+}
+
+// StampCreators sets on each row of a page who created it, in one statement,
+// for a reader ReaderMayKnowWhoActed admits. A withheld row gets none: whose
+// agent wrote hidden content is part of that content.
 func StampCreators[T any](ctx context.Context, tx pgx.Tx, entityType string, page []T,
 	id func(T) ids.UUID, withheld func(T) bool, set func(*T, *crmcontracts.PrincipalAttribution),
 ) error {
-	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+	if !ReaderMayKnowWhoActed(ctx) {
 		return nil
 	}
 	readable := make([]ids.UUID, 0, len(page))

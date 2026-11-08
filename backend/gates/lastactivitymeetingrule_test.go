@@ -6,7 +6,8 @@
 package gates
 
 // last_activity_at on deal, contact, company and project skips a task and a
-// called-off meeting, and counts only what has happened.
+// canceled or no-show meeting, and counts only what has happened. A past
+// meeting counts whether or not anyone reported it held.
 // relstrength.LastActivityCountsSQL spells all three.
 //
 // The last_activity_of_* SQL functions fold the column and cannot call Go, so
@@ -14,18 +15,12 @@ package gates
 // to it, and holds the Go reads of the same question to the same call.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
-
-// meetingRuleClocks are the recency functions a task or a called-off meeting
-// must not move.
-var meetingRuleClocks = []string{
-	"last_activity_of_deal", "last_activity_of_contact", "last_activity_of_company", "last_activity_of_project",
-}
 
 // gatekit:fixture the Go reads of a record's last touch that do not read
 // last_activity_at, each with what it computes.
@@ -43,12 +38,10 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 	t.Parallel()
 	bodies := currentRecencyBodies(t)
 	rule := relstrength.LastActivityCountsSQL("a", "now()")
-	for _, name := range meetingRuleClocks {
-		body, ok := bodies[name]
-		if !ok {
-			t.Errorf("no migration defines %s, so this gate checks nothing for it", name)
-			continue
-		}
+	// Every function a migration names last_activity_of_*, so a new clock is
+	// held to the rule without joining a list (currentRecencyBodies).
+	for _, name := range sortedKeys(bodies) {
+		body := bodies[name]
 		arms := activityArms(body)
 		if len(arms) == 0 {
 			t.Errorf("%s: no activity join found, so the gate cannot see this function's shape", name)
@@ -61,13 +54,13 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 		}
 	}
 	for file, what := range meetingRuleReaders {
-		src, err := os.ReadFile(file)
+		src, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Errorf("%s (%s): %v", file, what, err)
 			continue
 		}
-		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") {
-			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count a called-off "+
+		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") && !strings.Contains(string(src), "relstrength.ExternalActivityCountsSQL(") {
+			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count a canceled "+
 				"meeting, or one still ahead, as a touch", file, what)
 		}
 	}
