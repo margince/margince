@@ -6585,9 +6585,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.learnings.didNotWork": "Erfolgloses Ergebnis",
   "brief.weekly.learnings.pattern": "Muster",
   "brief.weekly.learnings.experiment": "Experiment",
-  "brief.weekly.learnings.notRun": "Diese Woche wurde noch nicht analysiert.",
-  "brief.weekly.learnings.insufficient":
-    "Nicht genug erfasste Belege für aussagekräftige Beobachtungen.",
   "brief.weekly.scorecard.title": "Wochenbilanz",
   "brief.weekly.scorecard.basis": "Zählweise",
   "brief.weekly.scorecard.advanced": "Phasenwechsel von Leads",
@@ -6811,7 +6808,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.glance.introWeekly":
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.suggestions.review": "Deal-Vorschläge ansehen",
-  "brief.suggestions.empty": "Keine Deal-Vorschläge in diesem Morgenbericht.",
+  "brief.suggestions.reviewCount_one": "{count} Deal-Vorschlag ansehen",
+  "brief.suggestions.reviewCount_other": "{count} Deal-Vorschläge ansehen",
   "brief.suggestions.notAnnotated":
     "Für heute priorisiert. Die nächtliche Prüfung hat zu diesen Deals noch keine Einschätzung geschrieben.",
   "brief.suggestions.noAssessment":

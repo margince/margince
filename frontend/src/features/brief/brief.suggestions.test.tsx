@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { briefKey } from "../../lib/workkeys";
 import { ranked } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { BriefSuggestions } from "./brief.suggestions";
@@ -12,7 +13,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("opens the stored run without turning suggestions into work or loading names while closed", async () => {
+// The opener counts the run's suggestions, so its words depend on the run.
+const findOpener = () => screen.findByText(/^Review (\d+ )?deal suggestions?$/);
+
+it("counts the suggestions and opens the stored run without turning them into work or loading names while closed", async () => {
   const user = userEvent.setup();
   const calls = stubApi({
     "GET /brief": () =>
@@ -28,8 +32,10 @@ it("opens the stored run without turning suggestions into work or loading names 
     "GET /deals/d-1": () => jsonResponse({ id: "d-1", name: "Acme rollout" }),
   });
   const { container } = render(<BriefSuggestions />);
-  expect(calls).toHaveLength(0);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  const opener = await findOpener();
+  expect(opener.textContent).toBe("Review 1 deal suggestion");
+  expect(calls.some((call) => call.path.startsWith("/deals"))).toBe(false);
+  await user.click(opener);
   expect(
     (await screen.findByRole("link", { name: "Acme rollout" })).getAttribute(
       "href",
@@ -43,15 +49,17 @@ it("opens the stored run without turning suggestions into work or loading names 
 });
 
 it.each([null, { ...ranked, items: [] }])(
-  "shows an absent or empty run honestly",
+  "draws nothing for an absent or empty run",
   async (run) => {
-    const user = userEvent.setup();
     stubApi({
       "GET /brief": () => (run ? jsonResponse(run) : jsonResponse({}, 404)),
     });
-    render(<BriefSuggestions />);
-    await user.click(screen.getByText(en["brief.suggestions.review"]));
-    expect(await screen.findByText(en["brief.suggestions.empty"])).toBeTruthy();
+    const { container, client } = render(<BriefSuggestions />);
+    // The read has settled as a success before the absence means anything.
+    await waitFor(() =>
+      expect(client.getQueryState(briefKey)?.status).toBe("success"),
+    );
+    expect(container.textContent).toBe("");
   },
 );
 
@@ -59,9 +67,8 @@ it("keeps a failed read distinct from an empty run", async () => {
   const user = userEvent.setup();
   stubApi({ "GET /brief": () => jsonResponse({ title: "Unavailable" }, 503) });
   render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
-  expect(screen.queryByText(en["brief.suggestions.empty"])).toBeNull();
 });
 
 it("never displays stored findings for a deal the current read refuses", async () => {
@@ -75,7 +82,7 @@ it("never displays stored findings for a deal the current read refuses", async (
     "GET /deals/d-1": () => jsonResponse({}, 404),
   });
   const { container } = render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   await waitFor(() =>
     expect(calls.some((call) => call.path === "/deals/d-1")).toBe(true),
   );
@@ -101,10 +108,9 @@ it("offers retry for a failed name read and restores the deal only after success
         : jsonResponse({ id: "d-1", name: "Acme rollout" }),
   });
   render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   expect(await screen.findByText(en["state.failed"])).toBeTruthy();
   expect(screen.queryByText(/Buyer requested/)).toBeNull();
-  expect(screen.queryByText(en["brief.suggestions.empty"])).toBeNull();
   fails = false;
   await user.click(screen.getByRole("button", { name: en["state.retry"] }));
   expect(
@@ -138,7 +144,7 @@ it("says no assessment was written yet when no pass annotated the run, and draws
     ...DEALS,
   });
   render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   expect(
     await screen.findByText(en["brief.suggestions.notAnnotated"]),
   ).toBeTruthy();
@@ -163,7 +169,7 @@ it("says the pass left no readable assessment when it ran and wrote no finding",
     ...DEALS,
   });
   render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   expect(
     await screen.findByText(en["brief.suggestions.noAssessment"]),
   ).toBeTruthy();
@@ -202,7 +208,7 @@ it("shows a real finding as a suggestion and lists the deal the pass said nothin
     ...DEALS,
   });
   render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   const heading = await screen.findByRole("heading", { level: 3 });
   expect(heading.textContent).toBe("Acme rollout");
   expect(screen.getByText(/security review before signing/)).toBeTruthy();
@@ -221,7 +227,7 @@ it("drops a deal the reader may no longer open from the quiet list as well", asy
     "GET /deals/d-2": DEALS["GET /deals/d-2"],
   });
   const { container } = render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   expect(
     await screen.findByRole("link", { name: "Globex renewal" }),
   ).toBeTruthy();
@@ -254,7 +260,7 @@ it.each(["", "   \n\t "])(
       ...DEALS,
     });
     render(<BriefSuggestions />);
-    await user.click(screen.getByText(en["brief.suggestions.review"]));
+    await user.click(await findOpener());
     expect(
       await screen.findByText(en["brief.suggestions.noAssessment"]),
     ).toBeTruthy();
@@ -275,7 +281,7 @@ it("draws no quiet line when every deal under it is one the reader may no longer
     "GET /deals/d-2": () => jsonResponse({}, 404),
   });
   const { container } = render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   await waitFor(() =>
     expect(
       calls.filter((call) => call.path.startsWith("/deals/")),
@@ -295,7 +301,7 @@ it("lists the findingless deals in rank order under their caption", async () => 
     ...DEALS,
   });
   render(<BriefSuggestions />);
-  await user.click(screen.getByText(en["brief.suggestions.review"]));
+  await user.click(await findOpener());
   const list = await screen.findByRole("list", {
     name: en["brief.suggestions.notAnnotated"],
   });

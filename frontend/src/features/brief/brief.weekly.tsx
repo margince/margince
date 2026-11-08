@@ -251,12 +251,11 @@ function reportSections(review: WeeklyReview): readonly Section[] {
           } satisfies Section,
         ]
       : []),
-    ...optional(learnings, {
+    ...optional(learnings?.items.length, {
       key: "observations",
       icon: Sparkles,
       title: "brief.report.chapter.observations",
-      // Only a lesson the model wrote carries its mark; an empty week is ours.
-      aside: learnings?.items.length ? <AiTag /> : undefined,
+      aside: <AiTag />,
       body: <LearningsPanel learnings={learnings} />,
     }),
     ...optional(scorecardRows(review), {

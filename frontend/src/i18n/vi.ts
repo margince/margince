@@ -6426,9 +6426,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.learnings.didNotWork": "Kết quả không thành công",
   "brief.weekly.learnings.pattern": "Xu hướng",
   "brief.weekly.learnings.experiment": "Thử nghiệm",
-  "brief.weekly.learnings.notRun": "Chưa phân tích tuần này.",
-  "brief.weekly.learnings.insufficient":
-    "Chưa đủ bằng chứng đã ghi nhận để đưa ra nhận xét hữu ích.",
   "brief.weekly.scorecard.title": "Bảng điểm tuần",
   "brief.weekly.scorecard.basis": "Cách tính",
   "brief.weekly.scorecard.advanced": "Lead chuyển giai đoạn",
@@ -6650,7 +6647,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.glance.introWeekly":
     "Xem lại kết quả và lên kế hoạch cho bước tiếp theo.",
   "brief.suggestions.review": "Xem các cơ hội được gợi ý",
-  "brief.suggestions.empty": "Không có cơ hội được gợi ý trong bản tin này.",
+  "brief.suggestions.reviewCount_one": "Xem {count} cơ hội được gợi ý",
+  "brief.suggestions.reviewCount_other": "Xem {count} cơ hội được gợi ý",
   "brief.suggestions.notAnnotated":
     "Đã xếp hạng cho hôm nay. Bản rà soát qua đêm chưa viết đánh giá cho các cơ hội này.",
   "brief.suggestions.noAssessment":

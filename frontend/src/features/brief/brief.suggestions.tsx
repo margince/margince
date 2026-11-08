@@ -10,14 +10,13 @@ import {
   useEntityName,
 } from "../../components/entityref";
 import { usableName } from "../../components/entityref.queries";
-import { EmptyState } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { Heading } from "../../design-system/heading";
 import { PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDate, formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDate, formatDateTime, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   type MorningBrief,
@@ -25,12 +24,33 @@ import {
   useMorningBrief,
 } from "./brief.queries";
 
+/**
+ * The stored run's deal suggestions, behind one opener that counts them. A run
+ * that loaded with no deals draws nothing; a failed read stays, so its retry
+ * is one press away.
+ */
 export function BriefSuggestions() {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const query = useMorningBrief();
   const [open, setOpen] = useState(false);
+  // An open section stays while its read retries, so the retry is not lost.
+  const empty = query.isSuccess && !query.data?.items.length;
+  if (empty || (query.isPending && !open)) {
+    return null;
+  }
+  const found =
+    query.data?.items.filter((item) => findingOf(item) !== null).length ?? 0;
   return (
     <Disclosure
-      summary={t("brief.suggestions.review")}
+      summary={
+        found > 0
+          ? plural("brief.suggestions.reviewCount", found, {
+              count: formatNumber(found, locale),
+            })
+          : t("brief.suggestions.review")
+      }
       open={open}
       onToggle={setOpen}
     >
@@ -47,16 +67,14 @@ function StoredSuggestions() {
   return (
     <QueryGate query={query} pendingLabel={t("brief.feed.loading")}>
       {(run) =>
-        !run?.items.length ? (
-          <EmptyState>{t("brief.suggestions.empty")}</EmptyState>
-        ) : (
+        run?.items.length ? (
           <>
             <p className="t-caption">
               {formatDateTime(run.generated_at, locale, readerZone)}
             </p>
             <RunSuggestions run={run} />
           </>
-        )
+        ) : null
       }
     </QueryGate>
   );

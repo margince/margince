@@ -24,11 +24,6 @@
   margin: 0;
 }
 
-/* The absence, as the prose it is: the body's own gutter is the interval. */
-.weekly-learnings-empty {
-  margin: 0;
-}
-
 /* What a lesson RESTS ON, beside the claim: a set of references rather than a
    bulleted list, so the browser's disc and its 40px indent both go. */
 .weekly-learnings-citations {

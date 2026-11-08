@@ -6568,9 +6568,6 @@ export const en = {
   "brief.weekly.learnings.experiment": "Experiment",
   // Two empty states, never one: a week nobody read and a week that held no
   // lesson are different facts, and only one of them is about the week.
-  "brief.weekly.learnings.notRun": "This week has not been analyzed yet.",
-  "brief.weekly.learnings.insufficient":
-    "Not enough recorded evidence for useful observations.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
@@ -6799,7 +6796,8 @@ export const en = {
   "brief.glance.nightAnon": "Working late",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.suggestions.review": "Review deal suggestions",
-  "brief.suggestions.empty": "No deal suggestions in this brief.",
+  "brief.suggestions.reviewCount_one": "Review {count} deal suggestion",
+  "brief.suggestions.reviewCount_other": "Review {count} deal suggestions",
   "brief.suggestions.notAnnotated":
     "Ranked for today. The overnight review has not written an assessment for these deals yet.",
   "brief.suggestions.noAssessment":
