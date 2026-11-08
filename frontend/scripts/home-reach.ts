@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Whether a change can reach Home's first load or the browser check that
-// measures it, so the per-PR Home check runs only when it can
-// (scripts/home-budget-scope.sh asks). Both come from the import graph, never
-// from a list of paths.
+// measures it. scripts/home-budget-scope.sh asks, so the per-PR Home check runs
+// only when it can. Both come from the import graph, never from a list of paths.
 //
 //   node scripts/home-reach.ts <path from the repository root>...
 //

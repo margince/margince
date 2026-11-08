@@ -537,7 +537,7 @@ test.describe("vitals: a load that breaks the budget fails", () => {
     ]);
   });
 
-  // The browser reports no paint of main after a larger one outside it, so the
+  // The browser reports no paint of main after a larger one outside it. So the
   // late block in main below never shows in the LCP stream.
   test("a larger paint outside main fails rather than hiding main's late content", async ({
     page,
