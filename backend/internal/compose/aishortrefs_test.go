@@ -37,7 +37,6 @@ var stillShowsRecordIDs = map[string]string{
 	"report_setup/custom_report_setup":       "catalog ids",
 	"report_setup/initiative_setup":          "catalog product ids",
 	"request_settlement/request_settle":      "request ids; integration replies are scripted by id",
-	"stage_evidence_extract/criteria":        "span and criterion ids",
 	"summarize/company_ask":                  "record ids in the company JSON",
 	"summarize/company_brief":                "record ids in the company JSON",
 	"summarize/company_dossier":              "profile field ids",
