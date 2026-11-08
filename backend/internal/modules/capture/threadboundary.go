@@ -29,13 +29,12 @@ func (s *Sink) readMailForTheSeatTx(
 	return rec, fields, err
 }
 
-// subjectThreadKeyTx is the thread a new email files under. A reply whose topic differs
-// from its parent's opens a conversation keyed by its own Message-ID. Any other reply
-// joins its parent's conversation. A message already stored keeps the key it has.
+// subjectThreadKeyTx files new mail only under a conversation the seat claims.
+// A changed topic opens a separate conversation. Stored messages keep their key.
 func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, subject string) (string, error) {
 	seat := actorUserID(ctx)
 	if !s.threadJoin.complete() || rec.NaturalKey.SourceSystem != connector.EmailSourceSystem ||
-		rec.ThreadKey == "" || len(rec.ReplyTo) == 0 || seat == ids.Nil {
+		rec.ThreadKey == "" || seat == ids.Nil {
 		return rec.ThreadKey, nil
 	}
 	own := strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
@@ -50,9 +49,17 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 	if stored {
 		return rec.ThreadKey, nil
 	}
+	admitted, err := s.admittedNewThreadKeyTx(ctx, tx, seat, rec.ThreadKey, own)
+	if err != nil || admitted != rec.ThreadKey || len(rec.ReplyTo) == 0 {
+		return admitted, err
+	}
 	parentKey, differs, found, err := s.heldParentTx(ctx, tx, seat, rec.ReplyTo[0], subject)
 	if err != nil || !found {
 		return rec.ThreadKey, err
+	}
+	admittedParent, err := s.admittedNewThreadKeyTx(ctx, tx, seat, parentKey, own)
+	if err != nil || admittedParent != parentKey {
+		return admittedParent, err
 	}
 	// The sender chose that Message-ID, so a key another message already carries
 	// would file this reply into a conversation it never belonged to.
