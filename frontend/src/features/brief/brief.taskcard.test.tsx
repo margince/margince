@@ -123,3 +123,28 @@ it("draws no clock on an undated task, and the due day on a dated one", () => {
   expect(undated.querySelector(".badge")).toBeNull();
   expect(screen.queryByText(en["brief.task.undated"])).toBeNull();
 });
+
+it("keeps the next card in hand when the completed selection leaves the queue", async () => {
+  const user = userEvent.setup();
+  stubApi({});
+  const rows = [
+    taskRow("task-0", "Call Weber"),
+    taskRow("task-1", "Send the sheet"),
+    taskRow("task-2", "Call Lumen"),
+  ];
+  const view = render(<BriefFeed day={readingsDay({}, rows)} state="ready" />);
+  await user.click(
+    screen.getByRole("button", { name: en["brief.pager.next"] }),
+  );
+  expect(
+    view.container.querySelector(".brief-triage-lead .worklist-row-title")
+      ?.textContent,
+  ).toBe("Send the sheet");
+  view.rerender(
+    <BriefFeed day={readingsDay({}, [rows[0], rows[2]])} state="ready" />,
+  );
+  expect(
+    view.container.querySelector(".brief-triage-lead .worklist-row-title")
+      ?.textContent,
+  ).toBe("Call Lumen");
+});

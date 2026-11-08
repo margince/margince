@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -118,7 +119,11 @@ func EnsureArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID
 		return err
 	}
 	if !owned[id] {
-		return refusedOn(ctx, deleteCheck, refusal)
+		reason, err := archiveOwnerRefusal(ctx, tx, r, id)
+		if err != nil {
+			return err
+		}
+		return refusedOn(ctx, deleteCheck, reason)
 	}
 	return nil
 }
@@ -188,4 +193,40 @@ func ownedArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids
 		out[id] = true
 	}
 	return out, nil
+}
+
+// ArchiveAuthorityError names the failed archive rule on every transport.
+type ArchiveAuthorityError struct{ SelfAssigned bool }
+
+func (e *ArchiveAuthorityError) Error() string {
+	code, message := e.MessageFault()
+	return code + ": " + message
+}
+func (e *ArchiveAuthorityError) Unwrap() error { return apperrors.ErrPermissionDenied }
+
+// MessageFault keeps archive refusals identical across HTTP and tool transports.
+func (e *ArchiveAuthorityError) MessageFault() (string, string) {
+	if e.SelfAssigned {
+		return "archive_self_assigned", "You assigned this record to yourself. Ask a manager to archive it."
+	}
+	return "archive_owner_required", "Only the record's owner or a manager can archive this record."
+}
+
+func archiveOwnerRefusal(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID) (error, error) {
+	if r.table == "activity" {
+		return fmt.Errorf("only the author or a manager can archive this activity: %w", apperrors.ErrPermissionDenied), nil
+	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos, userPos := arg(id), arg(p.UserID)
+	var selfAssigned bool
+	err = tx.QueryRow(ctx, fmt.Sprintf("SELECT coalesce(owner_id IN (%s), false) FROM %s WHERE id = $%d", memberIdentitySQL(userPos), pgx.Identifier{r.table}.Sanitize(), idPos), args...).Scan(&selfAssigned)
+	if err != nil {
+		return nil, fmt.Errorf("auth: reading archive ownership: %w", err)
+	}
+	return &ArchiveAuthorityError{SelfAssigned: selfAssigned}, nil
 }

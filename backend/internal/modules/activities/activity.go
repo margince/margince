@@ -44,6 +44,7 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 }
 
 type LogActivityInput struct {
+	identityProver     AddressProver
 	DealFiling         *crmcontracts.ActivityDealFiling
 	dealFilingResolver DealFilingResolver
 	Recommendation     *crmcontracts.RecommendationReceipt
@@ -249,6 +250,7 @@ func (s *Store) logActivityAndReadTranscript(
 	at := s.now()
 	in.recordedAt = &at
 	in.dealFilingResolver = s.dealFilingResolver
+	in.identityProver = s.identityProver
 	out, created, err := logActivityInTx(ctx, tx, in)
 	if err != nil {
 		return out, created, err

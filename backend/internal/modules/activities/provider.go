@@ -206,3 +206,9 @@ func originOfCaller(ctx context.Context, origin string) string {
 	}
 	return origin
 }
+
+// WithIdentityProver gives tool writes the same mailbox ownership proof as HTTP writes.
+func (p *Provider) WithIdentityProver(prover AddressProver) *Provider {
+	p.store = p.store.WithIdentityProver(prover)
+	return p
+}

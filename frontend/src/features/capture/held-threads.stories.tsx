@@ -120,6 +120,7 @@ const FURTHER: HeldThread = {
   attempts: 1,
   has_message: true,
   subject: "On a further page",
+  activity_id: "01a05500-0000-7000-8000-0000000000f1",
   kind: "personal",
 };
 
@@ -157,12 +158,17 @@ function story(
 async function openHeld(canvasElement: HTMLElement) {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: "View Held threads",
+      name: "View Mail not shared with the team",
     }),
   );
-  return within(canvasElement.ownerDocument.body).findByRole("dialog", {
-    name: "Held threads",
-  });
+  const drawer = await within(canvasElement.ownerDocument.body).findByRole(
+    "dialog",
+    { name: "Mail not shared with the team" },
+  );
+  await userEvent.click(
+    within(drawer).getByRole("button", { name: "Browse recent conversations" }),
+  );
+  return drawer;
 }
 
 const meta = {
@@ -182,12 +188,11 @@ export const Mixed: Story = {
     await within(drawer).findByRole("button", {
       name: "Entwurf Aufhebungsvertrag",
     });
-    await waitFor(() => {
-      const beside = drawer.querySelector(".held-threads-parties");
-      expect(beside?.getBoundingClientRect().height).toBe(0);
-      const cell = drawer.querySelector('td[data-fold="only"]:not(:empty)');
-      expect(cell?.getBoundingClientRect().height).toBeGreaterThan(0);
-    });
+    await expect(
+      within(drawer).getAllByRole("button", {
+        name: "Preview and change sharing",
+      }).length,
+    ).toBeGreaterThan(0);
   },
 };
 
@@ -211,12 +216,12 @@ export const ALongList: Story = {
   play: async ({ canvasElement }) => {
     const drawer = await openHeld(canvasElement);
     await userEvent.click(
-      await within(drawer).findByRole("button", { name: "Show more" }),
+      await within(drawer).findByRole("button", { name: "Load more" }),
     );
     await within(drawer).findByText("On a further page");
     await waitFor(async () => {
       await expect(
-        within(drawer).queryByRole("button", { name: "Show more" }),
+        within(drawer).queryByRole("button", { name: "Load more" }),
       ).toBeNull();
     });
   },
@@ -230,7 +235,7 @@ export const NothingHeld: Story = {
     await within(canvasElement).findAllByText("None yet");
     await expect(
       within(canvasElement).queryByRole("button", {
-        name: "View Held threads",
+        name: "View Mail not shared with the team",
       }),
     ).toBeNull();
   },
@@ -294,12 +299,33 @@ export const MixedPhone: Story = {
     });
     const beside = drawer.querySelector(".held-threads-parties");
     await expect(beside?.getBoundingClientRect().height).toBe(0);
-    const cell = drawer.querySelector('td[data-fold="only"]:not(:empty)');
-    const row = cell?.closest("tr")?.getBoundingClientRect();
-    const box = cell?.getBoundingClientRect();
-    await expect(box?.height).toBeGreaterThan(0);
-    await expect(Math.round(box?.width ?? 0)).toBeGreaterThan(
-      Math.round((row?.width ?? 0) / 2),
+    await expect(
+      within(drawer).getAllByRole("button", {
+        name: "Preview and change sharing",
+      }).length,
+    ).toBeGreaterThan(0);
+  },
+};
+
+export const SearchFirst: Story = {
+  render: story(MIXED),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "View Mail not shared with the team",
+      }),
     );
+    const dialog = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Mail not shared with the team" },
+    );
+    await waitFor(() =>
+      expect(within(dialog).getByRole("searchbox")).toBeVisible(),
+    );
+    await expect(
+      within(dialog).getByRole("button", {
+        name: "Browse recent conversations",
+      }),
+    ).toBeVisible();
   },
 };

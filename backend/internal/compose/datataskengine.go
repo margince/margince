@@ -98,6 +98,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		linkedAuditRedactionDataTask(),
 		markedAuditRedactionDataTask(),
 		keyedIdentifiersDataTask(),
+		mailCopiesDataTask(pool),
 		falseMeetingCancelsDataTask(now),
 	}
 }

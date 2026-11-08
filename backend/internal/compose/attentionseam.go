@@ -211,8 +211,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
-		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), db: db},
-		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
+		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db)},
+		attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
 			engine: briefs.NewBriefEngine(pool, newContactsStore(db)),
 			// The same reader WithDealFacts binds below, so the lane keeps an

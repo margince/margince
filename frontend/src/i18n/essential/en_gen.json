@@ -1,4 +1,6 @@
 {
+  "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.task_completion": "Completing tasks after email",
   "dealSuggestion.changed": "This suggestion is no longer available. Refresh the findings to see its current state.",
   "roles.object.data_task": "Data updates",
   "approval.preview.resolveConflict": "Resolve the conflicting context before approving this change.",

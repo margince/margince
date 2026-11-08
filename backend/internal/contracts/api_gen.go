@@ -37123,7 +37123,9 @@ type CaptureSenderDecisionDecision string
 
 // CaptureSenderListResponse defines model for CaptureSenderListResponse.
 type CaptureSenderListResponse struct {
-	Data []CaptureSenderDecision `json:"data"`
+	Data       []CaptureSenderDecision `json:"data"`
+	NextCursor *string                 `json:"next_cursor,omitempty"`
+	Total      *int                    `json:"total,omitempty"`
 }
 
 // CaptureSettings The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
@@ -43102,7 +43104,7 @@ type CreateActivityRequest struct {
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
 
-	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -60145,9 +60147,12 @@ type SchedulingProfile struct {
 	Location string  `json:"location"`
 
 	// LogoUrl The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
-	LogoUrl       *string                   `json:"logo_url,omitempty"`
-	NoticeMinutes int                       `json:"notice_minutes" maximum:"10080" minimum:"0"`
-	Provider      SchedulingProfileProvider `json:"provider"`
+	LogoUrl       *string `json:"logo_url,omitempty"`
+	NoticeMinutes int     `json:"notice_minutes" maximum:"10080" minimum:"0"`
+
+	// OfferedLengths Additional meeting lengths offered by this host. The default duration is always offered.
+	OfferedLengths *[]int                    `json:"offered_lengths,omitempty" unique:"items"`
+	Provider       SchedulingProfileProvider `json:"provider"`
 
 	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
 	PublicUrl   *string `json:"public_url,omitempty"`
@@ -69740,10 +69745,24 @@ type ListHeldThreadsParams struct {
 
 	// ContactId Only the threads with this contact. A contact you may not read, or one that is archived, answers 404.
 	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+	From      *time.Time          `form:"from,omitempty" json:"from,omitempty"`
+	To        *time.Time          `form:"to,omitempty" json:"to,omitempty"`
+	Reason    *string             `form:"reason,omitempty" json:"reason,omitempty"`
 }
 
 // ListHeldThreadsParamsStatus defines parameters for ListHeldThreads.
 type ListHeldThreadsParamsStatus string
+
+// ListCaptureSendersParams defines parameters for ListCaptureSenders.
+type ListCaptureSendersParams struct {
+	Q         *string `form:"q,omitempty" json:"q,omitempty"`
+	Decision  *string `form:"decision,omitempty" json:"decision,omitempty"`
+	Overrides *bool   `form:"overrides,omitempty" json:"overrides,omitempty"`
+	Cursor    *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
 
 // SetCaptureSenderDecisionJSONBody defines parameters for SetCaptureSenderDecision.
 type SetCaptureSenderDecisionJSONBody struct {
@@ -74474,6 +74493,9 @@ type BookPublicMeetingJSONBody struct {
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
 type BookPublicMeetingParams struct {
+	// L Offered meeting length in minutes. Unknown lengths use the default.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -74510,6 +74532,15 @@ type GetPublicAvailabilityParams struct {
 	From            time.Time `form:"from" json:"from"`
 	To              time.Time `form:"to" json:"to"`
 	DurationMinutes *int      `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
+
+	// L Offered meeting length in minutes. Unknown lengths use the default.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+}
+
+// GetPublicSchedulingProfileParams defines parameters for GetPublicSchedulingProfile.
+type GetPublicSchedulingProfileParams struct {
+	// L Offered meeting length in minutes. Unknown lengths use the default.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
 }
 
 // SubmitConfirmDetailsJSONBody defines parameters for SubmitConfirmDetails.
@@ -91023,7 +91054,7 @@ type ServerInterface interface {
 	RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
 	// Every decision this product made about your senders.
 	// (GET /capture/senders)
-	ListCaptureSenders(w http.ResponseWriter, r *http.Request)
+	ListCaptureSenders(w http.ResponseWriter, r *http.Request, params ListCaptureSendersParams)
 	// Withdraw your decision and hand the sender back to the classifier.
 	// (DELETE /capture/senders/{address}/decision)
 	DeleteCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string)
@@ -92742,7 +92773,7 @@ type ServerInterface interface {
 	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string)
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
-	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string)
+	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
 	// What the workspace holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
@@ -94881,7 +94912,7 @@ func (_ Unimplemented) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *htt
 
 // Every decision this product made about your senders.
 // (GET /capture/senders)
-func (_ Unimplemented) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListCaptureSenders(w http.ResponseWriter, r *http.Request, params ListCaptureSendersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98319,7 +98350,7 @@ func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Re
 
 // Read the host-approved booking page identity and meeting details.
 // (GET /public/booking/{host_slug}/profile)
-func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110167,6 +110198,45 @@ func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "reason" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reason", r.URL.Query(), &params.Reason, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reason"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reason", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListHeldThreads(w, r, params)
 	}))
@@ -110293,6 +110363,9 @@ func (siw *ServerInterfaceWrapper) RestoreCaptureOwnerIdentity(w http.ResponseWr
 // ListCaptureSenders operation middleware
 func (siw *ServerInterfaceWrapper) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -110301,8 +110374,76 @@ func (siw *ServerInterfaceWrapper) ListCaptureSenders(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCaptureSendersParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "decision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "decision", r.URL.Query(), &params.Decision, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "decision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "decision", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overrides" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "overrides", r.URL.Query(), &params.Overrides, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overrides"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overrides", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCaptureSenders(w, r)
+		siw.Handler.ListCaptureSenders(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135539,6 +135680,19 @@ func (siw *ServerInterfaceWrapper) BookPublicMeeting(w http.ResponseWriter, r *h
 	// Parameter object where we will unmarshal all parameters from the context
 	var params BookPublicMeetingParams
 
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	headers := r.Header
 
 	// ------------- Optional header parameter "Idempotency-Key" -------------
@@ -135628,6 +135782,19 @@ func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, 
 		return
 	}
 
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPublicAvailability(w, r, hostSlug, params)
 	}))
@@ -135680,8 +135847,24 @@ func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWri
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicSchedulingProfileParams
+
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPublicSchedulingProfile(w, r, hostSlug)
+		siw.Handler.GetPublicSchedulingProfile(w, r, hostSlug, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

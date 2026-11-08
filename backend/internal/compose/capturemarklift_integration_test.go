@@ -7,14 +7,18 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -235,13 +239,39 @@ func TestLaterMailFromAMarkedContactClearsAnAutomaticMarkOnceTheyAnswer(t *testi
 
 // A marked contact's request is not a buyer waiting, and the lane has it again
 // once the mark is gone.
-func TestAMarkedContactsMessageIsNotOnTheWaitingLane(t *testing.T) {
+func TestWorklistProducersExcludeMarkedSendersEvenWithACompanyLink(t *testing.T) {
 	o := setupOwed(t)
 	pat := o.contact(t, "Pat Seller", "pat@seller.example")
 	asked := o.customerWrites(t, "pat@seller.example", "Pricing for next year", o.now.Add(-3*time.Hour))
 	o.judgeAsRequest(t, asked)
+	company, err := o.e.Contacts.CreateCompany(o.e.Admin(), contacts.CreateCompanyInput{DisplayName: "Vendor company", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := o.e.Activities.RelinkActivity(o.e.Admin(), ids.From[ids.ActivityKind](asked), activities.RelinkActivityInput{EntityType: "company", EntityID: ids.UUID(company.Id)}); err != nil {
+		t.Fatal(err)
+	}
+
 	if !o.waiting(t, asked) {
 		t.Fatal("before the mark the message is not waiting; the case would pass for the wrong reason")
+	}
+
+	runVendorTriage(t, o.e, "seller.example")
+	reader := o.e.As(o.e.Rep1, nil, integration.AdminPerms)
+	if !asksAbout(reader, t, o.e, "seller.example") {
+		t.Fatal("the unmarked sender raised no company question")
+	}
+	feedNamesSender := func() bool {
+		t.Helper()
+		page := o.page(reader, t, "mine", o.now)
+		encoded, err := json.Marshal(page.Queue)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Contains(string(encoded), pat.String()) || strings.Contains(string(encoded), asked.String()) || strings.Contains(string(encoded), "seller.example")
+	}
+	if !feedNamesSender() {
+		t.Fatal("the full feed did not exercise the sender's signals")
 	}
 
 	setMark := func(mark any) {
@@ -260,9 +290,19 @@ func TestAMarkedContactsMessageIsNotOnTheWaitingLane(t *testing.T) {
 	if o.waiting(t, asked) {
 		t.Fatal("a vendor_marketing contact's message stayed on the waiting lane")
 	}
+	if asksAbout(reader, t, o.e, "seller.example") {
+		t.Fatal("the marked sender still raised a company question")
+	}
+	// The full feed invokes its registered producers rather than a test-owned producer list.
+	if feedNamesSender() {
+		t.Fatal("a Worklist producer admitted a marked sender")
+	}
 	setMark(nil)
 	if !o.waiting(t, asked) {
 		t.Fatal("clearing the mark did not bring the message back to the waiting lane")
+	}
+	if !asksAbout(reader, t, o.e, "seller.example") {
+		t.Fatal("clearing the mark did not restore the company question")
 	}
 }
 

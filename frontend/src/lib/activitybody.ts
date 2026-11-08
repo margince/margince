@@ -168,12 +168,12 @@ export function activityRequestBody(
   const isTranscript = canHaveTranscript(input.kind) && input.asTranscript;
   return {
     kind: input.kind,
+    source_activity_id: input.sourceActivityId,
     ...callAndMeetingFields(input),
     ...occurredFields(input, recordZone),
     ...(input.kind === "task"
       ? {
           ...taskRequestFields(input, recordZone),
-          source_activity_id: input.sourceActivityId,
         }
       : {
           subject: input.subject.trim(),

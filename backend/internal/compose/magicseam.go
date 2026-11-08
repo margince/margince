@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -50,7 +51,7 @@ func newMagicService(
 		WithPendingDecisions(magicPendingDecisions{svc: staged}).
 		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)}).
 		WithDecidedReceipts(magicDecidedReceipts{
-			receipts: attentionReceipts{svc: staged, deals: deals.NewStore(db, DealsInstallation())},
+			receipts: attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: staged, deals: deals.NewStore(db, DealsInstallation())},
 		}).
 		WithReferenceNames(newAttentionNames(db))
 }
@@ -81,6 +82,11 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 func decidedUndo(receipt attention.Receipt) *crmcontracts.MagicUndo {
 	if receipt.Source != attention.ReceiptFromCorrection || receipt.Undo == nil {
 		return nil
+	}
+	if receipt.TargetType == entityTypeActivity && receipt.Kind == "task_completed" && !receipt.Undo.Reversed {
+		undo := magicOffer(receipt.Undo.AuditLogID)
+		undo.Version = &receipt.Undo.Version
+		return undo
 	}
 	review := receipt.Review
 	switch {

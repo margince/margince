@@ -160,7 +160,7 @@ func TestCounterpartyReviewRemainsWithItsImportingSeat(t *testing.T) {
 	engine := NewCounterpartyVerdictEngine(
 		e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default(),
 	)
-	if err := engine.StageReviewsWorkspace(e.Admin(), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatal(err)
 	}
 	approval := ids.From[ids.ApprovalKind](stagedProposalID(t, e, disposition))
