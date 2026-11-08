@@ -228,7 +228,8 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 // same grant.
 func correctionStageNamesSQL(ctx context.Context) (before, after string) {
 	if !auth.Allows(ctx, "pipeline", principal.ActionRead) {
-		return "NULL::text", "NULL::text"
+		const hidden = "NULL::text"
+		return hidden, hidden
 	}
 	return "(SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id')",
 		"(SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id')"

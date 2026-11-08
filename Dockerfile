@@ -214,7 +214,7 @@ RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
 WORKDIR /app
 COPY --from=gobase /src/build/composition/api/ ./build/composition/api/
 COPY --from=gobase /src/build/composition/frontend/ ./build/composition/frontend/
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml third-party-files.txt ./
 COPY frontend/ ./frontend/
 # The unit trees, because a unit's frontend layer is a workspace member and the
 # generated registry imports it by package name. Copied AFTER the fetch above so

@@ -19,9 +19,9 @@ var (
 
 func clearsThreadKey(statement string) bool {
 	assignments, clears := 0, 0
-	for _, clause := range setClause.FindAllStringSubmatch(withoutSQLNoise(statement), -1) {
-		assignments += len(threadAssignment.FindAllString(clause[1], -1))
-		clears += len(nullThreadAssignment.FindAllString(clause[1], -1))
+	for _, clause := range setClauses(withoutSQLNoise(statement)) {
+		assignments += len(threadAssignment.FindAllString(clause, -1))
+		clears += len(nullThreadAssignment.FindAllString(clause, -1))
 	}
 	return assignments > 0 && assignments == clears
 }

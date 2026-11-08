@@ -432,15 +432,17 @@ func subjectReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]st
 		return nil, nil, nil, fmt.Errorf("reading the merged-away addresses for the export: %w", err)
 	}
 	emails = append(emails, priorEmails...)
-	// LEAD TWINS OF EVERY IDENTITY TOO. A lead promoted into a record that was
-	// later merged away points at the PREDECESSOR, so following only the
-	// survivor's promotions loses the lead-keyed proof A6 deliberately leaves
-	// on the lead.
+	// Lead twins of every identity too. A lead promoted into a record later
+	// merged away points at the predecessor. Following only the survivor's
+	// promotions loses the lead-keyed proof A6 leaves on the lead.
+	// A lead never promoted but holding one of the subject's addresses is
+	// theirs too. The Leads section exports it, so its history comes with it.
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM lead
 		 WHERE promoted_contact_id = $1
-		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`,
-		contactID.UUID)
+		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
+		    OR email = ANY($2::text[])`,
+		contactID.UUID, loweredAddresses(emails))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}

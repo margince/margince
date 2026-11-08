@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/scripts/vite-licenses.ts scripts/third_party_files.py scripts/third-party-files.sh scripts/sbom-license-parity.sh third-party-files.txt -->
 # SBOMs, license gate and signatures
 
 An **SBOM** (`software bill of materials`) is a list, for machines to read, of all
@@ -384,3 +385,16 @@ See also:
 - [make-targets.md](make-targets.md) for the rest of the root `Makefile`;
 - [deploy-margince.md](../how-to/deploy-margince.md) for what ships;
 - [license-release-rule.md](license-release-rule.md) for the LICENSE update that a tagged release needs.
+
+## Copied third-party files
+
+[`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version,
+its SPDX licence and the path to its licence text. `make third-party-files` checks the committed
+licence files and their siblings. It refuses missing files, copies with no record and licences
+outside `.grant.yaml`. A package with no licence text may use a recorded file whose source is `name@version`.
+
+The frontend build collects licence and notice texts from bundled code, CSS and copied files.
+Missing text fails the build. The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents
+embed the text to stay in one file. `make sbom-supplement` sets the copied-file licences in all three
+formats. `make sbom-parity` refuses missing files or licences that do not match. `make test-third-party-files`
+tests those failures on test data.
