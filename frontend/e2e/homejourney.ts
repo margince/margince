@@ -268,8 +268,12 @@ export async function recordVitals(page: Page): Promise<void> {
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (!(entry instanceof LargestContentfulPaint)) continue;
-        const inMain = entry.element?.closest("main") != null;
-        vitals.paints.push({ at: entry.startTime, inMain });
+        const shown = entry.element;
+        const inMain = shown?.closest("main") != null;
+        const element = shown
+          ? `${shown.tagName.toLowerCase()}${shown.id ? `#${shown.id}` : ""}${shown.classList[0] ? `.${shown.classList[0]}` : ""}`
+          : "a removed element";
+        vitals.paints.push({ at: entry.startTime, inMain, element });
       }
     }).observe({ type: "largest-contentful-paint", buffered: true });
     new PerformanceObserver((list) => {

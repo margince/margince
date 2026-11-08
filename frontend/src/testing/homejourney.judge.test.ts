@@ -14,12 +14,16 @@ import {
   longestLoss,
   mainContentLcp,
   outcomeOf,
+  type Paint,
   QUERY_RETRIES,
   RequestLedger,
   readerFrom,
   readOf,
+  type Shift,
   sessionWindowCls,
   tally,
+  type Vitals,
+  vitalsP95,
   vitalsReasons,
   withheldSources,
 } from "./homejourney.judge";
@@ -316,23 +320,45 @@ describe("Home's browser vitals", () => {
     value,
     input,
   });
-
-  it("takes the last paint inside main as the main-content LCP", () => {
-    expect(mainContentLcp([paint(100), paint(400, false), paint(300)])).toBe(
-      300,
-    );
+  const load = (paints: Paint[], shifts: Shift[] = []): Vitals => ({
+    paints,
+    shifts,
   });
 
-  it("fails a load with no paint inside main rather than passing it", () => {
-    expect(vitalsReasons({ paints: [paint(200, false)], shifts: [] })).toEqual([
-      "no largest contentful paint inside main",
+  it("takes the page's final LCP as main-content LCP when it sits in main", () => {
+    expect(mainContentLcp([paint(100, false), paint(300)])).toBe(300);
+  });
+
+  it("refuses an earlier paint in main once a larger one lands outside it", () => {
+    expect(mainContentLcp([paint(100), paint(400, false)])).toBeNull();
+    expect(vitalsReasons([load([paint(100), paint(400, false)])])).toEqual([
+      "load 1: the largest contentful paint is outside main",
     ]);
   });
 
-  it("passes an LCP of exactly the budget and fails one past it", () => {
-    expect(vitalsReasons({ paints: [paint(1_000)], shifts: [] })).toEqual([]);
-    expect(vitalsReasons({ paints: [paint(1_001)], shifts: [] })).toEqual([
-      "main-content LCP 1001 ms is over 1000 ms",
+  it("fails a load that painted nothing, and a run with no load", () => {
+    expect(vitalsReasons([load([])])).toEqual([
+      "load 1: no largest contentful paint",
+    ]);
+    expect(vitalsReasons([])).toEqual(["no load was measured"]);
+  });
+
+  it("passes an LCP p95 of exactly the budget and fails one past it", () => {
+    expect(vitalsReasons([load([paint(1_000)])])).toEqual([]);
+    expect(vitalsReasons([load([paint(1_001)])])).toEqual([
+      "main-content LCP p95 1001 ms is over 1000 ms",
+    ]);
+  });
+
+  it("judges the run's p95, not its best load", () => {
+    const loads = [
+      ...Array.from({ length: 18 }, () => load([paint(400)])),
+      load([paint(1_500)]),
+      load([paint(1_600)]),
+    ];
+    expect(vitalsP95(loads).lcpMs).toBe(1_500);
+    expect(vitalsReasons(loads)).toEqual([
+      "main-content LCP p95 1500 ms is over 1000 ms",
     ]);
   });
 
@@ -352,10 +378,10 @@ describe("Home's browser vitals", () => {
     expect(sessionWindowCls([shift(0, 0.3, true)])).toBe(0);
   });
 
-  it("fails a load whose shifts add up past 0.1", () => {
+  it("fails a run whose CLS p95 is past 0.1", () => {
     const shifts = [shift(0, 0.06), shift(200, 0.06)];
-    expect(vitalsReasons({ paints: [paint(300)], shifts })).toEqual([
-      "CLS 0.120 is over 0.1",
+    expect(vitalsReasons([load([paint(300)], shifts)])).toEqual([
+      "CLS p95 0.120 is over 0.1",
     ]);
   });
 });

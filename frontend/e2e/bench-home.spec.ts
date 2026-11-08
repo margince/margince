@@ -10,17 +10,16 @@ import {
   HOME_READS,
   type Journey,
   longestLoss,
-  mainContentLcp,
   outcomeOf,
   readerFrom,
   readOf,
-  sessionWindowCls,
   tally,
-  VITALS_BUDGET,
   type Vitals,
+  vitalsP95,
   vitalsReasons,
   withheldSources,
 } from "../src/testing/homejourney.judge";
+import { nearestRank } from "../src/testing/quantile";
 import {
   AnswerLog,
   fixedProfile,
@@ -34,7 +33,6 @@ import {
   watchScreen,
   worklistFetches,
 } from "./homejourney";
-import { nearestRank } from "./quantile";
 
 /**
  * R01 and R07 on a production build against a live api (`make bench-home`).
@@ -462,25 +460,13 @@ test("vitals: main-content LCP and CLS stay in budget on a fixed profile", async
     vitals.push(await readVitals(page));
   }
   report("vitals", loads);
-  const lcps = vitals.flatMap((v) => {
-    const lcp = mainContentLcp(v.paints);
-    return lcp === null ? [] : [Math.round(lcp)];
-  });
-  const shifts = vitals.map((v) => sessionWindowCls(v.shifts));
-  const lcpP95 = nearestRank(lcps, 0.95);
-  const clsP95 = nearestRank(shifts, 0.95);
+  const p95 = vitalsP95(vitals);
   // One line the home-budget script copies into the job summary.
   console.log(
-    `bench-home: vitals lcp_p95_ms=${lcpP95} cls_p95=${clsP95.toFixed(3)} samples=${vitals.length}`,
+    `bench-home: vitals lcp_p95_ms=${Math.round(p95.lcpMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
   );
   expectAllComplete("vitals", loads);
-  expect(lcps.length, "loads with a largest contentful paint inside main").toBe(
-    vitals.length,
-  );
-  expect(lcpP95, "main-content LCP p95").toBeLessThanOrEqual(
-    VITALS_BUDGET.lcpMs,
-  );
-  expect(clsP95, "CLS p95").toBeLessThanOrEqual(VITALS_BUDGET.cls);
+  expect(vitalsReasons(vitals), "the vitals budget").toEqual([]);
 });
 
 /**
@@ -505,7 +491,7 @@ test.describe("vitals: a load that breaks the budget fails", () => {
     await expect
       .poll(async () => settled(await readVitals(page)), { timeout: 10_000 })
       .toBe(true);
-    return vitalsReasons(await readVitals(page));
+    return vitalsReasons([await readVitals(page)]);
   }
 
   test("a block painted inside main after 1.5 s fails LCP", async ({
@@ -519,7 +505,7 @@ test.describe("vitals: a load that breaks the budget fails", () => {
       (v) => v.paints.some((paint) => paint.inMain && paint.at >= 1_400),
     );
     expect(reasons).toEqual([
-      expect.stringMatching(/^main-content LCP \d+ ms is over 1000 ms$/),
+      expect.stringMatching(/^main-content LCP p95 \d+ ms is over 1000 ms$/),
     ]);
   });
 
@@ -532,7 +518,7 @@ test.describe("vitals: a load that breaks the budget fails", () => {
       (v) => v.shifts.length > 0,
     );
     expect(reasons).toEqual([
-      expect.stringMatching(/^CLS 0\.\d+ is over 0\.1$/),
+      expect.stringMatching(/^CLS p95 0\.\d+ is over 0\.1$/),
     ]);
   });
 
@@ -544,6 +530,30 @@ test.describe("vitals: a load that breaks the budget fails", () => {
       `<header>${BLOCK}</header><main></main>`,
       (v) => v.paints.length > 0,
     );
-    expect(reasons).toEqual(["no largest contentful paint inside main"]);
+    expect(reasons).toEqual([
+      expect.stringMatching(
+        /^load 1: the largest contentful paint is outside main \(p\)$/,
+      ),
+    ]);
+  });
+
+  // The browser reports no paint of main after a larger one outside it, so the
+  // late block in main below never shows in the LCP stream.
+  test("a larger paint outside main fails rather than hiding main's late content", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main><p>Today</p></main><header id="shell"></header><script>
+        setTimeout(() => { document.getElementById("shell").innerHTML = ${JSON.stringify(BLOCK)}; }, 200);
+        setTimeout(() => document.querySelector("main").insertAdjacentHTML("beforeend", "<p>The rest of the day</p>"), 1500);
+      </script>`,
+      (v) => v.paints.some((paint) => !paint.inMain),
+    );
+    expect(reasons).toEqual([
+      expect.stringMatching(
+        /^load 1: the largest contentful paint is outside main \(p\)$/,
+      ),
+    ]);
   });
 });
