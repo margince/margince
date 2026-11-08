@@ -133,5 +133,9 @@ it("offers a retry when the work that needs you did not load", async () => {
   });
   fails = false;
   await user.click(retry);
-  expect(await within(section).findByText("Follow up with Weber")).toBeTruthy();
+  expect(
+    await within(section).findByRole("button", {
+      name: "Follow up with Weber",
+    }),
+  ).toBeTruthy();
 });

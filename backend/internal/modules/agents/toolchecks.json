@@ -1415,7 +1415,9 @@
     },
     "get_handled_for_you": {
       "checks": [
-        "deal.read"
+        "activity.read",
+        "deal.read",
+        "pipeline.read"
       ]
     },
     "get_hidden_backlog": {

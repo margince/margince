@@ -18,6 +18,7 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
+import { CardPager } from "./brief.cardpager";
 import { Triage } from "./brief.focus";
 import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
@@ -54,14 +55,10 @@ export function BriefFeed({
   // The row in hand, by identity. The queue is re-read and answered rows
   // leave it, so an index would hand over the row that moved up. A chosen
   // row that has gone falls back to the day's first.
-  const [chosen, setChosen] = useState<string | null>(null);
   const client = useQueryClient();
   const titleId = useId();
   const rows = waitingRows(day);
-  const at = Math.max(
-    0,
-    rows.findIndex((item) => identity(item) === chosen),
-  );
+  const { at, choose } = useCardChoice(rows);
   const lead = rows[at];
   const partial = Boolean(
     !day?.focus || day.readings?.more_available || laneUnread(day),
@@ -119,14 +116,21 @@ export function BriefFeed({
           {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
           {lead && (
             <HomeListReturnScope>
-              <Triage
+              <FeedPager
                 rows={rows}
                 at={at}
-                lead={lead}
-                onChoose={(item) => setChosen(identity(item))}
-                onOpenEmail={setOpenEmail}
-                onContext={onContext}
-              />
+                choose={choose}
+                title={lead.title ?? ""}
+              >
+                <Triage
+                  rows={rows}
+                  at={at}
+                  lead={lead}
+                  onChoose={choose}
+                  onOpenEmail={setOpenEmail}
+                  onContext={onContext}
+                />
+              </FeedPager>
             </HomeListReturnScope>
           )}
         </SurfaceState>
@@ -140,5 +144,47 @@ export function BriefFeed({
         }
       />
     </section>
+  );
+}
+
+function useCardChoice(rows: readonly WorklistItem[]) {
+  const [choice, setChoice] = useState<{ key: string | null; at: number }>({
+    key: null,
+    at: 0,
+  });
+  const found = rows.findIndex((item) => identity(item) === choice.key);
+  const at =
+    found >= 0 ? found : Math.max(0, Math.min(choice.at, rows.length - 1));
+  if (at !== choice.at) setChoice({ ...choice, at });
+  return {
+    at,
+    choose: (item: WorklistItem) =>
+      setChoice({ key: identity(item), at: Math.max(0, rows.indexOf(item)) }),
+  };
+}
+
+function FeedPager({
+  rows,
+  at,
+  choose,
+  title,
+  children,
+}: Readonly<{
+  rows: readonly WorklistItem[];
+  at: number;
+  choose: (item: WorklistItem) => void;
+  title: string;
+  children: ReactNode;
+}>) {
+  const previous = rows[at - 1];
+  const next = rows[at + 1];
+  return (
+    <CardPager
+      previous={previous ? () => choose(previous) : undefined}
+      next={next ? () => choose(next) : undefined}
+      title={title}
+    >
+      {children}
+    </CardPager>
   );
 }

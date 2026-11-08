@@ -27,6 +27,8 @@ afterEach(() => {
 
 const HELD: components["schemas"]["HeldThread"] = {
   thread_key: "t-1",
+  activity_id: "01a05500-0000-7000-8000-0000000000a1",
+  subject: "Held mail",
   status: "held",
   pending: false,
   attempts: 1,
@@ -125,13 +127,17 @@ it("returns focus to the card when the drawer's list empties before it closes", 
   const client = renderCard();
 
   await user.click(
-    await screen.findByRole("button", { name: "View Held threads" }),
+    await screen.findByRole("button", {
+      name: "View Mail not shared with the team",
+    }),
   );
   held = [];
   await client.invalidateQueries({ queryKey: ["held-threads"] });
   await waitFor(() =>
     expect(
-      screen.queryByRole("button", { name: "View Held threads" }),
+      screen.queryByRole("button", {
+        name: "View Mail not shared with the team",
+      }),
     ).not.toBeInTheDocument(),
   );
   await user.keyboard("{Escape}");
@@ -159,7 +165,9 @@ it("returns focus to the card while the drawer's list is still re-reading", asyn
   const client = renderCard();
 
   await user.click(
-    await screen.findByRole("button", { name: "View Held threads" }),
+    await screen.findByRole("button", {
+      name: "View Mail not shared with the team",
+    }),
   );
   void client.invalidateQueries({ queryKey: ["held-threads"] });
   await waitFor(() => expect(reads).toBe(2));
@@ -182,7 +190,9 @@ it("opens the held-mail controls from health and clears only the review paramete
   const user = userEvent.setup();
   renderCard();
   expect(
-    await screen.findByRole("dialog", { name: "Held threads" }),
+    await screen.findByRole("dialog", {
+      name: "Mail not shared with the team",
+    }),
   ).toBeVisible();
   await user.keyboard("{Escape}");
   await waitFor(() =>

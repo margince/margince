@@ -3,6 +3,8 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.task_completion": "Completing tasks after email",
   "homeRepair.reason.taskChanged":
     "The task changed while the preview was being built. Preview it again.",
   "homeRepair.normalize": "Correct source or generated date",
@@ -6620,6 +6622,11 @@ export const en = {
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
+  "brief.pager.label": "Tasks",
+  "brief.pager.previous": "Previous task",
+  "brief.pager.next": "Next task",
+  "brief.pager.hint":
+    "Swipe left or right to browse tasks. You can also use the arrow keys on the navigation buttons.",
   "brief.first.title": "Needs you",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
@@ -7886,6 +7893,12 @@ export const en = {
   "tasks.complete": "Done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
+  "tasks.log.action": "Log what happened",
+  "tasks.log.record": "Which record is this activity for?",
+  "tasks.log.chooseRecord": "Choose another record",
+  "tasks.log.leftOpen":
+    "The activity was logged. The task stays open until all files attach; retry to finish.",
+  "tasks.log.markDone": "Mark task done",
   "tasks.detail": "Task",
   "tasks.sourceEmail": "Source email",
   "tasks.openSource": "Open original",
@@ -11437,24 +11450,28 @@ export const en = {
   "heldThreads.statusFilter": "Status",
   "heldThreads.statusAll": "Any status",
   "heldThreads.noMatch": "No held thread matches.",
-  "heldThreads.showMore": "Show more",
   "heldThreads.count.pending": "waiting to be classified",
   "heldThreads.count.unsure": "unclear",
   "heldThreads.count.held": "held",
   "heldThreads.count.heldByOwner": "held by you",
-  "heldThreads.title": "Held threads",
+  "heldThreads.reasonFilter": "Reason",
+  "heldThreads.anyReason": "Any reason",
+  "heldThreads.from": "From date",
+  "heldThreads.to": "To date",
+  "heldThreads.browse": "Browse recent conversations",
+  "heldThreads.preview": "Preview and change sharing",
+  "heldThreads.loadMore": "Load more",
+  "senders.search": "Search by address, name or domain",
+  "senders.decisionFilter": "Decision",
+  "senders.allDecisions": "All decisions",
+  "senders.myOverrides": "My overrides",
+  "senders.browse": "Browse recent senders",
+  "heldThreads.title": "Mail not shared with the team",
   "heldThreads.sub":
-    "Threads your mailbox is withholding. Releasing a thread lets every colleague read it; only you can release yours.",
-  "heldThreads.empty": "Your mailbox is withholding no threads.",
+    "Margince keeps these conversations unshared. No action is needed. Search here if a conversation is missing from the team’s view.",
   "heldThreads.colThread": "Thread",
-  "heldThreads.colParties": "Participants",
   "heldThreads.colWhy": "Reason",
   "heldThreads.colWhen": "Arrived",
-  "heldThreads.release": "Share with the team",
-  "heldThreads.released": "Shared with the team",
-  "heldThreads.noSubject": "First message erased",
-  "heldThreads.nothingToShare":
-    "No message left to share. The first message was erased, and the hold stays so a later reply does not arrive shared.",
   "heldThreads.pending": "Awaiting classification",
   "heldThreads.attempts_one": "Asked {count} time",
   "heldThreads.attempts_other": "Asked {count} times",
@@ -11462,12 +11479,6 @@ export const en = {
     "{count} thread was asked about repeatedly with no answer. Mail stays withheld until the classifier responds again; nothing is lost.",
   "heldThreads.backlogStalled_other":
     "{count} threads were asked about repeatedly with no answer. Mail stays withheld until the classifier responds again; nothing is lost.",
-  "heldThreads.heldByOthers_one":
-    "{count} other mailbox imported this message and has not shared it. A thread opens only when every recipient agrees.",
-  "heldThreads.heldByOthers_other":
-    "{count} other mailboxes imported this message and have not shared it. A thread opens only when every recipient agrees.",
-  "heldThreads.releaseFailed": "The thread was not shared",
-  "heldThreads.stillHeldTitle": "Awaiting other mailboxes",
   "heldThreads.backlogStalledTitle": "Classifier not responding",
   "heldThreads.kind.legal": "Legal",
   "heldThreads.kind.financialCorporate": "Company finances",
@@ -11479,9 +11490,9 @@ export const en = {
   "heldThreads.kind.other": "Other reason",
   "heldThreads.moreParticipants_one": "+{count} more",
   "heldThreads.moreParticipants_other": "+{count} more",
-  "senders.title": "Senders",
+  "senders.title": "Sender decisions",
   "senders.sub":
-    "The decision on each address your mailbox brought in, and your own answer where given. Only you see this list.",
+    "Margince sorts senders automatically. Find a sender here to correct a decision or remove your override. No action is needed.",
   "senders.emptyBody":
     "After your mailbox brings in mail, each sender appears here with its outcome.",
   "senders.colSender": "Sender",
@@ -20057,6 +20068,9 @@ export const en = {
   "scheduling.acceptNeedsChoice":
     "Available once a calendar for bookings is saved under Calendar.",
   "scheduling.col.link": "Link",
+  "scheduling.offeredLengths": "Additional meeting lengths",
+  "scheduling.offeredLengthsHelp":
+    "Minutes separated by commas, for example 30, 45, 60. The default length is always available.",
   "scheduling.col.length": "Length",
   "scheduling.col.status": "Status",
   "scheduling.col.actions": "Actions",

@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -95,7 +96,7 @@ func weeklyConfirmedFollowup(
 	// The meeting as its history stood, so a follow-up recorded when the
 	// meeting was held still counts after the meeting is redated. The facts
 	// above were placed by the same reader.
-	transition := storekit.MeetingHeldAsOfSQL("meeting", b.add(at))
+	transition := storekit.MeetingHeldAsOfSQL("meeting", b.add(at), activities.ReversedCancellationSQL)
 	began := transition.Began
 	query := "SELECT count(DISTINCT task.source_activity_id) FROM activity task" +
 		" JOIN activity meeting ON meeting.id=task.source_activity_id " + transition.Join +

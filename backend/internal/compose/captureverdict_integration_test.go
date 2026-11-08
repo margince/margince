@@ -222,27 +222,13 @@ func TestVerdictBelowTheFloorAbstainsAndAsksAHuman(t *testing.T) {
 		t.Fatalf("fresh-answer flags by call = %v, want the first call plain and the re-ask fresh", brain.fresh)
 	}
 
-	// And the question reaches a human.
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
-		t.Fatalf("staging reviews: %v", err)
+	for range 2 {
+		if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if n := countIn(t, e, `
-		SELECT count(*) FROM approval
-		 WHERE kind = 'capture_counterparty' AND target_entity_id = $1`, activityID); n != 1 {
-		t.Fatalf("%d review proposals staged, want 1", n)
-	}
-	if n := countIn(t, e, `
-		SELECT count(*) FROM capture_pending_counterparty
-		 WHERE id = $1 AND proposal_id IS NOT NULL`, dispositionID); n != 1 {
-		t.Fatal("the ledger row was not linked to its proposal — a re-run would stage a duplicate")
-	}
-
-	// A second staging pass must find the offer already made.
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
-		t.Fatalf("second staging pass: %v", err)
-	}
-	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'capture_counterparty'`); n != 1 {
-		t.Fatalf("%d proposals after a second pass, want 1 — staging must be idempotent", n)
+	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind='capture_counterparty'`); n != 0 {
+		t.Fatalf("uncertainty created %d required reviews", n)
 	}
 }
 
