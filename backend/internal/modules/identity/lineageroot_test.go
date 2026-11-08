@@ -68,3 +68,22 @@ func TestAnAddressNoSeatSpellsAsTypedFallsBackToAMergedRoot(t *testing.T) {
 		t.Errorf("no matched seat answered found=%t, %v; want nothing found", found, err)
 	}
 }
+
+// Two logins name one mailbox when the local part matches and the domain is
+// one in either spelling, whatever the case.
+func TestTwoSpellingsOfOneLoginAreOneMailbox(t *testing.T) {
+	for _, c := range []struct {
+		a, b string
+		same bool
+	}{
+		{otherUnicode, typedPunycode, true},
+		{"Ana@XN--BCHER-KVA.example", otherUnicode, true},
+		{"bea@xn--bcher-kva.example", otherUnicode, false},
+		{"ana@other.example", otherUnicode, false},
+		{"not-an-address", "not-an-address", false},
+	} {
+		if got := sameMailbox(c.a, c.b); got != c.same {
+			t.Errorf("sameMailbox(%q, %q) = %t, want %t", c.a, c.b, got, c.same)
+		}
+	}
+}

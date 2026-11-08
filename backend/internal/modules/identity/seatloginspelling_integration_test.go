@@ -170,6 +170,13 @@ func TestADisabledSeatsLinkDoesNotSignInItsOtherSpelling(t *testing.T) {
 	if got, err := resolve("subject-linked"); !errors.Is(err, ErrFederatedSignInRefused) {
 		t.Errorf("the disabled seat's subject resolved %v, %v; want it refused, not moved to its twin", got, err)
 	}
+	// The same, for a disabled seat the fold's backfill has not reached.
+	if _, err := e.owner.Exec(ctx, `UPDATE app_user SET email_domain_folded = NULL WHERE id = $1`, disabled); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := resolve("subject-linked"); !errors.Is(err, ErrFederatedSignInRefused) {
+		t.Errorf("an unfolded disabled seat's subject resolved %v, %v; want it refused too", got, err)
+	}
 }
 
 // redeemedSeat invites a rep at address and redeems the invitation, so the seat

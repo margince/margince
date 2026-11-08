@@ -195,6 +195,21 @@ func (s *Service) countFailure(ctx context.Context, tx pgx.Tx, userID ids.UserID
 	return next.locked(now) && !state.locked(now), nil
 }
 
+// auditLoginTarget is the login a failed attempt is recorded against. It is
+// the stored login of any seat the address names, in either spelling. An
+// address no seat holds is recorded as typed.
+func auditLoginTarget(ctx context.Context, tx pgx.Tx, email string) (string, error) {
+	var stored string
+	err := tx.QueryRow(ctx,
+		`SELECT u.email FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+`
+		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1"),
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&stored)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return email, nil
+	}
+	return stored, err
+}
+
 func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 	ctx, cancel := detachedForFailure(ctx)
 	defer cancel()
@@ -211,7 +226,12 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 			typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &target, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
-			// no account to count against; only the audit row lands
+			// No account to count against, so only the audit row lands. It is
+			// still hashed by a seat's own login when one holds the address, so
+			// a seat that stops being live stays one target.
+			if target, err = auditLoginTarget(ctx, tx, email); err != nil {
+				return err
+			}
 		case err != nil:
 			return err
 		default:
