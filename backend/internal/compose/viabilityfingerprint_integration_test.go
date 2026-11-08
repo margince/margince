@@ -87,6 +87,24 @@ func TestEveryInputTheAssessmentReadsMovesTheFingerprint(t *testing.T) {
 		}
 	})
 
+	t.Run("which address is primary", func(t *testing.T) {
+		v := setupViability(t)
+		contact := v.contactOnTheDeal(t, v.supported)
+		address := ids.NewV7()
+		v.WsExec(t, `INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+			 VALUES ($1, $2, 'placed@customer.example', 'work', false, 'manual', 'human:x')`, address, contact)
+		before := v.fingerprintOf(t, v.supported)
+		// Matching reads the address and its owner, never its placement.
+		v.WsExec(t, `UPDATE contact_email SET is_primary = true, email_type = 'personal' WHERE id = $1`, address)
+		if after := v.fingerprintOf(t, v.supported); after != before {
+			t.Error("moving an address's placement made the receipt stale, though matching reads the same")
+		}
+		v.WsExec(t, `UPDATE contact_email SET archived_at = now() WHERE id = $1`, address)
+		if after := v.fingerprintOf(t, v.supported); after == before {
+			t.Error("archiving an address left the fingerprint where it was")
+		}
+	})
+
 	t.Run("a party known by its address alone", func(t *testing.T) {
 		v := setupViability(t)
 		activity := v.WsScalar(t, `SELECT fl.activity_id::text FROM activity_link fl

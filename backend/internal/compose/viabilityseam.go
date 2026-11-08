@@ -17,7 +17,9 @@ import (
 // is left out, so its own tasks never make a receipt stale.
 //
 // Participants and addresses are digested row by row. A tally or a maximum
-// stays put when one row is swapped for another.
+// stays put when one row is swapped for another. An address is digested as the
+// live value and its owner that matching reads, so moving the primary flag
+// leaves a receipt current.
 func viabilityFingerprintSQL(deal string) string {
 	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
 		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
@@ -27,8 +29,9 @@ func viabilityFingerprintSQL(deal string) string {
 		        (SELECT md5(string_agg(concat_ws(':', fp.contact_id, fp.user_id, fp.address, fp.channel_user_id, fp.role, fp.response),
 		                               ',' ORDER BY fp.id))
 		           FROM activity_participant fp WHERE fp.activity_id = ANY (array_agg(fa.id))),
-		        (SELECT md5(string_agg(concat_ws(':', ce.id, ce.version), ',' ORDER BY ce.id)) FROM contact_email ce
-		          WHERE ce.contact_id IN (SELECT fpc.contact_id FROM activity_participant fpc
+		        (SELECT md5(string_agg(concat_ws(':', ce.contact_id, lower(ce.email)), ',' ORDER BY ce.contact_id, lower(ce.email)))
+		           FROM contact_email ce
+		          WHERE ce.archived_at IS NULL AND ce.contact_id IN (SELECT fpc.contact_id FROM activity_participant fpc
 		                                   WHERE fpc.activity_id = ANY (array_agg(fa.id))
 		                                     AND fpc.contact_id IS NOT NULL)))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
