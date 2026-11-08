@@ -152,7 +152,9 @@ describe("a deal row carrying a decided next step", () => {
     renderWorklist();
 
     await screen.findByText(/Turbinenbau/);
-    expect(screen.getByRole("button", { name: /^create follow-up$/i })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /^create follow-up$/i }),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["brief.snooze"] }),

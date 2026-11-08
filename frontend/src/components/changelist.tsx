@@ -45,8 +45,8 @@ export function ChangeList({
 }
 
 // A stored value as text a reader recognises. The server says how to read
-// it: money with its currency, a calendar day or an instant, a stage or a
-// member by the name the reader may see. A value it cannot name is never shown
+// it: money with its currency, a calendar day or an instant. A stage or a
+// member reads by the name the reader may see. A value it cannot name is never shown
 // as its raw id, minor units or code. Absent and empty read as "empty"; a
 // list as its items. Never cut: two long values that differ only at the end
 // must still read as different.

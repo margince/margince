@@ -184,9 +184,9 @@ function activityRoute(route: string): string {
  * is only staged if nothing was sent, and no rendering can prove that.
  */
 /**
- * The pending summary a server sends beside these receipts: one bundle per
- * changed deal naming its corrections, so a fixture's list and count agree
- * the way the server's do.
+ * The pending summary a server sends beside these receipts. It holds one bundle
+ * per changed deal naming its corrections, so a fixture's list and count agree
+ * as the server's do.
  */
 export function pendingSummaryFor(receipts: readonly Receipt[]) {
   const bundles = new Map<

@@ -140,15 +140,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			return fmt.Errorf("deals: reading the changes Margince made: %w", err)
 		}
 		defer rows.Close()
-		for rows.Next() {
-			var b ChangeBundle
-			if err := rows.Scan(&b.DealID, &b.DealName, &b.Version, &b.AuditLogIDs, &b.UndoableAuditLogIDs, &b.Kinds, &b.LatestAt, &b.ValueBaseMinor,
-				&out.Deals, &out.UndoableDeals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved, &out.Opened, &out.Revived); err != nil {
-				return err
-			}
-			out.Bundles = append(out.Bundles, b)
-		}
-		return rows.Err()
+		return scanChangeBundles(rows, &out)
 	})
 	if err != nil {
 		return ChangeSummary{}, err
@@ -157,6 +149,20 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		out.Bundles, out.Truncated = out.Bundles[:bundleCap], true
 	}
 	return out, nil
+}
+
+// scanChangeBundles reads the summary rows into out. Every row repeats the
+// window counts, so each scan overwrites them with the same totals.
+func scanChangeBundles(rows pgx.Rows, out *ChangeSummary) error {
+	for rows.Next() {
+		var b ChangeBundle
+		if err := rows.Scan(&b.DealID, &b.DealName, &b.Version, &b.AuditLogIDs, &b.UndoableAuditLogIDs, &b.Kinds, &b.LatestAt, &b.ValueBaseMinor,
+			&out.Deals, &out.UndoableDeals, &out.Closed, &out.Redated, &out.Revalued, &out.Probabilities, &out.Moved, &out.Opened, &out.Revived); err != nil {
+			return err
+		}
+		out.Bundles = append(out.Bundles, b)
+	}
+	return rows.Err()
 }
 
 // ChangeCursor is where the next page of one deal's changes starts.

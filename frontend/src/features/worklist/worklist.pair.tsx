@@ -99,7 +99,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   }
   const mayMerge = item.actions?.includes("merge") ?? false;
   // Two contacts merge only through the review, where the reader ticks both
-  // and sees the preview; Keep opens it on the contact they chose to keep.
+  // and sees the preview. Keep opens it on the contact they chose to keep.
   const reviewed = item.subject?.type === "contact";
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const answer = (disposition: PairDisposition, winnerId?: string) =>

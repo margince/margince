@@ -124,7 +124,7 @@ export const Pinned: Story = {
   },
 };
 
-// MORE THAN THE LINE HOLDS: six reasons and a supporting sentence. The row says
+// More than the line holds: six reasons and a supporting sentence. The row says
 // the first reason; the rest are in its Details.
 export const WithMoreBehindIt: Story = {
   args: {

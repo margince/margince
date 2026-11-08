@@ -113,8 +113,8 @@ func correctionFieldsStillAppliedSQL(dealFields string) string {
 }
 
 // correctionStageStillNewestSQL holds for a correction c that moved no stage,
-// or whose stage move is still the deal's newest, the rule stageMoveToReverse
-// applies when it writes.
+// or whose stage move is still the deal's newest. stageMoveToReverse applies
+// the same rule when it writes.
 func correctionStageStillNewestSQL(stageKindsPos int) string {
 	return fmt.Sprintf("(c.correction <> ALL($%d::text[]) OR (c.stage_history_id = (%s)"+
 		" AND EXISTS (SELECT 1 FROM deal_stage_history moved WHERE moved.id = c.stage_history_id AND moved.from_stage_id IS NOT NULL)))",

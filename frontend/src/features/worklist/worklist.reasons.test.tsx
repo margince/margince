@@ -12,13 +12,8 @@ import { en } from "../../i18n/en";
 import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
-// Why a row is worth the reader's morning, drawn.
-//
-// Two lanes could state only how LONG something had been true. A lapsed
-// relationship said "no activity for 63 days" whether it was the rep's strongest
-// contact with an open deal behind them or a cc who had drifted, and a task
-// nobody had taken read exactly like the reader's own. Both facts were already
-// in the server's hand and dropped on the way out.
+// A row says why it matters, not only how long it has been true. An open deal
+// rests on a lapsed contact, or nobody owns a task.
 //
 // These assert the drawn phrase rather than the wire field: a reason that
 // reaches the client and has no sentence for it is silently omitted, so a test

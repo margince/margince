@@ -31,7 +31,7 @@ export const TASK_PARAM = "task";
 /**
  * The address that opens one task on Home. From Home it keeps the reader's own
  * dials, so an open Worklist drawer, its view and its filter stay as they were
- * under the task; from elsewhere it starts Home with the task alone.
+ * under the task. From elsewhere it starts Home with the task alone.
  */
 export function taskHref(id: string): string {
   const here = globalThis.location?.hash ?? "";

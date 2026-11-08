@@ -155,7 +155,7 @@ export function MoveButton({
 
   const taskBody = move.arguments;
   // The task the press wrote stays named here, with the way into it, even
-  // after the refreshed advice moves on: the reader sees what they made.
+  // after the refreshed advice moves on. The reader sees what they made.
   if (createTask.data) {
     return (
       <CreatedFollowUp

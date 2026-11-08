@@ -11,13 +11,12 @@ import {
   Field,
   TextInput,
 } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { middayInstant } from "../../format/calendarday";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate } from "../../format/format";
 import { formatDayRange } from "../../format/format.dates";
-import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -33,6 +32,7 @@ import {
 } from "../worklist/weeklyplan.queries";
 import { AddCommitment } from "./brief.plan.add";
 import { PlanContract, planEditable } from "./brief.plan.contract";
+import { hasFoot, PlanFoot } from "./brief.plan.foot";
 import { ReportTitle } from "./brief.reportcard";
 
 import "./brief.plan.css";
@@ -112,20 +112,6 @@ function statesReadOnly(
     return false;
   }
   return reading.hasPlan ? !reading.mayEdit : !reading.mayStart;
-}
-
-/**
- * Whether the save bar has anything in it.
- *
- * `Panel` draws its footer band whenever `footer` is a node at all, so a foot
- * that could only return null underneath it left an empty bordered strip under
- * a week with nothing on it. The answer belongs beside the panel rather than
- * inside the band.
- */
-function hasFoot(
-  reading: Readonly<{ editable: boolean; staged: number; unsaved: number }>,
-): boolean {
-  return reading.unsaved > 0 || (reading.editable && reading.staged > 0);
 }
 
 export function PlanSection({
@@ -310,57 +296,6 @@ export function PlanSection({
   );
 }
 
-/**
- * The save bar, and the refusal that can stand where it was. Drawn only when
- * one of them has something to say — the caller holds that, so the band itself
- * never renders empty.
- *
- * The two halves are gated differently on purpose. A refusal is history and
- * stays: `editable` goes false under a reader mid-stage when the weekly job
- * closes the week, which is the very thing that refused their save — hiding the
- * sentence with the button would leave them with neither the write nor the
- * reason. The BUTTON goes, because the rows lose their boxes with it, and a Save
- * left standing would send settlements the server refuses over ticks nobody can
- * see any more.
- */
-function PlanFoot({
-  editable,
-  staged,
-  unsaved,
-  saving,
-  onSave,
-}: Readonly<{
-  editable: boolean;
-  staged: number;
-  unsaved: number;
-  saving: boolean;
-  onSave: () => void;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  return (
-    <>
-      {/* `danger`: the write was refused, not merely at risk. */}
-      {unsaved > 0 && (
-        <Callout tone="danger" kind="outcome" title={t("plan.refusedTitle")}>
-          {plural("plan.saveRefused", unsaved, {
-            count: formatNumber(unsaved, locale),
-          })}
-        </Callout>
-      )}
-      {/* `pending`, not `disabled`: a write in flight is not a precondition the
-          reader can meet, and `disabled` is native — it drops focus from the
-          control they just pressed. */}
-      {editable && staged > 0 && (
-        <Button onClick={onSave} pending={saving}>
-          {plural("plan.save", staged, { count: formatNumber(staged, locale) })}
-        </Button>
-      )}
-    </>
-  );
-}
-
 function CommitmentRow({
   commitment,
   editable,
@@ -497,7 +432,7 @@ function HelpExchange({
   );
 }
 
-// The plan's own seven days, named as dates: a week number makes the reader
+// The plan's own seven days, named as dates. A week number makes the reader
 // count, and the report beside it may be about a different week.
 function weekDays(start: string, locale: Locale, zone: string): string {
   const end = new Date(`${start}T12:00:00Z`);

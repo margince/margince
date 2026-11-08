@@ -19,16 +19,13 @@ import { plain, type SpokenLine } from "./ai-activity-speak";
 // TWO RULES SHAPE IT, and the first is the older one.
 //
 // It never invents activity. Every reading here is something the installation
-// was asked and answered, and a reading with nothing to report is ABSENT rather
+// was asked and answered. A reading with nothing to report is ABSENT rather
 // than reworded into a cheerful nothing. Nor does it fill a quiet moment with
 // standing advice: help lives where a reader asks for it, not in this rotation.
 //
-// It must not go stale. That is the newer one, and it is what this file was
-// pulled out of `agentrail.tsx` to fix: the rotation carried whichever run
-// settled most recently, forever, so an installation that summarised one contact
-// at nine in the morning spent the rest of the working day with "What I know
-// about Sabine Mayer is ready." in the corner of every screen. A settled run
-// ages out of the rotation (`STILL_NEWS_MS`) instead.
+// It must not go stale. A run that settled at nine in the morning must not say
+// "What I know about Sabine Mayer is ready." in the corner of every screen all
+// day. So a settled run ages out of the rotation (`STILL_NEWS_MS`).
 
 /**
  * How long a run that has finished stays worth saying.

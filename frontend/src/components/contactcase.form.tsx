@@ -51,8 +51,8 @@ function selectionProblem(
   selected: readonly string[],
   owner: string,
 ): MessageKey | null {
-  // In pair mode with no pair this reader may merge, nothing can be ticked,
-  // so "tick two" would ask for the impossible; the pair rule is the reason.
+  // In pair mode with no pair this reader may merge, nothing can be ticked.
+  // "Tick two" would ask for the impossible, so the pair rule is the reason.
   const noPairToTick =
     contactCase.merge_mode === "pair" &&
     contactCase.members.every((member) =>

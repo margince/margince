@@ -109,8 +109,8 @@ func decidedLines(drawn []crmcontracts.MagicLine, decided []DecidedReceipt) []cr
 }
 
 // decidedLine dresses one decision. An approval is revisited through the
-// record it named; a correction carries the Undo its review allows, because
-// one older than the audit window has no audit line to carry it.
+// record it named. A correction carries the Undo its review allows: one older
+// than the audit window has no audit line to carry it.
 func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	values := map[string]string{"kind": receipt.Kind}
 	sentence := "magic.action.decided_kind"

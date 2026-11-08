@@ -8,7 +8,7 @@ type T = (key: "worklist.when.scheduled", values: { when: string }) => string;
  * When a meeting that owes an outcome was scheduled. Nobody has said it took
  * place, so the row names the booked time, not a held one. An exact time is
  * read in the viewer's zone, as the meeting's drawer and Home's schedule read
- * it; a date-only meeting keeps its calendar day in any zone.
+ * it. A date-only meeting keeps its calendar day in any zone.
  */
 export function scheduledText(
   item: WorklistItem,
