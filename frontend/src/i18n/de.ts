@@ -20113,7 +20113,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Installation hat nicht geprüft, ob sich das zurücknehmen lässt.",
   "magic.notShown_one": "{count} Änderung wird nicht gezeigt: {reason}",
   "magic.notShown_other": "{count} Änderungen werden nicht gezeigt: {reason}",
-  "magic.notShown.unadmittedAction": "Routinearbeit ohne Neuigkeiten für dich",
   "magic.notShown.unknownEntityType":
     "ein Datensatztyp, den diese Seite nicht einordnen kann",
   "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",

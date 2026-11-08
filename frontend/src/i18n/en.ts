@@ -19915,7 +19915,6 @@ export const en = {
     "This installation has not checked whether this can be put back.",
   "magic.notShown_one": "{count} change is not shown: {reason}",
   "magic.notShown_other": "{count} changes are not shown: {reason}",
-  "magic.notShown.unadmittedAction": "housekeeping with nothing to tell you",
   "magic.notShown.unknownEntityType": "a record type this page cannot place",
   "magic.notShown.outOfScope": "outside your own records",
   "magic.visibleScope": "Only changes visible to you are shown.",

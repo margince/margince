@@ -19599,7 +19599,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bản cài đặt này chưa kiểm tra xem có thể khôi phục hay không.",
   "magic.notShown_one": "Ẩn {count} thay đổi: {reason}",
   "magic.notShown_other": "Ẩn {count} thay đổi: {reason}",
-  "magic.notShown.unadmittedAction": "việc bảo trì, không cần bạn xử lý",
   "magic.notShown.unknownEntityType": "loại hồ sơ mà trang này không thể xếp",
   "magic.notShown.outOfScope": "nằm ngoài hồ sơ của bạn",
   "magic.visibleScope": "Chỉ hiển thị những thay đổi bạn có quyền xem.",
