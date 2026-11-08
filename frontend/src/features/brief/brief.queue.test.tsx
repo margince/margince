@@ -392,8 +392,9 @@ it("opens a follow-up on the conversation it waits on", async () => {
 // closing, so a reader who switched it to the team and shut it had a button
 // counting their own day over a list of somebody else's — two totals for one
 // control, and the one on screen was the wrong one.
-it("counts the queue the button actually opens", async () => {
-  window.location.hash = "#/home?queue_scope=team";
+it("opens the reader's own Today and counts that list, whatever the drawer was last left on", async () => {
+  window.location.hash =
+    "#/home?queue_scope=team&queue_view=decisions&filter=tasks";
   stubApi({
     "GET /worklist": (_body, query) =>
       jsonResponse(
@@ -401,34 +402,38 @@ it("counts the queue the button actually opens", async () => {
           ? {
               ...readingsDay({}, [], undefined, { total: 42 }),
               scope: "team",
+            }
+          : {
+              ...readingsDay({}, [taskRow("t", "Call Weber")]),
               counts: [
                 {
                   category: "tasks",
-                  considered: 42,
-                  shown: 0,
-                  more_available: false,
+                  considered: 3,
+                  shown: 1,
+                  more_available: true,
                 },
               ],
-            }
-          : readingsDay({}, [taskRow("t", "Call Weber")], undefined, {
-              total: 3,
-            }),
+            },
       ),
   });
+  const user = userEvent.setup();
   render(<BriefScreen />);
 
-  // The team's total, not the reader's own three. Read off the count element
-  // the switch carries rather than its accessible name, which is the verb
-  // alone — `OptionCount` is beside the words, not in them.
+  // The reader's own three, the list the button opens, not the team's 42 a
+  // closed drawer was last narrowed to. Read off the count the switch
+  // carries, which sits beside its words rather than in them.
   const toggle = await screen.findByRole("button", {
     name: en["brief.queue.show"],
   });
   await waitFor(() => {
-    expect(
-      toggle.querySelector(".optioncount")?.textContent,
-      "the switch counted a different queue from the one it opens",
-    ).toContain("42");
+    expect(toggle.querySelector(".optioncount")?.textContent).toContain("3");
   });
+  await user.click(toggle);
+  const hash = window.location.hash;
+  expect(hash).toContain("queue=1");
+  expect(hash).not.toContain("queue_scope");
+  expect(hash).not.toContain("queue_view");
+  expect(hash).not.toContain("filter=");
 });
 
 it("counts a closed drawer over the reader's own queue from Home's one read", async () => {

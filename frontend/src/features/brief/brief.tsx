@@ -28,6 +28,7 @@ import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { readerTask } from "../../lib/worklistcopy";
 import { pillFigure } from "../../lib/worklistcounts";
+import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
@@ -36,7 +37,6 @@ import {
   MeetingDetailModal,
   TaskDetailModal,
 } from "../worklist/taskdetailmodal";
-import { drawerQueue } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
@@ -72,33 +72,15 @@ import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
-// The queue the button opens, which keeps the drawer's scope and owner from
-// the address. It shares the drawer's query key, so the two report one total.
-function useDrawerDay(
-  params: ReturnType<typeof useUrlParams>[0],
-  drawerOpen: boolean,
-  homeDay: ReturnType<typeof briefDay>,
-) {
-  const owner = params.get("owner") ?? "";
-  const drawer = drawerQueue(params);
-  // The server counts every candidate before it applies a view, so Home's own
-  // read already holds a closed drawer's total over the same queue.
-  const homeQueue = drawer.scope === "mine" && owner === "";
-  const queued = useWorklist(
-    drawer.scope,
-    "all",
-    owner === "" ? undefined : owner,
-    drawerOpen || !homeQueue,
-    drawer.view,
-  );
-  if (homeQueue && !drawerOpen) {
-    // A disabled query stops refetching, so its cached day goes stale.
-    return { drawer, queuedDay: homeDay };
-  }
-  const queuedDay =
-    briefDay(queued.data?.pages) ?? (homeQueue ? homeDay : undefined);
-  return { drawer, queuedDay };
-}
+// The dials that narrow the drawer. The Home button clears them, so it always
+// opens the reader's own Today with every category.
+const DRAWER_DIALS = [
+  "queue_scope",
+  WORKLIST_VIEW_PARAM,
+  "filter",
+  "owner",
+  "selected",
+];
 
 export function BriefScreen() {
   const t = useT();
@@ -110,7 +92,6 @@ export function BriefScreen() {
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
   const drawerOpen = params.get("queue") === "1";
-  const { drawer, queuedDay } = useDrawerDay(params, drawerOpen, day);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
@@ -121,22 +102,26 @@ export function BriefScreen() {
       onChange={(next) => setParams(paramsFor(next, params))}
     />
   );
-  // The way into the whole queue, with the day's count on it. The count is
-  // the drawer's own total, read off the drawer's own query. It is the figure
-  // the drawer's head sentence ends on, whichever queue it shows.
+  // The way into the reader's own Today, with that list's count on it. It
+  // always opens Mine, Today, every category, whatever view the drawer was
+  // last left on, so the number is the one the opened list shows.
   const queueToggle = (
     <PageAsideToggle
       controlled={{
         open: drawerOpen,
-        ...(queuedDay && pillFigure(queuedDay, "all", drawer.view)),
+        ...(day && pillFigure(day, "all", DEFAULT_VIEW)),
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
         },
         onToggle: () => {
           const next = new Map(params);
-          if (next.get("queue") === "1") next.delete("queue");
-          else next.set("queue", "1");
+          if (next.get("queue") === "1") {
+            next.delete("queue");
+          } else {
+            for (const dial of DRAWER_DIALS) next.delete(dial);
+            next.set("queue", "1");
+          }
           navigate({ screen: "home" }, next);
         },
       }}
