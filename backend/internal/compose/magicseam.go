@@ -51,7 +51,8 @@ func newMagicService(
 		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)}).
 		WithDecidedReceipts(magicDecidedReceipts{
 			receipts: attentionReceipts{svc: staged, deals: deals.NewStore(db, DealsInstallation())},
-		})
+		}).
+		WithReferenceNames(newAttentionNames(db))
 }
 
 // magicDecidedReceipts hands the done lane the receipts the worklist reads,
