@@ -45,7 +45,6 @@ var stillShowsRecordIDs = map[string]string{
 	"summarize/deal_room_brief":              "record ids in the deal room JSON",
 	"summarize/meeting_brief":                "activity ids in the meeting JSON",
 	"summarize/meeting_plan":                 "deal and contact ids in the plan JSON",
-	"tag_suggest/interest":                   "the source record id on each span",
 }
 
 // A model is never shown a record UUID: it copies one wrong, cites it in the

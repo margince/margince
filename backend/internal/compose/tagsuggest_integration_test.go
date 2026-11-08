@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -60,7 +61,7 @@ func (b *tagBrainStub) Complete(_ context.Context, req model.Request) (model.Res
 		answer := tagSuggestAnswer{ID: s.id, Tags: []string{}}
 		for cue, tag := range b.cues {
 			if strings.Contains(s.text, cue) {
-				answer.Tags = append(answer.Tags, tag.String())
+				answer.Tags = append(answer.Tags, listedTagRef(req.Messages[0].Content, tag))
 			}
 		}
 		answers = append(answers, answer)
@@ -85,18 +86,47 @@ func (b *tagBrainStub) CompleteValidated(ctx context.Context, req model.Request,
 	return model.Response{}, fmt.Errorf("%w: %w", ai.ErrOutputRejected, refused)
 }
 
-// askedAbout lists the item ids the stub was asked about, across calls.
+// askedAbout lists the bodies of the items the stub was asked about, across
+// calls: the prompt names an item by a ref, never by its activity id.
 func (b *tagBrainStub) askedAbout() []string {
 	var out []string
 	for _, req := range b.prompts {
 		for _, s := range fencedSpans(req.System, req.Messages[0].Content) {
-			out = append(out, s.id)
+			out = append(out, s.body())
 		}
 	}
 	return out
 }
 
+// shownTagNames is each coined tag's name, by id: the prompt lists a tag by
+// its ref and its name.
+var shownTagNames sync.Map
+
+// listedTagRef is the ref the prompt lists the tag by, read off the line
+// "- t1: <name>. <description>".
+func listedTagRef(prompt string, tag ids.TagID) string {
+	name, coined := shownTagNames.Load(tag)
+	if !coined {
+		return tag.String()
+	}
+	for line := range strings.Lines(prompt) {
+		ref, rest, found := strings.Cut(strings.TrimPrefix(line, "- "), ": ")
+		if found && strings.HasPrefix(line, "- ") && strings.HasPrefix(rest, fmt.Sprint(name)+". ") {
+			return ref
+		}
+	}
+	return tag.String()
+}
+
 type fencedSpan struct{ id, text string }
+
+// body is the item's own text, after the kind, date and subject lines.
+func (s fencedSpan) body() string {
+	if i := strings.LastIndex(s.text, "\n\n"); i >= 0 {
+		return s.text[i+2:]
+	}
+	return s.text
+}
 
 // fencedSpans reads each source_id span out of a prompt, under the marker the
 // system prompt declares.
@@ -179,7 +209,7 @@ func TestEditingASuggestibleTagReadsTheWindowAgain(t *testing.T) {
 	e := setupTagScout(t)
 	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
-	note := e.note(e.Admin(), t, "note", "Wants a named contact for outages.", dana, clocktest.Now(t).Add(-time.Hour))
+	e.note(e.Admin(), t, "note", "Wants a named contact for outages.", dana, clocktest.Now(t).Add(-time.Hour))
 	brain := &tagBrainStub{cues: map[string]ids.TagID{"named contact": migration}}
 	e.mustSuggest(t, &tagBrainStub{})
 	if n := e.WsCount(t, `SELECT count(*) FROM tag_suggestion`); n != 0 {
@@ -194,7 +224,7 @@ func TestEditingASuggestibleTagReadsTheWindowAgain(t *testing.T) {
 	if pass := e.mustSuggest(t, brain); pass.Raised != 1 {
 		t.Fatalf("the pass after the edit raised %d, want 1", pass.Raised)
 	}
-	if asked := brain.askedAbout(); len(asked) != 1 || asked[0] != note.String() {
+	if asked := brain.askedAbout(); len(asked) != 1 || asked[0] != "Wants a named contact for outages." {
 		t.Fatalf("after the edit the model was asked about %v, want the note again", asked)
 	}
 }
@@ -250,8 +280,8 @@ func TestRestrictedArchivedAndNoiseItemsAreNeverSent(t *testing.T) {
 
 	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
 	e.mustSuggest(t, brain)
-	if asked := brain.askedAbout(); len(asked) != 1 || asked[0] != kept.String() {
-		t.Fatalf("the model was asked about %v, want only %s", asked, kept)
+	if asked := brain.askedAbout(); len(asked) != 1 || asked[0] != "Excel at month-end." {
+		t.Fatalf("the model was asked about %v, want only the kept note %s", asked, kept)
 	}
 }
 
@@ -459,17 +489,17 @@ func TestADeclinedItemIsStoredWithNoTagAndItsSiblingRaises(t *testing.T) {
 	}
 }
 
-// batchedWith maps each item id to the ids asked beside it in one call.
+// batchedWith maps each item's body to the bodies asked beside it in one call.
 func batchedWith(brain *tagBrainStub) map[string]map[string]bool {
 	out := map[string]map[string]bool{}
 	for _, req := range brain.prompts {
 		spans := fencedSpans(req.System, req.Messages[0].Content)
 		for _, a := range spans {
-			if out[a.id] == nil {
-				out[a.id] = map[string]bool{}
+			if out[a.body()] == nil {
+				out[a.body()] = map[string]bool{}
 			}
 			for _, b := range spans {
-				out[a.id][b.id] = a.id != b.id
+				out[a.body()][b.body()] = a.id != b.id
 			}
 		}
 	}
@@ -482,17 +512,17 @@ func TestItemsShareACallWhenTheyShareTheirReaders(t *testing.T) {
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	carl := e.SeedContact(t, "Carl Buyer", &e.Rep3)
 	at := clocktest.Now(t).Add(-time.Hour)
-	first := e.note(e.Admin(), t, "note", "Excel at month-end.", dana, at)
-	second := e.note(e.Admin(), t, "note", "Thanks for lunch.", dana, at)
-	elsewhere := e.note(e.Admin(), t, "note", "Agenda attached.", carl, at)
+	e.note(e.Admin(), t, "note", "Excel at month-end.", dana, at)
+	e.note(e.Admin(), t, "note", "Thanks for lunch.", dana, at)
+	e.note(e.Admin(), t, "note", "Agenda attached.", carl, at)
 	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
 
 	e.mustSuggest(t, brain)
 	together := batchedWith(brain)
-	if together[elsewhere.String()][first.String()] || together[elsewhere.String()][second.String()] {
+	if together["Agenda attached."]["Excel at month-end."] || together["Agenda attached."]["Thanks for lunch."] {
 		t.Fatal("an item on another rep's contact was asked beside items on Dana")
 	}
-	if !together[first.String()][second.String()] {
+	if !together["Excel at month-end."]["Thanks for lunch."] {
 		t.Fatal("two items on the same record were asked apart, want one call")
 	}
 }
