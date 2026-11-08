@@ -18,7 +18,7 @@ package identity
 
 import (
 	"context"
-	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -163,19 +163,48 @@ func mergedFormerSurvivor(ctx context.Context, tx pgx.Tx, email string) (ids.Use
 		return survivor, false, nil
 	}
 	// The seed can hold a seat per domain spelling, so the lineage can reach
-	// two live roots. `typed` rides the recursion to say which spelling the
-	// caller used, and the root spelled that way is the one answered.
-	err := tx.QueryRow(ctx, `WITH RECURSIVE lineage AS (
- SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at,
-        (lower(s.email) = @`+memberEmailField+`) AS typed FROM app_user s
+	// two live roots. Each root carries the login of the seat it was reached
+	// from, and the root reached from the spelling the caller typed is answered.
+	rows, err := tx.Query(ctx, `WITH RECURSIVE lineage AS (
+ SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at,s.email AS reached_from FROM app_user s
    WHERE `+storekit.SeatLoginIsSQL("s", "@"+memberEmailField, "@"+memberDomainField)+`
- UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at,l.typed FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
- ) SELECT id FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL
-   ORDER BY typed DESC, id LIMIT 1`, memberLoginArgs(email)).Scan(&survivor)
-	if errors.Is(err, pgx.ErrNoRows) {
+ UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at,l.reached_from FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
+ ) SELECT DISTINCT id, reached_from FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL
+   ORDER BY id`, memberLoginArgs(email))
+	if err != nil {
+		return survivor, false, err
+	}
+	roots, err := pgx.CollectRows(rows, pgx.RowToStructByPos[lineageRoot])
+	if err != nil {
+		return survivor, false, err
+	}
+	root, ok := rootReachedFrom(roots, typedLoginAddress(email))
+	if !ok {
 		return survivor, false, errRemovedEmail
 	}
-	return survivor, err == nil, err
+	return root, true, nil
+}
+
+// lineageRoot is a live seat a merge lineage ends at, with the login of the
+// seat the walk started from.
+type lineageRoot struct {
+	ID          ids.UserID
+	ReachedFrom string
+}
+
+// rootReachedFrom answers the root the typed spelling's own seat leads to, or
+// the first root when no seat is spelled that way. The roots come in id order,
+// so the answer does not depend on the order the walk returned them in.
+func rootReachedFrom(roots []lineageRoot, typed string) (ids.UserID, bool) {
+	if len(roots) == 0 {
+		return ids.UserID{}, false
+	}
+	for _, root := range roots {
+		if strings.EqualFold(root.ReachedFrom, typed) {
+			return root.ID, true
+		}
+	}
+	return roots[0].ID, true
 }
 
 func formerMemberAudit(in FormerMemberInput, role string) map[string]any {
