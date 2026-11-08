@@ -39,8 +39,6 @@ var stillShowsRecordIDs = map[string]string{
 	"offer_draft/draft":                      "product ids in the catalog",
 	"request_settlement/request_settle":      "request ids; integration replies are scripted by id",
 	"stage_evidence_extract/criteria":        "span and criterion ids",
-	"summarize/company_ask":                  "record ids in the company JSON",
-	"summarize/company_brief":                "record ids in the company JSON",
 	"summarize/company_dossier":              "profile field ids",
 	"summarize/contact_brief":                "record ids in the contact JSON",
 	"summarize/deal_room_brief":              "record ids in the deal room JSON",

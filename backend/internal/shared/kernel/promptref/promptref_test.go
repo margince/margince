@@ -69,3 +69,29 @@ func TestAllIsACopyTheCallerCannotEdit(t *testing.T) {
 		t.Errorf("All() = %v after editing a returned slice, want [m1]", got)
 	}
 }
+
+func TestAPayloadShowsEachIDAsARefOfItsKind(t *testing.T) {
+	t.Parallel()
+	const third = "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e09"
+	payload := promptref.Rewrite(
+		`{"deal":"`+firstID+`","acts":["`+secondID+`","`+firstID+`"],"other":"`+third+`"}`,
+		map[string]string{firstID: "deal", secondID: "activity"},
+		map[string]string{"deal": "d", "activity": "a", "": "r"})
+	if want := `{"deal":"d1","acts":["a1","d1"],"other":"r1"}`; payload.Text() != want {
+		t.Fatalf("Text() = %s, want %s", payload.Text(), want)
+	}
+	if id, ok := payload.ID("deal", "d1"); !ok || id != firstID {
+		t.Errorf("ID(deal, d1) = %q, %v; want the deal", id, ok)
+	}
+	for _, foreign := range [][2]string{{"activity", "d1"}, {"deal", "d2"}, {"deal", firstID}} {
+		if id, ok := payload.ID(foreign[0], foreign[1]); ok {
+			t.Errorf("ID(%s, %s) = %q; a ref the payload never showed as that kind must be refused", foreign[0], foreign[1], id)
+		}
+	}
+	if !payload.Names("the deal d1 stalled") || payload.Names("a C1 speaker, d2 and a10") {
+		t.Error("Names must find exactly the refs this payload showed")
+	}
+	if got := payload.Refer(`{"entity_id":"` + secondID + `"}`); got != `{"entity_id":"a1"}` {
+		t.Errorf("Refer = %s, want the activity's ref", got)
+	}
+}

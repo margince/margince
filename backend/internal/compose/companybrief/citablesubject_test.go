@@ -46,7 +46,7 @@ func TestASentenceCitingTheAccountSurvivesGrounding(t *testing.T) {
 	reply := `{"sections":[{"kind":"snapshot","sentences":[{"text":"They make automotive parts.",` +
 		`"nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + companyID + `"}]}]}]}`
 
-	sections, err := ParseBriefSections(reply, companyID, in)
+	sections, err := parseBriefSections(reply, companyID, in)
 	if err != nil {
 		t.Fatalf("parsing a well-formed brief: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestTheAccountsIdIsStillRefusedInProse(t *testing.T) {
 	reply := `{"sections":[{"kind":"snapshot","sentences":[{"text":"Company ` + companyID + ` makes parts.",` +
 		`"nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + companyID + `"}]}]}]}`
 
-	sections, err := ParseBriefSections(reply, companyID, in)
+	sections, err := parseBriefSections(reply, companyID, in)
 	if err != nil {
 		t.Fatalf("parsing a well-formed brief: %v", err)
 	}
