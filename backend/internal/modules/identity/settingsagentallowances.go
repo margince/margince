@@ -60,7 +60,7 @@ var AgentRoleWritesPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_WRITES_PER_WINDOW",
 	Type:     config.Map(config.Int),
 	Validate: writesBounds.roleValues,
-	Doc:      "Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value among its user's roles; a role with no value counts as the installation value. Admin gets 2000 while neither Admin nor the installation count has a value set.",
+	Doc:      "Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 2000 while neither Admin nor the installation count has a value set.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
 // AgentRoleEgressPerWindow is each role's own calls leaving the workspace per window.
@@ -69,7 +69,7 @@ var AgentRoleEgressPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_EGRESS_PER_WINDOW",
 	Type:     config.Map(config.Int),
 	Validate: egressBounds.roleValues,
-	Doc:      "Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value among its user's roles; a role with no value counts as the installation value.",
+	Doc:      "Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
 // AgentRoleCallsPerWindow is each role's own calls of any kind per window.
@@ -78,7 +78,7 @@ var AgentRoleCallsPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_CALLS_PER_WINDOW",
 	Type:     config.Map(config.Int),
 	Validate: callsBounds.roleValues,
-	Doc:      "Calls of any kind, tool or API, one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value among its user's roles; a role with no value counts as the installation value. Admin gets 20000 while neither Admin nor the installation count has a value set.",
+	Doc:      "Calls of any kind, tool or API, one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 20000 while neither Admin nor the installation count has a value set.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
 // allowanceBounds is the range one count may be set to, for the installation
