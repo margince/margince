@@ -20055,6 +20055,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.aboutCountAtLeast_one": "mindestens {count} Datensatz",
   "magic.aboutCountAtLeast_other": "mindestens {count} Datensätze",
   "magic.aboutNamedAtLeast": "{label} und möglicherweise weitere",
+  "magic.viewChanges_one": "{count} Änderung ansehen",
+  "magic.viewChanges_other": "{count} Änderungen ansehen",
+  "magic.viewChangesAtLeast_one": "Mindestens {count} Änderung ansehen",
+  "magic.viewChangesAtLeast_other": "Mindestens {count} Änderungen ansehen",
   "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens analysiert",

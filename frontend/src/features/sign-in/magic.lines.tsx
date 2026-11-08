@@ -352,6 +352,23 @@ function LineSubject({
     line.approval_kind === undefined &&
     since;
   const href = many ? undefined : recordHref(line);
+  // A group's opener counts the changes it holds, not the records it names.
+  if (opens && many) {
+    return (
+      <>
+        <span className="magic-line-subject">{shown}</span>{" "}
+        <LineRecordsOpener
+          line={line}
+          since={since}
+          summary={plural(
+            floor ? "magic.viewChangesAtLeast" : "magic.viewChanges",
+            count,
+            { count: formatNumber(count, locale) },
+          )}
+        />
+      </>
+    );
+  }
   return (
     <span className="magic-line-subject">
       {opens ? (
