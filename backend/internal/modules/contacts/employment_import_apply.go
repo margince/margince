@@ -211,12 +211,13 @@ func (s *Store) applyEmploymentEvidence(ctx context.Context, tx pgx.Tx, contact 
 	if !selected {
 		return apperrors.ErrNotFound
 	}
-	if len(episodes) == 0 {
-		return nil
-	}
 	// Once, after every episode, rather than as each one retires an employer.
 	// An earlier episode's employer may be one a later episode replaced.
-	return fileEmployerTwins(ctx, tx, contact, connectorCapturedBy(episodes[0].provider))
+	provider := selectedEmploymentProvider(episodes, req.Key, group)
+	if provider == "" {
+		return nil
+	}
+	return fileEmployerTwins(ctx, tx, contact, connectorCapturedBy(provider))
 }
 
 func employmentGroup(episodes []employmentEvidence, req crmcontracts.EmploymentImportRequest, action string) string {
@@ -271,6 +272,17 @@ func currentEmploymentKeys(episodes []employmentEvidence) map[string]bool {
 		}
 	}
 	return activeCurrent
+}
+
+// selectedEmploymentProvider names the provider of the episodes this import
+// applies. A recheck it causes is that provider's, not an unselected one's.
+func selectedEmploymentProvider(episodes []employmentEvidence, key *string, group string) string {
+	for _, e := range episodes {
+		if employmentSelected(e, key, group) {
+			return e.provider
+		}
+	}
+	return ""
 }
 
 func employmentSelected(e employmentEvidence, key *string, group string) bool {
