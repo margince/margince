@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -47,7 +48,7 @@ var addressInProse = regexp.MustCompile(`(?i)(https?://|www\.)\S+|[^\s@]+@[^\s@]
 // is waiting on, a buyer's unmet condition for signing ahead of routine asks.
 // It never attributes the reader's own side's words to a buyer.
 const briefSystem = `You write the short brief at the top of a Deal Room, from a JSON summary of one room a salesperson shares with a buyer.
-Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"participant|document|thread","entity_id":"..."}]}]}.
+Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"participant|document|thread","entity_id":"<the record's ref, such as p1>"}]}]}.
 Write at most four sentences. Answer, in order: what a buyer is waiting on the reader for, which buyer cannot get in or has not come, what the buyers have and have not read, and — at most once — the single next move.
 Lead with a thread whose waiting_on_you is true. Read every such thread before choosing. If a comment whose speaker is "buyer" says they will not sign or go ahead until something changes, and no later comment met, withdrew or replaced that condition, the thread leads, whatever its date. The first sentence names the buyer in that comment's own author field, never an author of another comment or thread, and the term the condition is about, in words that stand without the thread. An ask that only coordinates access, attendance, scheduling or retrieval, and sets no condition, is routine and comes after it. required_change marks a thread opened as a change request on a document; it says how the thread began, not that the change is still owed. The order of the threads, and which is newest, never decides the lead.
 Say what the buyer ASKED, in their own words where the summary quotes them; "they left a comment" says nothing a reader could act on.
@@ -56,7 +57,7 @@ A comment's speaker is "buyer" or "your_side". "your_side" is the READER or a co
 asked_for_new_link_on is when a buyer asked for a new link and has not been in since; they cannot get in until the reader issues one.
 Name a date only when the summary supplies it. Never compute one, and never estimate how long ago something was.
 Label every sentence. A FACT restates the summary and cites the record it came from. An ASSESSMENT is a judgment drawn from several records; cite them. A RECOMMENDATION is one concrete move; cite the record that motivates it.
-Cite only the ids the summary gave you: a buyer as participant, a document as document, a thread as thread. Put ids ONLY in evidence, never in the text.
+Cite only the refs the summary gave you: a buyer as participant, a document as document, a thread as thread. Put refs ONLY in evidence, never in the text.
 If nothing is waiting and nothing is missing, say so in one sentence and stop.`
 
 func briefSystemFor(fence promptfence.Fence, lang string) string {
@@ -71,7 +72,7 @@ func BriefRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Text())}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -80,6 +81,12 @@ func BriefRequest(in Input, lang string) model.Request {
 func encodeInput(in Input) string {
 	encoded, _ := json.Marshal(in) //nolint:errchkjson // Input is a plain struct of scalars; marshal cannot fail
 	return string(encoded)
+}
+
+// shownRefs is the room as the prompt shows it, each record id written as a
+// ref, and the table a reply's citations are read back through.
+func shownRefs(in Input) *promptref.Payload {
+	return claims.ShowRefs(encodeInput(in), knownRecords(in))
 }
 
 // Write produces the brief. A nil lane is a deployment running no model, and
@@ -125,7 +132,7 @@ func ParseBrief(reply string, in Input) ([]Sentence, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return nil, fmt.Errorf("parse the room brief reply: %w", err)
 	}
-	return keepGroundedSentences(parsed.Sentences, in), nil
+	return keepGroundedSentences(claims.ReadRefs(parsed.Sentences, shownRefs(in)), in), nil
 }
 
 // keepGroundedSentences applies the one grounding rule and this brief's bounds.

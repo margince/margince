@@ -4,13 +4,13 @@
 package contactdraft
 
 import (
-	"encoding/json"
 	"regexp"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,27 +52,50 @@ func fullView() (crmcontracts.Contact360, ids.ProjectID) {
 	return view, project
 }
 
-// Every id the summary shows the model is one a reason may cite. An id the
-// filter refuses is an invitation to a citation that is silently dropped, so
-// the census reads the encoded payload rather than a list of its fields.
-func TestEveryIDTheSummaryCarriesIsCitable(t *testing.T) {
+var summaryRef = regexp.MustCompile(`"(?:id|source_id)":"([a-z]+[0-9]+)"`)
+
+// Every record the summary shows the model is shown by a ref a reason may
+// cite, and never by its id. A ref the filter refuses is an invitation to a
+// citation that is silently dropped, so the census reads the encoded payload
+// rather than a list of its fields.
+func TestEveryRefTheSummaryCarriesIsCitable(t *testing.T) {
 	view, project := fullView()
 	in := FromView(view, Request{Envelope: envelopeAt(textlang.English, convstate.BandFresh), ProjectID: &project})
 	if in.Project == nil || in.Deal == nil || len(in.Claims) == 0 || len(in.Recent) == 0 || in.Meeting == nil {
 		t.Fatalf("the fixture must fold every section, got %+v", in)
 	}
-	payload, err := json.Marshal(in.Fenced())
+	req, err := GroundedRequest(in, draftvoice.Context{})
 	if err != nil {
-		t.Fatalf("encoding the summary: %v", err)
+		t.Fatalf("building the request: %v", err)
 	}
-	citable := knownRecords(in)
-	found := summaryID.FindAllString(string(payload), -1)
+	payload := req.Messages[0].Content
+	if id := summaryID.FindString(payload); id != "" {
+		t.Errorf("the summary shows the model the record id %s", id)
+	}
+	found := summaryRef.FindAllStringSubmatch(payload, -1)
 	if len(found) == 0 {
-		t.Fatal("the summary carries no id at all, so this census reads nothing")
+		t.Fatal("the summary carries no ref at all, so this census reads nothing")
 	}
-	for _, id := range found {
-		if _, held := citable[id]; !held {
-			t.Errorf("the summary carries %s, which no citation the filter accepts can name", id)
+	for _, match := range found {
+		if !citesSomeKind(t, in, match[1]) {
+			t.Errorf("the summary carries %s, which no citation the filter accepts can name", match[1])
 		}
 	}
+}
+
+// citesSomeKind says whether a reason citing ref, as some kind, survives the
+// parse the writer runs.
+func citesSomeKind(t *testing.T, in Input, ref string) bool {
+	t.Helper()
+	for _, kind := range []string{citeDeal, citeActivity, "contact", "lead"} {
+		reply := `{"subject":"S","body":"B","reasoning":[{"kind":"conversation","label":"l","entity_type":"` + kind + `","entity_id":"` + ref + `"}]}`
+		draft, err := ParseDraft(reply, in)
+		if err != nil {
+			t.Fatalf("parsing: %v", err)
+		}
+		if len(draft.Reasoning) == 1 {
+			return true
+		}
+	}
+	return false
 }

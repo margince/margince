@@ -56,6 +56,9 @@ func taskAndCommitment() Input {
 
 func answerOpen(t *testing.T, lane Completer, in Input) ([]Sentence, crmcontracts.WrittenBy) {
 	t.Helper()
+	if canned, ok := lane.(cannedLane); ok {
+		lane = citingLane{in: in, reply: canned.reply}
+	}
 	answered, by, err := Answer(t.Context(), lane, crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, in, string(textlang.English))
 	if err != nil {
 		t.Fatalf("answer: %v", err)

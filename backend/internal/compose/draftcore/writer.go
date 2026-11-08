@@ -30,6 +30,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -37,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -128,10 +130,22 @@ type Surface struct {
 	// draft also admits a dossier line, which is a fact about the company with
 	// no record of ours behind it.
 	KeepUncited func(kind crmcontracts.AccountDraftReasonKind, label string) bool
-	// Cites answers what kind of record this id is, as the caller can see it —
-	// so a citation can be checked against the type the model claimed. Empty
-	// means "no such record here", which drops the chip.
-	Cites func(entityID string) string
+	// Known is each record a citation may name, by id, with the kind the
+	// caller can see it as — so a citation can be checked against the type the
+	// model claimed. The payload shows each by a ref of that kind; an id it
+	// does not hold is shown by a ref no citation can name.
+	Known map[string]string
+}
+
+// shown is the payload as the model reads it: every record id written as a
+// ref. BuildRequest and ParseDraft both call it, so a ref names one record in
+// both.
+func (s Surface) shown(in Input) (*promptref.Payload, error) {
+	payload, err := json.Marshal(in.Fenced())
+	if err != nil {
+		return nil, fmt.Errorf("marshal %s input: %w", s.Name, err)
+	}
+	return claims.ShowKinds(string(payload), s.Known), nil
 }
 
 // schema is the answer's shape: closed at every level, subject then body then
@@ -267,11 +281,11 @@ func writeWithModel(
 // the caller's steering, and this surface's prompt and schema.
 func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Request, error) {
 	fence := promptfence.New()
-	payload, err := json.Marshal(in.Fenced())
+	shown, err := surface.shown(in)
 	if err != nil {
-		return model.Request{}, fmt.Errorf("marshal %s input: %w", surface.Name, err)
+		return model.Request{}, err
 	}
-	content := fence.Wrap(string(payload))
+	content := fence.Wrap(shown.Text())
 	if block := voice.Block(fence); block != "" {
 		content += "\n\n" + block
 	}
@@ -345,11 +359,15 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 	if subject == "" || body == "" {
 		return Draft{}, fmt.Errorf("%s response: empty subject or body", surface.Name)
 	}
+	shown, err := surface.shown(in)
+	if err != nil {
+		return Draft{}, err
+	}
 	return Draft{
 		Subject:   subject,
 		Body:      body,
 		To:        in.Addresses(),
-		Reasoning: keepGroundedReasons(surface, out.Reasoning),
+		Reasoning: keepGroundedReasons(surface, shown, out.Reasoning),
 	}, nil
 }
 
@@ -359,7 +377,7 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 // caller cannot see, or one labelled as the wrong kind, opens the WRONG record's
 // page rather than nothing at all — which is the worse of the two failures,
 // because it looks like it worked.
-func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
+func keepGroundedReasons(surface Surface, shown *promptref.Payload, reasons []modelReason) []Reason {
 	out := make([]Reason, 0, len(reasons))
 	for _, reason := range reasons {
 		kind, ok := surface.kind(reason.Kind)
@@ -374,15 +392,14 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 			// the wrong record's page rather than nothing at all — the worse of
 			// the two failures, because it looks like it worked.
 			//
-			// An id this draft never read resolves to "", and so does a null
-			// type — so the id must resolve before the pair is compared, or a
-			// made-up id with no type would match nothing to nothing.
-			cited := surface.Cites(reason.EntityID)
-			if cited == "" || cited != reason.EntityType {
+			// A ref this payload never showed, or showed as another kind, reads
+			// back to nothing, and so does a null type.
+			id, ok := shown.ID(reason.EntityType, reason.EntityID)
+			if !ok || surface.Known[id] != reason.EntityType {
 				continue
 			}
 			keep.EntityType = reason.EntityType
-			keep.EntityID = reason.EntityID
+			keep.EntityID = id
 		} else if !surface.KeepUncited(kind, label) {
 			// A reason with no citation is only honest where nothing was there
 			// to cite. An uncited "deal" is a claim about a record with no

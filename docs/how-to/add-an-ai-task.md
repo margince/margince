@@ -163,7 +163,10 @@ one certification run can cover:
    ```
 
    A batch that answers one result per label can use `resolveBatchRefs` in
-   `internal/compose/batchfidelity.go`. `TestNoSiteShowsTheModelARecordUUID` builds every request of
+   `internal/compose/batchfidelity.go`. A site that sends a whole record as JSON uses
+   `promptref.Rewrite`, which writes every ID in the rendered text as a ref of its kind. A grounded
+   summary calls it through `claims.ShowRefs` and reads the reply back with `claims.ReadRefs`. A
+   test lane that must cite a record reads its ref off the request with `aitest.RefBeside`. `TestNoSiteShowsTheModelARecordUUID` builds every request of
    every corpus scenario and fails a site whose prompt, answer schema or tool list carries a UUID.
    An integration fake that scripts its reply by record ID wraps in `inRefs`, in
    `internal/compose/refscript_integration_test.go`. It finds each record in the request by text the
