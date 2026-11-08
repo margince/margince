@@ -131,13 +131,19 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 	args := []any{limit}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	pinned := sprintf("AND a.id = ANY($%d)", arg(batch.ids))
-	outside, err := batch.seats.NotCoveredSQL("lower(trim(c.counterparty_email))", "c.user_id", arg)
+	// The header is trimmed of every whitespace Go's TrimSpace strips, so the
+	// address compares in the form the seat set keys it by.
+	header := `btrim(c.counterparty_email, E' \t\n\r\f\v')`
+	outside, err := batch.seats.NotCoveredSQL("lower("+header+")", "c.user_id", arg)
 	if err != nil {
 		return 0, err
 	}
 	// The other side is a seat when its address is ours. Then no contact or
 	// address stands for it either.
-	theirs := "(nullif(trim(c.counterparty_email), '') IS NULL OR " + outside + ")"
+	theirs := "(nullif(" + header + ", '') IS NULL OR " + outside + ")"
+	// A linked contact that holds a colleague's address is that colleague, so
+	// it stands for no outside party either.
+	notSeat := storekit.HoldsNoSeatAddressSQL("l.contact_id", batch.seats.For(ids.Nil), arg)
 	rows, err := tx.Query(ctx, `
 		`+participantCandidatesSQL(pinned)+`
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role)
@@ -156,9 +162,9 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		       -- promotion would have produced.
 		       SELECT NULL::uuid,
 		              (SELECT l.contact_id FROM activity_link l
-		                WHERE l.activity_id = c.id AND l.entity_type = 'contact'
+		                WHERE l.activity_id = c.id AND l.entity_type = 'contact' AND `+notSeat+`
 		                ORDER BY l.created_at LIMIT 1),
-		              lower(nullif(trim(c.counterparty_email), '')),
+		              lower(nullif(`+header+`, '')),
 		              CASE WHEN c.direction = 'inbound' THEN 'from' ELSE 'to' END
 		        WHERE `+theirs+`
   ) r

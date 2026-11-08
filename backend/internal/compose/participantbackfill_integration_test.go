@@ -368,23 +368,37 @@ func TestTheBackfillWritesNoSeatAddressAsAnOutsideParty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A contact that holds a colleague's proven mailbox is that colleague.
+	colleague, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Rep Two", Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: "rep2@bücher.example", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	cases := []struct {
 		name, counterparty string
 		holder             ids.UUID
 		linked             bool
+		linkColleague      bool
 		wantAddresses      []string
 	}{
-		{"a colleague's proven mailbox, in its punycode spelling", "rep2@xn--bcher-kva.example", e.Rep1, false, nil},
-		{"a contact linked to mail with a colleague", "rep2@bücher.example", e.Rep1, true, nil},
-		{"the owner's own alias", "rep1@private.test", e.Rep1, false, nil},
-		{"another seat's typed alias", "rep1@private.test", e.Rep2, false, []string{"rep1@private.test"}},
-		{"an outside party", "pat@counterparty.test", e.Rep1, false, []string{"pat@counterparty.test"}},
+		{"a colleague's proven mailbox, in its punycode spelling", "rep2@xn--bcher-kva.example", e.Rep1, false, false, nil},
+		{"a colleague's mailbox inside tabs", "\trep2@xn--bcher-kva.example\t", e.Rep1, false, false, nil},
+		{"a contact linked to mail with a colleague", "rep2@bücher.example", e.Rep1, true, false, nil},
+		{"a blank header linked to a contact holding a colleague's mailbox", "", e.Rep1, false, true, nil},
+		{"the owner's own alias", "rep1@private.test", e.Rep1, false, false, nil},
+		{"another seat's typed alias", "rep1@private.test", e.Rep2, false, false, []string{"rep1@private.test"}},
+		{"an outside party", "pat@counterparty.test", e.Rep1, false, false, []string{"pat@counterparty.test"}},
 	}
 	seeded := make([]ids.UUID, len(cases))
 	for i, c := range cases {
 		seeded[i] = seedLegacyActivity(t, e, "bf-seat-"+strconv.Itoa(i), "connector:gmail:"+c.holder.String(), "inbound", c.counterparty)
 		if c.linked {
 			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, seeded[i], linked.Id)
+		}
+		if c.linkColleague {
+			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, seeded[i], colleague.Id)
 		}
 	}
 
