@@ -71,6 +71,7 @@ func approvalScopeViolations(graph map[string]*graphFunc) []string {
 }
 
 func TestTheApprovalScopeCensusRejectsEitherMissingHalfAndNewReaders(t *testing.T) {
+	t.Parallel()
 	for _, defect := range []string{"none", "missing predicate", "missing grants", "missing seat", "missing action", "missing readability", "grant reader", "action reader", "readability reader"} {
 		t.Run(defect, func(t *testing.T) {
 			node := func(names ...string) *graphFunc {
