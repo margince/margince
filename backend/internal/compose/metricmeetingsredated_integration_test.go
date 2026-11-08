@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,7 +64,7 @@ func analyticsMeetingsIn(t *testing.T, e *forecastEnv, start time.Time) int {
 	t.Helper()
 	ctx := reportingActor(e)
 	frame := crmcontracts.ReportingContext{
-		EvaluatedAt: time.Now().UTC(), StateAt: time.Now().UTC(), PeriodKind: "week", Timezone: "UTC",
+		EvaluatedAt: clocktest.Now(t), StateAt: clocktest.Now(t), PeriodKind: "week", Timezone: "UTC",
 		Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 7)},
 		Scope:    crmcontracts.ReportingScope{Kind: "workspace"},
 	}
