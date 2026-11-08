@@ -117,7 +117,7 @@ func (s *Service) pastPlanHidden(ctx context.Context, approval crmcontracts.Appr
 	if err != nil && !errors.Is(err, errNoPastFootprint) {
 		return false, err
 	}
-	if footprint == nil && s.runsAsAgent(stagedByRow(subject)) {
+	if footprint == nil && s.runsAsAgent(subject) {
 		return true, nil
 	}
 	clears, err := s.planSight.Clears(ctx, approval, footprint)
