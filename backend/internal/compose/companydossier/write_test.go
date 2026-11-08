@@ -83,7 +83,7 @@ func TestASectionKindTheContractDoesNotDeclareIsDropped(t *testing.T) {
 		` + sectionEntry("summary", "They build load-shifting software.", in) + `,
 		` + sectionEntry("pipeline", "They are close to buying.", in) + `]}`
 
-	got, err := parseDossier(reply, in)
+	got, err := parseCitedDossier(reply, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestADossierSentenceLabelledARecommendationIsDropped(t *testing.T) {
 		{"text":"They build load-shifting software.","nature":"fact",` + cite + `},
 		{"text":"Pitch them load-shifting software.","nature":"recommendation",` + cite + `}]}]}`
 
-	got, err := parseDossier(reply, in)
+	got, err := parseCitedDossier(reply, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}

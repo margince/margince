@@ -218,7 +218,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move(promises[i%len(promises)]))
 	}
 	moves = append(moves, move("Send them the revised pricing once legal finishes its review."))
-	sections, err := parseBriefSections(`{"sections":[{"kind":"goal","sentences":[`+strings.Join(moves, ",")+`]}]}`, in)
+	sections, err := parseCitedSections(`{"sections":[{"kind":"goal","sentences":[`+strings.Join(moves, ",")+`]}]}`, in)
 	if err != nil {
 		t.Fatalf("ParseBriefSections: %v", err)
 	}

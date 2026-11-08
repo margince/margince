@@ -17,11 +17,12 @@ import (
 // as written, which is how a model that invents one answers.
 func cited(in Input, reply string) string { return shownRefs(in).Refer(reply) }
 
-func parseBrief(reply, companyID string, in Input) ([]Sentence, error) {
-	return ParseBrief(cited(in, reply), companyID, in)
+// parseCitedBrief parses reply as written for in, the account in.ID names.
+func parseCitedBrief(reply string, in Input) ([]Sentence, error) {
+	return ParseBrief(cited(in, reply), in.ID, in)
 }
 
-func parseBriefSections(reply, companyID string, in Input) ([]Section, error) {
+func parseCitedSections(reply, companyID string, in Input) ([]Section, error) {
 	return ParseBriefSections(cited(in, reply), companyID, in)
 }
 

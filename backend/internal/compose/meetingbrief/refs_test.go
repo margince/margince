@@ -21,11 +21,11 @@ func citedFor(req model.Request, in Input, reply string) string {
 	return shownRefs(in).Refer(reply)
 }
 
-func parseBriefSections(reply string, in Input) ([]Section, error) {
+func parseCitedSections(reply string, in Input) ([]Section, error) {
 	return ParseBriefSections(shownRefs(in).Refer(reply), in)
 }
 
-func parsePlan(reply string, in Input, floor Plan) (Plan, error) {
+func parseCitedPlan(reply string, in Input, floor Plan) (Plan, error) {
 	return ParsePlan(planShown(in, floor).Refer(reply), in, floor)
 }
 

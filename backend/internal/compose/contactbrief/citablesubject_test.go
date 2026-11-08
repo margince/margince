@@ -41,7 +41,7 @@ func TestASentenceCitingTheContactSurvivesGrounding(t *testing.T) {
 	reply := `{"sentences":[{"text":"They head legal.","nature":"fact",` +
 		`"evidence":[{"entity_type":"contact","entity_id":"` + contactID + `"}]}]}`
 
-	kept, err := parseBrief(reply, contactID, in)
+	kept, err := parseCitedBrief(reply, contactID, in)
 	if err != nil {
 		t.Fatalf("parsing a well-formed brief: %v", err)
 	}

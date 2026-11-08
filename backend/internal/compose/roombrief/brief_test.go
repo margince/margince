@@ -115,7 +115,7 @@ func TestTheModelReplyKeepsOnlyGroundedSentences(t *testing.T) {
 		{"text":"Answer the cap first.","nature":"recommendation","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]},
 		{"text":"Then issue a link.","nature":"recommendation","evidence":[{"entity_type":"participant","entity_id":"` + tomasID + `"}]}
 	]}` + "\n```"
-	got, err := parseBrief(reply, room())
+	got, err := parseCitedBrief(reply, room())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move("I'll send Tomas the revised liability cap once legal completes its review."))
 	}
 	moves = append(moves, move("Send Tomas the revised liability cap once legal finishes its review."))
-	got, err := parseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
+	got, err := parseCitedBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}

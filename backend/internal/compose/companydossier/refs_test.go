@@ -15,7 +15,7 @@ import (
 // showed stays as written, which is how a model that invents one answers.
 func cited(in Input, reply string) string { return dossierShown(in, "").Refer(reply) }
 
-func parseDossier(reply string, in Input) ([]Section, error) {
+func parseCitedDossier(reply string, in Input) ([]Section, error) {
 	return ParseDossier(cited(in, reply), in)
 }
 

@@ -15,7 +15,7 @@ import (
 // as written, which is how a model that invents one answers.
 func cited(in Input, reply string) string { return shownRefs(in).Refer(reply) }
 
-func parseBrief(reply string, in Input) ([]Sentence, error) {
+func parseCitedBrief(reply string, in Input) ([]Sentence, error) {
 	return ParseBrief(cited(in, reply), in)
 }
 

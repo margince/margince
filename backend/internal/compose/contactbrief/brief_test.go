@@ -77,7 +77,7 @@ func (nonsenseLane) Complete(context.Context, model.Request) (model.Response, er
 // about a contact with nothing to check it against.
 func TestParseBriefDropsSentencesCitingRecordsTheInputNeverHeld(t *testing.T) {
 	t.Parallel()
-	kept, err := parseBrief(`{"sentences":[
+	kept, err := parseCitedBrief(`{"sentences":[
 		{"text":"They are waiting on the sub-processor list.","evidence":[
 			{"entity_type":"activity","entity_id":"`+objectionID+`"}]},
 		{"text":"They spoke to your CFO last week.","evidence":[
@@ -98,7 +98,7 @@ func TestParseBriefDropsSentencesCitingRecordsTheInputNeverHeld(t *testing.T) {
 // passes an id-only check and then routes the reader to the wrong screen.
 func TestParseBriefDropsARealIDCitedAsTheWrongKind(t *testing.T) {
 	t.Parallel()
-	kept, err := parseBrief(`{"sentences":[
+	kept, err := parseCitedBrief(`{"sentences":[
 		{"text":"They own the renewal.","evidence":[
 			{"entity_type":"contact","entity_id":"`+briefDealID+`"}]}
 	]}`, briefContactID, inputFixture())
@@ -115,7 +115,7 @@ func TestParseBriefDropsARealIDCitedAsTheWrongKind(t *testing.T) {
 // click into a record their scope may hide.
 func TestParseBriefRefusesAContactCitationThatIsNotThisContact(t *testing.T) {
 	t.Parallel()
-	kept, err := parseBrief(`{"sentences":[
+	kept, err := parseCitedBrief(`{"sentences":[
 		{"text":"They are the economic buyer.","evidence":[
 			{"entity_type":"contact","entity_id":"`+strangerID+`"}]}
 	]}`, briefContactID, inputFixture())
@@ -132,7 +132,7 @@ func TestParseBriefRefusesAContactCitationThatIsNotThisContact(t *testing.T) {
 // same way rather than passed through to a card that would render it.
 func TestAnUnknownNatureIsReadAsAFact(t *testing.T) {
 	t.Parallel()
-	kept, err := parseBrief(`{"sentences":[
+	kept, err := parseCitedBrief(`{"sentences":[
 		{"text":"They are waiting on us.","nature":"prophecy","evidence":[
 			{"entity_type":"contact","entity_id":"`+briefContactID+`"}]}
 	]}`, briefContactID, inputFixture())
@@ -148,7 +148,7 @@ func TestAnUnknownNatureIsReadAsAFact(t *testing.T) {
 // brief offering three moves has handed back the triage it existed to do.
 func TestOnlyTheFirstRecommendationSurvives(t *testing.T) {
 	t.Parallel()
-	kept, err := parseBrief(`{"sentences":[
+	kept, err := parseCitedBrief(`{"sentences":[
 		{"text":"Send the sub-processor list today.","nature":"recommendation","evidence":[
 			{"entity_type":"activity","entity_id":"`+objectionID+`"}]},
 		{"text":"Also call their legal team.","nature":"recommendation","evidence":[
@@ -170,7 +170,7 @@ func TestOnlyTheFirstRecommendationSurvives(t *testing.T) {
 // reader would lose the advice and be told nothing about why.
 func TestTheAdviceBudgetIsSpentOnlyByAdviceTheReaderSees(t *testing.T) {
 	t.Parallel()
-	kept, err := parseBrief(`{"sentences":[
+	kept, err := parseCitedBrief(`{"sentences":[
 		{"text":"Call the CFO.","nature":"recommendation","evidence":[
 			{"entity_type":"activity","entity_id":"`+strangerID+`"}]},
 		{"text":"Send the sub-processor list today.","nature":"recommendation","evidence":[
@@ -189,7 +189,7 @@ func TestTheAdviceBudgetIsSpentOnlyByAdviceTheReaderSees(t *testing.T) {
 // providers, invisibly — the reader would only see a plainer brief.
 func TestParseBriefReadsAFencedReply(t *testing.T) {
 	t.Parallel()
-	kept, err := parseBrief("```json\n"+`{"sentences":[
+	kept, err := parseCitedBrief("```json\n"+`{"sentences":[
 		{"text":"They are waiting on the list.","evidence":[
 			{"entity_type":"activity","entity_id":"`+objectionID+`"}]}
 	]}`+"\n```", briefContactID, inputFixture())
@@ -270,7 +270,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move("I'll send the sub-processor list once legal completes its review."))
 	}
 	moves = append(moves, move("Send them the sub-processor list once legal finishes its review."))
-	kept, err := parseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, briefContactID, inputFixture())
+	kept, err := parseCitedBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, briefContactID, inputFixture())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}
