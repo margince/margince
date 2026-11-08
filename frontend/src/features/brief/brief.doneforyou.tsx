@@ -42,7 +42,7 @@ import {
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
 import { receiptHeadline, receiptReason } from "../../lib/receiptcopy";
-import { isReviewableReceipt } from "../../lib/receiptreview";
+import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 
@@ -288,7 +288,8 @@ function DealUndo({
   const listed = new Set(
     group.receipts
       .filter(isReviewableReceipt)
-      .map((receipt) => receipt.undo?.audit_log_id ?? receipt.id),
+      .map(receiptAuditId)
+      .filter((id): id is string => id !== undefined),
   );
   const audits = bundle?.audit_log_ids.filter((id) => listed.has(id)) ?? [];
   if (!bundle || audits.length < 2) return null;

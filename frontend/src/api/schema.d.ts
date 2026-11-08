@@ -56104,6 +56104,16 @@ export interface components {
              * @description The completed act, as its own surface spells it.
              */
             id: string;
+            /**
+             * @description What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+             * @enum {string}
+             */
+            source?: "correction" | "approval";
+            /**
+             * Format: uuid
+             * @description The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
+             */
+            audit_log_id?: string;
             /** @description The producer's own sub-type — for the label, never for authority. */
             kind: string;
             /** @description What was done, in the words the act itself recorded. */

@@ -18826,6 +18826,24 @@ func (e ReaderCalendar) Valid() bool {
 	}
 }
 
+// Defines values for ReceiptSource.
+const (
+	ReceiptSourceApproval   ReceiptSource = "approval"
+	ReceiptSourceCorrection ReceiptSource = "correction"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptSource enum.
+func (e ReceiptSource) Valid() bool {
+	switch e {
+	case ReceiptSourceApproval:
+		return true
+	case ReceiptSourceCorrection:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReceiptActorType.
 const (
 	ReceiptActorTypeReceiptActorAgent     ReceiptActorType = "agent"
@@ -56809,6 +56827,9 @@ type Receipt struct {
 	// Actor Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
 	Actor *ReceiptActor `json:"actor,omitempty"`
 
+	// AuditLogId The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
+	AuditLogId *openapi_types.UUID `json:"audit_log_id,omitempty"`
+
 	// Changes Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list).
 	Changes *[]MagicFieldChange `json:"changes,omitempty"`
 
@@ -56836,6 +56857,9 @@ type Receipt struct {
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
+	// Source What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+	Source *ReceiptSource `json:"source,omitempty"`
+
 	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
@@ -56852,6 +56876,9 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptSource What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+type ReceiptSource string
 
 // ReceiptActor Who did the act, and on whose behalf.
 //

@@ -75071,6 +75071,20 @@ components:
       properties:
         close_date_change: { $ref: '#/components/schemas/CloseDateChange' }
         id: { type: string, format: uuid, description: 'The completed act, as its own surface spells it.' }
+        source:
+          type: string
+          enum: [correction, approval]
+          description: >-
+            What kind of act `id` names: a change Margince applied itself (`correction`, where `id`
+            is its audit entry) or an approval the system decided (`approval`, where `id` is the
+            approval). Absent on older responses.
+        audit_log_id:
+          type: string
+          format: uuid
+          description: >-
+            The audit entry a `correction` wrote, present whether or not an Undo is offered, so a
+            client matches this receipt to a change list or a bundle by this id and never by
+            `id` alone. Absent on an approval and on older responses.
         kind: { type: string, description: "The producer's own sub-type — for the label, never for authority." }
         summary: { type: string, description: 'What was done, in the words the act itself recorded.' }
         headline:

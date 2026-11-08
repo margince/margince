@@ -28,6 +28,7 @@ import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
 import { type MagicLine, magicKey } from "../../lib/magic.queries";
 import { unwrap } from "../../lib/problem";
+import { receiptAuditId } from "../../lib/receiptreview";
 import { routeHash } from "../../lib/router";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
@@ -190,6 +191,6 @@ function useReviewedReceipt(id: string | undefined): Receipt | undefined {
     return undefined;
   }
   return handled.data.receipts?.find(
-    (receipt) => receipt.id === id && receipt.review !== undefined,
+    (receipt) => receiptAuditId(receipt) === id && receipt.review !== undefined,
   );
 }

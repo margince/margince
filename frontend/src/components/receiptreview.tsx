@@ -10,7 +10,7 @@ import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import type { Receipt } from "../lib/handled";
 import { throwProblem } from "../lib/problem";
-import { isReviewableReceipt } from "../lib/receiptreview";
+import { isReviewableReceipt, receiptAuditId } from "../lib/receiptreview";
 import { invalidateHandledChange, worklistKey } from "../lib/workkeys";
 import { ReceiptUndo } from "./receiptundo";
 
@@ -68,11 +68,13 @@ export function ReceiptReview({
   if (!isReviewableReceipt(receipt))
     return <p>{t("brief.changes.superseded")}</p>;
   const subject = receipt.subject;
-  if (!writable || !review.writable || subject?.type !== "deal") return null;
+  const changeId = receiptAuditId(receipt);
+  if (!writable || !review.writable || subject?.type !== "deal" || !changeId)
+    return null;
   const markReviewed = () =>
     decide.mutate({
       id: subject.id,
-      changeId: receipt.id,
+      changeId,
       version: review.version,
     });
   return (
