@@ -142,11 +142,13 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 		{&pkg.Deals, `SELECT d.id, d.name, d.status, d.amount_minor, d.currency
 		   FROM deal d JOIN relationship r ON r.deal_id = d.id
 		   WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.archived_at IS NULL`, nil},
-		{&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
+		{
+			&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
 		   FROM lead l
 		   WHERE l.id = ANY($2::uuid[])
 		      OR l.id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)`,
-			[]any{contactID.UUID, leads}},
+			[]any{contactID.UUID, leads},
+		},
 		// Art. 15 reaches a record the statutory floor is HOLDING about this
 		// subject, and does so deliberately: the restriction bars further
 		// PROCESSING of the record, not the subject's own access to what is
