@@ -42,7 +42,8 @@ changes, shown as **Admin preset**. Calls that go out stay at the installation
 value, because a large task is no reason to send more mail. These higher values
 apply to a kind only while nobody has saved its installation value or set it
 in the server configuration. If your installation already had its own value,
-Admin keeps that value until you set one for Admin. An empty Admin box takes the
+Admin keeps that value until you set one for Admin or press **Use defaults**.
+An empty Admin box takes the
 **Admin preset** where it applies, and the installation value where it does not.
 To keep Admin on the installation value, press **Use the installation value** on
 its row.
@@ -52,11 +53,11 @@ included. A value set in the server configuration stays, and the
 **Admin preset** does not apply to that kind.
 
 A role chooses how much, never what: an Admin's agent still needs the same
-permissions and the same approvals. A change of role or value resets nothing.
-An agent keeps what it used this window, and a value below that refuses it on
-its next call. Take Admin away from a user, and their agents drop to what their
-other roles allow on their next call. Archive a role, and its value no longer
-applies to anyone.
+permissions and the same approvals. A change of role or value resets nothing:
+an agent keeps what it used this window. Once a lower value applies, an agent
+that has used up a kind is refused calls of that kind. Take Admin away from a
+user, and their agents drop to what their other roles allow. Archive a role,
+and its value no longer applies to anyone.
 
 ## When an allowance runs out
 
@@ -76,14 +77,14 @@ the same for every role. If Margince cannot read the count for a moment, the
 agent is refused with a `503` and asked to try again in a few seconds. That is
 no limit, and the agent has used nothing more.
 
-Only whoever approved the connection can answer a request to widen it. Another
-administrator cannot, and neither can the owner of the company. An agent's
+Only whoever approved the connection can answer a request to widen it. Nobody
+else can, an administrator or the owner of the company included. An agent's
 limit is that colleague's own authority.
 
 The window is fixed, not rolling, so every allowance starts over at the same
 moment. A changed allowance applies within a minute, in the window that is
 running. Raise one, and a stopped agent can go on. Lower one, and an agent
-already past it is refused on its next call. A new window size waits for the
+already past it is refused its next call of that kind. A new window size waits for the
 next reset, so no agent starts over early; the card says when it starts.
 
 ## Where to see usage

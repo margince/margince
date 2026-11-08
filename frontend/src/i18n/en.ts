@@ -16025,7 +16025,7 @@ export const en = {
   "agentAllowances.roles.editHelp":
     "Leave a box empty to give the role’s value up; its placeholder shows the value that then applies. Type 0 to keep Admin on the installation value. Calls 50 to 20,000, changes 10 to 5,000, sends 1 to 200.",
   "agentAllowances.roles.preset":
-    "Admin gets {calls} calls and {changes} changes while neither Admin nor the installation has a value set for that kind. Sends stay at the installation value.",
+    "Admin gets {calls} calls and {changes} changes while neither Admin nor the installation has a value set for that kind. The preset leaves sends as they are.",
   "agentAllowances.roles.inherits": "Inherits {value}",
   "agentAllowances.roles.presetValue": "Admin preset {value}",
   "agentAllowances.roles.inputLabel": "{kind} for {role}",
@@ -16065,9 +16065,9 @@ export const en = {
   "agentUsage.stopped.calls":
     "Stopped by the calls in total limit: {used} of {limit}. It may call again when the window resets, {date} UTC.",
   "agentUsage.stopped.egress":
-    "Stopped by the sends limit: {used} of {limit}. Emails and other calls that leave Margince, website reads included, wait until the window resets, {date} UTC.",
+    "Stopped by the sends limit: {used} of {limit}. Emails and other calls that leave Margince, website reads included, are refused until the window resets, {date} UTC.",
   "agentUsage.stopped.writes":
-    "Stopped by the changes limit: {used} of {limit}. Its next change asks its owner to approve more. Otherwise it may change records again when the window resets, {date} UTC.",
+    "Stopped by the changes limit: {used} of {limit}. Its owner may be asked to approve more. Otherwise it may change records again when the window resets, {date} UTC.",
   "settings.passportColWindow": "This window",
   "settings.passportUsageToggle": "Show this window’s usage for {name}",
   "settings.passportsShowRevoked_one": "Show {count} revoked passport",

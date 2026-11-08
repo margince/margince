@@ -15717,7 +15717,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.editHelp":
     "Để trống một ô để bỏ giá trị của vai trò; chữ gợi ý trong ô cho biết giá trị sẽ áp dụng khi đó. Nhập 0 để Quản trị giữ giá trị của hệ thống. Lệnh gọi từ 50 đến 20.000, thay đổi từ 10 đến 5.000, lượt gửi từ 1 đến 200.",
   "agentAllowances.roles.preset":
-    "Quản trị nhận {calls} lệnh gọi và {changes} thay đổi khi cả Quản trị lẫn hệ thống đều chưa đặt giá trị cho loại đó. Lượt gửi giữ giá trị của hệ thống.",
+    "Quản trị nhận {calls} lệnh gọi và {changes} thay đổi khi cả Quản trị lẫn hệ thống đều chưa đặt giá trị cho loại đó. Mức sẵn không đổi lượt gửi.",
   "agentAllowances.roles.inherits": "Theo {value}",
   "agentAllowances.roles.presetValue": "Mức sẵn của Quản trị {value}",
   "agentAllowances.roles.inputLabel": "{kind} cho {role}",
@@ -15758,9 +15758,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentUsage.stopped.calls":
     "Đã dừng vì giới hạn tổng số lệnh gọi: {used} / {limit}. Có thể gọi lại khi khung thời gian đặt lại lúc {date} UTC.",
   "agentUsage.stopped.egress":
-    "Đã dừng vì giới hạn lượt gửi: {used} / {limit}. Email và các lệnh gọi khác ra khỏi Margince, kể cả việc đọc trang web, chờ đến khi khung thời gian đặt lại lúc {date} UTC.",
+    "Đã dừng vì giới hạn lượt gửi: {used} / {limit}. Email và các lệnh gọi khác ra khỏi Margince, kể cả việc đọc trang web, bị từ chối cho đến khi khung thời gian đặt lại lúc {date} UTC.",
   "agentUsage.stopped.writes":
-    "Đã dừng vì giới hạn thay đổi: {used} / {limit}. Lần thay đổi tiếp theo sẽ xin chủ sở hữu cho phép thêm. Nếu không, agent thay đổi lại được khi khung thời gian đặt lại lúc {date} UTC.",
+    "Đã dừng vì giới hạn thay đổi: {used} / {limit}. Chủ sở hữu có thể được đề nghị cho phép thêm. Nếu không, agent thay đổi lại được khi khung thời gian đặt lại lúc {date} UTC.",
   "settings.passportColWindow": "Khung này",
   "settings.passportUsageToggle": "Xem mức dùng khung này của {name}",
   "settings.passportsShowRevoked_one": "Hiện {count} passport đã thu hồi",

@@ -16130,7 +16130,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.editHelp":
     "Lass ein Feld leer, um den Wert der Rolle aufzugeben; sein Platzhalter zeigt den Wert, der dann gilt. Gib 0 ein, damit Admin beim Wert der Installation bleibt. Aufrufe 50 bis 20.000, Änderungen 10 bis 5.000, Sendungen 1 bis 200.",
   "agentAllowances.roles.preset":
-    "Admin bekommt {calls} Aufrufe und {changes} Änderungen, solange weder Admin noch die Installation einen Wert für diese Art hat. Sendungen bleiben beim Wert der Installation.",
+    "Admin bekommt {calls} Aufrufe und {changes} Änderungen, solange für diese Art weder für Admin noch für die Installation ein Wert gesetzt ist. Die Vorgabe lässt Sendungen, wie sie sind.",
   "agentAllowances.roles.inherits": "Übernimmt {value}",
   "agentAllowances.roles.presetValue": "Admin-Vorgabe {value}",
   "agentAllowances.roles.inputLabel": "{kind} für {role}",
@@ -16171,9 +16171,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentUsage.stopped.calls":
     "Gestoppt durch die Grenze für Aufrufe insgesamt: {used} von {limit}. Er kann wieder aufrufen, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "agentUsage.stopped.egress":
-    "Gestoppt durch die Grenze für Sendungen: {used} von {limit}. E-Mails und andere Aufrufe, die Margince verlassen, auch das Lesen von Websites, warten, bis das Zeitfenster am {date} UTC zurückgesetzt wird.",
+    "Gestoppt durch die Grenze für Sendungen: {used} von {limit}. E-Mails und andere Aufrufe, die Margince verlassen, auch das Lesen von Websites, werden abgelehnt, bis das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "agentUsage.stopped.writes":
-    "Gestoppt durch die Grenze für Änderungen: {used} von {limit}. Seine nächste Änderung bittet das zuständige Mitglied um mehr. Sonst ändert er wieder, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
+    "Gestoppt durch die Grenze für Änderungen: {used} von {limit}. Das zuständige Mitglied wird vielleicht um eine Freigabe für mehr gebeten. Sonst ändert er wieder, wenn das Zeitfenster am {date} UTC zurückgesetzt wird.",
   "settings.passportColWindow": "Dieses Zeitfenster",
   "settings.passportUsageToggle":
     "Nutzung dieses Zeitfensters für {name} anzeigen",
