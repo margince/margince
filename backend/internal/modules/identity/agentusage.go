@@ -19,13 +19,15 @@ import (
 // own grant, because the card that shows it sits on that page.
 const agentUsageObject = "ai_diagnostics"
 
-// AgentUsageHolder is one user with live agent credentials, and the counter
-// subjects those credentials are charged to. A connection's passports share
-// one subject, so it is listed once.
+// AgentUsageHolder is one user with live agent credentials, the counter
+// subjects those credentials are charged to, and the user's live roles, which
+// choose the allowance. A connection's passports share one subject, so it is
+// listed once.
 type AgentUsageHolder struct {
 	UserID      ids.UUID
 	DisplayName string
 	Subjects    []string
+	Roles       []string
 }
 
 // AgentUsageHolders lists every user with a live passport or connection.
@@ -69,12 +71,32 @@ func (s *Service) AgentUsageHolders(ctx context.Context, id Identity) ([]AgentUs
 			}
 			out = addHolderSubject(out, user, name, agentvolume.SubjectOf(passport, grant))
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		return addHolderRolesTx(ctx, tx, out)
 	})
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// addHolderRolesTx sets each holder's live roles, read the way authentication
+// reads them, so the allowance shown is the one their agents are held to.
+func addHolderRolesTx(ctx context.Context, tx pgx.Tx, holders []AgentUsageHolder) error {
+	users := make([]ids.UUID, len(holders))
+	for i, holder := range holders {
+		users[i] = holder.UserID
+	}
+	_, roles, err := loadRoleDocuments(ctx, tx, users)
+	if err != nil {
+		return err
+	}
+	for i := range holders {
+		holders[i].Roles = roles[holders[i].UserID]
+	}
+	return nil
 }
 
 // addHolderSubject appends subject to the user it belongs to. Rows arrive

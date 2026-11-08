@@ -985,6 +985,27 @@ func (e AgentContextItemOccurredPrecision) Valid() bool {
 	}
 }
 
+// Defines values for AgentRoleAllowanceValueSource.
+const (
+	AgentRoleAllowanceValueSourceAdminPreset  AgentRoleAllowanceValueSource = "admin_preset"
+	AgentRoleAllowanceValueSourceInstallation AgentRoleAllowanceValueSource = "installation"
+	AgentRoleAllowanceValueSourceRole         AgentRoleAllowanceValueSource = "role"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceValueSource enum.
+func (e AgentRoleAllowanceValueSource) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceValueSourceAdminPreset:
+		return true
+	case AgentRoleAllowanceValueSourceInstallation:
+		return true
+	case AgentRoleAllowanceValueSourceRole:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolTier.
 const (
 	AgentToolTierAutoExecute          AgentToolTier = "auto_execute"
@@ -31238,10 +31259,24 @@ type AdvanceProjectPhaseRequestToPhase string
 
 // AgentAllowanceDefaults What each agent allowance is before an admin changes it, so a screen never restates them.
 type AgentAllowanceDefaults struct {
+	// AdminCallsPerWindow The Admin preset for calls of any kind. The preset leaves sends at the installation value.
+	AdminCallsPerWindow int `json:"admin_calls_per_window"`
+
+	// AdminWritesPerWindow The Admin preset for changing calls.
+	AdminWritesPerWindow int `json:"admin_writes_per_window"`
 	AgentCallsPerWindow  int `json:"agent_calls_per_window"`
 	AgentEgressPerWindow int `json:"agent_egress_per_window"`
 	AgentWindowHours     int `json:"agent_window_hours"`
 	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+}
+
+// AgentAllowanceFrom defines model for AgentAllowanceFrom.
+type AgentAllowanceFrom struct {
+	Limit int `json:"limit" minimum:"1"`
+
+	// RoleKey The role whose own value, or the Admin preset, gives this count: the highest among the
+	// user's roles. Null when it is the installation value.
+	RoleKey *string `json:"role_key"`
 }
 
 // AgentAllowanceSettings How much one agent may do in one window. A passport a user minted has its own allowance;
@@ -31252,6 +31287,12 @@ type AgentAllowanceDefaults struct {
 // a count applies within a minute, in the window that is running: a raised count gives
 // headroom within that minute, and a lowered one refuses an agent already past it on its
 // next call. The per-minute limits are fixed by the build and shown here read-only.
+//
+// The three counts here are the installation value. `roles` lists what each live role gives.
+// An agent gets, for each count, the highest allowance among the live roles of the user who
+// connected it, where a role with no value of its own gives the installation value. Roles
+// choose the limit only: the count is still one per passport or connection, for tool calls
+// and API requests together, and a change of role or value resets nothing.
 type AgentAllowanceSettings struct {
 	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"50"`
@@ -31286,6 +31327,9 @@ type AgentAllowanceSettings struct {
 
 	// McpStreamOpensPerMinute How many streams one passport may open per minute. Fixed by the build.
 	McpStreamOpensPerMinute int `json:"mcp_stream_opens_per_minute"`
+
+	// Roles Every live role, the seeded ones first in their order, then the others by name.
+	Roles []AgentRoleAllowance `json:"roles"`
 }
 
 // AgentAssembledContext What `catch_me_up_on` answers: the record asked about and the sections assembled around it.
@@ -31416,8 +31460,8 @@ type AgentContextSection struct {
 
 // AgentCounterUsage One allowance in the running window.
 type AgentCounterUsage struct {
-	// Limit The allowance in force: the installation's value, plus one more allowance for each
-	// release a user granted in this window.
+	// Limit The allowance in force: what the roles of the user who connected the agent give, plus
+	// one more allowance for each release a user granted in this window.
 	Limit int `json:"limit" minimum:"0"`
 
 	// Released How many times a user released more in this window.
@@ -31550,6 +31594,61 @@ type AgentRecordRef struct {
 	RecordType string             `json:"record_type"`
 }
 
+// AgentRoleAllowance One live role and the allowance its users' agents get for each count.
+type AgentRoleAllowance struct {
+	AgentCallsPerWindow  AgentRoleAllowanceValue `json:"agent_calls_per_window"`
+	AgentEgressPerWindow AgentRoleAllowanceValue `json:"agent_egress_per_window"`
+	AgentWritesPerWindow AgentRoleAllowanceValue `json:"agent_writes_per_window"`
+
+	// RoleKey The role's key: its identity, which a rename leaves alone.
+	RoleKey  string `json:"role_key"`
+	RoleName string `json:"role_name"`
+
+	// System True for a role Margince ships.
+	System bool `json:"system"`
+}
+
+// AgentRoleAllowanceSet One role's own allowances in a save. `0` for a count uses the installation value.
+type AgentRoleAllowanceSet struct {
+	// AgentCallsPerWindow 0, or 50 to 20000.
+	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"0"`
+
+	// AgentEgressPerWindow 0, or 1 to 200.
+	AgentEgressPerWindow int `json:"agent_egress_per_window" maximum:"200" minimum:"0"`
+
+	// AgentWritesPerWindow 0, or 10 to 5000.
+	AgentWritesPerWindow int `json:"agent_writes_per_window" maximum:"5000" minimum:"0"`
+
+	// RoleKey The key of a live role.
+	RoleKey string `json:"role_key"`
+}
+
+// AgentRoleAllowanceValue defines model for AgentRoleAllowanceValue.
+type AgentRoleAllowanceValue struct {
+	// Source Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+	// Admin preset, which binds the built-in Admin role for a count while nobody saved an
+	// Admin value for it and the installation value is still the default, set by no boot
+	// source. `installation` is the installation value, which the role inherits.
+	Source AgentRoleAllowanceValueSource `json:"source"`
+
+	// Value The allowance this role gives for the count.
+	Value int `json:"value" minimum:"1"`
+}
+
+// AgentRoleAllowanceValueSource Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+// Admin preset, which binds the built-in Admin role for a count while nobody saved an
+// Admin value for it and the installation value is still the default, set by no boot
+// source. `installation` is the installation value, which the role inherits.
+type AgentRoleAllowanceValueSource string
+
+// AgentRoleResolvedAllowance What each one of this user's passports or connections may do per window, before any release,
+// and the role each count comes from.
+type AgentRoleResolvedAllowance struct {
+	Calls  AgentAllowanceFrom `json:"calls"`
+	Egress AgentAllowanceFrom `json:"egress"`
+	Writes AgentAllowanceFrom `json:"writes"`
+}
+
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
 	// Actions A router's choices. Each runs one verb and is admitted at that verb's tier, so a router whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router.
@@ -31630,6 +31729,10 @@ type AgentUsageState string
 // their live passports and connections, so a user with two passports has twice the
 // allowance. `state` is the worst state of any one of them.
 type AgentUserUsage struct {
+	// Allowance What each one of this user's passports or connections may do per window, before any release,
+	// and the role each count comes from.
+	Allowance AgentRoleResolvedAllowance `json:"allowance"`
+
 	// Calls One allowance in the running window.
 	Calls       AgentCounterUsage `json:"calls"`
 	DisplayName string            `json:"display_name"`
@@ -31639,6 +31742,9 @@ type AgentUserUsage struct {
 
 	// PassportCount Live passports and connections. A connection counts once.
 	PassportCount int `json:"passport_count" minimum:"1"`
+
+	// RoleKeys The user's live roles, which choose their agents' allowance.
+	RoleKeys []string `json:"role_keys"`
 
 	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
@@ -49826,6 +49932,12 @@ type InstallationSettings struct {
 	// a count applies within a minute, in the window that is running: a raised count gives
 	// headroom within that minute, and a lowered one refuses an agent already past it on its
 	// next call. The per-minute limits are fixed by the build and shown here read-only.
+	//
+	// The three counts here are the installation value. `roles` lists what each live role gives.
+	// An agent gets, for each count, the highest allowance among the live roles of the user who
+	// connected it, where a role with no value of its own gives the installation value. Roles
+	// choose the limit only: the count is still one per passport or connection, for tool calls
+	// and API requests together, and a change of role or value resets nothing.
 	AgentAllowances AgentAllowanceSettings `json:"agent_allowances"`
 
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
@@ -55718,6 +55830,11 @@ type Problem struct {
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
 	// `errors` array of `{ field, code, message }` on 422 validation.
+	//
+	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
+	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
+	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
+	// The `Retry-After` header says how many seconds until the call can succeed.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.
@@ -64057,6 +64174,13 @@ type UpdateInstallationSettingsRequest struct {
 
 	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
 	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" maximum:"200" minimum:"1"`
+
+	// AgentRoleAllowances Set every role's own allowances at once, replacing what each role held. Each item names
+	// a live role by its `role_key`. A role left out holds no values of its own and uses the
+	// installation value. The built-in Admin role left out returns to the Admin preset; Admin
+	// sent with `0` for a count uses the installation value for it instead. Applies within a
+	// minute, in the running window, and resets no count.
+	AgentRoleAllowances *[]AgentRoleAllowanceSet `json:"agent_role_allowances,omitempty"`
 
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
 	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty" maximum:"3600" minimum:"10"`

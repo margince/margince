@@ -148,6 +148,10 @@ type Reading struct {
 	// Window is the length the bucket was counted under. A release names it
 	// with the bucket, because a bucket number means nothing under another length.
 	Window time.Duration
+	// ResetsAt is when this window ends, and ResetsIn how long that is by the
+	// meter's own clock, so a refusal says when to retry without a clock of its own.
+	ResetsAt time.Time
+	ResetsIn time.Duration
 }
 
 // countKey is one agent's counter for one window bucket. The bucket comes from

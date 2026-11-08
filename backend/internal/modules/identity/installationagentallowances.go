@@ -19,12 +19,14 @@ import (
 
 // AgentAllowancePatch is a sparse write of the agent allowances: a nil field is
 // left as it is. WindowHours is scheduled, never written straight
-// (scheduleAgentWindowTx).
+// (scheduleAgentWindowTx), and Roles replaces every role's values at once
+// against the live roles (saveRoleAllowancesTx).
 type AgentAllowancePatch struct {
 	WritesPerWindow *int
 	EgressPerWindow *int
 	CallsPerWindow  *int
 	WindowHours     *int
+	Roles           *[]RoleAllowanceSet
 }
 
 func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
@@ -96,13 +98,23 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolum
 	if values[5], err = settings.ApplyTx(ctx, tx, AgentWindowNextFrom); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	return values.policy(c), nil
+	policy := values.policy(c)
+	held, err := readRoleValues(c, policy.Limits, func(s *config.Setting[map[string]int]) (map[string]int, error) {
+		return config.StoredApplyTx(ctx, tx, c, s)
+	})
+	if err != nil {
+		return agentvolume.Policy{}, err
+	}
+	policy.Roles = held.Roles()
+	return policy, nil
 }
 
-// readAgentPolicy reads the allowances for the settings page, each through
-// its read gate.
-func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentvolume.Policy, error) {
+// readAgentPolicy reads the allowances and every live role's values for the
+// settings page, each setting through its read gate.
+func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentvolume.Policy, []RoleAllowance, error) {
 	var values allowanceValues
+	var policy agentvolume.Policy
+	var roles []RoleAllowance
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		for i, setting := range agentAllowanceEntries {
 			value, err := config.StoredValTx(ctx, tx, s.config, setting)
@@ -115,13 +127,27 @@ func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentv
 		if values[4], err = settings.GetTx(ctx, tx, AgentWindowNextHours); err != nil {
 			return err
 		}
-		values[5], err = settings.GetTx(ctx, tx, AgentWindowNextFrom)
-		return err
+		if values[5], err = settings.GetTx(ctx, tx, AgentWindowNextFrom); err != nil {
+			return err
+		}
+		policy = values.policy(s.config)
+		held, err := readRoleValues(s.config, policy.Limits, func(setting *config.Setting[map[string]int]) (map[string]int, error) {
+			return config.StoredValTx(ctx, tx, s.config, setting)
+		})
+		if err != nil {
+			return err
+		}
+		live, err := liveRolesTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		policy.Roles, roles = held.Roles(), roleAllowances(live, held)
+		return nil
 	})
 	if err != nil {
-		return agentvolume.Policy{}, fmt.Errorf("identity: reading the agent allowances: %w", err)
+		return agentvolume.Policy{}, nil, fmt.Errorf("identity: reading the agent allowances: %w", err)
 	}
-	return values.policy(s.config), nil
+	return policy, roles, nil
 }
 
 // scheduleAgentWindowTx turns a requested window length into a plan that takes

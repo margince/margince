@@ -94,8 +94,9 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 		t.Fatalf("encoding a fully-populated patch: %v", err)
 	}
 
-	// The window length is scheduled inside the transaction, not encoded.
-	allowanceWrites := allowancesField.Type.NumField() - 1
+	// The window length is scheduled, and the role values checked against the
+	// live roles, inside the transaction; neither is encoded.
+	allowanceWrites := allowancesField.Type.NumField() - 2
 	if want := patchType.NumField() - 2 + operationsField.Type.NumField() + allowanceWrites; len(encoded) != want {
 		t.Errorf("the encoder produced %d writes for %d patch fields — "+
 			"a field it does not encode is one that silently stops saving",

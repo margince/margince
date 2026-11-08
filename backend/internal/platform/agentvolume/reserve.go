@@ -45,7 +45,7 @@ func (m *Meter) Reserve(ctx context.Context, c Counter, n int) (Reading, bool, e
 	}
 	answer, err := reserveScript.Run(ctx, m.rdb,
 		[]string{m.countKey(ws, agent, c, w.bucket), m.releaseKey(ws, agent, c, w.bucket)},
-		n, w.limits.of(c), w.ttlSeconds()).Int64Slice()
+		n, w.limits.Of(c), w.ttlSeconds()).Int64Slice()
 	m.noteReach(err)
 	if err != nil {
 		return Reading{}, false, fmt.Errorf("agentvolume: reserving %d on %s: %w", n, c, err)

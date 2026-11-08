@@ -10,6 +10,8 @@ package identity
 // against.
 
 import (
+	"errors"
+	"fmt"
 	"math"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
@@ -23,8 +25,8 @@ var AgentWritesPerWindow = config.DefineStored(config.Spec[int]{
 	Env:     "MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW",
 	Type:    config.Int,
 	Default: config.Some(agentvolume.DefaultWrites),
-	Min:     config.Some(10),
-	Max:     config.Some(5000),
+	Min:     config.Some(writesBounds.lowest),
+	Max:     config.Some(writesBounds.highest),
 	Doc:     "Changing calls one agent passport may make per window.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
@@ -34,8 +36,8 @@ var AgentEgressPerWindow = config.DefineStored(config.Spec[int]{
 	Env:     "MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW",
 	Type:    config.Int,
 	Default: config.Some(agentvolume.DefaultEgress),
-	Min:     config.Some(1),
-	Max:     config.Some(200),
+	Min:     config.Some(egressBounds.lowest),
+	Max:     config.Some(egressBounds.highest),
 	Doc:     "Calls that send something out of the workspace one agent passport may make per window.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
@@ -45,10 +47,68 @@ var AgentCallsPerWindow = config.DefineStored(config.Spec[int]{
 	Env:     "MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW",
 	Type:    config.Int,
 	Default: config.Some(agentvolume.DefaultCalls),
-	Min:     config.Some(50),
-	Max:     config.Some(20000),
+	Min:     config.Some(callsBounds.lowest),
+	Max:     config.Some(callsBounds.highest),
 	Doc:     "Calls of any kind, tool or API, one agent passport may make per window.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
+
+// AgentRoleWritesPerWindow, AgentRoleEgressPerWindow and AgentRoleCallsPerWindow
+// are each role's own value for one count, keyed by role key: the durable
+// identity of a role, which a rename leaves alone. A role absent from a map, or
+// set to 0, uses the installation value.
+var AgentRoleWritesPerWindow = config.DefineStored(config.Spec[map[string]int]{
+	Key:      "installation.agent_role_writes_per_window",
+	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_WRITES_PER_WINDOW",
+	Type:     config.Map(config.Int),
+	Validate: writesBounds.roleValues,
+	Doc:      "Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
+
+var AgentRoleEgressPerWindow = config.DefineStored(config.Spec[map[string]int]{
+	Key:      "installation.agent_role_egress_per_window",
+	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_EGRESS_PER_WINDOW",
+	Type:     config.Map(config.Int),
+	Validate: egressBounds.roleValues,
+	Doc:      "Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
+
+var AgentRoleCallsPerWindow = config.DefineStored(config.Spec[map[string]int]{
+	Key:      "installation.agent_role_calls_per_window",
+	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_CALLS_PER_WINDOW",
+	Type:     config.Map(config.Int),
+	Validate: callsBounds.roleValues,
+	Doc:      "Calls of any kind, tool or API, one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
+
+// allowanceBounds is the range one count may be set to, for the installation
+// and for a role alike.
+type allowanceBounds struct{ lowest, highest int }
+
+var (
+	writesBounds = allowanceBounds{10, 5000}
+	egressBounds = allowanceBounds{1, 200}
+	callsBounds  = allowanceBounds{50, 20000}
+)
+
+// maxRoleAllowances bounds how many roles one map may name.
+const maxRoleAllowances = 256
+
+// roleValues holds every value of a role map to the installation's own range,
+// or 0 for the installation value.
+func (b allowanceBounds) roleValues(m map[string]int) error {
+	if len(m) > maxRoleAllowances {
+		return fmt.Errorf("at most %d roles may have a value of their own", maxRoleAllowances)
+	}
+	for role, value := range m {
+		if role == "" {
+			return errors.New("a role key cannot be empty")
+		}
+		if value != 0 && (value < b.lowest || value > b.highest) {
+			return fmt.Errorf("a role's value is 0, for the installation value, or %d to %d", b.lowest, b.highest)
+		}
+	}
+	return nil
+}
 
 // AgentWindowHours is the window length in force.
 var AgentWindowHours = config.DefineStored(config.Spec[int]{
@@ -75,6 +135,7 @@ var AgentWindowNextFrom = settings.Define[int]("installation.agent_window_next_f
 func agentAllowanceSettings() []config.Any {
 	return []config.Any{
 		AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
+		AgentRoleWritesPerWindow, AgentRoleEgressPerWindow, AgentRoleCallsPerWindow,
 		AgentWindowHours,
 	}
 }

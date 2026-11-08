@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -79,14 +81,38 @@ func (e *VolumeExceededError) Error() string {
 	if e.Tool != "" {
 		lead = e.Tool + ": this agent"
 	}
+	resets := e.Reading.ResetsAt.UTC().Format(time.RFC3339)
 	if e.Releasable() {
 		return fmt.Sprintf(
-			"%s has spent %d of its %d %s for this window; it may continue once the contact who connected it releases the window, or when the window rolls",
-			lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
+			"%s has spent %d of its %d %s for this window; it may continue once the contact who connected it releases the window, or when the window rolls at %s",
+			lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter, resets)
 	}
 	return fmt.Sprintf(
-		"%s has spent %d of its %d %s for this window, and that limit holds until the window rolls; no approval lifts it",
-		lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
+		"%s has spent %d of its %d %s for this window, and that limit holds until the window rolls at %s; no approval lifts it",
+		lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter, resets)
+}
+
+// FaultReference names the limit that refused, so a client backs off on fields
+// rather than parsing the sentence: which counter, its ceiling, what was used
+// and when the window resets.
+func (e *VolumeExceededError) FaultReference() map[string]any {
+	return map[string]any{"limit": map[string]any{
+		"kind":      string(e.Reading.Counter),
+		"ceiling":   e.Reading.Limit,
+		"used":      e.Reading.Observed,
+		"resets_at": e.Reading.ResetsAt.UTC().Format(time.RFC3339),
+	}}
+}
+
+// Unreferenced is the refusal as its sentinel classifies it.
+func (e *VolumeExceededError) Unreferenced() error {
+	return fmt.Errorf("%s: %w", e.Error(), apperrors.ErrBudgetExceeded)
+}
+
+// RetryAfterSeconds is how long until the window resets, rounded up so a client
+// that waits exactly this long finds the new window open.
+func (e *VolumeExceededError) RetryAfterSeconds() int {
+	return int(math.Ceil(e.Reading.ResetsIn.Seconds()))
 }
 
 // AdmitReplay is the admission a RECORDED answer takes before it is served

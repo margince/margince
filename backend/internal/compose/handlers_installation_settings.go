@@ -229,6 +229,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		EgressPerWindow: req.AgentEgressPerWindow,
 		CallsPerWindow:  req.AgentCallsPerWindow,
 		WindowHours:     req.AgentWindowHours,
+		Roles:           roleAllowanceSets(req.AgentRoleAllowances),
 	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
@@ -270,7 +271,7 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
-		AgentAllowances:            toAgentAllowances(s.AgentAllowances, h.clock()),
+		AgentAllowances:            toAgentAllowances(s.AgentAllowances, s.AgentRoleAllowances, h.clock()),
 		Locks:                      loadedLocks(identity.Settings()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)

@@ -263,6 +263,12 @@ type Fault struct {
 	RetryAfterSeconds int
 }
 
+// retryAfterFault is a referenced refusal that knows when the same call can
+// succeed, such as an agent allowance that resets at a known moment.
+type retryAfterFault interface {
+	RetryAfterSeconds() int
+}
+
 // transientCodes are the refusals that clear ON THEIR OWN: a rate limit whose
 // window elapses, a metered budget that refills. Membership is by CODE and not
 // by status range, because the range lies — a 503 is equally the shape of
@@ -332,6 +338,9 @@ func Classify(err error) (Fault, bool) {
 			// field for whatever parses it.
 			if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
 				fault.Detail = detail
+			}
+			if waits, ok := referenced.(retryAfterFault); ok {
+				fault.RetryAfterSeconds = waits.RetryAfterSeconds()
 			}
 			return fault, true
 		}

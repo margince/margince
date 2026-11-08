@@ -21,7 +21,7 @@ func TestAUserSumsTheirPassportsAndIsAsStoppedAsTheirWorst(t *testing.T) {
 		"b": {Writes: agentvolume.CounterUsage{Used: 0, Limit: 200}},
 	}
 
-	row := userUsage(holder, usage)
+	row := userUsage(holder, usage, agentvolume.Allowance{})
 
 	if row.Writes.Used != 200 || row.Writes.Limit != 400 || row.PassportCount != 2 {
 		t.Errorf("the row sums to %+v over %d passports, want 200 of 400 over 2", row.Writes, row.PassportCount)
@@ -34,7 +34,7 @@ func TestAUserSumsTheirPassportsAndIsAsStoppedAsTheirWorst(t *testing.T) {
 // The row answers how much and whose, never which agents.
 func TestAgentUsageNamesNoPassport(t *testing.T) {
 	row := userUsage(AgentUsageHolder{UserID: ids.NewV7(), DisplayName: "Minh", Subjects: []string{"a"}},
-		map[string]agentvolume.Usage{"a": {}})
+		map[string]agentvolume.Usage{"a": {}}, agentvolume.Allowance{})
 	raw, err := json.Marshal(row)
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func TestAgentUsageNamesNoPassport(t *testing.T) {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
-	want := []string{"calls", "display_name", "egress", "passport_count", "state", "user_id", "writes"}
+	want := []string{"allowance", "calls", "display_name", "egress", "passport_count", "role_keys", "state", "user_id", "writes"}
 	if !slices.Equal(keys, want) {
 		t.Errorf("a user's row carries %v, want exactly %v", keys, want)
 	}
