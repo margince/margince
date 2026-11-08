@@ -362,6 +362,43 @@ func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
 	}
 }
 
+// A decline the models gave the header-only text is about that text, as a label
+// is. Left in place, it would keep the restored body out of the classify backlog
+// the cleared label returns it to.
+func TestARestoredBodyIsOfferedAgainAfterADecline(t *testing.T) {
+	o := setupOwed(t)
+	o.now = clocktest.Now(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	ask := "Can we meet on Thursday to sign?"
+	headerOnly := "From: pat@customer.example\nTo: " + o.seat
+	message := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signing", messageID: "restore-declined@customer.example",
+		body: readInFull(ask), encoding: "base64", authenticated: true, at: o.now.Add(-48 * time.Hour),
+	})
+	o.asLegacy(t, message, headerOnly)
+	if recorded, err := o.e.Activities.MarkCaptureLabelDeclined(o.judge(), message, "prompt-digest"); err != nil || !recorded {
+		t.Fatalf("declining the header-only body → %t, %v", recorded, err)
+	}
+
+	restoration := activities.MailBodyRestoration{
+		Activity: message, StoredBody: headerOnly, Body: headerOnly + "\n\n" + ask, Completeness: "complete",
+		Version: activityVersion(t, o.e, message),
+	}
+	system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
+	var restored bool
+	if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		restored, _, err = activities.RestoreMailBodyTx(system, tx, restoration)
+		return err
+	}); err != nil || !restored {
+		t.Fatalf("restoring the body → %t, %v", restored, err)
+	}
+	if declined := o.e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE id = $1 AND capture_label_declined_at IS NOT NULL`, message); declined != 0 {
+		t.Error("the decline of the header-only text outlived the restore, so the full body is never offered")
+	}
+}
+
 // captureLabel and captureLabelStamp read the two columns
 // activity_capture_label_stamped holds together.
 func (o *owedEnv) captureLabel(t *testing.T, message ids.UUID) *string {
