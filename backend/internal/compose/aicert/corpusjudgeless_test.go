@@ -47,12 +47,12 @@ func (c requestCompleter) Complete(_ context.Context, req model.Request) (model.
 
 var (
 	uuidPattern  = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
-	labelPattern = regexp.MustCompile(`"(m[0-9]+)"`)
+	labelPattern = regexp.MustCompile(`"([amrst][0-9]+)"`)
 	fencePattern = regexp.MustCompile(`untrusted-([a-z2-7]{26})`)
 )
 
 // mintedIDs is the ids a reply may cite, in the order the request gives them.
-// A response schema's enum of ids or of message labels comes first. Without
+// A response schema's enum of ids or of short refs comes first. Without
 // one, it is the ids in the turns, less the nonce every fenced span repeats.
 func mintedIDs(req model.Request) []string {
 	if ids := uuidPattern.FindAllString(string(req.ResponseSchema), -1); len(ids) > 0 {

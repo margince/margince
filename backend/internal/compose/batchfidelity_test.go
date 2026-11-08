@@ -57,9 +57,9 @@ func TestEverySiteLetsTheModelNameOnlyTheIDsItWasSent(t *testing.T) {
 		"request_settlement": {settleRequest([]settleCandidate{
 			{Request: activities.RepliedRequest{RequestID: first}},
 			{Request: activities.RepliedRequest{RequestID: second}},
-		}), []string{first.String(), second.String()}},
-		"capture_counterparty_verdict":    {verdictRequest(capture.PendingCounterparty{ID: first}), []string{first.String()}},
-		"capture_confidentiality_verdict": {confidentialityRequest(capture.PendingThread{ID: first}), []string{first.String()}},
+		}), []string{"r1", "r2"}},
+		"capture_counterparty_verdict":    {verdictRequest(capture.PendingCounterparty{ID: first}), []string{"s1"}},
+		"capture_confidentiality_verdict": {confidentialityRequest(capture.PendingThread{ID: first}), []string{"t1"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
