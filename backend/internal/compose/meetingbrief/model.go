@@ -32,7 +32,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -184,7 +183,7 @@ func BriefRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Text())}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -204,11 +203,11 @@ func encodeInput(in Input) string {
 	return string(encoded)
 }
 
-// shownRefs is the meeting as the prompt shows it, each record id written as
-// a ref, and the table a reply's citations are read back through. A
-// withheld conversation is shown by a ref no citation can name.
-func shownRefs(in Input) *promptref.Payload {
-	return claims.ShowRefs(encodeInput(in), knownRecords(in))
+// shownRefs names each record id the meeting prompt shows by a ref, and reads
+// a reply's citations back. A withheld conversation is shown by a ref no
+// citation can name.
+func shownRefs(in Input) claims.Refs {
+	return claims.MintRefs(encodeInput(in), knownRecords(in))
 }
 
 // wireReply is the shape the prompt asks for.
@@ -273,7 +272,7 @@ func keptSentence(
 			EntityID   string `json:"entity_id"`
 		} `json:"evidence"`
 	},
-	allowed map[string]bool, known map[Evidence]string, shown *promptref.Payload, recommendations *int,
+	allowed map[string]bool, known map[Evidence]string, shown claims.Refs, recommendations *int,
 ) (Sentence, bool) {
 	nature := raw.Nature
 	if nature == "" {
@@ -290,7 +289,7 @@ func keptSentence(
 		sentence.Evidence = append(sentence.Evidence,
 			Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID})
 	}
-	read := claims.ReadRefs([]Sentence{sentence}, shown)
+	read := shown.Read([]Sentence{sentence})
 	if len(read) == 0 {
 		return Sentence{}, false
 	}

@@ -163,14 +163,20 @@ one certification run can cover:
    ```
 
    A batch that answers one result per label can use `resolveBatchRefs` in
-   `internal/compose/batchfidelity.go`. A site that sends a whole record as JSON uses
-   `promptref.Rewrite`, which writes every ID in the rendered text as a ref of its kind. A grounded
-   summary calls it through `claims.ShowRefs` and reads the reply back with `claims.ReadRefs`. A
-   test lane that must cite a record reads its ref off the request with `aitest.RefBeside`. `TestNoSiteShowsTheModelARecordUUID` builds every request of
+   `internal/compose/batchfidelity.go`. A JSON payload built with record IDs goes out through
+   `promptref.Rewrite`, which puts each ID's label in its place. `promptref.Mint` builds those tables
+   from every UUID the rendered text carries, one table for each kind, so a site that sends a whole
+   record misses none. `Refs.NamedIn` finds a label that a reply wrote in reader text, and the parser
+   refuses that text as it refuses an ID there. Cited evidence of the shape
+   `{entity_type, entity_id}` reads back through `claims.Refs`, which keeps one table for each entity
+   type. `claims.MintRefs` builds it from the payload, `Show` writes the payload in refs, and `Read`
+   reads the reply's citations back. `TestNoSiteShowsTheModelARecordUUID` builds every request of
    every corpus scenario and fails a site whose prompt, answer schema or tool list carries a UUID.
-   An integration fake that scripts its reply by record ID wraps in `inRefs`, in
-   `internal/compose/refscript_integration_test.go`. It finds each record in the request by text the
-   record shows and writes the ref the request gave it.
+
+   A test lane that must cite a record reads its ref off a JSON request with `aitest.RefWhere`, by a
+   field the test knows, or `aitest.RefBeside`, by the record's name. An integration fake for a prompt
+   of fenced spans wraps in `inRefs`, in `internal/compose/refscript_integration_test.go`. It finds
+   each record in the request by text the record shows and writes the ref the request gave it.
    Why a UUID is a bad name for a model:
    [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids).
 

@@ -25,7 +25,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -180,7 +179,7 @@ func groundedRequest(systemFor func(promptfence.Fence, string) string, in Input,
 	fence := promptfence.New()
 	return model.Request{
 		System:         systemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Text())}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -196,11 +195,10 @@ func encodeInput(in Input) string {
 	return string(encoded)
 }
 
-// shownRefs is the account as the prompts show it, each record id written as
-// a ref, and the table a reply's citations are read back through. The
-// account's own id is shown as the company it is.
-func shownRefs(in Input) *promptref.Payload {
-	return claims.ShowRefs(encodeInput(in), knownRecords(in.ID, in))
+// shownRefs names each record id the prompts show by a ref, and reads a
+// reply's citations back. The account's own id is shown as the company it is.
+func shownRefs(in Input) claims.Refs {
+	return claims.MintRefs(encodeInput(in), knownRecords(in.ID, in))
 }
 
 // ParseBrief reads a model reply into grounded sentences. Exported for the
@@ -221,7 +219,7 @@ func ParseBrief(text, companyID string, in Input) ([]Sentence, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(text)), &reply); err != nil {
 		return nil, fmt.Errorf("parse the brief reply: %w", err)
 	}
-	return keepGroundedSentences(claims.ReadRefs(reply.Sentences, shownRefs(in)), companyID, in), nil
+	return keepGroundedSentences(shownRefs(in).Read(reply.Sentences), companyID, in), nil
 }
 
 func writeWithModel(ctx context.Context, lane Completer, companyID string, in Input, lang string) ([]Section, error) {
@@ -296,7 +294,7 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 		if !ok {
 			continue
 		}
-		for _, sentence := range claims.ReadRefs(section.Sentences, shown) {
+		for _, sentence := range shown.Read(section.Sentences) {
 			nature := sentence.Nature
 			if nature == "" {
 				// An unlabelled claim is a fact, which is the strictest

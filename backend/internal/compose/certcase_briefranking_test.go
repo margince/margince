@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -161,9 +162,15 @@ func TestBriefRankingCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 		},
 		{
 			name:       "a deal the model invented",
-			answer:     func(o []string) string { return briefRankReply(ids.NewV7().String(), o[1]) },
+			answer:     func(o []string) string { return briefRankReply("d9", o[1]) },
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "position 1 is not a candidate it was given",
+		},
+		{
+			name:       "a deal named by a raw id rather than its ref",
+			answer:     func(o []string) string { return briefRankReply(ids.NewV7().String(), o[1]) },
+			wantResult: aitasks.OutcomeInvalid,
+			wantDetail: "not a deal reference",
 		},
 		{
 			name:       "one deal ranked twice and the other never",
@@ -227,16 +234,14 @@ func TestBriefRankingFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	}
 }
 
-// The fixture supplies no id, and Prepare mints a fresh one per candidate per
-// preparation. Were the ids to come from the corpus, their author could write
-// them into the expected reply, and a model echoing back ids it was handed would
-// be indistinguishable from one that ranked the right deals.
+// The model sees each candidate by its ref, d1 and d2, never by the deal id
+// Prepare mints or by the corpus label.
 //
 // The labels that stand in for them never reach the model, which is the same
 // invariant from the other side: this prompt renders ids and numbers only, and a
 // corpus-authored word appearing in it would be untrusted text on a site that
 // declares no data boundary.
-func TestBriefRankingCaseMintsDealIDsAndSendsNoLabel(t *testing.T) {
+func TestBriefRankingCaseNamesDealsByRefAndSendsNoLabel(t *testing.T) {
 	fixture := briefRankFixture(t)
 
 	ask := func() []string {
@@ -265,17 +270,8 @@ func TestBriefRankingCaseMintsDealIDsAndSendsNoLabel(t *testing.T) {
 		return ordered
 	}
 
-	first, second := ask(), ask()
-	if len(first) != 2 {
-		t.Fatalf("the request lists %d candidates, want the fixture's 2", len(first))
-	}
-	for _, id := range first {
-		if _, err := ids.Parse(id); err != nil {
-			t.Fatalf("the ranked id %q is not one this system mints: %v", id, err)
-		}
-	}
-	if first[0] == second[0] {
-		t.Errorf("two preparations of one fixture ranked the same id %q", first[0])
+	if listed := ask(); !slices.Equal(listed, []string{"d1", "d2"}) {
+		t.Fatalf("the request lists %v, want the fixture's two candidates as d1 and d2", listed)
 	}
 }
 

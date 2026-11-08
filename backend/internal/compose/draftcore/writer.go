@@ -38,7 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -137,15 +136,16 @@ type Surface struct {
 	Known map[string]string
 }
 
-// shown is the payload as the model reads it: every record id written as a
-// ref. BuildRequest and ParseDraft both call it, so a ref names one record in
-// both.
-func (s Surface) shown(in Input) (*promptref.Payload, error) {
+// shown is the payload as the model reads it, every record id written as a
+// ref, and the refs a reply's citations read back through. BuildRequest and
+// ParseDraft both call it, so a ref names one record in both.
+func (s Surface) shown(in Input) (string, claims.Refs, error) {
 	payload, err := json.Marshal(in.Fenced())
 	if err != nil {
-		return nil, fmt.Errorf("marshal %s input: %w", s.Name, err)
+		return "", nil, fmt.Errorf("marshal %s input: %w", s.Name, err)
 	}
-	return claims.ShowKinds(string(payload), s.Known), nil
+	refs := claims.MintKinds(string(payload), s.Known)
+	return refs.Show(string(payload)), refs, nil
 }
 
 // schema is the answer's shape: closed at every level, subject then body then
@@ -281,11 +281,11 @@ func writeWithModel(
 // the caller's steering, and this surface's prompt and schema.
 func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Request, error) {
 	fence := promptfence.New()
-	shown, err := surface.shown(in)
+	shown, _, err := surface.shown(in)
 	if err != nil {
 		return model.Request{}, err
 	}
-	content := fence.Wrap(shown.Text())
+	content := fence.Wrap(shown)
 	if block := voice.Block(fence); block != "" {
 		content += "\n\n" + block
 	}
@@ -359,7 +359,7 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 	if subject == "" || body == "" {
 		return Draft{}, fmt.Errorf("%s response: empty subject or body", surface.Name)
 	}
-	shown, err := surface.shown(in)
+	_, refs, err := surface.shown(in)
 	if err != nil {
 		return Draft{}, err
 	}
@@ -367,7 +367,7 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 		Subject:   subject,
 		Body:      body,
 		To:        in.Addresses(),
-		Reasoning: keepGroundedReasons(surface, shown, out.Reasoning),
+		Reasoning: keepGroundedReasons(surface, refs, out.Reasoning),
 	}, nil
 }
 
@@ -377,7 +377,7 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 // caller cannot see, or one labelled as the wrong kind, opens the WRONG record's
 // page rather than nothing at all — which is the worse of the two failures,
 // because it looks like it worked.
-func keepGroundedReasons(surface Surface, shown *promptref.Payload, reasons []modelReason) []Reason {
+func keepGroundedReasons(surface Surface, refs claims.Refs, reasons []modelReason) []Reason {
 	out := make([]Reason, 0, len(reasons))
 	for _, reason := range reasons {
 		kind, ok := surface.kind(reason.Kind)
@@ -394,7 +394,7 @@ func keepGroundedReasons(surface Surface, shown *promptref.Payload, reasons []mo
 			//
 			// A ref this payload never showed, or showed as another kind, reads
 			// back to nothing, and so does a null type.
-			id, ok := shown.ID(reason.EntityType, reason.EntityID)
+			id, ok := refs.ID(reason.EntityType, reason.EntityID)
 			if !ok || surface.Known[id] != reason.EntityType {
 				continue
 			}

@@ -178,9 +178,10 @@ func promptMessageOf(excerpt ExcerptIn, row HistoryIn) PromptMessage {
 // that breaks the original.
 func PlanRequest(in Input, floor Plan, lang string) model.Request {
 	fence := promptfence.New()
+	prompt := encodePlanPrompt(planPromptOf(in, floor))
 	return model.Request{
 		System:         planSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(planShown(in, floor).Text())}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(planRefs(in, floor).Show(prompt))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}

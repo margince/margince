@@ -7,8 +7,9 @@ package compose
 
 // A model request names its records by short refs (s1, a2) and never by id.
 // These suites script their fake models by the record ids the test seeded.
-// This file is the one translator between the two. It reads the text a record
-// shows from the database, finds that text in the request, and takes its ref.
+// This file reads the text a record shows from the database, finds that text
+// in the request, and takes its ref. aitest.RefWhere reads a JSON payload by a
+// field the test already knows; these prompts are fenced spans and lines.
 
 import (
 	"context"

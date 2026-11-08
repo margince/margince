@@ -55,7 +55,7 @@ func line(text string, evidence ...string) map[string]any {
 
 func TestAGroundedReplyIsKept(t *testing.T) {
 	in := inputWithTimeline()
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story:      []map[string]any{line("The offer was promised on the call and never sent.", "act-1")},
 		blocker:    []map[string]any{line("Nothing has moved in twelve days.", "act-2")},
 		buyer:      []map[string]any{line("They asked for the price before anything else.", "act-2")},
@@ -85,7 +85,7 @@ func TestAGroundedReplyIsKept(t *testing.T) {
 
 func TestAnEmptyBlockerListIsKeptRatherThanRefused(t *testing.T) {
 	in := inputWithTimeline()
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story:      []map[string]any{line("They accepted the scope and a kickoff is booked.", "act-1")},
 		moveReason: []map[string]any{line("Read the brief before the meeting.", "act-1")},
 	}), in)
@@ -101,7 +101,7 @@ func TestAnEmptyBlockerListIsKeptRatherThanRefused(t *testing.T) {
 
 func TestAnEmptyBuyerListIsKeptRatherThanRefused(t *testing.T) {
 	in := inputWithTimeline()
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story: []map[string]any{line("The offer went out on the call and nothing came back.", "act-1")},
 	}), in)
 	if err != nil {
@@ -116,7 +116,7 @@ func TestAnEmptyBuyerListIsKeptRatherThanRefused(t *testing.T) {
 
 func TestASentenceCitingNothingIsDropped(t *testing.T) {
 	in := inputWithTimeline()
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story: []map[string]any{
 			line("The offer was promised on the call.", "act-1"),
 			line("The buyer seems enthusiastic."),
@@ -132,7 +132,7 @@ func TestASentenceCitingNothingIsDropped(t *testing.T) {
 
 func TestACitationOutsideTheInputIsDropped(t *testing.T) {
 	in := inputWithTimeline()
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story: []map[string]any{line("Something happened.", "act-invented")},
 	}), in)
 	if err == nil {
@@ -144,7 +144,7 @@ func TestTheDealsOwnIDGroundsNothing(t *testing.T) {
 	in := inputWithTimeline()
 	// Citing the deal says only that the model read the prompt; the sentence
 	// is left uncited and therefore dropped, and the card has no story.
-	if _, err := ParseStatus(reply(draft{
+	if _, err := parseIDs(reply(draft{
 		story: []map[string]any{line("This deal is open.", "deal-1")},
 	}), in); err == nil {
 		t.Fatal("a card grounded only in the deal's own id was kept")
@@ -153,7 +153,7 @@ func TestTheDealsOwnIDGroundsNothing(t *testing.T) {
 
 func TestAReplyThatSpellsARecordIDIsRefused(t *testing.T) {
 	in := inputWithTimeline()
-	if _, err := ParseStatus(reply(draft{
+	if _, err := parseIDs(reply(draft{
 		story: []map[string]any{line("See act-1 for the detail.", "act-1")},
 	}), in); err == nil {
 		t.Fatal("a reply naming a record id in reader text was kept")
@@ -162,7 +162,7 @@ func TestAReplyThatSpellsARecordIDIsRefused(t *testing.T) {
 
 func TestAnOversizedSentenceIsRefused(t *testing.T) {
 	in := inputWithTimeline()
-	if _, err := ParseStatus(reply(draft{
+	if _, err := parseIDs(reply(draft{
 		story: []map[string]any{line(strings.Repeat("x", maxSentenceLen+1), "act-1")},
 	}), in); err == nil {
 		t.Fatal("a sentence past the card's bounds was kept")
@@ -173,7 +173,7 @@ func TestAReplyTellingNoStoryIsRefused(t *testing.T) {
 	in := inputWithTimeline()
 	// A blocker without a story is a card that opens with what is wrong and
 	// never says what the deal IS, which is not the card this site serves.
-	if _, err := ParseStatus(reply(draft{
+	if _, err := parseIDs(reply(draft{
 		blocker: []map[string]any{line("It is stalling.", "act-1")},
 	}), in); err == nil {
 		t.Fatal("a card telling no story was kept")
@@ -186,7 +186,7 @@ func TestTheStoryIsCappedRatherThanTruncatedSilently(t *testing.T) {
 	for range maxStoryRows + 2 {
 		many = append(many, line("A grounded sentence.", "act-1"))
 	}
-	got, err := ParseStatus(reply(draft{story: many}), in)
+	got, err := parseIDs(reply(draft{story: many}), in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestAnUnrecognisedVerdictIsDroppedAndTheRestOfTheCardSurvives(t *testing.T)
 	// nothing — but the reasoning behind the call is still grounded, and
 	// throwing away a good card over one bad word costs them the whole
 	// briefing.
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story:    []map[string]any{line("The offer went out after the call.", "act-1")},
 		standing: "promising",
 		because:  []map[string]any{line("They replied within a day both times.", "act-2")},
@@ -225,7 +225,7 @@ func TestAnUncitedVerdictReasonIsDropped(t *testing.T) {
 	// The filter treats a verdict reason like any other sentence: uncited, it
 	// goes. What the CARD then does with a call left resting on nothing is the
 	// fold's business, and fold_test.go holds that half.
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story:    []map[string]any{line("The offer went out after the call.", "act-1")},
 		standing: "cold",
 		because:  []map[string]any{line("It feels dead.")},
@@ -342,7 +342,7 @@ func TestAnUngroundedMoveReasonDoesNotReachTheReader(t *testing.T) {
 		},
 	} {
 		t.Run(what, func(t *testing.T) {
-			got, err := ParseStatus(reply(draft{
+			got, err := parseIDs(reply(draft{
 				story:      []map[string]any{line("The offer was promised and never sent.", "act-1")},
 				standing:   "drifting",
 				because:    []map[string]any{line("Twelve days of silence.", "act-2")},
@@ -379,7 +379,7 @@ func TestTheOlderMoveReasonShapeDegradesRatherThanPassing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding the older shape: %v", err)
 	}
-	got, parseErr := ParseStatus(string(encoded), in)
+	got, parseErr := parseIDs(string(encoded), in)
 	if parseErr != nil {
 		t.Fatalf("the older shape was refused whole rather than degraded: %v", parseErr)
 	}
@@ -408,7 +408,7 @@ func TestTheMoveReasonKeepsItsOwnBound(t *testing.T) {
 			len(overlong))
 	}
 
-	if _, err := ParseStatus(reply(draft{
+	if _, err := parseIDs(reply(draft{
 		story:      story,
 		moveReason: []map[string]any{line(overlong, "act-1")},
 	}), in); err == nil {
@@ -417,7 +417,7 @@ func TestTheMoveReasonKeepsItsOwnBound(t *testing.T) {
 
 	// And the same text IS accepted where the longer bound applies, so the test
 	// is about the move reason's bound rather than about length in general.
-	if _, err := ParseStatus(reply(draft{
+	if _, err := parseIDs(reply(draft{
 		story: []map[string]any{line(overlong, "act-1")},
 	}), in); err != nil {
 		t.Errorf("a section sentence within its own bound was refused: %v", err)

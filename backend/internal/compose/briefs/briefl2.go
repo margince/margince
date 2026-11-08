@@ -18,10 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -48,7 +50,7 @@ type briefL2Ranker struct {
 const briefL2System = `You re-rank a sales rep's morning-brief deal queue.
 Each candidate carries a deterministic feature vector (each factor 0..1): winnability, revenue, timing, momentum (overnight change), warmth (strongest stakeholder). Higher is more worth acting on today.
 Re-order the deals best-first using judgment the flat weighted score cannot capture (e.g. a fresh overnight reply on a high-value deal outranks a slightly higher static score).
-Return ONLY a JSON object {"order":[deal_id,...]} listing EVERY given deal id exactly once, best-first. Never invent an id, never drop one, never add commentary.`
+Return ONLY a JSON object {"order":["d1",...]} listing EVERY given deal reference exactly once, best-first. Never invent a reference, never drop one, never add commentary.`
 
 // reorder asks the model to re-rank candidates and returns a permutation
 // strictly bounded to that set. The candidate list is already the §10
@@ -77,13 +79,13 @@ func (rk briefL2Ranker) reorder(ctx context.Context, candidates []BriefQueueItem
 // prompt stays green through the change that breaks the original.
 func (rk briefL2Ranker) askModel(ctx context.Context, candidates []BriefQueueItem) ([]ids.UUID, error) {
 	resp, err := ai.Ask(ctx, rk.brain, RankRequest(candidates), func(text string) error {
-		_, err := ParseRankOrder(text)
+		_, err := ParseRankOrder(text, candidates)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	return ParseRankOrder(resp.Text)
+	return ParseRankOrder(resp.Text, candidates)
 }
 
 // RankRequest builds the re-order prompt from the candidates' feature
@@ -93,7 +95,7 @@ func (rk briefL2Ranker) askModel(ctx context.Context, candidates []BriefQueueIte
 // the evidenced factors.
 //
 // NOTHING UNTRUSTED REACHES THIS PROMPT. Every byte it renders is
-// machine-made: deal ids this installation minted and factors the
+// machine-made: refs to deals this installation minted and factors the
 // deterministic §10.1 fold computed. That is why the request declares no
 // data boundary and wraps nothing in a promptfence — there is no
 // attacker-authored span to bound, and a fence around numbers would be a
@@ -109,15 +111,16 @@ func (rk briefL2Ranker) askModel(ctx context.Context, candidates []BriefQueueIte
 // carries no ResponseSchema: BoundToCandidates enforces the shape that
 // matters regardless of what the model returns.
 //
-//promptlang:exempt the reply is a permutation of the candidate ids and nothing else — ParseRankOrder reads uuids and BoundToCandidates discards anything that is not one, so no sentence reaches a reader.
-//promptvoice:exempt the reply is a permutation of candidate ids and nothing else — ParseRankOrder reads uuids and BoundToCandidates discards anything that is not one, so no sentence reaches a reader.
+//promptlang:exempt the reply is a permutation of the candidate ids and nothing else — ParseRankOrder reads deal refs and BoundToCandidates discards anything that is not one, so no sentence reaches a reader.
+//promptvoice:exempt the reply is a permutation of candidate ids and nothing else — ParseRankOrder reads deal refs and BoundToCandidates discards anything that is not one, so no sentence reaches a reader.
 func RankRequest(candidates []BriefQueueItem) model.Request {
 	var b strings.Builder
 	b.WriteString("Candidates:\n")
+	refs := rankRefs(candidates)
 	for _, item := range candidates {
 		f := item.Features
 		fmt.Fprintf(&b, "- %s: winnability=%.2f revenue=%.2f timing=%.2f momentum=%.2f warmth=%.2f (composite=%.3f)\n",
-			item.DealID, f.Winnability, f.Revenue, f.Timing, f.Momentum, f.Warmth, item.Composite)
+			refs.For(item.DealID.String()), f.Winnability, f.Revenue, f.Timing, f.Momentum, f.Warmth, item.Composite)
 	}
 	return model.Request{
 		System:         briefL2System,
@@ -127,18 +130,43 @@ func RankRequest(candidates []BriefQueueItem) model.Request {
 	}
 }
 
-// ParseRankOrder reads the ordered id list out of a reply. It is this
-// site's ONLY refusal: a reply that cannot be read degrades the whole L2
-// pass to the deterministic composite order, while a reply that can be
-// read is bounded rather than rejected — see BoundToCandidates.
-func ParseRankOrder(text string) ([]ids.UUID, error) {
+// rankRefs names the candidates d1, d2, … in the order the prompt lists them.
+func rankRefs(candidates []BriefQueueItem) *promptref.Refs {
+	refs := promptref.New("d")
+	for _, item := range candidates {
+		refs.For(item.DealID.String())
+	}
+	return refs
+}
+
+// dealRef is the shape of a ref rankRefs mints.
+var dealRef = regexp.MustCompile(`^d[1-9][0-9]*$`)
+
+// ParseRankOrder reads the ordered deal refs out of a reply as the deals they
+// name. It is this site's ONLY refusal: a reply that cannot be read, or that
+// names anything but a deal ref, a record id included, degrades the whole L2
+// pass to the deterministic composite order. A ref of no candidate reads as
+// ids.Nil, which BoundToCandidates drops like any other id it was not given.
+func ParseRankOrder(text string, candidates []BriefQueueItem) ([]ids.UUID, error) {
 	var parsed struct {
-		Order []ids.UUID `json:"order"`
+		Order []string `json:"order"`
 	}
 	if err := json.Unmarshal([]byte(ai.Unfence(text)), &parsed); err != nil {
 		return nil, fmt.Errorf("brief: L2 response is not {\"order\":[...]}: %w", err)
 	}
-	return parsed.Order, nil
+	refs := rankRefs(candidates)
+	byRef := make(map[string]ids.UUID, len(candidates))
+	for _, item := range candidates {
+		byRef[refs.For(item.DealID.String())] = item.DealID
+	}
+	order := make([]ids.UUID, len(parsed.Order))
+	for i, ref := range parsed.Order {
+		if !dealRef.MatchString(ref) {
+			return nil, fmt.Errorf("brief: L2 response names %q, which is not a deal reference", ref)
+		}
+		order[i] = byRef[ref]
+	}
+	return order, nil
 }
 
 // BoundToCandidates is the deterministic guardrail that makes the L2

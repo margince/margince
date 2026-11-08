@@ -16,17 +16,17 @@ import (
 // in two payloads, so the request's own prompt says which one it read.
 func citedFor(req model.Request, in Input, reply string) string {
 	if strings.HasPrefix(req.System, planSystem) {
-		return planShown(in, floorFor(in)).Refer(reply)
+		return planRefs(in, floorFor(in)).Show(reply)
 	}
-	return shownRefs(in).Refer(reply)
+	return shownRefs(in).Show(reply)
 }
 
 func parseCitedSections(reply string, in Input) ([]Section, error) {
-	return ParseBriefSections(shownRefs(in).Refer(reply), in)
+	return ParseBriefSections(shownRefs(in).Show(reply), in)
 }
 
 func parseCitedPlan(reply string, in Input, floor Plan) (Plan, error) {
-	return ParsePlan(planShown(in, floor).Refer(reply), in, floor)
+	return ParsePlan(planRefs(in, floor).Show(reply), in, floor)
 }
 
 // Both prompts show the meeting and its records by refs. A reply citing a ref
@@ -54,7 +54,7 @@ func TestTheMeetingPromptsShowRefsAndReadThemBackToRecords(t *testing.T) {
 			t.Errorf("the brief citing %q kept %+v, want %d section(s) citing the meeting's id", cite, sections, want)
 		}
 	}
-	planMeeting := planShown(in, floor).Refer(meeting)
+	planMeeting := planRefs(in, floor).Show(meeting)
 	for cite, want := range map[string]bool{planMeeting: true, meeting: false, "a99": false} {
 		plan, err := ParsePlan(`{"opening":{"text":"Open on the security pack.","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"`+cite+`"}]}}`, in, floor)
 		if (err == nil) != want || (want && plan.Opening.Evidence[0].EntityID != meeting) {

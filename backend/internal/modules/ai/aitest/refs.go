@@ -4,28 +4,83 @@
 package aitest
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// RefBeside is the short ref a request shows for the record whose name,
-// label or title is name, read off the request the way a model reads it.
-// A request names records by refs and never by id, so a scripted reply that
-// cites a record names it by this. False when the request shows no such
-// record.
-func RefBeside(req model.Request, name string) (string, bool) {
-	shown := regexp.MustCompile(`"id":"([a-z]+[0-9]+)"[^{}]*?"(?:label|name|title|display_name)":"` + regexp.QuoteMeta(name) + `"`)
-	var text strings.Builder
+// nameFields are the fields a request shows a record's name under.
+var nameFields = []string{"label", "name", "title", "display_name"}
+
+// RefWhere is the short ref a request's JSON shows for the record whose field
+// holds value, read off the request the way a model reads it. A request names
+// records by refs and never by id, so a scripted reply that cites a record a
+// test seeded names it by this. False when the request shows no such record.
+func RefWhere(req model.Request, field, value string) (string, bool) {
 	for _, message := range req.Messages {
-		text.WriteString(message.Content)
+		for _, payload := range jsonIn(message.Content) {
+			if ref, ok := refIn(payload, field, value); ok {
+				return ref, true
+			}
+		}
 	}
-	found := shown.FindStringSubmatch(text.String())
-	if found == nil {
-		return "", false
+	return "", false
+}
+
+// RefBeside is RefWhere for the record whose name, label, title or display
+// name is name.
+func RefBeside(req model.Request, name string) (string, bool) {
+	for _, field := range nameFields {
+		if ref, ok := RefWhere(req, field, name); ok {
+			return ref, true
+		}
 	}
-	return found[1], true
+	return "", false
+}
+
+// jsonIn is every JSON object text carries, in order, past the fence and the
+// prose around it.
+func jsonIn(text string) []any {
+	var out []any
+	for at := strings.IndexByte(text, '{'); at >= 0; {
+		decoder := json.NewDecoder(strings.NewReader(text[at:]))
+		var value any
+		next := at + 1
+		if decoder.Decode(&value) == nil {
+			out = append(out, value)
+			next = at + int(decoder.InputOffset())
+		}
+		found := strings.IndexByte(text[next:], '{')
+		if found < 0 {
+			break
+		}
+		at = next + found
+	}
+	return out
+}
+
+func refIn(node any, field, value string) (string, bool) {
+	switch v := node.(type) {
+	case map[string]any:
+		if v[field] == value {
+			ref, ok := v["id"].(string)
+			return ref, ok
+		}
+		for _, child := range v {
+			if ref, ok := refIn(child, field, value); ok {
+				return ref, true
+			}
+		}
+	case []any:
+		for _, child := range v {
+			if ref, ok := refIn(child, field, value); ok {
+				return ref, true
+			}
+		}
+	}
+	return "", false
 }
 
 // RefBefore is the ref of the record whose rendering holds text: the last

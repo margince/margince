@@ -25,18 +25,8 @@ import (
 //
 // gatekit:fixture the sites not yet moved to promptref — expected data the gate checks still holds, not a waived cost
 var stillShowsRecordIDs = map[string]string{
-	"account_scan/company_scan":          "contact ids in the account JSON and the schema",
 	"agent_loop/morning_brief":           "seed context record ids, passed back to tools",
 	"agent_loop/overnight_at_risk_sweep": "seed context record ids, passed back to tools",
-	"brief_ranking/rank":                 "candidate ids",
-	"corpus_ask/corpus_ask":              "passage ids",
-	"deal_health/deal_status":            "the deal JSON ids; integration fakes reply with them",
-	"enrich/signature":                   "the source activity id on its span",
-	"growth_fit/growth_fit":              "profile field ids",
-	"offer_draft/draft":                  "product ids in the catalog",
-	"stage_evidence_extract/criteria":    "span and criterion ids",
-	"tag_suggest/interest":               "the source record id on each span",
-	"weekly_learnings/learn":             "deal ids in the week JSON",
 }
 
 // A model is never shown a record UUID: it copies one wrong, cites it in the

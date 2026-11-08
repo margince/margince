@@ -70,28 +70,32 @@ func TestAllIsACopyTheCallerCannotEdit(t *testing.T) {
 	}
 }
 
-func TestAPayloadShowsEachIDAsARefOfItsKind(t *testing.T) {
+func TestMintGivesEachIDARefOfItsKind(t *testing.T) {
 	t.Parallel()
 	const third = "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e09"
-	payload := promptref.Rewrite(
-		`{"deal":"`+firstID+`","acts":["`+secondID+`","`+firstID+`"],"other":"`+third+`"}`,
+	payload := `{"deal":"` + firstID + `","acts":["` + secondID + `","` + firstID + `"],"other":"` + third + `"}`
+	tables := promptref.Mint(payload,
 		map[string]string{firstID: "deal", secondID: "activity"},
 		map[string]string{"deal": "d", "activity": "a", "": "r"})
-	if want := `{"deal":"d1","acts":["a1","d1"],"other":"r1"}`; payload.Text() != want {
-		t.Fatalf("Text() = %s, want %s", payload.Text(), want)
+	if len(tables) != 3 {
+		t.Fatalf("Mint made %d tables, want one each for deal, activity and the unnamed kind", len(tables))
 	}
-	if id, ok := payload.ID("deal", "d1"); !ok || id != firstID {
-		t.Errorf("ID(deal, d1) = %q, %v; want the deal", id, ok)
+	shown := promptref.Rewrite(payload, tables["deal"], tables["activity"], tables[""])
+	if want := `{"deal":"d1","acts":["a1","d1"],"other":"r1"}`; shown != want {
+		t.Fatalf("Rewrite over the minted tables = %s, want %s", shown, want)
 	}
-	for _, foreign := range [][2]string{{"activity", "d1"}, {"deal", "d2"}, {"deal", firstID}} {
-		if id, ok := payload.ID(foreign[0], foreign[1]); ok {
-			t.Errorf("ID(%s, %s) = %q; a ref the payload never showed as that kind must be refused", foreign[0], foreign[1], id)
-		}
+	if id, ok := tables["deal"].ID("d1"); !ok || id != firstID {
+		t.Errorf("deal ID(d1) = %q, %v; want the deal", id, ok)
 	}
-	if !payload.Names("the deal d1 stalled") || payload.Names("a C1 speaker, d2 and a10") {
-		t.Error("Names must find exactly the refs this payload showed")
+	if id, ok := tables["activity"].ID("d1"); ok {
+		t.Errorf("activity ID(d1) = %q; a ref minted for another kind must be refused", id)
 	}
-	if got := payload.Refer(`{"entity_id":"` + secondID + `"}`); got != `{"entity_id":"a1"}` {
-		t.Errorf("Refer = %s, want the activity's ref", got)
+}
+
+func TestMintUsesAKindsOwnNameWhenItHasNoPrefix(t *testing.T) {
+	t.Parallel()
+	tables := promptref.Mint(firstID, map[string]string{firstID: "lead"}, nil)
+	if got := tables["lead"].All(); !slices.Equal(got, []string{"lead1"}) {
+		t.Errorf("refs = %v, want [lead1]", got)
 	}
 }

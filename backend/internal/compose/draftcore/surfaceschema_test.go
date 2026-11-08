@@ -33,7 +33,7 @@ func narrowSurface() Surface {
 // shows its deal.
 func keepNarrow(reasons []modelReason) []Reason {
 	surface := narrowSurface()
-	return keepGroundedReasons(surface, claims.ShowKinds(`{"deal":"`+deal1+`"}`, surface.Known), reasons)
+	return keepGroundedReasons(surface, claims.MintKinds(`{"deal":"`+deal1+`"}`, surface.Known), reasons)
 }
 
 func TestTheSchemaAdmitsExactlyTheKindsTheParseKeeps(t *testing.T) {

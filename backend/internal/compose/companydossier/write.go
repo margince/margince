@@ -28,7 +28,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -58,7 +57,7 @@ func DossierRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:   dossierSystemFor(fence, lang),
-		Messages: []model.Message{{Role: "user", Content: fence.Wrap(dossierShown(in, lang).Text())}},
+		Messages: []model.Message{{Role: "user", Content: fence.Wrap(dossierRefs(in).Show(encodeInput(in, lang)))}},
 		// Deliberately NOT set: the dossier describes the company, and our own
 		// context is only ever an input to a judgment about fit. A writer given
 		// it would start comparing, which is the other surface's job.
@@ -68,12 +67,11 @@ func DossierRequest(in Input, lang string) model.Request {
 	}
 }
 
-// dossierShown is the summary as the dossier prompt shows it, each profile
-// field and fact by its ref, and the table a reply's citations are read back
-// through. The language words the industry only, so every language mints the
-// same refs.
-func dossierShown(in Input, lang string) *promptref.Payload {
-	return claims.ShowRefs(encodeInput(in, lang), KnownRecords(in))
+// dossierRefs names each profile field and fact the dossier prompt shows by a
+// ref, and reads a reply's citations back. The language words the industry
+// only, so the refs are the same in every language.
+func dossierRefs(in Input) claims.Refs {
+	return claims.MintRefs(encodeInput(in, ""), KnownRecords(in))
 }
 
 // WriteDossier assembles the dossier, degrading to the deterministic floor on
@@ -135,10 +133,10 @@ func ParseDossier(reply string, in Input) ([]Section, error) {
 		return nil, fmt.Errorf("parse the dossier reply: %w", err)
 	}
 	known := KnownRecords(in)
-	shown := dossierShown(in, "")
+	shown := dossierRefs(in)
 	bySection := map[string][]claims.Sentence{}
 	for _, section := range parsed.Sections {
-		kept := keepNatures(claims.ReadRefs(section.Sentences, shown), known, map[string]bool{natureFact: true})
+		kept := keepNatures(shown.Read(section.Sentences), known, map[string]bool{natureFact: true})
 		bySection[section.Kind] = append(bySection[section.Kind], kept...)
 	}
 	// orderedSections emits only the kinds the contract declares, in reading

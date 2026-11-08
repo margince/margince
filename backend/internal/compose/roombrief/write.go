@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -72,7 +71,7 @@ func BriefRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Text())}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -83,10 +82,10 @@ func encodeInput(in Input) string {
 	return string(encoded)
 }
 
-// shownRefs is the room as the prompt shows it, each record id written as a
-// ref, and the table a reply's citations are read back through.
-func shownRefs(in Input) *promptref.Payload {
-	return claims.ShowRefs(encodeInput(in), knownRecords(in))
+// shownRefs names each record id the room prompt shows by a ref, and reads a
+// reply's citations back.
+func shownRefs(in Input) claims.Refs {
+	return claims.MintRefs(encodeInput(in), knownRecords(in))
 }
 
 // Write produces the brief. A nil lane is a deployment running no model, and
@@ -132,7 +131,7 @@ func ParseBrief(reply string, in Input) ([]Sentence, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return nil, fmt.Errorf("parse the room brief reply: %w", err)
 	}
-	return keepGroundedSentences(claims.ReadRefs(parsed.Sentences, shownRefs(in)), in), nil
+	return keepGroundedSentences(shownRefs(in).Read(parsed.Sentences), in), nil
 }
 
 // keepGroundedSentences applies the one grounding rule and this brief's bounds.

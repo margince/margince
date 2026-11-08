@@ -19,3 +19,13 @@ func refBeside(t *testing.T, req model.Request, name string) string {
 	}
 	return ref
 }
+
+// refWhere is aitest.RefWhere for a test that cannot go on without the ref.
+func refWhere(t *testing.T, req model.Request, field, value string) string {
+	t.Helper()
+	ref, ok := aitest.RefWhere(req, field, value)
+	if !ok {
+		t.Fatalf("the request shows no record whose %s is %q:\n%v", field, value, req.Messages)
+	}
+	return ref
+}

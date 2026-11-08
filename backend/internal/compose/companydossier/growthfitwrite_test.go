@@ -53,7 +53,7 @@ func sevenOfSeven() Input {
 
 // citing renders a reply citing one of the input's own records.
 func citing(band string, in Input) string {
-	id := in.ProfileFields[0].Id.String()
+	id := firstFieldRef
 	return `{"band":"` + band + `","positive_factors":[
 		{"text":"They sell load-shifting software.","nature":"fact",
 		 "evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]}]}`
@@ -83,7 +83,8 @@ func TestEveryModelFailureDegradesToTheFloorAndSaysSo(t *testing.T) {
 		},
 		"lane abstaining itself": {scriptedLane{reply: citing("unknown", in)}, crmcontracts.GrowthFitNextStepRetryLater, true},
 		"lane citing a stranger": {
-			scriptedLane{reply: citing("strong", fourOfSeven())}, crmcontracts.GrowthFitNextStepRetryLater, true,
+			scriptedLane{reply: strings.Replace(citing("strong", in), firstFieldRef, "p99", 1)},
+			crmcontracts.GrowthFitNextStepRetryLater, true,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -215,7 +216,7 @@ func TestAClaimCitingSomethingOutsideTheCompanyIsDropped(t *testing.T) {
 // the distinction the whole nature vocabulary exists to keep.
 func TestARecommendationCannotPoseAsAFactorAndAFactCannotPoseAsTheAngle(t *testing.T) {
 	in := sevenOfSeven()
-	id := in.ProfileFields[0].Id.String()
+	id := firstFieldRef
 	cite := `"evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]`
 	reply := `{"band":"strong",
 		"positive_factors":[
@@ -246,7 +247,7 @@ func TestARecommendationCannotPoseAsAFactorAndAFactCannotPoseAsTheAngle(t *testi
 // would empty most of a growth fit and degrade the whole call to the floor.
 func TestAnAssessmentSurvivesAsAFactor(t *testing.T) {
 	in := sevenOfSeven()
-	id := in.ProfileFields[0].Id.String()
+	id := firstFieldRef
 	reply := `{"band":"strong","positive_factors":[
 			{"text":"Their stack matches who we sell to.","nature":"assessment",
 			 "evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]}]}`
@@ -270,7 +271,7 @@ func TestAnAssessmentSurvivesAsAFactor(t *testing.T) {
 // therefore be refused where only advice belongs, not promoted to fit.
 func TestAnUnlabelledSentenceIsNotPromotedIntoTheRecommendedAngle(t *testing.T) {
 	in := sevenOfSeven()
-	id := in.ProfileFields[0].Id.String()
+	id := firstFieldRef
 	reply := `{"band":"strong","positive_factors":[
 			{"text":"They sell load-shifting software.","nature":"fact",
 			 "evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]}],
@@ -290,7 +291,7 @@ func TestAnUnlabelledSentenceIsNotPromotedIntoTheRecommendedAngle(t *testing.T) 
 
 func TestAnAngleWrittenAsTheWritersOwnIsDroppedAndTheRestOfTheReplyKept(t *testing.T) {
 	in := sevenOfSeven()
-	id := in.ProfileFields[0].Id.String()
+	id := firstFieldRef
 	cite := `"evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]`
 	for _, c := range []struct {
 		angle string
@@ -323,7 +324,7 @@ func TestAnAngleWrittenAsTheWritersOwnIsDroppedAndTheRestOfTheReplyKept(t *testi
 
 func TestAReplyWhoseOnlyClaimIsAnAngleWrittenAsTheWritersOwnSaysSo(t *testing.T) {
 	in := sevenOfSeven()
-	id := in.ProfileFields[0].Id.String()
+	id := firstFieldRef
 	reply := `{"band":"strong","recommended_angle":{"text":"I'd lead with their plant managers.",` +
 		`"nature":"recommendation","evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]}}`
 

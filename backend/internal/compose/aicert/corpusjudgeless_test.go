@@ -47,12 +47,14 @@ func (c requestCompleter) Complete(_ context.Context, req model.Request) (model.
 
 var (
 	uuidPattern  = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
-	labelPattern = regexp.MustCompile(`"([amrst][0-9]+)"`)
+	labelPattern = regexp.MustCompile(`"([a-z][0-9]+)"`)
 	fencePattern = regexp.MustCompile(`untrusted-([a-z2-7]{26})`)
+	// listedRefPattern is a record a turn lists by its ref: "- d1: …".
+	listedRefPattern = regexp.MustCompile(`(?m)^- ([a-z][0-9]+):`)
 )
 
 // mintedIDs is the ids a reply may cite, in the order the request gives them.
-// A response schema's enum of ids or of short refs comes first. Without
+// A response schema's enum of ids or of record refs (m1, t2) comes first. Without
 // one, it is the ids in the turns, less the nonce every fenced span repeats.
 func mintedIDs(req model.Request) []string {
 	if ids := uuidPattern.FindAllString(string(req.ResponseSchema), -1); len(ids) > 0 {
@@ -79,6 +81,11 @@ func mintedIDs(req model.Request) []string {
 	for _, id := range uuidPattern.FindAllString(turns.String(), -1) {
 		if !nonces[id] && !slices.Contains(ids, id) {
 			ids = append(ids, id)
+		}
+	}
+	for _, m := range listedRefPattern.FindAllStringSubmatch(turns.String(), -1) {
+		if !slices.Contains(ids, m[1]) {
+			ids = append(ids, m[1])
 		}
 	}
 	return ids

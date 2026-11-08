@@ -7,22 +7,21 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
-// planShown is the briefing as the plan prompt shows it, each record id
-// written as a ref, and the table a reply's citations are read back through.
-// PlanRequest and ParsePlan both call it, so a ref names one record in both.
-func planShown(in Input, floor Plan) *promptref.Payload {
-	return claims.ShowRefs(encodePlanPrompt(planPromptOf(in, floor)), knownRecords(in))
+// planRefs names each record id the plan prompt shows by a ref, and reads a
+// reply's citations back. PlanRequest and ParsePlan both call it, so a ref
+// names one record in both.
+func planRefs(in Input, floor Plan) claims.Refs {
+	return claims.MintRefs(encodePlanPrompt(planPromptOf(in, floor)), knownRecords(in))
 }
 
 // readPlanRefs reads every citation of a reply back to the record id the
 // request showed it by; a ref it never showed reads as no record, which no
 // grounding accepts. An item whose prose writes a ref is dropped, as one that
 // spells an id is.
-func readPlanRefs(reply planReply, shown *promptref.Payload) planReply {
-	names := func(lines ...string) bool { return slices.ContainsFunc(lines, shown.Names) }
+func readPlanRefs(reply planReply, shown claims.Refs) planReply {
+	names := func(lines ...string) bool { return slices.ContainsFunc(lines, shown.NamedIn) }
 	read := func(evidence []replyEvidence) []replyEvidence {
 		out := make([]replyEvidence, 0, len(evidence))
 		for _, cited := range evidence {

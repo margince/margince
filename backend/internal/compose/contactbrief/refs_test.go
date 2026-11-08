@@ -13,7 +13,7 @@ import (
 // cited is a reply scripted with record ids as the model writes it: each id
 // the request showed spelled as its ref. An id the request never showed stays
 // as written, which is how a model that invents one answers.
-func cited(in Input, reply string) string { return shownRefs(in).Refer(reply) }
+func cited(in Input, reply string) string { return shownRefs(in).Show(reply) }
 
 func parseCitedBrief(reply, contactID string, in Input) ([]Sentence, error) {
 	return ParseBrief(cited(in, reply), contactID, in)
