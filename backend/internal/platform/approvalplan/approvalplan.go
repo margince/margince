@@ -42,6 +42,8 @@ type Footprint struct {
 	Refs    map[string][]ids.UUID `json:"refs"`
 	Objects []string              `json:"objects,omitempty"`
 	Fields  []string              `json:"fields,omitempty"`
+	// Files are the attachments a send would carry, checked as a send checks them.
+	Files []ids.UUID `json:"files,omitempty"`
 }
 
 // PayloadWithheld reports an approval whose staged call, summary and evidence

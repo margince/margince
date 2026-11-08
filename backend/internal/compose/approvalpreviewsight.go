@@ -97,11 +97,6 @@ func planFootprint(approval crmcontracts.Approval, preview *crmcontracts.Approva
 		preview = &crmcontracts.ApprovalPreview{}
 	}
 	refs := previewReferences(approval, preview, touched)
-	if preview.Files != nil {
-		for _, file := range *preview.Files {
-			refs.add(previewEntityAttachment, ids.UUID(file.Id))
-		}
-	}
 	objects := previewMaskObjects(approval, refs)
 	if preview.ImportRows != nil {
 		for i := range *preview.ImportRows {
@@ -109,7 +104,7 @@ func planFootprint(approval crmcontracts.Approval, preview *crmcontracts.Approva
 		}
 	}
 	slices.Sort(objects)
-	return &approvalplan.Footprint{Refs: refs.byType, Objects: slices.Compact(objects), Fields: previewFieldNames(preview)}
+	return &approvalplan.Footprint{Refs: refs.byType, Objects: slices.Compact(objects), Fields: previewFieldNames(preview), Files: previewFiles(preview)}
 }
 
 // viewerClears answers whether the caller opens every record a stored plan
@@ -127,7 +122,11 @@ func (r approvalPreviewReader) viewerClears(ctx context.Context, approval crmcon
 	if slices.ContainsFunc(footprint.Fields, func(field string) bool { return slices.Contains(masked, field) }) {
 		return false, nil
 	}
-	return r.viewerReadsEvery(ctx, footprint.Refs)
+	open, err := r.viewerReadsEvery(ctx, footprint.Refs)
+	if err != nil || !open {
+		return false, err
+	}
+	return r.viewerSendsFiles(ctx, footprint.Files)
 }
 
 // recording makes every record a label or a record read resolves count as
@@ -246,12 +245,17 @@ func (t *previewTouched) addDetails(details []crmcontracts.ApprovalPreviewDetail
 
 func (r approvalPreviewReader) viewerOpensPreview(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched) (bool, error) {
 	open, err := r.viewerReadsEvery(ctx, previewReferences(approval, preview, touched).byType)
-	if err != nil || !open || preview.Files == nil || len(*preview.Files) == 0 {
+	if err != nil || !open {
 		return open, err
 	}
-	files := make([]ids.UUID, 0, len(*preview.Files))
-	for _, file := range *preview.Files {
-		files = append(files, ids.UUID(file.Id))
+	return r.viewerSendsFiles(ctx, previewFiles(preview))
+}
+
+// viewerSendsFiles answers whether the caller could attach every file, by the
+// rule a send applies. A withheld or empty file counts as one they cannot open.
+func (r approvalPreviewReader) viewerSendsFiles(ctx context.Context, files []ids.UUID) (bool, error) {
+	if len(files) == 0 {
+		return true, nil
 	}
 	if _, err := r.activities.PreviewSendAttachments(ctx, files); err != nil {
 		if previewUnavailable(err) {
@@ -260,6 +264,17 @@ func (r approvalPreviewReader) viewerOpensPreview(ctx context.Context, approval 
 		return false, err
 	}
 	return true, nil
+}
+
+func previewFiles(preview *crmcontracts.ApprovalPreview) []ids.UUID {
+	if preview.Files == nil {
+		return nil
+	}
+	files := make([]ids.UUID, 0, len(*preview.Files))
+	for _, file := range *preview.Files {
+		files = append(files, ids.UUID(file.Id))
+	}
+	return files
 }
 
 // viewerReadsEvery answers whether the caller can open every record named. An
