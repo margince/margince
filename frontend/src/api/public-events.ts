@@ -1077,6 +1077,8 @@ export interface components {
              * @enum {string}
              */
             meeting_status?: "booked" | "held" | "no_show" | "canceled";
+            /** @description True when this update removed the meeting's status, so the meeting is unanswered again, as a calendar first captured it. */
+            meeting_status_cleared?: boolean;
             /**
              * @description How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
              * @enum {string}
