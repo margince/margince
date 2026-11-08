@@ -1300,6 +1300,7 @@ public.approval.id uuid NOT NULL gen=- def=uuidv7()
 public.approval.kind text NOT NULL gen=- def=-
 public.approval.on_behalf_of uuid gen=- def=-
 public.approval.passport_id uuid gen=- def=-
+public.approval.plan_footprint jsonb gen=- def=-
 public.approval.proposed_by text NOT NULL gen=- def=-
 public.approval.proposed_change jsonb NOT NULL gen=- def=-
 public.approval.requested_decider_id uuid gen=- def=-
