@@ -39,7 +39,7 @@ func redactUnlinkedNotes(ctx context.Context, tx pgx.Tx, keys subjectKeys) ([]id
 	}
 	changed, err := scrubbedIDs(ctx, tx, `UPDATE activity a
  SET subject=regexp_replace(a.subject,@pattern,@erased,'gi'),body=regexp_replace(a.body,@pattern,@erased,'gi'),
- raw=NULL,source_author_id=NULL,source_author_name=NULL,version=a.version+1,updated_at=now()
+ raw=NULL,source_author_id=NULL,source_author_name=NULL
  WHERE a.id=ANY(@locked::uuid[]) AND a.kind='note' AND a.restricted_at IS NULL
  AND NOT EXISTS(SELECT 1 FROM activity_link l WHERE l.activity_id=a.id AND (l.contact_id IS NOT NULL OR l.lead_id IS NOT NULL))
  AND NOT `+retentionscope.HeldThroughAnyLink("a.id")+`

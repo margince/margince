@@ -331,34 +331,36 @@ category refusing mail the old gate would have allowed.
 into consent's handlers.
 
 - **Article 17 erasure** (`Eraser.EraseContact`) clears personal values from domain rows and audit
-  images, removes raw capture, embeddings and attachment bytes, and cancels retained outbox copies.
+  images, removes raw capture, embeddings and attachment bytes, and cancels kept outbox copies.
   Audit IDs, actors, actions and times stay fixed. One transaction per subject records the proof
   and audit marker. A subject under `legal_hold` cannot be erased.
 
   Background tasks use earlier proofs and stored links to clear old copies while keeping later
-  edits and held content. Request references go after their linked copies. Fully cleared weekly
-  items also match their editable erased label, which can match the wrong copy. Closed requests
-  with machine-retired identifiers qualify too. Any hold, open dispute or conflicting CRM write
-  defers these marker corrections. Nightly retention retries them.
+  edits and held content. Request references go after their linked copies.
+
+  Weekly items cleared in full also match their erased label. A user can edit that label, so it
+  can match the wrong copy. Closed requests whose identifiers the machine retired match too. Any hold, a case with
+  `dispute_open` set, or a conflicting CRM write defers these fixes. Nightly retention retries them.
 
   Full names and addresses are removed from notes without contact or lead links. Other text stays.
-  Restricted or held notes, ambiguous names, descriptions, signatures and matching uploaded files
-  get manual-review notices. Files and search copies stay intact. Uncertain text matches do not
-  enter subject exports. An administrator must restore a missing reviewer's access before retrying.
+  Restricted or held notes, possible name matches, descriptions, signatures and matching uploaded
+  files get a notice for a human review. Files and search copies are kept as they are. Possible text
+  matches do not go into subject exports. If no one can review them, an admin must restore review
+  access before retrying.
 - **The suppression list** hashes each erased address and handle. Capture, import and typed creates
   refuse a later match. Public booking can still create one; refusal there would reveal erasures.
-- **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and unrestricted row scope.
+- **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
   One audited export (`action=export`) includes the subject's records, channels, deals, leads,
-  activities, attachments, consent, raw capture, field sources, retained audit payloads and linked
-  room comments, introduction notes and other kept copies. Private mailbox content stays hidden.
+  activities, attachments and consent. It also includes raw capture, field sources, kept audit
+  payloads, linked room comments, introduction notes and other kept copies. Private mailbox content stays hidden.
 - **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
   workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it every `24h` by default.
   Each enabled policy takes its single action in one audited transaction per overdue record.
 
   Each workspace's failure stays on its own job. Held records and activities linked to held
-  contacts, companies or deals stay intact. An unknown policy scope is skipped with a logged error.
+  contacts, companies or deals are kept as they are. An unknown policy scope is skipped with a logged error.
 
-  `consent.SeedDefaultRetentionTx` supplies the defaults. Age alone archives rather than destroys
+  `consent.SeedDefaultRetentionTx` supplies the defaults. Time alone archives rather than destroys
   domain records, so they can be restored. Other defaults erase copies or derived data: raw provider
   originals (`raw_capture`, 90 days from import), AI call payloads and deal-risk day rows.
 

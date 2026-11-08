@@ -59,16 +59,16 @@ Also called: right to be forgotten, Art. 17, delete my data, data subject reques
 
 The audit details and stored event copies of the records being erased lose their personal values too. The audit still keeps who acted, what happened and when.
 
-### What still needs manual review after erasure?
+### What still needs a human review after erasure?
 
 A **Manual privacy review needed** notification points to retained text that may name the contact.
 Descriptions, signatures, uploaded files and their search copies are kept for a human to review.
-Held notes and uncertain name matches are flagged too. Open the notice and decide what may be removed.
-An inactive member's signature needs help from whoever runs Margince; the notice identifies it.
+Held notes and possible name matches are flagged too. Open the notice and decide what may be removed.
+An inactive member's signature needs help from whoever runs Margince; the notice names it.
 
 Matching full names and email addresses are removed from notes without contact or lead links.
 Other note text stays. If no active administrator or ops member can read the retained content,
-erasure stops with instructions to restore a reviewer's access and retry.
+erasure stops and says how to restore review access and retry.
 
 ### How do I answer a data access request?
 To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
