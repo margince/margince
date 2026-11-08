@@ -7,6 +7,7 @@ import {
   worklistGaps,
 } from "../features/brief/brief.completeness";
 import { greetingNameOf } from "../format/greetingname";
+import { nearestRank } from "./quantile";
 
 // The Home benchmark's verdicts (e2e/bench-home.spec.ts), kept apart from the
 // browser so each one is a plain function a unit test can ask. The marks say
@@ -354,4 +355,93 @@ export class RequestLedger {
       if (due.journey === journey) this.retries.delete(read);
     }
   }
+}
+
+/**
+ * One largest-contentful-paint entry, and whether its element sits in `main`.
+ * `element` names it (tag, id, first class) so a failure says what won.
+ */
+export type Paint = { at: number; inMain: boolean; element?: string };
+/** One layout shift; `input` marks a shift right after user input. */
+export type Shift = { at: number; value: number; input: boolean };
+/** What one document load painted and shifted, as the page recorded it. */
+export type Vitals = { paints: Paint[]; shifts: Shift[] };
+
+/** Home's fixed-profile browser budgets: both are "at most". */
+export const VITALS_BUDGET = { lcpMs: 1_000, cls: 0.1 };
+
+/**
+ * Main-content LCP: the page's final LCP, when its element sits inside `main`.
+ * Null when the page painted nothing, or when its largest paint is elsewhere.
+ * An earlier entry inside `main` is no answer: once a larger paint outside it
+ * lands, the browser reports no later paint of `main` at all.
+ */
+export function mainContentLcp(paints: readonly Paint[]): number | null {
+  const final = paints.at(-1);
+  return final?.inMain ? final.at : null;
+}
+
+// A session window closes after a 1 s gap or at 5 s long, as Chrome's CLS does.
+const SHIFT_GAP_MS = 1_000;
+const SHIFT_WINDOW_MS = 5_000;
+
+/** CLS as the largest session window of shifts no input caused. */
+export function sessionWindowCls(shifts: readonly Shift[]): number {
+  let worst = 0;
+  let current = 0;
+  let first = Number.NEGATIVE_INFINITY;
+  let last = Number.NEGATIVE_INFINITY;
+  for (const shift of shifts) {
+    if (shift.input) continue;
+    if (shift.at - last < SHIFT_GAP_MS && shift.at - first < SHIFT_WINDOW_MS) {
+      current += shift.value;
+    } else {
+      current = shift.value;
+      first = shift.at;
+    }
+    last = shift.at;
+    worst = Math.max(worst, current);
+  }
+  return worst;
+}
+
+function elementOf(paint: Paint | undefined): string {
+  return paint?.element ? ` (${paint.element})` : "";
+}
+
+/** The p95 of main-content LCP and of CLS over a run of loads. */
+export function vitalsP95(loads: readonly Vitals[]): {
+  lcpMs: number;
+  cls: number;
+} {
+  const lcps = loads.map(
+    (load) => mainContentLcp(load.paints) ?? Number.POSITIVE_INFINITY,
+  );
+  const shifts = loads.map((load) => sessionWindowCls(load.shifts));
+  return { lcpMs: nearestRank(lcps, 0.95), cls: nearestRank(shifts, 0.95) };
+}
+
+/**
+ * Why a run of loads breaks the vitals budget; empty when it keeps it. A load
+ * whose largest paint is not in `main` fails by itself, whatever the p95.
+ */
+export function vitalsReasons(loads: readonly Vitals[]): string[] {
+  if (loads.length === 0) return ["no load was measured"];
+  const reasons: string[] = [];
+  for (const [i, load] of loads.entries()) {
+    if (load.paints.length === 0)
+      reasons.push(`load ${i + 1}: no largest contentful paint`);
+    else if (mainContentLcp(load.paints) === null)
+      reasons.push(
+        `load ${i + 1}: the largest contentful paint is outside main${elementOf(load.paints.at(-1))}`,
+      );
+  }
+  const p95 = vitalsP95(loads);
+  if (Number.isFinite(p95.lcpMs) && p95.lcpMs > VITALS_BUDGET.lcpMs)
+    reasons.push(
+      `main-content LCP p95 ${Math.round(p95.lcpMs)} ms is over ${VITALS_BUDGET.lcpMs} ms`,
+    );
+  if (p95.cls > VITALS_BUDGET.cls)
+    reasons.push(`CLS p95 ${p95.cls.toFixed(3)} is over ${VITALS_BUDGET.cls}`);
+  return reasons;
 }
