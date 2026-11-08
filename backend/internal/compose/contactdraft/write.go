@@ -152,9 +152,7 @@ func GroundedRequest(in Input, voice draftvoice.Context) (model.Request, error) 
 // existed, differing in error wording and one word of one comment.
 func surface(in Input) draftcore.Surface {
 	known := knownRecords(in)
-	_, refs := in.asShown()
 	return draftcore.Surface{
-		Refs:   refs,
 		Name:   "contact draft",
 		System: draftSystemFor,
 		Kinds:  reasonKinds,
@@ -164,7 +162,7 @@ func surface(in Input) draftcore.Surface {
 		KeepUncited: func(kind crmcontracts.AccountDraftReasonKind, _ string) bool {
 			return kind == crmcontracts.AccountDraftReasonKindIntent
 		},
-		Cites: func(entityID string) string { return known[entityID] },
+		Known: known,
 	}
 }
 

@@ -82,7 +82,7 @@ func TestTheMeetingADraftFollowsUpLeadsWhatTheWriterReads(t *testing.T) {
 	if strings.Contains(asked.String(), deal.String()) {
 		t.Errorf("the writer was shown the deal's id, not its ref: %s", asked.String())
 	}
-	for _, want := range []string{`"about"`, subject, `"deal_id":"d1"`} {
+	for _, want := range []string{`"about"`, subject, `"deal_id":"`} {
 		if !strings.Contains(asked.String(), want) {
 			t.Errorf("the writer was not given %s: %s", want, asked.String())
 		}

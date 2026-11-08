@@ -10,28 +10,30 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
-// narrowSurface shows one deal, deal-1, as d1.
+// deal1 is the one deal narrowSurface knows; its payload shows it as d1.
+const deal1 = "01a07000-0000-7000-8000-000000000001"
+
 func narrowSurface() Surface {
-	refs := NewRecordRefs()
-	refs.For("deal", "deal-1")
 	return Surface{
-		Refs:  refs,
 		Name:  "test draft",
 		Kinds: []crmcontracts.AccountDraftReasonKind{crmcontracts.AccountDraftReasonKindIntent, crmcontracts.AccountDraftReasonKindDeal},
 		KeepUncited: func(kind crmcontracts.AccountDraftReasonKind, _ string) bool {
 			return kind == crmcontracts.AccountDraftReasonKindIntent
 		},
-		Cites: func(entityID string) string {
-			if entityID == "deal-1" {
-				return "deal"
-			}
-			return ""
-		},
+		Known: map[string]string{deal1: "deal"},
 	}
+}
+
+// keepNarrow keeps reasons as narrowSurface's parse does, over a payload that
+// shows its deal.
+func keepNarrow(reasons []modelReason) []Reason {
+	surface := narrowSurface()
+	return keepGroundedReasons(surface, claims.ShowKinds(`{"deal":"`+deal1+`"}`, surface.Known), reasons)
 }
 
 func TestTheSchemaAdmitsExactlyTheKindsTheParseKeeps(t *testing.T) {
@@ -78,8 +80,8 @@ func TestANullCitationReadsAsNoCitation(t *testing.T) {
 	if err := json.Unmarshal([]byte(raw), &out); err != nil {
 		t.Fatalf("decoding: %v", err)
 	}
-	kept := keepGroundedReasons(narrowSurface(), out.Reasoning)
-	if len(kept) != 2 || kept[0].EntityID != "" || kept[1].EntityID != "deal-1" {
+	kept := keepNarrow(out.Reasoning)
+	if len(kept) != 2 || kept[0].EntityID != "" || kept[1].EntityID != deal1 {
 		t.Fatalf("kept = %+v, want the uncited intent and the cited deal", kept)
 	}
 }
@@ -87,14 +89,14 @@ func TestANullCitationReadsAsNoCitation(t *testing.T) {
 // The model cites by the ref the payload showed. Anything else — a ref never
 // minted, the raw id, or a shown ref under another kind — names no record.
 func TestACitationNamesARecordOnlyByItsShownRef(t *testing.T) {
-	for entityID, want := range map[string]int{"d1": 1, "d2": 0, "deal-1": 0} {
+	for entityID, want := range map[string]int{"d1": 1, "d2": 0, deal1: 0} {
 		reasons := []modelReason{{Kind: "deal", Label: "renewal", EntityType: "deal", EntityID: entityID}}
-		if kept := keepGroundedReasons(narrowSurface(), reasons); len(kept) != want {
+		if kept := keepNarrow(reasons); len(kept) != want {
 			t.Errorf("citing %q kept %+v, want %d reason(s)", entityID, kept, want)
 		}
 	}
 	asActivity := []modelReason{{Kind: "deal", Label: "renewal", EntityType: "activity", EntityID: "d1"}}
-	if kept := keepGroundedReasons(narrowSurface(), asActivity); len(kept) != 0 {
+	if kept := keepNarrow(asActivity); len(kept) != 0 {
 		t.Errorf("a deal ref cited as an activity was kept as %+v", kept)
 	}
 }
@@ -114,7 +116,7 @@ func TestACitationWithANullTypeIsDropped(t *testing.T) {
 		if err := json.Unmarshal([]byte(raw), &out); err != nil {
 			t.Fatalf("decoding: %v", err)
 		}
-		if kept := keepGroundedReasons(narrowSurface(), out.Reasoning); len(kept) != 0 {
+		if kept := keepNarrow(out.Reasoning); len(kept) != 0 {
 			t.Errorf("%s with a null type was kept as %+v", name, kept)
 		}
 	}

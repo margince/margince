@@ -21,6 +21,12 @@ func ShowRefs(payload string, known map[Evidence]string) *promptref.Payload {
 	for cited := range known {
 		kindOf[cited.EntityID] = cited.EntityType
 	}
+	return ShowKinds(payload, kindOf)
+}
+
+// ShowKinds is ShowRefs for a site that keys its citable records by id alone,
+// with the kind each one is cited as.
+func ShowKinds(payload string, kindOf map[string]string) *promptref.Payload {
 	return promptref.Rewrite(payload, kindOf, refPrefixes)
 }
 
